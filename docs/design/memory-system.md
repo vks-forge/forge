@@ -68,7 +68,7 @@ Why this and not a framework:
 One git repository per project, outside the product repo:
 
 ```
-.factory/
+.forge/
   memory/
     <project-slug>/              git repo, Director-only write, main protected
       MEMORY.md                  index + pinned summary, always loaded, ≤ 200 lines / 25 KB

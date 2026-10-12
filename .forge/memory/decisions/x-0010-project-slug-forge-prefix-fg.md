@@ -6,11 +6,12 @@ source: { type: chat, ref: 2026-10-13 orchestrator proposal after repo `vks-forg
 author: director
 origin: inferred
 confidence: 0.7
-status: pending
+status: active
 valid_from: 2026-10-13
+approved_at: 2026-10-13
+approved_by: user ("we will call this forge", d-0043)
 tags: [naming, dogfood, m0]
 ---
 
 Slug matches the GitHub repo name; prefix is two letters so branch names and
 worktree paths stay short on a host with `LongPathsEnabled=0` (m0-brief §5).
-Used as the default in `project.yaml` examples until approved or changed.

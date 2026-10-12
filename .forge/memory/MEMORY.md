@@ -19,11 +19,11 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0010 — Control room built in React, lifting from Paperclip (MIT); no embedded tracker
 - d-0011 — Branching: worktree when 4+ files / parallel / schema-auth / long-running; else feature branch
 - d-0012 — Workers never push or hold git creds; dispatcher pushes; factory bot merges by policy
-- d-0013 — This repo uses `.factory/memory/` for project memory, not Claude's auto-memory
+- d-0013 — This repo uses `.forge/memory/` for project memory, not Claude's auto-memory
 - d-0015 — Major work (Director decides major vs simple) goes through red-green TDD; G1 verifies red→green from receipts
 - d-0016 — Multi-harness drivers (Claude Code, Codex, OpenCode, Pi, ACP) are a v1 requirement
 - d-0017 — Every task validated plan-mode style (grill → enhance → finalize), depth scales with lane (supersedes d-0014)
-- d-0018 — Enhancement skill is written by us (`.factory/skills/enhance-decisions/`)
+- d-0018 — Enhancement skill is written by us (`.forge/skills/enhance-decisions/`)
 - d-0019 — Skills and agents self-improve: propose-then-gate via outcomes, ledger tier, replay eval
 - d-0037 — M0 exit = one dogfood ticket on the Claude driver; other drivers M0.5 wave
 - d-0038 — Tool system M0: tokenizer shell parsing, signatures verified from main checkout HEAD
@@ -35,12 +35,18 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0025 — Always LLM triage before validation; process correctness over call count
 - d-0033 — Receipt hooks `onFailure: block` + timeout, SessionStart liveness registration, PreToolUse chokepoint (supersedes d-0026)
 - d-0034 — Any-language targets; `profile: ts | generic`, TS-only checks `skipped` with reason under generic (supersedes d-0027)
-- d-0039 — Worktrees in `.worktrees/`, data in `.factory/data/`, memory in `.factory/memory/<slug>/`; nested-worktree safeguards, longpaths (supersedes d-0028)
+- d-0040 — One package skeleton (`src/{schemas,domain,ports|adapters,shared}`), single root `__tests__/` mirroring `src/`
+- d-0041 — Every file opens with a header comment (what / why + doc ref / exports / depends on); lint-enforced
+- d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
+- d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
+- d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0045 — All hand-written types/interfaces in `src/types/` as `<name>.types.ts` (ports in `types/ports/`); only `z.infer` aliases may sit in `schemas/`; lint-enforced
 - d-0035 — ACP-first driver contract: pinned `@agentclientprotocol/claude-agent-acp`, per-run options via `_meta`, bypass opt-out on every session, resumable not warm (supersedes d-0029)
 - d-0036 — M0 four slices amended: preflight probes + answer endpoint in slice 2, URL precondition (supersedes d-0030)
 
 ## Superseded
 
+- d-0039 — worktrees/data/memory paths → superseded by d-0044 (`.forge/` rename, 2026-10-13)
 - d-0004 — Docker container per Worker by default → superseded by d-0005 (2026-10-12)
 - d-0014 — Grill-me before any work → superseded by d-0017 (per-task, lane-scaled) (2026-10-12)
 - x-0005 — First v1 cut (single driver) → superseded by x-0006 (2026-10-12)
@@ -66,10 +72,11 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - x-0006 — v1 walking-skeleton cut, revised → exit criterion restated by d-0037 (M0 = Claude loop; other drivers M0.5)
 - x-0007 — Self-improvement: 18-step research-backed loop, system not skill (`docs/design/self-improvement.md` §12–§13)
 - x-0009 — Tool system v2 → M0 slice amended by d-0038 (tokenizer first, tree-sitter M1)
+- x-0010 — Project slug `forge`, ticket prefix `FG`, memory dir `.forge/memory/forge/` (approved 2026-10-13 via d-0043)
 
 ## Pending proposals (need user approve / reject)
 
-- x-0010 — project slug `forge`, ticket prefix `FG`, memory dir `.factory/memory/forge/` (`proposed/x-0010-project-slug-forge-prefix-fg.md`)
+- none
 
 ## Outcomes
 

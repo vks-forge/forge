@@ -78,7 +78,7 @@ worktree by the dispatcher, not by the Worker.
   against `migrations/`; a model change without a migration, or a
   column-add on a populated table without a backfill marker, fails.
 - **ADR → rules pipeline:** `docs/adr/*.md` in the product repo; the Director's
-  `compile_rules` step proposes `.factory/rules/*.yaml` (dependency-cruiser +
+  `compile_rules` step proposes `.forge/rules/*.yaml` (dependency-cruiser +
   ast-grep rule bodies with the ADR id); accepting a rule is Tier C (named
   signer). Rules are the same list that drives lane triage's tier-C globs.
 
@@ -86,7 +86,7 @@ worktree by the dispatcher, not by the Worker.
 
 Written by the Director's `plan` step (or by a separate test-writer Worker on a
 different model) from the ticket's acceptance criteria *before* the
-implementing Worker starts. Stored under `.factory/intent-tests/<ticket>/`
+implementing Worker starts. Stored under `.forge/intent-tests/<ticket>/`
 outside any path mounted into the Worker's worktree, copied in by the
 dispatcher only at gate time, and never shown to the Worker.
 

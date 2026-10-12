@@ -5,10 +5,11 @@ statement: Worktrees live at `.worktrees/<ticket-id>` inside the repo, runtime d
 source: { type: chat, ref: 2026-10-12 user "finalize" after enhance pass (docs/design/reviews/2026-10-12-enhance-pass.md) }
 author: user
 origin: owner
-status: active
+status: superseded
 valid_from: 2026-10-12
+valid_to: 2026-10-13
 approved_at: 2026-10-12
-superseded_by: null
+superseded_by: d-0044
 supersedes: d-0028
 tags: [worktrees, storage, memory, layout, windows]
 pinned: true

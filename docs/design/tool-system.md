@@ -47,7 +47,7 @@ tool, the catalogue says whether the tool exists for this run at all.
 | **harness-native** | read, edit, write, grep, glob, shell | the harness | PreToolUse / PostToolUse hook (Claude), app-server events (Codex), plugin (OpenCode), extension `tool_call` (Pi), ACP permission stream |
 | **factory-core** (MCP) | `get_ticket`, `list_comments`, `add_comment`, `ask_director`, `report_blocked`, `finish` | Factory MCP server, per-run token | server-side |
 | **factory-capability** (MCP) | `web_search` (SearXNG, pluggable backends), `web_fetch` (allow-listed, proxied, SSRF-guarded), `docs_lookup`, `code_graph` (graft), `memory_search` (Director only), `db_query_readonly` | Factory MCP server, each tool individually grantable | server-side |
-| **project** (MCP) | servers declared in `.factory/project.yaml`, signed | proxied through the factory MCP mux | server-side |
+| **project** (MCP) | servers declared in `.forge/project.yaml`, signed | proxied through the factory MCP mux | server-side |
 | **gate-only** | test runner, lint, typecheck, mutation, SAST | dispatcher, outside the Worker | `gate_results` |
 
 Gate-only tools are listed so nobody grants them to a Worker by accident: the
@@ -61,7 +61,7 @@ Taken from Codex (`ToolExecutor` spec + handler, exposure enum), Pi
 resources), Paperclip (schema hash, quarantine).
 
 ```yaml
-# .factory/tools/catalog.yaml  (signed; DB is an index)
+# .forge/tools/catalog.yaml  (signed; DB is an index)
 - name: shell
   kind: harness-native
   risk: exec                     # read | write-cwd | exec | network | credential | destructive  (declared, not inferred)
@@ -120,7 +120,7 @@ IDs).
 
 ### 5.0 Floors (unbypassable)
 
-Hermes's pattern: a hardline list (`rm -rf /`, credential files, `.factory/**`
+Hermes's pattern: a hardline list (`rm -rf /`, credential files, `.forge/**`
 policy files, `git push`, package publish, destructive DB statements) plus the
 operator's deny globs, matched on **normalised and de-obfuscated** input
 (Unicode NFC, quote and escape stripping, `$(...)` expansion detection).
@@ -153,7 +153,7 @@ wall.
 OpenCode's rule triple with Codex's aggregation:
 
 ```yaml
-# .factory/tools/grants/lanes.yaml (excerpt)
+# .forge/tools/grants/lanes.yaml (excerpt)
 standard:
   - { action: shell, resource: "pnpm test*",   effect: allow }
   - { action: shell, resource: "pnpm add *",   effect: ask,   save: "pnpm add <pkg>" }
@@ -392,15 +392,15 @@ Director's fixed grant: `memory_search`, `code_graph`, `web_search`,
 
 | Change | Tier | Path |
 |---|---|---|
-| Add a tool to the catalogue | C | signed commit to `.factory/tools/catalog.yaml` |
-| Project grants a project MCP or widens a lane default | C | `.factory/tools/grants/<project>.yaml`, user signs |
+| Add a tool to the catalogue | C | signed commit to `.forge/tools/catalog.yaml` |
+| Project grants a project MCP or widens a lane default | C | `.forge/tools/grants/<project>.yaml`, user signs |
 | Agent YAML `tools.allow/deny` | C | `execution-plane.md` §5a, `self-improvement.md` §2 |
-| Edit a floor or the banned-always list | C + typed confirmation | `.factory/tools/floors.yaml` |
+| Edit a floor or the banned-always list | C + typed confirmation | `.forge/tools/floors.yaml` |
 | Narrowing anything | A | any reviewed commit |
 | `always(scope, ttl)` from an approval | session grant, expires | written by the engine with provenance; visible on Ticket |
 | Worker asks for a tool it does not have | never granted at runtime | `ask_director` → Needs-you → user edits grants → new run |
 
-Protected-path shield (Roo): edits to `.factory/**`, `CLAUDE.md`, `AGENTS.md`,
+Protected-path shield (Roo): edits to `.forge/**`, `CLAUDE.md`, `AGENTS.md`,
 `.claude/**`, `.codex/**`, `opencode.json` always ask, in every lane, under
 every auto-approve setting. The self-improvement loop may propose a skill that
 *uses* a tool; it may not propose a grant. The janitor may not touch `tools/`.

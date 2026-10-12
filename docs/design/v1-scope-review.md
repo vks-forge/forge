@@ -1,7 +1,7 @@
 # v1 scope review — keep / enhance / cut
 
 Status: proposed, 2026-10-12
-Reviewed: all six design docs, `.factory/memory/` records d-0001..d-0013, r-0001..r-0006, x-0001..x-0004.
+Reviewed: all six design docs, `.forge/memory/` records d-0001..d-0013, r-0001..r-0006, x-0001..x-0004.
 Lens: one user, one Windows 11 box, installed harnesses, no team. Goal is merged code with less human time than doing it by hand. Every component is judged by "what breaks if v1 ships without it" and "what evidence says it pays".
 
 ## 1. Verdict
@@ -68,7 +68,7 @@ One prompt → one ticket → one Claude Code run on a feature branch → G1 →
 | Phoenix / OTLP | Defer | `run_events` in SQLite plus the ticket thread is the trace for v1. |
 | Gitea fallback | Cut | Never stand up a git server for a local repo; the engine merges locally. |
 | Skills registry, signatures, render cache, FSM predictor | Defer | Copy skill dirs into run HOME. Nothing about Worker capability depends on the DB. |
-| ADR → compiled rules pipeline, Tier C rule acceptance | Defer | Hand-written `.factory/rules/*.yaml` until there are ADRs to compile. |
+| ADR → compiled rules pipeline, Tier C rule acceptance | Defer | Hand-written `.forge/rules/*.yaml` until there are ADRs to compile. |
 | Session handoff summary on rotation | Defer | Fresh session + ticket thread is the handoff. |
 | Per-state concurrency caps | Simplify | One global slot limit (3). |
 | Low-priv account, firewall rules, mitmproxy, DPAPI | Cut from v1 | See §4.6. Untested on this host; pretending isolation is worse than stating trust. |
@@ -100,7 +100,7 @@ User decisions that override §2 and §5 above. The revised cut is proposal x-00
 | d-0016 multi-harness in v1 | Drivers Codex, OpenCode, Pi, ACP are **not deferred**. Claude Code still goes first to prove the loop; the rest land before M0 closes. Budget: ~300 lines driver + ~100 lines renderer each. |
 | d-0017 validate every task, plan-mode style | Replaces §4.3's "start the run before triage finishes". Every lane gets a validation turn: Express = one confirmation (task restated, predicted files, lane, recommended answer); Standard = short grill; Full = grill + enhancement pass + explicit finalize. Nothing is dispatched before the user says go. |
 | d-0015 red-green TDD on major work | Adds a **TDD-order check to G1**: receipts must show new test fails → non-test edits → test passes, on Standard/Full. Worker prompt on those lanes loads the `tdd` skill. |
-| d-0018 own enhancement skill | New deliverable: `.factory/skills/enhance-decisions/SKILL.md`. Runs after grill, before finalize. |
+| d-0018 own enhancement skill | New deliverable: `.forge/skills/enhance-decisions/SKILL.md`. Runs after grill, before finalize. |
 | d-0019 self-improving skills and agents | Revives `skill_usage`, skill/agent versions and signatures from §5 (no longer deferred). Adds an `improve_skill` step on janitor triggers, propose-then-gate, replay eval before merge. Needs its own design doc. |
 
 Still deferred: G2 SAST + ADR compile, hidden intent tests, G4 mutation, G5, G6, canaries, Bifrost, Phoenix, Gitea, egress isolation, four of eight screens (Settings joined M0 per d-0031).
@@ -111,6 +111,6 @@ Grill answers d-0020..d-0030, enhance pass `reviews/2026-10-12-enhance-pass.md`,
 
 - **M0 exit** (d-0037): one dogfood ticket Inbox → Done on the Claude driver with G1 green. Codex, OpenCode, Pi, generic ACP = M0.5 wave, one PR each, `preflight: missing binary` until installed.
 - **§4.3 amended** (d-0025): every lane gets an LLM triage step; no run starts before the validation turn.
-- **§4.6 amended** (d-0031, d-0039): isolation on subscription = `settingSources` excluding `user`/`project`, per-run `--settings` under `.factory/data/`, `--strict-mcp-config`, `--add-dir` scoped; `--bare` only in `api_key` mode.
+- **§4.6 amended** (d-0031, d-0039): isolation on subscription = `settingSources` excluding `user`/`project`, per-run `--settings` under `.forge/data/`, `--strict-mcp-config`, `--add-dir` scoped; `--bare` only in `api_key` mode.
 - **Gates by profile** (d-0034): `project.yaml` `profile: ts | generic`; TS-bound checks `skipped` with reason under `generic`.
 - **Slices** (d-0036): see `m0-brief.md`.

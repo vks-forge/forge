@@ -14,7 +14,7 @@ stated as constraints. You propose; the user finalizes.
 ## Inputs (read all before writing anything)
 
 1. The decision list under review (file path or ids). Read every record.
-2. `.factory/memory/MEMORY.md`, then every `decisions/*.md` with
+2. `.forge/memory/MEMORY.md`, then every `decisions/*.md` with
    `status: active` and every `rejected/*.md`. These are constraints.
 3. `docs/design/*.md` for the areas the decisions touch.
 4. `research/notes/**` for the same areas, when present.

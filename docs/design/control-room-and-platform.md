@@ -22,7 +22,7 @@ packages/
   gates/         G1–G6 runners, blast radius, canaries
   memory/        memory repo reader/writer, index, janitor
   db/            SQLite schema + migrations (Drizzle)
-.factory/        skills/ agents/ rules/ intent-tests/ memory/<project>/
+.forge/        skills/ agents/ rules/ intent-tests/ memory/<project>/
 ```
 
 ## 2. Control room UI
@@ -146,7 +146,7 @@ worktrunk's hooks:
   worktree (`.env`, local config). Hooks: `create`, `pre-merge`, `post-merge`.
 - pnpm store on the same NTFS volume (or a ReFS Dev Drive) so installs
   hardlink; no copy-on-write on NTFS.
-- Add `.worktrees/`, `.factory/data/` and `.factory/memory/*/.index/` to ignore
+- Add `.worktrees/`, `.forge/data/` and `.forge/memory/*/.index/` to ignore
   lists before first dispatch; exclude `.worktrees/` from the graft indexer;
   never run edits or git in the main checkout.
 

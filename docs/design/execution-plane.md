@@ -109,7 +109,7 @@ from the harness output. The agent's own claim is checked against it at G1.
 
 | Order | Harness | Control interface | Why this order |
 |---|---|---|---|
-| 1 | **Claude Code** | ACP server `@agentclientprotocol/claude-agent-acp` (pinned; not the stale `@zed-industries/claude-code-acp`), one process per run, `loadSession` for continuity. Per-run `settings`, `settingSources: []`, `strictMcpConfig`, `mcpServers`, `allowedTools`, `disallowedTools`, `maxBudgetUsd`, `maxTurns` via `_meta.claudeCode.options`, files under `.factory/data/runs/<id>/`. `allowDangerouslySkipPermissions: false` on every `session/new` and `session/load`. Fallback: `claude -p --output-format stream-json` with the same `--settings` / `--setting-sources` / `--strict-mcp-config` flags, Express only until the permission-prompt bridge is verified (d-0035). | Works with the user's own login (d-0031). PreToolUse hooks from the per-run settings layer are the chokepoint and must carry `onFailure: "block"` + `timeout` (d-0033). SDK callback hooks and `canUseTool` do not cross JSON-RPC; settings-file hooks do. |
+| 1 | **Claude Code** | ACP server `@agentclientprotocol/claude-agent-acp` (pinned; not the stale `@zed-industries/claude-code-acp`), one process per run, `loadSession` for continuity. Per-run `settings`, `settingSources: []`, `strictMcpConfig`, `mcpServers`, `allowedTools`, `disallowedTools`, `maxBudgetUsd`, `maxTurns` via `_meta.claudeCode.options`, files under `.forge/data/runs/<id>/`. `allowDangerouslySkipPermissions: false` on every `session/new` and `session/load`. Fallback: `claude -p --output-format stream-json` with the same `--settings` / `--setting-sources` / `--strict-mcp-config` flags, Express only until the permission-prompt bridge is verified (d-0035). | Works with the user's own login (d-0031). PreToolUse hooks from the per-run settings layer are the chokepoint and must carry `onFailure: "block"` + `timeout` (d-0033). SDK callback hooks and `canUseTool` do not cross JSON-RPC; settings-file hooks do. |
 | 2 | **Codex** | `codex app-server` (JSON-RPC over stdio) via `@openai/codex-sdk`. Fallback: `codex exec --json --sandbox workspace-write -C <dir> --output-schema s.json`. | `turn/steer` and `turn/interrupt` map directly to Director live chat; per-turn model/cwd/sandbox overrides; only harness with a documented native Windows sandbox. |
 | 3 | **OpenCode** | `opencode serve --port 4096 --hostname 127.0.0.1` + `@opencode-ai/sdk`. `POST /session`, `POST /session/:id/prompt_async`, `GET /global/event` (SSE), `POST /session/:id/abort`, `POST /session/:id/permissions/:id`. | Multi-provider models; `opencode.json` `permission` map with per-pattern `ask/allow/deny`; one warm server avoids MCP cold start. Multi-cwd on one server is unverified; run one server per worktree until confirmed. |
 | 4 | **Pi** | `pi --mode rpc` (JSONL), `promptAndWait()`, wait for `agent_settled`. One-shot: `pi --mode json -p --tools read,bash,edit,write,grep,find,ls --session <file.jsonl>`. | Lightweight, extensions in-process (`tool_call` handler can return `{block:true}` which is our gate hook). No built-in approval prompts, so isolation must come from §6. |
@@ -161,7 +161,7 @@ store per-harness copies and we do not store content in the database.
 **Canonical source** is one git tree, signed on commit:
 
 ```
-.factory/
+.forge/
   skills/
     git-rebase/SKILL.md            Agent Skills standard: frontmatter + body + optional scripts/
     db-migration/SKILL.md

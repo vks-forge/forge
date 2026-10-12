@@ -33,8 +33,8 @@ Three findings shape the design:
 
 | Component | File | Fields the loop may change | Fields that need Tier C (user signs) |
 |---|---|---|---|
-| Skill | `.factory/skills/<name>/SKILL.md`, `references/` | body prose, `description`, `references/*` | `allowed-tools`, anything under `scripts/`, new skill creation |
-| Agent | `.factory/agents/<name>.yaml` | `system` prose, `skills[]` (only to add an already-approved skill) | `tools.allow/deny`, `lanes`, `model` |
+| Skill | `.forge/skills/<name>/SKILL.md`, `references/` | body prose, `description`, `references/*` | `allowed-tools`, anything under `scripts/`, new skill creation |
+| Agent | `.forge/agents/<name>.yaml` | `system` prose, `skills[]` (only to add an already-approved skill) | `tools.allow/deny`, `lanes`, `model` |
 | Director step prompt | `packages/core/prompts/<step>.md` | prose, few-shot examples | output schema, deterministic overrides |
 
 Out of scope for this loop: lane thresholds, blast-radius weights, gate
@@ -281,7 +281,7 @@ step names its strongest sources; §13 lists what this changes in §2–§11.
   pass^k. Confirmed MIT after the OpenAI acquisition.
 - **Own replay runner** (worktree manager + `WorkerDriver`): skills and
   agents must be evaluated inside the real harness; no vendor tool does this.
-- **git** as the registry, `.factory/skills/ACTIVE` pointer file or registry
+- **git** as the registry, `.forge/skills/ACTIVE` pointer file or registry
   row as the label.
 - **GEPA** (MIT, Python; `gepa-ts` port exists but is unverified): optional
   candidate generator for step prompts; it still goes through steps 7–12.

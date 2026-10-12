@@ -1,19 +1,19 @@
 # CLAUDE
 
-## Project memory (`.factory/memory/`) — use this, not auto-memory
+## Project memory (`.forge/memory/`) — use this, not auto-memory
 
 This repo keeps its own project memory, following `docs/design/memory-system.md`.
 Claude's auto-memory (`~/.claude/projects/.../memory/`) holds only user-level
 working preferences. Everything about *this project* lives here.
 
-**At session start:** read `.factory/memory/MEMORY.md`, then every file in
+**At session start:** read `.forge/memory/MEMORY.md`, then every file in
 `decisions/` with `status: active` and every file in `rejected/`. Treat
 `decisions/` as authoritative constraints. Never propose anything listed in
 `rejected/` without naming the record and saying why it should be reopened.
 
 **Layout**
 ```
-.factory/memory/
+.forge/memory/
   MEMORY.md        index, ≤200 lines, pointers only
   decisions/       d-NNNN  status: active | superseded
   rejected/        r-NNNN  approaches rejected, with reason
