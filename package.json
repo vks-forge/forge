@@ -1,0 +1,28 @@
+{
+  "name": "software-factory",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "typecheck": "tsc -b",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "build": "tsc -b"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "5.0.4",
+    "eslint": "10.12.0",
+    "fast-check": "4.10.2",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.2",
+    "vitest": "5.0.4"
+  }
+}

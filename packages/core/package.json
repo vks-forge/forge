@@ -1,0 +1,21 @@
+{
+  "name": "@forge/core",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "imports": {
+    "#/*": "./src/*",
+    "#tests/*": "./__tests__/*"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  }
+}

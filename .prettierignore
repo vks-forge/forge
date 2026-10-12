@@ -1,0 +1,15 @@
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+research
+graft
+.hyperresearch
+.forge
+.worktrees
+.claude
+docs
+CLAUDE.md
+.mcp.json
+.ignore
+C*UsersvikasAppData*
