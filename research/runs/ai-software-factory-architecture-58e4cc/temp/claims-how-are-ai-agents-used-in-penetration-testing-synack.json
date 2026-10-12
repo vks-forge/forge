@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "Synack deploys a named production agentic AI system, 'Sara,' that plans and executes multi-step penetration-testing tasks (reconnaissance, hypothesis generation, evidence collection) alongside its human Red Team, while human researchers retain responsibility for validating exploitability and business impact.",
+    "stance": "supports",
+    "stance_target": "production precedent for Director/Worker-style agent-plus-human-checkpoint architecture in a security-testing software factory",
+    "evidence_type": "empirical",
+    "scope_conditions": "Synack's commercial penetration testing platform",
+    "quoted_support": "Synack applies this model through Sara, an agentic AI system that works alongside the Synack Red Team to plan and execute testing tasks, generate hypotheses, and collect evidence, while human researchers validate exploitability and assess real-world impact.",
+    "numbers": [],
+    "entities": ["Synack", "Sara", "Synack Red Team"],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "how-are-ai-agents-used-in-penetration-testing-synack"
+  },
+  {
+    "claim": "Multi-agent penetration testing systems are structured using one of two topologies: horizontal/parallel (specialized agents operating side-by-side under central orchestration for simultaneous large-attack-surface coverage) or vertical/hierarchical (routine data collection at lower levels, escalation and consequential reasoning at higher levels for controlled accountability).",
+    "stance": "supports",
+    "stance_target": "multi-agent topology design options for the software-factory architecture",
+    "evidence_type": "theoretical",
+    "scope_conditions": "agentic penetration testing systems generally",
+    "quoted_support": "Horizontal (parallel): Specialized agents operate side by side on narrow tasks, coordinated through a central orchestration layer... Vertical (hierarchical): Routine data collection happens at lower levels, while higher levels handle more consequential reasoning and escalation.",
+    "numbers": [],
+    "entities": ["OWASP Top 10 for Agentic Applications"],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "how-are-ai-agents-used-in-penetration-testing-synack"
+  },
+  {
+    "claim": "Governance of autonomous security-testing agents requires: a documented authorized scope, mandatory human sign-off on high-risk/irreversible actions, logging of every agent decision and tool call for post-engagement audit, and periodic review of agent output against human-validated findings to catch model/behavior drift.",
+    "stance": "supports",
+    "stance_target": "blast-radius control and audit-trail requirements for the Zero-Hallucination & Quality Control pillar",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "agentic security testing programs, referencing NIST AI RMF",
+    "quoted_support": "Define and document the scope an agent is authorized to act within. Require human sign-off on any high-risk or irreversible action. Log agent decisions and tool use for post-engagement review. Periodically review agent output against human-validated findings to catch drift.",
+    "numbers": [],
+    "entities": ["NIST AI Risk Management Framework"],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "how-are-ai-agents-used-in-penetration-testing-synack"
+  },
+  {
+    "claim": "Without clearly defined scope, machine-readable policy constraints, and an audit trail, a multi-agent system loses the traceability that a penetration test (or any audit-dependent deliverable) depends on.",
+    "stance": "supports",
+    "stance_target": "traceability/audit-trail is a structural requirement, not optional add-on, for multi-agent systems operating with real-world consequences",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "multi-agent penetration testing systems",
+    "quoted_support": "Both topologies depend on clear boundaries: a defined scope, machine-readable policies that constrain what an agent can act on, and an audit trail that records what each agent did and why. Without those controls, a multi-agent system can lose the traceability that a penetration test report depends on.",
+    "numbers": [],
+    "entities": [],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "how-are-ai-agents-used-in-penetration-testing-synack"
+  }
+]

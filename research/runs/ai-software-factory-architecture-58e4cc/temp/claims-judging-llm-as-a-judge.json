@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "Strong LLM judges like GPT-4 achieve over 80% agreement with both controlled and crowdsourced human preferences on open-ended chat assistant evaluation, matching the same level of agreement found between two human annotators.",
+    "stance": "supports",
+    "stance_target": "pillar 1 & 2: LLM-as-judge is a scalable, reliable rigid-eval mechanism for agent output quality control",
+    "evidence_type": "empirical",
+    "scope_conditions": "MT-Bench (multi-turn question set) and Chatbot Arena (crowdsourced battle platform), NeurIPS 2023 Datasets & Benchmarks track",
+    "quoted_support": "Our results reveal that strong LLM judges like GPT-4 can match both controlled and crowdsourced human preferences well, achieving over 80% agreement, the same level of agreement between humans.",
+    "numbers": ["over 80% agreement"],
+    "entities": ["GPT-4", "UC Berkeley", "MT-Bench", "Chatbot Arena"],
+    "time_period": "2023 (foundational), cited through 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "judging-llm-as-a-judge"
+  },
+  {
+    "claim": "LLM-as-a-judge exhibits three named systematic biases/limitations: position bias (favoring the first-presented answer in pairwise comparison), verbosity bias (favoring longer responses regardless of quality), and self-enhancement bias (a model favoring its own family's outputs), plus limited reasoning ability as a general constraint.",
+    "stance": "refutes",
+    "stance_target": "assumption that LLM-as-judge scoring is unbiased and quality-calibrated out of the box",
+    "evidence_type": "empirical",
+    "scope_conditions": "original foundational study of LLM-judge limitations",
+    "quoted_support": "We examine the usage and limitations of LLM-as-a-judge, including position, verbosity, and self-enhancement biases, as well as limited reasoning ability, and propose solutions to mitigate some of them.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2023",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "judging-llm-as-a-judge"
+  },
+  {
+    "claim": "Traditional multiple-choice benchmarks (MMLU, HELM) cannot effectively distinguish between RLHF-aligned chat models and their unaligned base models, even though human users strongly prefer the aligned versions — motivating open-ended, preference-based evaluation like MT-Bench/Chatbot Arena as a complement, not a replacement, for traditional benchmarks.",
+    "stance": "refutes",
+    "stance_target": "sufficiency of traditional multiple-choice benchmarks for evaluating instruction-tuned/agentic LLM quality",
+    "evidence_type": "empirical",
+    "scope_conditions": "comparison of aligned vs base LLaMA/Vicuna variants",
+    "quoted_support": "the heightened user preference does not always correspond to improved scores on traditional LLM benchmarks – benchmarks like MMLU and HELM cannot effectively tell the difference between these aligned models and the base models.",
+    "numbers": [],
+    "entities": ["MMLU", "HELM", "LLaMA", "Vicuna"],
+    "time_period": "2023",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "judging-llm-as-a-judge"
+  },
+  {
+    "claim": "MT-Bench and Chatbot Arena released 3,000 expert votes and 30,000 human-preference conversations publicly, enabling reproducible verification of LLM-judge/human agreement rates rather than relying on unverifiable vendor-internal data.",
+    "stance": "supports",
+    "stance_target": "pillar 1: reproducibility standard for rigid-eval benchmark claims, contrasted with vendor-internal unverifiable figures found elsewhere in this batch",
+    "evidence_type": "empirical",
+    "scope_conditions": "public benchmark release",
+    "quoted_support": "The MT-bench questions, 3K expert votes, and 30K conversations with human preferences are publicly available at https://github.com/lm-sys/FastChat/tree/main/fastchat/llm_judge.",
+    "numbers": ["3,000 expert votes", "30,000 conversations"],
+    "entities": ["MT-Bench", "Chatbot Arena", "FastChat"],
+    "time_period": "2023",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "judging-llm-as-a-judge"
+  }
+]

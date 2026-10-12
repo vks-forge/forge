@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Anthropic draws an architectural distinction between workflows (LLMs and tools orchestrated through predefined code paths, offering predictability) and agents (LLMs dynamically direct their own process and tool usage, offering flexibility at higher cost/latency and risk of compounding errors).",
+    "stance": "neutral",
+    "stance_target": "foundational taxonomy for choosing between workflow orchestration and autonomous agents in a software factory",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Anthropic's work with dozens of customer teams building LLM agents, published Dec 2024",
+    "quoted_support": "Workflows are systems where LLMs and tools are orchestrated through predefined code paths. Agents, on the other hand, are systems where LLMs dynamically direct their own processes and tool usage, maintaining control over how they accomplish tasks.",
+    "numbers": [],
+    "entities": ["Anthropic"],
+    "time_period": "2024-2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "building-effective-ai-agents-anthropic"
+  },
+  {
+    "claim": "Across dozens of customer implementations, Anthropic found the most successful LLM agent deployments used simple, composable patterns rather than complex frameworks, and recommends starting with direct LLM API calls before adopting a framework.",
+    "stance": "supports",
+    "stance_target": "AI software factory architectures should favor composable primitives over heavyweight orchestration frameworks, consistent with Sierra's and the 60-patterns book's parallel conclusions",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic's engagement with customer teams across industries, 2024",
+    "quoted_support": "Consistently, the most successful implementations weren't using complex frameworks or specialized libraries. Instead, they were building with simple, composable patterns.",
+    "numbers": [],
+    "entities": ["Anthropic"],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "building-effective-ai-agents-anthropic"
+  },
+  {
+    "claim": "The orchestrator-workers pattern, where a central LLM dynamically decomposes a task and delegates to worker LLMs, is well-suited to tasks like multi-file coding changes where the needed subtasks cannot be predicted in advance, unlike fixed parallelization.",
+    "stance": "supports",
+    "stance_target": "director/worker multi-agent architecture is the recommended pattern for unpredictable, multi-step coding tasks in an AI software factory",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Anthropic's production agent design patterns, 2024",
+    "quoted_support": "This workflow is well-suited for complex tasks where you can't predict the subtasks needed (in coding, for example, the number of files that need to be changed and the nature of the change in each file likely depend on the task).",
+    "numbers": [],
+    "entities": ["Anthropic"],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "building-effective-ai-agents-anthropic"
+  },
+  {
+    "claim": "Anthropic recommends investing as much engineering effort in the agent-computer interface (ACI, i.e. tool design/documentation) as in human-computer interface design, citing that while building their own SWE-bench agent they found more time was spent optimizing tools than the overall prompt, and that changing a file-edit tool to require absolute filepaths (instead of relative) eliminated a recurring class of agent mistakes.",
+    "stance": "supports",
+    "stance_target": "tool/interface design discipline is a load-bearing, underrated lever for reducing agent error rates in production coding agents",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic's internal SWE-bench coding agent development, 2024",
+    "quoted_support": "While building our agent for SWE-bench, we actually spent more time optimizing our tools than the overall prompt. For example, we found that the model would make mistakes with tools using relative filepaths after the agent had moved out of the root directory. To fix this, we changed the tool to always require absolute filepaths — and we found that the model used this method flawlessly.",
+    "numbers": [],
+    "entities": ["Anthropic", "SWE-bench"],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "building-effective-ai-agents-anthropic"
+  },
+  {
+    "claim": "Agents should only be used for open-ended problems where the number of steps can't be predicted and a fixed path can't be hardcoded; their autonomy entails higher cost and the potential for compounding errors, so extensive sandbox testing and guardrails are recommended before granting autonomy at scale.",
+    "stance": "supports",
+    "stance_target": "autonomous agents require explicit scoping criteria (open-endedness, acceptable cost/error-compounding risk) and sandboxed testing before production deployment",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Anthropic's agent design guidance, 2024",
+    "quoted_support": "The autonomous nature of agents means higher costs, and the potential for compounding errors. We recommend extensive testing in sandboxed environments, along with the appropriate guardrails.",
+    "numbers": [],
+    "entities": ["Anthropic"],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "building-effective-ai-agents-anthropic"
+  }
+]

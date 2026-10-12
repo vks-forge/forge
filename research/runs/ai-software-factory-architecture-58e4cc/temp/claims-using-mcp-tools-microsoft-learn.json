@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "Microsoft Agent Framework supports three MCP transport types for local/remote tool integration: MCPStdioTool (local process stdio), MCPStreamableHTTPTool (HTTP/SSE), and MCPWebsocketTool (WebSocket).",
+    "stance": "neutral",
+    "stance_target": "architecture for agent-tool integration via MCP",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Microsoft Agent Framework (.NET/Python/Go), as of 2026-09-23",
+    "quoted_support": "The Agent Framework supports three types of MCP connections: MCPStdioTool - Local MCP Servers ... MCPStreamableHTTPTool - HTTP/SSE MCP Servers ... MCPWebsocketTool - WebSocket MCP Servers",
+    "numbers": [],
+    "entities": ["Microsoft Agent Framework", "Model Context Protocol", "MCPStdioTool", "MCPStreamableHTTPTool", "MCPWebsocketTool"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "using-mcp-tools-microsoft-learn"
+  },
+  {
+    "claim": "Each MCP transport in Microsoft Agent Framework caps retained Host-channel payloads at 1 MiB by default, with oversized payloads omitted from the Host channel while the parsed result still reaches the model.",
+    "stance": "neutral",
+    "stance_target": "context isolation / payload retention controls for agent tool outputs",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Microsoft Agent Framework, host transports like AG-UI",
+    "quoted_support": "Each MCP transport limits a retained Host payload to 1 MiB by default. Oversized payloads are omitted from the Host channel, while the parsed result still reaches the model.",
+    "numbers": ["1 MiB"],
+    "entities": ["Microsoft Agent Framework", "AG-UI", "max_host_payload_size_bytes"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "using-mcp-tools-microsoft-learn"
+  },
+  {
+    "claim": "Server-initiated MCP sampling and sampling_callback are deprecated as of MCP spec version 2026-07-28 and will be removed no later than 2027-07-28.",
+    "stance": "neutral",
+    "stance_target": "MCP protocol evolution / deprecation timeline",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Model Context Protocol specification",
+    "quoted_support": "Server-initiated MCP sampling and sampling_callback are deprecated as of MCP specification version 2026-07-28 and are removed no later than 2027-07-28. Don't build new integrations on this feature.",
+    "numbers": ["2026-07-28", "2027-07-28"],
+    "entities": ["Model Context Protocol", "sampling_callback"],
+    "time_period": "2026-2027",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "using-mcp-tools-microsoft-learn"
+  },
+  {
+    "claim": "Microsoft explicitly disclaims responsibility for third-party MCP servers and recommends relying on servers hosted by trusted providers rather than proxies, logging all data shared for auditing.",
+    "stance": "supports",
+    "stance_target": "security/trust boundary considerations for agent tool ecosystems",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Microsoft Agent Framework guidance",
+    "quoted_support": "Microsoft hasn't tested or verified these servers. Microsoft has no responsibility to you or others in relation to your use of any remote MCP servers. We recommend that you ... rely on servers hosted by trusted service providers themselves rather than proxies.",
+    "numbers": [],
+    "entities": ["Microsoft", "Model Context Protocol"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "using-mcp-tools-microsoft-learn"
+  }
+]

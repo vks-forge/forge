@@ -1,0 +1,25 @@
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+
+# factory runtime data: runs, per-run settings, secrets, sqlite
+.factory/data/
+.factory/memory/*/.index/
+
+# per-ticket worktrees live inside the repo folder (d-0039)
+.worktrees/
+
+# hyperresearch: raw fetched pages and local db are not source
+.hyperresearch/
+research/raw/
+research/temp/
+research/index/
+
+# toolchain
+node_modules/
+dist/
+coverage/
+*.tmp
+*.log
+
+# stray temp file written at repo root by a tool (name has a non-ASCII colon)
+/C*UsersvikasAppData*

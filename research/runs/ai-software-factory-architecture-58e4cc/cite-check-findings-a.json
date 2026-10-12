@@ -1,0 +1,47 @@
+[
+  {
+    "verdict": "unsupported",
+    "severity": "critical",
+    "sentence": "Findings below confidence 75 or without an evidence artifact go unreported, and two critics each try to *refute* the other rather than \"loop-until-both-agree (models converge by going silent, not by being right)\" [[adversarial-code-review-cross-model-ai-assessment-get-claude-skills]].",
+    "cited_note_id": "adversarial-code-review-cross-model-ai-assessment-get-claude-skills",
+    "correct_note_id": null,
+    "evidence": "The note confirms the refute/loop-until-both-agree quote and 'confidence levels' are reported, but never states a numeric threshold of 75, nor any requirement that findings be accompanied by an 'evidence artifact' to avoid going unreported -- that specific gating mechanism does not appear anywhere in the body.",
+    "suggested_fix": "Soften claim to drop the specific '75' confidence threshold and 'evidence artifact' requirement, or cite the actual source (if any) that specifies this mechanism; keep only the quoted loop-until-both-agree clause attributed to this note."
+  },
+  {
+    "verdict": "partially-supported",
+    "severity": "critical",
+    "sentence": "Input richness matters too: agents given only a text description reproduced 3.5% of CyberGym vulnerabilities, while stack traces \"greatly\" improved success [[cybergym-evaluating-ai-agents-real-world-cybersecurity-capabilities-at-scale]].",
+    "cited_note_id": "cybergym-evaluating-ai-agents-real-world-cybersecurity-capabilities-at-scale",
+    "correct_note_id": "cybergym-evaluating-ai-agents-real-world-cybersecurity-capabilities-at-scale",
+    "evidence": "The note states the opposite condition: 'For level 0, only 3.5% of instances can be reproduced WITHOUT access to the text description of the target vulnerability' -- 3.5% is the success rate when the text description is ABSENT (level 0, below the primary level-1 task), not the rate when agents are given 'only a text description.'",
+    "suggested_fix": "Correct the sentence to state that 3.5% is the reproduction rate with no vulnerability description at all (level 0), and that providing the text description (level 1) plus richer inputs like stack traces (level 2) and patches (level 3) progressively raises success."
+  },
+  {
+    "verdict": "partially-supported",
+    "severity": "major",
+    "sentence": "And the frameworks object to missing *attribution*, not to cadence, so logging and audit trails could satisfy them without live human gating each cycle; APTS Tier 1 is already designed for low-friction, non-production operation [[owasp-apts-autonomous-penetration-testing-standard-owasp-foundation]].",
+    "cited_note_id": "owasp-apts-autonomous-penetration-testing-standard-owasp-foundation",
+    "correct_note_id": null,
+    "evidence": "The fetched OWASP APTS page lists domain/requirement counts and tier sizes (Tier 1 = 72 requirements, described only as the 'minimum bar for responsible deployment') but contains no statement that Tier 1 is designed for 'low-friction' or 'non-production' operation; that characterization is not present in the note body.",
+    "suggested_fix": "Soften the claim to what the source supports (Tier 1 is the lowest/foundation compliance tier with 72 requirements) and drop the unsupported 'low-friction, non-production operation' characterization, or find a source that states it explicitly."
+  },
+  {
+    "verdict": "wrong-source",
+    "severity": "major",
+    "sentence": "- **Isolate by sub-agent.** Sub-agents spend \"tens of thousands of tokens or more\" exploring and return compact summaries, writing artifacts to the filesystem rather than relaying them through the coordinator in a \"game of telephone\" [[how-we-built-our-multi-agent-research-system-anthropic]].",
+    "cited_note_id": "how-we-built-our-multi-agent-research-system-anthropic",
+    "correct_note_id": "effective-context-engineering-for-ai-agents-anthropic",
+    "evidence": "The 'game of telephone' quote is confirmed verbatim in how-we-built-our-multi-agent-research-system-anthropic, but the quoted phrase 'tens of thousands of tokens or more' does not appear anywhere in that note -- it appears instead in effective-context-engineering-for-ai-agents-anthropic ('Each subagent might explore extensively, using tens of thousands of tokens or more...').",
+    "suggested_fix": "Add a second citation to effective-context-engineering-for-ai-agents-anthropic for the 'tens of thousands of tokens or more' quote, keeping how-we-built-our-multi-agent-research-system-anthropic for the 'game of telephone' quote."
+  },
+  {
+    "verdict": "partially-supported",
+    "severity": "major",
+    "sentence": "The *skeptical* objection says the OpenAI–Hugging Face incident proves the factory should not be built: isolation failed, model values failed as a backstop, and about 7% of agents spoofed tool calls to deceive their own scorer [[brief-independent-investigation-of-agents-behavior-reasoning-and-collaboration-i]].",
+    "cited_note_id": "brief-independent-investigation-of-agents-behavior-reasoning-and-collaboration-i",
+    "correct_note_id": "brief-independent-investigation-of-agents-behavior-reasoning-and-collaboration-i",
+    "evidence": "The note states 'Roughly 7% of the transcripts we evaluated were successfully spoofed in some places' -- the 7% figure is a rate over evaluated transcripts, not over agents; the report's sentence changes the denominator from transcripts to agents.",
+    "suggested_fix": "Reword to 'about 7% of evaluated transcripts showed spoofed tool calls' rather than 'about 7% of agents', to match the source's actual unit of measurement."
+  }
+]

@@ -1,0 +1,10 @@
+https://www.reddit.com/r/ClaudeWorkflows/comments/1vojoyu/workflow_adversarial_multillm_code_review_skill/
+https://kinde.com/learn/ai-for-software-engineering/ai-agents/judge-in-the-loop-building-reliable-llm-as-a-judge-pipelines/
+https://arxiv.org/abs/2601.04742
+https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5610993
+https://www.davidpoll.com/2026/02/code-review-is-not-about-catching-bugs/
+https://dev.to/teppana88/how-i-validate-quality-when-ai-agents-write-my-code-481c
+https://deepeval.com/blog/top-5-llm-evaluation-frameworks
+https://medium.com/@adnanmasood/the-unreasonable-ineffectiveness-of-agent-benchmarks-363bc599ec67
+https://www.endorlabs.com/learn/vulnerability-blast-radius-how-to-measure-and-reduce-impact
+https://arxiv.org/html/2601.00205v1

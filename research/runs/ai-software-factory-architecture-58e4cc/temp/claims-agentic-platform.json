@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Google Threat Intelligence's Agentic platform uses two specialized agents divided by task domain — a general Threat Intel (CTI) Agent and a dedicated Malware Analyst Agent for file-based reverse engineering — rather than one monolithic agent.",
+    "stance": "supports",
+    "stance_target": "Triggers/Infrastructure pillar — specialized department agents (akin to Director/Worker or specialized-team pattern) in a production security product",
+    "evidence_type": "empirical",
+    "scope_conditions": "Google Threat Intelligence Enterprise/Enterprise Plus license tier, production system",
+    "quoted_support": "Specialized Agents: the platform uses agents optimized for specific tasks, such as the Threat Intel Agent for general queries and the Malware Analysis Agent for file-based investigations.",
+    "numbers": [],
+    "entities": ["Google Threat Intelligence", "Gemini 3", "Threat Intel Agent", "Malware Analysis Agent"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "agentic-platform"
+  },
+  {
+    "claim": "The platform explicitly surfaces raw tool-call outputs to the user as a deliberate hallucination-detection mechanism, described as helping the user and the system 'generate new improved prompts specifically attempting to prevent further hallucinations.'",
+    "stance": "supports",
+    "stance_target": "Zero-Hallucination & Quality Control pillar — exposing intermediate tool-call evidence (not just final answer) is a concrete production anti-hallucination design pattern",
+    "evidence_type": "empirical",
+    "scope_conditions": "production security chat platform",
+    "quoted_support": "This information for helping detecting hallucinations to consequently generate new improved prompts specifically attempting to prevent further hallucinations.",
+    "numbers": [],
+    "entities": ["Google Threat Intelligence"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "agentic-platform"
+  },
+  {
+    "claim": "Even with RAG grounding and inline citations, the vendor explicitly warns that generative AI 'may sometimes produce inaccurate information' and tells users to treat responses as a starting point, not a final verified answer.",
+    "stance": "refutes",
+    "stance_target": "Zero-Hallucination & Quality Control pillar — vendors acknowledge that RAG + citations does not achieve true zero-hallucination, undermining absolute claims",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "production disclaimer, Google Threat Intelligence",
+    "quoted_support": "While powerful, the generative AI may sometimes produce inaccurate information. Always use the provided responses as a starting point for your investigation and double-check critical information.",
+    "numbers": [],
+    "entities": ["Google Threat Intelligence"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "agentic-platform"
+  },
+  {
+    "claim": "The Malware Analyst Agent performs deep reverse engineering across multiple binary formats (PE, ELF, Mach-O, .NET assemblies, AutoIt3-compiled scripts) and deobfuscates scripts (VBA, PowerShell, HTA, JavaScript) to recover C2 servers and encryption keys, as a documented production capability.",
+    "stance": "supports",
+    "stance_target": "Reverse Engineering & Codebase Mastery pillar — concrete named capabilities a production security agent performs on decompiled/obfuscated code",
+    "evidence_type": "empirical",
+    "scope_conditions": "Google Threat Intelligence Malware Analyst Agent, production",
+    "quoted_support": "Script & Macro Deobfuscation: Can analyze and deobfuscate various script formats (VBA, PowerShell, HTA, JavaScript), unrolling stagers and recovering encryption keys or Command and Control (C2) servers within a file.",
+    "numbers": [],
+    "entities": ["PE", "ELF", "Mach-O", ".NET", "AutoIt3", "VBA", "PowerShell", "HTA", "JavaScript"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "agentic-platform"
+  },
+  {
+    "claim": "Responses in the platform cite sources split into two categories — internal GTI database resources and external Web resources — displayed in a dedicated Sources panel, as a verifiability mechanism.",
+    "stance": "supports",
+    "stance_target": "Zero-Hallucination & Quality Control pillar — structured source attribution (internal vs external) as a verifiability design pattern for agent answers",
+    "evidence_type": "empirical",
+    "scope_conditions": "production platform UI design",
+    "quoted_support": "This side panel displays the references used to generate the answer, organized into two sections: GTI (resources from the Google Threat Intelligence database) and Web (external global resources).",
+    "numbers": [],
+    "entities": ["Google Threat Intelligence"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "agentic-platform"
+  }
+]

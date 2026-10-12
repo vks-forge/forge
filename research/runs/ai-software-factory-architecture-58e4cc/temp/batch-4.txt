@@ -1,0 +1,10 @@
+https://sierra.ai/blog/agency-secure-scalable-sandboxes-for-agents
+https://www.jetbrains.com/pages/ai-agents/building/agent-framework-comparison/
+https://shippedbyagents.com/posts/structural-risks-of-autonomous-coding-agents-in-production
+https://teamorouter.com/blogs/claude-subscription-vs-api-which-is-cheaper-2026
+https://www.mindstudio.ai/blog/usage-based-ai-pricing-vs-flat-subscriptions
+https://developers.openai.com/api/docs/pricing
+https://www.freecodecamp.org/news/ai-agent-engineers-guide-60-patterns-for-building-autonomous-systems-book/
+https://www.reddit.com/r/artificial/comments/1v3mxzb/an_ai_broke_out_of_its_sandbox_yesterday_then_it/
+https://skywork.ai/blog/mcp-server/claude-agent-sdk-best-practices-ai-agents-2025
+https://www.openhelm.ai/blog/openai-agents-sdk-vs-langgraph-vs-autogen

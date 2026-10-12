@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "OpenAI's own official documentation explicitly separates API token pricing from subscription usage and directs automation/CI workloads toward API-key billing by design, stating API keys are 'Great for automation in shared environments like CI,' available at every individual and business tier, billed at standard API rates rather than subscription limits.",
+    "stance": "supports",
+    "stance_target": "OpenAI, unlike Anthropic's ambiguous/evolving enforcement, has clear and stable official guidance separating subscription usage from automation/API usage",
+    "evidence_type": "legal",
+    "scope_conditions": "OpenAI ChatGPT/Codex official pricing documentation, as of October 2026",
+    "quoted_support": "API token prices are separate from subscription usage; don't use them to estimate included tasks... API Key: Great for automation in shared environments like CI. Codex in the CLI, SDK, or IDE extension. No cloud-based features (GitHub code review, Slack, etc.). Pay for Codex usage based on API pricing.",
+    "numbers": [],
+    "entities": ["OpenAI", "Codex", "ChatGPT"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "pricing-chatgpt-learn"
+  },
+  {
+    "claim": "OpenAI's documented policy allows users who hit subscription usage limits mid-task to finish that turn ('subject to fair use limits'), and permits all users to continue working past subscription limits by running extra local chats via an API key charged at standard API rates -- an explicit, vendor-sanctioned bridge from subscription to metered billing rather than a hard stop or ban.",
+    "stance": "supports",
+    "stance_target": "OpenAI's enforcement mechanism for exceeding subscription limits is graceful degradation to metered billing, not suspension",
+    "evidence_type": "legal",
+    "scope_conditions": "OpenAI ChatGPT/Codex usage limits, 2026",
+    "quoted_support": "We want you to be able to complete work already in progress. If you reach your usage limits during an active turn, the agent will be able to continue working on that turn, subject to fair use limits... All users may also run extra local chats using an API key, with usage charged at standard API rates.",
+    "numbers": [],
+    "entities": ["OpenAI"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "pricing-chatgpt-learn"
+  },
+  {
+    "claim": "OpenAI's subscription usage allowances vary sharply by model, with GPT-6 Astra limited to 5-45 local messages per five-hour period on the Plus plan while GPT-6 Luna allows 350-3,000 messages in the same window, and Fast/Ultrafast speed modes consume included usage at 2.5x-8x the rate of Standard mode.",
+    "stance": "neutral",
+    "stance_target": "subscription usage caps for agentic/automated workloads are highly model- and mode-dependent rather than a single flat allowance",
+    "evidence_type": "empirical",
+    "scope_conditions": "OpenAI ChatGPT Plus/Standard Business plans, 2026",
+    "quoted_support": "GPT-6 Astra: 5-45 [Plus]... GPT-6 Luna: 350-3,000 [Plus]... Fast: 2.5x [included subscription usage]... GPT-6.1 Sol Ultrafast: 8x.",
+    "numbers": ["5-45", "350-3,000", "2.5x", "8x"],
+    "entities": ["OpenAI", "GPT-6 Astra", "GPT-6 Luna"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "pricing-chatgpt-learn"
+  }
+]

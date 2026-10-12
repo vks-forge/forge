@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "OpenAI acquired Promptfoo in March 2026, raising vendor-neutrality concerns for teams using it as an independent red-teaming tool.",
+    "stance": "neutral",
+    "stance_target": "eval-tooling market consolidation and vendor independence risk",
+    "evidence_type": "empirical",
+    "scope_conditions": "March-September 2026",
+    "quoted_support": "OpenAI announced its acquisition of Promptfoo in March 2026. The open-source project continues, but teams with vendor-neutrality requirements are re-evaluating their stacks.",
+    "numbers": [],
+    "entities": ["OpenAI", "Promptfoo"],
+    "time_period": "March 2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "promptfoo-vs-deepeval-llm-testing-framework-comparison-2026-genaiqa"
+  },
+  {
+    "claim": "The standard production pattern for LLM/agent quality control runs Promptfoo as a red-team CI gate (catching prompt injection, jailbreaks, PII leakage) and DeepEval as a separate metric CI gate (catching hallucination, bias, answer-relevance regressions), because the two tools cover different failure classes.",
+    "stance": "supports",
+    "stance_target": "layered eval architecture combining adversarial red-teaming with quality metric gating",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "production GenAI application CI/CD",
+    "quoted_support": "With this topology, Promptfoo owns 'can an attacker break this'; DeepEval owns 'does this meet our quality bar.'",
+    "numbers": [],
+    "entities": ["Promptfoo", "DeepEval"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "promptfoo-vs-deepeval-llm-testing-framework-comparison-2026-genaiqa"
+  },
+  {
+    "claim": "At 10,000 evaluations/day, Promptfoo red-team plus llm-rubric assertions cost roughly $100/day in judge-model tokens versus DeepEval's 4-metric suite at roughly $300/day, because DeepEval's metrics are all LLM-judged while many Promptfoo assertions (contains, equals) require no judge call.",
+    "stance": "supports",
+    "stance_target": "eval framework cost scales with judge-model dependency, not framework choice alone",
+    "evidence_type": "empirical",
+    "scope_conditions": "10,000 evaluations/day, GPT-4o judge pricing, 2026",
+    "quoted_support": "Promptfoo is slightly cheaper in our usage because many of its assertions don't need a judge call (e.g., contains, equals). DeepEval's metrics are all LLM-judged.",
+    "numbers": ["$100/day Promptfoo", "$300/day DeepEval", "10,000 evals/day"],
+    "entities": ["Promptfoo", "DeepEval", "GPT-4o"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "promptfoo-vs-deepeval-llm-testing-framework-comparison-2026-genaiqa"
+  },
+  {
+    "claim": "Both Promptfoo and DeepEval are only approximately 85-92% accurate versus human raters, so 5-10% of flagged cases should be sampled for human review, especially for bias and toxicity judgments.",
+    "stance": "refutes",
+    "stance_target": "fully automated LLM-judge evals can replace human review entirely (zero-hallucination via automation alone)",
+    "evidence_type": "empirical",
+    "scope_conditions": "LLM-as-judge grading accuracy in production use",
+    "quoted_support": "Ignoring human review - both tools are ~85-92% accurate vs human raters. Sample 5-10% of flagged cases for human review, especially for bias and toxicity.",
+    "numbers": ["85-92% accuracy", "5-10% sampling"],
+    "entities": ["Promptfoo", "DeepEval"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "promptfoo-vs-deepeval-llm-testing-framework-comparison-2026-genaiqa"
+  },
+  {
+    "claim": "Promptfoo ships 40+ red-team plugins covering direct and indirect prompt injection, jailbreaks, PII exposure, BOLA, SQL injection via LLM, excessive agency, and system-prompt leakage, with automatic adversarial test-case generation via a secondary LLM against the specific application context.",
+    "stance": "supports",
+    "stance_target": "automated red-teaming coverage breadth as a key quality-control capability for agentic systems",
+    "evidence_type": "empirical",
+    "scope_conditions": "Promptfoo v0.92.x, 2026",
+    "quoted_support": "Promptfoo's red-team plugins also generate test cases automatically using a secondary LLM. You don't hand-write adversarial prompts - the tool generates them against your specific application context.",
+    "numbers": ["40+ plugins"],
+    "entities": ["Promptfoo"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "promptfoo-vs-deepeval-llm-testing-framework-comparison-2026-genaiqa"
+  }
+]

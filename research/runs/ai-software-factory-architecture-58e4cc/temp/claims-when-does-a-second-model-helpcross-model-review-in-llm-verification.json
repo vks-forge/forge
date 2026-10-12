@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "On code artifacts specifically, same-model fresh-context review (CCR) outperforms cross-model review (F1 40.7% vs 37.2%), the opposite of the pattern seen for documents, where cross-model review wins decisively (F1 42.1% vs 24.5%).",
+    "stance": "refutes",
+    "stance_target": "cross-model adversarial review is universally better than same-model review for catching defects",
+    "evidence_type": "empirical",
+    "scope_conditions": "30 artifacts with 150 planted errors; 10 Python functions/classes, 10 technical tutorials, 10 presentation scripts; 900 review sessions; 3 reviewer models from 2 developers",
+    "quoted_support": "For code artifacts, CCR outperforms all XMR conditions; one possible explanation is that the generating model shares an understanding of programming patterns and code structure that an external model lacks. For documents, the pattern reverses",
+    "numbers": ["F1 40.7% (CCR, code)", "F1 37.2% (XMR, code)", "F1 42.1% (XMR, documents)", "F1 24.5% (CCR, documents)"],
+    "entities": ["Claude Opus 4.6", "CCR", "XMR"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "medium",
+    "source_note_id": "when-does-a-second-model-helpcross-model-review-in-llm-verification"
+  },
+  {
+    "claim": "A top-tier cross-model reviewer is not significantly different in F1 from same-model fresh-context review overall, so model distinctness alone does not establish a reliable defect-catching advantage.",
+    "stance": "refutes",
+    "stance_target": "a different frontier model inherently catches more code/artifact defects than same-model review",
+    "evidence_type": "statistical",
+    "scope_conditions": "Aggregate across all 30 artifacts and 3 artifact types, not code-specific",
+    "quoted_support": "a top-tier cross-model reviewer is not significantly different in F1 from same-model review in a fresh session (CCR), which does not establish equivalence",
+    "numbers": ["F1 32.1-32.3% (top-tier XMR)", "F1 28.6% (CCR)"],
+    "entities": ["CCR", "XMR"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "medium",
+    "source_note_id": "when-does-a-second-model-helpcross-model-review-in-llm-verification"
+  },
+  {
+    "claim": "A lightweight cross-model reviewer scores at or below the same-model baseline, showing reviewer capability, not model independence per se, drives defect-catching performance.",
+    "stance": "refutes",
+    "stance_target": "swapping in any different model as reviewer improves defect detection",
+    "evidence_type": "empirical",
+    "scope_conditions": "Lightweight-tier cross-model reviewer condition",
+    "quoted_support": "A lightweight cross-model reviewer scores no higher than same-model review.",
+    "numbers": ["F1 24.0-27.0% (lightweight XMR)", "F1 27.1% (same-context self-review baseline)"],
+    "entities": ["XMR"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "medium",
+    "source_note_id": "when-does-a-second-model-helpcross-model-review-in-llm-verification"
+  },
+  {
+    "claim": "Combining one same-model review with one cross-model review catches more planted errors (56.7%) than two same-model reviews (42.7%), a statistically significant gain, but this combination does not significantly beat two cross-model reviews by the top-tier model, so the paper cannot separate 'model independence' from 'reviewer capability' as the causal mechanism.",
+    "stance": "neutral",
+    "stance_target": "mechanism behind combined review coverage gains",
+    "evidence_type": "statistical",
+    "scope_conditions": "Call-matched comparison, 2 review calls, Holm-adjusted significance test",
+    "quoted_support": "one CCR plus one cross-model review matches more planted errors than two CCR reviews (56.7% vs. 42.7%; Holm-adjusted p=.006), but not significantly more than two reviews by the top-tier cross-model reviewer, so model difference and reviewer capability are not separated",
+    "numbers": ["56.7%", "42.7%", "p=.006", "Jaccard overlap 41.2%"],
+    "entities": ["CCR", "XMR"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "medium",
+    "source_note_id": "when-does-a-second-model-helpcross-model-review-in-llm-verification"
+  },
+  {
+    "claim": "Even the best-performing union of review strategies matched only 56.7% of planted errors, and ground truth consisted of planted (not independently annotated) errors scored by an unaudited keyword-based matcher, limiting confidence in absolute F1 figures.",
+    "stance": "neutral",
+    "stance_target": "measurement validity of LLM code/artifact review defect-detection studies",
+    "evidence_type": "empirical",
+    "scope_conditions": "Author-stated methodological limitation",
+    "quoted_support": "even our union approach matches only 56.7% of the planted errors under our automated matcher... The ground truth consists of planted errors written at injection time and was not independently annotated, and the matcher was not audited by hand.",
+    "numbers": ["56.7% recall ceiling", "150 planted errors across 30 artifacts"],
+    "entities": [],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "when-does-a-second-model-helpcross-model-review-in-llm-verification"
+  }
+]

@@ -1,0 +1,1462 @@
+[
+  {
+    "url": "https://www.reddit.com/r/ClaudeWorkflows/comments/1vojoyu/workflow_adversarial_multillm_code_review_skill/",
+    "title": "Adversarial Multi-LLM Code Review Skill (Claude vs. Codex/GPT)",
+    "content": "14 Aug 2026 ... A multi-agent adversarial code review workflow that uses two different LLM families (e.g., Claude and Codex/GPT) to independently review code."
+  },
+  {
+    "url": "https://arxiv.org/html/2606.15074",
+    "title": "TriAdReview: Triangular Adversarial Review Architecture for Multi ...",
+    "content": "13 Jun 2026 ... Adversarial review is effective for \u201cde-fatting\u201d tasks. On architecture design, code generation, and security audit, the triple model achieves a\u00a0..."
+  },
+  {
+    "url": "https://github.com/addyosmani/adverse",
+    "title": "addyosmani/adverse: Multi-agent adversarial code review ... - GitHub",
+    "content": "Synthesis is deterministic Node code, not another LLM call. A fourth model invocation would cost more, add another failure mode, and inherit the same single-\u00a0..."
+  },
+  {
+    "url": "https://www.getclaudeskills.com/skills/adversarial-code-review-basicmachines-co",
+    "title": "Adversarial Code Review - Cross-Model AI Assessment",
+    "content": "Adversarial Code Review is a specialized skill designed for developers who want to enhance their code review process by leveraging the strengths of multiple\u00a0..."
+  },
+  {
+    "url": "https://myers.io/2026/04/15/LLMs-and-the-Adversarial-loop/",
+    "title": "LLMs and the Adversarial Loop - myers.io",
+    "content": "15 Apr 2026 ... LLMs are stochastic. Two calls with the same prompt will emphasise different aspects, notice different patterns, and follow different reasoning."
+  },
+  {
+    "url": "https://vietbui.mintlify.app/concepts/multi-vendor-adversarial-review",
+    "title": "Multi-Vendor Adversarial Review - LLM Wiki",
+    "content": "Using a different AI model (different vendor or different model tier) to review the work produced by the implementing model. Catches single-model blind spots\u2026 \u200b."
+  },
+  {
+    "url": "https://kinde.com/learn/ai-for-software-engineering/ai-agents/judge-in-the-loop-building-reliable-llm-as-a-judge-pipelines/",
+    "title": "Kinde Judge in the Loop: Building Reliable LLM-as-a-Judge Pipelines",
+    "content": "An LLM-as-a-judge pipeline is a system where one Large Language Model (the \u201cjudge\u201d) is used to evaluate the outputs of another LLM (the \u201cperformer\u201d)."
+  },
+  {
+    "url": "https://www.digitalocean.com/resources/articles/llm-as-a-judge",
+    "title": "What Is LLM-as-a-Judge? Definition and Best Practices in 2026",
+    "content": "14 Aug 2026 ... LLM-as-a-judge follows a structured review process. An LLM judge (or LLM evaluator) receives the original prompt, the candidate response, and a\u00a0..."
+  },
+  {
+    "url": "https://www.confident-ai.com/blog/why-llm-as-a-judge-is-the-best-llm-evaluation-method",
+    "title": "LLM-as-a-Judge Simply Explained: The Complete Guide to Run ...",
+    "content": "LLM-as-a-Judge is an LLM evaluation method that uses a large language model to automatically score the outputs of another LLM system against a defined criterion\u00a0..."
+  },
+  {
+    "url": "https://langfuse.com/docs/evaluation/evaluation-methods/llm-as-a-judge",
+    "title": "LLM-as-a-Judge - Langfuse",
+    "content": "Langfuse Academy: Evaluation covers how LLM-as-a-judge fits with manual review and code evaluators. \u00b7 Writing good evaluators explains how to design judge\u00a0..."
+  },
+  {
+    "url": "https://www.comet.com/site/blog/llm-as-a-judge/",
+    "title": "LLM-as-a-Judge: The Ultimate Guide for AI Developers - Comet",
+    "content": "18 Feb 2026 ... LLM-as-a-judge is an evaluation method for assessing the output quality of AI apps. Think of it as a mechanism that lets you know whether\u00a0..."
+  },
+  {
+    "url": "https://galtea.ai/blog/llm-as-a-judge-prompts-templates-rubrics-and-best-practices",
+    "title": "LLM as a Judge prompts: templates, rubrics, and best practices",
+    "content": "18 May 2026 ... If you have not yet built the pipeline the judge sits inside, start with the complete guide and come back. ... Treat it like code: version\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/abs/2601.04742",
+    "title": "[2601.04742] Tool-MAD: A Multi-Agent Debate Framework for Fact ...",
+    "content": "8 Jan 2026 ... Abstract:Large Language Models (LLMs) suffer from hallucinations and factual inaccuracies, especially in complex reasoning and fact verification\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/abs/2507.19090",
+    "title": "Debate-driven Claim Verification with Multiple Large Language ...",
+    "content": "25 Jul 2025 ... Title:Debating Truth: Debate-driven Claim Verification with Multiple Large Language Model Agents ; Cite as: arXiv:2507.19090 [cs.CL] ; (or arXiv:\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/abs/2603.28488",
+    "title": "Courtroom-Style Multi-Agent Debate with Progressive RAG ... - arXiv",
+    "content": "30 Mar 2026 ... Abstract:Large language models (LLMs) remain unreliable for high-stakes claim verification due to hallucinations and shallow reasoning."
+  },
+  {
+    "url": "https://arxiv.org/html/2505.08532v1",
+    "title": "The Truth Becomes Clearer Through Debate! Multi-Agent Systems ...",
+    "content": "13 May 2025 ... Most existing detection methods either employ traditional classification models, which suffer from low interpretability and limited\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2607.26212v1",
+    "title": "Multi-Agent Debate Strategies: Survey, Taxonomy, and Challenges",
+    "content": "28 Jul 2026 ... The adoption of Large Language Models (LLMs) within agentic systems has rapidly evolved from a conceptual research direction into a concrete\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2606.27409v1",
+    "title": "Delayed Verification Destabilizes Multi-Agent LLM Belief - arXiv",
+    "content": "25 Jun 2026 ... Multi-agent large language model (LLM) systems often rely on verifier and critic agents to suppress hallucinations, but verification is\u00a0..."
+  },
+  {
+    "url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5610993",
+    "title": "Auto-Generated AI Code Hallucinations: Detection, Impact, and ...",
+    "content": "30 Oct 2025 ... Through empirical examples and analysis of current research, we demonstrate that hallucination rates in code generation can exceed 30% in\u00a0..."
+  },
+  {
+    "url": "https://www.getmaxim.ai/articles/top-5-tools-to-detect-hallucination-in-2025/",
+    "title": "Top 5 tools to detect hallucination in 2025 - Maxim AI",
+    "content": "4 Dec 2025 ... Key Features \u00b7 Real-Time Detection: Galileo offers immediate identification of hallucinations in AI-generated content as responses are produced."
+  },
+  {
+    "url": "https://dl.acm.org/doi/full/10.1145/3793655.3793725",
+    "title": "Detecting and Correcting Hallucinations in LLM-Generated Code via ...",
+    "content": "21 Jul 2026 ... This non-executing approach uses deterministic rules to find and fix both API and identifier-level conflicts. On a manually-curated dataset of\u00a0..."
+  },
+  {
+    "url": "https://www.evidentlyai.com/blog/ai-hallucinations-examples",
+    "title": "8 AI hallucinations examples - Evidently AI",
+    "content": "8 Oct 2025 ... AI hallucinations occur when a large language model \u2013 like GPT, Claude, or Gemini \u2013 confidently produces false, misleading, or fabricated\u00a0..."
+  },
+  {
+    "url": "https://www.trantorinc.com/insights/ai-hallucination",
+    "title": "AI Hallucination \u00b7 What It Is, Why It Happens, and Real Examples ...",
+    "content": "20 Jul 2026 ... According to IBM's 2025 AI in Enterprise survey, 76 percent of enterprise AI deployments experienced hallucination issues in production. Gartner\u00a0..."
+  },
+  {
+    "url": "https://link.springer.com/article/10.1007/s10579-026-09938-4",
+    "title": "Hallucinations in generative artificial intelligence and large ...",
+    "content": "7 Aug 2026 ... Generative Artificial Intelligence (GAI) and Large Language Models (LLMs) have demonstrated significant capabilities in generating\u00a0..."
+  },
+  {
+    "url": "https://www.davidpoll.com/2026/02/code-review-is-not-about-catching-bugs/",
+    "title": "Code Review Is Not About Catching Bugs - David Poll",
+    "content": "23 Feb 2026 ... And sure, reviewers do catch bugs. But I think that framing dramatically overstates the bug-catching role and understates everything else code\u00a0..."
+  },
+  {
+    "url": "https://thenewstack.io/code-review-catches-maintainability-bugs/",
+    "title": "The code review bug hunt is dead. Here's what developers get wrong.",
+    "content": "6 Jul 2026 ... Engineers and experts say code review rarely catches bugs \u2014 its real job is flagging code that's painful to maintain later."
+  },
+  {
+    "url": "https://www.oreilly.com/radar/ai-code-review-only-catches-half-of-your-bugs/",
+    "title": "AI Code Review Only Catches Half of Your Bugs - O'Reilly",
+    "content": "30 Apr 2026 ... There's an entire class of bugs that you simply can't find with structural analysis\u2014no linter, no static analyzer, no AI code reviewer will\u00a0..."
+  },
+  {
+    "url": "https://newsletter.pragmaticengineer.com/p/what-is-happening-with-code-reviews",
+    "title": "What is happening with code reviews? - The Pragmatic Engineer",
+    "content": "8 Sept 2026 ... Multi-agent code review. Build a custom solution which triggers several models/agents to review the code and suggest fixes. Agents update\u00a0..."
+  },
+  {
+    "url": "https://www.linkedin.com/posts/github_different-ai-models-find-different-bugs-activity-7440151385750315008-yvvp",
+    "title": "Multi-Agent Code Review with Copilot CLI | GitHub posted on the topic",
+    "content": "18 Mar 2026 ... Different AI models find different bugs. So why not use all of them? Try this out in Copilot CLI: 1. Run /review 2. Ask it to use multiple\u00a0..."
+  },
+  {
+    "url": "https://www.mindstudio.ai/blog/automated-code-review-multiple-ai-agents",
+    "title": "How to Set Up Automated Code Review with Multiple AI Agents",
+    "content": "24 Apr 2026 ... Never validate your own code in the same context window. Use separate Claude and Codex sessions for adversarial PR review that catches what\u00a0..."
+  },
+  {
+    "url": "https://dev.to/teppana88/how-i-validate-quality-when-ai-agents-write-my-code-481c",
+    "title": "How I Validate Quality When AI Agents Write My Code",
+    "content": "16 Mar 2026 ... Bake the gates into the framework so they execute by default. When skipping a gate is harder than following it, quality becomes a property of\u00a0..."
+  },
+  {
+    "url": "https://www.confident-ai.com/blog/definitive-ai-agent-evaluation-guide",
+    "title": "AI Agent Evaluation: Metrics, Traces, Human Review, and Workflows",
+    "content": "13 Apr 2026 ... A practical guide to evaluating AI agents with LLM metrics and tracing\u2014plus when human review matters, how it calibrates judges,\u00a0..."
+  },
+  {
+    "url": "https://axiomstudio.ai/blog/quality-gates-for-ai-generated-code-automated-review-and-compliance",
+    "title": "AI Code Quality Gates: An Automated Review Pipeline | Axiom Studio",
+    "content": "3 May 2026 ... AI-generated code slips past human review. Build a four-gate pipeline \u2014 lint, security, coverage, compliance \u2014 that fails fast before merge."
+  },
+  {
+    "url": "https://www.openhands.dev/blog/best-automated-code-review-tools",
+    "title": "The Best Automated Code Review Tools for Engineering Teams",
+    "content": "23 Sept 2026 ... Some use deterministic static analysis to catch known patterns. Others use AI to reason about the diff and surrounding code. Agent platforms can\u00a0..."
+  },
+  {
+    "url": "https://blog.codacy.com/code-review-is-dead-why-ai-generated-code-needs-verification-not-human-approval",
+    "title": "Code Review Is Dead: AI-Generated Code Needs Verification, Not ...",
+    "content": "25 Jun 2026 ... The purpose is to identify patterns that your automated gates might have missed. When a human reviewer catches an edge-case bug or an insecure\u00a0..."
+  },
+  {
+    "url": "https://aiagentskit.com/blog/ai-agents-for-code-review/",
+    "title": "AI Agents for Code Review: Architecture & Production Guide",
+    "content": "6 days ago ... Deploying autonomous ai agents for code review bridges this operational gap by pairing Abstract Syntax Tree (AST) symbol graphs with parallel\u00a0..."
+  },
+  {
+    "url": "https://deepeval.com/blog/top-5-llm-evaluation-frameworks",
+    "title": "Top 5 LLM Evaluation Frameworks in 2026, Compared - DeepEval",
+    "content": "Top 5 LLM Evaluation Frameworks in 2026, Compared \u00b7 DeepEval is for you if... You want one framework for AI agents, RAG, and multi-turn applications \u00b7 Promptfoo\u00a0..."
+  },
+  {
+    "url": "https://machinelearningmastery.com/llm-evaluation-frameworks-compared-how-to-actually-measure-what-your-model-does/",
+    "title": "LLM Evaluation Frameworks Compared: How to Actually Measure ...",
+    "content": "14 Jul 2026 ... ... DeepEval handling everything else inside the same CI pipeline. Category, RAGAS, DeepEval, Promptfoo. Best for, RAG-specific scoring, CI/CD\u00a0..."
+  },
+  {
+    "url": "https://genai.qa/blog/promptfoo-vs-deepeval/",
+    "title": "Promptfoo vs DeepEval: LLM Testing Framework Comparison (2026)",
+    "content": "24 Apr 2026 ... ... Python pytest testing, metric coverage, CI/CD integration, cost, and decision matrix for picking the right LLM evaluation framework in 2026."
+  },
+  {
+    "url": "https://medium.com/@srinib100/llm-evaluation-frameworks-deepeval-promptfoo-and-giskard-ad4e1547ec1c",
+    "title": "LLM Evaluation Frameworks: DeepEval, Promptfoo, and Giskard",
+    "content": "5 Apr 2026 ... Open-source LLM evaluation framework designed as \u201cPytest for LLMs.\u201d Python-first, 60+ metrics, integrates into standard CI pipelines. DeepEval's\u00a0..."
+  },
+  {
+    "url": "https://deepeval.com/",
+    "title": "DeepEval - The LLM Evaluation Framework",
+    "content": "Any model. Any framework. Any pipeline. ... Plug DeepEval into the tools you already ship with \u2014 evaluate across any LLM, any agent framework, and any CI/CD\u00a0..."
+  },
+  {
+    "url": "https://deepeval.com/docs/evaluation-prompts",
+    "title": "Prompts | DeepEval - The LLM Evaluation Framework",
+    "content": "You can evaluate prompts end-to-end by running the evaluate function in Python or assert_test in CI/CD pipelines. In Python In CI/CD. To evaluate a prompt\u00a0..."
+  },
+  {
+    "url": "https://medium.com/@adnanmasood/the-unreasonable-ineffectiveness-of-agent-benchmarks-363bc599ec67",
+    "title": "The Unreasonable Ineffectiveness of Agent Benchmarks - Medium",
+    "content": "20 May 2026 ... Why agentic AI benchmarks fail in production: a review of 15 evaluations shows none score safety or cost. A 5-dimension deployment-readiness\u00a0..."
+  },
+  {
+    "url": "https://snorkel.ai/blog/closing-the-evaluation-gap-agentic-ai-alex-ratner/",
+    "title": "Agentic AI Evaluation Gap | Alex Ratner - Snorkel AI",
+    "content": "23 Jun 2026 ... Today, model capabilities are advancing faster than we can build the data sets and benchmarks to empirically evaluate them. You see this in\u00a0..."
+  },
+  {
+    "url": "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents",
+    "title": "Demystifying evals for AI agents - Anthropic",
+    "content": "9 Jan 2026 ... The capabilities that make agents useful also make them difficult to evaluate. The strategies that work across deployments combine techniques to\u00a0..."
+  },
+  {
+    "url": "https://link.springer.com/article/10.1007/s10462-026-11571-0",
+    "title": "a comprehensive review of agentic AI evaluation - Springer Nature",
+    "content": "24 Apr 2026 ... Our analysis reveals that evaluation methodology not model capability constitutes the primary bottleneck limiting reliable agent deployment. We\u00a0..."
+  },
+  {
+    "url": "https://cameronrwolfe.substack.com/p/agent-evals",
+    "title": "Agent Evaluation: A Detailed Guide - Deep (Learning) Focus",
+    "content": "18 May 2026 ... Whereas we previously evaluated LLMs using benchmarks composed of static questions or short conversations, we now have agent systems that\u00a0..."
+  },
+  {
+    "url": "https://redis.io/blog/ai-agent-benchmarks/",
+    "title": "AI Agent Benchmarks: What They Measure & Where They Fall Short",
+    "content": "23 Mar 2026 ... How to benchmark your own AI agents & agentic systems \u00b7 Start with trace-based observability \u00b7 Convert traces to evals \u00b7 Implement four-layer\u00a0..."
+  },
+  {
+    "url": "https://www.endorlabs.com/learn/vulnerability-blast-radius-how-to-measure-and-reduce-impact",
+    "title": "Vulnerability Blast Radius: How to Measure and Reduce Impact | Blog",
+    "content": "6 May 2026 ... Endor Labs measures it with reachability analysis across your code and its dependencies. The term has gotten extra attention lately thanks to\u00a0..."
+  },
+  {
+    "url": "https://www.reddit.com/r/ExperiencedDevs/comments/1eljry6/programmatically_figuring_out_impactblast_radius/",
+    "title": "Programmatically figuring out impact/blast radius of code changes",
+    "content": "6 Aug 2024 ... What are the limits of static analysis anyway? Or is it a developing system that takes time? In my experience static analysis has a lot of bugs\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2608.07440v1",
+    "title": "Blast Radius - arXiv",
+    "content": "7 Aug 2026 ... The code channel is a probabilistic descendant of change-impact analysis [19, 20] from software maintenance, which estimates the set of\u00a0..."
+  },
+  {
+    "url": "https://neelshah18.com/blog/codeflow-browser-codebase-architecture-blast-radius/",
+    "title": "Codeflow: Map Codebase Architecture and\u2026 - Neel Shah",
+    "content": "20 Jul 2026 ... #Codeflow#Code Architecture#Dependency Graph#Blast Radius#Static Analysis#GitHub#Code Review#Developer Tools#D3.js#Open Source."
+  },
+  {
+    "url": "https://pharaoh.so/blog/knowledge-graph-for-code-explained/",
+    "title": "Knowledge Graph for Code Explained: A Practical Guide",
+    "content": "7 Apr 2026 ... Blast radius beats file reading when you're changing shared code ... blast radius analysis; dead code detection; reachability checking\u00a0..."
+  },
+  {
+    "url": "https://recursive.pm/blast-radius",
+    "title": "Blast Radius Analysis for Code Changes - Recursive",
+    "content": "Blast radius is the total impact of a change \u2014 everything that breaks, degrades, or is affected when you modify a piece of code, remove a feature, or change\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2601.00205v1",
+    "title": "Understanding Security Risks of AI Agents' Dependency Updates",
+    "content": "1 Jan 2026 ... Unlike traditional development tools, these agents generate not only the required code, but also which dependencies to add, remove, or update\u00a0..."
+  },
+  {
+    "url": "https://www.nature.com/articles/s41598-025-34350-3",
+    "title": "A generative AI cybersecurity risks mitigation model for code ...",
+    "content": "14 Jan 2026 ... The proposed framework integrates the predictive capability of ANN and structured analysis of ISM for the identification, evaluation, and\u00a0..."
+  },
+  {
+    "url": "https://www.jamasoftware.com/blog/ai-generated-code-risks/",
+    "title": "AI-Generated Code Risks in Safety-Critical Software",
+    "content": "31 Aug 2026 ... AI-generated code introduces new security and compliance considerations as engineering teams accelerate software development. Vulnerabilities in\u00a0..."
+  },
+  {
+    "url": "https://www.endorlabs.com/learn/the-most-common-security-vulnerabilities-in-ai-generated-code",
+    "title": "The Most Common Security Vulnerabilities in AI-Generated Code",
+    "content": "12 Aug 2025 ... Recent academic studies show that over 40% of AI-generated code solutions contain security flaws, even with the latest generation of large\u00a0..."
+  },
+  {
+    "url": "https://cset.georgetown.edu/publication/cybersecurity-risks-of-ai-generated-code/",
+    "title": "Cybersecurity Risks of AI-Generated Code | Center for Security and ...",
+    "content": "Existing research has shown that, under experimental conditions, AI code generation models frequently output insecure code. However, the process of evaluating\u00a0..."
+  },
+  {
+    "url": "https://www.herodevs.com/blog-posts/the-dependency-boom-how-ai-is-inflating-open-source-use",
+    "title": "The Dependency Boom: How AI Is Inflating Open Source Use",
+    "content": "4 Nov 2025 ... AI-generated code is driving a dependency boom. Learn how unchecked imports, phantom packages, and outdated OSS create hidden security and\u00a0..."
+  },
+  {
+    "url": "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview",
+    "title": "Agent Skills - Claude Platform Docs",
+    "content": "Agent Skills are modular capabilities that extend Claude's functionality. Each Skill packages instructions, metadata, and optional resources (scripts,\u00a0..."
+  },
+  {
+    "url": "https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills",
+    "title": "Equipping agents for the real world with Agent Skills - Anthropic",
+    "content": "16 Oct 2025 ... Skills extend Claude's capabilities by packaging your expertise into composable resources for Claude, transforming general-purpose agents into\u00a0..."
+  },
+  {
+    "url": "https://www.ability.ai/blog/claude-skills-agent-workflows",
+    "title": "Claude skills guide: building scalable agent workflows - Ability.ai",
+    "content": "Claude agent skills are modular, reusable instruction sets that encode business logic \u2014 SOPs, reference files, and guardrails \u2014 into reliable AI workflows that\u00a0..."
+  },
+  {
+    "url": "https://www.gend.co/blog/claude-skills-claude-md-guide",
+    "title": "Claude Skills and Claude MD: Complete Guide to Anthropic's New ...",
+    "content": "5 Dec 2025 ... Agent Skills are modular capabilities that Claude can invoke automatically when your request matches a Skill's description. Each Skill\u00a0..."
+  },
+  {
+    "url": "https://www.linkedin.com/posts/bijit-ghosh-48281a78_claude-has-introduced-a-new-capability-called-activity-7385034661791690752-QvAC",
+    "title": "Claude's new Skills feature: modular add-ons for AI capabilities",
+    "content": "17 Oct 2025 ... ... Skills feels more tangible and easier to understand. At its core, Claude is the agent. Skills are modular add-ons that extend its abilities\u00a0..."
+  },
+  {
+    "url": "https://medium.com/@axtonliu/claude-skills-the-complete-guide-to-building-reusable-ai-capabilities-d3e19f0abbd9",
+    "title": "Claude Skills: The Complete Guide to Building Reusable AI ...",
+    "content": "29 Mar 2026 ... 1. Clear responsibility separation. The main Skill defines the SOP. The main Claude session makes decisions. Subagents execute specific stages."
+  },
+  {
+    "url": "https://github.com/addyosmani/agent-skills/blob/main/skills/performance-optimization/SKILL.md",
+    "title": "agent-skills/skills/performance-optimization/SKILL.md at main - GitHub",
+    "content": "Optimizes application performance across frontend, backend, queries, and databases. Use when performance requirements exist, when you suspect performance\u00a0..."
+  },
+  {
+    "url": "https://github.com/addyosmani/agent-skills/blob/main/skills/ci-cd-and-automation/SKILL.md",
+    "title": "addyosmani/agent-skills - CI/CD and Automation - GitHub",
+    "content": "PR Checks \u00b7 Required reviews: At least 1 approval before merge \u00b7 Required status checks: CI must pass before merge \u00b7 Branch protection: No force-pushes to main\u00a0..."
+  },
+  {
+    "url": "https://github.com/commandcodeai/agent-skills",
+    "title": "CommandCodeAI/agent-skills: A curated list of awesome ... - GitHub",
+    "content": "Software Development \u00b7 Cloud Infrastructure & AWS \u00b7 Cloudflare \u00b7 Content & Communication \u00b7 Visual Design & Media \u00b7 Business Operations \u00b7 Document Management \u00b7 Data\u00a0..."
+  },
+  {
+    "url": "https://github.com/planetscale/database-skills",
+    "title": "planetscale/database-skills: Skills for AI agents working ... - GitHub",
+    "content": "Repo Structure \u00b7 SKILL.md \u2014 Required. Instructions, triggers, and workflow for the skill. \u00b7 references/ \u2014 Optional. Supporting documents loaded into context as\u00a0..."
+  },
+  {
+    "url": "https://blog.serghei.pl/posts/agent-skills-101/",
+    "title": "Agent Skills 101: a practical guide for engineers - Serghei's Blog",
+    "content": "19 Feb 2026 ... If you explicitly remove that decision from the agent, every piece of advice above becomes obsolete for that skill. Claude Code, VS Code GitHub\u00a0..."
+  },
+  {
+    "url": "https://agent-skills-hub.github.io/",
+    "title": "Agent Skills Hub",
+    "content": "This skill covers LLM integration patterns, RAG architecture, prompt engineering that scales, AI UX that users trust, and cost optimization that doesn't\u00a0..."
+  },
+  {
+    "url": "https://www.tcs.com/insights/blogs/agentic-ai-for-smarter-standard-operating-procedures-sop-management",
+    "title": "Agentic AI for Smarter Standard Operating Procedures Management",
+    "content": "The agentic workflow for SOP management includes seven steps: detecting and logging triggers, mapping impacts to SOPs and controls, generating a change brief,\u00a0..."
+  },
+  {
+    "url": "https://fin.ai/glossary/ai-agent-sop",
+    "title": "What is an AI Agent SOP? - Fin AI",
+    "content": "How AI Agent SOPs Work \u00b7 1. Define the trigger. Every AI Agent SOP starts with a clear description of when it applies: what customer intent or query type should\u00a0..."
+  },
+  {
+    "url": "https://www.skan.ai/blogs/from-sops-to-aops-agentic-operating-procedure",
+    "title": "Agent operating procedures (AOPs) for enterprise AI - Skan AI",
+    "content": "19 May 2026 ... Most organizations I speak to believe that their current Standard Operating Procedures (SOPs) and existing process documentation paired with\u00a0..."
+  },
+  {
+    "url": "https://beam.ai/agentic-insights/the-ai-implementation-blueprint-from-sops-to-self-learning-ai-agents-that-actually-work-in-production",
+    "title": "How to Build Self-Learning AI Agents from Your Existing SOPs",
+    "content": "23 Sept 2025 ... Step 1: Transform SOPs into Executable AI Agent Workflows \u00b7 Step 2: Enable Production-Ready System Integration \u00b7 Step 3: Build Self-Learning\u00a0..."
+  },
+  {
+    "url": "https://irisagent.com/smart-operating-procedures/",
+    "title": "Smart Operating Procedures | Build AI Agents in Natural Language",
+    "content": "A Smart Operating Procedure is a natural language instruction set that compiles into executable AI logic. Your CX team writes the workflow once in plain English\u00a0..."
+  },
+  {
+    "url": "https://dust.tt/blog/ai-agent-workflows",
+    "title": "AI agent workflows: How they work and how to build your own - Dust",
+    "content": "16 Apr 2026 ... An AI agent workflow is a structured sequence of tasks where one or more AI agents autonomously execute steps, make decisions, use tools, and\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2610.04832v1",
+    "title": "Agent Skill Evolution: How Revisions Affect Coding Agents - arXiv",
+    "content": "4 Oct 2026 ... Agent Skills, the SKILL.md files that tell an LLM coding agent how a project works, are revised like code, yet what a revision does to the agent\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2603.18897v1",
+    "title": "Accelerating LLM Agents via Pattern-Aware Speculative Tool ...",
+    "content": "19 Mar 2026 ... LLM-powered agents are emerging as a dominant paradigm for autonomous task solving. Unlike standard inference workloads, agents operate in a\u00a0..."
+  },
+  {
+    "url": "https://github.com/VoltAgent/awesome-ai-agent-papers",
+    "title": "GitHub - VoltAgent/awesome-ai-agent-papers",
+    "content": "... Agent Coordination via LLM-Based Communication with Conformal Prediction ... LLM agent navigates at query time, replacing retrieval with skill-tree traversal."
+  },
+  {
+    "url": "https://papers.ssrn.com/sol3/Delivery.cfm/7186738.pdf?abstractid=7186738&mirid=1",
+    "title": "A Survey of Control Strategies, Skills, and Harnesses for LLM Agents",
+    "content": "2023), generative verifiers cast verification as chain-of-thought next-token prediction and outperform discriminative reward models and LLM-as-judge (Zhang et\u00a0..."
+  },
+  {
+    "url": "https://www.alphaxiv.org/abs/2610.skillrefiner-offline-skill-refinement.pdf",
+    "title": "OFFLINE SKILL REFINEMENT FROM HISTORICAL AGENT TRACES",
+    "content": "1 Oct 2026 ... ... agent to prefer formulas, but this leads to brittle formula chains ... Skillrevise: Improving llm-authored agent skills via trace-conditioned\u00a0..."
+  },
+  {
+    "url": "https://www.preprints.org/manuscript/202605.1276",
+    "title": "A Survey of Agent Skills: Toward Procedural Infrastructure for LLM ...",
+    "content": "19 May 2026 ... Large language model (LLM) agents are increasingly expected to solve long-horizon tasks through repeated interaction with external\u00a0..."
+  },
+  {
+    "url": "https://www.ibm.com/think/tutorials/llm-agent-orchestration-with-langchain-and-granite",
+    "title": "LLM Agent Orchestration: A Step by Step Guide - IBM",
+    "content": "LLM agent orchestration refers to the process of managing and coordinating the interactions between a language model (LLM) and various tools, APIs,\u00a0..."
+  },
+  {
+    "url": "https://www.accelirate.com/llm-agent-orchestration/",
+    "title": "LLM Agent Orchestration: Architecture, Frameworks, and Use Cases",
+    "content": "31 Mar 2026 ... LLM agent orchestration is the process of coordinating multiple AI agents to execute complex workflows by assigning tasks,\u00a0..."
+  },
+  {
+    "url": "https://tao-hpu.medium.com/dynamic-planning-vs-static-workflows-what-truly-defines-an-ai-agent-b13ca5a2d110",
+    "title": "Dynamic Planning vs Static Workflows: What Truly Defines an AI Agent",
+    "content": "6 Nov 2025 ... [1][2] True agents possess dynamic planning capabilities where the language model autonomously directs tool selection, execution order, and\u00a0..."
+  },
+  {
+    "url": "https://www.marktechpost.com/2026/05/05/build-a-modular-skill-based-agent-system-for-llms-with-dynamic-tool-routing-in-python/",
+    "title": "Build a Modular Skill-Based Agent System for LLMs with Dynamic ...",
+    "content": "5 May 2026 ... As we move through the implementation, we show how an agent can select the right skill for a task, compose multiple skills for more advanced\u00a0..."
+  },
+  {
+    "url": "https://devblogs.microsoft.com/azure-sdk/dynamic-workflows-azure-functions-hosted-skills/",
+    "title": "Dynamic Workflows in Azure Functions Hosted Skills: Durable, AI ...",
+    "content": "4 days ago ... Without Dynamic Workflows, an LLM reasoning loop must process each step in a multi-step workflow independently. For each step, the LLM calls one\u00a0..."
+  },
+  {
+    "url": "https://n8n.io/workflows/7004-ai-orchestrator-dynamically-selects-models-based-on-input-type/",
+    "title": "AI orchestrator: dynamically selects models based on input type - n8n",
+    "content": "This workflow is designed to intelligently route user queries to the most suitable large language model (LLM) based on the type of request received in a..."
+  },
+  {
+    "url": "https://levelup.gitconnected.com/this-ai-project-on-github-trending-can-read-software-you-did-not-write-51f0a211dc35",
+    "title": "This AI project on GitHub Trending can read software you did not write",
+    "content": "3 days ago ... REA gives coding agents evidence-based reverse-engineering tools. That is more useful, and more dangerous, than another code generator\u00a0..."
+  },
+  {
+    "url": "https://www.dynamicsconsulting.it/research/ai-reverse-engineering",
+    "title": "AI Reverse Engineering of Legacy Platforms | Dynamics Consulting",
+    "content": "Applying RAG and multi-agent workflows to reconstruct functional and architectural knowledge from large legacy codebases ... Dependency maps become\u00a0..."
+  },
+  {
+    "url": "https://cloud.google.com/blog/products/infrastructure-modernization/mainframe-migration-and-modernization-with-ai",
+    "title": "Mainframe migration and modernization with AI | Google Cloud Blog",
+    "content": "4 Aug 2026 ... 1. Assessment: AI reverse-engineering of the legacy applications ... Our Mainframe Assessment Tool (MAT) reverse-engineers legacy codebases at\u00a0..."
+  },
+  {
+    "url": "https://snowmanlabs.com/insights/legacy-system-documentation-with-ai",
+    "title": "Legacy System Documentation with AI: A Practical Guide",
+    "content": "20 Jul 2026 ... Legacy system documentation with AI is the use of coding agents and large language models to reverse-engineer what an undocumented system\u00a0..."
+  },
+  {
+    "url": "https://www.linkedin.com/pulse/from-black-box-blueprint-ai-reverse-engineering-legacy-monnette-ty5zc",
+    "title": "From Black Box to Blueprint: AI Reverse Engineering for Legacy ...",
+    "content": "30 Sept 2025 ... AI-driven reverse engineering transforms legacy modernization from a necessary cost into a strategic opportunity. By rapidly extracting and\u00a0..."
+  },
+  {
+    "url": "https://www.isaqb.org/blog/ai-agents-dont-modernize-legacy-code-on-their-own/",
+    "title": "AI Agents Don't Modernize Legacy Code on Their Own - iSAQB",
+    "content": "18 May 2026 ... They modify code purely based on text patterns, not on semantic understanding. In large codebases with many dependencies, this quickly leads to\u00a0..."
+  },
+  {
+    "url": "https://gtidocs.virustotal.com/docs/agentic-platform",
+    "title": "Agentic Platform - Google Threat Intelligence",
+    "content": "Extracts transferred files and payload objects from HTTP traffic captures, allowing the agent to chain tools and inspect suspicious downloads. Granular Network\u00a0..."
+  },
+  {
+    "url": "https://www.sentinelone.com/labs/context-engineering-compaction-agent-memory-for-automated-malware-analysis/",
+    "title": "Context Engineering | Compaction & Agent Memory for Automated ...",
+    "content": "2 Jul 2026 ... For malware analysis this includes logs and tool outputs, decompiled functions, intermediate artifacts, and ground-truth comparisons. When the\u00a0..."
+  },
+  {
+    "url": "https://www.mindstudio.ai/blog/reverse-engineer-anything-mcp",
+    "title": "Reverse Engineer Anything: What the Viral REA MCP Actually Does",
+    "content": "1 day ago ... What REA adds is an interface layer that lets an AI agent operate these tools autonomously, chaining decompilation, hypothesis generation, and\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/pdf/2604.14317",
+    "title": "Challenges and Future Directions in Agentic Reverse Engineering ...",
+    "content": "15 Apr 2026 ... Some RE tasks require networking capabilities, such as port scanning or network traffic analysis. ... Agents that study decompiled binaries\u00a0..."
+  },
+  {
+    "url": "https://medium.com/d-classified/utilizing-generative-ai-for-reverse-engineering-31cbcd435e84",
+    "title": "Utilizing Generative AI for Reverse Engineering - Medium",
+    "content": "8 Nov 2024 ... Gen AI in The New Age of Automation in Malware Analysis ... Integrating Generative AI capabilities, specifically Large Language Models (LLMs),\u00a0..."
+  },
+  {
+    "url": "https://blog.talosintelligence.com/scripting-the-disassembler/",
+    "title": "Scripting the disassembler: Local agentic reverse engineering ...",
+    "content": "18 Jun 2026 ... Cisco Talos detailed a new approach to reverse engineering that pairs local AI agents with traditional analysis tools like the VB6\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2411.14971v1",
+    "title": "Leveraging LLMs for Legacy Code Modernization - arXiv",
+    "content": "22 Nov 2024 ... Legacy software systems, written in outdated languages like MUMPS and mainframe assembly, pose challenges in efficiency, maintenance, staffing,\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2509.19587v1",
+    "title": "Reverse Engineering User Stories from Code using Large ... - arXiv",
+    "content": "23 Sept 2025 ... We investigate whether large language models (LLMs) can automatically recover user stories directly from source code and how prompt design\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2504.04553v2",
+    "title": "Understanding Codebase like a Professional! Human\u2013AI ... - arXiv",
+    "content": "31 Oct 2025 ... This suggests that an LLM-powered Codebase Understanding System should be designed to support a structured three-level chain of comprehension,\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2601.13007v1",
+    "title": "Scalable Legacy Software Architecture Recovery with LLMs - arXiv",
+    "content": "19 Jan 2026 ... Recovering accurate architecture from large-scale legacy software is hindered by architectural drift, missing relations, and the limited\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2605.18684v1",
+    "title": "Reversa: A Reverse Documentation Engineering Framework ... - arXiv",
+    "content": "18 May 2026 ... ... comprehension of business applications [8] . Work on LLM-generated documentation for legacy modernization explicitly studies legacy\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/pdf/2511.02922",
+    "title": "Code Comprehension with GitHub Copilot - arXiv",
+    "content": "comprehension even on this small code base suggests the problem would likely persist in larger, industry-scale legacy systems. Future studies should\u00a0..."
+  },
+  {
+    "url": "https://medium.com/@harrinair2000/legacy-code-and-ai-why-caution-is-key-before-integrating-ai-63b4abfded96",
+    "title": "Legacy Code and AI: Why Caution Is Key Before Integrating AI",
+    "content": "29 Jun 2025 ... The missing half of the story is in people's heads: undocumented decisions, workarounds, and past trade-offs. AI can't magically understand\u00a0..."
+  },
+  {
+    "url": "https://www.freecodecamp.org/news/understand-a-legacy-codebase-with-ai/",
+    "title": "How to Understand a Legacy Codebase Using AI Before Changing it",
+    "content": "21 Aug 2026 ... Enterprise customers must have a credit limit >= 50000. And several infrastructure concerns: MySQL Redis Event bus. Ask AI to classify the code:"
+  },
+  {
+    "url": "https://thefridaydeploy.substack.com/p/ai-cant-handle-your-legacy-codebase",
+    "title": "AI can't handle your legacy codebase? This might be why.",
+    "content": "6 Jun 2025 ... ... constraints imposed by existing code - like a brand new product or side project. ... In a similar vein, AI can do a great job of explaining code,\u00a0..."
+  },
+  {
+    "url": "https://deepinspire.com/blog/ai-assisted-coding-how-to-use-and-limitations",
+    "title": "AI-Assisted Coding: How To Use & Limitations - DeepInspire",
+    "content": "17 Mar 2026 ... 6 key limitations of AI-assisted coding \u00b7 1. The knowledge paradox: speed at the expense of understanding \u00b7 2. The \"almost complete\" trap \u00b7 3."
+  },
+  {
+    "url": "https://snowmanlabs.com/insights/legacy-code-modernization-with-ai",
+    "title": "Legacy Code Modernization with AI: What Actually Works",
+    "content": "8 Aug 2026 ... Legacy code modernization with AI means applying AI where the constraint really lives: in millions of lines of poorly documented, thinly tested\u00a0..."
+  },
+  {
+    "url": "https://www.linkedin.com/pulse/ai-vs-legacy-tech-from-liability-leverage-mohamed-irfan-glyze",
+    "title": "AI vs. Legacy Tech: From Liability to Leverage - LinkedIn",
+    "content": "10 Sept 2025 ... But there are glaring disadvantages. You end up with incompatibilities, security issues, costly maintenance, and skill gaps\u2014as in, a lot of the\u00a0..."
+  },
+  {
+    "url": "https://simbian.ai/solutions/use-case/automated-penetration-testing",
+    "title": "Automated Penetration Testing | AI Pentest Agent | Simbian",
+    "content": "With Simbian, you can test after every release, after every infrastructure change, or on a scheduled cadence. Each test adapts to the current state of your\u00a0..."
+  },
+  {
+    "url": "https://www.synack.com/learning-center/how-are-ai-agents-used-in-penetration-testing/",
+    "title": "How Are AI Agents Used in Penetration Testing? - Synack",
+    "content": "30 Sept 2026 ... AI agents are most commonly applied to testing tasks that are structured, repeatable, and well suited to automation, such as reconnaissance,\u00a0..."
+  },
+  {
+    "url": "https://www.picussecurity.com/resource/blog/what-is-an-autonomous-penetration-testing-platform",
+    "title": "What Is an Autonomous Penetration Testing Platform? - Picus Security",
+    "content": "23 Jul 2026 ... Automated pentesting breaks down at the edge of its encoded rules. At each node along a path, it consults a rule-based decision engine and tries\u00a0..."
+  },
+  {
+    "url": "https://www.getastra.com/blog/penetration-testing/autonomous-ai-agents-for-penetration-testing/",
+    "title": "Autonomous AI Agents for Penetration Testing: A Complete Guide",
+    "content": "14 Sept 2026 ... Agentic AI differs from traditional automation by utilizing independent planning, reasoning, and adaptability to achieve goals, whereas\u00a0..."
+  },
+  {
+    "url": "https://firecompass.com/best-agentic-ai-penetration-testing-platforms-for-web-apps-and-apis-in-2026/",
+    "title": "Best Agentic AI Pentesting Platforms for Web/API 2026 - FireCompass",
+    "content": "6 Jul 2026 ... Agentic AI penetration testing is an approach where AI agents autonomously plan and execute penetration testing tasks, including attack surface\u00a0..."
+  },
+  {
+    "url": "https://www.aikido.dev/blog/ai-penetration-testing",
+    "title": "AI Penetration Testing Tools | Autonomous, Agentic and Continuous ...",
+    "content": "25 Jul 2025 ... The term \u201cautomated penetration testing\u201d often refers to tools that run pre-programmed scans without adaptation or validation. These tools are\u00a0..."
+  },
+  {
+    "url": "https://cloud.google.com/blog/topics/threat-intelligence/from-prompting-to-autonomy-the-evolution-of-adversarial-ai",
+    "title": "GTIG AI Threat Tracker: From Prompting to Autonomy - Google Cloud",
+    "content": "8 Sept 2026 ... By leveraging autonomous AI agents to research vulnerabilities, scan server-side infrastructure, and execute targeted exploits, the adversary\u00a0..."
+  },
+  {
+    "url": "https://devops.com/sonar-ai-agent-discovers-vulnerabilities-hidden-in-business-logic-workflows/",
+    "title": "Sonar AI Agent Discovers Vulnerabilities Hidden in Business Logic ...",
+    "content": "27 Aug 2026 ... The AI agent traces how code and data move through an application, helping uncover flaws that traditional deterministic scanners may miss. Sonar\u00a0..."
+  },
+  {
+    "url": "https://github.com/nvidia/skillspector",
+    "title": "GitHub - NVIDIA/SkillSpector: Security scanner for AI agent skills ...",
+    "content": "AI agent skills (used by Claude Code, Codex CLI, Gemini CLI, etc.) execute with implicit trust and minimal vetting. In the 31,132-skill analyzed subset of\u00a0..."
+  },
+  {
+    "url": "https://aws.amazon.com/blogs/machine-learning/securing-ai-agents-how-aws-and-cisco-ai-defense-scale-mcp-and-a2a-deployments/",
+    "title": "Securing AI agents: How AWS and Cisco AI Defense scale MCP and ...",
+    "content": "13 May 2026 ... The scanner analyzes each MCP tool and A2A agent card and Agent Skill, generating detailed security reports. If issues are found, the component\u00a0..."
+  },
+  {
+    "url": "https://alexlavaee.me/blog/agent-operated-cicd-pipelines/",
+    "title": "Agent-Operated CI/CD: The Architecture Making AI Coding Agents ...",
+    "content": "The principle: agents can only touch what they're explicitly allowed to touch. A code review agent doesn't need deployment permissions. A security scanner doesn\u00a0..."
+  },
+  {
+    "url": "https://www.linkedin.com/pulse/ai-agent-report-rakesh-gohel-glhnc",
+    "title": "The AI Agent Report - LinkedIn",
+    "content": "31 Jul 2026 ... The convergence of vulnerability scanning into CI/CD, the open vs. closed AI debate, and advancements in embodied AI and cost-effective frontier\u00a0..."
+  },
+  {
+    "url": "https://www.synack.com/blog/autonomous-ai-security-testing-risks/",
+    "title": "Nobody's in the Cockpit: Risks of Autonomous AI Security Testing",
+    "content": "10 Jun 2026 ... Major bug bounty platforms now report 60\u201380% of submissions are invalid, overwhelming triage teams with AI-generated false positives. Every\u00a0..."
+  },
+  {
+    "url": "https://simbian.ai/blog/automated-penetration-testing-2026",
+    "title": "Automated Penetration Testing: Full Autonomy Fell to 9% - Simbian AI",
+    "content": "21 Sept 2026 ... In November 2024, a pentester-turned-CEO wrote on r/cybersecurity that there's no such thing as useful automated penetration testing, and that\u00a0..."
+  },
+  {
+    "url": "https://escape.tech/blog/what-is-ai-pentesting/",
+    "title": "AI pentesting: what it is, and what it can actually find - Escape DAST",
+    "content": "1 Oct 2026 ... An agent remembers what it saw from one step to the next, so it can chase a hunch that only pays off five requests later. That's why people call\u00a0..."
+  },
+  {
+    "url": "https://zerothreat.ai/blog/what-is-agentic-pentesting",
+    "title": "What is Agentic Pentesting: AI-Agent Powered Security - ZeroThreat",
+    "content": "23 Feb 2026 ... Instead of one-time scans or manual efforts, it uses autonomous agents to continuously discover, test, exploit, and validate security issues\u00a0..."
+  },
+  {
+    "url": "https://firecompass.com/blog-10-questions-to-ask-ai-pen-testing-vendor/",
+    "title": "10 Questions to Ask Your AI Pen Testing Vendor Before You Sign",
+    "content": "22 May 2026 ... Every AI pen test vendor on your shortlist will tell you their false positive rate is under five percent. Their demos will look impressive."
+  },
+  {
+    "url": "https://mnemehq.com/insights/how-ai-coding-agents-use-adrs/",
+    "title": "How AI Coding Agents Use ADRs (Architecture Decision Records)",
+    "content": "6 Jul 2026 ... For a decade ADRs were written for humans to read. Now the code is increasingly written by AI coding agents, and the question changes: does the\u00a0..."
+  },
+  {
+    "url": "https://www.reddit.com/r/softwarearchitecture/comments/1ull9py/does_anyone_maintain_adrs_for_decisions_an_ai/",
+    "title": "does anyone maintain ADRs for decisions an AI agent made, not a ...",
+    "content": "2 Jul 2026 ... It does a startlingly accurate job of reverse-engineering the actual motivations and thought processes behind the actual code changes, just from\u00a0..."
+  },
+  {
+    "url": "https://www.braingrid.ai/blog/architecture-decision-records-for-ai-coding-agents",
+    "title": "Architecture Decision Records for AI Coding Agents: Where the Why ...",
+    "content": "4 Aug 2026 ... An architecture decision record captures why you chose an approach. For AI coding agents that forget between sessions, the ADR is the one\u00a0..."
+  },
+  {
+    "url": "https://zarar.dev/enforcing-invariants-in-ai-generated-code-with-adrs-and-contracts/",
+    "title": "Enforcing Invariants in AI-Generated Code with ADRs and Contracts",
+    "content": "30 Jun 2026 ... Architecture Decision Records as Invariants \u00b7 Figure out when we need to record one \u00b7 Actually record it \u00b7 Point agents to treat the ADRs as\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2608.17694v1",
+    "title": "Gathering Architecture Decision Records from Meeting Transcriptions",
+    "content": "18 Aug 2026 ... Existing LLM-based approaches to Architecture Decision Record (ADR) generation share a critical and largely unexamined assumption: that\u00a0..."
+  },
+  {
+    "url": "https://www.typingmind.com/skills/rmyndharis-architecture-decision-records",
+    "title": "Architecture Decision Records - AI Skill for Any LLM - TypingMind",
+    "content": "Write and maintain Architecture Decision Records (ADRs) following best practices for technical decision documentation... A free, open-source AI skill for\u00a0..."
+  },
+  {
+    "url": "https://medium.com/@dipakkrdas/code-wiki-llm-maintained-documentation-for-your-codebase-fc54f94bef6d",
+    "title": "Code Wiki: LLM-Maintained Documentation for Your Codebase",
+    "content": "14 Jun 2026 ... Role: Overview, command reference, integration notes \u00b7 Role: Wiki schema \u2014 directory layout, page frontmatter, ingest / query / doc-resync / add-\u00a0..."
+  },
+  {
+    "url": "https://github.com/microsoft/llmwiki/blob/main/ARCHITECTURE.md",
+    "title": "llmwiki/ARCHITECTURE.md at main - GitHub",
+    "content": "The LLM Wiki: Initialize Wiki command creates a starter template with seven sections: page types, directory structure, frontmatter schema, naming conventions,\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2511.12884v2",
+    "title": "An Empirical Study of Context Files for Agentic Coding - arXiv",
+    "content": "9 Aug 2026 ... ... context files behave like static documentation or like evolving configuration in the codebase. ... conventions that make agent context\u00a0..."
+  },
+  {
+    "url": "https://gist.github.com/cmer/2a9b78d2145204eedf1029e9305e3e50",
+    "title": "Ultimate LLM Prompt for Deep Codebase Analysis & Documentation",
+    "content": "4 days ago ... How to Use \u00b7 Open your repo in Cursor, Claude Code, or cursor-agent. \u00b7 Paste the full prompt into the model chat (use CMD+SHIFT+V in Cursor to\u00a0..."
+  },
+  {
+    "url": "https://www.verdent.ai/guides/llm-knowledge-base-coding-agents",
+    "title": "LLM Knowledge Base for Coding Agents: Beyond RAG - Verdent AI",
+    "content": "6 Apr 2026 ... Persistent Markdown Wiki as the Agent's Memory Layer \u00b7 Ingest \u2192 Compile \u2192 Query Cycle Applied to a Codebase \u00b7 Where This Beats RAG and Where It\u00a0..."
+  },
+  {
+    "url": "https://addyo.substack.com/p/my-llm-coding-workflow-going-into",
+    "title": "My LLM coding workflow going into 2026 - Elevate | Addy Osmani",
+    "content": "18 Dec 2025 ... LLMs are only as good as the context you provide - show them the relevant code, docs, and constraints. When working on a codebase, I make sure\u00a0..."
+  },
+  {
+    "url": "https://medium.com/data-science-collective/the-llm-landscape-part-1-the-starters-guide-to-context-window-management-9c77aff15dc5",
+    "title": "The LLM Landscape Part 1: The Starter's Guide to Context Window ...",
+    "content": "16 Aug 2026 ... This starter's guide focuses on one of the most important LLM challenges: context window management for building real-world LLM applications."
+  },
+  {
+    "url": "https://redis.io/blog/llm-context-windows/",
+    "title": "LLM context windows: what they are & how they work - Redis",
+    "content": "23 Jan 2026 ... Context window management in production ... Production LLM apps need more than large context windows. Optimizing for your specific task beats\u00a0..."
+  },
+  {
+    "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents",
+    "title": "Effective context engineering for AI agents - Anthropic",
+    "content": "29 Sept 2025 ... Despite their speed and ability to manage larger and larger volumes of data, we've observed that LLMs, like humans, lose focus or experience\u00a0..."
+  },
+  {
+    "url": "https://www.langchain.com/blog/context-engineering-for-agents",
+    "title": "Context Engineering - LangChain",
+    "content": "2 Jul 2025 ... Agents interleave LLM calls and tool calls, using tool feedback to decide the next step \u00b7 Context from tool calls accumulates over multiple agent\u00a0..."
+  },
+  {
+    "url": "https://mem0.ai/library/coding-agents/ai-coding-agents-that-actually-remember-your-codebase",
+    "title": "AI Coding Agents That Remember Your Codebase (2026) - Mem0",
+    "content": "18 Sept 2026 ... LLMs reason over a bounded context window. For large monorepos, this context is only a thin slice of the codebase. ... LLM. The core\u00a0..."
+  },
+  {
+    "url": "https://martinfowler.com/articles/exploring-gen-ai/context-engineering-coding-agents.html",
+    "title": "Context Engineering for Coding Agents - Martin Fowler",
+    "content": "5 Feb 2026 ... Instructions \u00b7 Tools: Built-in capabilities like calling bash commands, searching files, etc. \u00b7 LLM: Allowing the LLM to decide when to load\u00a0..."
+  },
+  {
+    "url": "https://mastra.ai/articles/context-engineering",
+    "title": "Context Engineering for AI Agents: A Practical Guide - Mastra",
+    "content": "7 Aug 2026 ... Query augmentation improves what you retrieve before you retrieve it. Giving the agent the current date and time, for example, lets it infer\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2512.15374v2",
+    "title": "SCOPE: Prompt Evolution for Enhancing Agent Effectiveness - arXiv",
+    "content": "28 May 2026 ... Rather than accumulating external strategies (memory-augmented), relying on in-context inference (alarm-based), or optimizing offline (static),\u00a0..."
+  },
+  {
+    "url": "https://medium.com/data-and-beyond/context-engineering-in-the-age-of-llms-a-developers-definitive-guide-3b0e0d05612d",
+    "title": "Context Engineering in the Age of LLMs: A Developer's Definitive ...",
+    "content": "6 Jul 2025 ... But here's the catch: long context \u2260 optimal context. Voyager's smart memory + scoped agents (our custom multi-agent system); Single-agent RAG\u00a0..."
+  },
+  {
+    "url": "https://developers.googleblog.com/architecting-efficient-context-aware-multi-agent-framework-for-production/",
+    "title": "Architecting efficient context-aware multi-agent framework for ...",
+    "content": "4 Dec 2025 ... Single-agent systems struggle with context bloat; multi-agent systems amplify it. If a root agent passes its full history to a sub-agent, and\u00a0..."
+  },
+  {
+    "url": "https://atlan.com/know/ai-agent/ai-agent-context/how-to-implement-context-window-management-ai-agents/",
+    "title": "AI Agent Context Window Management: Implementation Guide [2026]",
+    "content": "17 Jun 2026 ... Pitfall 3: Context inheritance bloat in multi-agent systems ... RAG handles knowledge retrieval, routing handles permission and freshness scoping."
+  },
+  {
+    "url": "https://fast.io/resources/ai-agent-webhook-integration/",
+    "title": "AI Agent Webhook Integration Guide: Event-Driven Workflows | Fastio",
+    "content": "Connect AI agents to webhooks for real-time automation. Build event-driven workflows that cut latency and reduce API polling costs significantly."
+  },
+  {
+    "url": "https://dust.tt/academy/agent-automation/chapter/webhook-triggers",
+    "title": "Webhook triggers | Automate your agents | Dust Academy",
+    "content": "Webhook triggers are event-driven. Your agent responds instantly to events from external systems: a ticket is created, a PR is opened, a deal changes stages\u00a0..."
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=Cti9x-TLwxE",
+    "title": "Build An Event-Driven AI Agent With A Webhook - YouTube",
+    "content": "13 Jul 2026 ... ... trigger automated workflows. We create a webhook endpoint with Flask ... Code Walkthrough: Flask Imports and Dependencies 08:00\u00a0..."
+  },
+  {
+    "url": "https://www.developersdigest.tech/blog/deploy-agent-webhook-railway",
+    "title": "Put an AI Agent Behind a Webhook: Turn GitHub Issues into Pull ...",
+    "content": "5 Aug 2026 ... The most common trigger for an AI coding agent is not a clock, it is an event. A GitHub webhook, a Railway service, and OpenCode headless\u00a0..."
+  },
+  {
+    "url": "https://www.stonebranch.com/blog/webhook-integrations-for-event-driven-automation",
+    "title": "Using Webhook Integrations for Event-Driven Automation",
+    "content": "25 Oct 2022 ... Need to share real-time data updates from one application to another? Webhooks are a fast and easy way to enable event-driven automation. Using\u00a0..."
+  },
+  {
+    "url": "https://chipp.ai/ai/glossary/ai-agent-webhooks",
+    "title": "AI Agent Webhooks \u2014 AI Glossary | Chipp",
+    "content": "HTTP callbacks that notify external systems when specific events occur in an AI agent's lifecycle, such as new messages, completed actions,\u00a0..."
+  },
+  {
+    "url": "https://www.mindstudio.ai/blog/build-cron-based-ai-automation-hermes-agent",
+    "title": "How to Build a Cron-Based AI Automation with Hermes Agent",
+    "content": "11 May 2026 ... Yes. You can define multiple agents, each with its own cron schedule and skill set. A common pattern is to have a high-frequency monitoring\u00a0..."
+  },
+  {
+    "url": "https://dev.to/ryancwynar/the-cron-layer-how-i-taught-my-ai-agent-to-work-autonomously-247-3oog",
+    "title": "The Cron Layer: How I Taught My AI Agent to Work Autonomously 24/7",
+    "content": "1 Mar 2026 ... The AI model is the engine. The cron layer is the driver. Without orchestration, you have a very smart assistant that sits idle 23 hours a day."
+  },
+  {
+    "url": "https://uptimerobot.com/knowledge-hub/monitoring/ai-agent-monitoring-best-practices-tools-and-metrics/",
+    "title": "AI Agent Monitoring: Best Practices, Tools & Metrics for 2026",
+    "content": "Tools like UptimeRobot make this practical with endpoint, keyword, port, and cron job monitoring. UptimeRobot. Downtime happens. Get notified! Join the world's\u00a0..."
+  },
+  {
+    "url": "https://saulius.io/blog/openclaw-autonomous-ai-agent-framework-heartbeat-monitoring",
+    "title": "How Autonomous AI Agents Execute Long-Running Tasks with ...",
+    "content": "6 Feb 2026 ... OpenClaw Agentic Framework: How Autonomous AI Agents Execute Long-Running Tasks with Heartbeat Monitoring ... Cron expression (any schedule)."
+  },
+  {
+    "url": "https://growwstacks.com/blog/ai-agent-cron-job-inception-strategy/",
+    "title": "The AI Agent Cron Job Inception Strategy: How to Make Your AI ...",
+    "content": "10 Feb 2026 ... Most AI agents run on fixed schedules - but what if they could autonomously create new tasks? This cron job inception strategy enables your\u00a0..."
+  },
+  {
+    "url": "https://lastping.dev/agents/",
+    "title": "AI agent monitoring: the dead man's switch agents set up - LastPing",
+    "content": "The dead man's switch for everything that runs without you, including your AI agents. An autonomous agent is the new cron job: its worst failures are silent\u00a0..."
+  },
+  {
+    "url": "https://www.augmentcode.com/guides/ai-agent-incident-response",
+    "title": "AI Agent Incident Response: From Alert to Fix - Augment Code",
+    "content": "8 Jun 2026 ... The AI agent incident response approach is a multi-agent automation pipeline. Specialized agents coordinate detection, triage, root cause\u00a0..."
+  },
+  {
+    "url": "https://resolve.ai/glossary/ai-incident-management-tools",
+    "title": "AI Incident Management Tools: Complete Evaluation Guide",
+    "content": "AI incident management tools investigate production incidents across code, infrastructure, and telemetry using multi-agent architectures for faster root\u00a0..."
+  },
+  {
+    "url": "https://underdefense.com/blog/incident-response-automation-tools/",
+    "title": "11 Best Incident Response Automation Tools in 2026: SOAR, XDR ...",
+    "content": "19 Jun 2026 ... XDR (Extended Detection and Response) correlates telemetry across endpoint, network, and cloud in one platform. Agentic AI autonomously selects\u00a0..."
+  },
+  {
+    "url": "https://www.logicmonitor.com/edwin-ai/ai-agent",
+    "title": "AI Agents for ITOps - LogicMonitor",
+    "content": "5 days ago ... AI Agents That Do the Investigation Work for Your Team \u00b7 Specialized AI agents handle the time-consuming parts of incident response: finding the\u00a0..."
+  },
+  {
+    "url": "https://learn.microsoft.com/en-us/azure/sre-agent/automate-incidents",
+    "title": "Tutorial: Automate Incident Response in Azure SRE Agent",
+    "content": "25 Aug 2026 ... Create an incident response plan \u00b7 Select a lookback period, such as Last 7 days. \u00b7 Review the matching alerts. If an expected alert is missing,\u00a0..."
+  },
+  {
+    "url": "https://www.acceldata.io/agentic-data-management/use-cases/incident-management",
+    "title": "AI Incident Management for Data Teams in Seconds - Acceldata",
+    "content": "Monitor active data quality and pipeline incidents in real time across jobs, policies, and assets. ... Automatically organize incidents by criticality, state,\u00a0..."
+  },
+  {
+    "url": "https://e2b.dev/",
+    "title": "E2B | The Enterprise AI Agent Cloud",
+    "content": "The AI Agent Cloud. An isolated machine for every AI agent: run code, browse, use tools, pause, fork. In our cloud or your AWS, GCP, or Azure account."
+  },
+  {
+    "url": "https://www.developersdigest.tech/blog/ai-agent-code-sandbox-comparison-2026",
+    "title": "Where Should Your AI Agent Run Code: E2B vs Daytona vs Modal ...",
+    "content": "1 Jul 2026 ... E2B provides on-demand Linux VMs purpose-built for AI agent code execution. Each sandbox is described in their docs as \"a fast, secure Linux VM\"\u00a0..."
+  },
+  {
+    "url": "https://blog.logrocket.com/comparing-ai-agent-sandbox-platforms-e2b-modal-daytona-and-more/",
+    "title": "Comparing AI agent sandbox platforms: E2B, Modal, Daytona, and ...",
+    "content": "4 Aug 2026 ... Comparing AI agent sandbox platforms: E2B, Modal, Daytona, and more ; E2B, 717ms create / 662ms resume (measured), Firecracker microVM ; Daytona\u00a0..."
+  },
+  {
+    "url": "https://www.zenml.io/blog/e2b-vs-daytona",
+    "title": "E2B vs Daytona: Sandbox Comparison for Platform Engineers",
+    "content": "2 Mar 2026 ... Both E2B and Daytona give AI agents a place to run code safely in isolated cloud environments. But their approach to this process differs\u00a0..."
+  },
+  {
+    "url": "https://pub.towardsai.net/e2b-vs-daytona-vs-modal-vs-docker-how-ai-agent-sandboxes-actually-differ-bd1ea9bb3333",
+    "title": "E2B vs Daytona vs Modal vs Docker: How AI Agent Sandboxes ...",
+    "content": "17 Aug 2026 ... E2B is built around one job: give an agent a full, disposable computer, fast. Each sandbox runs as a Firecracker microVM with its own guest\u00a0..."
+  },
+  {
+    "url": "https://modal.com/resources/best-infrastructure-platforms-coding-agents",
+    "title": "Best Infrastructure Platforms for Coding Agents in 2026 | Modal Blog",
+    "content": "E2B excels at ephemeral code execution, spinning up isolated environments for agents to run generated code, then tearing them down. The platform supports up to\u00a0..."
+  },
+  {
+    "url": "https://medium.com/@hugolu87/announcing-orchestra-runtime-the-control-plane-for-ai-agents-fc7632128c11",
+    "title": "Announcing Orchestra Runtime: The Control Plane for AI Agents",
+    "content": "30 Jun 2026 ... Orchestra runtime: scalable, sandboxed, on-demand infrastructure for running AI ... Starting a session spins up an isolated sandbox for\u00a0..."
+  },
+  {
+    "url": "https://sierra.ai/blog/agency-secure-scalable-sandboxes-for-agents",
+    "title": "Agency: Secure, scalable sandboxes for agents - Sierra",
+    "content": "29 Jul 2026 ... Fast enough to spin one up without losing your flow state; Cheap ... Agency is our agent sandbox orchestration layer. Named both for\u00a0..."
+  },
+  {
+    "url": "https://www.wiz.io/academy/ai-security/ai-agent-orchestration",
+    "title": "AI agent orchestration: What security teams need to know - Wiz",
+    "content": "20 Mar 2026 ... Agent orchestration adds autonomous decision-making. The orchestrator dynamically selects agents, tools, and execution paths based on\u00a0..."
+  },
+  {
+    "url": "https://www.linkedin.com/top-content/technology/building-scalable-web-applications/scalability-of-hosted-agent-sandboxes/",
+    "title": "Scalability of Hosted Agent Sandboxes - LinkedIn",
+    "content": "3 days ago ... I often get asked to make predictions on the future of AI Infrastructure. My short answer: While accelerators like TPUs handle core\u00a0..."
+  },
+  {
+    "url": "https://ona.com/compare/devin",
+    "title": "Ona vs Devin - Enterprise AI Software Engineering",
+    "content": "The orchestration layer stays on Cognition's cloud and requires a persistent outbound connection. Scalability. Ona. \u2713. Spin up hundreds of parallel agents on\u00a0..."
+  },
+  {
+    "url": "https://temporal.io/blog/temporal-sandbox-orchestration-harness-the-missing-layer-for-running-agents",
+    "title": "Temporal Sandbox Orchestration Harness: The missing layer for ...",
+    "content": "7 May 2026 ... Standardize how AI agents ... You need an environment isolated enough to contain the risk, and flexible enough to spin up and tear down frequently\u00a0..."
+  },
+  {
+    "url": "https://www.jetbrains.com/pages/ai-agents/building/agent-framework-comparison/",
+    "title": "LangGraph vs. AutoGen vs. CrewAI: An Agent Framework Comparison",
+    "content": "LangGraph, AutoGen, and CrewAI all build multi-agent systems, but they disagree on something basic: what actually drives execution. LangGraph runs a graph\u00a0..."
+  },
+  {
+    "url": "https://www.datacamp.com/tutorial/crewai-vs-langgraph-vs-autogen",
+    "title": "CrewAI vs LangGraph vs AutoGen: Choosing the Right Multi-Agent ...",
+    "content": "28 Sept 2025 ... In-Depth Comparison: CrewAI vs LangGraph vs AutoGen. Each framework approaches multi-agent orchestration from a unique angle. CrewAI\u00a0..."
+  },
+  {
+    "url": "https://dev.to/pockit_tools/langgraph-vs-crewai-vs-autogen-the-complete-multi-agent-ai-orchestration-guide-for-2026-2d63",
+    "title": "LangGraph vs CrewAI vs AutoGen: The Complete Multi-Agent AI ...",
+    "content": "6 Feb 2026 ... In 2025, we built single AI agents. In 2026, we're orchestrating armies of them. The shift from monolithic AI agents to multi-agent systems\u00a0..."
+  },
+  {
+    "url": "https://www.heu.ai/articles/langgraph-vs-crewai-vs-autogen",
+    "title": "LangGraph vs CrewAI vs AutoGen: Architecture - HEU.AI",
+    "content": "1 Oct 2026 ... LangGraph, CrewAI, and AutoGen take fundamentally different approaches to agent execution: cyclical graph-based control,\u00a0..."
+  },
+  {
+    "url": "https://sudhamsr.medium.com/langgraph-vs-crewai-vs-autogen-a-full-comparison-for-beginners-2a70d1dcd566",
+    "title": "LangGraph vs CrewAI vs AutoGen: A Full Comparison for Beginners",
+    "content": "6 Apr 2026 ... Quick Verdict \u00b7 Choose LangGraph if you need production-grade workflows, branching logic, checkpoints, and strong control over state. \u00b7 Choose\u00a0..."
+  },
+  {
+    "url": "https://pub.towardsai.net/langgraph-vs-crewai-vs-autogen-which-ai-agent-framework-should-your-enterprise-use-in-2026-3a9ebb407b09",
+    "title": "LangGraph vs CrewAI vs AutoGen: Production Guide (2026)",
+    "content": "21 Mar 2026 ... AutoGen is Microsoft Research's multi-agent conversation framework. Agents communicate by exchanging messages in a conversation loop until they\u00a0..."
+  },
+  {
+    "url": "https://shippedbyagents.com/posts/structural-risks-of-autonomous-coding-agents-in-production",
+    "title": "Structural Risks of Autonomous Coding Agents in Production",
+    "content": "5 days ago ... Autonomous coding agents have changed what it means to introduce AI into a codebase. The risk they carry is structural: it concerns what\u00a0..."
+  },
+  {
+    "url": "https://www.fiddler.ai/blog/artificial-intelligence-security-issues",
+    "title": "Artificial Intelligence Security Issues: Coding Agent Risks - Fiddler AI",
+    "content": "22 May 2026 ... Engineers experiment with different agent frameworks, connect them to internal repositories, and run them with personal access tokens. This\u00a0..."
+  },
+  {
+    "url": "https://www.industry.gov.au/publications/risks-and-controls-multi-agent-systems",
+    "title": "Risks and controls for multi-agent systems",
+    "content": "10 Aug 2026 ... Infrastructure and environment failures emerge from agent populations acting in their shared environment. Together they can compromise the\u00a0..."
+  },
+  {
+    "url": "https://www.champsoft.com/blogs/blogs-losing-control-visibility-autonomous-coding-agents/",
+    "title": "Why Developers Are Losing Control of Autonomous Coding Agents ...",
+    "content": "24 Sept 2026 ... Autonomous coding agents aren't going away, and the productivity gains are real. But speed without visibility eventually turns into rework,\u00a0..."
+  },
+  {
+    "url": "https://www.altamira.ai/blog/5-security-risks-of-autonomous-ai-agents/",
+    "title": "Top 5 security risks of autonomous AI agents - Altamira.ai",
+    "content": "8 Jan 2026 ... Understanding agentic AI threats in 2026 \u00b7 1. Excessive permissions \u00b7 2. Agent hijacking \u00b7 3. Cascading failures \u00b7 4. Tool misuse and code execution."
+  },
+  {
+    "url": "https://www.linkedin.com/posts/yashmittalz_we-talk-about-ai-agents-being-autonomous-activity-7493133116039974912-29cV",
+    "title": "The Dangers of Unsupervised AI Autonomy in Code Changes",
+    "content": "11 Aug 2026 ... Once multiple agents are working in parallel, a new management problem appears: \u2014 who is working on what \u2014 what context and state they share \u2014\u00a0..."
+  },
+  {
+    "url": "https://teamorouter.com/blogs/claude-subscription-vs-api-which-is-cheaper-2026",
+    "title": "Claude Subscription vs API: Which Is Cheaper in 2026? (Real Math)",
+    "content": "4 Aug 2026 ... Claude Pro vs Max vs API pay-per-use in 2026 \u2014 a real cost breakdown with session-level math, caching economics, and a decision matrix for\u00a0..."
+  },
+  {
+    "url": "https://www.reddit.com/r/ClaudeAI/comments/1qpcj8q/claude_subscriptions_are_up_to_36x_cheaper_than/",
+    "title": "Claude Subscriptions are up to 36x cheaper than API (and why \"Max ...",
+    "content": "28 Jan 2026 ... Subscription vs. API: In a typical \"agentic\" loop (where the model reads the same context over and over), the subscription is up to 36x better\u00a0..."
+  },
+  {
+    "url": "https://coworker.ai/blog/claude-api-pricing",
+    "title": "Claude API Pricing: A Complete Guide for AI Teams in 2026",
+    "content": "15 Jul 2026 ... Token costs in Claude API deployments are driven by four distinct billing levers: input tokens, output tokens, prompt caching, and batch\u00a0..."
+  },
+  {
+    "url": "https://age-of-product.com/token-economics-2026/",
+    "title": "Token Economics in 2026: No More Cheap Claude",
+    "content": "19 Apr 2026 ... ... and Windsurf from using subscription authentication, forcing automation workloads onto metered API billing. ... Inflationary pricing, and\u00a0..."
+  },
+  {
+    "url": "https://vexp.dev/blog/claude-code-cost-per-month",
+    "title": "Claude Code Real Cost Breakdown 2026: API vs Pro vs Max - vexp",
+    "content": "13 Mar 2026 ... The Hidden Cost Driver: Token Inefficiency \u00b7 65\u201380% of input tokens are irrelevant to the task \u00b7 A session that loads 80,000 tokens might only\u00a0..."
+  },
+  {
+    "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+    "title": "Pricing - Claude Platform Docs",
+    "content": "On Claude Fable 5.1 and Claude Mythos 5.1, a cache hit costs 2.5% of the standard input price ($0.25 USD per million tokens). On Claude Opus 5.5 and Claude\u00a0..."
+  },
+  {
+    "url": "https://www.mindstudio.ai/blog/usage-based-ai-pricing-vs-flat-subscriptions",
+    "title": "Usage-Based AI Pricing vs Flat Subscriptions: What the GitHub ...",
+    "content": "15 Jun 2026 ... GitHub Copilot introduced usage-based billing for \u201cpremium requests\u201d because different models have vastly different compute costs. Basic code\u00a0..."
+  },
+  {
+    "url": "https://www.granola.ai/blog/pricing-models-per-seat-flat-rate-ai-notetakers-sales",
+    "title": "Pricing models explained: Per-seat vs. flat-rate AI notetakers for sales",
+    "content": "22 Feb 2026 ... The sticker price on an AI notetaker covers only a fraction of what the tool actually costs. Per-seat models scale predictably while\u00a0..."
+  },
+  {
+    "url": "https://www.harness.io/pricing",
+    "title": "Harness Pricing | Flexible Plans for DevOps & CI/CD",
+    "content": "Cloud AI Cost Management i. AI DLC ... All Harness subscription tiers integrate with popular tools such as\u00a0..."
+  },
+  {
+    "url": "https://composio.dev/content/best-ai-agent-harnesses",
+    "title": "8 Best AI Agent Harnesses in 2026: Performance, Cost, and Speed ...",
+    "content": "4 Aug 2026 ... Hermes Agent passed 20 tasks and had the lowest total estimated cost at $9.28. It also had the lowest cost per successful task at $0.46. Oh My\u00a0..."
+  },
+  {
+    "url": "https://medium.com/@UdaykiranEstari/ai-token-pricing-2026-why-your-20-flat-rate-subscription-is-dead-051ba554ec4e",
+    "title": "AI Token Pricing 2026: Your $20 Unlimited Subscription Is Dead",
+    "content": "5 May 2026 ... The six-week death of flat-rate AI means the 15x agentic token tax is now your problem \u2014 here's the production-ready framework that cuts\u00a0..."
+  },
+  {
+    "url": "https://www.sitepoint.com/ai-coding-tools-cost-analysis-roi-calculator-2026/",
+    "title": "AI Coding Tools Cost Analysis 2026: ROI Calculator - SitePoint",
+    "content": "5 Mar 2026 ... Pricing models shifted from flat-rate subscriptions to hybrid usage-based structures starting in late 2023, and that shift accelerated\u00a0..."
+  },
+  {
+    "url": "https://developers.openai.com/api/docs/pricing",
+    "title": "Pricing | OpenAI API",
+    "content": "Prices per 1M tokens. ... Regional processing (data residency) endpoints are charged a 10% uplift for models released on or after March 5, 2026, that are eligible\u00a0..."
+  },
+  {
+    "url": "https://www.zuora.com/guides/ai-pricing-models/",
+    "title": "AI Pricing Models Compared: Seats, Tokens, Outcomes - Zuora",
+    "content": "30 Jun 2026 ... Six pricing models cover the AI offer space: Per Seat, Per Token, Per Activity, Per Output, Per Outcome, and Hybrid combinations. The right\u00a0..."
+  },
+  {
+    "url": "https://pricepertoken.com/",
+    "title": "LLM API Pricing 2026 - Compare 300+ AI Model Costs",
+    "content": "Up-to-date pricing information for major LLM APIs including OpenAI, Anthropic, Google, Mistral and more. Compare token costs across different AI models and find\u00a0..."
+  },
+  {
+    "url": "https://firstpagesage.com/seo-blog/ai-token-usage-cost-by-model/",
+    "title": "AI Token Usage Cost by Model: OpenAI vs. Anthropic vs. Google",
+    "content": "9 Sept 2026 ... AI Token Cost Over Time, 2023 to 2026 ; Q4 2024, 11.7, 176, 20.6 ; Q1 2025, 11.1, 214, 23.8."
+  },
+  {
+    "url": "https://artificialanalysis.ai/models",
+    "title": "Comparison of AI Models across Intelligence, Performance, and Price",
+    "content": "Claude Opus 5.5 (high with fallback). Output Speed (tokens/s). Celeris-1 logo Celeris-1 (1564 t/s)\u00a0..."
+  },
+  {
+    "url": "https://aitokenprice.com/",
+    "title": "AI Token Price: API Prices for Every AI Model, Verified",
+    "content": "API prices per 1M tokens for 78 AI models, including GPT-6, Claude Opus 5.5 and Gemini 3.8 Flash, with cached and batch rates and a verified date on each."
+  },
+  {
+    "url": "https://medium.com/@vinodbokare0588/loop-engineering-the-ai-skill-replacing-prompt-engineering-0e108d3713be",
+    "title": "Loop Engineering: The AI Skill Replacing Prompt Engineering",
+    "content": "27 Jun 2026 ... They run it, read the error, fix it, run it again. AI coding agents that skip this cycle and generate code exactly once are fundamentally\u00a0..."
+  },
+  {
+    "url": "https://www.freecodecamp.org/news/ai-agent-engineers-guide-60-patterns-for-building-autonomous-systems-book/",
+    "title": "The AI Agent Engineer's Guide: 60 Patterns for Building ...",
+    "content": "20 Aug 2026 ... ... Self (Agent 27), Feedback Loop (Agent 46). Reality Check. Autonomous ... Loop (Agent 46), Curriculum Designer (Agent 49). Agent 51 \u2014 The\u00a0..."
+  },
+  {
+    "url": "https://addyo.substack.com/p/practical-loop-engineering",
+    "title": "Practical Loop Engineering - by Addy Osmani - Elevate",
+    "content": "14 Aug 2026 ... A loop is an autonomous, self-correcting feedback cycle where an AI agent ... idle gaps, even crashes and picks up right where it left off."
+  },
+  {
+    "url": "https://www.addwebsolution.com/blog/loop-engineering-ai-agent-loops-production-software",
+    "title": "Loop Engineering: How AI Agent Loops Ship Production Software in ...",
+    "content": "12 Jun 2026 ... Short answer: Loop engineering is the practice of designing AI systems that don't just answer once; they act, observe the result,\u00a0..."
+  },
+  {
+    "url": "https://addyosmani.com/blog/self-improving-agents/",
+    "title": "Self-Improving Coding Agents | AddyOsmani.com",
+    "content": "31 Jan 2026 ... This is the promise of autonomous AI coding agents - harnessing tools like Claude Code in continuous loops to improve and ship code while you\u00a0..."
+  },
+  {
+    "url": "https://www.union.ai/blog-post/how-to-build-self-healing-agents",
+    "title": "How to Build Self-Healing Agents | Union.ai",
+    "content": "2 Apr 2026 ... When an agent's inner loop surfaces infrastructure failures as ... When the agent has exhausted its autonomous options, it should\u00a0..."
+  },
+  {
+    "url": "https://www.reddit.com/r/artificial/comments/1v3mxzb/an_ai_broke_out_of_its_sandbox_yesterday_then_it/",
+    "title": "An AI broke out of its sandbox yesterday. Then it hacked a ... - Reddit",
+    "content": "23 Jul 2026 ... On July 21 OpenAI confirmed that GPT-5.6 Sol was running inside an isolated sandbox with no internet access. Its job was to solve a\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2507.21046v4",
+    "title": "A Survey of Self-Evolving Agents What, When, How, and ... - arXiv",
+    "content": "16 Jan 2026 ... ... agent's lifecycle. These risks are not merely extensions of traditional AI safety issues, such as those arising from vague user instructions\u00a0..."
+  },
+  {
+    "url": "https://en.wikipedia.org/wiki/OpenAI%E2%80%93HuggingFace_incident",
+    "title": "OpenAI\u2013HuggingFace incident - Wikipedia",
+    "content": "From May to July 2026, AI agents developed by OpenAI escaped their testing sandbox to access the Internet and breach the infrastructure of Hugging Face,\u00a0..."
+  },
+  {
+    "url": "https://www.mckinsey.com/industries/engineering-construction-and-building-materials/our-insights/how-ai-is-reshaping-the-future-of-the-aec-industry",
+    "title": "How AI is reshaping the future of the AEC industry - McKinsey",
+    "content": "15 Jul 2026 ... Within minutes, AI agents compare the image with the latest 3D model, engineering drawings, procurement records, and construction schedule. They\u00a0..."
+  },
+  {
+    "url": "https://github.com/addyosmani/agent-skills/blob/main/skills/code-review-and-quality/SKILL.md",
+    "title": "agent-skills/skills/code-review-and-quality/SKILL.md at main - GitHub",
+    "content": "Production-grade engineering skills for AI coding agents. - agent-skills/skills/code-review-and-quality/SKILL.md at main \u00b7 addyosmani/agent-skills."
+  },
+  {
+    "url": "https://docs.aws.amazon.com/connect/latest/adminguide/agentic-voice-best-practices.html",
+    "title": "Agentic voice best practices - Amazon Connect Customer",
+    "content": "The caller might want to correct or short-cut the bot mid-prompt \u2014 the normal conversational case. Example. For a self-service AI agent, leave barge-in on\u00a0..."
+  },
+  {
+    "url": "https://skywork.ai/blog/mcp-server/claude-agent-sdk-best-practices-ai-agents-2025",
+    "title": "Mastering Claude Agent SDK: Best Practices for Developing AI ...",
+    "content": "30 Sept 2025 ... Anthropic engineers emphasize multi-agent workflows and specialization in their 2025 guidance; see the engineering post on agent orchestration\u00a0..."
+  },
+  {
+    "url": "https://www.onewave-ai.com/claude-agents",
+    "title": "Claude Agents | Anthropic Agent SDK Consulting - OneWave AI",
+    "content": "We build production agent systems with Claude managed agents and the Anthropic Agent SDK. Autonomous workflows, multi-agent orchestration, and tool-using\u00a0..."
+  },
+  {
+    "url": "https://www.ayautomate.com/blog/how-to-build-multi-agent-system-claude",
+    "title": "How to Build a Multi-Agent System With Claude in 2026 - AY Automate",
+    "content": "22 Jun 2026 ... Claude 4.7 ships with native sub-agent support inside Claude Code, a first-class Agent SDK in TypeScript and Python, and clean interop with\u00a0..."
+  },
+  {
+    "url": "https://www.anthropic.com/engineering/multi-agent-research-system",
+    "title": "How we built our multi-agent research system - Anthropic",
+    "content": "13 Jun 2025 ... Our Research feature uses multiple Claude agents to explore complex topics more effectively. We share the engineering challenges and the lessons\u00a0..."
+  },
+  {
+    "url": "https://www.mindstudio.ai/blog/agent-sdk-vs-framework-claude-pydantic-ai-production",
+    "title": "When to Use Claude Agent SDK vs Pydantic AI for Production",
+    "content": "29 Mar 2026 ... The Claude Agent SDK typically refers to building agents using Anthropic's official Python or TypeScript SDK ( anthropic ) directly. You use\u00a0..."
+  },
+  {
+    "url": "https://madgeek.ai/resources/ai-agent-framework-comparison",
+    "title": "AI Agent Framework Comparison: Claude vs OpenAI vs LangGraph",
+    "content": "8 Jun 2026 ... The main AI agent frameworks in 2026 are Claude Agents SDK, OpenAI Agents SDK, and LangGraph \u2014 each with different strengths for tool use\u00a0..."
+  },
+  {
+    "url": "https://www.openhelm.ai/blog/openai-agents-sdk-vs-langgraph-vs-autogen",
+    "title": "OpenAI Agents SDK vs LangGraph vs AutoGen: Building Production ...",
+    "content": "14 Nov 2025 ... Performance characteristics ... The OpenAI SDK has the least overhead, LangGraph gives you the most control over routing, and AutoGen's multi-\u00a0..."
+  },
+  {
+    "url": "https://composio.dev/content/openai-agents-sdk-vs-langgraph-vs-autogen-vs-crewai",
+    "title": "OpenAI Agents SDK vs LangGraph vs Autogen vs CrewAI - Composio",
+    "content": "21 Mar 2025 ... State Management \u00b7 OpenAI Agents SDK: State persistence is solid with built-in tracing. \u00b7 LangGraph: Excels in managing state through graph\u00a0..."
+  },
+  {
+    "url": "https://www.reddit.com/r/LangChain/comments/1rnc2u9/comprehensive_comparison_of_every_ai_agent/",
+    "title": "Comprehensive comparison of every AI agent framework in 2026",
+    "content": "7 Mar 2026 ... **Multi-Agent:** AutoGen, CrewAI, MetaGPT, OpenAI Agents SDK, Google ... LangGraph vs. Other Agentic Frameworks. 21 upvotes \u00b7 20\u00a0..."
+  },
+  {
+    "url": "https://fast.io/resources/langgraph-vs-autogen/",
+    "title": "LangGraph vs AutoGen: Multi-Agent Framework Comparison 2026",
+    "content": "11 May 2026 ... LangGraph models agent workflows as directed graphs with typed state, while AutoGen treats workflows as multi-agent conversations with natural\u00a0..."
+  },
+  {
+    "url": "https://www.langchain.com/resources/langchain-vs-autogen",
+    "title": "LangChain vs. AutoGen in 2026",
+    "content": "23 Jun 2026 ... ... LangGraph, Microsoft Agent Framework, Deep Agents, OpenAI SDK, Anthropic SDK, or custom code. Choosing LangGraph does not commit your team\u00a0..."
+  },
+  {
+    "url": "https://pub.towardsai.net/i-tried-10-ai-agent-frameworks-in-2026-heres-the-honest-guide-i-wish-i-had-earlier-16da216282da",
+    "title": "I Tried 10 AI Agent Frameworks in 2026 - Towards AI",
+    "content": "14 May 2026 ... A practical comparison of 10 AI agent frameworks in 2026, including LangGraph, CrewAI, AutoGen, DSPy, and OpenAI Agents SDK, with real-world\u00a0..."
+  },
+  {
+    "url": "https://learn.microsoft.com/en-us/agent-framework/agents/tools/local-mcp-tools",
+    "title": "Using MCP tools with Agents - Microsoft Learn",
+    "content": "23 Sept 2026 ... MCP Tool Types. The mcptool package lets agents use tools from Model Context Protocol (MCP) servers. Connect to an MCP server. import\u00a0..."
+  },
+  {
+    "url": "https://modelcontextprotocol.io/docs/2026-07-28/getting-started/intro",
+    "title": "What is the Model Context Protocol (MCP)?",
+    "content": "Using MCP, AI applications like Claude or ChatGPT can connect to data sources (e.g. local files, databases), tools (e.g. search engines, calculators) and\u00a0..."
+  },
+  {
+    "url": "https://modelcontextprotocol.io/specification/2026-07-28/server/tools",
+    "title": "Tools - Model Context Protocol",
+    "content": "28 Jul 2026 ... Tools enable models to interact with external systems, such as querying databases, calling APIs, or performing computations. Each tool is\u00a0..."
+  },
+  {
+    "url": "https://www.oracle.com/in/database/model-context-protocol-mcp/",
+    "title": "Model Context Protocol (MCP) Explained | Oracle India",
+    "content": "17 Feb 2026 ... ... protocol for tool interaction across vendors or systems. ... Chatbots can use MCP to combine personal device data and sentiment analysis tools."
+  },
+  {
+    "url": "https://www.anthropic.com/engineering/code-execution-with-mcp",
+    "title": "Code execution with MCP: building more efficient AI agents - Anthropic",
+    "content": "4 Nov 2025 ... Direct tool calls consume context for each definition and result. Agents scale better by writing code to call tools instead. Here's how it works\u00a0..."
+  },
+  {
+    "url": "https://www.databricks.com/blog/what-is-model-context-protocol",
+    "title": "What is the Model Context Protocol (MCP)? - Databricks",
+    "content": "Rather than hardcoding connections to each external service, AI agents using MCP can dynamically discover available tools, understand their capabilities through\u00a0..."
+  },
+  {
+    "url": "https://deepeval.com/blog/best-llm-evaluation-platforms",
+    "title": "Top 5 LLM Evaluation Platforms in 2026, Compared - DeepEval",
+    "content": "29 Sept 2026 ... LLM evaluation frameworks like DeepEval help developers and researchers evaluate their AI applications in code. However, when entire teams\u00a0..."
+  },
+  {
+    "url": "https://www.marktechpost.com/2026/08/09/top-llm-observability-and-evaluation-platforms-in-2026-langfuse-langsmith-braintrust-arize-and-more-compared/",
+    "title": "Top LLM Observability and Evaluation Platforms in 2026: Langfuse ...",
+    "content": "9 Aug 2026 ... AI-native observability platforms: Langfuse, LangSmith, Braintrust, Arize, Opik \u2014 treat the LLM trace as the primary object. They capture nested\u00a0..."
+  },
+  {
+    "url": "https://futureagi.com/blog/deepeval-alternatives-2026/",
+    "title": "DeepEval Alternatives in 2026: 5 LLM Eval Platforms Compared",
+    "content": "7 Jun 2025 ... Langfuse is the strongest OSS-first alternative when the gap is observability rather than the eval framework itself. Many teams keep DeepEval in\u00a0..."
+  },
+  {
+    "url": "https://www.braintrust.dev/",
+    "title": "Braintrust - The active observability platform for agents",
+    "content": "Ship quality agents at scale. Braintrust is the AI observability platform for tracing production, running evals, and catching regressions before they reach\u00a0..."
+  },
+  {
+    "url": "https://www.lyzr.ai/blog/best-tools-for-llm-evaluation/",
+    "title": "Best Tools for LLM Evaluation in Enterprise (2026) - Lyzr",
+    "content": "24 Sept 2026 ... LLM evaluation tool capability comparison. Capability, Lyzr, DeepEval, Braintrust, Arize Phoenix, LangSmith ... observability-first platform\u00a0..."
+  },
+  {
+    "url": "https://www.confident-ai.com/frameworks/deepeval",
+    "title": "DeepEval by Confident AI: Open-Source LLM Evaluation Framework ...",
+    "content": "DeepEval is the open-source LLM evaluation framework built and maintained by Confident AI. Run 50+ research-backed metrics in Python or TypeScript,\u00a0..."
+  },
+  {
+    "url": "https://safeguard.sh/resources/blog/best-sast-tools-2026",
+    "title": "Best SAST Tools in 2026: Semgrep, CodeQL & Snyk Compared",
+    "content": "5 Jun 2026 ... CodeQL treats code as data you can query, which gives it unmatched depth for the kind of deep semantic analysis security researchers rely on. It\u00a0..."
+  },
+  {
+    "url": "https://cycode.com/blog/ai-sast-tools/",
+    "title": "The 11 Best AI SAST Tools in 2026 - Cycode",
+    "content": "17 Sept 2026 ... GitHub Advanced Security builds static analysis into the platform where much of the world's code already lives. CodeQL treats code as queryable\u00a0..."
+  },
+  {
+    "url": "https://www.endorlabs.com/learn/best-developer-security-tools",
+    "title": "Developer Security Tools Compared: A Practical Guide for 2026 | Blog",
+    "content": "22 Apr 2026 ... Integration challenges: While Semgrep integrates with GitHub and GitLab, it doesn't provide the comprehensive workflow integration that\u00a0..."
+  },
+  {
+    "url": "https://www.opsmx.com/blog/best-ai-code-security-scanning-tools/",
+    "title": "9 Best AI for Code Security Scanning Tools Compared 2026 - OpsMx",
+    "content": "7 days ago ... The best AI code security scanning tools in 2026 are OpsMx Delivery Shield with AI Guardian, Snyk Code, GitHub Advanced Security, Checkmarx One,\u00a0..."
+  },
+  {
+    "url": "https://github.com/hardw00t/ai-security-arsenal",
+    "title": "hardw00t/ai-security-arsenal: A collection of skills, agents ... - GitHub",
+    "content": "SAST Orchestration. Static Application Security Testing orchestration with custom rule development. Capabilities: Multi-tool scanning with Semgrep, CodeQL\u00a0..."
+  },
+  {
+    "url": "https://www.greptile.com/content-library/best-sast-tools",
+    "title": "5 Best SAST Tools for Engineering Teams (2026 Guide) | Greptile",
+    "content": "6 days ago ... Semgrep vs. Snyk: Snyk leans on AI for developer-friendly fixes and strong IDE integration. Semgrep gives teams full control to write and\u00a0..."
+  },
+  {
+    "url": "https://ai.engineer/orgs/factory",
+    "title": "Factory: AI Software Engineering Agents",
+    "content": "Factory builds Droids, AI agents that help enterprise engineering teams implement, test, review and maintain software. Its Factory 2.0 platform connects\u00a0..."
+  },
+  {
+    "url": "https://www.port.io/blog/ai-software-factory",
+    "title": "AI Software Factory: What It Is, Why You Need One, Who Owns It",
+    "content": "Discover what an AI software factory is, why it beats coding assistants, and who owns it in your engineering organization today."
+  },
+  {
+    "url": "https://www.augmentcode.com/guides/dark-factory-autonomous-software-delivery",
+    "title": "The Dark Factory: What Fully Autonomous Software Delivery ...",
+    "content": "17 Sept 2026 ... This guide addresses chief technology officers (CTOs) and engineering leaders, including vice presidents and engineering managers, who must\u00a0..."
+  },
+  {
+    "url": "https://www.upheave.tech/blog/the-software-factory/",
+    "title": "The Software Factory: An Autonomous Software Delivery Engine",
+    "content": "1 Sept 2026 ... The question we wanted to answer is whether an agency of our size can encode its engineering judgement into something that then builds software\u00a0..."
+  },
+  {
+    "url": "https://factory.com/news/safe-autonomy-readiness-policy",
+    "title": "Building AI for Safe and Responsible Autonomy: Our Readiness Policy",
+    "content": "4 Mar 2025 ... Our mission at Factory is to bring autonomy to software engineering in a way that prioritizes safety, responsibility, and transparency."
+  },
+  {
+    "url": "https://www.linkedin.com/pulse/how-factoryai-works-move-over-vibe-coding-copilots-nikunj-2evpc",
+    "title": "How Factory.ai Works - Move Over Vibes & Copilots, Autonomous ...",
+    "content": "14 Jul 2026 ... ... ai is \"for AI to become an autonomous software engineering organization\". ... factory like the below evolution of AI in software engineering\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2502.02649v3",
+    "title": "Fully Autonomous AI Agents Should Not be Developed - arXiv",
+    "content": "20 Oct 2025 ... Our analysis reveals that risks to people increase with the autonomy of a system: The more control a user cedes to an AI agent, the more risks\u00a0..."
+  },
+  {
+    "url": "https://www.reddit.com/r/AI_Agents/comments/1rkfmf9/fully_autonomous_agents_in_production_is_human/",
+    "title": "Fully autonomous agents in production: is human validation being ...",
+    "content": "4 Mar 2026 ... Those past few months, with tools like open-claw and such, it seems that people focus on making fully autonomous AI Agents. Even companies\u00a0..."
+  },
+  {
+    "url": "https://rdi.berkeley.edu/blog/auto-software-dev/",
+    "title": "When Coding Stops Being the Bottleneck - Berkeley RDI",
+    "content": "26 Jul 2026 ... Autonomous software development challenges this assumption. A central research question is how to redesign programming languages, development\u00a0..."
+  },
+  {
+    "url": "https://ieeexplore.ieee.org/document/11540994/",
+    "title": "From LLM Reasoning to Autonomous AI Agents - IEEE Xplore",
+    "content": "1 Jun 2026 ... Furthermore, we review AI-agent frameworks introduced between 2023 and 2025 that integrate large language models with modular toolkits to enable\u00a0..."
+  },
+  {
+    "url": "https://en.wikipedia.org/wiki/Devin_AI",
+    "title": "Devin AI - Wikipedia",
+    "content": "Devin AI is an AI-assisted software development tool created by Cognition Labs. It is designed to autonomously complete software development tasks."
+  },
+  {
+    "url": "https://www.techtarget.com/ai/tip/The-risks-of-AI-overreliance-in-software-engineering",
+    "title": "The risks of AI overreliance in software engineering | TechTarget",
+    "content": "6 days ago ... However, this efficiency could easily instill overreliance on these tools in our developers, leading to time-consuming issues; problems with\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/abs/2412.17481",
+    "title": "[2412.17481] A Survey on LLM-based Multi-Agent System - arXiv",
+    "content": "23 Dec 2024 ... This paper presents a comprehensive survey of these studies. We first discuss the definition of LLM-MAS, a framework encompassing much of\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/abs/2402.01680",
+    "title": "[2402.01680] Large Language Model based Multi-Agents - arXiv",
+    "content": "21 Jan 2024 ... Recently, based on the development of using one LLM as a single planning or decision-making agent, LLM-based multi-agent systems have achieved\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/abs/2501.06322",
+    "title": "Multi-Agent Collaboration Mechanisms: A Survey of LLMs - arXiv",
+    "content": "10 Jan 2025 ... These LLM-based Multi-Agent Systems (MASs) enable groups of intelligent agents to coordinate and solve complex tasks collectively at scale,\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/abs/2505.21116",
+    "title": "[2505.21116] Creativity in LLM-based Multi-Agent Systems: A Survey",
+    "content": "27 May 2025 ... Abstract:Large language model (LLM)-driven multi-agent systems (MAS) are transforming how humans and AIs collaboratively generate ideas and\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/html/2412.17481v2",
+    "title": "A Survey on LLM-based Multi-Agent System: Recent Advances and ...",
+    "content": "7 Jan 2025 ... We provide an overview of the various applications of LLM-MAS in (i) solving complex tasks, (ii) simulating specific scenarios, and (iii)\u00a0..."
+  },
+  {
+    "url": "https://arxiv.org/abs/2502.14321",
+    "title": "A Communication-Centric Survey of LLM-Based Multi-Agent Systems",
+    "content": "20 Feb 2025 ... Existing surveys typically categorize LLM-based multi-agent systems (LLM-MAS) according to their application domains or architectures,\u00a0..."
+  },
+  {
+    "url": "https://dl.acm.org/doi/10.1145/3839525",
+    "title": "Reducing Hallucinations in LLM-Generated Code via Semantic ...",
+    "content": "1 Oct 2026 ... We identify theoretical requirements for this framework, and we prove that under a formal model of LLM hallucinations, these properties confer\u00a0..."
+  },
+  {
+    "url": "https://futureagi.com/blog/taming-hallucination-beast-strategies-reliable-llms/",
+    "title": "Reduce LLM Hallucinations in 2026 - Future AGI",
+    "content": "Reduce LLM hallucinations in 2026 with seven proven strategies: RAG grounding, uncertainty estimation, fine tuning, adversarial training, live eval."
+  },
+  {
+    "url": "https://medium.com/@victor.dibia/practical-steps-to-reduce-hallucination-and-improve-performance-of-systems-built-with-large-5d2bcadeba61",
+    "title": "Practical Steps to Reduce Hallucination and Improve Performance ...",
+    "content": "28 Aug 2023 ... How can we make systems that integrate LLM's like ChatGPT more reliable? Here are practical techniques (and research) to mitigate\u00a0..."
+  },
+  {
+    "url": "https://www.diva-portal.org/smash/get/diva2:1887431/FULLTEXT01.pdf",
+    "title": "Mitigating Hallucination in Large Language Model Code Generation ...",
+    "content": "Studies indicate that LLMs produce substantial carbon dioxide emissions, primarily due to the ... Zhang, \u201cExploring and evaluating hallucinations in llm-powered\u00a0..."
+  },
+  {
+    "url": "https://mem0.ai/library/agent-memory/reducing-hallucinations-llms-with-grounded-memory",
+    "title": "Reducing Hallucinations in LLMs with Grounded Memory - Mem0",
+    "content": "Learn how grounded memory and RAG architectures reduce LLM hallucinations by 95%+. Explore retrieval systems, verification loops, and Mem0's stateful\u00a0..."
+  },
+  {
+    "url": "https://www.researchgate.net/post/What_are_the_most_effective_strategies_for_mitigating_hallucinations_in_large_language_models_deployed_in_enterprise_production_environments",
+    "title": "What are the most effective strategies for mitigating hallucinations in ...",
+    "content": "14 Mar 2026 ... With the rapid adoption of LLMs in enterprise settings for tasks like code generation, customer support, and decision support systems,\u00a0..."
+  },
+  {
+    "url": "https://www.swarms.ai/blog/what-is-multi-agent-orchestration",
+    "title": "What Is Multi-Agent Orchestration? Patterns, State, and Failure ...",
+    "content": "6 hours ago ... It defines the term, maps each common orchestration pattern to a concrete swarm_type in the Swarms API, and covers the three things that decide\u00a0..."
+  },
+  {
+    "url": "https://www.ibm.com/think/topics/agent-swarm",
+    "title": "What are Agent Swarms and How Do They Work? - IBM",
+    "content": "28 Sept 2026 ... An agent swarm describes a more collaborative arrangement. Agents can divide a larger task, specialize in different types of work, share\u00a0..."
+  },
+  {
+    "url": "https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/ai-agent-design-patterns",
+    "title": "AI Agent Orchestration Patterns - Azure Architecture Center",
+    "content": "12 Feb 2026 ... Before you adopt a multiagent orchestration pattern, evaluate whether your scenario requires one. Agent architectures exist on a spectrum of\u00a0..."
+  },
+  {
+    "url": "https://aws.amazon.com/blogs/machine-learning/multi-agent-collaboration-patterns-with-strands-agents-and-amazon-nova/",
+    "title": "Multi-Agent collaboration patterns with Strands Agents and Amazon ...",
+    "content": "11 Nov 2025 ... In an AI swarm, each agent might approach the problem from a different perspective (or with different data or mode) and share its findings so\u00a0..."
+  },
+  {
+    "url": "https://fast.io/resources/multi-agent-orchestration-patterns/",
+    "title": "Multi-Agent Orchestration Patterns: Complete Guide 2026 - Fastio",
+    "content": "13 Feb 2026 ... Multi-agent orchestration patterns define how AI agents work together to complete tasks. This guide covers the four primary patterns (supervisor\u00a0..."
+  },
+  {
+    "url": "https://www.developersdigest.tech/blog/seven-ai-agent-orchestration-patterns",
+    "title": "7 AI Agent Orchestration Patterns Developers Should Know",
+    "content": "22 Apr 2026 ... Harness + Swarm. The harness cron triggers a swarm of research agents every morning. Supervisor + Pipeline. A supervisor decomposes work, each\u00a0..."
+  },
+  {
+    "url": "https://www.reddit.com/r/AI_Agents/comments/1rx4psr/why_ai_agents_fall_apart_on_real_work_and_what_i/",
+    "title": "Why AI agents fall apart on real work, and what I learned building a ...",
+    "content": "18 Mar 2026 ... This is what I now think is the core problem with long-running agent systems: the model is a probabilistic system optimizing for a plausible\u00a0..."
+  },
+  {
+    "url": "https://www.quora.com/Why-do-AI-agents-still-struggle-with-long-running-tasks-despite-having-powerful-LLMs-and-what-architectural-improvements-are-needed-to-make-them-truly-autonomous",
+    "title": "Why do AI agents still struggle with long-running tasks ... - Quora",
+    "content": "19 Aug 2026 ... A modern AI can write flawless code in seconds. Yet on a 50-step autonomous task, a single hallucinated detail at step 15 will silently doom\u00a0..."
+  },
+  {
+    "url": "https://brightlume.ai/blog/long-running-ai-agents-scheduling-durability-recovery",
+    "title": "Long-Running AI Agents: Scheduling, Durability, and Recovery ...",
+    "content": "17 Apr 2026 ... Most AI agent tutorials assume synchronous, request-response execution: user asks a question, agent thinks for a few seconds, returns an answer."
+  },
+  {
+    "url": "https://www.linkedin.com/pulse/why-most-llm-agents-fail-long-tasks-how-maker-fixed-dingkang-wang-x3swc",
+    "title": "Why Most LLM Agents Fail at Long Tasks \u2013 And How MAKER Fixed It",
+    "content": "22 Nov 2025 ... Lack of Step-Level Control: These autonomous agents, while flexible, have low task controllability. They are prone to arbitrary actions,\u00a0..."
+  },
+  {
+    "url": "https://winder.ai/why-ai-agents-fail-in-production/",
+    "title": "Why AI Agents Fail in Production, and the Observability That Catches It",
+    "content": "15 Aug 2026 ... They call the right tool with the wrong arguments. They run out of context partway through a long task and forget a constraint you gave them at\u00a0..."
+  },
+  {
+    "url": "https://www.mindstudio.ai/blog/ai-agent-memory-wall-long-running-jobs",
+    "title": "AI Agent Memory Wall: Why Agents Fail at Long-Running Jobs and ...",
+    "content": "22 Mar 2026 ... In short tasks, errors are usually handled per-call. In long jobs, errors can cascade: the agent improvises around a failed step, that\u00a0..."
+  }
+]

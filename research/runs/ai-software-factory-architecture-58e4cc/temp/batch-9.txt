@@ -1,0 +1,10 @@
+https://www.datacamp.com/tutorial/crewai-vs-langgraph-vs-autogen
+https://www.fiddler.ai/blog/artificial-intelligence-security-issues
+https://coworker.ai/blog/claude-api-pricing
+https://www.granola.ai/blog/pricing-models-per-seat-flat-rate-ai-notetakers-sales
+https://www.zuora.com/guides/ai-pricing-models/
+https://addyo.substack.com/p/practical-loop-engineering
+https://www.mckinsey.com/industries/engineering-construction-and-building-materials/our-insights/how-ai-is-reshaping-the-future-of-the-aec-industry
+https://www.onewave-ai.com/claude-agents
+https://composio.dev/content/openai-agents-sdk-vs-langgraph-vs-autogen-vs-crewai
+https://modelcontextprotocol.io/docs/2026-07-28/getting-started/intro

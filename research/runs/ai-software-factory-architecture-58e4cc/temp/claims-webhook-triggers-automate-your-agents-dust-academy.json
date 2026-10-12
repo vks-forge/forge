@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "Each webhook-triggered agent event starts a new, separate conversation rather than continuing a shared session, enabling the agent to handle each event independently with full reasoning transparency reviewable per-event.",
+    "stance": "supports",
+    "stance_target": "event-driven trigger architecture should isolate per-event agent context rather than accumulate state in a long-lived session",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Dust platform documentation, 2026",
+    "quoted_support": "Every webhook event creates a separate conversation, allowing your agent to handle each event independently with full reasoning transparency.",
+    "numbers": [],
+    "entities": ["Dust"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "webhook-triggers-automate-your-agents-dust-academy"
+  },
+  {
+    "claim": "A platform's built-in managed webhook triggers cover GitHub (PR/issue events), Jira (ticket creation/status changes), Zendesk (support ticket events), Fathom (meeting recordings), and Linear (issue tracking), plus admin-configurable custom webhooks for any other platform.",
+    "stance": "neutral",
+    "stance_target": "catalog of available managed event-trigger integrations for agent automation",
+    "evidence_type": "empirical",
+    "scope_conditions": "Dust platform, 2026",
+    "quoted_support": "GitHub: PR events, issue updates. Jira: Ticket creation, status changes. Zendesk: Support ticket events. Fathom: Meeting recordings. Linear: Issue tracking events.",
+    "numbers": [],
+    "entities": ["GitHub", "Jira", "Zendesk", "Fathom", "Linear", "Dust"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "webhook-triggers-automate-your-agents-dust-academy"
+  },
+  {
+    "claim": "Webhook trigger configurations support natural-language filters (e.g., 'Only when ticket contains urgent') layered on top of the structural event type to narrow which events actually invoke the agent.",
+    "stance": "supports",
+    "stance_target": "event-driven triggers for continuous agent operation need filterable conditions, not just raw event-type matching",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Dust Agent Builder, 2026",
+    "quoted_support": "Add optional filter in natural language (e.g., Only when ticket contains \"urgent\")",
+    "numbers": [],
+    "entities": ["Dust"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "webhook-triggers-automate-your-agents-dust-academy"
+  }
+]

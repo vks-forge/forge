@@ -1,0 +1,40 @@
+# Draft B — must_read_note_ids (n=38)
+
+- building-effective-ai-agents-anthropic: Building Effective AI Agents \ Anthropic
+- interim-report-agent-self-termination-and-idle-cost-economics: Interim report — agent-self-termination-and-idle-cost-economics
+- how-we-built-our-multi-agent-research-system-anthropic: How we built our multi-agent research system \ Anthropic
+- interim-report-probabilistic-skill-sequence-prediction-architecture: Interim report — probabilistic-skill-sequence-prediction-architecture
+- interim-report-consumer-subscription-automation-policy-risk: Interim report — consumer-subscription-automation-policy-risk
+- interim-report-pentest-autonomy-regression-vs-mandated-cadence: Interim report — pentest-autonomy-regression-vs-mandated-cadence
+- interim-report-worker-agent-autonomy-reliability-at-scale: Interim report — worker-agent-autonomy-reliability-at-scale
+- owasp-apts-autonomous-penetration-testing-standard-owasp-foundation: OWASP APTS - Autonomous Penetration Testing Standard | OWASP Foundation
+- equipping-agents-for-the-real-world-with-agent-skills-anthropic: Equipping agents for the real world with Agent Skills \ Anthropic
+- agency-secure-scalable-sandboxes-for-agents-sierra: Agency: Secure, scalable sandboxes for agents | Sierra
+- interim-report-agent-skills-context-overhead-magnitude: Interim report — agent-skills-context-overhead-magnitude
+- center-for-responsible-decentralized-intelligence-at-berkeley: Center for Responsible, Decentralized Intelligence at Berkeley
+- demystifying-evals-for-ai-agents-anthropic: Demystifying evals for AI agents \ Anthropic
+- effective-context-engineering-for-ai-agents-anthropic: Effective context engineering for AI agents \ Anthropic
+- agent-skills-claude-platform-docs: Agent Skills - Claude Platform Docs
+- claude-credit-overhaul-2026-anthropic-pauses-the-june-15-change: Claude Credit Overhaul 2026: Anthropic Pauses the June 15 Change
+- grade-graph-representation-of-llm-agent-dependency-and-execution: Grade: Graph Representation of LLM Agent Dependency and Execution
+- two-multi-account-claude-code-architectures-one-anthropic-accepts-one-they-ban-d: Two Multi-Account Claude Code Architectures: One Anthropic Accepts, One They Ban - DEV Community
+- openai-rogue-agent-breach-of-hugging-face-wikipedia: OpenAI rogue agent breach of Hugging Face - Wikipedia
+- structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents: Structural Risks of Autonomous Coding Agents in Production · Shipped by Agents
+- leveraging-llms-for-legacy-code-modernization-challenges-and-opportunities-for-l: Leveraging LLMs for Legacy Code Modernization: Challenges and Opportunities for LLM-Generated Docume
+- ai-code-review-only-catches-half-of-your-bugs-oreilly: AI Code Review Only Catches Half of Your Bugs – O’Reilly
+- automated-penetration-testing-full-autonomy-fell-to-9: Automated Penetration Testing: Full Autonomy Fell to 9%
+- are-llms-reliable-code-reviewers-systematic: Are LLMs Reliable Code Reviewers? Systematic
+- openai-hugging-face: OpenAI – Hugging Face
+- when-does-a-second-model-helpcross-model-review-in-llm-verification: When Does a Second Model Help?Cross-Model Review in LLM Verification
+- usage-policies-openai: Usage policies | OpenAI
+- arxiv250208788v3-cscl-21-jun-2025: arXiv:2502.08788v3  [cs.CL]  21 Jun 2025
+- nobodys-in-the-cockpit-risks-of-autonomous-ai-security-testing: Nobody’s in the Cockpit: Risks of Autonomous AI Security Testing
+- the-hugging-face-incident-and-the-road-ahead-openai: The Hugging Face incident and the road ahead | OpenAI
+- claude-code-max-account-banned-after-recharge-complete-fix-guide-2026-laozhang-a: Claude Code Max Account Banned After Recharge? Complete Fix Guide (2026) | LaoZhang AI Blog
+- the-code-review-bug-hunt-is-dead-heres-what-developers-get-wrong-the-new-stack: The code review bug hunt is dead. Here's what developers get wrong. - The New Stack
+- brief-independent-investigation-of-agents-behavior-reasoning-and-collaboration-i: Brief independent investigation of agents’ behavior, reasoning and collaboration in the OpenAI / Hug
+- understanding-the-new-codex-limit-system-after-the-april-9-update-codex-cli-open: Understanding the New Codex Limit System After the April 9 Update - Codex CLI - OpenAI Developer Com
+- the-end-of-the-claude-subscription-hack: The End of the Claude Subscription Hack
+- code-review-is-not-about-catching-bugs-davidpollcom: Code Review Is Not About Catching Bugs · davidpoll.com
+- from-static-to-dynamic-benchmarking-real-world-code: From Static to Dynamic: Benchmarking Real-World Code
+- cross-model-llm-code-review-should-you-use-claude-to-review-codex-or-vice-versa: Cross-Model LLM Code Review: Should you use Claude to review Codex or vice versa?

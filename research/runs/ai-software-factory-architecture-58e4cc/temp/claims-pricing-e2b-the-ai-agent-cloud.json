@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "E2B's Pro tier costs $150/month base plus per-second usage billing, supporting 100 concurrent sandboxes by default; running 100 sandboxes at 10 hours/month each (1,000 run-hours, default 2 vCPU/4GiB config) costs $316/month total ($166 usage + $150 base).",
+    "stance": "supports",
+    "stance_target": "per-agent sandbox cost at fleet scale can be quantified from published vendor pricing",
+    "evidence_type": "empirical",
+    "scope_conditions": "E2B Pro plan, default 2 vCPU / 4 GiB sandbox configuration, published pricing calculator",
+    "quoted_support": "Pro Plan Monthly Cost: Usage Cost $166, Pro Plan Base $150, Total Monthly $316, Max Concurrent Sandboxes 100.",
+    "numbers": ["$150/month base", "$316/month total for 100 concurrent sandboxes at 1,000 run-hours", "100 concurrent included", "expandable to 1,100 for +$1,000/mo"],
+    "entities": ["E2B"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "pricing-e2b-the-ai-agent-cloud"
+  },
+  {
+    "claim": "E2B's per-second compute rates are $0.000014/vCPU-second and $0.0000045/GiB-second of memory, both for Hobby and Pro tiers, with no charge for storage up to 10-20GB depending on tier.",
+    "stance": "neutral",
+    "stance_target": "raw unit economics of running agent sandboxes at the per-second level",
+    "evidence_type": "empirical",
+    "scope_conditions": "E2B Hobby/Pro tiers",
+    "quoted_support": "1 vCPU: Hobby/Pro $0.000014/s; 4 GiB [Default] Memory: Hobby/Pro $0.0000180/s",
+    "numbers": ["$0.000014/vCPU-s", "$0.0000045/GiB-s", "10-20GB free storage"],
+    "entities": ["E2B"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "pricing-e2b-the-ai-agent-cloud"
+  },
+  {
+    "claim": "Enterprise-scale agent sandbox deployment (tens of thousands of concurrent sandboxes) on E2B requires a minimum committed spend of $3,000/month.",
+    "stance": "supports",
+    "stance_target": "fleet-scale (100+ agent) sandbox infrastructure has a quantifiable cost floor from vendor pricing",
+    "evidence_type": "empirical",
+    "scope_conditions": "E2B Enterprise tier",
+    "quoted_support": "Enterprise requires $3,000/mo minimum.",
+    "numbers": ["$3,000/month minimum"],
+    "entities": ["E2B"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "pricing-e2b-the-ai-agent-cloud"
+  }
+]

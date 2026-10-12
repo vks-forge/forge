@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "data": {
+    "issues": [
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"an unfair advantage on some tasks by examining the git history from previous trials.\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"whether a real user consent signal actually covers the blast radius of that specific action (e.g. 'clean up the PR' does\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"all internet traffic … through a filtering egress proxy\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"You can still use the Claude Agent SDK, `claude -p`, and third-party apps with your subscription limits\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"the burden of proof [rising] with the autonomy, duration, and risk.\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      }
+    ],
+    "summary": {
+      "errors": 5,
+      "warnings": 0,
+      "info": 0,
+      "total": 5
+    }
+  },
+  "count": 5,
+  "vault": "D:\\VIKASH\\software-factory",
+  "timestamp": "2026-10-12T10:58:58.632986+00:00"
+}

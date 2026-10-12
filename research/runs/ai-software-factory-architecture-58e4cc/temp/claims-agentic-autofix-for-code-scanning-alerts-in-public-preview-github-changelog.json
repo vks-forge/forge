@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "GitHub's agentic autofix validates proposed fixes by rerunning the original CodeQL analysis before surfacing a pull request, rather than auto-committing changes.",
+    "stance": "supports",
+    "stance_target": "mandated human-review checkpoint for AI-generated security fixes rather than full autonomy",
+    "evidence_type": "empirical",
+    "scope_conditions": "public preview, July 2026, requires GitHub Code Security/Advanced Security + Copilot cloud agent license",
+    "quoted_support": "it explores relevant files, proposes a fix, and reruns the original analysis to confirm the fix closes the alert before opening a pull request for your review.",
+    "numbers": [],
+    "entities": ["GitHub", "Copilot", "CodeQL"],
+    "time_period": "July 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "agentic-autofix-for-code-scanning-alerts-in-public-preview-github-changelog"
+  },
+  {
+    "claim": "Agentic autofix always produces a draft pull request for human review rather than directly committing fixes to the codebase.",
+    "stance": "supports",
+    "stance_target": "human-in-the-loop requirement for AI code-security remediation",
+    "evidence_type": "empirical",
+    "scope_conditions": "GitHub agentic autofix public preview",
+    "quoted_support": "Iterates if needed, then opens a draft pull request ready for your review.",
+    "numbers": [],
+    "entities": ["GitHub", "Copilot"],
+    "time_period": "July 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "agentic-autofix-for-code-scanning-alerts-in-public-preview-github-changelog"
+  },
+  {
+    "claim": "Fix generation for GitHub agentic autofix typically takes 2-4 minutes and the resulting PR documents the validation steps Copilot took.",
+    "stance": "neutral",
+    "stance_target": "operational latency and transparency of agentic autofix",
+    "evidence_type": "empirical",
+    "scope_conditions": "GitHub agentic autofix public preview",
+    "quoted_support": "Fix generation typically takes 2–4 minutes. The pull request includes a summary of the fix, why it closes the alert, and the validation steps Copilot took to confirm that it works.",
+    "numbers": ["2-4 minutes"],
+    "entities": ["GitHub", "Copilot"],
+    "time_period": "July 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "agentic-autofix-for-code-scanning-alerts-in-public-preview-github-changelog"
+  },
+  {
+    "claim": "Agentic autofix covers alerts from both first-party (CodeQL) and third-party scanning tools, with no explicit vulnerability-class scope exclusions stated in the changelog.",
+    "stance": "neutral",
+    "stance_target": "scope limits of AI-driven vulnerability autofix",
+    "evidence_type": "empirical",
+    "scope_conditions": "as clarified in a July 16, 2026 editor's note to the original changelog",
+    "quoted_support": "Editor's note (July 16, 2026): Clarified that autofix works for all first-party and third-party code scanning alerts.",
+    "numbers": [],
+    "entities": ["GitHub", "CodeQL"],
+    "time_period": "July 2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "agentic-autofix-for-code-scanning-alerts-in-public-preview-github-changelog"
+  },
+  {
+    "claim": "Organization or repository admins can disable Copilot Autofix in Settings, and enterprise admins can disable it by policy, disabling both classic and agentic autofix experiences.",
+    "stance": "supports",
+    "stance_target": "existence of administrative override/kill-switch controls for AI autofix tooling",
+    "evidence_type": "empirical",
+    "scope_conditions": "GitHub agentic autofix public preview",
+    "quoted_support": "An organization or repository admin can turn Copilot Autofix off in Settings, and an enterprise admin can disable it by policy. When disabled via policy, both the classic and agentic autofix experiences are disabled.",
+    "numbers": [],
+    "entities": ["GitHub", "Copilot"],
+    "time_period": "July 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "agentic-autofix-for-code-scanning-alerts-in-public-preview-github-changelog"
+  }
+]

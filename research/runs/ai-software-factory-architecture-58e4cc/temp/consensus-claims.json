@@ -1,0 +1,41 @@
+[
+  {
+    "claim": "A single model acting as both code generator and sole quality judge (naive self-review or naive LLM-as-judge) is not a reliable quality gate; independent, cross-model or multi-step adversarial verification is needed before trusting generated code or content.",
+    "independent_source_count": 5,
+    "sources": [
+      "what-is-llm-as-a-judge-definition-and-best-practices-in-2026-digitalocean",
+      "agentic-platform",
+      "top-5-tools-to-detect-hallucination-in-2025",
+      "ai-software-factory-what-it-is-why-you-need-one-who-owns-it",
+      "the-code-review-bug-hunt-is-dead-heres-what-developers-get-wrong-the-new-stack"
+    ]
+  },
+  {
+    "claim": "Automated codebase mapping / dependency graphing and blast-radius containment are a prerequisite for governing AI-generated code changes, not an optional add-on.",
+    "independent_source_count": 4,
+    "sources": [
+      "structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents",
+      "ai-software-factory-what-it-is-why-you-need-one-who-owns-it",
+      "the-11-best-ai-sast-tools-in-2026-cycode",
+      "agent-skillsskillsperformance-optimizationskillmd-at-main-addyosmaniagent-skills"
+    ]
+  },
+  {
+    "claim": "Autonomous coding agents require hard environment isolation (scoped, non-root, credential-isolated sandboxes) with credential injection happening at a proxy layer rather than agents holding direct API keys/secrets.",
+    "independent_source_count": 3,
+    "sources": [
+      "agency-secure-scalable-sandboxes-for-agents-sierra",
+      "structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents",
+      "agentic-platform"
+    ]
+  },
+  {
+    "claim": "Rigid evals for an autonomous software factory must use stricter, independently-defined metrics than the generating model's own confidence/self-report, and must extend to agent-level audit, not just code-output checking.",
+    "independent_source_count": 3,
+    "sources": [
+      "llm-agent-orchestration-a-step-by-step-guide-ibm",
+      "center-for-responsible-decentralized-intelligence-at-berkeley",
+      "agent-skillsskillsperformance-optimizationskillmd-at-main-addyosmaniagent-skills"
+    ]
+  }
+]

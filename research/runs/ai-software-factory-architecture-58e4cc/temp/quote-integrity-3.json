@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "data": {
+    "issues": [
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"an unfair advantage on some tasks by examining the git history from previous trials\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      }
+    ],
+    "summary": {
+      "errors": 1,
+      "warnings": 0,
+      "info": 0,
+      "total": 1
+    }
+  },
+  "count": 1,
+  "vault": "D:\\VIKASH\\software-factory",
+  "timestamp": "2026-10-12T11:01:08.092672+00:00"
+}

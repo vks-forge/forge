@@ -1,0 +1,9 @@
+https://composable-models.github.io/llm_debate/
+https://dl.acm.org/doi/full/10.1145/3793655.3793725
+https://www.oreilly.com/radar/ai-code-review-only-catches-half-of-your-bugs/
+https://axiomstudio.ai/blog/quality-gates-for-ai-generated-code-automated-review-and-compliance
+https://genai.qa/blog/promptfoo-vs-deepeval/
+https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents
+https://pharaoh.so/blog/knowledge-graph-for-code-explained/
+https://en.wikipedia.org/wiki/OpenAI%E2%80%93HuggingFace_incident
+https://en.wikipedia.org/wiki/Devin_AI

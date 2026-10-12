@@ -1,0 +1,10 @@
+https://learn.microsoft.com/en-us/agent-framework/agents/tools/local-mcp-tools
+https://deepeval.com/blog/best-llm-evaluation-platforms
+https://safeguard.sh/resources/blog/best-sast-tools-2026
+https://ai.engineer/orgs/factory
+https://www.reddit.com/r/AI_Agents/comments/1rkfmf9/fully_autonomous_agents_in_production_is_human/
+https://github.com/taichengguo/LLM_MultiAgents_Survey_Papers
+https://dl.acm.org/doi/10.1145/3839525
+https://www.swarms.ai/blog/what-is-multi-agent-orchestration
+https://www.reddit.com/r/AI_Agents/comments/1rx4psr/why_ai_agents_fall_apart_on_real_work_and_what_i/
+https://github.com/addyosmani/adverse

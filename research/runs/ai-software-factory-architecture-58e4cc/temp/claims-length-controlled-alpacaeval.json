@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "Controlling for response-length bias in AlpacaEval via a GLM-based debiasing method raises its Spearman correlation with human-judged LMSYS Chatbot Arena rankings from 0.94 to 0.98, making the debiased metric the highest-correlating automatic benchmark with Chatbot Arena among those compared.",
+    "stance": "supports",
+    "stance_target": "feasibility of statistically correcting LLM-judge verbosity bias to improve alignment with human preference, as a concrete technique for the software factory's eval pipeline",
+    "evidence_type": "empirical",
+    "scope_conditions": "AlpacaEval benchmark, 805 fixed instructions, GPT-4-turbo evaluator, 2024",
+    "quoted_support": "Length-controlling not only improves the robustness of the metric to manipulations in model verbosity, we also find that it increases the Spearman correlation with LMSYS Chatbot Arena from 0.94 to 0.98.",
+    "numbers": ["0.94 to 0.98 Spearman correlation"],
+    "entities": ["AlpacaEval", "AlpacaEval-LC", "LMSYS Chatbot Arena"],
+    "time_period": "2024",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "length-controlled-alpacaeval"
+  },
+  {
+    "claim": "The original (non-length-controlled) AlpacaEval metric randomized presentation order to control for position bias but left length and style effects uncontrolled, allowing verbose outputs to be systematically overrated.",
+    "stance": "refutes",
+    "stance_target": "assuming that controlling for one known LLM-judge bias (e.g. position) is sufficient without also controlling for length/verbosity bias",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "AlpacaEval benchmark design, as described in the 2024 paper",
+    "quoted_support": "The metric was designed to control for certain biases, such as the order in which the model and baseline were presented, by randomizing their sequence. However, other factors like length and style effects were not controlled for.",
+    "numbers": [],
+    "entities": ["AlpacaEval"],
+    "time_period": "2024",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "length-controlled-alpacaeval"
+  },
+  {
+    "claim": "The length-controlling method answers a specific counterfactual question -- what would the preference be if the model's and baseline's outputs had the same length -- by fitting a generalized linear model to the auto-annotator's preferences using length difference and other features, then predicting preferences with length difference fixed at zero.",
+    "stance": "supports",
+    "stance_target": "a concrete, implementable statistical debiasing technique (GLM-based counterfactual correction) applicable to the software factory's own LLM-judge pipelines",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "method description, 2024 paper",
+    "quoted_support": "We introduce a length-controlled AlpacaEval that aims to answer the counterfactual question: 'What would the preference be if the model's and baseline's output had the same length?' To achieve this, we first fit a generalized linear model to predict the biased auto-annotator's preferences based on the mediators we want to control for (length difference) and other relevant features.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2024",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "length-controlled-alpacaeval"
+  }
+]

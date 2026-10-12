@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "AWS's Well-Architected Agentic AI Lens explicitly names reasoning-loop token spikes, tool-invocation storms, and memory growth as the three agent-specific cost escalation patterns that generic infrastructure monitoring fails to catch, recommending statistical anomaly detection (2-sigma/3-sigma thresholds via CloudWatch) targeted at these signals specifically to catch them 'within minutes... rather than days later through billing data.'",
+    "stance": "supports",
+    "stance_target": "continuous agent-fleet anomaly detection requires agent-specific statistical signals, not generic infra monitoring, to be cost-effective at catching runaway spend",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "AWS Well-Architected Framework, Agentic AI Lens, control AGENTCOST07, maturity levels 2-5",
+    "quoted_support": "Agent-specific cost escalation patterns such as reasoning loop token spikes, tool invocation storms, and memory growth are detected within minutes of occurring, rather than days later through billing data... Anomaly detection is configured on generic infrastructure metrics rather than on agent-specific signals... which allows agent-driven escalation to hide in aggregate noise.",
+    "numbers": ["2-sigma and 3-sigma statistical thresholds"],
+    "entities": ["AWS", "Amazon Bedrock AgentCore", "Amazon CloudWatch Anomaly Detection", "AWS Cost Anomaly Detection"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "agent-cost-governance-and-continuous-optimization-agentic-ai-lens"
+  },
+  {
+    "claim": "No dollar-figure or percentage overhead cost for running continuous anomaly detection on an agent fleet is published in AWS's own framework document -- the guidance is entirely qualitative/architectural (maturity levels, which signals to monitor, which AWS services to wire together), not a quantified monitoring-cost-as-percentage-of-fleet-spend figure.",
+    "stance": "neutral",
+    "stance_target": "cc-5: quantified fleet monitoring/anomaly-detection overhead cost",
+    "evidence_type": "theoretical",
+    "scope_conditions": "AWS Well-Architected Agentic AI Lens document as published",
+    "quoted_support": "Cost governance preserves agent autonomy by using graduated throttling and approval workflows rather than binary shutdown, so that agents continue to complete tasks under pressure at reduced throughput.",
+    "numbers": [],
+    "entities": ["AWS"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "agent-cost-governance-and-continuous-optimization-agentic-ai-lens"
+  },
+  {
+    "claim": "Mature agent cost governance (AWS Level 4/5) replaces binary agent shutdown with graduated throttling, allowing agents under budget pressure to continue completing tasks at reduced throughput rather than being hard-killed -- a softer alternative to the auto-kill-idle-agents pattern that preserves task completion while bounding spend.",
+    "stance": "refutes",
+    "stance_target": "auto-killing idle/over-budget agents outright is the industry-recommended cost-control pattern at scale",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "AWS Well-Architected Agentic AI Lens, maturity level 4 (Proactive) and 5 (Optimized)",
+    "quoted_support": "Cost governance preserves agent autonomy by using graduated throttling and approval workflows rather than binary shutdown, so that agents continue to complete tasks under pressure at reduced throughput.",
+    "numbers": [],
+    "entities": ["AWS", "Amazon Bedrock AgentCore Policy", "Amazon Bedrock Guardrails"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "agent-cost-governance-and-continuous-optimization-agentic-ai-lens"
+  }
+]

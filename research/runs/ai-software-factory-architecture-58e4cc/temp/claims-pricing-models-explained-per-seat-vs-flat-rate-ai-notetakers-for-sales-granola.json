@@ -1,0 +1,30 @@
+[
+  {
+    "claim": "Flat-rate 'unlimited' AI SaaS plans frequently conceal usage caps that only become visible after purchase, e.g., Otter.ai's Pro plan caps at 1,200 transcription minutes/month with a 90-minute per-conversation limit despite its flat-rate framing.",
+    "stance": "supports",
+    "stance_target": "general principle that nominal pricing hides true usage-based cost, applicable to agent subscription economics (Pillar 6)",
+    "evidence_type": "empirical",
+    "scope_conditions": "AI notetaker SaaS market, 2026",
+    "quoted_support": "Otter.ai's Pro plan costs $8.33/user/month billed annually but caps users at 1,200 transcription minutes per month with a 90-minute per-conversation limit.",
+    "numbers": ["$8.33/user/month", "1,200 min/month cap", "90-min/conversation limit"],
+    "entities": ["Otter.ai"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "pricing-models-explained-per-seat-vs-flat-rate-ai-notetakers-for-sales-granola"
+  },
+  {
+    "claim": "Enterprise AI SaaS vendors like Gong add mandatory platform fees of $5,000-$50,000 annually plus a separate professional-services onboarding fee on top of per-seat pricing, in addition to a per-user rate around $250/month.",
+    "stance": "supports",
+    "stance_target": "hidden enterprise AI tooling costs relevant to total-cost-of-ownership modeling (Pillar 6)",
+    "evidence_type": "empirical",
+    "scope_conditions": "Gong enterprise pricing, 2026",
+    "quoted_support": "At the enterprise end, Gong's pricing adds a mandatory platform fee on top of per-seat costs, with buyers reporting fees from $5,000 to $50,000 annually, approximately $250/user/month for the standard package, and a $7,500 professional services onboarding fee.",
+    "numbers": ["$5,000-$50,000/year platform fee", "~$250/user/month", "$7,500 onboarding fee"],
+    "entities": ["Gong"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "pricing-models-explained-per-seat-vs-flat-rate-ai-notetakers-for-sales-granola"
+  }
+]

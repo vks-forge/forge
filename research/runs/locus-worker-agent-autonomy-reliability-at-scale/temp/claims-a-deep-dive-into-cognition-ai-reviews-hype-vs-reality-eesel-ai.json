@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Devin (Cognition Labs) achieved a 13.86% unassisted success rate on SWE-bench, versus 4.80% for Claude 2 and 1.96% for the prior state of the art.",
+    "stance": "neutral",
+    "stance_target": "Devin-class autonomous coding agent reliability on real-world tasks",
+    "evidence_type": "statistical",
+    "scope_conditions": "SWE-bench benchmark (real-world GitHub issues), Cognition's own published technical paper, circa 2024",
+    "quoted_support": "Devin managed to correctly solve 13.86% of these issues from start to finish... Claude 2: 4.80%, Previous SOTA: 1.96%.",
+    "numbers": ["13.86%", "4.80%", "1.96%"],
+    "entities": ["Devin", "Cognition Labs", "SWE-bench", "Claude 2"],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "a-deep-dive-into-cognition-ai-reviews-hype-vs-reality-eesel-ai"
+  },
+  {
+    "claim": "A 13.86% SWE-bench success rate is equivalently an 86.14% failure rate on real-world coding tasks, undermining claims of full autonomy.",
+    "stance": "refutes",
+    "stance_target": "a Devin-class agent can be relied on to complete real-world engineering tasks unattended at high success rates",
+    "evidence_type": "statistical",
+    "scope_conditions": "SWE-bench, Devin, as reported ~2024-2025",
+    "quoted_support": "A 13.86% success rate is a fantastic technical achievement. But flip it around, and it's also an 86.14% failure rate. For a tool that's supposed to be an autonomous engineer, that's an awful lot of problems left unsolved.",
+    "numbers": ["86.14%"],
+    "entities": ["Devin", "Cognition Labs"],
+    "time_period": "2024-2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "a-deep-dive-into-cognition-ai-reviews-hype-vs-reality-eesel-ai"
+  },
+  {
+    "claim": "A frame-by-frame investigation by YouTube channel 'Internet of Bugs' concluded Devin's viral Upwork demo task was likely hand-picked for the AI's strengths, the debugging sequence appeared staged (introducing then 'impressively' fixing its own errors), and the shown timeline was heavily compressed/edited, masking failed attempts and long pauses.",
+    "stance": "refutes",
+    "stance_target": "publicly demoed autonomous agent performance reflects realistic unattended reliability",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "single viral Devin demo video, analyzed circa 2024",
+    "quoted_support": "The job felt hand-picked... The debugging was a bit fishy... The timeline was heavily edited... these points don't mean Devin is a fake, but they do suggest that the demos were more like a carefully crafted highlight reel than a typical day at the office for the AI.",
+    "numbers": [],
+    "entities": ["Internet of Bugs", "Devin", "Upwork"],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "a-deep-dive-into-cognition-ai-reviews-hype-vs-reality-eesel-ai"
+  },
+  {
+    "claim": "Developer community consensus treats Devin as 'more of a smart intern' than an autonomous senior engineer, requiring human direction, oversight, and intervention most of the time it gets stuck.",
+    "stance": "refutes",
+    "stance_target": "a Director-agent model can spin up Worker Agents with minimal human review today",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "developer community assessment of Devin, as of Oct 2025 article date",
+    "quoted_support": "the consensus that's forming in the developer community is that Devin is less of an independent senior engineer and more of a super-advanced intern who still needs supervision... which, according to the numbers, happens most of the time.",
+    "numbers": [],
+    "entities": ["Devin", "Cognition Labs"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "a-deep-dive-into-cognition-ai-reviews-hype-vs-reality-eesel-ai"
+  },
+  {
+    "claim": "For live customer-facing or business-critical systems, an 86% failure rate from a 'black box' agent approach is unacceptable without reliability, oversight, and complete control mechanisms.",
+    "stance": "supports",
+    "stance_target": "heavy governance scaffolding is required before deploying highly autonomous agents against production systems",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "business/enterprise deployment context",
+    "quoted_support": "When you're dealing with live customers or business-critical systems, you simply can't afford an 86% failure rate. You need reliability, oversight, and complete control.",
+    "numbers": ["86%"],
+    "entities": ["Devin", "eesel AI"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "a-deep-dive-into-cognition-ai-reviews-hype-vs-reality-eesel-ai"
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "Requiring an LLM code reviewer to explain its reasoning and propose a fix (the natural design for an adversarial critique agent) sharply increases the rate at which it wrongly rejects CORRECT code as defective: GPT-4o's false-negative rate on MBPP rises from 35.9% (Direct prompt) to 74.1% (Direct+Explain) to 87.9% (Full, explanation+fix).",
+    "stance": "refutes",
+    "stance_target": "a critique-style adversarial review prompt reliably improves defect detection without new failure modes",
+    "evidence_type": "empirical",
+    "scope_conditions": "GPT-4o, MBPP benchmark, 3 prompting styles tested",
+    "quoted_support": "we demonstrate that LLMs frequently misclassify correct code implementation as non-compliant or defective. Surprisingly, we find that more detailed prompt design, particularly with those requiring explanations and proposed corrections, leads to higher misjudgment rates",
+    "numbers": ["FNR 35.9% (Direct)", "FNR 74.1% (Direct+Explain)", "FNR 87.9% (Full)", "MBPP", "GPT-4o"],
+    "entities": ["GPT-4o", "MBPP"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "are-llms-reliable-code-reviewers-systematic"
+  },
+  {
+    "claim": "The over-correction effect (elaborated critique prompts raising false-negative/rejection rate) holds across multiple model families including Claude-4.5-sonnet, Gemini-2.0-flash, Llama-3.1-8B, and Mistral-Small-3.1-24B, not just GPT-4o.",
+    "stance": "refutes",
+    "stance_target": "over-correction is a GPT-specific artifact rather than a general LLM-reviewer failure mode",
+    "evidence_type": "empirical",
+    "scope_conditions": "5 models x 3 benchmarks (HumanEval, MBPP, QuixBugs) x 3 prompting styles",
+    "quoted_support": "Table 2 reports the false-positive rate (FPR, %) and false-negative rate (FNR, %) of five LLMs on three benchmarks... under three prompting approaches",
+    "numbers": ["Claude-4.5-sonnet MBPP FNR 58.5-62.3%", "Llama-3.1-8B MBPP FNR up to 91.9%"],
+    "entities": ["Claude-4.5-sonnet", "Gemini-2.0-flash", "Llama-3.1-8B", "Mistral-Small-3.1-24B"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "are-llms-reliable-code-reviewers-systematic"
+  },
+  {
+    "claim": "The authors propose a Fix-guided Verification Filter -- treating the reviewer's proposed fix as executable counterfactual evidence and validating both original and revised code against benchmark tests plus spec-constrained augmented tests -- as a practical safeguard against LLM reviewer over-correction.",
+    "stance": "neutral",
+    "stance_target": "mitigation design for adversarial code review over-correction",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Proposed method, not independently validated outside this paper",
+    "quoted_support": "we propose a Fix-guided Verification Filter that treats the model proposed fix as executable counterfactual evidence, and validates the original and revised implementations using benchmark tests and spec-constrained augmented tests.",
+    "numbers": [],
+    "entities": ["Fix-guided Verification Filter"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "medium",
+    "source_note_id": "are-llms-reliable-code-reviewers-systematic"
+  }
+]

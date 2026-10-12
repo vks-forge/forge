@@ -1,0 +1,30 @@
+[
+  {
+    "claim": "The open-source janus-llm tool can translate a binary file into a programming language using Ghidra decompilation combined with LLM reasoning.",
+    "stance": "supports",
+    "stance_target": "Reverse Engineering & Codebase Mastery pillar — a concrete, installable open-source tool exists that combines automated decompilation (Ghidra) with LLM translation, directly usable in a software-factory reverse-engineering pipeline",
+    "evidence_type": "empirical",
+    "scope_conditions": "janus-llm v. as of fetch, MITRE Corporation, Apache-2.0 license",
+    "quoted_support": "Translate from a binary file to a programming language using Ghidra decompilation.",
+    "numbers": ["42 stars", "7 forks", "1,379 commits"],
+    "entities": ["Ghidra", "MITRE Corporation", "janus-llm"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "github-janus-llmjanus-llm-leveraging-llms-for-modernization-through-intelligent"
+  },
+  {
+    "claim": "janus-llm chunks code across over 100 programming languages to fit different model context windows and stores chunks in a Chroma vector database, enabling RAG-based codebase ingestion at scale.",
+    "stance": "supports",
+    "stance_target": "Open Source Architecture Reading & Context Ingestion pillar — a working reference implementation for chunking and vectorizing arbitrary legacy codebases for LLM context ingestion",
+    "evidence_type": "empirical",
+    "scope_conditions": "janus-llm tool, supports 100+ languages via tree-sitter parsing",
+    "quoted_support": "Chunk code of over 100 programming languages to fit within different model context windows and add to a Chroma vector database.",
+    "numbers": ["100+ programming languages supported"],
+    "entities": ["Chroma", "tree-sitter", "LangChain"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "github-janus-llmjanus-llm-leveraging-llms-for-modernization-through-intelligent"
+  }
+]

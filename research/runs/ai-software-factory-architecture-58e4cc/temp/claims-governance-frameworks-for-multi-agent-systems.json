@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Multi-agent systems introduce runtime failure modes that traditional single-model AI governance frameworks do not explicitly address, including recursive delegation, unauthorized tool usage, prompt-injection propagation across agents, and unexpected coordination failures.",
+    "stance": "refutes",
+    "stance_target": "Existing single-agent governance/safety standards are sufficient for a Director/Worker multi-agent fleet",
+    "evidence_type": "theoretical",
+    "scope_conditions": "General multi-agent AI governance, 2026",
+    "quoted_support": "These distributed interactions create failure modes that traditional governance frameworks do not explicitly address. For example, determining responsibility becomes difficult when multiple agents contribute to a final output.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "governance-frameworks-for-multi-agent-systems"
+  },
+  {
+    "claim": "A recommended governance framework for multi-agent systems rests on three pillars -- observability (distributed tracing, correlation IDs, runtime anomaly detection across agent chains), control (role-based permissions, scoped API access, tool allowlists, execution budgets, approval gates, and pause/override/kill switches), and trust (provenance tracking, immutable audit logs, adversarial red-teaming) -- directly enumerating the governance scaffolding a 100+ Worker fleet would require.",
+    "stance": "supports",
+    "stance_target": "Heavy governance scaffolding (permission scoping, kill-switches, escalation triggers) is necessary before high-concurrency autonomous agent deployment is safe",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Multi-agent governance framework, 2026",
+    "quoted_support": "Effective control mechanisms include: role-based agent permissions, scoped API access, tool allowlists, sensitive data restrictions, execution budgets, workflow approval gates, runtime intervention hooks. Organizations should also design intervention capabilities that allow operators to pause, override, or terminate agent execution when anomalous behavior is detected.",
+    "numbers": [],
+    "entities": ["Lumenova AI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "governance-frameworks-for-multi-agent-systems"
+  },
+  {
+    "claim": "The framework states explicitly that governance must be embedded before multi-agent systems are deployed in production, not retrofitted after issues arise, directly bearing on whether current practice supports deploying a 100+ Worker fleet 'first, govern later.'",
+    "stance": "refutes",
+    "stance_target": "Governance scaffolding can be added after initial production deployment of a high-concurrency agent fleet",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Multi-agent governance best practice, 2026",
+    "quoted_support": "Governance should be established before multi-agent systems are deployed in production, not after issues arise. Embedding governance early helps organizations define policies, assign responsibilities, and implement controls that can scale as agent autonomy increases.",
+    "numbers": [],
+    "entities": ["Lumenova AI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "governance-frameworks-for-multi-agent-systems"
+  },
+  {
+    "claim": "The framework identifies the biggest governance risks unique to multi-agent systems as uncontrolled agent delegation, privilege escalation, prompt injection that propagates across multiple agents, conflicting agent objectives, excessive tool access, and lack of traceability when incidents occur -- a direct taxonomy of risks a Director spawning 100+ Workers would face.",
+    "stance": "refutes",
+    "stance_target": "A Director spawning 100+ Workers with minimal human review is currently production-reliable",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Multi-agent governance risk taxonomy, 2026",
+    "quoted_support": "Some of the most common risks include uncontrolled agent delegation, privilege escalation, prompt injection that propagates across multiple agents, conflicting agent objectives, excessive tool access, and a lack of traceability when incidents occur.",
+    "numbers": [],
+    "entities": ["Lumenova AI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "governance-frameworks-for-multi-agent-systems"
+  },
+  {
+    "claim": "The framework recommends human-in-the-loop checkpoints and kill switches specifically scoped to high-risk actions (e.g. financial decisions, legal approvals, healthcare recommendations) rather than blanket human review of every action, implying a risk-tiered rather than uniform approval model is the practical governance design for scale.",
+    "stance": "neutral",
+    "stance_target": "Design pattern for balancing autonomy with safety at scale",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Multi-agent governance, high-risk workflows, 2026",
+    "quoted_support": "For high-risk workflows such as financial decisions, legal approvals, or healthcare recommendations, human-in-the-loop checkpoints remain an essential governance safeguard.",
+    "numbers": [],
+    "entities": ["Lumenova AI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "governance-frameworks-for-multi-agent-systems"
+  }
+]

@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "As of 2026, Claude paid subscription plans (Pro $20/mo, Max 5x $100/mo, Max 20x $200/mo) include Claude Code access under session-based usage limits, removing the prior restriction that subscriptions only worked in the chat UI.",
+    "stance": "neutral",
+    "stance_target": "cost structure of agentic coding tool access in 2026",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic Claude pricing, 2026",
+    "quoted_support": "Claude subscriptions now include Claude Code. Paid plans (Pro and Max) unlock the terminal coding agent, so the old \"subscriptions only work in the chat UI\" rule no longer applies.",
+    "numbers": ["$20/month", "$100/month", "$200/month"],
+    "entities": ["Anthropic", "Claude Pro", "Claude Max", "Claude Code"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "claude-subscription-vs-api-which-is-cheaper-in-2026-real-math-teamorouter"
+  },
+  {
+    "claim": "For Claude Sonnet 5 API usage, cached input tokens cost $0.20 per 1M tokens versus $3 per 1M for a cache miss, and in agentic coding workflows cache hits typically account for 90-99% of total input tokens because context is re-sent on every turn, making cache-hit rate the dominant cost lever.",
+    "stance": "supports",
+    "stance_target": "prompt caching is the primary lever for controlling API cost in agentic coding workloads",
+    "evidence_type": "statistical",
+    "scope_conditions": "Anthropic Claude Sonnet 5 API pricing, 2026",
+    "quoted_support": "Sonnet 5 cached reads cost $0.20 per 1M tokens (Opus $0.50) versus $3/$5 for a cache miss. For agentic coding — where context is re-sent on every turn — cache hits are 90-99% of total input. This is the single biggest lever on API cost.",
+    "numbers": ["$0.20 per 1M", "$3 per 1M", "90-99%"],
+    "entities": ["Anthropic", "Claude Sonnet 5"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "claude-subscription-vs-api-which-is-cheaper-in-2026-real-math-teamorouter"
+  },
+  {
+    "claim": "A typical interactive Claude Code session (~300K input tokens, 15K output tokens) at an 80% cache-hit rate costs approximately $0.45 on official Sonnet 5 API rates, dropping to approximately $0.29 at a >99% cache-hit rate achievable via a dedicated caching gateway.",
+    "stance": "neutral",
+    "stance_target": "per-session cost modeling for agentic coding API usage",
+    "evidence_type": "statistical",
+    "scope_conditions": "modeled Claude Code session, Sonnet 5 pricing, 2026 (vendor-produced estimate from TeamoRouter, a caching-gateway seller — note commercial interest)",
+    "quoted_support": "Total per session ≈ $0.45 ... Total per session ≈ $0.29 (vs $0.45 official)",
+    "numbers": ["$0.45", "$0.29", "300K input tokens", "15K output tokens", "80%", "99%"],
+    "entities": ["Anthropic", "Claude Sonnet 5", "TeamoRouter"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "claude-subscription-vs-api-which-is-cheaper-in-2026-real-math-teamorouter"
+  },
+  {
+    "claim": "Subscription pricing is cheaper for light-to-moderate interactive Claude use (roughly under 5-10 sessions/day), while API pay-per-use becomes cheaper the moment usage is automated (CI/CD, background agents), spiky/unbounded, or spread across a team, because subscriptions impose session and weekly usage caps.",
+    "stance": "supports",
+    "stance_target": "autonomous/automated agent workloads are economically forced onto metered API billing rather than flat subscriptions",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Claude pricing economics, 2026",
+    "quoted_support": "subscriptions are cheaper for interactive humans within their session limits, and API is cheaper the moment you exceed those limits or add automation.",
+    "numbers": [],
+    "entities": ["Anthropic"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "claude-subscription-vs-api-which-is-cheaper-in-2026-real-math-teamorouter"
+  },
+  {
+    "claim": "Anthropic's batch API roughly halves prices for non-urgent jobs, making it the cheapest API option for time-insensitive workloads.",
+    "stance": "neutral",
+    "stance_target": "cost optimization options for non-time-sensitive agent workloads",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic batch API pricing, 2026",
+    "quoted_support": "Anthropic's batch API roughly halves prices for non-urgent jobs. If your workload is not time-sensitive, batch is the cheapest possible API option.",
+    "numbers": ["roughly halves"],
+    "entities": ["Anthropic"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "claude-subscription-vs-api-which-is-cheaper-in-2026-real-math-teamorouter"
+  }
+]

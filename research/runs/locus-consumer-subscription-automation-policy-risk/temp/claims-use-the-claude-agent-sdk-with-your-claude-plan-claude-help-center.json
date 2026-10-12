@@ -1,0 +1,30 @@
+[
+  {
+    "claim": "On June 15, 2026, Anthropic paused its previously-announced plan to separate Claude Agent SDK/claude -p/third-party-app usage from subscription limits; nothing changed on the effective date.",
+    "stance": "refutes",
+    "stance_target": "that Anthropic enforced a hard separation of programmatic usage from Claude Pro/Max subscription limits starting June 15, 2026",
+    "evidence_type": "legal",
+    "scope_conditions": "Claude Agent SDK, claude -p, third-party apps, all subscription tiers",
+    "quoted_support": "Update June 15, 2026: We've paused the previously-announced changes to Claude Agent SDK usage. For now, nothing has changed: Claude Agent SDK, claude -p, and third-party app usage still draw from your subscription limits.",
+    "numbers": ["June 15, 2026"],
+    "entities": ["Anthropic", "Claude Agent SDK", "claude -p"],
+    "time_period": "June 15, 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "use-the-claude-agent-sdk-with-your-claude-plan-claude-help-center"
+  },
+  {
+    "claim": "As of October 7, 2026, Claude Max and Team plans added monthly API credits covering the Agent SDK, claude -p, the Claude API, and Claude Managed Agents as a supplement, while subscription-limit-based usage of the Agent SDK, claude -p, and third-party apps remains available.",
+    "stance": "refutes",
+    "stance_target": "that programmatic/third-party-app usage via consumer subscription credentials has been banned or fully metered away from flat-rate plans",
+    "evidence_type": "legal",
+    "scope_conditions": "Claude Max and Team plans, effective October 7, 2026",
+    "quoted_support": "Update October 7, 2026: Claude Max and Team plans now include monthly API credits, which cover the Claude Agent SDK, `claude -p`, the Claude API, and Claude Managed Agents. You can still use the Claude Agent SDK, `claude -p`, and third-party apps with your subscription limits.",
+    "numbers": ["October 7, 2026"],
+    "entities": ["Anthropic", "Claude Max", "Claude Team", "Claude Agent SDK", "claude -p", "Claude Managed Agents"],
+    "time_period": "October 7, 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "use-the-claude-agent-sdk-with-your-claude-plan-claude-help-center"
+  }
+]

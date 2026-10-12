@@ -1,0 +1,1517 @@
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "what-is-the-model-context-protocol-mcp-model-context-protocol",
+      "title": "What is the Model Context Protocol (MCP)? - Model Context Protocol",
+      "path": "research/notes/what-is-the-model-context-protocol-mcp-model-context-protocol.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "ground_truth",
+      "content_type": "docs",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 409,
+      "summary": null,
+      "created": "2026-10-12T08:30:15.877510+00:00",
+      "updated": null
+    },
+    {
+      "id": "openai-agents-sdk-vs-langgraph-vs-autogen-vs-crewai-composio",
+      "title": "OpenAI Agents SDK vs LangGraph vs Autogen vs CrewAI | Composio",
+      "path": "research/notes/openai-agents-sdk-vs-langgraph-vs-autogen-vs-crewai-composio.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 3481,
+      "summary": null,
+      "created": "2026-10-12T08:30:12.814288+00:00",
+      "updated": null
+    },
+    {
+      "id": "agent-skill-evolution-how-revisions-affect-coding-agents",
+      "title": "Agent Skill Evolution: How Revisions Affect Coding Agents",
+      "path": "research/notes/agent-skill-evolution-how-revisions-affect-coding-agents.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "institutional",
+      "content_type": "paper",
+      "tags": [
+        "agent-skills",
+        "ai-software-factory-architecture-58e4cc",
+        "cost-optimization",
+        "empirical-study",
+        "evals"
+      ],
+      "word_count": 13591,
+      "summary": "Large-scale empirical study (arXiv 2610.04832v1, Oct 2026, Univ. of Arizona/CSU Long Beach/NTU/CAS/Wuhan Univ./ECU) of how Agent Skill (SKILL.md) revisions causally affect coding-agent behavior, cost, and correctness. Reconstructed revision histories for 3,159 Skills across 856 repositories from the SkillMD-138K public snapshot (138,133 SKILL.md files, 20,556 repos), built 396 probes from real added/deleted directives, and ran them on 21 models (16 open-weight 3.8B-32B plus 5 closed: Claude Sonnet 3.5/3.7/4.5, Haiku 4.5, GPT-5.5) and on 4 agents in a network-less sandbox using the mini-SWE-agent scaffold.\n\nKey findings directly bearing on the Skills/SOP and rigid-evals pillars: (1) 55.0% of revisions add/delete a MUST/NEVER constraint, conditional rule, or numbered step — most Skill maintenance is rule-level, not prose. (2) An added rule (naming a concrete command/path/identifier) raises single-answer compliance by +0.41 on average across 16 open models (e.g. Qwen 2.5-7B: 0.253->0.649, delta +0.395); the gain is concentrated in rules naming a token the old Skill never mentioned (+0.51 to +0.66) versus tokens already present (+0.08). Unrelated text of equal length added no effect, confirming the rule content itself — not length or noise — drives compliance. (3) In the sandbox, the four agents' required-action rate rose by +0.23 on average (Devstral-Small gained most, +0.36; Claude Sonnet 4.5 +0.19 from a 0.62 baseline), and blind-human-judged final correctness rose +0.10 on average (+0.13 for Qwen models, +0.06 inconclusive for Sonnet 4.5). (4) Deleting a rule lowers compliance by 0.27-0.33, about three-quarters the magnitude of adding one; deleting a 'replaced' rule costs -0.58 vs -0.12 for deleting a duplicate. (5) Real-world progressive-disclosure (on-demand Skill loading, as used by Anthropic's actual Skills architecture) only preserves about 51% of the agent action-gain on average (38% for open models) versus having the Skill preloaded — meaningful evidence that progressive disclosure trades effectiveness for token savings. (6) Cost: a revision adds 17-27% more input tokens per request but shortens the output (model told which command to run hedges less), and inside an agent episode the paper could not detect added marginal cost from a revision, while loading the Skill body AT ALL (carrying cost, old vs 'none') raises episode tokens by 37-57%, and on average 50%. One rule-model pair in five (20%) adds tokens with zero detected compliance gain — direct empirical evidence of wasted token spend from over-specified Skills, relevant to the Cost & Resource Optimization pillar. (7) Skill revisions couple with harness-configuration changes (CLAUDE.md +2.1pp, AGENTS.md +2.0pp, Cursor/Codex configs +1.9pp) more often than size-matched non-Skill commits (23.0% vs 18.5%), and creating a new Skill couples even more tightly (36.7% vs 21.8%) — evidence that Skills and harness config co-evolve and should be versioned/reviewed together. Model-related motives are almost never documented in commit messages (only 0.4% name a model version). LONG/DENSE SOURCE (13,591 words, heavy statistical apparatus) — flagging for potential source-analyst delegation given the density of numeric findings.",
+      "created": "2026-10-12T08:27:31.891147+00:00",
+      "updated": "2026-10-12T08:30:09.985142+00:00"
+    },
+    {
+      "id": "detecting-and-correcting-hallucinations-in-llm-generated-code",
+      "title": "Detecting and Correcting Hallucinations in LLM-Generated Code",
+      "path": "research/notes/detecting-and-correcting-hallucinations-in-llm-generated-code.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "institutional",
+      "content_type": "paper",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 3474,
+      "summary": null,
+      "created": "2026-10-12T08:30:09.340725+00:00",
+      "updated": null
+    },
+    {
+      "id": "langgraph-vs-autogen-vs-crewai-an-agent-framework-comparison",
+      "title": "LangGraph vs. AutoGen vs. CrewAI: An Agent Framework Comparison",
+      "path": "research/notes/langgraph-vs-autogen-vs-crewai-an-agent-framework-comparison.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "autogen",
+        "crewai",
+        "langgraph",
+        "multi-agent-frameworks"
+      ],
+      "word_count": 3448,
+      "summary": "JetBrains 'AI Agents for Developers' guide (2026, cites JetBrains Developer Ecosystem Survey 2026, 15,000+ developers, noting ~23% of developers still write code manually with only occasional AI use) comparing LangGraph, AutoGen, and CrewAI by execution model rather than feature checklist. LangGraph: graph-based state machine, developer defines every node/edge explicitly; typed shared state with checkpointing (in-memory/SQLite/Postgres) enables pause-for-human-approval and resume; best for long-running coding workflows, auditable branching/retry logic; integrates with LangSmith for node-level tracing. AutoGen (Microsoft): event-driven message-passing runtime; rewritten around an actor-model core splitting Core API (message passing) from AgentChat API; AssistantAgent/UserProxyAgent/GroupChat with RoundRobinGroupChat or SelectorGroupChat determining turn order; best for open-ended/exploratory multi-agent conversation, OpenTelemetry tracing requires external backend. CrewAI: role-based task delegation via crews (agents with role/goal/backstory, tasks with description/expected output, sequential or hierarchical process types); built-in task/crew-level tracing; best for workflows resembling an org chart but offers less execution-internals visibility — 'Flows' add event-driven control to recover determinism. Production-fit verdict: LangGraph most production-ready for complex/stateful workflows (Postgres-backed checkpointing + LangSmith); AutoGen's actor-model core distributes across processes/machines but persistence is left to the team; CrewAI fits structured, lower-complexity, shorter-run automation. Notes a hidden migration cost: switching frameworks after a prototype hardens requires a rewrite of state/coordination model, not just syntax porting.",
+      "created": "2026-10-12T08:27:39.640754+00:00",
+      "updated": "2026-10-12T08:30:08.824072+00:00"
+    },
+    {
+      "id": "using-mcp-tools-microsoft-learn",
+      "title": "Using MCP Tools | Microsoft Learn",
+      "path": "research/notes/using-mcp-tools-microsoft-learn.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "commentary",
+      "content_type": "article",
+      "tags": [
+        "agent-framework",
+        "ai-software-factory-architecture-58e4cc",
+        "mcp-tooling"
+      ],
+      "word_count": 2773,
+      "summary": "Microsoft Agent Framework (.NET/Python/Go) docs for integrating MCP servers as agent tools. Covers three transport types: MCPStdioTool (local process), MCPStreamableHTTPTool (HTTP/SSE, with header_provider for dynamic auth and max_host_payload_size_bytes capping retained payloads at 1 MiB default), and MCPWebsocketTool. Documents connection-identity binding (framework reconnects sessions when header-derived identity changes), tool_result_content modes (structured_first/content_first/content_only/structured_only/both) for choosing between structuredContent and content in model-visible results, and that server-initiated MCP sampling is deprecated as of spec version 2026-07-28, removed no later than 2027-07-28. Also shows exposing an agent itself as an MCP server via AsAIFunction/McpServerTool/as_mcp_server(). Security guidance: review/log all data shared with third-party MCP servers, prefer trusted hosts over proxies, avoid DefaultAzureCredential in production.",
+      "created": "2026-10-12T08:27:56.220320+00:00",
+      "updated": "2026-10-12T08:30:04.853706+00:00"
+    },
+    {
+      "id": "agency-secure-scalable-sandboxes-for-agents-sierra",
+      "title": "Agency: Secure, scalable sandboxes for agents | Sierra",
+      "path": "research/notes/agency-secure-scalable-sandboxes-for-agents-sierra.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "agent-sandbox",
+        "ai-software-factory-architecture-58e4cc",
+        "director-worker-pattern",
+        "infrastructure"
+      ],
+      "word_count": 2053,
+      "summary": "Sierra engineering blog (2026) describing Agency, their in-house Kubernetes-based agent-sandbox orchestration layer built to support Pinecone (internal employee agent) and Ghostwriter (agent-building agent for customers). Architecture: a stateless control plane (CreateRunnerInstance/DeleteRunnerInstance APIs, IAM auth, DynamoDB state tracking) provisions a fleet of stateful Kubernetes-pod runners, each with dedicated compute and a Persistent Volume for repo checkout/builds. Security-by-default design choices: all LLM inference routed through an external proxy so agents never hold real API keys; dedicated IAM roles per runner type; hardened containers (non-root, dropped capabilities, read-only rootfs); filtering egress proxy restricting reachable hosts; isolated K8s nodepools; signed runner-pod identity to prevent impersonation. Key operational finding: active runner instances differ from 8-hour to 8-day idle counts by 2-4 orders of magnitude, motivating 'runner hibernation' — decoupling runner/app communication via async input/output message queues (Elasticache Redis Streams, p50 8ms/p99 40ms round trip) with checkpoint-based FSM state so idle agents can be transparently spun down and resumed without the calling application noticing. Lessons: build composable primitives (reused across multiple products), owning the agentic stack enabled building a customer-data-isolated 'Ephemeral Sessions' feature in under a week, and favor 'boring,' reliable infrastructure.",
+      "created": "2026-10-12T08:27:35.502863+00:00",
+      "updated": "2026-10-12T08:29:59.814787+00:00"
+    },
+    {
+      "id": "devin-ai-wikipedia",
+      "title": "Devin AI - Wikipedia",
+      "path": "research/notes/devin-ai-wikipedia.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "institutional",
+      "content_type": "article",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1687,
+      "summary": null,
+      "created": "2026-10-12T08:29:51.411595+00:00",
+      "updated": null
+    },
+    {
+      "id": "llm-as-a-judge-simply-explained-the-complete-guide-to-run-llm-evals-at-scale-con",
+      "title": "LLM-as-a-Judge Simply Explained: The Complete Guide to Run LLM Evals at Scale - Confident AI",
+      "path": "research/notes/llm-as-a-judge-simply-explained-the-complete-guide-to-run-llm-evals-at-scale-con.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 5815,
+      "summary": null,
+      "created": "2026-10-12T08:29:49.881254+00:00",
+      "updated": null
+    },
+    {
+      "id": "openai-rogue-agent-breach-of-hugging-face-wikipedia",
+      "title": "OpenAI rogue agent breach of Hugging Face - Wikipedia",
+      "path": "research/notes/openai-rogue-agent-breach-of-hugging-face-wikipedia.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "institutional",
+      "content_type": "article",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 8750,
+      "summary": null,
+      "created": "2026-10-12T08:29:48.978046+00:00",
+      "updated": null
+    },
+    {
+      "id": "what-is-llm-as-a-judge-definition-and-best-practices-in-2026-digitalocean",
+      "title": "What Is LLM-as-a-Judge? Definition and Best Practices in 2026 | DigitalOcean",
+      "path": "research/notes/what-is-llm-as-a-judge-definition-and-best-practices-in-2026-digitalocean.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "eval-pitfalls",
+        "llm-as-judge"
+      ],
+      "word_count": 5074,
+      "summary": "Vendor explainer (DigitalOcean, updated Aug 2026) on LLM-as-a-judge evaluation methodology for software factory QC pipelines. Defines the structured review process: rubric definition, evaluation input assembly, structured JSON verdict (score/pass-fail/justification), and result storage for human-review triage. Distinguishes LLM-as-a-judge (single-pass scoring against rubric) from agent-as-a-judge (multi-step evidence retrieval, tool use, verification before verdict) -- directly relevant to adversarial review architecture. Documents five concrete failure modes with named studies: (1) judgment drift across model version upgrades even with frozen prompts; (2) inherent non-determinism from sampling, only partially fixed by temperature=0; (3) self-preference bias, citing the 2024 study 'LLM Evaluators Recognize and Favor Their Own Generations' showing GPT-4 scores its own outputs higher than human reviewers do; (4) prompt-sensitivity -- identical outputs score differently under reworded rubrics; (5) length/persuasiveness bias, citing the 2024 Length-Controlled AlpacaEval paper showing judges over-weight response length regardless of correctness. Recommends best practices: objective rubrics, structured JSON outputs, supplying reference/retrieved context for factual checks, periodic validation against human reviewers (e.g., weekly sampling of 200 scored items), and freezing judge model+prompt version for the duration of an evaluation cycle to avoid uncomparable score drift. Cites CodeJudgeBench (Jiang et al.) benchmarking 26 LLM judges across code generation/repair/unit-test generation tasks as relevant to code-quality gating.",
+      "created": "2026-10-12T08:28:15.462995+00:00",
+      "updated": "2026-10-12T08:29:47.453045+00:00"
+    },
+    {
+      "id": "adversarial-code-review-cross-model-ai-assessment-get-claude-skills",
+      "title": "Adversarial Code Review - Cross-Model AI Assessment | Get Claude Skills",
+      "path": "research/notes/adversarial-code-review-cross-model-ai-assessment-get-claude-skills.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1770,
+      "summary": null,
+      "created": "2026-10-12T08:29:46.460893+00:00",
+      "updated": null
+    },
+    {
+      "id": "knowledge-graph-for-code-explained-a-practical-guide",
+      "title": "Knowledge Graph for Code Explained: A Practical Guide",
+      "path": "research/notes/knowledge-graph-for-code-explained-a-practical-guide.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2503,
+      "summary": null,
+      "created": "2026-10-12T08:29:45.366355+00:00",
+      "updated": null
+    },
+    {
+      "id": "claude-agents-anthropic-agent-sdk-consulting-onewave-ai",
+      "title": "Claude Agents | Anthropic Agent SDK Consulting | OneWave AI",
+      "path": "research/notes/claude-agents-anthropic-agent-sdk-consulting-onewave-ai.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1401,
+      "summary": null,
+      "created": "2026-10-12T08:29:41.772059+00:00",
+      "updated": null
+    },
+    {
+      "id": "demystifying-evals-for-ai-agents-anthropic",
+      "title": "Demystifying evals for AI agents \\ Anthropic",
+      "path": "research/notes/demystifying-evals-for-ai-agents-anthropic.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 6056,
+      "summary": null,
+      "created": "2026-10-12T08:29:40.154087+00:00",
+      "updated": null
+    },
+    {
+      "id": "what-are-agent-swarms-and-how-do-they-work-ibm",
+      "title": "What are Agent Swarms and How Do They Work? | IBM",
+      "path": "research/notes/what-are-agent-swarms-and-how-do-they-work-ibm.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 4092,
+      "summary": null,
+      "created": "2026-10-12T08:29:33.165860+00:00",
+      "updated": null
+    },
+    {
+      "id": "promptfoo-vs-deepeval-llm-testing-framework-comparison-2026-genaiqa",
+      "title": "Promptfoo vs DeepEval: LLM Testing Framework Comparison (2026) | genai.qa",
+      "path": "research/notes/promptfoo-vs-deepeval-llm-testing-framework-comparison-2026-genaiqa.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2705,
+      "summary": null,
+      "created": "2026-10-12T08:29:31.333515+00:00",
+      "updated": null
+    },
+    {
+      "id": "what-is-ai-agent-orchestration-guide-to-multi-agent-systems-wiz",
+      "title": "What is AI Agent Orchestration? Guide to Multi-Agent Systems | Wiz",
+      "path": "research/notes/what-is-ai-agent-orchestration-guide-to-multi-agent-systems-wiz.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 3018,
+      "summary": null,
+      "created": "2026-10-12T08:29:25.416738+00:00",
+      "updated": null
+    },
+    {
+      "id": "reduce-llm-hallucinations-in-2026",
+      "title": "Reduce LLM Hallucinations in 2026",
+      "path": "research/notes/reduce-llm-hallucinations-in-2026.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2885,
+      "summary": null,
+      "created": "2026-10-12T08:29:25.028059+00:00",
+      "updated": null
+    },
+    {
+      "id": "sonar-ai-agent-discovers-vulnerabilities-hidden-in-business-logic-workflows-devo",
+      "title": "Sonar AI Agent Discovers Vulnerabilities Hidden in Business Logic Workflows | DevOps.com | DevOps.com",
+      "path": "research/notes/sonar-ai-agent-discovers-vulnerabilities-hidden-in-business-logic-workflows-devo.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 857,
+      "summary": null,
+      "created": "2026-10-12T08:29:18.873907+00:00",
+      "updated": null
+    },
+    {
+      "id": "ai-code-quality-gates-an-automated-review-pipeline-axiom-studio",
+      "title": "AI Code Quality Gates: An Automated Review Pipeline | Axiom Studio",
+      "path": "research/notes/ai-code-quality-gates-an-automated-review-pipeline-axiom-studio.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2193,
+      "summary": null,
+      "created": "2026-10-12T08:29:15.461051+00:00",
+      "updated": null
+    },
+    {
+      "id": "practical-loop-engineering-by-addy-osmani-elevate",
+      "title": "Practical Loop Engineering - by Addy Osmani - Elevate",
+      "path": "research/notes/practical-loop-engineering-by-addy-osmani-elevate.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "commentary",
+      "content_type": "blog",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 3357,
+      "summary": null,
+      "created": "2026-10-12T08:29:13.291570+00:00",
+      "updated": null
+    },
+    {
+      "id": "ai-code-review-only-catches-half-of-your-bugs-oreilly",
+      "title": "AI Code Review Only Catches Half of Your Bugs – O’Reilly",
+      "path": "research/notes/ai-code-review-only-catches-half-of-your-bugs-oreilly.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 3397,
+      "summary": null,
+      "created": "2026-10-12T08:29:12.355343+00:00",
+      "updated": null
+    },
+    {
+      "id": "ai-incident-management-tools-complete-evaluation-guide",
+      "title": "AI Incident Management Tools: Complete Evaluation Guide",
+      "path": "research/notes/ai-incident-management-tools-complete-evaluation-guide.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1621,
+      "summary": null,
+      "created": "2026-10-12T08:29:11.207095+00:00",
+      "updated": null
+    },
+    {
+      "id": "ai-pricing-models-compared-seats-tokens-outcomes-zuora",
+      "title": "AI Pricing Models Compared: Seats, Tokens, Outcomes | Zuora",
+      "path": "research/notes/ai-pricing-models-compared-seats-tokens-outcomes-zuora.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2826,
+      "summary": null,
+      "created": "2026-10-12T08:29:10.334994+00:00",
+      "updated": null
+    },
+    {
+      "id": "center-for-responsible-decentralized-intelligence-at-berkeley",
+      "title": "Center for Responsible, Decentralized Intelligence at Berkeley",
+      "path": "research/notes/center-for-responsible-decentralized-intelligence-at-berkeley.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 3294,
+      "summary": null,
+      "created": "2026-10-12T08:29:09.826211+00:00",
+      "updated": null
+    },
+    {
+      "id": "how-are-ai-agents-used-in-penetration-testing-synack",
+      "title": "How Are AI Agents Used in Penetration Testing? | Synack",
+      "path": "research/notes/how-are-ai-agents-used-in-penetration-testing-synack.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1606,
+      "summary": null,
+      "created": "2026-10-12T08:29:09.712330+00:00",
+      "updated": null
+    },
+    {
+      "id": "the-cron-layer-how-i-taught-my-ai-agent-to-work-autonomously-247-dev-community",
+      "title": "The Cron Layer: How I Taught My AI Agent to Work Autonomously 24/7 - DEV Community",
+      "path": "research/notes/the-cron-layer-how-i-taught-my-ai-agent-to-work-autonomously-247-dev-community.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "commentary",
+      "content_type": "blog",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 710,
+      "summary": null,
+      "created": "2026-10-12T08:29:07.026682+00:00",
+      "updated": null
+    },
+    {
+      "id": "improving-factuality-and-reasoning-in-language-models-through-multiagent-debate",
+      "title": "Improving Factuality and Reasoning in Language Models through Multiagent Debate",
+      "path": "research/notes/improving-factuality-and-reasoning-in-language-models-through-multiagent-debate.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 828,
+      "summary": null,
+      "created": "2026-10-12T08:29:06.996735+00:00",
+      "updated": null
+    },
+    {
+      "id": "equipping-agents-for-the-real-world-with-agent-skills-anthropic",
+      "title": "Equipping agents for the real world with Agent Skills \\ Anthropic",
+      "path": "research/notes/equipping-agents-for-the-real-world-with-agent-skills-anthropic.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1536,
+      "summary": null,
+      "created": "2026-10-12T08:29:06.439734+00:00",
+      "updated": null
+    },
+    {
+      "id": "how-to-understand-a-legacy-codebase-using-ai-before-changing-it",
+      "title": "How to Understand a Legacy Codebase Using AI Before Changing it",
+      "path": "research/notes/how-to-understand-a-legacy-codebase-using-ai-before-changing-it.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 3915,
+      "summary": null,
+      "created": "2026-10-12T08:29:06.276812+00:00",
+      "updated": null
+    },
+    {
+      "id": "ai-software-factory-what-it-is-why-you-need-one-who-owns-it",
+      "title": "AI Software Factory: What It Is, Why You Need One, Who Owns It",
+      "path": "research/notes/ai-software-factory-what-it-is-why-you-need-one-who-owns-it.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2773,
+      "summary": null,
+      "created": "2026-10-12T08:29:05.739986+00:00",
+      "updated": null
+    },
+    {
+      "id": "agent-skillsskillsperformance-optimizationskillmd-at-main-addyosmaniagent-skills",
+      "title": "agent-skills/skills/performance-optimization/SKILL.md at main · addyosmani/agent-skills · GitHub",
+      "path": "research/notes/agent-skillsskillsperformance-optimizationskillmd-at-main-addyosmaniagent-skills.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "ground_truth",
+      "content_type": "code",
+      "tags": [
+        "agent-skills",
+        "ai-software-factory-architecture-58e4cc",
+        "evals",
+        "sop-to-skill"
+      ],
+      "word_count": 2447,
+      "summary": "Real production example SKILL.md from addyosmani/agent-skills repo (Addy Osmani is a Google Chrome engineering lead), a GitHub-hosted library of reusable Agent Skills for coding agents. Demonstrates how an SOP becomes a machine-consumable Agent Skill: YAML frontmatter (name/description triggers discovery), then a rigid 5-step workflow (MEASURE -> IDENTIFY -> FIX -> VERIFY -> GUARD) for performance optimization work, with explicit Core Web Vitals thresholds (LCP <=2.5s good/>4.0s poor, INP <=200ms good/>500ms poor, CLS <=0.1 good/>0.25 poor) and CI-enforceable budgets (JS bundle <200KB gzipped, API p95 <200ms, Lighthouse score >=90). Encodes a strict verification gate as a decision table: any 'neutral' (no measurable gain beyond run-to-run variance) or correctness-breaking change must be reverted, not kept — directly modeling 'rigid evals' discipline for agent-driven code changes. Includes a diagnostic decision tree mapping symptoms (slow LCP, high CLS, N+1 queries, connection pool exhaustion, cache stampede) to root-cause investigation steps, and a 'Common Rationalizations' table explicitly countering agent/developer excuses for skipping measurement (e.g., 'It's fast on my machine', 'Just cache it'). Ends with a machine-checkable verification checklist (before/after measurements exist, re-measured under identical conditions, tests still pass) — a template for encoding blast-radius-aware acceptance criteria directly into an Agent Skill.",
+      "created": "2026-10-12T08:27:28.195368+00:00",
+      "updated": "2026-10-12T08:29:03.382143+00:00"
+    },
+    {
+      "id": "webhook-triggers-automate-your-agents-dust-academy",
+      "title": "Webhook triggers | Automate your agents | Dust Academy",
+      "path": "research/notes/webhook-triggers-automate-your-agents-dust-academy.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 605,
+      "summary": null,
+      "created": "2026-10-12T08:29:02.926330+00:00",
+      "updated": null
+    },
+    {
+      "id": "a-generative-ai-cybersecurity-risks-mitigation-model-for-code-generation-using-a",
+      "title": "A generative AI cybersecurity risks mitigation model for code generation: using ANN-ISM hybrid approach | Scientific Reports",
+      "path": "research/notes/a-generative-ai-cybersecurity-risks-mitigation-model-for-code-generation-using-a.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 26997,
+      "summary": null,
+      "created": "2026-10-12T08:29:02.736089+00:00",
+      "updated": null
+    },
+    {
+      "id": "the-11-best-ai-sast-tools-in-2026-cycode",
+      "title": "The 11 Best AI SAST Tools in 2026 | Cycode",
+      "path": "research/notes/the-11-best-ai-sast-tools-in-2026-cycode.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 4670,
+      "summary": null,
+      "created": "2026-10-12T08:29:01.510850+00:00",
+      "updated": null
+    },
+    {
+      "id": "pricing-models-explained-per-seat-vs-flat-rate-ai-notetakers-for-sales-granola",
+      "title": "Pricing models explained: Per-seat vs. flat-rate AI notetakers for sales | Granola",
+      "path": "research/notes/pricing-models-explained-per-seat-vs-flat-rate-ai-notetakers-for-sales-granola.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2270,
+      "summary": null,
+      "created": "2026-10-12T08:28:58.479755+00:00",
+      "updated": null
+    },
+    {
+      "id": "context-engineering",
+      "title": "Context Engineering",
+      "path": "research/notes/context-engineering.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2799,
+      "summary": null,
+      "created": "2026-10-12T08:28:58.433461+00:00",
+      "updated": null
+    },
+    {
+      "id": "codeflow-map-codebase-architecture-and-neel-shah",
+      "title": "Codeflow: Map Codebase Architecture and… — Neel Shah",
+      "path": "research/notes/codeflow-map-codebase-architecture-and-neel-shah.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1659,
+      "summary": null,
+      "created": "2026-10-12T08:28:55.870637+00:00",
+      "updated": null
+    },
+    {
+      "id": "claude-api-pricing-a-complete-guide-for-ai-teams-in-2026-coworker-ai",
+      "title": "Claude API Pricing: A Complete Guide for AI Teams in 2026 | Coworker AI",
+      "path": "research/notes/claude-api-pricing-a-complete-guide-for-ai-teams-in-2026-coworker-ai.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 5816,
+      "summary": null,
+      "created": "2026-10-12T08:28:55.202592+00:00",
+      "updated": null
+    },
+    {
+      "id": "e2b-the-enterprise-ai-agent-cloud",
+      "title": "E2B | The Enterprise AI Agent Cloud",
+      "path": "research/notes/e2b-the-enterprise-ai-agent-cloud.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "cloud-sandboxes"
+      ],
+      "word_count": 2335,
+      "summary": null,
+      "created": "2026-10-12T08:28:55.013849+00:00",
+      "updated": null
+    },
+    {
+      "id": "agentic-ai-evaluation-gap-alex-ratner-snorkel-ai",
+      "title": "Agentic AI Evaluation Gap | Alex Ratner | Snorkel AI",
+      "path": "research/notes/agentic-ai-evaluation-gap-alex-ratner-snorkel-ai.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1354,
+      "summary": null,
+      "created": "2026-10-12T08:28:52.159179+00:00",
+      "updated": null
+    },
+    {
+      "id": "artificial-intelligence-security-issues-coding-agent-risks-fiddler-ai-blog",
+      "title": "Artificial Intelligence Security Issues: Coding Agent Risks | Fiddler AI Blog",
+      "path": "research/notes/artificial-intelligence-security-issues-coding-agent-risks-fiddler-ai-blog.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1996,
+      "summary": null,
+      "created": "2026-10-12T08:28:51.747186+00:00",
+      "updated": null
+    },
+    {
+      "id": "context-engineering-compaction-agent-memory-for-automated-malware-analysis-senti",
+      "title": "Context Engineering | Compaction & Agent Memory for Automated Malware Analysis | SentinelOne",
+      "path": "research/notes/context-engineering-compaction-agent-memory-for-automated-malware-analysis-senti.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1780,
+      "summary": null,
+      "created": "2026-10-12T08:28:51.176756+00:00",
+      "updated": null
+    },
+    {
+      "id": "llm-context-windows-what-they-are-how-they-work",
+      "title": "LLM context windows: what they are & how they work",
+      "path": "research/notes/llm-context-windows-what-they-are-how-they-work.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1767,
+      "summary": null,
+      "created": "2026-10-12T08:28:49.715010+00:00",
+      "updated": null
+    },
+    {
+      "id": "crewai-vs-langgraph-vs-autogen-choosing-the-right-multi-agent-ai-framework-datac",
+      "title": "CrewAI vs LangGraph vs AutoGen: Choosing the Right Multi-Agent AI Framework | DataCamp",
+      "path": "research/notes/crewai-vs-langgraph-vs-autogen-choosing-the-right-multi-agent-ai-framework-datac.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 4501,
+      "summary": null,
+      "created": "2026-10-12T08:28:49.353474+00:00",
+      "updated": null
+    },
+    {
+      "id": "ai-reverse-engineering-of-legacy-platforms-dynamics-consulting",
+      "title": "AI Reverse Engineering of Legacy Platforms | Dynamics Consulting",
+      "path": "research/notes/ai-reverse-engineering-of-legacy-platforms-dynamics-consulting.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 993,
+      "summary": null,
+      "created": "2026-10-12T08:28:47.957448+00:00",
+      "updated": null
+    },
+    {
+      "id": "ai-agent-incident-response-from-alert-to-fix-augment-code",
+      "title": "AI Agent Incident Response: From Alert to Fix | Augment Code",
+      "path": "research/notes/ai-agent-incident-response-from-alert-to-fix-augment-code.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "quality-control"
+      ],
+      "word_count": 2724,
+      "summary": null,
+      "created": "2026-10-12T08:28:47.340507+00:00",
+      "updated": null
+    },
+    {
+      "id": "llm-evaluation-frameworks-compared-how-to-actually-measure-what-your-model-does",
+      "title": "LLM Evaluation Frameworks Compared: How to Actually Measure What Your Model Does - MachineLearningMastery.com",
+      "path": "research/notes/llm-evaluation-frameworks-compared-how-to-actually-measure-what-your-model-does.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 5174,
+      "summary": null,
+      "created": "2026-10-12T08:28:46.811314+00:00",
+      "updated": null
+    },
+    {
+      "id": "ultimate-llm-prompt-for-deep-codebase-analysis-documentation-github",
+      "title": "Ultimate LLM Prompt for Deep Codebase Analysis & Documentation · GitHub",
+      "path": "research/notes/ultimate-llm-prompt-for-deep-codebase-analysis-documentation-github.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "ground_truth",
+      "content_type": "code",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1543,
+      "summary": null,
+      "created": "2026-10-12T08:28:46.421126+00:00",
+      "updated": null
+    },
+    {
+      "id": "github-addyosmaniadverse-multi-agent-adversarial-code-review-for-any-coding-agen",
+      "title": "GitHub - addyosmani/adverse: Multi-agent adversarial code review for any coding agent · GitHub",
+      "path": "research/notes/github-addyosmaniadverse-multi-agent-adversarial-code-review-for-any-coding-agen.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "ground_truth",
+      "content_type": "code",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1782,
+      "summary": null,
+      "created": "2026-10-12T08:28:45.181459+00:00",
+      "updated": null
+    },
+    {
+      "id": "llm-agent-orchestration-architecture-frameworks-and-use-cases-accelirate",
+      "title": "LLM Agent Orchestration: Architecture, Frameworks, and Use Cases - Accelirate",
+      "path": "research/notes/llm-agent-orchestration-architecture-frameworks-and-use-cases-accelirate.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2864,
+      "summary": null,
+      "created": "2026-10-12T08:28:44.184001+00:00",
+      "updated": null
+    },
+    {
+      "id": "architecture-decision-records-for-ai-coding-agents-where-the-why-lives",
+      "title": "Architecture Decision Records for AI Coding Agents: Where the Why Lives",
+      "path": "research/notes/architecture-decision-records-for-ai-coding-agents-where-the-why-lives.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2362,
+      "summary": null,
+      "created": "2026-10-12T08:28:42.839179+00:00",
+      "updated": null
+    },
+    {
+      "id": "how-to-build-a-cron-based-ai-automation-with-hermes-agent-scheduling-and-skills",
+      "title": "How to Build a Cron-Based AI Automation with Hermes Agent: Scheduling and Skills | MindStudio",
+      "path": "research/notes/how-to-build-a-cron-based-ai-automation-with-hermes-agent-scheduling-and-skills.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "triggers-infra"
+      ],
+      "word_count": 3029,
+      "summary": null,
+      "created": "2026-10-12T08:28:39.461478+00:00",
+      "updated": null
+    },
+    {
+      "id": "automated-penetration-testing-full-autonomy-fell-to-9",
+      "title": "Automated Penetration Testing: Full Autonomy Fell to 9%",
+      "path": "research/notes/automated-penetration-testing-full-autonomy-fell-to-9.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 3771,
+      "summary": null,
+      "created": "2026-10-12T08:28:39.239209+00:00",
+      "updated": null
+    },
+    {
+      "id": "understanding-security-risks-of-ai-agents-dependency-updates",
+      "title": "Understanding Security Risks of AI Agents’ Dependency Updates",
+      "path": "research/notes/understanding-security-risks-of-ai-agents-dependency-updates.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "institutional",
+      "content_type": "paper",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "multi-agent-architecture"
+      ],
+      "word_count": 4536,
+      "summary": null,
+      "created": "2026-10-12T08:28:36.706289+00:00",
+      "updated": null
+    },
+    {
+      "id": "ai-agent-evaluation-metrics-traces-human-review-and-workflows-confident-ai",
+      "title": "AI Agent Evaluation: Metrics, Traces, Human Review, and Workflows - Confident AI",
+      "path": "research/notes/ai-agent-evaluation-metrics-traces-human-review-and-workflows-confident-ai.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 7480,
+      "summary": null,
+      "created": "2026-10-12T08:28:34.513010+00:00",
+      "updated": null
+    },
+    {
+      "id": "what-is-multi-agent-orchestration-patterns-state-and-failure-handling-swarms-blo",
+      "title": "What Is Multi-Agent Orchestration? Patterns, State, and Failure Handling | Swarms Blog",
+      "path": "research/notes/what-is-multi-agent-orchestration-patterns-state-and-failure-handling-swarms-blo.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 5224,
+      "summary": null,
+      "created": "2026-10-12T08:28:33.771038+00:00",
+      "updated": null
+    },
+    {
+      "id": "vulnerability-blast-radius-how-to-measure-and-reduce-impact-blog-endor-labs",
+      "title": "Vulnerability Blast Radius: How to Measure and Reduce Impact | Blog | Endor Labs",
+      "path": "research/notes/vulnerability-blast-radius-how-to-measure-and-reduce-impact-blog-endor-labs.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "blast-radius"
+      ],
+      "word_count": 2186,
+      "summary": null,
+      "created": "2026-10-12T08:28:33.706707+00:00",
+      "updated": null
+    },
+    {
+      "id": "ai-agent-webhook-integration-guide-event-driven-workflows-fastio",
+      "title": "AI Agent Webhook Integration Guide: Event-Driven Workflows | Fastio",
+      "path": "research/notes/ai-agent-webhook-integration-guide-event-driven-workflows-fastio.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "triggers-infra"
+      ],
+      "word_count": 1639,
+      "summary": null,
+      "created": "2026-10-12T08:28:32.478641+00:00",
+      "updated": null
+    },
+    {
+      "id": "what-is-an-ai-agent-sop",
+      "title": "What is an AI Agent SOP?",
+      "path": "research/notes/what-is-an-ai-agent-sop.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1235,
+      "summary": null,
+      "created": "2026-10-12T08:28:32.382231+00:00",
+      "updated": null
+    },
+    {
+      "id": "the-code-review-bug-hunt-is-dead-heres-what-developers-get-wrong-the-new-stack",
+      "title": "The code review bug hunt is dead. Here's what developers get wrong. - The New Stack",
+      "path": "research/notes/the-code-review-bug-hunt-is-dead-heres-what-developers-get-wrong-the-new-stack.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 5774,
+      "summary": null,
+      "created": "2026-10-12T08:28:30.190582+00:00",
+      "updated": null
+    },
+    {
+      "id": "openai-agents-sdk-vs-langgraph-vs-autogen-building-production-agents-openhelm",
+      "title": "OpenAI Agents SDK vs LangGraph vs AutoGen: Building Production Agents | OpenHelm",
+      "path": "research/notes/openai-agents-sdk-vs-langgraph-vs-autogen-building-production-agents-openhelm.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1743,
+      "summary": null,
+      "created": "2026-10-12T08:28:29.564301+00:00",
+      "updated": null
+    },
+    {
+      "id": "agent-skillsskillsci-cd-and-automationskillmd-at-main-addyosmaniagent-skills-git",
+      "title": "agent-skills/skills/ci-cd-and-automation/SKILL.md at main · addyosmani/agent-skills · GitHub",
+      "path": "research/notes/agent-skillsskillsci-cd-and-automationskillmd-at-main-addyosmaniagent-skills-git.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "ground_truth",
+      "content_type": "code",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1594,
+      "summary": null,
+      "created": "2026-10-12T08:28:27.784356+00:00",
+      "updated": null
+    },
+    {
+      "id": "top-5-tools-to-detect-hallucination-in-2025",
+      "title": "Top 5 tools to detect hallucination in 2025",
+      "path": "research/notes/top-5-tools-to-detect-hallucination-in-2025.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2273,
+      "summary": null,
+      "created": "2026-10-12T08:28:25.943555+00:00",
+      "updated": null
+    },
+    {
+      "id": "github-taichengguollm_multiagents_survey_papers-large-language-model-based-multi",
+      "title": "GitHub - taichengguo/LLM_MultiAgents_Survey_Papers: Large Language Model based Multi-Agents: A Survey of Progress and Challenges (In IJCAI 2024) · GitHub",
+      "path": "research/notes/github-taichengguollm_multiagents_survey_papers-large-language-model-based-multi.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "ground_truth",
+      "content_type": "code",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2175,
+      "summary": null,
+      "created": "2026-10-12T08:28:25.850026+00:00",
+      "updated": null
+    },
+    {
+      "id": "mastering-claude-agent-sdk-best-practices-for-developing-ai-agents-2025",
+      "title": "Mastering Claude Agent SDK: Best Practices for Developing AI Agents (2025)",
+      "path": "research/notes/mastering-claude-agent-sdk-best-practices-for-developing-ai-agents-2025.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1623,
+      "summary": null,
+      "created": "2026-10-12T08:28:24.898436+00:00",
+      "updated": null
+    },
+    {
+      "id": "context-engineering-for-ai-agents-a-practical-guide",
+      "title": "Context Engineering for AI Agents: A Practical Guide",
+      "path": "research/notes/context-engineering-for-ai-agents-a-practical-guide.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "context-engineering"
+      ],
+      "word_count": 4767,
+      "summary": null,
+      "created": "2026-10-12T08:28:24.155824+00:00",
+      "updated": null
+    },
+    {
+      "id": "agent-skills-claude-platform-docs",
+      "title": "Agent Skills - Claude Platform Docs",
+      "path": "research/notes/agent-skills-claude-platform-docs.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "ground_truth",
+      "content_type": "docs",
+      "tags": [
+        "agent-skills",
+        "ai-software-factory-architecture-58e4cc",
+        "primary-vendor-docs"
+      ],
+      "word_count": 2556,
+      "summary": "Anthropic's official Agent Skills architecture doc. Skills are filesystem-based directories (SKILL.md + reference files + scripts) that give Claude domain expertise via progressive disclosure across 3 levels: Level 1 metadata (YAML frontmatter name+description, ~100 tokens/skill, always loaded at startup into system prompt); Level 2 instructions (SKILL.md body, under 5k tokens, loaded only when triggered); Level 3 resources/scripts (loaded on demand, zero cost until accessed; scripts run via bash with only output entering context, not code). Skills run in an agent VM with bash/Python/Node file system access. Available across Claude API (sandboxed container, no network access, no runtime package installs), Claude Code (full network access, filesystem skills in ~/.claude/skills or .claude/skills/), and claude.ai (individual-user upload only, no org-wide admin management). Security section warns explicitly: malicious Skills can direct tool/bash misuse or data exfiltration via external URL fetches; recommends auditing all bundled files and treating Skill installation like installing software. Enterprise tier offers Skill content scanning (does not cover API/Console uploads).",
+      "created": "2026-10-12T08:27:25.560986+00:00",
+      "updated": "2026-10-12T08:28:23.223625+00:00"
+    },
+    {
+      "id": "adaptive-heterogeneous-multi-agent-debate-for-enhanced-educational-and-factual-r",
+      "title": "Adaptive heterogeneous multi-agent debate for enhanced educational and factual reasoning in large language models | Journal of King Saud University Computer and Information Sciences | Springer Nature Link",
+      "path": "research/notes/adaptive-heterogeneous-multi-agent-debate-for-enhanced-educational-and-factual-r.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 13880,
+      "summary": null,
+      "created": "2026-10-12T08:28:21.183592+00:00",
+      "updated": null
+    },
+    {
+      "id": "medium-2",
+      "title": "Medium",
+      "path": "research/notes/medium-2.md",
+      "status": "deprecated",
+      "type": "note",
+      "tier": "commentary",
+      "content_type": "blog",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "context-engineering"
+      ],
+      "word_count": 334,
+      "summary": null,
+      "created": "2026-10-12T08:28:02.748859+00:00",
+      "updated": "2026-10-12T08:28:15.574657+00:00"
+    },
+    {
+      "id": "factory-ai-software-engineering-agents-ai-engineer",
+      "title": "Factory: AI Software Engineering Agents | AI Engineer",
+      "path": "research/notes/factory-ai-software-engineering-agents-ai-engineer.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 409,
+      "summary": null,
+      "created": "2026-10-12T08:28:11.168869+00:00",
+      "updated": null
+    },
+    {
+      "id": "the-ai-agent-engineers-guide-60-patterns-for-building-autonomous-systems-full-bo",
+      "title": "The AI Agent Engineer's Guide: 60 Patterns for Building Autonomous Systems [Full Book]",
+      "path": "research/notes/the-ai-agent-engineers-guide-60-patterns-for-building-autonomous-systems-full-bo.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 100555,
+      "summary": null,
+      "created": "2026-10-12T08:28:09.970053+00:00",
+      "updated": null
+    },
+    {
+      "id": "best-sast-tools-in-2026-semgrep-codeql-snyk-compared",
+      "title": "Best SAST Tools in 2026: Semgrep, CodeQL & Snyk Compared",
+      "path": "research/notes/best-sast-tools-in-2026-semgrep-codeql-snyk-compared.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1786,
+      "summary": null,
+      "created": "2026-10-12T08:28:06.109156+00:00",
+      "updated": null
+    },
+    {
+      "id": "pricing-openai-api",
+      "title": "Pricing | OpenAI API",
+      "path": "research/notes/pricing-openai-api.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "ground_truth",
+      "content_type": "docs",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2675,
+      "summary": null,
+      "created": "2026-10-12T08:28:03.189415+00:00",
+      "updated": null
+    },
+    {
+      "id": "automated-penetration-testing-ai-pentest-agent-simbian",
+      "title": "Automated Penetration Testing | AI Pentest Agent | Simbian",
+      "path": "research/notes/automated-penetration-testing-ai-pentest-agent-simbian.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1888,
+      "summary": null,
+      "created": "2026-10-12T08:28:02.667039+00:00",
+      "updated": null
+    },
+    {
+      "id": "top-5-llm-evaluation-platforms-in-2026-compared-deepeval-the-llm-evaluation-fram",
+      "title": "Top 5 LLM Evaluation Platforms in 2026, Compared | DeepEval - The LLM Evaluation Framework",
+      "path": "research/notes/top-5-llm-evaluation-platforms-in-2026-compared-deepeval-the-llm-evaluation-fram.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 3704,
+      "summary": null,
+      "created": "2026-10-12T08:28:00.938150+00:00",
+      "updated": null
+    },
+    {
+      "id": "usage-based-ai-pricing-vs-flat-subscriptions-what-the-github-copilot-shift-means",
+      "title": "Usage-Based AI Pricing vs Flat Subscriptions: What the GitHub Copilot Shift Means for Builders | MindStudio",
+      "path": "research/notes/usage-based-ai-pricing-vs-flat-subscriptions-what-the-github-copilot-shift-means.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 3260,
+      "summary": null,
+      "created": "2026-10-12T08:27:57.232003+00:00",
+      "updated": null
+    },
+    {
+      "id": "leveraging-llms-for-legacy-code-modernization-challenges-and-opportunities-for-l",
+      "title": "Leveraging LLMs for Legacy Code Modernization: Challenges and Opportunities for LLM-Generated Documentation",
+      "path": "research/notes/leveraging-llms-for-legacy-code-modernization-challenges-and-opportunities-for-l.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "institutional",
+      "content_type": "paper",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 10998,
+      "summary": null,
+      "created": "2026-10-12T08:27:54.312155+00:00",
+      "updated": null
+    },
+    {
+      "id": "top-5-llm-evaluation-frameworks-in-2026-compared-deepeval-the-llm-evaluation-fra",
+      "title": "Top 5 LLM Evaluation Frameworks in 2026, Compared | DeepEval - The LLM Evaluation Framework",
+      "path": "research/notes/top-5-llm-evaluation-frameworks-in-2026-compared-deepeval-the-llm-evaluation-fra.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "eval-frameworks"
+      ],
+      "word_count": 3991,
+      "summary": null,
+      "created": "2026-10-12T08:27:51.555248+00:00",
+      "updated": null
+    },
+    {
+      "id": "agentic-platform",
+      "title": "Agentic Platform",
+      "path": "research/notes/agentic-platform.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "ground_truth",
+      "content_type": "docs",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2514,
+      "summary": null,
+      "created": "2026-10-12T08:27:51.023086+00:00",
+      "updated": null
+    },
+    {
+      "id": "claude-subscription-vs-api-which-is-cheaper-in-2026-real-math-teamorouter",
+      "title": "Claude Subscription vs API: Which Is Cheaper in 2026? (Real Math) · TeamoRouter",
+      "path": "research/notes/claude-subscription-vs-api-which-is-cheaper-in-2026-real-math-teamorouter.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1536,
+      "summary": null,
+      "created": "2026-10-12T08:27:49.735175+00:00",
+      "updated": null
+    },
+    {
+      "id": "how-i-validate-quality-when-ai-agents-write-my-code-dev-community",
+      "title": "How I Validate Quality When AI Agents Write My Code - DEV Community",
+      "path": "research/notes/how-i-validate-quality-when-ai-agents-write-my-code-dev-community.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "commentary",
+      "content_type": "blog",
+      "tags": [
+        "agent-quality",
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 5774,
+      "summary": null,
+      "created": "2026-10-12T08:27:48.472772+00:00",
+      "updated": null
+    },
+    {
+      "id": "medium",
+      "title": "Medium",
+      "path": "research/notes/medium.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "commentary",
+      "content_type": "blog",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "codebase-mastery"
+      ],
+      "word_count": 2243,
+      "summary": null,
+      "created": "2026-10-12T08:27:46.994260+00:00",
+      "updated": null
+    },
+    {
+      "id": "structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents",
+      "title": "Structural Risks of Autonomous Coding Agents in Production · Shipped by Agents",
+      "path": "research/notes/structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2562,
+      "summary": null,
+      "created": "2026-10-12T08:27:44.910761+00:00",
+      "updated": null
+    },
+    {
+      "id": "code-review-is-not-about-catching-bugs-davidpollcom",
+      "title": "Code Review Is Not About Catching Bugs · davidpoll.com",
+      "path": "research/notes/code-review-is-not-about-catching-bugs-davidpollcom.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "code-review"
+      ],
+      "word_count": 2679,
+      "summary": null,
+      "created": "2026-10-12T08:27:44.661960+00:00",
+      "updated": null
+    },
+    {
+      "id": "how-ai-coding-agents-use-adrs-architecture-decision-records-mneme-hq",
+      "title": "How AI Coding Agents Use ADRs (Architecture Decision Records) — Mneme HQ",
+      "path": "research/notes/how-ai-coding-agents-use-adrs-architecture-decision-records-mneme-hq.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "adr-context",
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 2377,
+      "summary": null,
+      "created": "2026-10-12T08:27:38.775759+00:00",
+      "updated": null
+    },
+    {
+      "id": "llm-agent-orchestration-a-step-by-step-guide-ibm",
+      "title": "LLM Agent Orchestration: A Step by Step Guide | IBM",
+      "path": "research/notes/llm-agent-orchestration-a-step-by-step-guide-ibm.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 7194,
+      "summary": null,
+      "created": "2026-10-12T08:27:36.587932+00:00",
+      "updated": null
+    },
+    {
+      "id": "tool-mad-a-multi-agent-debate-framework-for-fact-verification",
+      "title": "Tool-MAD: A Multi-Agent Debate Framework for Fact Verification",
+      "path": "research/notes/tool-mad-a-multi-agent-debate-framework-for-fact-verification.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "institutional",
+      "content_type": "paper",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "multi-agent-eval"
+      ],
+      "word_count": 9222,
+      "summary": null,
+      "created": "2026-10-12T08:27:32.235223+00:00",
+      "updated": null
+    },
+    {
+      "id": "nobodys-in-the-cockpit-risks-of-autonomous-ai-security-testing",
+      "title": "Nobody’s in the Cockpit: Risks of Autonomous AI Security Testing",
+      "path": "research/notes/nobodys-in-the-cockpit-risks-of-autonomous-ai-security-testing.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "adversarial-review",
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 1217,
+      "summary": null,
+      "created": "2026-10-12T08:27:31.649630+00:00",
+      "updated": null
+    },
+    {
+      "id": "kinde-judge-in-the-loop-building-reliable-llm-as-a-judge-pipelines",
+      "title": "Kinde Judge in the Loop: Building Reliable LLM-as-a-Judge Pipelines",
+      "path": "research/notes/kinde-judge-in-the-loop-building-reliable-llm-as-a-judge-pipelines.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "ai-software-factory-architecture-58e4cc",
+        "llm-as-judge"
+      ],
+      "word_count": 1553,
+      "summary": null,
+      "created": "2026-10-12T08:27:28.486690+00:00",
+      "updated": null
+    },
+    {
+      "id": "gtig-ai-threat-tracker-from-prompting-to-autonomy-the-evolution-of-adversarial-a",
+      "title": "GTIG AI Threat Tracker: From Prompting to Autonomy – The Evolution of Adversarial AI | Google Cloud Blog",
+      "path": "research/notes/gtig-ai-threat-tracker-from-prompting-to-autonomy-the-evolution-of-adversarial-a.md",
+      "status": "draft",
+      "type": "note",
+      "tier": "unknown",
+      "content_type": "unknown",
+      "tags": [
+        "adversarial-review",
+        "ai-software-factory-architecture-58e4cc"
+      ],
+      "word_count": 6488,
+      "summary": null,
+      "created": "2026-10-12T08:27:25.604685+00:00",
+      "updated": null
+    }
+  ],
+  "count": 92,
+  "vault": "D:\\VIKASH\\software-factory",
+  "timestamp": "2026-10-12T08:30:16.004873+00:00"
+}

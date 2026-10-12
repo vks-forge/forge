@@ -1,0 +1,10 @@
+https://www.digitalocean.com/resources/articles/llm-as-a-judge
+https://link.springer.com/article/10.1007/s44443-025-00353-3
+https://www.getmaxim.ai/articles/top-5-tools-to-detect-hallucination-in-2025/
+https://thenewstack.io/code-review-catches-maintainability-bugs/
+https://www.confident-ai.com/blog/definitive-ai-agent-evaluation-guide
+https://machinelearningmastery.com/llm-evaluation-frameworks-compared-how-to-actually-measure-what-your-model-does/
+https://snorkel.ai/blog/closing-the-evaluation-gap-agentic-ai-alex-ratner/
+https://neelshah18.com/blog/codeflow-browser-codebase-architecture-blast-radius/
+https://www.nature.com/articles/s41598-025-34350-3
+https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills

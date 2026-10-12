@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "Equixly's security assessment of popular MCP server implementations found 43% contained command injection vulnerabilities, 22% allowed path traversal/arbitrary file read, 30% permitted unrestricted SSRF-style URL fetching, and 5% had other security issues.",
+    "stance": "refutes",
+    "stance_target": "the Model Context Protocol tool ecosystem used in multi-agent software-factory architectures is secure by default",
+    "evidence_type": "empirical",
+    "scope_conditions": "Equixly security research, approximately one month of MCP server assessments, published March 29, 2025",
+    "quoted_support": "Command Injection Vulnerabilities: 43% of tested implementations contained command injection flaws. Path Traversal/Arbitrary File Read: 22% allowed accessing files outside intended directories. SSRF Vulnerabilities: 30% permitted unrestricted URL fetching. Other Security Issues: 5% had miscellaneous security concerns.",
+    "numbers": ["43%", "22%", "30%", "5%"],
+    "entities": ["Equixly", "MCP"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "mcp-servers-the-new-security-nightmare-equixly"
+  },
+  {
+    "claim": "When Equixly disclosed MCP server vulnerabilities to development teams, only 30% acknowledged and released fixes, 45% dismissed the risks as 'theoretical' or 'acceptable,' and 25% did not respond to the disclosure at all.",
+    "stance": "supports",
+    "stance_target": "adversarial model review and rigid evals must not rely on vendor self-remediation of discovered tool/MCP-server vulnerabilities, since most do not fix promptly",
+    "evidence_type": "empirical",
+    "scope_conditions": "Equixly vulnerability disclosure process, 2025",
+    "quoted_support": "30% acknowledged and released fixes. 45% claimed the security risks were \"theoretical\" or \"acceptable\"... 25% did not respond to our security disclosures.",
+    "numbers": ["30%", "45%", "25%"],
+    "entities": ["Equixly"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "mcp-servers-the-new-security-nightmare-equixly"
+  },
+  {
+    "claim": "The MCP protocol specification mandates session identifiers directly in URLs (GET /messages/?sessionId=UUID), exposing them in server logs and creating a session-hijacking vector that is a protocol-level flaw, not an implementation bug that can be patched by individual server authors.",
+    "stance": "supports",
+    "stance_target": "blast-radius mitigation for agent tool protocols requires addressing protocol-level security design flaws, not just per-server hardening",
+    "evidence_type": "empirical",
+    "scope_conditions": "Model Context Protocol specification analysis, Equixly, 2025",
+    "quoted_support": "Session IDs in URLs: The protocol specification mandates session identifiers in URLs (GET /messages/?sessionId=UUID), which fundamentally violates security best practices. This design exposes sensitive identifiers in logs and a session could be hijacked by an attacker.",
+    "numbers": [],
+    "entities": ["Equixly", "MCP"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "mcp-servers-the-new-security-nightmare-equixly"
+  },
+  {
+    "claim": "MCP servers can be invoked directly by any caller, not only by LLMs following plan/act transparency conventions, which expands the practical attack surface beyond what most implementers have secured against.",
+    "stance": "supports",
+    "stance_target": "the zero-hallucination/blast-radius pillar must account for the agent tool layer being independently attackable, not just the LLM's own decision-making",
+    "evidence_type": "theoretical",
+    "scope_conditions": "MCP architecture analysis, Equixly, 2025",
+    "quoted_support": "MCP servers can be called by anyone, not just LLMs. While LLMs typically show what they're going to do with \"plan\" and \"act\" phases, a malicious attacker has no such transparency. This creates an expanded attack surface that many developers haven't properly secured.",
+    "numbers": [],
+    "entities": ["Equixly", "MCP"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "mcp-servers-the-new-security-nightmare-equixly"
+  }
+]

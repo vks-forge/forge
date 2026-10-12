@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "FACTSCORE decomposes a long-form LLM generation into atomic facts and computes the percentage of atomic facts supported by a reliable knowledge source, solving the problem that binary factual/non-factual judgments are inadequate for mixed-support generations.",
+    "stance": "supports",
+    "stance_target": "pillar 1: granular, decomposed factuality evaluation methodology for rigid evals",
+    "evidence_type": "theoretical",
+    "scope_conditions": "long-form text generation evaluation, people biographies domain tested",
+    "quoted_support": "we introduce FACTSCORE, a new evaluation that breaks a generation into a series of atomic facts and computes the percentage of atomic facts supported by a reliable knowledge source.",
+    "numbers": [],
+    "entities": ["University of Washington", "Meta AI", "Allen Institute for AI"],
+    "time_period": "2023 (original publication), relevant as a 2026 cited benchmark",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "factscore-fine-grained-atomic-evaluation-of"
+  },
+  {
+    "claim": "ChatGPT achieves only a 58% human-evaluated FACTSCORE on generated people biographies, demonstrating the need for fine-grained factuality scoring rather than binary correctness judgments.",
+    "stance": "supports",
+    "stance_target": "pillar 1: LLM factuality is partial even for state-of-the-art commercial models, justifying rigid evals",
+    "evidence_type": "empirical",
+    "scope_conditions": "human evaluation of biography generation task, 2023 study",
+    "quoted_support": "we report new analysis demonstrating the need for such a fine-grained score (e.g., ChatGPT only achieves 58%).",
+    "numbers": ["58%"],
+    "entities": ["ChatGPT"],
+    "time_period": "2023",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "factscore-fine-grained-atomic-evaluation-of"
+  },
+  {
+    "claim": "An automated FACTSCORE estimator using retrieval and a strong LLM judge achieves less than a 2% error rate compared to costly human evaluation, and applying it to 6,500 generations from 13 recent LMs would have cost $26,000 if done by human annotators.",
+    "stance": "supports",
+    "stance_target": "pillar 6: cost optimization — automated LLM-judge evaluation is dramatically cheaper than human evaluation at comparable accuracy",
+    "evidence_type": "empirical",
+    "scope_conditions": "automated vs. human factuality evaluation comparison, 13 LMs, 6,500 generations",
+    "quoted_support": "we also introduce an automated model that estimates FACTSCORE using retrieval and a strong language model, with less than a 2% error rate. Finally, we use this automated metric to evaluate 6,500 generations from a new set of 13 recent LMs that would have cost $26K if evaluated by humans.",
+    "numbers": ["<2% error rate", "6,500 generations", "13 LMs", "$26,000"],
+    "entities": [],
+    "time_period": "2023",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "factscore-fine-grained-atomic-evaluation-of"
+  },
+  {
+    "claim": "GPT-4 and ChatGPT are measurably more factual than public open-source models, with Vicuna and Alpaca ranking among the best public models by FACTSCORE.",
+    "stance": "supports",
+    "stance_target": "comparative factuality benchmarking of commercial vs open models",
+    "evidence_type": "empirical",
+    "scope_conditions": "13-model comparison study, 2023",
+    "quoted_support": "GPT-4 and ChatGPT are more factual than public models, and Vicuna and Alpaca are some of the best public models.",
+    "numbers": [],
+    "entities": ["GPT-4", "ChatGPT", "Vicuna", "Alpaca"],
+    "time_period": "2023",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "factscore-fine-grained-atomic-evaluation-of"
+  }
+]

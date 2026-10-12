@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "A toy RAG agent evaluated with a 0.5 keyword-overlap threshold reported 100% 'accuracy' while the same answers scored only 0.04 average BLEU and 0.24 average F1, demonstrating that naive keyword-match accuracy metrics can drastically overstate agent output quality compared to n-gram or precision/recall-based metrics.",
+    "stance": "supports",
+    "stance_target": "Zero-Hallucination & Quality Control pillar — rigid evals must use stricter metrics than keyword overlap, since lenient thresholds mask low-quality output",
+    "evidence_type": "empirical",
+    "scope_conditions": "single toy LangChain + IBM Granite RAG agent, 4 test queries on The Adventures of Sherlock Holmes text",
+    "quoted_support": "Total Entries: 4, Accurate Entries: 4 (100.00%), Average BLEU Score: 0.04, Average F1 Score: 0.24",
+    "numbers": ["100% keyword-match accuracy", "0.04 average BLEU score", "0.24 average F1 score", "keyword match threshold 0.5"],
+    "entities": ["IBM Granite", "LangChain", "BLEU", "F1"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "llm-agent-orchestration-a-step-by-step-guide-ibm"
+  },
+  {
+    "claim": "A production perinatal-care AI platform (MyLUA Health) built on IBM watsonx.ai, watsonx Orchestrate, Granite models, and RAG reports that 79% of users felt comfortable sharing sensitive health information with the platform, attributed to grounded, governed, HIPAA-compliant agent responses.",
+    "stance": "supports",
+    "stance_target": "Zero-Hallucination & Quality Control pillar — grounding (RAG) plus governance can measurably increase user trust in regulated domains",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "single vendor case study, healthcare domain, no independent verification",
+    "quoted_support": "The result: 79% of users felt comfortable sharing sensitive health information with the platform, a direct outcome of accurate, governed, agent-driven responses rather than generic answers.",
+    "numbers": ["79% of users comfortable sharing sensitive health info"],
+    "entities": ["MyLUA Health", "IBM watsonx.ai", "watsonx Orchestrate", "IBM Granite"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "llm-agent-orchestration-a-step-by-step-guide-ibm"
+  },
+  {
+    "claim": "A four-component framework (Profile, Memory, Planning, Action) is proposed as the standard architecture for LLM-based autonomous agents, where Memory can be unified or hybrid and Planning can follow predefined steps or adapt dynamically via feedback.",
+    "stance": "neutral",
+    "stance_target": "Triggers/Infrastructure pillar — foundational vocabulary for describing single-agent architecture components that scale into multi-agent Director/Worker systems",
+    "evidence_type": "theoretical",
+    "scope_conditions": "general LLM agent design framework",
+    "quoted_support": "The framework presented in figure-1 provides a holistic design for large language model (LLM)-based autonomous agents, emphasizing the interplay between key components: profile, memory, planning and action.",
+    "numbers": [],
+    "entities": ["AutoGen", "CrewAI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "llm-agent-orchestration-a-step-by-step-guide-ibm"
+  }
+]

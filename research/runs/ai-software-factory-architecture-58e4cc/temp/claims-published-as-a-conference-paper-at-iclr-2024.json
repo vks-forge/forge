@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "Self-repair efficacy is bottlenecked by the model's ability to generate useful feedback on its own code, not by its ability to generate code; using a stronger model to generate feedback significantly improves self-repair's effectiveness for a weaker drafter.",
+    "stance": "supports",
+    "stance_target": "adversarial/second-pass review helps when the reviewer is meaningfully stronger than the drafter",
+    "evidence_type": "empirical",
+    "scope_conditions": "HumanEval and APPS benchmarks, Code Llama, GPT-3.5, and GPT-4 as code/feedback models",
+    "quoted_support": "self-repair is bottlenecked by the model's ability to provide feedback on its own code; using a stronger model [for feedback] ... self-repair still lags far behind what can be achieved with human-level debugging.",
+    "numbers": [],
+    "entities": ["Code Llama", "GPT-3.5", "GPT-4", "HumanEval", "APPS"],
+    "time_period": "2024",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "published-as-a-conference-paper-at-iclr-2024"
+  },
+  {
+    "claim": "When the cost of additional model invocations is accounted for, self-repair is not a silver bullet: several settings show no improvement or only modest improvement over not repairing at all.",
+    "stance": "refutes",
+    "stance_target": "adding a second model pass to critique/repair code reliably produces net-positive value once cost is considered",
+    "evidence_type": "empirical",
+    "scope_conditions": "Cost-adjusted comparison across sampling budgets",
+    "quoted_support": "Self-repair is not a silver bullet: when the cost of repair is taken into account, we find several settings... modest to no improvements",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2024",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "published-as-a-conference-paper-at-iclr-2024"
+  },
+  {
+    "claim": "Self-repair is more likely to be beneficial when more of the sampling budget is spent on generating diverse initial candidates rather than on repair iterations.",
+    "stance": "neutral",
+    "stance_target": "optimal allocation of compute budget between generation and critique/repair passes",
+    "evidence_type": "empirical",
+    "scope_conditions": "Sampling-budget allocation experiments on HumanEval/APPS",
+    "quoted_support": "Self-repair is more likely to be beneficial when more of the sampling budget is spent on generating [initial candidates]",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2024",
+    "region": "n/a",
+    "confidence": "medium",
+    "source_note_id": "published-as-a-conference-paper-at-iclr-2024"
+  }
+]

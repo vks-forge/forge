@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "Across 36 experimental configurations (4 models x 9 benchmarks), multi-agent debate (MAD) frameworks beat plain Chain-of-Thought in only about 15% of cases under ANOVA-tested Win/Tie/Lose categorization.",
+    "stance": "refutes",
+    "stance_target": "multi-agent debate/critique reliably improves over single-model baselines",
+    "evidence_type": "statistical",
+    "scope_conditions": "5 MAD frameworks (SoM, MP, EoT, ChatEval, AgentVerse), 4 foundation models, 9 benchmarks spanning general knowledge, math reasoning, and programming",
+    "quoted_support": "SoM, EoT, ChatEval, and AgentVerse only outperformed CoT in approximately 15% cases, while MP did not demonstrate significant improvement over CoT.",
+    "numbers": ["36 configurations", "~15% win rate", "ANOVA p<0.05"],
+    "entities": ["SoM", "MP", "EoT", "ChatEval", "AgentVerse", "Chain-of-Thought"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "arxiv250208788v3-cscl-21-jun-2025"
+  },
+  {
+    "claim": "MAD frameworks perform worse specifically on programming tasks relative to other task types; only SoM and AgentVerse had positive win rates on programming, while MAD outperformed its own baseline more on mathematical reasoning.",
+    "stance": "refutes",
+    "stance_target": "adversarial/debate-style multi-agent review is effective for code-defect catching",
+    "evidence_type": "statistical",
+    "scope_conditions": "HumanEval, MBPP programming benchmarks, same 4-model x 9-benchmark design",
+    "quoted_support": "MAD frameworks performed worse on programming tasks (only SoM/AgentVerse had positive win rates) but better on mathematical reasoning, surpassing their overall performance levels.",
+    "numbers": ["HumanEval", "MBPP"],
+    "entities": ["SoM", "AgentVerse", "HumanEval", "MBPP"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "arxiv250208788v3-cscl-21-jun-2025"
+  },
+  {
+    "claim": "The one case where a MAD framework (AgentVerse) beat CoT on HumanEval is attributable not to debate/critique dynamics but to an added execution-evaluation stage where agents can run code and see test results -- a mechanism the authors say is 'arguably beyond the scope of MAD designs.'",
+    "stance": "neutral",
+    "stance_target": "mechanism of apparent multi-agent code-quality gains",
+    "evidence_type": "empirical",
+    "scope_conditions": "AgentVerse on HumanEval",
+    "quoted_support": "when handling programming tasks, AgentVerse incorporates an additional execution-evaluation stage so that agents can utilize the execution results from the generated programs, which is usually absent in other MAD frameworks and arguably beyond the scope of MAD designs.",
+    "numbers": [],
+    "entities": ["AgentVerse", "HumanEval"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "arxiv250208788v3-cscl-21-jun-2025"
+  },
+  {
+    "claim": "Increasing debate rounds (2-4) or agent population (3-9) does not fix the shortfall of debate frameworks on HumanEval; SoM continues to underperform CoT regardless of scaling these hyperparameters.",
+    "stance": "refutes",
+    "stance_target": "scaling multi-agent debate interaction (more rounds/agents) improves code-defect catching",
+    "evidence_type": "empirical",
+    "scope_conditions": "Ablation study on HumanEval with SoM framework, debate rounds and agent count varied",
+    "quoted_support": "the SoM framework continues to underperform CoT on the MMLU and HumanEval benchmarks, even as debate rounds increase from 2 to 4 or the number of agents increases from 3 to 9 on HumanEval.",
+    "numbers": ["debate rounds 2-4", "agent count 3-9"],
+    "entities": ["SoM", "HumanEval"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "arxiv250208788v3-cscl-21-jun-2025"
+  }
+]

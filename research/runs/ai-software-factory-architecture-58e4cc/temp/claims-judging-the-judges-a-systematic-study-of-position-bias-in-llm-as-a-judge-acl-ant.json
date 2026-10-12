@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "Across 15 LLM judges evaluated on MTBench and DevBench (22 tasks, ~40 solution-generating models, 150,000+ evaluation instances), position bias is confirmed not to be due to random chance and varies significantly across judges and tasks.",
+    "stance": "refutes",
+    "stance_target": "treating any single LLM judge's position-bias tendency as negligible or uniformly correctable across a software factory's review pipeline",
+    "evidence_type": "empirical",
+    "scope_conditions": "15 LLM judges, MTBench + DevBench, 22 tasks, ~40 solution-generating models, IJCNLP-AACL 2025",
+    "quoted_support": "Our experiments, involving 15 LLM judges across MTBench and DevBench with 22 tasks and approximately 40 solution-generating models, result in over 150,000 evaluation instances... The findings confirm that position bias is not due to random chance and varies significantly across judges and tasks.",
+    "numbers": ["15 LLM judges", "22 tasks", "~40 models", "150,000+ evaluation instances"],
+    "entities": ["MTBench", "DevBench"],
+    "time_period": "2025",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "judging-the-judges-a-systematic-study-of-position-bias-in-llm-as-a-judge-acl-ant"
+  },
+  {
+    "claim": "Position bias is only weakly influenced by prompt-component length but is strongly affected by the quality gap between the two compared solutions -- bias is most severe exactly when candidate solutions are close in quality.",
+    "stance": "refutes",
+    "stance_target": "assuming position bias is a minor concern when evaluating close-quality code candidates in an adversarial review pipeline -- the paper shows the opposite, bias is worst in exactly that regime",
+    "evidence_type": "empirical",
+    "scope_conditions": "pairwise and list-wise LLM judge comparison settings, 2025",
+    "quoted_support": "While position bias is weakly influenced by the length of prompt components, it is strongly affected by the quality gap between solutions.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2025",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "judging-the-judges-a-systematic-study-of-position-bias-in-llm-as-a-judge-acl-ant"
+  },
+  {
+    "claim": "The study introduces three new metrics for position bias assessment -- repetition stability, position consistency, and preference fairness -- and identifies Judge-Level, Candidate-Level, and Task-Level factors contributing to the bias.",
+    "stance": "supports",
+    "stance_target": "providing concrete, reusable metrics the software factory could adopt to quantify and monitor position bias in its own adversarial review/judge infrastructure",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "methodological contribution, IJCNLP-AACL 2025",
+    "quoted_support": "This exploratory study evaluates position bias in LLM judges across pairwise and list-wise comparison settings, introducing three metrics: repetition stability, position consistency, and preference fairness... We identify Judge-Level, Candidate-Level, and Task-Level factors contributing to bias.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2025",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "judging-the-judges-a-systematic-study-of-position-bias-in-llm-as-a-judge-acl-ant"
+  }
+]

@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Anthropic took three distinct policy positions on subscription-vs-automation economics within three months: a February 20, 2026 legal-terms update prohibiting subscription OAuth tokens in third-party products (unenforced at first), April 4, 2026 active enforcement against OpenClaw specifically, and a May 13, 2026 announcement of a metered Agent SDK credit (effective June 15) that was then paused hours before taking effect.",
+    "stance": "supports",
+    "stance_target": "Anthropic's subscription-automation enforcement policy has been volatile and inconsistently rolled out across 2026, rather than a single stable rule",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic Claude subscriptions, February-June 2026",
+    "quoted_support": "between April and June 2026, Anthropic banned third-party tools from Claude subscriptions, announced a repricing that would have billed them at full API rates, and then paused the whole plan hours before it took effect. Three positions in three months.",
+    "numbers": ["February 20, 2026", "April 4, 2026", "May 13, 2026", "June 15, 2026"],
+    "entities": ["Anthropic"],
+    "time_period": "February-June 2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "medium-4"
+  },
+  {
+    "claim": "Anthropic's April 4, 2026 enforcement action specifically targeted OpenClaw, estimated to have 135,000+ running instances at the time, requiring affected usage to move to pay-as-you-go billing or a separate API key; Claude Code lead Boris Cherny stated subscriptions 'weren't built for the usage patterns of these third-party tools.'",
+    "stance": "supports",
+    "stance_target": "Anthropic's enforcement against subscription automation targeted a specific high-volume third-party tool ecosystem with an identifiable instance count",
+    "evidence_type": "empirical",
+    "scope_conditions": "OpenClaw, Anthropic Claude Pro/Max, April 2026",
+    "quoted_support": "Claude Pro and Max subscribers can no longer route their plan's usage through third-party harnesses, starting with OpenClaw, the open-source agent framework with an estimated 135,000+ instances running at the time... Claude Code lead Boris Cherny said subscriptions 'weren't built for the usage patterns of these third-party tools.'",
+    "numbers": ["135,000+"],
+    "entities": ["OpenClaw", "Anthropic", "Boris Cherny"],
+    "time_period": "April 2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "medium-4"
+  },
+  {
+    "claim": "VentureBeat reported some OpenClaw users consuming hundreds or thousands of dollars of API-equivalent tokens per month on a $200 flat-rate Claude plan prior to enforcement -- an over 5x gap between flat-subscription pricing and equivalent metered API cost for heavy agentic use.",
+    "stance": "supports",
+    "stance_target": "flat-rate consumer subscriptions, prior to enforcement, substantially subsidized heavy agentic token consumption relative to metered API pricing",
+    "evidence_type": "statistical",
+    "scope_conditions": "OpenClaw + Claude $200 subscription, before April 2026 enforcement",
+    "quoted_support": "VentureBeat reported some OpenClaw users consuming hundreds or thousands of dollars of tokens per month on a $200 plan. Analysts cited a gap of more than 5x between flat-subscription pricing and equivalent API cost for heavy agentic use.",
+    "numbers": ["$200", "5x"],
+    "entities": ["OpenClaw", "VentureBeat"],
+    "time_period": "early 2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "medium-4"
+  },
+  {
+    "claim": "OpenAI positioned itself as the permissive competitor to Anthropic's crackdown: it hired OpenClaw creator Peter Steinberger, shipped a $100 ChatGPT tier with 5x Codex limits in April 2026 aimed at users Anthropic had just restricted, and staff publicly called OpenAI's own terms 'quite permissive' toward OpenCode-style third-party projects.",
+    "stance": "neutral",
+    "stance_target": "competitive dynamics where one vendor's automation crackdown drives migration to a rival vendor's subscription rather than metered billing",
+    "evidence_type": "empirical",
+    "scope_conditions": "OpenAI competitive response, April 2026",
+    "quoted_support": "OpenAI is deliberately playing the open counterpart. Codex works with ChatGPT sign-in across third-party clients, OpenAI staff have publicly called their terms 'quite permissive' toward projects like OpenCode, and the company hired Steinberger... In April OpenAI shipped a $100 ChatGPT tier with 5x Codex limits, aimed squarely at the users Anthropic had just restricted.",
+    "numbers": ["$100", "5x"],
+    "entities": ["OpenAI", "Peter Steinberger", "Codex"],
+    "time_period": "April 2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "medium-4"
+  },
+  {
+    "claim": "The widely cited '15-30x subsidy' figure for Claude subscriptions vs. API-equivalent agentic usage traces to a single source (fazm.ai, relayed via Zed's engineering blog) and should be treated with caution as an unverified single-source estimate, though the directional claim (subscriptions substantially subsidize heavy agent usage) is not disputed.",
+    "stance": "neutral",
+    "stance_target": "reliability of the specific multiplier figure used across multiple secondary sources to characterize the subscription-API cost gap",
+    "evidence_type": "empirical",
+    "scope_conditions": "Claude subscription vs. API cost comparison, 2026",
+    "quoted_support": "That figure comes from a single source (fazm.ai), so treat the exact multiple with caution, but the direction is not in dispute.",
+    "numbers": ["15-30x"],
+    "entities": ["Zed Industries", "fazm.ai"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "low",
+    "source_note_id": "medium-4"
+  }
+]

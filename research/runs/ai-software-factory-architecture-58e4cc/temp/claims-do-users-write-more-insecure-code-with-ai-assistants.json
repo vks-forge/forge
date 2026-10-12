@@ -1,0 +1,30 @@
+[
+  {
+    "claim": "In a controlled user study, participants with access to an AI code assistant wrote significantly less secure code on security-related programming tasks than participants without assistant access.",
+    "stance": "supports",
+    "stance_target": "AI-generated code requires mandatory automated security quality gates rather than developer trust",
+    "evidence_type": "empirical",
+    "scope_conditions": "CCS 2023 controlled user study, Stanford/UCSD",
+    "quoted_support": "Overall, we find that participants who had access to an AI assistant wrote significantly less secure code than those without access to an assistant.",
+    "numbers": [],
+    "entities": ["Neil Perry", "Megha Srivastava", "Deepak Kumar", "Dan Boneh", "Stanford University"],
+    "time_period": "2023",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "do-users-write-more-insecure-code-with-ai-assistants"
+  },
+  {
+    "claim": "Participants who used an AI code assistant were also more likely to believe they had written secure code, indicating the tools induce overconfidence about security flaws rather than merely producing more bugs.",
+    "stance": "supports",
+    "stance_target": "human reviewer trust in AI-generated code is miscalibrated and should not be relied upon in place of machine-checkable gates",
+    "evidence_type": "empirical",
+    "scope_conditions": "same CCS 2023 study population",
+    "quoted_support": "Participants with access to an AI assistant were also more likely to believe they wrote secure code, suggesting that such tools may lead users to be overconfident about security flaws in their code.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2023",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "do-users-write-more-insecure-code-with-ai-assistants"
+  }
+]

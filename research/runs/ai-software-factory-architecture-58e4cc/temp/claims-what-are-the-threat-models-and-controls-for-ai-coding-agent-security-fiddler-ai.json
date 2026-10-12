@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "A 2025 study analyzing over 7,700 AI-generated files from public GitHub repositories found 4,241 Common Weakness Enumeration (CWE) instances spanning 77 distinct vulnerability types, with Python files showing vulnerability rates of 16-18%.",
+    "stance": "supports",
+    "stance_target": "AI-coding-agent-generated code carries a measurable, non-trivial rate of security vulnerabilities requiring dedicated scanning, directly relevant to the automated cybersecurity sweep pillar",
+    "evidence_type": "statistical",
+    "scope_conditions": "cited 2025 study of AI-generated GitHub files",
+    "quoted_support": "A 2025 study analyzing over 7,700 AI-generated files from public GitHub repositories found 4,241 Common Weakness Enumeration (CWE) instances spanning 77 distinct vulnerability types. Python files exhibited vulnerability rates of 16-18%.",
+    "numbers": ["7,700 files", "4,241 CWE instances", "77 vulnerability types", "16-18%"],
+    "entities": ["GitHub"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "what-are-the-threat-models-and-controls-for-ai-coding-agent-security-fiddler-ai"
+  },
+  {
+    "claim": "Traditional static application security testing (SAST) tools detect only 60-70% of AI-generated code vulnerabilities, leaving a significant share of agent-specific vulnerability patterns undetected because those scanners were optimized against human-written code.",
+    "stance": "supports",
+    "stance_target": "existing security scanning tooling (Semgrep, CodeQL, Snyk-class SAST tools) is insufficient on its own for the automated cybersecurity sweep pillar of an AI software factory and must be supplemented with agent-output-specific validation",
+    "evidence_type": "statistical",
+    "scope_conditions": "cited research on SAST detection rates for AI-generated code, as of 2026",
+    "quoted_support": "Research shows SAST tools detect 60-70% of AI-generated code vulnerabilities, leaving a significant share of agent-specific issues undetected.",
+    "numbers": ["60-70%"],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "what-are-the-threat-models-and-controls-for-ai-coding-agent-security-fiddler-ai"
+  },
+  {
+    "claim": "Prompt injection vulnerabilities have been documented in at least 14 major AI products since April 2023, and OpenAI's CISO has publicly acknowledged that prompt injection remains an unsolved security problem despite extensive red-teaming.",
+    "stance": "supports",
+    "stance_target": "prompt injection is an unresolved, industry-wide vulnerability class rather than a solved problem, directly relevant to the zero-hallucination/adversarial-review pillar",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "industry-wide documented prompt injection incidents, April 2023 to 2026",
+    "quoted_support": "Prompt injection vulnerabilities have been documented in major enterprise AI coding assistants and chatbots, with at least 14 major AI products affected since April 2023. OpenAI's CISO has publicly acknowledged that prompt injection remains an unsolved security problem despite extensive red-teaming.",
+    "numbers": ["14 major AI products", "April 2023"],
+    "entities": ["OpenAI"],
+    "time_period": "2023-2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "what-are-the-threat-models-and-controls-for-ai-coding-agent-security-fiddler-ai"
+  },
+  {
+    "claim": "MCP tools can mutate their definitions post-installation, meaning a tool approved as safe on Day 1 could silently reroute API keys to attackers by Day 7, a vulnerability class traditional access controls cannot address.",
+    "stance": "supports",
+    "stance_target": "MCP tool-definition integrity must be continuously re-verified, not approved once at install time, for an AI software factory's tool-exposure layer",
+    "evidence_type": "theoretical",
+    "scope_conditions": "MCP server tool-definition mutation risk, as described in 2026",
+    "quoted_support": "MCP tools can mutate their definitions post-installation. This means a tool approved as safe on Day 1 could silently reroute API keys to attackers by Day 7.",
+    "numbers": [],
+    "entities": ["Model Context Protocol"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "what-are-the-threat-models-and-controls-for-ai-coding-agent-security-fiddler-ai"
+  },
+  {
+    "claim": "Pre-deployment testing alone cannot catch all autonomous coding agent failure modes because agents behave differently under production loads and real-world inputs, requiring continuous runtime observability (full decision tracing, anomaly detection, drift monitoring) as a necessary complement.",
+    "stance": "supports",
+    "stance_target": "a rigid-evals architecture for an AI software factory must include continuous production-time monitoring, not rely solely on pre-deployment test suites, matching the 90-minute cyber-sweep and continuous-operation pillars",
+    "evidence_type": "theoretical",
+    "scope_conditions": "enterprise AI coding agent security practice, 2026",
+    "quoted_support": "Pre-deployment testing cannot catch all failure modes. Agents behave differently under production loads and with real-world inputs. This is why runtime observability is essential for continuous validation.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "what-are-the-threat-models-and-controls-for-ai-coding-agent-security-fiddler-ai"
+  }
+]

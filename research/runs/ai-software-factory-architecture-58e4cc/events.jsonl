@@ -1,0 +1,28 @@
+{"at": "2026-10-12T08:22:05.901732+00:00", "type": "levers", "register": "advocate", "inference_depth": "deep"}
+{"at": "2026-10-12T08:22:09.811579+00:00", "type": "step", "step": "1", "status": "done", "chapter": null}
+{"at": "2026-10-12T08:26:17.176116+00:00", "type": "step", "step": "2", "status": "running", "chapter": null}
+{"at": "2026-10-12T08:32:49.927590+00:00", "type": "step", "step": "2", "status": "done", "chapter": null}
+{"at": "2026-10-12T08:34:28.313627+00:00", "type": "step", "step": "3", "status": "done", "chapter": null}
+{"at": "2026-10-12T08:39:27.739769+00:00", "type": "step", "step": "4", "status": "done", "chapter": null}
+{"at": "2026-10-12T08:41:00.448616+00:00", "type": "step", "step": "5", "status": "running", "chapter": null}
+{"at": "2026-10-12T08:52:57.356002+00:00", "type": "step", "step": "5", "status": "done", "chapter": null}
+{"at": "2026-10-12T08:54:10.010640+00:00", "type": "step", "step": "6", "status": "done", "chapter": null}
+{"at": "2026-10-12T08:55:32.034868+00:00", "type": "step", "step": "7", "status": "done", "chapter": null}
+{"at": "2026-10-12T08:55:54.301545+00:00", "type": "step", "step": "8", "status": "running", "chapter": null}
+{"at": "2026-10-12T09:11:04.417596+00:00", "type": "step", "step": "8", "status": "done", "chapter": null}
+{"at": "2026-10-12T09:12:15.533702+00:00", "type": "step", "step": "9", "status": "done", "chapter": null}
+{"at": "2026-10-12T09:15:09.224653+00:00", "type": "step", "step": "10", "status": "running", "chapter": null}
+{"at": "2026-10-12T09:25:42.536453+00:00", "type": "step", "step": "10", "status": "done", "chapter": null}
+{"at": "2026-10-12T09:51:02.435890+00:00", "type": "step", "step": "11", "status": "done", "chapter": null}
+{"at": "2026-10-12T09:51:53.351058+00:00", "type": "step", "step": "12", "status": "running", "chapter": null}
+{"at": "2026-10-12T09:55:34.531103+00:00", "type": "step", "step": "12", "status": "done", "chapter": null}
+{"at": "2026-10-12T09:56:58.430058+00:00", "type": "step", "step": "13", "status": "done", "chapter": null}
+{"at": "2026-10-12T09:57:30.547743+00:00", "type": "step", "step": "14", "status": "running", "chapter": null}
+{"at": "2026-10-12T10:04:17.517585+00:00", "type": "step", "step": "14", "status": "done", "chapter": null}
+{"at": "2026-10-12T10:04:41.096948+00:00", "type": "step", "step": "14.5", "status": "running", "chapter": null}
+{"at": "2026-10-12T10:22:31.227831+00:00", "type": "step", "step": "14.5", "status": "done", "chapter": null}
+{"at": "2026-10-12T10:22:57.415077+00:00", "type": "step", "step": "15", "status": "running", "chapter": null}
+{"at": "2026-10-12T10:46:47.890702+00:00", "type": "step", "step": "15", "status": "done", "chapter": null}
+{"at": "2026-10-12T10:52:21.483034+00:00", "type": "step", "step": "16", "status": "done", "chapter": null}
+{"at": "2026-10-12T10:55:40.630187+00:00", "type": "finish", "passed": false, "failed_checks": ["quote-integrity"]}
+{"at": "2026-10-12T11:01:59.926492+00:00", "type": "finish", "passed": true, "failed_checks": []}

@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "At a fleet scale of 200 concurrent agent sandboxes, the monthly vendor compute bill ranges from $7,200 (Northflank PaaS) to $35,770 (Fly.io Sprites) depending on platform and billing model -- a ~5x spread at identical workload specification.",
+    "stance": "supports",
+    "stance_target": "sandbox/idle cost at 100+ agent fleet scale is directly quantifiable from published vendor pricing and varies enormously by billing model choice",
+    "evidence_type": "empirical",
+    "scope_conditions": "200 concurrent sandboxes, nf-compute-100-4-equivalent spec on m7i.2xlarge infrastructure, pricing as of May 2026",
+    "quoted_support": "at 200 concurrent sandboxes, total costs range from $7,200 to over $35,000 depending on the platform... Northflank $7,200.00... Fly Sprites $35,770.00",
+    "numbers": ["$7,200 (Northflank PaaS)", "$16,819.20 (E2B, Daytona)", "$24,491.50 (Modal)", "$30,484.80 (Runloop)", "$31,068.80 (Vercel Sandbox)", "$35,770.00 (Fly.io Sprites)", "200 concurrent sandboxes"],
+    "entities": ["Northflank", "E2B", "Daytona", "Modal", "Runloop", "Vercel Sandbox", "Fly.io Sprites", "Cloudflare Sandbox", "Blaxel"],
+    "time_period": "May 2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "ai-sandbox-pricing-comparison-2026-blog-northflank"
+  },
+  {
+    "claim": "Bring-your-own-cloud (BYOC) deployment for a 200-sandbox agent fleet reduces the monthly cost from $7,200 (managed PaaS) to $2,060 on the one platform (Northflank) offering self-serve, publicly-priced BYOC -- a ~71% reduction.",
+    "stance": "supports",
+    "stance_target": "BYOC deployment is a quantifiable, large-magnitude cost-optimization lever for fleet-scale agent infrastructure",
+    "evidence_type": "empirical",
+    "scope_conditions": "Northflank BYOC, 200 concurrent sandboxes, self-serve tier",
+    "quoted_support": "the same 200 sandboxes cost $2,060 in total, compared to $7,200 on Northflank PaaS.",
+    "numbers": ["$2,060/month BYOC vs $7,200/month PaaS", "~71% reduction", "management fee: cloud bill + $0.01389/vCPU-hr + $0.00139/GB-hr"],
+    "entities": ["Northflank"],
+    "time_period": "May 2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "ai-sandbox-pricing-comparison-2026-blog-northflank"
+  },
+  {
+    "claim": "Idle billing behavior differs structurally across sandbox vendors: some charge $0 during idle periods (Fly.io Sprites, per-second active-only), others charge only storage while paused (E2B indefinite pause), and others bill provisioned memory for the full session regardless of idle state (Vercel Sandbox) -- so the same workload's idle cost exposure can vary from zero to the full provisioned rate depending solely on vendor billing model.",
+    "stance": "supports",
+    "stance_target": "idle-cost optimization for agent fleets is primarily a vendor/billing-model selection decision, not purely an engineering problem",
+    "evidence_type": "empirical",
+    "scope_conditions": "cross-vendor comparison, pricing as of May 2026",
+    "quoted_support": "Fly.io Sprites, for instance, uses this model with no charge when the sandbox is idle... Vercel Sandbox, for instance, bills Active CPU only... However, memory is billed based on provisioned resources for the full duration the sandbox runs, not active usage.",
+    "numbers": [],
+    "entities": ["Fly.io Sprites", "E2B", "Vercel Sandbox", "Cloudflare Sandbox"],
+    "time_period": "May 2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "ai-sandbox-pricing-comparison-2026-blog-northflank"
+  }
+]

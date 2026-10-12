@@ -1,0 +1,123 @@
+{
+  "manifest_version": 1,
+  "vault_tag": "ai-software-factory-architecture-58e4cc",
+  "profile": "full",
+  "profile_steps": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16"
+  ],
+  "status": "done",
+  "started_at": "2026-10-12T08:20:19.473898+00:00",
+  "updated_at": "2026-10-12T11:01:59.926752+00:00",
+  "budget_usd": null,
+  "blocked_on": null,
+  "steps": {
+    "1": {
+      "status": "done",
+      "finished_at": "2026-10-12T08:22:09.810813+00:00"
+    },
+    "2": {
+      "status": "done",
+      "started_at": "2026-10-12T08:26:17.174947+00:00",
+      "finished_at": "2026-10-12T08:32:49.924637+00:00"
+    },
+    "3": {
+      "status": "done",
+      "finished_at": "2026-10-12T08:34:28.310507+00:00"
+    },
+    "4": {
+      "status": "done",
+      "finished_at": "2026-10-12T08:39:27.736656+00:00"
+    },
+    "5": {
+      "status": "done",
+      "started_at": "2026-10-12T08:41:00.446333+00:00",
+      "finished_at": "2026-10-12T08:52:57.354772+00:00"
+    },
+    "6": {
+      "status": "done",
+      "finished_at": "2026-10-12T08:54:10.009715+00:00"
+    },
+    "7": {
+      "status": "done",
+      "finished_at": "2026-10-12T08:55:32.033064+00:00"
+    },
+    "8": {
+      "status": "done",
+      "started_at": "2026-10-12T08:55:54.300618+00:00",
+      "finished_at": "2026-10-12T09:11:04.416739+00:00"
+    },
+    "9": {
+      "status": "done",
+      "finished_at": "2026-10-12T09:12:15.533079+00:00"
+    },
+    "10": {
+      "status": "done",
+      "started_at": "2026-10-12T09:15:09.222272+00:00",
+      "finished_at": "2026-10-12T09:25:42.535510+00:00"
+    },
+    "11": {
+      "status": "done",
+      "finished_at": "2026-10-12T09:51:02.433538+00:00"
+    },
+    "12": {
+      "status": "done",
+      "started_at": "2026-10-12T09:51:53.349372+00:00",
+      "finished_at": "2026-10-12T09:55:34.530109+00:00"
+    },
+    "13": {
+      "status": "done",
+      "finished_at": "2026-10-12T09:56:58.429228+00:00"
+    },
+    "14": {
+      "status": "done",
+      "started_at": "2026-10-12T09:57:30.546901+00:00",
+      "finished_at": "2026-10-12T10:04:17.516726+00:00"
+    },
+    "14.5": {
+      "status": "done",
+      "started_at": "2026-10-12T10:04:41.095742+00:00",
+      "finished_at": "2026-10-12T10:22:31.226982+00:00"
+    },
+    "15": {
+      "status": "done",
+      "started_at": "2026-10-12T10:22:57.413727+00:00",
+      "finished_at": "2026-10-12T10:46:47.889957+00:00"
+    },
+    "16": {
+      "status": "done",
+      "finished_at": "2026-10-12T10:52:21.482162+00:00"
+    }
+  },
+  "chapters": {},
+  "spend": {
+    "estimated_usd": 0.0,
+    "sources_fetched": 0,
+    "notes_written": 0,
+    "agents_spawned": 0
+  },
+  "levers": {
+    "register": "advocate",
+    "inference_depth": "deep",
+    "domain_notes": "Sourcing: current multi-agent orchestration frameworks (LangGraph, AutoGen/AG2, CrewAI, OpenAI Agents SDK, Claude Agent SDK, MCP), eval/observability tooling (promptfoo, DeepEval, Braintrust, LangSmith, OpenAI Evals), static/security scanning (Semgrep, CodeQL, Snyk, OWASP ZAP, Trivy), cloud agent-sandbox providers (E2B, Modal, Fly Machines, Daytona, Northflank, Kubernetes-based isolation). Prefer sources within the last 12-18 months given how fast agent tooling moves; engineering blogs, vendor docs, GitHub repos, and arXiv multi-agent-systems papers all count as primary for this domain. Measured benchmark numbers and documented production architectures outrank marketing claims."
+  },
+  "verify": {
+    "passed": true,
+    "at": "2026-10-12T11:01:59.925619+00:00",
+    "failed_checks": []
+  }
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "Ragas defines Faithfulness as the fraction of atomic claim-statements in a generated answer that can be inferred from the retrieved context, computed by using an LLM to decompose the answer and verify each statement against the context.",
+    "stance": "neutral",
+    "stance_target": "foundational definition of the faithfulness metric used throughout agent-output quality control",
+    "evidence_type": "theoretical",
+    "scope_conditions": "RAG pipeline evaluation, reference-free setting",
+    "quoted_support": "We say that the answer is faithful to the context if the claims that are made in the answer can be inferred from the context.",
+    "numbers": [],
+    "entities": ["Ragas", "Shahul Es", "Jithin James"],
+    "time_period": "2023-2025",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "ragas-automated-evaluation-of-retrieval-augmented-generation"
+  },
+  {
+    "claim": "Ragas is explicitly designed as a reference-free evaluation framework, meaning it estimates RAG system quality without requiring ground-truth human-annotated answers.",
+    "stance": "supports",
+    "stance_target": "scalability of rigid automated evals in a software factory, removing the human-labeling bottleneck",
+    "evidence_type": "theoretical",
+    "scope_conditions": "RAG pipeline evaluation",
+    "quoted_support": "We focus on settings where reference answers may not be available, and where we want to estimate different proxies for correctness.",
+    "numbers": [],
+    "entities": ["Ragas"],
+    "time_period": "2023-2025",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "ragas-automated-evaluation-of-retrieval-augmented-generation"
+  },
+  {
+    "claim": "Answer Relevance is operationalized by having an LLM generate candidate questions the given answer could plausibly be responding to, then scoring embedding cosine similarity between those generated questions and the original question.",
+    "stance": "neutral",
+    "stance_target": "metric design used to detect topic drift / incomplete answers in agent outputs",
+    "evidence_type": "theoretical",
+    "scope_conditions": "RAG and LLM QA evaluation",
+    "quoted_support": "Answer Relevance refers to the idea that the generated answer should address the actual question that was provided.",
+    "numbers": [],
+    "entities": ["Ragas"],
+    "time_period": "2023-2025",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "ragas-automated-evaluation-of-retrieval-augmented-generation"
+  }
+]

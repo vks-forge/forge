@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "An agent-controlled context compression architecture (Focus), where the agent itself decides when to consolidate and prune its own history via start_focus/complete_focus tool calls, reduced total token consumption by 22.7% (14,920,555 to 11,526,418 tokens) across 5 hard SWE-bench Lite instances while maintaining identical task-success accuracy (3/5 = 60%) to an uncompressed baseline using Claude Haiku 4.5.",
+    "stance": "supports",
+    "stance_target": "agent-autonomous (not externally-imposed) context compression can cut cost without sacrificing task quality, a measured benchmark for the cost-optimization pillar",
+    "evidence_type": "empirical",
+    "scope_conditions": "N=5 context-intensive SWE-bench Lite instances, Claude Haiku 4.5, two-tool scaffold (persistent bash + string-replace editor), published Jan 2026",
+    "quoted_support": "Focus achieves 22.7% token reduction (14.9M →11.5M tokens) while maintaining identical accuracy (3/5 = 60% for both agents).",
+    "numbers": ["22.7%", "14,920,555 tokens", "11,526,418 tokens", "3/5 (60%)"],
+    "entities": ["Focus", "Claude Haiku 4.5", "SWE-bench Lite", "Nikhil Verma"],
+    "time_period": "January 2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "active-context-compression-autonomous-memory"
+  },
+  {
+    "claim": "Passive/infrequent compression prompting caused measurable accuracy degradation (60% vs 80% baseline in earlier experiments) whereas aggressive prompting that mandates compression every 10-15 tool calls, reinforced by system-injected reminders, eliminated the accuracy tradeoff entirely while still delivering the token savings -- implying that compression frequency/timing, not merely whether to compress, is the critical design variable.",
+    "stance": "refutes",
+    "stance_target": "context compression inherently trades off against task accuracy",
+    "evidence_type": "empirical",
+    "scope_conditions": "SWE-bench Lite, Claude Haiku 4.5",
+    "quoted_support": "The key insight: when and how often to compress matters more than whether to compress. Frequent small compressions (every 10-15 calls) preserve recent context while discarding stale exploration logs, whereas infrequent large compressions risk losing critical implementation details.",
+    "numbers": ["60% vs 80%", "10-15 tool calls"],
+    "entities": ["Focus", "Claude Haiku 4.5"],
+    "time_period": null,
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "active-context-compression-autonomous-memory"
+  },
+  {
+    "claim": "Current LLMs do not naturally optimize for context/token efficiency on their own; achieving significant compression gains (22.7% vs. only 6% with passive prompting) required explicit, directive scaffolding instructing the model to compress on a fixed cadence, indicating context-efficient behavior must be engineered into the harness rather than assumed as an emergent model capability.",
+    "stance": "supports",
+    "stance_target": "architecture/scaffolding, not raw model capability, determines whether cost-optimization goals are achieved in agentic loops",
+    "evidence_type": "empirical",
+    "scope_conditions": "Claude Haiku 4.5 on SWE-bench Lite",
+    "quoted_support": "Current models appear to lack intrinsic cost-awareness—they do not naturally optimize for token efficiency... This indicates that current LLMs do not naturally optimize for context efficiency—they require scaffolding that makes compression a first-class part of the workflow.",
+    "numbers": ["6% (passive)", "22.7% (aggressive)"],
+    "entities": [],
+    "time_period": null,
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "active-context-compression-autonomous-memory"
+  },
+  {
+    "claim": "Context compression benefit is task-dependent: exploration-heavy tasks (codebase navigation, e.g., matplotlib-26020 and sympy-21171) showed 50-57% token savings, while one iterative-refinement task (pylint-7080) showed a 110% token INCREASE because compressions discarded context that later had to be re-derived, exceeding the compression benefit.",
+    "stance": "refutes",
+    "stance_target": "aggressive context compression is universally beneficial for all agentic task types",
+    "evidence_type": "empirical",
+    "scope_conditions": "5 SWE-bench Lite instances with Claude Haiku 4.5",
+    "quoted_support": "This case shows that compression is not universally beneficial: tasks requiring iterative refinement may suffer from aggressive context pruning... On pylint-7080, Focus used 110% more tokens than Baseline (4.3M vs. 2.1M), yet both agents passed the test suite.",
+    "numbers": ["50-57% savings", "+110% on pylint-7080", "4.3M vs 2.1M tokens"],
+    "entities": ["pylint-7080", "matplotlib-26020", "sympy-21171"],
+    "time_period": null,
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "active-context-compression-autonomous-memory"
+  }
+]

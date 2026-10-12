@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "CrewAI, LangGraph, and AutoGen represent three distinct multi-agent orchestration philosophies: role-based, graph-based, and conversation-based respectively.",
+    "stance": "neutral",
+    "stance_target": "which multi-agent framework to use in a software factory architecture",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "as of 2026, based on hands-on tutorial comparison",
+    "quoted_support": "CrewAI adopts a role-based model inspired by real-world organizational structures, LangGraph embraces a graph-based workflow approach, and AutoGen focuses on conversational collaboration.",
+    "numbers": [],
+    "entities": ["CrewAI", "LangGraph", "AutoGen", "DataCamp"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "crewai-vs-langgraph-vs-autogen-choosing-the-right-multi-agent-ai-framework-datac"
+  },
+  {
+    "claim": "CrewAI Flows provide event-driven, production-ready pipelines with explicit state and branching logic, complementing the autonomous decision-making of Crews.",
+    "stance": "supports",
+    "stance_target": "director/worker triggers and continuous operation architecture (Pillar 5)",
+    "evidence_type": "theoretical",
+    "scope_conditions": "CrewAI framework documentation-derived",
+    "quoted_support": "Flows are event-driven, production-ready pipelines that manage execution paths, state, and branching logic.",
+    "numbers": [],
+    "entities": ["CrewAI", "Flows", "Crews"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "crewai-vs-langgraph-vs-autogen-choosing-the-right-multi-agent-ai-framework-datac"
+  },
+  {
+    "claim": "LangGraph supports node-level caching with memory or SQLite backends, and provides replay/debugging through LangGraph Studio.",
+    "stance": "supports",
+    "stance_target": "reliability and observability tooling for agentic pipelines (Pillar 1)",
+    "evidence_type": "theoretical",
+    "scope_conditions": "framework capability as described in tutorial",
+    "quoted_support": "LangGraph supports node-level caching with backends like memory or SQLite and provides replay and debugging through LangGraph Studio.",
+    "numbers": [],
+    "entities": ["LangGraph", "LangGraph Studio", "LangSmith"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "crewai-vs-langgraph-vs-autogen-choosing-the-right-multi-agent-ai-framework-datac"
+  },
+  {
+    "claim": "AutoGen's RoundRobinGroupChat lets multiple agents take turns with responses broadcast to all participants, implementing a reflection pattern (draft then critique).",
+    "stance": "supports",
+    "stance_target": "adversarial model review architecture (Pillar 1)",
+    "evidence_type": "theoretical",
+    "scope_conditions": "AutoGen framework capability",
+    "quoted_support": "It allows multiple agents to collaborate by taking turns, each response broadcast to all participants so that the entire team maintains a consistent context. This design makes it easy to implement the reflection pattern, where one agent creates a draft and another evaluates or critiques it.",
+    "numbers": [],
+    "entities": ["AutoGen", "RoundRobinGroupChat"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "crewai-vs-langgraph-vs-autogen-choosing-the-right-multi-agent-ai-framework-datac"
+  },
+  {
+    "claim": "Each framework scales differently: CrewAI via horizontal agent replication/task parallelization, LangGraph via distributed graph execution, AutoGen via conversation sharding (with noted limitations for large-scale applications).",
+    "stance": "neutral",
+    "stance_target": "scalability of multi-agent orchestration frameworks",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "as described in tutorial, not independently benchmarked",
+    "quoted_support": "AutoGen scales conversationally, allowing multiple agents to collaborate in larger groups, though it has limitations for large-scale applications.",
+    "numbers": [],
+    "entities": ["CrewAI", "LangGraph", "AutoGen"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "crewai-vs-langgraph-vs-autogen-choosing-the-right-multi-agent-ai-framework-datac"
+  }
+]

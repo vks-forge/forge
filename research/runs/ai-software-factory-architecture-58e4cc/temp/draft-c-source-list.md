@@ -1,0 +1,37 @@
+# Draft C — must_read_note_ids (n=35)
+
+- building-effective-ai-agents-anthropic: Building Effective AI Agents \ Anthropic
+- interim-report-agent-self-termination-and-idle-cost-economics: Interim report — agent-self-termination-and-idle-cost-economics
+- how-we-built-our-multi-agent-research-system-anthropic: How we built our multi-agent research system \ Anthropic
+- interim-report-probabilistic-skill-sequence-prediction-architecture: Interim report — probabilistic-skill-sequence-prediction-architecture
+- interim-report-consumer-subscription-automation-policy-risk: Interim report — consumer-subscription-automation-policy-risk
+- interim-report-pentest-autonomy-regression-vs-mandated-cadence: Interim report — pentest-autonomy-regression-vs-mandated-cadence
+- interim-report-worker-agent-autonomy-reliability-at-scale: Interim report — worker-agent-autonomy-reliability-at-scale
+- owasp-apts-autonomous-penetration-testing-standard-owasp-foundation: OWASP APTS - Autonomous Penetration Testing Standard | OWASP Foundation
+- equipping-agents-for-the-real-world-with-agent-skills-anthropic: Equipping agents for the real world with Agent Skills \ Anthropic
+- agency-secure-scalable-sandboxes-for-agents-sierra: Agency: Secure, scalable sandboxes for agents | Sierra
+- interim-report-agent-skills-context-overhead-magnitude: Interim report — agent-skills-context-overhead-magnitude
+- center-for-responsible-decentralized-intelligence-at-berkeley: Center for Responsible, Decentralized Intelligence at Berkeley
+- demystifying-evals-for-ai-agents-anthropic: Demystifying evals for AI agents \ Anthropic
+- effective-context-engineering-for-ai-agents-anthropic: Effective context engineering for AI agents \ Anthropic
+- agent-skills-claude-platform-docs: Agent Skills - Claude Platform Docs
+- context-engineering: Context Engineering
+- webhook-triggers-automate-your-agents-dust-academy: Webhook triggers | Automate your agents | Dust Academy
+- effective-harnesses-for-long-running-agents-anthropic: Effective harnesses for long-running agents \ Anthropic
+- how-i-validate-quality-when-ai-agents-write-my-code-dev-community: How I Validate Quality When AI Agents Write My Code - DEV Community
+- langgraph-vs-autogen-vs-crewai-an-agent-framework-comparison: LangGraph vs. AutoGen vs. CrewAI: An Agent Framework Comparison
+- practical-loop-engineering-by-addy-osmani-elevate: Practical Loop Engineering - by Addy Osmani - Elevate
+- ai-software-factory-what-it-is-why-you-need-one-who-owns-it: AI Software Factory: What It Is, Why You Need One, Who Owns It
+- how-ai-coding-agents-use-adrs-architecture-decision-records-mneme-hq: How AI Coding Agents Use ADRs (Architecture Decision Records) — Mneme HQ
+- context-engineering-for-ai-agents-a-practical-guide: Context Engineering for AI Agents: A Practical Guide
+- ai-incident-management-tools-complete-evaluation-guide: AI Incident Management Tools: Complete Evaluation Guide
+- the-cron-layer-how-i-taught-my-ai-agent-to-work-autonomously-247-dev-community: The Cron Layer: How I Taught My AI Agent to Work Autonomously 24/7 - DEV Community
+- openai-agents-sdk-vs-langgraph-vs-autogen-vs-crewai-composio: OpenAI Agents SDK vs LangGraph vs Autogen vs CrewAI | Composio
+- architecture-decision-records-for-ai-coding-agents-where-the-why-lives: Architecture Decision Records for AI Coding Agents: Where the Why Lives
+- agent-cost-governance-and-continuous-optimization-agentic-ai-lens: Agent cost governance and continuous optimization - Agentic AI Lens
+- openai-agents-sdk-vs-langgraph-vs-autogen-building-production-agents-openhelm: OpenAI Agents SDK vs LangGraph vs AutoGen: Building Production Agents | OpenHelm
+- context-engineering-compaction-agent-memory-for-automated-malware-analysis-senti: Context Engineering | Compaction & Agent Memory for Automated Malware Analysis | SentinelOne
+- factory-ai-software-engineering-agents-ai-engineer: Factory: AI Software Engineering Agents | AI Engineer
+- crewai-vs-langgraph-vs-autogen-choosing-the-right-multi-agent-ai-framework-datac: CrewAI vs LangGraph vs AutoGen: Choosing the Right Multi-Agent AI Framework | DataCamp
+- context-engineering-in-deep-agents-docs-by-langchain: Context engineering in Deep Agents - Docs by LangChain
+- ai-agent-incident-response-from-alert-to-fix-augment-code: AI Agent Incident Response: From Alert to Fix | Augment Code

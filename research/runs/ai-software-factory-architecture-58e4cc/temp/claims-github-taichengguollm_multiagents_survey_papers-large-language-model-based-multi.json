@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "The IJCAI 2024 survey 'Large Language Model based Multi-Agents: A Survey of Progress and Challenges' (arXiv:2402.01680) categorizes LLM multi-agent research into five streams: Multi-Agent Framework, Multi-Agent Orchestration and Efficiency, Multi-Agent for Problem Solving, Multi-Agent for World Simulation, and Multi-Agent Datasets and Benchmarks.",
+    "stance": "neutral",
+    "stance_target": "taxonomy for organizing multi-agent software-factory research",
+    "evidence_type": "theoretical",
+    "scope_conditions": "IJCAI 2024 survey scope, maintained through 2026",
+    "quoted_support": "We categorized these papers into five main streams: Multi-Agents Framework, Multi-Agents Orchestration and Efficiency, Multi-Agents for Problem Solving, Multi-Agents for World Simulation, Multi-Agents Datasets and Benchmarks",
+    "numbers": ["five"],
+    "entities": ["Taicheng Guo", "IJCAI 2024"],
+    "time_period": "2024-2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "github-taichengguollm_multiagents_survey_papers-large-language-model-based-multi"
+  },
+  {
+    "claim": "MetaGPT (Hong et al. 2023) is cited as a multi-agent framework for software development under 'Meta Programming for A Multi-Agent Collaborative Framework.'",
+    "stance": "neutral",
+    "stance_target": "named primary framework for software-dev multi-agent architecture",
+    "evidence_type": "theoretical",
+    "scope_conditions": "2023/08 publication",
+    "quoted_support": "[2023/08] MetaGPT: Meta Programming for A Multi-Agent Collaborative Framework. Sirui Hong et al.",
+    "numbers": [],
+    "entities": ["MetaGPT", "Sirui Hong"],
+    "time_period": "2023-08",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "github-taichengguollm_multiagents_survey_papers-large-language-model-based-multi"
+  },
+  {
+    "claim": "AgentCoder (Huang et al. 2023) applies multi-agent collaboration with iterative testing and optimization specifically to code generation.",
+    "stance": "neutral",
+    "stance_target": "primary architecture for multi-agent code generation with self-testing loops",
+    "evidence_type": "theoretical",
+    "scope_conditions": "2023/12 publication",
+    "quoted_support": "[2023/12] AgentCoder: Multi-Agent-based Code Generation with Iterative Testing and Optimisation. Dong Huang et al.",
+    "numbers": [],
+    "entities": ["AgentCoder", "Dong Huang"],
+    "time_period": "2023-12",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "github-taichengguollm_multiagents_survey_papers-large-language-model-based-multi"
+  },
+  {
+    "claim": "ChatEval (Chan et al. 2023) proposes multi-agent debate as a mechanism to improve LLM-based evaluation quality.",
+    "stance": "supports",
+    "stance_target": "multi-agent debate as an adversarial-review mechanism for quality control",
+    "evidence_type": "theoretical",
+    "scope_conditions": "2023/08 publication",
+    "quoted_support": "[2023/08] ChatEval: Towards Better LLM-based Evaluators through Multi-Agent Debate. Chi-Min Chan et al.",
+    "numbers": [],
+    "entities": ["ChatEval", "Chi-Min Chan"],
+    "time_period": "2023-08",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "github-taichengguollm_multiagents_survey_papers-large-language-model-based-multi"
+  }
+]

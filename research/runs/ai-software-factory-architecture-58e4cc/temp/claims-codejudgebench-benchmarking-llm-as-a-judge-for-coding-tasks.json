@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "A relatively small reasoning ('thinking') model, Qwen3-8B, can outperform specially-trained LLM-as-a-Judge models up to 70B parameters at coding-task judgment, indicating reasoning capability matters more than raw parameter count or specialized judge training.",
+    "stance": "supports",
+    "stance_target": "model selection strategy for the software factory's code-review judge agent -- favoring reasoning-capable models over larger specially-trained judges purely for cost/resource optimization (pillar 6)",
+    "evidence_type": "empirical",
+    "scope_conditions": "CodeJudgeBench, 26 LLM-as-a-Judge models, code generation/repair/unit-test tasks, 2025",
+    "quoted_support": "Notably, even relatively small thinking models, such as Qwen3-8B, can outperform specially trained LLM-as-a-Judge models up to 70B in size.",
+    "numbers": ["Qwen3-8B", "70B parameter comparison models"],
+    "entities": ["Qwen3-8B", "CodeJudgeBench"],
+    "time_period": "2025",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "codejudgebench-benchmarking-llm-as-a-judge-for-coding-tasks"
+  },
+  {
+    "claim": "Across all 26 benchmarked LLM-as-a-Judge models, simply swapping the order in which two code responses are presented in a pairwise comparison can substantially change the judgment accuracy, confirming position bias specifically in code-judging scenarios.",
+    "stance": "refutes",
+    "stance_target": "assuming code-judging tasks are immune to the position bias documented in general text-judging benchmarks",
+    "evidence_type": "empirical",
+    "scope_conditions": "CodeJudgeBench, pairwise code-judging tasks, 2025",
+    "quoted_support": "For pairwise judging tasks, simply changing the order in which responses are presented can substantially impact accuracy... This sensitivity raises concerns about the reliability and consistency of LLM-as-a-Judge in coding scenarios.",
+    "numbers": ["26 models"],
+    "entities": ["CodeJudgeBench"],
+    "time_period": "2025",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "codejudgebench-benchmarking-llm-as-a-judge-for-coding-tasks"
+  },
+  {
+    "claim": "Pairwise comparison outperforms scalar point-wise judging, and retaining the full, unprocessed LLM response -- including comments and reasoning traces -- rather than stripping them before judging, improves LLM-as-a-Judge performance on coding tasks.",
+    "stance": "supports",
+    "stance_target": "concrete prompting-strategy recommendations for implementing the software factory's automated code-review judge",
+    "evidence_type": "empirical",
+    "scope_conditions": "CodeJudgeBench prompting-strategy ablation study, 2025",
+    "quoted_support": "We find that using pair-wise comparison outperforms scalar point-wise judging. Furthermore, retaining comments and reasoning in the full, unprocessed LLM response leads to improved judge performance.",
+    "numbers": [],
+    "entities": ["CodeJudgeBench"],
+    "time_period": "2025",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "codejudgebench-benchmarking-llm-as-a-judge-for-coding-tasks"
+  },
+  {
+    "claim": "CodeJudgeBench sources its 4,260 curated evaluation pairs from LiveCodeBench, which continually collects new problems from LeetCode, AtCoder, and CodeForces specifically to mitigate training-data contamination in coding benchmarks.",
+    "stance": "supports",
+    "stance_target": "methodology for building contamination-resistant rigid eval benchmarks for code-generating agents in the software factory",
+    "evidence_type": "empirical",
+    "scope_conditions": "CodeJudgeBench dataset construction, 2025",
+    "quoted_support": "The problems come from LiveCodeBench, which mitigates data contamination by continually collecting new problems from platforms such as LeetCode, AtCoder, and CodeForces.",
+    "numbers": ["4,260 curated pairs"],
+    "entities": ["LiveCodeBench", "LeetCode", "AtCoder", "CodeForces"],
+    "time_period": "2025",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "codejudgebench-benchmarking-llm-as-a-judge-for-coding-tasks"
+  },
+  {
+    "claim": "LLM-as-a-Judge performance varies depending on which LLM originally generated the code or unit test being judged, meaning a judge model's accuracy is not uniform across different generator models.",
+    "stance": "refutes",
+    "stance_target": "assuming a single validated judge model will perform uniformly well regardless of which generator agent in the software factory produced the code under review",
+    "evidence_type": "empirical",
+    "scope_conditions": "CodeJudgeBench cross-generator judging analysis, 2025",
+    "quoted_support": "when judging code and unit tests written by different LLMs, LLM-as-a-Judge models also show variance in performance.",
+    "numbers": [],
+    "entities": ["CodeJudgeBench"],
+    "time_period": "2025",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "codejudgebench-benchmarking-llm-as-a-judge-for-coding-tasks"
+  }
+]

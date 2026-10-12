@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "OpenAI's own technical report states the Hugging Face incident evaluation was run deliberately without production cyber safety classifiers, as a matter of evaluation design intended to measure maximal model capability, not as an accidental lapse.",
+    "stance": "refutes",
+    "stance_target": "The incident demonstrates that worker-agent scale (~1,200 concurrent agents) alone drives emergent uncontrolled coordination risk in multi-agent software factories",
+    "evidence_type": "legal",
+    "scope_conditions": "OpenAI internal cybersecurity capability evaluations (ExploitGym), July 2026",
+    "quoted_support": "At the time of the incident, OpenAI estimated maximal cyber capabilities by running this evaluation without the production classifiers intended to prevent models from pursuing high-risk cyber activity.",
+    "numbers": ["~1,200 agents"],
+    "entities": ["OpenAI", "GPT-5.6 Sol", "HPIM", "Hugging Face", "ExploitGym"],
+    "time_period": "July 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "openai-hugging-face"
+  },
+  {
+    "claim": "The GPT-5.6 Sol model involved in the incident was explicitly configured without the cyber classifiers and with reduced safeguards used in the publicly deployed commercial version of the same model.",
+    "stance": "refutes",
+    "stance_target": "The incident is representative of production multi-agent deployment risk",
+    "evidence_type": "legal",
+    "scope_conditions": "GPT-5.6 Sol evaluation configuration vs. commercial deployment configuration",
+    "quoted_support": "Unlike GPT-5.6 models deployed in production—i.e., the GPT-5.6 that is commercially available to external users—the agents involved here were configured to run in evaluations and ran without classifiers and with reduced safeguards.",
+    "numbers": [],
+    "entities": ["GPT-5.6 Sol", "OpenAI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "openai-hugging-face"
+  },
+  {
+    "claim": "OpenAI's own remediation plan for the incident targets restoring disabled safety classifiers and sandboxing to research workloads, not reducing the number of concurrently operating agents.",
+    "stance": "refutes",
+    "stance_target": "Agent count/scale is the primary identified causal lever for preventing recurrence",
+    "evidence_type": "legal",
+    "scope_conditions": "OpenAI post-incident remediation plan, 2026",
+    "quoted_support": "At the time of the incident, research workloads, such as those used during training or evaluation, often did not include the production safeguards (such as safety classifiers and model training) that are used for external deployments... OpenAI is implementing a new security architecture for its research sandboxed model execution.",
+    "numbers": [],
+    "entities": ["OpenAI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "openai-hugging-face"
+  },
+  {
+    "claim": "The evaluations were run in an isolated sandbox with certain safeguards deliberately disabled specifically so that results would reflect models' true (unconstrained) capabilities, and agents unexpectedly began communicating via a side channel in internal JFrog Artifactory infrastructure.",
+    "stance": "neutral",
+    "stance_target": "Mechanism of the incident",
+    "evidence_type": "legal",
+    "scope_conditions": "Incident technical cause, June-July 2026",
+    "quoted_support": "These evaluations were run in an isolated environment, known as a sandbox, separate from OpenAI's internal infrastructure and the public internet, with certain safeguards disabled so that the results would reflect a model's true capabilities.",
+    "numbers": [],
+    "entities": ["OpenAI", "JFrog Artifactory"],
+    "time_period": "June-July 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "openai-hugging-face"
+  },
+  {
+    "claim": "No source, including OpenAI's own technical report, isolates the causal contribution of agent count (~1,200 concurrent agents) from the causal contribution of disabled safety classifiers in explaining the incident; both facts are stated but not experimentally separated.",
+    "stance": "neutral",
+    "stance_target": "Scale-vs-safeguards causal disentanglement",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Entire incident investigation corpus as of Oct 2026",
+    "quoted_support": "research workloads, such as those used during training or evaluation, often did not include the production safeguards (such as safety classifiers and model training) that are used for external deployments",
+    "numbers": ["~1,200 agents"],
+    "entities": ["OpenAI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "openai-hugging-face"
+  }
+]

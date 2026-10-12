@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "LLM-based multi-agent software-development systems (ChatDev/Qian et al. 2023, MetaGPT/Hong et al. 2023, Dong et al. 2023b) typically emulate distinct human software-team roles (CTO, programmer, Product Manager, Engineer, Analyst, coder) and follow waterfall-like collaborative processes.",
+    "stance": "neutral",
+    "stance_target": "role-emulation as the dominant architectural pattern for multi-agent software-dev systems",
+    "evidence_type": "theoretical",
+    "scope_conditions": "LLM-MA software development systems surveyed as of IJCAI 2024",
+    "quoted_support": "Given that software development is a complex endeavor requiring the collaboration of various roles like product managers, programmers, and testers, LLM-MA systems are typically set to emulate these distinct roles and collaborate to address the intricate challenge. Following the waterfall or...",
+    "numbers": [],
+    "entities": ["ChatDev", "MetaGPT", "Qian et al.", "Hong et al."],
+    "time_period": "2023-2024",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "large-language-model-based-multi-agents-a-survey-of-progress-and-challenges"
+  },
+  {
+    "claim": "MetaGPT uses a 'Shared Message Pool' communication structure layered on top of a sandboxed agent-environment interface, distinguishing it from other cooperative software-dev multi-agent systems that use layered structure without a shared pool.",
+    "stance": "neutral",
+    "stance_target": "specific communication-architecture choice within multi-agent software-dev systems",
+    "evidence_type": "theoretical",
+    "scope_conditions": "MetaGPT (Hong et al. 2023)",
+    "quoted_support": "[Hong et al., 2023] Sandbox Pre-defined Product Manager, Engineer Cooperative Layered, Shared Message Pool Environment, Agent interaction, Human Memory, Self-Evolution",
+    "numbers": [],
+    "entities": ["MetaGPT"],
+    "time_period": "2023",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "large-language-model-based-multi-agents-a-survey-of-progress-and-challenges"
+  },
+  {
+    "claim": "Across surveyed multi-agent systems, agent capability growth derives from three feedback sources — environment, agent-interaction, and human — adjusted through memory mechanisms and self-evolution.",
+    "stance": "neutral",
+    "stance_target": "generalizable framework for how multi-agent systems improve/learn over a task",
+    "evidence_type": "theoretical",
+    "scope_conditions": "survey taxonomy across software-dev, embodied-agent, and science-debate multi-agent systems",
+    "quoted_support": "Feedback from Agents ... Adjustment ... Environment, Agent interaction, Human / Memory, Self-Evolution",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2023-2024",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "large-language-model-based-multi-agents-a-survey-of-progress-and-challenges"
+  },
+  {
+    "claim": "Debate-based multi-agent systems for science/factuality tasks (Du et al. 2023, Xiong et al. 2023, Chan et al. 2023) use proponent-opponent-judge profiles with no sandboxed environment, structurally distinct from cooperative sandboxed software-dev systems.",
+    "stance": "neutral",
+    "stance_target": "architectural contrast between debate-based adversarial review systems and cooperative production systems",
+    "evidence_type": "theoretical",
+    "scope_conditions": "science debate / factuality multi-agent systems surveyed as of 2023-2024",
+    "quoted_support": "Examining, Inter-Consistency [Xiong et al., 2023] None Pre-defined Proponent, Opponent, Judge Debate Centralized, Decentralized Agent interaction Memory",
+    "numbers": [],
+    "entities": ["Du et al.", "Xiong et al.", "Chan et al.", "ChatEval"],
+    "time_period": "2023",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "large-language-model-based-multi-agents-a-survey-of-progress-and-challenges"
+  }
+]

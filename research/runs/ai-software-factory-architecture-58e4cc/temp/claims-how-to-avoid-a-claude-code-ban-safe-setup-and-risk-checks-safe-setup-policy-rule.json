@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "Anthropic's Consumer Terms explicitly state that users may not access the services through automated or non-human means unless using an Anthropic API key or Anthropic explicitly permits it -- establishing automation as categorically outside consumer-subscription scope by written term, not ambiguous policy.",
+    "stance": "supports",
+    "stance_target": "whether Anthropic's subscription terms are silent/ambiguous on automated usage, or explicitly restrict it",
+    "evidence_type": "legal",
+    "scope_conditions": "Anthropic Consumer Terms, current as of 2026",
+    "quoted_support": "The same Consumer Terms say that, unless you are using an Anthropic API key or Anthropic explicitly permits it, you may not access the services through automated or non-human means. That clause is the clean dividing line many users skip.",
+    "numbers": [],
+    "entities": ["Anthropic"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "how-to-avoid-a-claude-code-ban-safe-setup-and-risk-checks-safe-setup-policy-rule"
+  },
+  {
+    "claim": "Anthropic's 'Using Agents According to Our Usage Policy' page explicitly prohibits creating or managing multiple accounts to evade detection or circumvent platform safeguards, giving the clearest official written statement against multi-account evasion specifically (as distinct from legitimate multi-account ownership).",
+    "stance": "supports",
+    "stance_target": "whether Anthropic has official written policy against multi-account subscription pooling specifically for evasion purposes",
+    "evidence_type": "legal",
+    "scope_conditions": "Anthropic Usage Policy, 2026",
+    "quoted_support": "Anthropic's current Using Agents According to Our Usage Policy page... explicitly tells users not to create or manage multiple accounts to evade detection or circumvent platform safeguards. That is the strongest official public wording around multi-account evasion.",
+    "numbers": [],
+    "entities": ["Anthropic"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "how-to-avoid-a-claude-code-ban-safe-setup-and-risk-checks-safe-setup-policy-rule"
+  },
+  {
+    "claim": "Anthropic's official Safeguards Warnings and Appeals page lists exactly three ban triggers in writing: repeated Usage Policy violations, account creation from an unsupported location, and Terms of Service violations -- holding multiple accounts per se is not, on its own, one of the three listed triggers.",
+    "stance": "neutral",
+    "stance_target": "scope of Anthropic's officially documented ban triggers versus informal/inferred enforcement signals",
+    "evidence_type": "legal",
+    "scope_conditions": "Anthropic Safeguards Warnings and Appeals page, 2026",
+    "quoted_support": "Anthropic's current Safeguards Warnings and Appeals page says accounts may be banned for repeated Usage Policy violations, account creation from an unsupported location, or Terms of Service violations.",
+    "numbers": [],
+    "entities": ["Anthropic"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "how-to-avoid-a-claude-code-ban-safe-setup-and-risk-checks-safe-setup-policy-rule"
+  },
+  {
+    "claim": "A widespread Anthropic service outage on March 11, 2026 caused thousands of users to falsely believe they had been banned, leading some to file unnecessary appeals or create new accounts (which itself risks triggering a duplicate-account ban).",
+    "stance": "neutral",
+    "stance_target": "not every reported subscription lockout reflects genuine enforcement action against automation/volume",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic service outage, March 11 2026",
+    "quoted_support": "On March 11, 2026, a widespread Anthropic service outage prevented thousands of users from logging into both Claude.ai and Claude Code. Many of these users assumed they had been banned and filed appeals, wasted time troubleshooting, or even created new accounts.",
+    "numbers": ["March 11, 2026"],
+    "entities": ["Anthropic"],
+    "time_period": "March 2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "how-to-avoid-a-claude-code-ban-safe-setup-and-risk-checks-safe-setup-policy-rule"
+  }
+]

@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "A structured 6-phase LLM prompt protocol (context scan, architecture deep dive, feature-by-feature breakdown, gotchas, glossary/reference, final assembly) can drive deep codebase reverse-engineering without pasting the full repository into the model's context.",
+    "stance": "supports",
+    "stance_target": "SOPs encoded as reusable agent Skills can operationalize codebase mastery/reverse engineering at scale",
+    "evidence_type": "theoretical",
+    "scope_conditions": "prompt engineering template for GPT-5/Claude Opus/Cursor/Claude Code, as of Oct 2026",
+    "quoted_support": "You will discover, read, and analyze only the necessary files to fully understand the system — you do not expect the full codebase to be pasted into the chat.",
+    "numbers": ["6 phases"],
+    "entities": ["GPT-5", "Claude Opus 4.1", "Cursor", "Claude Code"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "ultimate-llm-prompt-for-deep-codebase-analysis-documentation-github"
+  },
+  {
+    "claim": "The chunking controller recommends an approximately 60/40 token split between reading source files and writing documentation, with periodic STATE BLOCK checkpoints to survive context-window limits across sessions.",
+    "stance": "supports",
+    "stance_target": "token/state discipline is necessary for large-codebase ingestion given hard context-window limits",
+    "evidence_type": "theoretical",
+    "scope_conditions": "large-codebase LLM analysis prompt pattern, 2026",
+    "quoted_support": "~60% tokens for reading, ~40% for writing. After each phase or major section, emit a STATE BLOCK: INDEX_VERSION, FILE_MAP_SUMMARY (top ~50 files), OPEN_QUESTIONS, KNOWN_RISKS, GLOSSARY_DELTA.",
+    "numbers": ["60%", "40%", "~50 files"],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "ultimate-llm-prompt-for-deep-codebase-analysis-documentation-github"
+  },
+  {
+    "claim": "A file-prioritization scoring pass should weight entry points, high-coupling modules, heavily-tested modules, and runtime-critical configs positively, and vendor dependencies, build artifacts, and large binaries negatively, before any file is read.",
+    "stance": "supports",
+    "stance_target": "dependency/import-graph-driven prioritization outperforms naive breadth-first file reading for codebase mastery",
+    "evidence_type": "theoretical",
+    "scope_conditions": "codebase analysis prompt pattern, 2026",
+    "quoted_support": "Score importance: + Entry points, high-coupling modules, heavily tested modules, runtime-critical configs, feature modules. – Vendor deps, build artifacts, large binaries",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "ultimate-llm-prompt-for-deep-codebase-analysis-documentation-github"
+  },
+  {
+    "claim": "Starting codebase exploration from end-to-end/integration tests is proposed as a shortcut to identify a system's features quickly, versus reading implementation code directly.",
+    "stance": "supports",
+    "stance_target": "tests-first exploration is an efficient entry point for automated codebase reverse-engineering",
+    "evidence_type": "theoretical",
+    "scope_conditions": "codebase analysis prompt pattern, 2026",
+    "quoted_support": "Start from E2E/integration tests to identify features quickly.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "ultimate-llm-prompt-for-deep-codebase-analysis-documentation-github"
+  },
+  {
+    "claim": "A GitHub commenter on the prompt noted it pushes toward broad repo coverage, which can reduce efficiency on larger codebases where core architectural components matter more than overall completeness, suggesting the prompt lacks a clear stopping rule.",
+    "stance": "refutes",
+    "stance_target": "the proposed codebase-analysis SOP is sufficient as-is for large-codebase efficiency",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "community review comment, May 2026",
+    "quoted_support": "Might be worth adding a clearer prioritization or stopping rule for the agent exploration. Right now the prompt pushes more toward broad repo coverage, which could reduce efficiency on larger codebases.",
+    "numbers": [],
+    "entities": ["guilhermehfr"],
+    "time_period": "May 2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "ultimate-llm-prompt-for-deep-codebase-analysis-documentation-github"
+  }
+]

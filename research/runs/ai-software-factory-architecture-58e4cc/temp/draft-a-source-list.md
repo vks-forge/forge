@@ -1,0 +1,38 @@
+# Draft A — must_read_note_ids (n=36)
+
+- building-effective-ai-agents-anthropic: Building Effective AI Agents \ Anthropic
+- interim-report-agent-self-termination-and-idle-cost-economics: Interim report — agent-self-termination-and-idle-cost-economics
+- how-we-built-our-multi-agent-research-system-anthropic: How we built our multi-agent research system \ Anthropic
+- interim-report-probabilistic-skill-sequence-prediction-architecture: Interim report — probabilistic-skill-sequence-prediction-architecture
+- interim-report-consumer-subscription-automation-policy-risk: Interim report — consumer-subscription-automation-policy-risk
+- interim-report-pentest-autonomy-regression-vs-mandated-cadence: Interim report — pentest-autonomy-regression-vs-mandated-cadence
+- interim-report-worker-agent-autonomy-reliability-at-scale: Interim report — worker-agent-autonomy-reliability-at-scale
+- owasp-apts-autonomous-penetration-testing-standard-owasp-foundation: OWASP APTS - Autonomous Penetration Testing Standard | OWASP Foundation
+- equipping-agents-for-the-real-world-with-agent-skills-anthropic: Equipping agents for the real world with Agent Skills \ Anthropic
+- agency-secure-scalable-sandboxes-for-agents-sierra: Agency: Secure, scalable sandboxes for agents | Sierra
+- interim-report-agent-skills-context-overhead-magnitude: Interim report — agent-skills-context-overhead-magnitude
+- center-for-responsible-decentralized-intelligence-at-berkeley: Center for Responsible, Decentralized Intelligence at Berkeley
+- demystifying-evals-for-ai-agents-anthropic: Demystifying evals for AI agents \ Anthropic
+- effective-context-engineering-for-ai-agents-anthropic: Effective context engineering for AI agents \ Anthropic
+- agent-skills-claude-platform-docs: Agent Skills - Claude Platform Docs
+- the-11-best-ai-sast-tools-in-2026-cycode: The 11 Best AI SAST Tools in 2026 | Cycode
+- automata-from-agent-traces: Automata from Agent Traces:
+- vulnerability-blast-radius-how-to-measure-and-reduce-impact-blog-endor-labs: Vulnerability Blast Radius: How to Measure and Reduce Impact | Blog | Endor Labs
+- knowledge-graph-for-code-explained-a-practical-guide: Knowledge Graph for Code Explained: A Practical Guide
+- a-software-factory-needs-one-sandbox-per-agent-upstash-blog: A Software Factory Needs One Sandbox per Agent | Upstash Blog
+- ai-sandbox-pricing-comparison-2026-blog-northflank: AI Sandbox pricing comparison (2026) | Blog — Northflank
+- the-real-cost-of-always-on-ai-agents-on-kubernetes-and-how-to-kill-idle-gpu-burn: The Real Cost of Always-On AI Agents on Kubernetes (and How to Kill Idle GPU Burn) - ScaleOps
+- adaptive-heterogeneous-multi-agent-debate-for-enhanced-educational-and-factual-r: Adaptive heterogeneous multi-agent debate for enhanced educational and factual reasoning in large la
+- tool-mad-a-multi-agent-debate-framework-for-fact-verification: Tool-MAD: A Multi-Agent Debate Framework for Fact Verification
+- act-while-thinking-accelerating-llm-agents-via-pattern-aware-speculative-tool-ex: Act While Thinking: Accelerating LLM Agents via Pattern-Aware Speculative Tool Execution
+- adversarial-code-review-cross-model-ai-assessment-get-claude-skills: Adversarial Code Review - Cross-Model AI Assessment | Get Claude Skills
+- github-addyosmaniagent-skills-production-grade-engineering-skills-for-ai-coding: GitHub - addyosmani/agent-skills: Production-grade engineering skills for AI coding agents. · GitHub
+- github-addyosmaniadverse-multi-agent-adversarial-code-review-for-any-coding-agen: GitHub - addyosmani/adverse: Multi-agent adversarial code review for any coding agent · GitHub
+- pricing-e2b-the-ai-agent-cloud: Pricing | E2B — The AI Agent Cloud
+- claude-api-pricing-a-complete-guide-for-ai-teams-in-2026-coworker-ai: Claude API Pricing: A Complete Guide for AI Teams in 2026 | Coworker AI
+- stop-paying-for-idle-how-we-built-per-second-metering-for-blaxel-sandboxes-blaxe: Stop paying for idle: how we built per-second metering for Blaxel Sandboxes | Blaxel
+- e2b-the-enterprise-ai-agent-cloud: E2B | The Enterprise AI Agent Cloud
+- agent-skill-evolution-how-revisions-affect-coding-agents: Agent Skill Evolution: How Revisions Affect Coding Agents
+- best-sast-tools-in-2026-semgrep-codeql-snyk-compared: Best SAST Tools in 2026: Semgrep, CodeQL & Snyk Compared
+- improving-factuality-and-reasoning-in-language-models-through-multiagent-debate: Improving Factuality and Reasoning in Language Models through Multiagent Debate
+- claude-subscription-vs-api-which-is-cheaper-in-2026-real-math-teamorouter: Claude Subscription vs API: Which Is Cheaper in 2026? (Real Math) · TeamoRouter

@@ -1,0 +1,119 @@
+[
+  {
+    "verdict": "unsupported",
+    "severity": "critical",
+    "sentence": "Findings below confidence 75 or without an evidence artifact go unreported, and two critics each try to *refute* the other rather than \"loop-until-both-agree (models converge by going silent, not by being right)\" [[adversarial-code-review-cross-model-ai-assessment-get-claude-skills]].",
+    "cited_note_id": "adversarial-code-review-cross-model-ai-assessment-get-claude-skills",
+    "correct_note_id": null,
+    "evidence": "The note confirms the refute/loop-until-both-agree quote and 'confidence levels' are reported, but never states a numeric threshold of 75, nor any requirement that findings be accompanied by an 'evidence artifact' to avoid going unreported -- that specific gating mechanism does not appear anywhere in the body.",
+    "suggested_fix": "Soften claim to drop the specific '75' confidence threshold and 'evidence artifact' requirement, or cite the actual source (if any) that specifies this mechanism; keep only the quoted loop-until-both-agree clause attributed to this note."
+  },
+  {
+    "verdict": "partially-supported",
+    "severity": "critical",
+    "sentence": "Input richness matters too: agents given only a text description reproduced 3.5% of CyberGym vulnerabilities, while stack traces \"greatly\" improved success [[cybergym-evaluating-ai-agents-real-world-cybersecurity-capabilities-at-scale]].",
+    "cited_note_id": "cybergym-evaluating-ai-agents-real-world-cybersecurity-capabilities-at-scale",
+    "correct_note_id": "cybergym-evaluating-ai-agents-real-world-cybersecurity-capabilities-at-scale",
+    "evidence": "The note states the opposite condition: 'For level 0, only 3.5% of instances can be reproduced WITHOUT access to the text description of the target vulnerability' -- 3.5% is the success rate when the text description is ABSENT (level 0, below the primary level-1 task), not the rate when agents are given 'only a text description.'",
+    "suggested_fix": "Correct the sentence to state that 3.5% is the reproduction rate with no vulnerability description at all (level 0), and that providing the text description (level 1) plus richer inputs like stack traces (level 2) and patches (level 3) progressively raises success."
+  },
+  {
+    "verdict": "partially-supported",
+    "severity": "major",
+    "sentence": "And the frameworks object to missing *attribution*, not to cadence, so logging and audit trails could satisfy them without live human gating each cycle; APTS Tier 1 is already designed for low-friction, non-production operation [[owasp-apts-autonomous-penetration-testing-standard-owasp-foundation]].",
+    "cited_note_id": "owasp-apts-autonomous-penetration-testing-standard-owasp-foundation",
+    "correct_note_id": null,
+    "evidence": "The fetched OWASP APTS page lists domain/requirement counts and tier sizes (Tier 1 = 72 requirements, described only as the 'minimum bar for responsible deployment') but contains no statement that Tier 1 is designed for 'low-friction' or 'non-production' operation; that characterization is not present in the note body.",
+    "suggested_fix": "Soften the claim to what the source supports (Tier 1 is the lowest/foundation compliance tier with 72 requirements) and drop the unsupported 'low-friction, non-production operation' characterization, or find a source that states it explicitly."
+  },
+  {
+    "verdict": "wrong-source",
+    "severity": "major",
+    "sentence": "- **Isolate by sub-agent.** Sub-agents spend \"tens of thousands of tokens or more\" exploring and return compact summaries, writing artifacts to the filesystem rather than relaying them through the coordinator in a \"game of telephone\" [[how-we-built-our-multi-agent-research-system-anthropic]].",
+    "cited_note_id": "how-we-built-our-multi-agent-research-system-anthropic",
+    "correct_note_id": "effective-context-engineering-for-ai-agents-anthropic",
+    "evidence": "The 'game of telephone' quote is confirmed verbatim in how-we-built-our-multi-agent-research-system-anthropic, but the quoted phrase 'tens of thousands of tokens or more' does not appear anywhere in that note -- it appears instead in effective-context-engineering-for-ai-agents-anthropic ('Each subagent might explore extensively, using tens of thousands of tokens or more...').",
+    "suggested_fix": "Add a second citation to effective-context-engineering-for-ai-agents-anthropic for the 'tens of thousands of tokens or more' quote, keeping how-we-built-our-multi-agent-research-system-anthropic for the 'game of telephone' quote."
+  },
+  {
+    "verdict": "partially-supported",
+    "severity": "major",
+    "sentence": "The *skeptical* objection says the OpenAI\u2013Hugging Face incident proves the factory should not be built: isolation failed, model values failed as a backstop, and about 7% of agents spoofed tool calls to deceive their own scorer [[brief-independent-investigation-of-agents-behavior-reasoning-and-collaboration-i]].",
+    "cited_note_id": "brief-independent-investigation-of-agents-behavior-reasoning-and-collaboration-i",
+    "correct_note_id": "brief-independent-investigation-of-agents-behavior-reasoning-and-collaboration-i",
+    "evidence": "The note states 'Roughly 7% of the transcripts we evaluated were successfully spoofed in some places' -- the 7% figure is a rate over evaluated transcripts, not over agents; the report's sentence changes the denominator from transcripts to agents.",
+    "suggested_fix": "Reword to 'about 7% of evaluated transcripts showed spoofed tool calls' rather than 'about 7% of agents', to match the source's actual unit of measurement."
+  },
+  {
+    "verdict": "partially-supported",
+    "severity": "major",
+    "sentence": "The decision rule is VM-grade isolation (Firecracker, or Kata Containers on Kubernetes) for the mutating pool and anything running untrusted legacy binaries, with gVisor acceptable for the read-only pool [[ai-sandbox-pricing-comparison-2026-blog-northflank]].",
+    "cited_note_id": "ai-sandbox-pricing-comparison-2026-blog-northflank",
+    "correct_note_id": null,
+    "evidence": "The Northflank note confirms Northflank itself uses Kata Containers and gVisor 'depending on underlying infrastructure' but never mentions Firecracker and states no mutating-pool-vs-read-only-pool isolation decision rule; that prescriptive framing is the report's own synthesis, not a claim in the source.",
+    "suggested_fix": "Soften to 'Northflank uses Kata Containers and gVisor depending on infrastructure' or drop the citation from the prescriptive 'decision rule' framing and present it as the report's own recommendation."
+  },
+  {
+    "verdict": "partially-supported",
+    "severity": "major",
+    "sentence": "2. **Permissions narrow as they flow down.** Each Worker's IAM scope is narrower than the Director's, reversing the common norm of sub-agents inheriting the orchestrator's full permissions; OWASP rates orchestrator-agent compromise the highest-impact agentic attack vector because a compromised Director compromises every Worker [[csai-foundation]].",
+    "cited_note_id": "csai-foundation",
+    "correct_note_id": null,
+    "evidence": "The note itself (CSAI Foundation / Cloud Security Alliance paper) makes the 'orchestrator compromise is the highest-impact attack vector' claim and cites OWASP's ASI01 (Agent Goal Hijack) as 'applying with particular force' -- it does not show OWASP itself issuing a formal rating of orchestrator compromise as the single highest-impact vector.",
+    "suggested_fix": "Attribute the claim to CSAI Foundation rather than OWASP, e.g. 'CSA\u2019s taxonomy names orchestrator compromise the highest-impact agentic attack vector, noting OWASP\u2019s Agent Goal Hijack (ASI01) applies with particular force to orchestrators.'"
+  },
+  {
+    "verdict": "partially-supported",
+    "severity": "major",
+    "sentence": "3. **Promotions are signed commits** by the class owner; the CTO \"sets how far autonomy goes\" [[ai-software-factory-what-it-is-why-you-need-one-who-owns-it]].",
+    "cited_note_id": "ai-software-factory-what-it-is-why-you-need-one-who-owns-it",
+    "correct_note_id": null,
+    "evidence": "The quote 'sets how far autonomy goes' matches the source verbatim (attributed to VP R&D/CTO), but the note never mentions 'signed commits' as the promotion mechanism -- that specific architectural detail is the report's own design choice bundled into a sentence that cites only this source.",
+    "suggested_fix": "Split the sentence so the citation only backs the CTO-authority quote, or cite the report's own ledger-design section for the 'signed commits' mechanism."
+  },
+  {
+    "verdict": "partially-supported",
+    "severity": "major",
+    "sentence": "| Wiring a trigger to a mutating workflow | Platform lead | Unsecured trigger channels are level-skipping [[center-for-responsible-decentralized-intelligence-at-berkeley]] |",
+    "cited_note_id": "center-for-responsible-decentralized-intelligence-at-berkeley",
+    "correct_note_id": null,
+    "evidence": "The note defines 'level-skipping' specifically as an organization nominally operating at Level I governance (human review/deployment) while in practice merging agent-generated changes no one meaningfully inspected -- it does not discuss trigger-wiring or webhook security at all; the report applies the term to a new scenario the source never addresses.",
+    "suggested_fix": "Either drop the citation for this row or rephrase to make clear the 'level-skipping' analogy is the report's own extension of Berkeley's concept, not a claim Berkeley makes about triggers."
+  },
+  {
+    "verdict": "partially-supported",
+    "severity": "major",
+    "sentence": "Capability will promote classes faster as the factory's own pass^k thresholds are met sooner (public leaderboards such as SWE-bench Verified are contaminated and do not count), with \"progressively less human curation\" [[effective-context-engineering-for-ai-agents-anthropic]].",
+    "cited_note_id": "effective-context-engineering-for-ai-agents-anthropic",
+    "correct_note_id": null,
+    "evidence": "The quoted phrase 'progressively less human curation' is verbatim from Anthropic's context-engineering post, but that post never discusses pass^k thresholds or SWE-bench Verified contamination -- those claims belong to a different source (e.g. the demystifying-evals note, which covers pass@k/pass^k) and are not supported by this citation.",
+    "suggested_fix": "Cite demystifying-evals-for-ai-agents-anthropic (or whichever note states the SWE-bench-Verified-contamination claim) for the pass^k/contamination clause, keeping this citation only for the 'progressively less human curation' quote."
+  },
+  {
+    "verdict": "partially-supported",
+    "severity": "major",
+    "sentence": "| Generator models | Strongest current coder per task family (the brief's Claude 3.5 generation is superseded; Opus-class led solo at 91.4%); Sonnet-class Workers; Haiku-class for triage and heartbeats | [[cross-model-llm-code-review-should-you-use-claude-to-review-codex-or-vice-versa]], [[practical-loop-engineering-by-addy-osmani-elevate]] |",
+    "cited_note_id": "practical-loop-engineering-by-addy-osmani-elevate",
+    "correct_note_id": null,
+    "evidence": "practical-loop-engineering never discusses model-tier assignment (Sonnet-class vs Haiku-class) for triage/heartbeat work; it covers loop/goal primitives and dual-agent verification discipline, not model selection by task class. Only the 91.4% Opus-solo figure (from the other cited note) is supported.",
+    "suggested_fix": "Drop practical-loop-engineering from this row's citation list, or cite it only for the dual-agent verification practice elsewhere in the table."
+  },
+  {
+    "verdict": "partially-supported",
+    "severity": "major",
+    "sentence": "| Sandboxes | Agency-pattern Kubernetes runners with a Kata Containers (VM-grade) RuntimeClass for the mutating pool and untrusted legacy binaries, gVisor acceptable for the read-only pool; Firecracker microVMs via E2B, or Northflank (Kata/gVisor) BYOC, for managed scale; Upstash Box or Blaxel for bursty jobs | [[agency-secure-scalable-sandboxes-for-agents-sierra]], [[ai-sandbox-pricing-comparison-2026-blog-northflank]] |",
+    "cited_note_id": "ai-sandbox-pricing-comparison-2026-blog-northflank",
+    "correct_note_id": null,
+    "evidence": "Same issue as the earlier 'decision rule' sentence: Northflank's note confirms it uses Kata Containers/gVisor for its own sandboxes but states no mutating-pool-vs-read-only-pool prescriptive rule, and Sierra's Agency note (the other citation) uses generic hardened Kubernetes containers, not Kata Containers, so neither source states this specific architecture.",
+    "suggested_fix": "Present the pool-based RuntimeClass assignment as the report's own design recommendation informed by, rather than stated in, these sources."
+  },
+  {
+    "verdict": "partially-supported",
+    "severity": "major",
+    "sentence": "| Evals and observability | Harbor, Braintrust or LangSmith, self-hosted Langfuse, Arize Phoenix; promptfoo or DeepEval in CI; OpenTelemetry | [[demystifying-evals-for-ai-agents-anthropic]] |",
+    "cited_note_id": "demystifying-evals-for-ai-agents-anthropic",
+    "correct_note_id": null,
+    "evidence": "The note's appendix names and describes Harbor, Braintrust, LangSmith, Langfuse, and Arize Phoenix, but never mentions promptfoo, DeepEval, or OpenTelemetry; those three tools are not supported by this citation.",
+    "suggested_fix": "Cite a separate source for promptfoo/DeepEval/OpenTelemetry, or drop them from the row if no source names them."
+  }
+]

@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Codeflow's blast-radius mode starts from a selected file or pull request and highlights downstream files that may be affected by a change, with shared utilities and foundational services typically revealing much wider impact than leaf-level UI modules.",
+    "stance": "supports",
+    "stance_target": "automated blast-radius containment as a required pre-merge check in the software factory's dependency-mapping pipeline",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Codeflow tool, browser-based static dependency analysis, 2026",
+    "quoted_support": "Select a file and Codeflow highlights the files that depend on it. This provides a quick blast-radius estimate: shared utilities and foundational services often reveal much wider impact than leaf-level UI modules.",
+    "numbers": [],
+    "entities": ["Codeflow", "braedonsaunders/codeflow"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "codeflow-map-codebase-architecture-and-neel-shah"
+  },
+  {
+    "claim": "Heuristic dependency-graph analysis tools can miss relationships hidden by dynamic imports, runtime wiring, reflection, generated code, and renamed runtime references -- blast-radius estimates from such tools should be treated as a prioritization signal, not ground truth.",
+    "stance": "refutes",
+    "stance_target": "relying solely on automated static dependency graphing for blast-radius containment without human/runtime validation",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "heuristic static analysis tooling limitation, general",
+    "quoted_support": "Blast radius should be interpreted as a prioritization signal. Dynamic imports, runtime wiring, reflection, generated code, and framework conventions can hide relationships from heuristic analysis.",
+    "numbers": [],
+    "entities": ["Codeflow"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "codeflow-map-codebase-architecture-and-neel-shah"
+  },
+  {
+    "claim": "Regex/heuristic-based security scanning embedded in codebase-mapping tools produces false positives and misses context-dependent vulnerabilities; such scanner output should be treated as a review queue requiring human confirmation, not a formal security finding.",
+    "stance": "refutes",
+    "stance_target": "using lightweight heuristic security scanners as sufficient standalone security sweeps in the factory's QC pipeline, without human/deeper-tool confirmation",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Codeflow's built-in secret/injection/eval() scanner, general heuristic scanner limitation",
+    "quoted_support": "These are screening signals, not formal security findings. A regex- or heuristic-based scanner can produce false positives and miss context-dependent vulnerabilities. Treat results as a review queue that needs human confirmation.",
+    "numbers": [],
+    "entities": ["Codeflow"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "codeflow-map-codebase-architecture-and-neel-shah"
+  },
+  {
+    "claim": "A GitHub Action ('Codeflow Card') can recalculate repository health, scale, fragility, and hidden costs after every merge and publish the result as a theme-aware SVG badge in the README, providing continuous architecture-drift visibility.",
+    "stance": "supports",
+    "stance_target": "event-driven, post-merge continuous-operation triggers for architecture drift monitoring in pillar 5",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Codeflow Card GitHub Action feature, 2026",
+    "quoted_support": "It also provides Codeflow Card, a GitHub Action that recalculates repository health, scale, fragility, and hidden costs after merges and publishes the result as a theme-aware SVG in the README.",
+    "numbers": [],
+    "entities": ["Codeflow Card"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "codeflow-map-codebase-architecture-and-neel-shah"
+  },
+  {
+    "claim": "Unauthenticated GitHub API access used by browser-based codebase-analysis tools is capped at 60 requests per hour; supplying a personal access token raises the limit to 5,000 requests per hour, which matters for analyzing larger repositories that require per-file content fetches.",
+    "stance": "neutral",
+    "stance_target": "infrastructure constraint sizing for automated codebase-ingestion pipelines operating against GitHub's API",
+    "evidence_type": "empirical",
+    "scope_conditions": "GitHub API rate limits as documented for the Codeflow tool, 2026",
+    "quoted_support": "Unauthenticated GitHub API access is limited to 60 requests per hour. A token raises the documented allowance to 5,000 requests per hour, which matters for larger repositories because Codeflow may request individual file contents.",
+    "numbers": ["60 requests/hour unauthenticated", "5,000 requests/hour with token"],
+    "entities": ["GitHub API"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "codeflow-map-codebase-architecture-and-neel-shah"
+  }
+]

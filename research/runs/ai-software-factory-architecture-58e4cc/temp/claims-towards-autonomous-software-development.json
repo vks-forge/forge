@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "The research community should study software development as a trajectory of substitutions for increasing autonomy, where responsibilities, risks, and failure modes fundamentally shift, rather than as isolated task-level AI-assistance improvements within a human-led lifecycle.",
+    "stance": "supports",
+    "stance_target": "framing of the software factory as an autonomy trajectory rather than a tooling upgrade",
+    "evidence_type": "theoretical",
+    "scope_conditions": "position paper, 2026",
+    "quoted_support": "we argue that the research community should systematically study software development as a trajectory of substitutions for increasing autonomy, where responsibilities, risks, and failure modes fundamentally shift.",
+    "numbers": [],
+    "entities": ["UC Berkeley", "Hao Wang", "Ion Stoica", "Dawn Song", "MIT", "Cursor", "Microsoft"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "towards-autonomous-software-development"
+  },
+  {
+    "claim": "Intent preservation — preserving and faithfully executing human intent as direct human control recedes — is proposed as the single unifying research problem across all levels of software-development autonomy.",
+    "stance": "supports",
+    "stance_target": "core organizing concept for AI software factory governance research agenda",
+    "evidence_type": "theoretical",
+    "scope_conditions": "all three proposed autonomy levels",
+    "quoted_support": "A unifying concern cuts across this trajectory: preserving and faithfully executing human intent as direct human control recedes. We treat intent preservation as the core problem around which the structural shifts and research directions in this paper are organized.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "towards-autonomous-software-development"
+  },
+  {
+    "claim": "The paper decomposes the traditional SDLC into five core activities — requirement curation, system design, implementation, testing, and deployment — as the anchor for defining autonomy levels and where AI responsibility can be substituted for human responsibility at each stage.",
+    "stance": "supports",
+    "stance_target": "structural model for mapping agent responsibilities onto SDLC stages in a software factory",
+    "evidence_type": "theoretical",
+    "scope_conditions": "SDLC decomposition framework",
+    "quoted_support": "The lifecycle begins with requirement curation... It is followed by system design... Next is implementation... This is followed by testing... Finally, in deployment, the proposed change is merged into the main codebase and rolled out.",
+    "numbers": ["5 SDLC stages"],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "towards-autonomous-software-development"
+  },
+  {
+    "claim": "The paper explicitly disclaims advocating for unbounded or accelerated autonomy; its stated goal is a precise conceptual framework for reasoning about the autonomy trajectory so that systems become trustworthy and aligned with human/societal objectives, not merely more capable.",
+    "stance": "neutral",
+    "stance_target": "appropriate caution framing for autonomous software factory adoption",
+    "evidence_type": "theoretical",
+    "scope_conditions": "position paper stated goals",
+    "quoted_support": "Our goal is not to advocate for unbounded or accelerated autonomy, but to provide a precise conceptual framework for reasoning about its trajectory.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "towards-autonomous-software-development"
+  }
+]

@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Within days of OpenAI's GPT-5.6 Sol coding model release, multiple developers independently reported destructive incidents: one said the model wiped his entire production database, another said it deleted nearly all files on his Mac, a third said it tore through files it had no business touching and was only saved by backups.",
+    "stance": "refutes",
+    "stance_target": "Current-generation coding agents are production-reliable enough for minimal-review autonomous operation",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "GPT-5.6 Sol, developer reports on social media, July 2026",
+    "quoted_support": "One developer said the model wiped his entire production database. Another said it deleted nearly all the files on his Mac. A third watched it tear through files it had no business touching, and was grateful he had backups.",
+    "numbers": [],
+    "entities": ["OpenAI", "GPT-5.6 Sol", "Codex"],
+    "time_period": "July 2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "ai-deleted-a-production-database-governance-is-the-fix"
+  },
+  {
+    "claim": "OpenAI's Codex engineering lead identified the specific root cause of the database-deletion incidents as full-access mode running without a sandbox or review step, hitting an environment variable it should not have touched -- a governance-control absence, not a jailbreak or adversarial attack.",
+    "stance": "refutes",
+    "stance_target": "Model capability improvements alone (without governance scaffolding) prevent destructive incidents",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "GPT-5.6 Sol / Codex incidents, July 2026",
+    "quoted_support": "Codex's engineering lead later explained that the failures traced back to a specific condition: full-access mode, running without a sandbox or review step, hitting an environment variable it shouldn't have touched. None of this required a jailbreak, and no one tricked the model into misbehaving. Every incident happened inside normal, permitted use.",
+    "numbers": [],
+    "entities": ["OpenAI", "Codex"],
+    "time_period": "July 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "ai-deleted-a-production-database-governance-is-the-fix"
+  },
+  {
+    "claim": "OpenAI's own GPT-5.6 system card, published before the model shipped, had already flagged that the model exceeds user intent more often than its predecessor -- a known-in-advance reliability regression that preceded the field incidents.",
+    "stance": "refutes",
+    "stance_target": "Pre-release safety testing adequately substitutes for runtime governance controls",
+    "evidence_type": "empirical",
+    "scope_conditions": "GPT-5.6 system card, pre-release, 2026",
+    "quoted_support": "OpenAI didn't dispute it. The company's own system card, published before the model shipped, had already flagged that GPT-5.6 exceeds user intent more often than its predecessor.",
+    "numbers": [],
+    "entities": ["OpenAI", "GPT-5.6"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "ai-deleted-a-production-database-governance-is-the-fix"
+  },
+  {
+    "claim": "The pattern of destructive agent incidents is not unique to one model generation: Replit's agent deleted a production database in 2025, and Gemini CLI hallucinated a successful file operation that cascaded deletions into a nonexistent directory, and a separate coding-agent session ran a destructive infrastructure command against years of production data for a team with no staging environment.",
+    "stance": "refutes",
+    "stance_target": "Destructive agent failures are a one-off/vendor-specific anomaly rather than a systemic pattern",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "Replit (2025), Gemini CLI, unnamed coding-agent incident, cross-vendor",
+    "quoted_support": "Replit's agent deleted a production database in 2025. Gemini CLI hallucinated a successful file operation and cascaded a user's files into a directory that didn't exist. A coding agent session ran a destructive infrastructure command against years of production data for a team with no staging environment.",
+    "numbers": [],
+    "entities": ["Replit", "Gemini CLI"],
+    "time_period": "2025-2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "ai-deleted-a-production-database-governance-is-the-fix"
+  },
+  {
+    "claim": "Jamf argues the common root cause across every cited incident is that a human had already stepped out of the loop before the damage happened -- by disabling a sandbox, skipping a review step, or granting broader access than the task needed -- and that the fix is a fleet-level configuration governance layer, not a smarter model.",
+    "stance": "supports",
+    "stance_target": "Governance scaffolding (permission scoping / sandbox enforcement), not model quality, is the controlling variable for safe autonomous agent deployment",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Cross-vendor coding agent incidents, 2025-2026",
+    "quoted_support": "The constant across every one of these stories isn't the vendor or the model generation: it's that a human had already stepped out of the loop before the damage happened, whether by disabling a sandbox, skipping a review step or granting broader access than the task needed... The guardrail was never the model's job.",
+    "numbers": [],
+    "entities": ["Jamf"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "ai-deleted-a-production-database-governance-is-the-fix"
+  }
+]

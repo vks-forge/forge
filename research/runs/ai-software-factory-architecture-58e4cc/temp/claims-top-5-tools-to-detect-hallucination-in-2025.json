@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Maxim AI's agent simulation testing allows teams to test agents across hundreds of scenarios and user personas before production deployment to expose edge cases where hallucinations emerge.",
+    "stance": "supports",
+    "stance_target": "pre-deployment rigid evals / blast-radius containment via simulation before production release",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "vendor-sourced, self-promotional claim",
+    "quoted_support": "The platform's simulation capabilities allow teams to test agents across hundreds of scenarios and user personas before production deployment. Simulations expose edge cases and failure modes where hallucinations typically emerge.",
+    "numbers": ["hundreds of scenarios"],
+    "entities": ["Maxim AI"],
+    "time_period": "2025",
+    "region": "",
+    "confidence": "low",
+    "source_note_id": "top-5-tools-to-detect-hallucination-in-2025"
+  },
+  {
+    "claim": "Langfuse is an open-source, self-hostable LLM observability platform shipping a catalog of LLM-as-judge evaluators for hallucination, context relevance, and toxicity, positioned for regulated/privacy-sensitive industries requiring full data sovereignty.",
+    "stance": "supports",
+    "stance_target": "tech stack options for self-hosted eval/observability layer in a software factory",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "vendor comparison, 2025",
+    "quoted_support": "Open-Source Flexibility: Self-hosting capabilities provide complete data control and infrastructure customization, critical for regulated industries and privacy-sensitive applications.",
+    "numbers": [],
+    "entities": ["Langfuse"],
+    "time_period": "2025",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "top-5-tools-to-detect-hallucination-in-2025"
+  },
+  {
+    "claim": "Arize AI uses embedding-based semantic drift detection and similarity checks for retrieval systems to flag when model embeddings shift, as a signal for potential hallucination patterns at enterprise scale.",
+    "stance": "supports",
+    "stance_target": "production monitoring approaches for continuous-operation agent fleets",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "enterprise-scale production monitoring",
+    "quoted_support": "Embedding-Based Analytics: Semantic drift detection and similarity checks for retrieval systems help identify when model embeddings shift, potentially indicating hallucination patterns.",
+    "numbers": [],
+    "entities": ["Arize AI"],
+    "time_period": "2025",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "top-5-tools-to-detect-hallucination-in-2025"
+  },
+  {
+    "claim": "Effective hallucination detection requires combining multiple detection approaches (e.g., token-similarity filtering plus LLM-based detection) rather than relying on a single method.",
+    "stance": "supports",
+    "stance_target": "multi-layered adversarial review architecture over single-check gating",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "general best-practice recommendation, no cited methodology",
+    "quoted_support": "Leverage Multi-Method Detection: Combining token similarity filtering with LLM-based detection provides comprehensive coverage, catching both obvious and subtle hallucinations.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2025",
+    "region": "",
+    "confidence": "low",
+    "source_note_id": "top-5-tools-to-detect-hallucination-in-2025"
+  },
+  {
+    "claim": "Vendor-cited (unverified, no primary source given) statistic: enterprises lose an average of $2.4 million per major hallucination-related incident.",
+    "stance": "neutral",
+    "stance_target": "cost justification for investing in hallucination-detection infrastructure",
+    "evidence_type": "statistical",
+    "scope_conditions": "no methodology, sample, or citation given -- treat as unverified marketing claim",
+    "quoted_support": "Studies estimate enterprises lose $2.4 million per major incident due to hallucination-related failures.",
+    "numbers": ["$2.4 million per major incident"],
+    "entities": [],
+    "time_period": "2025",
+    "region": "",
+    "confidence": "low",
+    "source_note_id": "top-5-tools-to-detect-hallucination-in-2025"
+  }
+]

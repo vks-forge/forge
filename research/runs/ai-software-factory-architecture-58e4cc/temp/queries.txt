@@ -1,0 +1,49 @@
+AI code review two different LLMs adversarial
+LLM as judge code review pipeline
+multi-agent debate verification large language models arxiv
+AI generated code hallucination detection 2025
+why multi-model code review doesn't catch bugs
+automated eval gate before human code review AI agents
+LLM evaluation framework CI pipeline promptfoo deepeval
+AI agent benchmark evals limitations criticism
+code change blast radius analysis tool static analysis
+dependency impact analysis AI code generation safety
+Claude Agent Skills SOP modular capability
+agent skills git rebase automation database optimization skill
+standard operating procedure to AI agent workflow mapping
+agent trace history skill chaining prediction LLM
+LLM agent workflow orchestration dynamic skill selection
+AI agent reverse engineer legacy codebase dependency mapping
+automated decompilation agent network traffic analysis
+LLM codebase comprehension large legacy systems research arxiv
+limitations of AI legacy code understanding
+scheduled automated penetration testing AI agent loop
+AI vulnerability scanning CI cron autonomous agent
+autonomous pentesting agent risks false positives
+AI agent reads ADR architecture decision records enforce rules
+LLM codebase context ingestion docs folder convention
+LLM context window management large codebase agent
+context window bloat multi-agent RAG retrieval scoping
+webhook triggered AI coding agent event driven automation
+AI agent cron schedule autonomous monitoring
+database alert triggers AI incident response agent
+cloud sandbox isolated VM AI coding agent E2B Modal Daytona
+orchestrator spin up hundreds of AI agents scalable sandbox
+multi-agent orchestration framework LangGraph AutoGen CrewAI comparison
+risks of running many autonomous coding agents concurrently
+Claude subscription vs API cost automation token economics
+flat rate AI subscription automation harness cost analysis
+AI API pricing per token vs subscription comparison 2025
+self-terminating AI agent idle autonomous loop design
+AI agent self archiving no issues found quiet exit
+Claude Agent SDK multi-agent orchestration 2025
+OpenAI Agents SDK vs LangGraph vs AutoGen
+Model Context Protocol MCP tool use agents
+DeepEval Braintrust LangSmith LLM observability eval platform
+Semgrep CodeQL Snyk AI agent integration security scanning
+AI software factory autonomous engineering organization 2025
+criticism of fully autonomous AI software development
+multi-agent LLM systems survey paper arxiv
+reducing LLM hallucination production code generation research
+director agent worker agent swarm pattern orchestration
+why autonomous AI agents fail long running tasks

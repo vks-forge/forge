@@ -1,0 +1,10 @@
+https://cloud.google.com/blog/topics/threat-intelligence/from-prompting-to-autonomy-the-evolution-of-adversarial-ai
+https://www.synack.com/blog/autonomous-ai-security-testing-risks/
+https://mnemehq.com/insights/how-ai-coding-agents-use-adrs/
+https://medium.com/@dipakkrdas/code-wiki-llm-maintained-documentation-for-your-codebase-fc54f94bef6d
+https://medium.com/data-science-collective/the-llm-landscape-part-1-the-starters-guide-to-context-window-management-9c77aff15dc5
+https://mastra.ai/articles/context-engineering
+https://fast.io/resources/ai-agent-webhook-integration/
+https://www.mindstudio.ai/blog/build-cron-based-ai-automation-hermes-agent
+https://www.augmentcode.com/guides/ai-agent-incident-response
+https://e2b.dev/

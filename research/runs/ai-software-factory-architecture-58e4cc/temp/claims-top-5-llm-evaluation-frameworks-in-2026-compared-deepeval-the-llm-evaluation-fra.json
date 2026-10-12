@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "An LLM evaluation framework is distinct from an academic benchmark, an evaluation platform, an observability platform, and a guardrail -- its primary job is to tell you whether a version of your LLM application is better than another before you ship it.",
+    "stance": "neutral",
+    "stance_target": "terminology/taxonomy for eval tooling selection in an agentic software factory",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "2026 LLM application development tooling landscape",
+    "quoted_support": "the primary job of an evaluation framework is to tell you whether a version of your LLM application is better than another before you ship it.",
+    "numbers": [],
+    "entities": ["DeepEval", "Promptfoo", "Ragas", "Arize Phoenix", "TruLens"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "top-5-llm-evaluation-frameworks-in-2026-compared-deepeval-the-llm-evaluation-fra"
+  },
+  {
+    "claim": "AI-agent tracing -- tracing a failed evaluation score back to the specific tool call, retriever step, LLM call, or sub-agent that caused it -- is a key differentiator among LLM eval frameworks, with Promptfoo explicitly lacking native component-level agent-tracing support.",
+    "stance": "neutral",
+    "stance_target": "observability-grade granularity needed for debugging multi-agent pipeline failures",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "comparison of DeepEval, Promptfoo, Ragas, Arize Phoenix, TruLens as of 2026",
+    "quoted_support": "AI agent tracing: can a failed score be traced back to the tool, retriever, LLM call, or AI sub-agent that caused it? ... Promptfoo: Not supported: no native component-level scoring",
+    "numbers": [],
+    "entities": ["Promptfoo", "DeepEval"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "top-5-llm-evaluation-frameworks-in-2026-compared-deepeval-the-llm-evaluation-fra"
+  },
+  {
+    "claim": "A developer-workflow criterion for choosing an eval framework is whether AI coding agents (Claude Code, Cursor, Codex) can themselves use it as an evaluation harness to run tests, inspect failures, and verify fixes.",
+    "stance": "supports",
+    "stance_target": "agent-usable eval tooling as infrastructure for self-correcting agentic development loops",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "2026 LLM eval framework selection criteria",
+    "quoted_support": "Can AI coding agents such as Claude Code, Cursor, and Codex use it as an evaluation harness to run tests, inspect failures, make targeted changes, and verify the result?",
+    "numbers": [],
+    "entities": ["Claude Code", "Cursor", "Codex"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "top-5-llm-evaluation-frameworks-in-2026-compared-deepeval-the-llm-evaluation-fra"
+  }
+]

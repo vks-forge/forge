@@ -1,0 +1,150 @@
+{
+  "analyst_id": "a",
+  "loci": [
+    {
+      "name": "autonomy-reliability-at-scale",
+      "flavor": "dialectical",
+      "one_line": "Can a software factory run 100+ worker agents with minimal human review and get production-grade reliability today, or does current evidence require heavy governance scaffolding before that scale is safe?",
+      "rationale": "Pre-validated from contradiction-graph cluster 'autonomy-reliability-fight' (decision_relevance: high). Sierra's Agency post (agency-secure-scalable-sandboxes-for-agents-sierra) and Berkeley RDI argue vertically-integrated multi-agent infra is feasible at scale today; 'Shipped by Agents' (structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents) documents catastrophic, near-instantaneous blast radius and self-reinforcing architectural drift absent hard constraints, the legacy-modernization survey shows LLM code-understanding is non-uniform, and The New Stack piece shows oversight moves up a level rather than disappearing. The same Berkeley source straddles both sides, which is itself evidence the fight is genuine. Validated: both sides cite real, distinct sources making non-overlapping claims (capability vs. safety-at-scale), confirming this is a load-bearing tension for the whitepaper's core 5,000-person-company claim rather than a scope mismatch.",
+      "corpus_evidence": [
+        "agency-secure-scalable-sandboxes-for-agents-sierra",
+        "center-for-responsible-decentralized-intelligence-at-berkeley",
+        "structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents",
+        "leveraging-llms-for-legacy-code-modernization-challenges-and-opportunities-for-l",
+        "the-code-review-bug-hunt-is-dead-heres-what-developers-get-wrong-the-new-stack"
+      ],
+      "opposing_positions": [
+        {"position": "Vertically-integrated, in-house multi-agent infra (Sierra's Agency) and Berkeley RDI's feasibility framing show parallel multi-agent software construction at scale is achievable today, justifying ambitious concurrency targets.", "sources": ["agency-secure-scalable-sandboxes-for-agents-sierra", "center-for-responsible-decentralized-intelligence-at-berkeley"]},
+        {"position": "Frontier agents are not reliably autonomous across long-horizon maintenance; blast radius from excess permissions is catastrophic and near-instantaneous, architectural drift compounds across sessions absent governance, and existing security tooling can't audit agent code at this scale, so human oversight must move up a level, not disappear.", "sources": ["center-for-responsible-decentralized-intelligence-at-berkeley", "structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents", "leveraging-llms-for-legacy-code-modernization-challenges-and-opportunities-for-l", "the-code-review-bug-hunt-is-dead-heres-what-developers-get-wrong-the-new-stack"]}
+      ],
+      "suggested_starting_urls": [],
+      "suggested_searches": [
+        "named engineering postmortem AI coding agent production incident 2026 blast radius",
+        "Berkeley RDI autonomy levels framework long-horizon software maintenance agents",
+        "architectural drift self-reinforcing multi-session coding agent governance"
+      ]
+    },
+    {
+      "name": "agent-skill-token-overhead",
+      "flavor": "dialectical",
+      "one_line": "Do Agent Skills with progressive disclosure actually eliminate context/token overhead as vendor docs claim, or does the only empirical measurement in the corpus show real, budget-relevant overhead?",
+      "rationale": "Pre-validated from contradiction-graph cluster 'skills-overhead-fight' (decision_relevance: medium). Claude platform docs (agent-skills-claude-platform-docs) and addyosmani's performance-optimization SKILL.md claim Skills+progressive disclosure reduce context overhead and token spend. The sole empirical study in the corpus, 'agent-skill-evolution-how-revisions-affect-coding-agents', directly measures a non-zero, non-negligible token overhead from Skill-body loading and shows Skill size trades off directly against runtime context budget -- a single empirical source outranking vendor-documentation framing on this specific numeric question. This is directly load-bearing for Pillar 6 (cost optimization) since the report must decide whether to budget for Skills as free or as a metered resource.",
+      "corpus_evidence": [
+        "agent-skills-claude-platform-docs",
+        "agent-skillsskillsperformance-optimizationskillmd-at-main-addyosmaniagent-skills",
+        "agent-skill-evolution-how-revisions-affect-coding-agents"
+      ],
+      "opposing_positions": [
+        {"position": "Encoding SOPs as Agent Skills with progressive disclosure reduces context overhead and token spend vs. inline instructions; deterministic Skill sequences improve reliability at lower cost.", "sources": ["agent-skills-claude-platform-docs", "agent-skillsskillsperformance-optimizationskillmd-at-main-addyosmaniagent-skills"]},
+        {"position": "Measured independently, Skill-body loading carries real, quantified token overhead; progressive disclosure does not fully neutralize it, and Skill size directly trades off against runtime context budget.", "sources": ["agent-skill-evolution-how-revisions-affect-coding-agents"]}
+      ],
+      "suggested_starting_urls": [],
+      "suggested_searches": [
+        "quantified token overhead Claude Agent Skills measurement benchmark",
+        "progressive disclosure context window cost Agent Skills production",
+        "Skill size vs context budget tradeoff empirical study 2026"
+      ]
+    },
+    {
+      "name": "autonomous-pentest-reliability-gap",
+      "flavor": "dialectical",
+      "one_line": "Do vendor-marketed autonomous pentest/security-agent products support the whitepaper's ~90-minute unattended vulnerability-sweep pillar, or does the vendors' own measured data show full autonomy is still rare and risky?",
+      "rationale": "Simbian and Synack both sell autonomous AI pentest/security-testing agents (automated-penetration-testing-ai-pentest-agent-simbian, how-are-ai-agents-used-in-penetration-testing-synack), implying continuous unattended sweeps are viable now -- directly matching Pillar 3's '~90 min automated pentest sweep' requirement. But Simbian's own analysis of the Cobalt 'AI and Pentesting Pulse Report 2026' (455 security leaders) found full reliance on AI automation fell to just 9% (automated-penetration-testing-full-autonomy-fell-to-9), and Synack's own blog 'Nobody's in the Cockpit' (nobodys-in-the-cockpit-risks-of-autonomous-ai-security-testing) warns about the risks of removing human oversight from autonomous security testing. The same vendors straddle both sides -- selling the capability while their own data/commentary complicates the autonomy claim -- which is exactly the kind of genuine, load-bearing tension the whitepaper's Pillar 3 design must resolve (e.g., scheduled sweep auto-flags vs. auto-patches, and what stays human-gated).",
+      "corpus_evidence": [
+        "automated-penetration-testing-full-autonomy-fell-to-9",
+        "automated-penetration-testing-ai-pentest-agent-simbian",
+        "how-are-ai-agents-used-in-penetration-testing-synack",
+        "nobodys-in-the-cockpit-risks-of-autonomous-ai-security-testing"
+      ],
+      "opposing_positions": [
+        {"position": "Autonomous AI pentest/security-testing agents are production-viable today and can run continuous, largely unattended vulnerability sweeps (vendor product claims).", "sources": ["automated-penetration-testing-ai-pentest-agent-simbian", "how-are-ai-agents-used-in-penetration-testing-synack"]},
+        {"position": "Industry survey data (455 security leaders, Cobalt 2026) and vendor's own risk commentary show full automation reliance is still rare (9%) and removing human oversight ('nobody in the cockpit') from autonomous security testing carries documented operational risk.", "sources": ["automated-penetration-testing-full-autonomy-fell-to-9", "nobodys-in-the-cockpit-risks-of-autonomous-ai-security-testing"]}
+      ],
+      "suggested_starting_urls": [
+        "https://simbian.ai/blog/automated-penetration-testing-2026",
+        "https://www.synack.com/blog/autonomous-ai-security-testing-risks/"
+      ],
+      "suggested_searches": [
+        "Cobalt AI and Pentesting Pulse Report 2026 full methodology",
+        "autonomous penetration testing agent false positive rate production 2026",
+        "scheduled automated vulnerability sweep human-in-the-loop gate design"
+      ]
+    },
+    {
+      "name": "trace-driven-skill-sequencing",
+      "flavor": "convergent",
+      "one_line": "How would a Director Agent actually mine an agent-trace history to predict and autonomously chain the next Skill in a sequence, in production, not just in an academic benchmark?",
+      "rationale": "Pillar 2 explicitly demands 'probabilistic sequences -- analyzing a developer's agent-trace history to predict and chain skills autonomously.' The corpus has an academic method for exactly the underlying primitive (automata-from-agent-traces: extracting a compact deterministic finite-state machine from LLM-agent execution traces using only positive examples, used for workflow memory, next-step and failure prediction) and a curated catalog of trace-analysis techniques (github-yintonghuoawesome-agent-trajectory-a-collection-of-agent-trajectory-analy), plus a library of modular, callable Skills (github-addyosmaniagent-skills-production-grade-engineering-skills-for-ai-coding) and a definition of SOP-as-Skill (what-is-an-ai-agent-sop). None of these sources connects the FSM/trace-prediction technique to an actual Skill-dispatch runtime -- the corpus gestures at both halves (trace mining, Skill libraries) but never the bridge. This is the single most under-resolved technical requirement in Pillar 2 and directly determines whether the whitepaper's pseudo-code for autonomous Skill-chaining is grounded or invented.",
+      "corpus_evidence": [
+        "automata-from-agent-traces",
+        "github-yintonghuoawesome-agent-trajectory-a-collection-of-agent-trajectory-analy",
+        "github-addyosmaniagent-skills-production-grade-engineering-skills-for-ai-coding",
+        "what-is-an-ai-agent-sop"
+      ],
+      "suggested_starting_urls": [
+        "https://arxiv.org/abs/2608.23670",
+        "https://github.com/YintongHuo/awesome-agent-trajectory"
+      ],
+      "suggested_searches": [
+        "agent trace mining next-skill prediction production deployment",
+        "Claude Agent SDK skill dispatch probabilistic sequencing trace history",
+        "finite-state-machine workflow memory LLM agent runtime integration"
+      ]
+    },
+    {
+      "name": "idle-fleet-cost-economics-at-scale",
+      "flavor": "convergent",
+      "one_line": "What does it actually cost, in dollars at 100+-agent fleet scale, to run idle-shutdown/auto-archive policies vs. always-on sandboxes, and whose idle-timeout defaults are actually tuned to agent workload burstiness?",
+      "rationale": "Pillar 6 requires 'auto-killing/self-archiving idle agents that find no issues without paging a human.' The corpus has per-vendor idle-timeout mechanics in isolation -- Microsoft Foundry's hosted-agent-session stop/resume/delete semantics (manage-hosted-agent-sessions-microsoft-foundry-microsoft-learn), Google's Workbench idle-shutdown with a 180-minute default (idle-shutdown-gemini-enterprise-agent-platform-google-cloud-documentation), and Blaxel's vendor argument that per-hour/per-token sandbox billing structurally mismatches how coding agents actually consume compute, proposing GB-second/standby billing instead (ai-agent-development-costs-why-sandbox-billing-breaks-blaxel) -- plus separate subscription-vs-API economics pieces (claude-subscription-vs-api-which-is-cheaper-in-2026-real-math-teamorouter, ai-pricing-models-compared-seats-tokens-outcomes-zuora). No source in the corpus quantifies total fleet cost under idle-shutdown vs. always-on for a 100-worker deployment, nor validates whether any vendor's default idle-timeout window is actually matched to real agentic workload burst patterns. This is an audited absence: the number SHOULD exist for the whitepaper's Pillar 6 cost model to be credible, and isn't published anywhere found in the width sweep.",
+      "corpus_evidence": [
+        "ai-agent-development-costs-why-sandbox-billing-breaks-blaxel",
+        "manage-hosted-agent-sessions-microsoft-foundry-microsoft-learn",
+        "idle-shutdown-gemini-enterprise-agent-platform-google-cloud-documentation",
+        "ai-pricing-models-compared-seats-tokens-outcomes-zuora",
+        "claude-subscription-vs-api-which-is-cheaper-in-2026-real-math-teamorouter"
+      ],
+      "suggested_starting_urls": [
+        "https://blaxel.ai/blog",
+        "https://learn.microsoft.com/en-us/azure/ai-foundry/"
+      ],
+      "suggested_searches": [
+        "100 agent fleet sandbox cost per month idle shutdown case study",
+        "GB-second billing agent sandbox cost comparison per-hour",
+        "agent workload burstiness idle timeout tuning production data"
+      ]
+    },
+    {
+      "name": "agent-authored-dependency-supply-chain-risk",
+      "flavor": "convergent",
+      "one_line": "Given the Purdue-scale empirical finding on agent-authored dependency-update risk, what specific automated gate (SAST/SCA/pentest-sweep) would actually catch these issues before merge in a factory running at 90-minute sweep cadence?",
+      "rationale": "Pillar 1 (adversarial validation, blast radius) and Pillar 3 (scheduled vulnerability sweeps) both bear on this. The corpus contains a large-scale empirical study (understanding-security-risks-of-ai-agents-dependency-updates: Purdue arXiv paper, 117,062 dependency changes across 33,596 agent-authored PRs from Copilot/Devin/Codex/Cursor/Claude Code vs. 6,618 human-authored PRs, 2,807 repos) quantifying agent-vs-human dependency-update risk, plus a generic blast-radius measurement methodology (vulnerability-blast-radius-how-to-measure-and-reduce-impact-blog-endor-labs) and a generative-AI-specific risk-mitigation framework (a-generative-ai-cybersecurity-risks-mitigation-model-for-code-generation-using-a). None of these sources connects the specific agent-authored risk pattern the Purdue study identifies to a concrete automated gate design that would catch it inside a ~90-minute scheduled sweep -- the corpus has the 'what's wrong' data but not the 'what specifically catches it' architecture, which is exactly what Pillar 1's 'code blast radius identification' and Pillar 3's sweep cadence need to be made concrete rather than aspirational.",
+      "corpus_evidence": [
+        "understanding-security-risks-of-ai-agents-dependency-updates",
+        "vulnerability-blast-radius-how-to-measure-and-reduce-impact-blog-endor-labs",
+        "a-generative-ai-cybersecurity-risks-mitigation-model-for-code-generation-using-a"
+      ],
+      "suggested_starting_urls": [
+        "https://arxiv.org/abs/2601.00205"
+      ],
+      "suggested_searches": [
+        "agent-authored PR dependency update vulnerability pattern mitigation",
+        "SCA tool catch LLM-generated dependency bump before merge",
+        "blast radius scoring automated gate agent generated code CI pipeline"
+      ]
+    }
+  ],
+  "skip_loci": [
+    {
+      "slug": "sandbox-provider-benchmark-comparison",
+      "reason": "E2B, Sierra Agency, Microsoft Foundry, and Blaxel notes already give qualitative architecture comparisons; without a specific quantified head-to-head (cold-start latency, isolation guarantee, $/agent-hour) gesture in the corpus to chase, this risks becoming a generic vendor-comparison rewrite rather than a load-bearing depth question. Folded the cost-relevant portion into idle-fleet-cost-economics-at-scale instead."
+    },
+    {
+      "slug": "rogue-agent-incident-forensics",
+      "reason": "OpenAI-Hugging-Face rogue agent breach (openai-rogue-agent-breach-of-hugging-face-wikipedia) is a strong single case study but its evidentiary role (blast radius, insufficient oversight) is already the core of the autonomy-reliability-at-scale dialectical locus; a separate locus would duplicate rather than add a new question."
+    },
+    {
+      "slug": "adr-enforcement-mechanism",
+      "reason": "Corpus sources (architecture-decision-records-for-ai-coding-agents-where-the-why-lives, how-ai-coding-agents-use-adrs-architecture-decision-records-mneme-hq) argue ADRs are load-bearing for agent context but describe ADRs as something agents read, not a concrete enforcement mechanism (lint rule generation, CI gate) that blocks new code violating a prior ADR decision -- a real gap, but weaker and more diffuse than the other six candidates; dropped to stay under budget and because it's less clearly load-bearing for the report's recommendation vs. its coverage of Pillar 4 generally."
+    }
+  ]
+}

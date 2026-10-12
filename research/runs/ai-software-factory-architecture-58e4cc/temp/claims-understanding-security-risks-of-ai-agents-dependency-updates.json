@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Across 117,062 dependency changes from agent-authored and human-authored PRs on 2,807 GitHub repos across seven ecosystems, AI coding agents select known-vulnerable dependency versions more often than humans: 2.46% vs 1.64% of additions/updates.",
+    "stance": "refutes",
+    "stance_target": "assumption that autonomous coding agents maintain dependency security at least as well as human developers",
+    "evidence_type": "empirical",
+    "scope_conditions": "117,062 dependency changes, 33,596 agent PRs (Copilot, Devin, OpenAI Codex, Cursor, Claude Code) vs 6,618 human PRs, 2,807 repos, 7 ecosystems, AIDev-pop dataset",
+    "quoted_support": "Agents select known-vulnerable versions more often than humans (2.46% vs. 1.64%)",
+    "numbers": ["117,062", "33,596", "6,618", "2,807", "2.46%", "1.64%"],
+    "entities": ["Copilot", "Devin", "OpenAI Codex", "Cursor", "Claude Code", "Purdue University"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "understanding-security-risks-of-ai-agents-dependency-updates"
+  },
+  {
+    "claim": "When AI agents introduce a vulnerable dependency version, remediation is harder than for humans: 36.8% of agent cases require a major-version upgrade to reach a patched release, versus 12.9% for human cases.",
+    "stance": "supports",
+    "stance_target": "blast radius of agent-driven code changes being systematically larger/harder to remediate than human changes",
+    "evidence_type": "empirical",
+    "scope_conditions": "same dataset, PR-time vulnerability labeling via ecosyste.ms (GitHub Security Advisories + OSV)",
+    "quoted_support": "their vulnerable selections are more disruptive to remediate (36.8% require major-version upgrades vs. 12.9% for humans), despite patched alternatives existing in most cases.",
+    "numbers": ["36.8%", "12.9%"],
+    "entities": [],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "understanding-security-risks-of-ai-agents-dependency-updates"
+  },
+  {
+    "claim": "At the fleet level, agent-authored dependency work produced a net vulnerability increase of 98 across the sample, while human-authored dependency work produced a net vulnerability reduction of 1,316 over the same period.",
+    "stance": "refutes",
+    "stance_target": "assumption that autonomous agents improve overall supply-chain security posture through routine dependency maintenance",
+    "evidence_type": "empirical",
+    "scope_conditions": "aggregate across 2,807 repos, same study period",
+    "quoted_support": "At the aggregate level, agent-driven dependency work yields a net vulnerability increase of 98, whereas human-authored work yields a net reduction of 1,316.",
+    "numbers": ["98", "1,316"],
+    "entities": [],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "understanding-security-risks-of-ai-agents-dependency-updates"
+  },
+  {
+    "claim": "AI agents perform dependency version updates more frequently than humans when touching a manifest file (25.5% vs 15.8%), but spread edits across many small PRs rather than bundling them as humans do.",
+    "stance": "neutral",
+    "stance_target": "characterizing agent PR behavior patterns relevant to CI/CD trigger design",
+    "evidence_type": "empirical",
+    "scope_conditions": "same dataset",
+    "quoted_support": "agents spread dependency edits across many PRs and, within those edits, perform version updates more often than humans (25.5% vs. 15.8%).",
+    "numbers": ["25.5%", "15.8%"],
+    "entities": [],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "understanding-security-risks-of-ai-agents-dependency-updates"
+  },
+  {
+    "claim": "The study authors recommend PR-time vulnerability screening and registry-aware guardrails as the mitigation for agent-introduced dependency risk, directly motivating an automated blast-radius/adversarial-review gate before merge in autonomous development pipelines.",
+    "stance": "supports",
+    "stance_target": "necessity of rigid, automated pre-merge security gates in an AI software factory architecture",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "recommendation derived from the empirical findings above",
+    "quoted_support": "These findings motivate PR-time vulnerability screening and registry-aware guardrails to make agent-driven dependency updates safer.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "understanding-security-risks-of-ai-agents-dependency-updates"
+  }
+]

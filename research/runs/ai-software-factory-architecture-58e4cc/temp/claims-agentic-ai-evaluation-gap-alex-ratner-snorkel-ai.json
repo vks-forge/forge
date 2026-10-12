@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "The ability to measure (evaluate) AI agents has been outpaced by the ability to build them, arguably for the first time in the field's history, because model capabilities now advance faster than benchmark/dataset construction.",
+    "stance": "supports",
+    "stance_target": "the need to treat rigid eval infrastructure as a first-class, continuously-invested engineering discipline in an autonomous software factory, not an afterthought",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "general claim about the AI agent field, stated June 2026",
+    "quoted_support": "our ability to measure agents has been outpaced — arguably for the first time in the history of the field — by our ability to build them.",
+    "numbers": [],
+    "entities": ["Alex Ratner", "Snorkel AI"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "agentic-ai-evaluation-gap-alex-ratner-snorkel-ai"
+  },
+  {
+    "claim": "Coding-agent benchmarks show a saturation/difficulty gradient: HumanEval is roughly 95% saturated, Terminal-Bench 2.1 sits at approximately 83%, and ProgramBench (replicating entire program artifacts, equivalent to weeks of human work) has a fully-resolved accuracy rate in the low single digits.",
+    "stance": "supports",
+    "stance_target": "benchmark-saturation as a documented absence/gap finding -- current simple coding benchmarks no longer discriminate agent capability at the software-factory scale",
+    "evidence_type": "empirical",
+    "scope_conditions": "coding-agent benchmark landscape as of mid-2026",
+    "quoted_support": "HumanEval is approximately saturated at 95%. Terminal-Bench 2.1 sits at ~83%... ProgramBench has a fully-resolved accuracy rate in the low single digits.",
+    "numbers": ["~95% HumanEval saturation", "~83% Terminal-Bench 2.1", "low single digits ProgramBench accuracy"],
+    "entities": ["HumanEval", "Terminal-Bench 2.1", "ProgramBench"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "agentic-ai-evaluation-gap-alex-ratner-snorkel-ai"
+  },
+  {
+    "claim": "In agentic AI development, the data/task/environment specification constitutes a majority of the product specification itself -- defining tasks, environments, and success criteria is now a large share of the product-building work.",
+    "stance": "supports",
+    "stance_target": "treating SOP/eval-dataset construction as core engineering work in a software factory, comparable in effort to building the agents themselves",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "agentic AI product development, 2026",
+    "quoted_support": "in the agentic world, the data spec is a majority of the product spec. Defining what tasks an agent should complete, what environments it should operate in, and what a good output looks like is an increasing percentage of the work of building the product itself.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "agentic-ai-evaluation-gap-alex-ratner-snorkel-ai"
+  },
+  {
+    "claim": "SlopCodeBench specifically tests coding agents against mid-execution spec changes to measure autonomy-horizon adaptation, since real-world projects rarely proceed on a fixed, unchanging specification.",
+    "stance": "supports",
+    "stance_target": "designing eval suites that test agent adaptability to shifting requirements rather than only fixed-spec task completion",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "benchmark design, Snorkel Open Benchmarks Grants program, 2026",
+    "quoted_support": "SlopCodeBench measures coding tasks where the spec changes during execution — a direct test of that autonomy-horizon problem. Most real-world projects don't go straight-line. Requirements shift. An agent that performs well on a fixed spec may accumulate technical debt and drift when the target moves.",
+    "numbers": [],
+    "entities": ["SlopCodeBench"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "agentic-ai-evaluation-gap-alex-ratner-snorkel-ai"
+  },
+  {
+    "claim": "Snorkel AI committed $3M to an Open Benchmarks Grants program supporting open, academically/open-source-driven agent evaluation benchmarks, with approximately 20 benchmarks being announced.",
+    "stance": "neutral",
+    "stance_target": "scale of industry investment in closing the agent-evaluation gap",
+    "evidence_type": "statistical",
+    "scope_conditions": "Snorkel AI funding commitment, as of mid-2026",
+    "quoted_support": "Snorkel has committed $3M, about 20 benchmarks are being announced in the coming months, and a new batch is being onboarded.",
+    "numbers": ["$3M commitment", "~20 benchmarks"],
+    "entities": ["Snorkel AI", "Open Benchmarks Grants"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "agentic-ai-evaluation-gap-alex-ratner-snorkel-ai"
+  }
+]

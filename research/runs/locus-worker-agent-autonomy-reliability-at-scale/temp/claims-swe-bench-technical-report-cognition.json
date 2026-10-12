@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "On a randomly sampled 25% subset of SWE-bench (570 of 2,294 real-world GitHub issue/PR pairs), Devin resolved 79 issues end-to-end unassisted, a 13.86% success rate, versus the previous best unassisted baseline of 1.96% and best assisted baseline (given exact files to edit) of 4.80%.",
+    "stance": "neutral",
+    "stance_target": "primary quantification of Devin's real-world-task success rate on a standardized benchmark",
+    "evidence_type": "statistical",
+    "scope_conditions": "SWE-bench test set subset, Cognition's own evaluation, 2024",
+    "quoted_support": "Devin successfully resolved 79 of the 570 issues, giving a 13.86% success rate. This is significantly higher than even the previous best assisted system (Claude 2) of 4.80%.",
+    "numbers": ["13.86%", "79/570", "1.96%", "4.80%"],
+    "entities": ["Devin", "Cognition Labs", "SWE-bench", "Claude 2"],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "swe-bench-technical-report-cognition"
+  },
+  {
+    "claim": "Devin was capped at 45 minutes of runtime per SWE-bench task specifically because, unlike most agents, it has the capability to run indefinitely -- implying no natural stopping point without an imposed time-boxing control.",
+    "stance": "supports",
+    "stance_target": "autonomous agents require externally imposed circuit breakers/time limits rather than relying on the agent's own judgment to stop",
+    "evidence_type": "empirical",
+    "scope_conditions": "Cognition's SWE-bench evaluation methodology, 2024",
+    "quoted_support": "We limit Devin to 45 minutes of runtime, as unlike most agents, it has the capability to run indefinitely. It can choose to terminate earlier if it wants.",
+    "numbers": ["45 minutes"],
+    "entities": ["Devin", "Cognition Labs"],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "swe-bench-technical-report-cognition"
+  },
+  {
+    "claim": "Even the best-assisted LLM baselines (given the exact correct files to edit, an easier setting than the agent's unassisted full-repo navigation) only achieve a 4.80% success rate on SWE-bench, indicating the underlying task difficulty is high regardless of agent architecture.",
+    "stance": "neutral",
+    "stance_target": "baseline difficulty of real-world coding tasks for LLM-based systems circa 2024",
+    "evidence_type": "statistical",
+    "scope_conditions": "SWE-bench evaluation of non-agentic LLM baselines, 2024",
+    "quoted_support": "Properly solving SWE-bench examples is challenging. The harder PRs require changing tens of files, maintaining backwards compatibility, and/or doing a lot of complex reasoning. Even when assisted, the best LLMs only achieve a 4.80% success rate.",
+    "numbers": ["4.80%"],
+    "entities": ["SWE-bench", "Claude 2"],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "swe-bench-technical-report-cognition"
+  }
+]

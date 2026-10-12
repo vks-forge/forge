@@ -1,0 +1,30 @@
+[
+  {
+    "claim": "A deterministic AST-analysis post-processing framework that validates generated code against a dynamically-generated, library-introspection-built Knowledge Base can detect Knowledge Conflicting Hallucinations (e.g. non-existent API parameters/function names) with 100% precision and 87.6% recall (F1 = 0.934) on a manually curated 200-snippet Python dataset.",
+    "stance": "supports",
+    "stance_target": "deterministic static-analysis verification is a viable, reliable alternative to probabilistic LLM-in-the-loop hallucination repair",
+    "evidence_type": "empirical",
+    "scope_conditions": "200 manually curated Python code snippets",
+    "quoted_support": "On a manually-curated dataset of 200 Python snippets, our framework detected KCHs with 100% precision and 87.6% recall (0.934 F1-score), and successfully auto-corrected 77.0% of all identified hallucinations.",
+    "numbers": ["100% precision", "87.6% recall", "0.934 F1", "77.0% auto-corrected", "200 snippets"],
+    "entities": ["Dipin Khati", "Daniel Rodriguez-Cardenas", "Paul Pantzer", "Denys Poshyvanyk", "William & Mary", "FORGE 2026"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "detecting-and-correcting-hallucinations-in-llm-generated-code"
+  },
+  {
+    "claim": "Knowledge Conflicting Hallucinations in LLM-generated code (e.g. calling a non-existent pandas function pd.read_exel()) are syntactically clean and idiomatic-looking but fail only at runtime, meaning linters and standard static checks cannot catch them.",
+    "stance": "supports",
+    "stance_target": "structural/syntactic analysis alone is insufficient to catch a specific, common class of LLM code hallucination",
+    "evidence_type": "theoretical",
+    "scope_conditions": "LLM code generation, Python ecosystem example",
+    "quoted_support": "a model may call pd.read_exel('data.csv'), which both invents a function name and mismatches the intended file type... This failure often presents as a block of code that looks clean, seems idiomatic, and even follows local variable naming conventions. But when executed, the program crashes.",
+    "numbers": [],
+    "entities": ["pandas"],
+    "time_period": null,
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "detecting-and-correcting-hallucinations-in-llm-generated-code"
+  }
+]

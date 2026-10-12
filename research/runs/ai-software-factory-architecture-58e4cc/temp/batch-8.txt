@@ -1,0 +1,10 @@
+https://simbian.ai/blog/automated-penetration-testing-2026
+https://www.braingrid.ai/blog/architecture-decision-records-for-ai-coding-agents
+https://gist.github.com/cmer/2a9b78d2145204eedf1029e9305e3e50
+https://redis.io/blog/llm-context-windows/
+https://www.langchain.com/blog/context-engineering-for-agents
+https://dust.tt/academy/agent-automation/chapter/webhook-triggers
+https://dev.to/ryancwynar/the-cron-layer-how-i-taught-my-ai-agent-to-work-autonomously-247-3oog
+https://resolve.ai/glossary/ai-incident-management-tools
+https://www.developersdigest.tech/blog/ai-agent-code-sandbox-comparison-2026
+https://www.wiz.io/academy/ai-security/ai-agent-orchestration

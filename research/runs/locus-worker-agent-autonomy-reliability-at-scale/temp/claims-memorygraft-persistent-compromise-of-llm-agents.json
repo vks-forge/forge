@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "MemoryGraft compromises LLM agents by implanting malicious 'successful experiences' into an agent's long-term memory via benign-looking ingestion artifacts, exploiting the agent's tendency to replicate patterns from retrieved past successes rather than via transient jailbreak prompts.",
+    "stance": "supports",
+    "stance_target": "persistent memory shared across or within autonomous agents is a durable attack surface that survives individual task correction, requiring ongoing monitoring not just point-in-time review",
+    "evidence_type": "empirical",
+    "scope_conditions": "LLM agents with long-term memory/RAG, validated on MetaGPT's DataInterpreter with GPT-4o",
+    "quoted_support": "MemoryGraft exploits the agent's semantic imitation heuristic which is the tendency to replicate patterns from retrieved successful tasks... an attacker who can supply benign ingestion-level artifacts that the agent reads during execution can induce it to construct a poisoned RAG store.",
+    "numbers": [],
+    "entities": ["MemoryGraft", "MetaGPT", "DataInterpreter", "GPT-4o"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "memorygraft-persistent-compromise-of-llm-agents"
+  },
+  {
+    "claim": "A small number of poisoned memory records can account for a large fraction of experiences retrieved by an agent during subsequent benign operation, causing persistent behavioral drift across sessions.",
+    "stance": "supports",
+    "stance_target": "a Director agent orchestrating many Worker Agents that share or inherit experience memory is exposed to compounding, hard-to-detect compromise that minimal human review would miss",
+    "evidence_type": "empirical",
+    "scope_conditions": "validated on MetaGPT DataInterpreter agent, GPT-4o backend",
+    "quoted_support": "we find that a small number of poisoned records can account for a large fraction of retrieved experiences on benign workloads, turning experience-based self-improvement into a vector for stealthy and durable compromise.",
+    "numbers": [],
+    "entities": ["MemoryGraft", "MetaGPT"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "memorygraft-persistent-compromise-of-llm-agents"
+  },
+  {
+    "claim": "MemoryGraft is distinct from both transient prompt injection and standard RAG factual-knowledge poisoning because it targets the trust boundary between an agent's reasoning core and its own accumulated past experience, which is not addressed by input-level guardrails alone.",
+    "stance": "supports",
+    "stance_target": "input/output filtering guardrails are insufficient; memory-layer validation and segmentation controls are a distinct, necessary governance layer",
+    "evidence_type": "theoretical",
+    "scope_conditions": "LLM agent architecture with persistent memory",
+    "quoted_support": "it introduces a critical, unexplored attack surface, i.e., the trust boundary between an agent's reasoning core and its own past... Unlike traditional prompt injections that are transient, or standard RAG poisoning that targets factual knowledge, MemoryGraft exploits the agent's semantic imitation heuristic.",
+    "numbers": [],
+    "entities": ["MemoryGraft"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "memorygraft-persistent-compromise-of-llm-agents"
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "Upstash Box bills only active CPU hours (memory free, storage $0.10/GB-month), such that an idle agent sandbox waiting on an LLM response costs nothing on the compute meter once paused; the published worked example shows a box using 10% of one core for an hour costs $0.01 versus $0.20 for 100% of two cores for an hour.",
+    "stance": "supports",
+    "stance_target": "idle agent sandbox cost can be driven to near-zero via active-only billing, giving a concrete dollar figure for idle-vs-active cost ratio",
+    "evidence_type": "empirical",
+    "scope_conditions": "Upstash Box product, pay-as-you-go pricing",
+    "quoted_support": "An idle box pauses and stops billing active CPU, so a worker that waits for a model response costs nothing on that meter... a box that uses 10% of a single core for one hour costs $0.01, and the same hour at 100% of two cores costs $0.20.",
+    "numbers": ["$0.01/hr at 10% of 1 core", "$0.20/hr at 100% of 2 cores", "$0.10/active-CPU-hour pay-as-you-go rate", "$0.10/GB-month storage", "free plan: 10 concurrent boxes, 5 CPU-hours/month", "paid default: 1,000 concurrent boxes"],
+    "entities": ["Upstash", "Upstash Box"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "a-software-factory-needs-one-sandbox-per-agent-upstash-blog"
+  },
+  {
+    "claim": "A snapshot fan-out pattern (prepare and snapshot one base environment, then restore N worker sandboxes from it) allows a 3-worker fleet to be provisioned, dependencies-included, in 4.2 seconds total, versus a cold single-sandbox creation measured at 2.1 seconds -- demonstrating that fleet-scale sandbox provisioning latency does not scale linearly with worker count when snapshotting is used.",
+    "stance": "supports",
+    "stance_target": "snapshot-based provisioning mitigates the latency cost of spinning up large concurrent agent fleets, which is the counterpart tradeoff to aggressive auto-kill/scale-to-zero policies",
+    "evidence_type": "empirical",
+    "scope_conditions": "Upstash Box SDK, measured single-run timings, Node runtime, small size",
+    "quoted_support": "Three workers restored, ran and confirmed the install in 4.2 seconds in total... Box.create(): 2102 ms",
+    "numbers": ["Box.create(): 2,102ms single sandbox", "3 parallel restores: 4,208ms total"],
+    "entities": ["Upstash Box"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "a-software-factory-needs-one-sandbox-per-agent-upstash-blog"
+  },
+  {
+    "claim": "Shared checkouts across concurrent coding agents produce test failures unrelated to the agents' actual tasks because agents interfere with each other's dependency installs and working trees; per-agent sandbox isolation is necessary (not merely a security nicety) for a 100+-agent fleet to produce trustworthy results.",
+    "stance": "supports",
+    "stance_target": "one-sandbox-per-agent is a scaling requirement, not just an isolation/security requirement, for a software factory architecture",
+    "evidence_type": "theoretical",
+    "scope_conditions": "general claim about concurrent coding agents sharing a filesystem",
+    "quoted_support": "Twenty agents on one machine are not twenty workers, they are twenty ways to break the same checkout... One shared checkout cannot host a fleet of agents. A fleet of sandboxes can.",
+    "numbers": [],
+    "entities": ["Upstash"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "a-software-factory-needs-one-sandbox-per-agent-upstash-blog"
+  }
+]

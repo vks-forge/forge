@@ -1,0 +1,135 @@
+---
+name: hyperresearch-4-loci-analysis
+description: >
+  Step 4 of the hyperresearch V8 pipeline. Spawns 2 parallel loci-analyst
+  subagents that read the width corpus and identify 1-6 specific
+  questions where depth investigation will pay off. Deduplicates and
+  scores each locus on importance/uncertainty/disagreement/decision_impact,
+  then allocates source budgets dynamically. Invoked via Skill tool from
+  the entry skill (full tier only).
+---
+<!-- rendered from profile "full" (hyperresearch 0.12.0) — edit the profile or the package template, not this file -->
+
+# Step 4 — Loci analysis (parallel, 2 analysts)
+
+**Tier gate:** SKIP entirely for `light` tier — proceed directly to step 9. Only `full` tier runs loci analysis.
+
+**Goal:** identify 1–6 specific questions where depth investigation will pay off.
+
+---
+
+## Recover state
+
+Read these inputs:
+- `research/runs/<vault_tag>/scaffold.md` — vault_tag
+- `research/runs/<vault_tag>/prompt-decomposition.json` — atomic items, sub-questions
+- `research/runs/<vault_tag>/temp/contradiction-graph.json` — ranked fight clusters (if step 3 ran)
+- `research/runs/<vault_tag>/temp/coverage-gaps.md` — which atomic items have weak coverage
+
+Survey the corpus: `C:/Users/vikas/AppData/Roaming/uv/tools/hyperresearch/Scripts/hyperresearch.exe note list --tag <vault_tag> --all -j` to confirm width sweep is complete.
+
+---
+
+## Procedure
+
+1. **Spawn 2 `hyperresearch-loci-analyst` subagents in parallel** (ONE message, all 2 Task calls). Each analyst gets a letter id in order — `a`, `b`, `c`, ... — and writes to its own output file. All read the same width corpus but return independently.
+
+   **Spawn template:**
+   ```
+   subagent_type: hyperresearch-loci-analyst
+   prompt: |
+     RESEARCH QUERY (verbatim, gospel):
+     > {{paste research/runs/<vault_tag>/query.md body}}
+
+     QUERY FILE: research/runs/<vault_tag>/query.md
+
+     PIPELINE POSITION: You are step 4 (loci-analyst, instance <analyst_id> of 2) of
+     the hyperresearch V8 pipeline. The width sweep (step 2) populated the vault
+     tagged <vault_tag>. The contradiction graph (step 3) lives at
+     research/runs/<vault_tag>/temp/contradiction-graph.json. After you and the other
+     analysts return, the orchestrator dedupes your loci and assigns budgets.
+
+     YOUR INPUTS:
+     - corpus_tag: <vault_tag>
+     - analyst_id: "<analyst_id>" (one letter per analyst: a, b, c, ...)
+     - output_path: research/runs/<vault_tag>/loci-<analyst_id>.json
+
+     RUN DIRECTIVES: append the FULL contents of research/runs/<vault_tag>/shims/research.md here, verbatim.
+   ```
+
+2. **Wait for all 2.** If some fail, proceed with the successful outputs. If every analyst fails (empty loci lists), tell the user the width sweep was too thin and stop — do not force depth on a weak corpus.
+
+3. **Deduplicate and clamp to 6.**
+   - Read every analyst's JSON output (`research/runs/<vault_tag>/loci-<analyst_id>.json`).
+   - Dedupe on `name` (exact match) or near-match (same core question, different phrasing). When in doubt, prefer the entry with stronger `corpus_evidence`.
+   - If the deduped list exceeds 6, drop the weakest entries — rank by how load-bearing the rationale is for the canonical research query.
+   - **Persist every analyst's `skip_loci` array** in the merged output — union them under a top-level `skip_loci` key. These justifications matter downstream.
+
+4. **Score and budget each locus (dynamic depth allocation).** For each surviving locus, compute four dimensions:
+   - **importance** (0-10): how central is this locus to the research_query? A locus that directly answers a primary sub-question scores 8-10; tangential enrichment scores 2-4.
+   - **uncertainty** (0-10): how uncertain is the current evidence? If the contradiction graph shows a sharp fight with equal-quality evidence on both sides, uncertainty is high (8-10). If one side has clearly stronger evidence, moderate (4-6). If the corpus already resolves this, low (1-3).
+   - **disagreement** (0-10): how many independent sources disagree? Proxy from the contradiction cluster size. Singletons score low (2-3); multi-source fights score high (7-10). If no contradiction graph exists, estimate from the loci analyst's `opposing_positions`.
+   - **decision_impact** (0-10): would resolving this locus change the draft's recommendation or thesis? If yes, high (8-10). If it adds nuance but doesn't change direction, moderate (4-6).
+
+   **Composite score** = importance + uncertainty + disagreement + decision_impact (max 40).
+
+   **Allocate source budgets.** Total source budget for step 5 is 40. Distribute proportionally:
+   - Loci scoring 30-40: `source_budget` up to 15 (deep dive)
+   - Loci scoring 20-29: `source_budget` up to 10 (standard)
+   - Loci scoring 10-19: `source_budget` up to 5 (shallow pass)
+   - Loci scoring <10: `source_budget` 0-3, or skip investigation entirely
+
+   It's fine if only 1-2 loci score above 20 — allocate heavily to them.
+
+5. **Write scored loci to `research/runs/<vault_tag>/loci.json`.** Schema:
+   ```json
+   {
+     "loci": [
+       {
+         "name": "...",
+         "one_line": "...",
+         "flavor": "dialectical|synthesis|technical",
+         "importance": 8,
+         "uncertainty": 7,
+         "disagreement": 6,
+         "decision_impact": 9,
+         "composite_score": 30,
+         "source_budget": 12,
+         "rationale": "..."
+       }
+     ],
+     "skip_loci": [...union from all analysts...]
+   }
+   ```
+
+6. **Decide investigator count.** Spawn ONE depth-investigator (in step 5) per locus with `source_budget > 0`, capped at 6. If only 1 locus passes scoring, spawn 1.
+
+7. **Reconsider `inference_depth` against the actual corpus.** Step 1 set it provisionally from the query alone; you have now seen what the surface web actually holds. Upgrade to `deep` when the corpus shows the load-bearing questions are underdetermined by clearly-published sources — high-uncertainty loci where the missing evidence is gray literature, filings, or unpublished figures rather than papers nobody fetched yet. Downgrade to `surface` only if step 1 chose `deep` and the corpus turned out rich and univocal. To change it:
+
+   ```bash
+   C:/Users/vikas/AppData/Roaming/uv/tools/hyperresearch/Scripts/hyperresearch.exe levers set <vault_tag> inference_depth=deep --rerender -j
+   ```
+
+   The `--rerender` refreshes the shim files so step 5's investigators inherit the new posture. If the step-1 value still fits, do nothing.
+
+**INVARIANT:** at least one `flavor: "dialectical"` locus must be present unless an analyst's `skip_loci` justifies its absence with specific evidence of a univocal corpus. No dialectical locus + no justification = re-spawn the loci-analyst with a tighter prompt.
+
+**Placeholder-breadcrumb ban:** depth investigators will fetch sources; do not hand them breadcrumb placeholders like `hyperresearch-locus-seed` — use real source note ids from the vault or omit `--suggested-by` entirely.
+
+---
+
+## Exit criterion
+
+- `research/runs/<vault_tag>/loci.json` exists with at least 1 locus (or every analyst justified skip with `skip_loci`)
+- At least one dialectical locus OR a documented justification in `skip_loci`
+- All retained loci have `source_budget` allocated
+
+---
+
+## Next step
+
+Return to the entry skill (`hyperresearch`). Invoke step 5:
+
+```
+Skill(skill: "hyperresearch-5-depth-investigation")
+```

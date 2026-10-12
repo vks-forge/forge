@@ -1,0 +1,30 @@
+[
+  {
+    "claim": "OWASP's NHI Top 10 (2025) ranks NHI1 'Improper Offboarding' as the #1 risk for non-human identities including AI agent service accounts and API keys, ahead of secret leakage (NHI2).",
+    "stance": "supports",
+    "stance_target": "offboarding/kill-switch mechanisms are the formally recognized top-priority governance gap for agent credentials, directly relevant before scaling Worker Agent populations",
+    "evidence_type": "theoretical",
+    "scope_conditions": "OWASP NHI Top 10, 2025 edition",
+    "quoted_support": "NHI1:2025 - Improper Offboarding: Improper offboarding refers to the inadequate deactivation or removal of non-human identities (NHIs) such as service accounts and access keys when they are no longer needed. Unmonitored and deprecated services may remain vulnerable, and their associated NHIs can be exploited by attackers to gain unauthorized access to sensitive systems and data.",
+    "numbers": ["NHI1"],
+    "entities": ["OWASP", "OWASP Non-Human Identities Top 10"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "owasp-non-human-identities-top-10-owasp-foundation"
+  },
+  {
+    "claim": "The NHI Top 10 ranking methodology weighs exploitability, prevalence, detectability, and impact, placing improper offboarding above secret leakage, meaning the industry consensus treats agent decommissioning as more exploitable/impactful than credential exposure.",
+    "stance": "supports",
+    "stance_target": "kill-switch/decommissioning infrastructure should be prioritized over other governance controls when scaling agent concurrency",
+    "evidence_type": "theoretical",
+    "scope_conditions": "OWASP NHI Top 10 ranking criteria, 2025",
+    "quoted_support": "This comprehensive list highlights the most critical challenges in integrating Non-Human Identities (NHIs) into the development lifecycle, ranked based on exploitability, prevalence, detectability, and impact.",
+    "numbers": [],
+    "entities": ["OWASP"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "owasp-non-human-identities-top-10-owasp-foundation"
+  }
+]

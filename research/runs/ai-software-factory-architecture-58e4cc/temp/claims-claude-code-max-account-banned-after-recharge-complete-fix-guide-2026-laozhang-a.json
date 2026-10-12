@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "Anthropic's Transparency Hub, published January 29, 2026, reports the company disabled approximately 1.45 million accounts across Claude.ai, Claude API, and Claude Code combined during July-December 2025, with only 1,700 of 52,000 filed appeals succeeding, a 3.3% overturn rate.",
+    "stance": "supports",
+    "stance_target": "scale and opacity of Anthropic's account-suspension enforcement, including against paying individually-owned subscribers",
+    "evidence_type": "statistical",
+    "scope_conditions": "Anthropic Transparency Hub, July-December 2025, published January 29 2026",
+    "quoted_support": "According to Anthropic's Transparency Hub (published January 29, 2026), the company banned 1.45 million accounts in the second half of 2025 alone, with only 1,700 successful appeals out of 52,000 filed -- a 3.3% overturn rate.",
+    "numbers": ["1.45 million", "1,700", "52,000", "3.3%"],
+    "entities": ["Anthropic"],
+    "time_period": "H2 2025",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "claude-code-max-account-banned-after-recharge-complete-fix-guide-2026-laozhang-a"
+  },
+  {
+    "claim": "Starting January 2026, Anthropic's payment events (subscription purchase/renewal) triggered deeper account-activity reviews that surfaced prior third-party-tool usage, causing individually-owned subscriptions to be suspended minutes after legitimate payment, documented across multiple GitHub issues (#5088, #9950, #12118, #24235, #32918).",
+    "stance": "supports",
+    "stance_target": "individually-owned Claude subscriptions have been suspended for automation/third-party-tool usage, with payment acting as the review trigger rather than real-time detection",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic Claude Code Max subscriptions, January-March 2026",
+    "quoted_support": "The moment they made a payment, however, the system performed a comprehensive review of their account activity history. This review surfaced the unauthorized tool usage, and the payment triggered the ban... GitHub Issue #5088 documents exactly this scenario: a user paid for Claude Code Max 5x and was immediately locked out with 'This organization has been disabled,' despite having used the account normally for months before the payment.",
+    "numbers": ["#5088", "#9950", "#12118", "#24235", "#32918"],
+    "entities": ["Anthropic", "GitHub"],
+    "time_period": "January-March 2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "claude-code-max-account-banned-after-recharge-complete-fix-guide-2026-laozhang-a"
+  },
+  {
+    "claim": "Per Anthropic's Consumer Terms of Service (effective October 8, 2025), a user whose subscription is terminated without a confirmed policy violation is entitled to a pro-rata refund of the unused portion; no refund is provided if a genuine violation is confirmed.",
+    "stance": "neutral",
+    "stance_target": "contractual remedy available to individually-owned subscribers wrongly suspended for presumed automation/ToS violations",
+    "evidence_type": "legal",
+    "scope_conditions": "Anthropic Consumer Terms of Service, effective October 8 2025",
+    "quoted_support": "Per the Consumer Terms of Service (effective October 8, 2025), if Anthropic terminates your subscription without a policy violation on your part, you are entitled to a pro-rata refund of the unused portion. If the ban is for a confirmed policy violation, no refund is provided under the Terms.",
+    "numbers": ["October 8, 2025"],
+    "entities": ["Anthropic"],
+    "time_period": "2025-2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "claude-code-max-account-banned-after-recharge-complete-fix-guide-2026-laozhang-a"
+  },
+  {
+    "claim": "Field analysis of reported bans suggests roughly 60% of payment-triggered Claude account suspensions involve some form of IP or geographic mismatch between card billing country, current IP location, account registration, and historical login patterns.",
+    "stance": "supports",
+    "stance_target": "geographic/IP consistency is the dominant signal in automated fraud-detection-driven account suspensions",
+    "evidence_type": "statistical",
+    "scope_conditions": "field reports from developer community, March 2026",
+    "quoted_support": "Field reports from the developer community (cited in articles from March 2026) suggest that roughly 60% of payment-triggered bans involve some form of IP or geographic mismatch.",
+    "numbers": ["60%"],
+    "entities": ["Anthropic"],
+    "time_period": "March 2026",
+    "region": "",
+    "confidence": "low",
+    "source_note_id": "claude-code-max-account-banned-after-recharge-complete-fix-guide-2026-laozhang-a"
+  }
+]

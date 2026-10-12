@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Having multiple LLM instances propose answers, critique each other, and debate over several rounds before converging on a final answer substantially improves factual accuracy and mathematical/strategic reasoning compared to single-agent generation.",
+    "stance": "supports",
+    "stance_target": "adversarial multi-agent review reduces hallucination and improves output quality",
+    "evidence_type": "empirical",
+    "scope_conditions": "Tested across six reasoning/factuality benchmarks; applies to black-box LLMs without fine-tuning",
+    "quoted_support": "We show that this procedure substantially improves mathematical and strategic reasoning across a range of tasks. It also improves factual accuracy, reducing the fallacies and hallucinations that contemporary models often produce.",
+    "numbers": ["six benchmarks", "two debate rounds (main experiment)", "three agents (main experiment)"],
+    "entities": ["Yilun Du", "Shuang Li", "Antonio Torralba", "Joshua B. Tenenbaum", "Igor Mordatch", "MIT", "Google Brain"],
+    "time_period": "ICML 2024 / arXiv 2023",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "improving-factuality-and-reasoning-in-language-models-through-multiagent-debate"
+  },
+  {
+    "claim": "Multiagent debate performance on arithmetic tasks improves monotonically as either the number of debating agents or the number of debate rounds increases.",
+    "stance": "supports",
+    "stance_target": "scaling adversarial review compute improves correctness",
+    "evidence_type": "empirical",
+    "scope_conditions": "arithmetic reasoning task",
+    "quoted_support": "Arithmetic performance improves as the number of underlying agents involved in debate increases... Arithmetic performance improves as the number of rounds of underlying debate increases.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2023-2024",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "improving-factuality-and-reasoning-in-language-models-through-multiagent-debate"
+  },
+  {
+    "claim": "Debate between heterogeneous models (ChatGPT and Bard) can correct an error that neither model produces correctly alone, allowing one model's strengths to compensate for another's weaknesses.",
+    "stance": "supports",
+    "stance_target": "cross-model adversarial review as a hallucination-reduction mechanism",
+    "evidence_type": "empirical",
+    "scope_conditions": "GSM8K grade-school math problem example",
+    "quoted_support": "While both models generate incorrect responses to the initial GSM8K problem, debate between the models enables them to generate the correct final answer.",
+    "numbers": [],
+    "entities": ["ChatGPT", "Bard"],
+    "time_period": "2023",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "improving-factuality-and-reasoning-in-language-models-through-multiagent-debate"
+  },
+  {
+    "claim": "Follow-on work from the same research line argues organization of multi-agent computation and complementarity of participating models matters as much as raw model scale.",
+    "stance": "supports",
+    "stance_target": "multi-agent orchestration design is a first-class lever, not just model capability",
+    "evidence_type": "theoretical",
+    "scope_conditions": "SLM-MUX framework for orchestrating small language models",
+    "quoted_support": "The main idea is to route each problem to the most useful subset of models, showing that the organization of computation—and the complementarity of the participating models—can matter as much as raw model scale.",
+    "numbers": [],
+    "entities": ["SLM-MUX"],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "improving-factuality-and-reasoning-in-language-models-through-multiagent-debate"
+  },
+  {
+    "claim": "Scaling test-time compute can be spent on verification (multiple verifiers checking different aspects of a candidate solution) rather than only on generating more candidates.",
+    "stance": "supports",
+    "stance_target": "multi-agent verification as a distinct lever from multi-agent generation",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Multi-Agent Verification follow-up paper",
+    "quoted_support": "We show that additional computation can be spent not only on generating more candidate answers, but also on verifying them. Multiple verifiers, each focused on different aspects of a solution, can be combined to evaluate candidate outputs.",
+    "numbers": [],
+    "entities": ["Multi-Agent Verification"],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "improving-factuality-and-reasoning-in-language-models-through-multiagent-debate"
+  }
+]

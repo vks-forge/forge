@@ -1,0 +1,104 @@
+{
+  "critic_type": "instruction",
+  "findings": [
+    {
+      "severity": "critical",
+      "atomic_item": "## 2. Advanced Skill Sequences (Beyond Prompting)",
+      "failure_mode": "decomposition-gap",
+      "location": "H2 at position 2: '## 2. Advanced Skill Sequences (SOPs to Agent Skills)'",
+      "issue": "The query file's pillar heading is '## 2. Advanced Skill Sequences (Beyond Prompting)', but prompt-decomposition.json rewrote it to '(SOPs to Agent Skills)', and the draft copied the rewritten version. The draft matches the decomposition exactly but not the user's heading. Lesser related case: pillar 5's '(Crucial)' marker was dropped. Expected per query: ['1. Zero-Hallucination & Quality Control (Adversarial Validation)', '2. Advanced Skill Sequences (Beyond Prompting)', '3. Reverse Engineering & Codebase Mastery', '4. Open Source Architecture Reading & Context Ingestion', '5. Triggers, Infrastructure, and Continuous Operation (Crucial)', '6. Cost & Resource Optimization']. Draft: same except #2 reads '(SOPs to Agent Skills)' and #5 has no '(Crucial)'.",
+      "requires_orchestrator_restructure": true,
+      "recommendation": "Rename H2 #2 to '## 2. Advanced Skill Sequences (Beyond Prompting)'. The 2.1 subsection already carries the SOP-to-Skills framing. Optionally restore '(Crucial)' on H2 #5 to mirror the user's emphasis. Both are one-line heading renames with no body changes."
+    },
+    {
+      "severity": "major",
+      "atomic_item": "mimicking a 5,000-person software company where different AI agents act as specialized departments",
+      "failure_mode": "under-covered",
+      "location": "Executive summary / Section 5.2 'The Director is mostly a workflow engine' / Section 7 Mermaid diagram",
+      "issue": "The objective's organizing metaphor (agents as specialized departments of a 5,000-person company) has no department map. Departments appear only scattered: Review, Security, SRE, Triage, and Implementation in the 5.1 trigger table, plus the Architecture Librarian, Test Author, and Director. The diagram shows planes, not departments. The '5,000' scale gets one sentence in 8.4. The decomposition kept this only as a scope_condition, not an atomic item, which is how it slipped through.",
+      "requires_orchestrator_restructure": false,
+      "recommendation": "Add a compact 'Department roster' table in Section 5.2 (or right after the Section 7 diagram). Columns: department, agent role(s), triggers, pool (read-only/mutating), ledger ceiling, human counterpart. Build it from roles the draft already defines: Triage, Implementation, Test Author, Adversarial Review/Critic, Arbiter, Architecture Librarian, Reverse Engineering, Security Sweep, SRE, Cost Governor, Oversight/Coordination Monitor. Add one sentence explaining how '5,000-person company' scale maps to the two-pool, telemetry-gated fan-out model. Optionally label the Mermaid EXEC subgraph nodes with department names."
+    },
+    {
+      "severity": "major",
+      "atomic_item": "Decompilation & Analysis: Strategies for agents to deep-scan network calls, decompile unknown structures, and automatically map out dependencies.",
+      "failure_mode": "under-covered",
+      "location": "Section 3.1, paragraph starting 'Decompilation is an audited absence.'",
+      "issue": "The prompt asks for decompilation strategies. The draft offers no tooling or workflow and defers decompilation to a Phase 4 'research spike', even though the vault has usable evidence: MITRE's Janus-LLM ships binary-to-source translation via Ghidra decompilation integration [[github-janus-llmjanus-llm-leveraging-llms-for-modernization-through-intelligent]], and GTIG documented actors pairing Ghidra with the Gemini-CLI agent to reverse-engineer WinRAR SFX components into Markdown context for LLMs [[gtig-ai-threat-tracker-from-prompting-to-autonomy-the-evolution-of-adversarial-a]]. Ghidra appears nowhere in the draft or the tech stack.",
+      "requires_orchestrator_restructure": false,
+      "recommendation": "Keep the 'no measured accuracy study' caveat, but add a concrete strategy paragraph: Ghidra headless decompilation, then LLM annotation with recovered types persisted to durable files (the SentinelLABS pattern already cited), then cross-checking against the dynamic egress-derived map. Cite Janus-LLM's Ghidra integration and the GTIG Ghidra+Gemini-CLI case as existence proofs. Add Ghidra (headless) to the 'Code intelligence and security' row in Section 9."
+    },
+    {
+      "severity": "major",
+      "atomic_item": "Recommended Tech Stack (Models, Orchestration Frameworks, Cloud Providers)",
+      "failure_mode": "vague-recommendation",
+      "location": "Section 9 table, row 'Cloud and messaging' — 'Any hyperscaler via BYOC'",
+      "issue": "The prompt names Cloud Providers as one of three required stack components. The draft's answer is 'Any hyperscaler via BYOC', which is not a recommendation, even though the vault cites AWS (DynamoDB in Sierra's Agency, the AWS Agentic AI Lens), GKE (idle-GPU case), Azure Foundry, and Google Workbench.",
+      "requires_orchestrator_restructure": false,
+      "recommendation": "Commit to a primary cloud with a short rationale drawn from cited evidence. For example: AWS (EKS + Karpenter + DynamoDB + Redis Streams, matching Sierra's documented Agency control plane and the AWS Agentic AI Lens cost-governance guidance), with GKE + KEDA as the documented alternative, and E2B/Northflank BYOC deployed into that same account. State the selection criteria in one sentence (BYOC support, microVM runtime availability, existing reference architecture)."
+    },
+    {
+      "severity": "major",
+      "atomic_item": "each operating in their own isolated, scalable cloud VM sandbox to prevent CPU starvation and system conflicts",
+      "failure_mode": "under-covered",
+      "location": "Section 5.2 'Each Worker runs in an isolated microVM or hardened container' and Section 9 'Sandboxes' row ('Agency-pattern Kubernetes runners')",
+      "issue": "The prompt specifies one VM per Worker. The draft treats 'microVM or hardened container' as interchangeable and recommends Kubernetes-pod runners without naming the VM-grade runtime that makes them meet the prompt's VM requirement. The vault has the specifics: Northflank uses Kata Containers and gVisor microVM isolation [[ai-sandbox-pricing-comparison-2026-blog-northflank]], and Anthropic reports 'The hypervisor, seccomp, and gVisor across our products have been dependable. Our custom allowlist proxy was the piece that failed' [[how-we-contain-claude-across-products-anthropic]].",
+      "requires_orchestrator_restructure": false,
+      "recommendation": "In 5.2 and the Section 9 Sandboxes row, specify the isolation runtime: Firecracker (E2B) or Kata/gVisor RuntimeClass on Kubernetes runners. Add a sentence on the decision rule: VM-grade isolation for the mutating pool and anything running untrusted legacy binaries; gVisor acceptable for the read-only pool. Cite the Anthropic finding that vendor hypervisor/gVisor layers held while the custom proxy failed. This also strengthens the egress-proxy claims elsewhere."
+    },
+    {
+      "severity": "major",
+      "atomic_item": "Example Pseudo-code for an Adversarial Agentic Loop",
+      "failure_mode": "under-covered",
+      "location": "Section 10.1 pseudo-code — 'gen, critic = model_policy.pair_for(task.family)' and 'if critic:'",
+      "issue": "The prompt asks for a loop where a different frontier model critiques the generator's output. The pseudo-code makes the critic optional ('if critic:'), so a run can complete with no adversarial review at all. That contradicts Section 1.3 (the critic's mandate is mutation and guard deletion) and Section 1.4. The code also never shows the cross-vendor path the user named.",
+      "requires_orchestrator_restructure": false,
+      "recommendation": "Remove the 'if critic:' guard so a critic always runs (fresh-context same-vendor at minimum). Make pair_for's contract explicit in a comment, e.g. '# returns (opus-class, gpt-5.x-class) where the leaderboard shows cross-vendor wins, e.g. ADR/spec/doc families; else (gen, fresh-context gen)'. Optionally add a one-line 'critic.vendor != gen.vendor or critic.context == \"fresh\"' assertion. Small edits only."
+    },
+    {
+      "severity": "major",
+      "atomic_item": "Recommended Tech Stack (Models, Orchestration Frameworks, Cloud Providers)",
+      "failure_mode": "under-covered",
+      "location": "Section 9 table row 'Director orchestration' and the paragraph after it beginning 'Anthropic advises using frameworks only if'",
+      "issue": "Orchestration Frameworks is a named stack component, but the draft gives one row and a single paragraph that dismisses AutoGen and CrewAI with a one-quote rationale. It does not compare the cited options (LangGraph, AutoGen/AG2, CrewAI, OpenAI Agents SDK, Claude Agent SDK) on the axes its own thesis depends on: state persistence and checkpointing, multi-vendor model routing, inspectability, and human-gate insertion.",
+      "requires_orchestrator_restructure": false,
+      "recommendation": "Add a 4-5 row comparison table under Section 9 (framework x checkpoint/durable state, multi-vendor routing, inspectability, ledger/human-gate insertion, verdict for this factory). Use the already-cited sources [[langgraph-vs-autogen-vs-crewai-an-agent-framework-comparison]], [[openai-agents-sdk-vs-langgraph-vs-autogen-building-production-agents-openhelm]], and [[openai-agents-sdk-vs-langgraph-vs-autogen-vs-crewai-composio]]. Keep the existing 'thin custom Director' verdict."
+    },
+    {
+      "severity": "major",
+      "atomic_item": "readability-structural: DEEP inference — audited absence asserted without stating what was searched",
+      "failure_mode": "under-covered",
+      "location": "Section 1.4 'No product called \"Jav AI\" appears in the evidence base'; Section 1.6 'No source publishes a scoring formula'; Section 3.1 'No measured study of LLM-agent decompilation accuracy exists in the evidence base'; Section 5.3 'No cited architecture ships this monitor'; Section 8.2 Phase 4 'which no public deployment has yet reported'",
+      "issue": "Under the deep-inference directive, each audited absence must state what was searched. These five absences rest only on 'the evidence base', with no search scope (queries, source classes, date window). The decompilation one is also contradicted by the Ghidra-related vault notes.",
+      "requires_orchestrator_restructure": false,
+      "recommendation": "Append a short scope clause to each absence, e.g. '(searched: vendor docs, arXiv, and engineering blogs for 'Jav AI', 'JAV', and LLM-judge decision products, 2024-2026)'. Or add a single 'Audited absences and search scope' note before Section 10.3 listing all five with their search scope. Narrow the decompilation absence to 'no measured accuracy study', since tooling evidence exists."
+    },
+    {
+      "severity": "minor",
+      "atomic_item": "Explore how the system can analyze a developer's agent-trace history to probabilistically predict and chain multiple skills together autonomously based on the specific scenario.",
+      "failure_mode": "under-covered",
+      "location": "Section 2.3, paragraph starting 'Prediction. Agent traces use small alphabets'",
+      "issue": "The prompt asks about one developer's trace history and scenario-specific chaining. The draft models only a pooled corpus FSM (~700 traces per Skill category). It does not cover per-developer history: cold start for a single developer, conditioning on scenario or task family, or blending personal and fleet priors.",
+      "requires_orchestrator_restructure": false,
+      "recommendation": "Add 2-3 sentences: condition the FSM on scenario (trigger class / task family) and on developer or team, falling back to the fleet FSM until that developer's slice reaches the convergence threshold. Mark this as Inference derived from [[automata-from-agent-traces]]'s convergence bound and cross-model fitness result. Do not fabricate a per-developer threshold beyond what that bound supports."
+    },
+    {
+      "severity": "minor",
+      "atomic_item": "readability-structural: comparison tables",
+      "failure_mode": "missing-comparison-table",
+      "location": "Section 6.3, paragraph starting 'Sandbox pricing varies about 5x at identical specification'",
+      "issue": "Six sandbox options (Northflank managed, Northflank BYOC, E2B, Daytona, Modal, Fly.io Sprites, plus Upstash/Blaxel billing models) are compared in prose across monthly cost at 200 concurrent, billing model (active-CPU vs keep-alive), and BYOC availability.",
+      "requires_orchestrator_restructure": false,
+      "recommendation": "Convert to a table: provider x monthly cost at 200 concurrent x billing model x isolation runtime x BYOC. Use only figures already cited from [[ai-sandbox-pricing-comparison-2026-blog-northflank]], [[pricing-e2b-the-ai-agent-cloud]], [[a-software-factory-needs-one-sandbox-per-agent-upstash-blog]], and [[ai-agent-development-costs-why-sandbox-billing-breaks-blaxel]]."
+    },
+    {
+      "severity": "minor",
+      "atomic_item": "readability-structural: undefined technical terms",
+      "failure_mode": "missing-definitions",
+      "location": "Sections 5.1/6.3 'KEDA', Section 9 'Karpenter', Section 7 diagram 'CoT monitors' and 'JIT keys', Section 1.2 'F1', Section 1.6 'ROC-AUC', Section 6.1 'TTL'",
+      "issue": "Most acronyms are defined inline (SAST, AST, MCP, SCA, IaC, DAST, FSM, IAM, BYOC), but KEDA, Karpenter, CoT, JIT keys, F1, ROC-AUC/AUROC, and TTL are used without definition.",
+      "requires_orchestrator_restructure": false,
+      "recommendation": "Add brief parentheticals on first use: KEDA (Kubernetes event-driven autoscaler), Karpenter (node autoscaler), CoT (chain-of-thought), JIT keys (just-in-time short-lived credentials), F1 (harmonic mean of precision and recall), ROC-AUC (ranking-quality score, 0.5 = chance), TTL (cache time-to-live)."
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "claim": "MCP (Model Context Protocol) is an open-source standard, analogized to a 'USB-C port for AI applications,' providing a standardized way to connect AI applications/agents to external data sources, tools, and workflows.",
+    "stance": "supports",
+    "stance_target": "context ingestion and tool-access standardization architecture (Pillar 4/5)",
+    "evidence_type": "theoretical",
+    "scope_conditions": "official MCP documentation, 2026",
+    "quoted_support": "Think of MCP like a USB-C port for AI applications. Just as USB-C provides a standardized way to connect electronic devices, MCP provides a standardized way to connect AI applications to external systems.",
+    "numbers": [],
+    "entities": ["MCP", "Model Context Protocol", "Claude", "ChatGPT", "VS Code", "Cursor"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "what-is-the-model-context-protocol-mcp-model-context-protocol"
+  },
+  {
+    "claim": "MCP is supported across a broad ecosystem of AI assistants and development tools including Claude, ChatGPT, Visual Studio Code, Cursor, and MCPJam, enabling a 'build once, integrate everywhere' pattern.",
+    "stance": "supports",
+    "stance_target": "cross-vendor tool integration standard for director/worker agent systems (Pillar 5)",
+    "evidence_type": "theoretical",
+    "scope_conditions": "official MCP documentation, 2026",
+    "quoted_support": "MCP is an open protocol supported across a wide range of clients and servers. AI assistants like Claude and ChatGPT, development tools like Visual Studio Code, Cursor, MCPJam, and many others all support MCP -- making it easy to build once and integrate everywhere.",
+    "numbers": [],
+    "entities": ["MCP", "Claude", "ChatGPT", "Visual Studio Code", "Cursor", "MCPJam"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "what-is-the-model-context-protocol-mcp-model-context-protocol"
+  }
+]

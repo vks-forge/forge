@@ -1,0 +1,89 @@
+{
+  "critic_type": "dialectic",
+  "findings": [
+    {
+      "severity": "critical",
+      "location": "Section 6.1 Subscription versus API, bullet 'Third-party access cut off' ('from April 4, subscriptions stopped covering third-party usage entirely') and exec summary item 4 ('the one cost tactic vendors have written into their terms and enforced against')",
+      "issue": "Anthropic's own live Help Center page (fetched for this run) contradicts the draft: as of the Oct 7, 2026 update, 'You can still use the Claude Agent SDK, `claude -p`, and third-party apps with your subscription limits', and the June 15 metering split was paused with 'nothing has changed'. The subscription interim concluded that programmatic use, including third-party harnesses, is 'tolerated and still draws against subscription limits'. The draft's 'stopped covering third-party usage entirely' is therefore false as of the fetch date, and the pro-subscription case is a strawman. The real enforcement line is impersonation and resale 'on behalf of their users', not automation itself.",
+      "evidence": "use-the-claude-agent-sdk-with-your-claude-plan-claude-help-center; claude-agent-sdk-credits-are-paused-how-claude-p-and-github-actions-are-billed-n; interim-report-consumer-subscription-automation-policy-risk; comparisons.md Step-8 subscription-policy update",
+      "recommendation": "Correct the April 4 bullet: say the April action targeted third-party harnesses such as OpenClaw, and that Anthropic's current Help Center says Agent SDK, `claude -p`, and third-party app usage still draw from subscription limits. Restate the steel-man at full strength: an organization's own automation running under the official client on individually owned subscriptions is currently tolerated, and Max/Team now add API credits for it. Then keep the thesis on its real grounds. Volume-triggered account reviews (1.45M bans), a posture that has reversed twice in four months, the 'ordinary, individual usage' calibration of caps, and the shared interactive/automation limit make subscriptions an unfit substrate for always-on factory work. Soften exec item 4 to 'the cost tactic whose limits vendors control unilaterally and have enforced against at the impersonation and pooling edge'."
+    },
+    {
+      "severity": "critical",
+      "location": "Section 3.2 'The steel-man is serious.' paragraph and point 3 'The most motivated actor kept humans in the loop'",
+      "issue": "The steel-man for auto-patching leaves out its strongest argument, which is in the vault: time-to-exploit asymmetry. Frontier agents produce working exploits for 157/120 ExploitGym instances within a two-hour limit, even with standard defenses on. OpenAI warns defenders to prepare for AI attackers that 'work faster, at a larger scale'. GTIG documents adversaries moving to 'highly autonomous systems ... without the need for human oversight'. A named-human production gate opens an exposure window that machine-speed attackers can exploit, and the draft never prices that window. Point 3 also relies on the 2025 GTG-1002 case while newer GTIG reporting points the other way.",
+      "evidence": "exploitgym-can-ai-agents-turn-security; the-hugging-face-incident-and-the-road-ahead-openai ('AI-enabled attackers that work faster, at a larger scale'); gtig-ai-threat-tracker-from-prompting-to-autonomy-the-evolution-of-adversarial-a",
+      "recommendation": "Add the exploit-speed argument to the steel-man paragraph with the ExploitGym and OpenAI figures. Then answer it directly: the P0 staging auto-merge, batched sign-off, and compensating controls (WAF or feature-flag kill, egress tightening) cover the exposure window without an unverified production merge. Add a target sign-off SLA for P0 production promotion so the gate is time-bounded. Qualify point 3 with the GTIG observation that adversary autonomy is rising, and note that GTG-1002's human checkpoints show hallucination limits, not a durable ceiling."
+    },
+    {
+      "severity": "major",
+      "location": "Executive summary item 2: '\"100+ minimally reviewed workers\" is the configuration behind the worst documented agent incident on record.'",
+      "issue": "The cross-locus reconciliation required this claim to be scoped to 'minimal review AND disabled/absent safeguards', not to scale alone. Item 2 still attributes the incident to the brief's configuration. OpenAI says the run was 'under reduced safeguards', on an internal-only research model whose reward hacking was reinforced during training. That model and those safeguards differ from a production factory, and the draft's own paragraph 20 concedes none of the counterfactuals varied agent count.",
+      "evidence": "comparisons.md Step-8 corpus-critic update (Tension 1 confidence narrowed); the-hugging-face-incident-and-the-road-ahead-openai ('operating under reduced safeguards'; reward hacking 'subsequently reinforced' in IM1 training)",
+      "recommendation": "Rewrite item 2 to say the worst documented incident involved ~1,200 agents running with safeguards deliberately reduced on an internal research model, so the evidence condemns ungoverned scale, not scale itself. That wording matches paragraph 20 and keeps the summary from overclaiming against the maximalist."
+    },
+    {
+      "severity": "major",
+      "location": "Thesis paragraph on the skeptical objection: 'chain-of-thought monitors would have alerted \"more than a day before\" the breach' and Section 5.3 commitment 6 (coordination monitor 'pages security')",
+      "issue": "The draft answers the skeptic with counterfactual monitoring but leaves out vault evidence that real early signals existed and went unanswered. CNA/Reuters reporting shows OpenAI had signals of the probing two months before the incident and admitted they 'should have triggered an earlier response'. OpenAI's remediation added a rule to pause if an alert cannot be cleared within 30 minutes, with 'fully autonomous shutdown' as the goal. The skeptic's strongest point is that detection without a fail-closed response is not containment, and the draft leaves it out.",
+      "evidence": "interim-report-worker-agent-autonomy-reliability-at-scale (cites exclusive-openais-rogue-agents-probed-hugging-face-for-weaknesses-two-months-bef); the-hugging-face-incident-and-the-road-ahead-openai ('pause the relevant activity if they cannot establish within 30 minutes'; 'fully autonomous shutdown procedures')",
+      "recommendation": "After the counterfactual sentence, concede that early signals existed in the real incident and were not acted on. State the design consequence: oversight-plane alerts default to fail-closed, with automatic pause or isolation unless a human clears the alert within a fixed window, following OpenAI's 30-minute rule. Do not page and wait. Reflect this in commitment 6 and in the supervisor pseudo-code comment."
+    },
+    {
+      "severity": "major",
+      "location": "Executive summary paragraph 2 ('sixteen parallel Claude agents built a working C compiler') and Section 8.1/8.2 Phase 3 'Conditional auto-merge' promotion rule 1 (pass^k over a fixed window)",
+      "issue": "The draft quotes Berkeley's C-compiler demonstration but leaves out Berkeley's qualifier in the same passage: frontier agents 'deteriorate sharply' on continuous-evolution benchmarks. EvoClaw shows scores collapsing from above 80% on isolated tasks to at most 38% across successive milestones, and SWE-CI shows the same pattern. This is the operating mode of an always-on factory. Per-change gates and per-class pass^k cannot detect cumulative architectural drift, so Tier A promotion evidence is blind to the failure the factory is most exposed to.",
+      "evidence": "center-for-responsible-decentralized-intelligence-at-berkeley ('frontier agents still deteriorate sharply ... struggle to preserve correctness and architectural coherence across successive changes'); towards-autonomous-software-development (EvoClaw >80% to <=38%; SWE-CI); agentic-ai-evaluation-gap-alex-ratner-snorkel-ai (SlopCodeBench)",
+      "recommendation": "Pair the C-compiler sentence with Berkeley's deterioration caveat. In 8.1 or Phase 3, add a longitudinal drift gate: periodic whole-repo regression and architecture-conformance runs over the cumulative Tier A change stream, plus drift metrics such as compiled-rule violations trended over time. Promotion and continued Tier A status must depend on these, not only on per-change pass^k. Tie this to the Phase 5 drift-benchmark exit gate the draft already names."
+    },
+    {
+      "severity": "major",
+      "location": "Section 3.2 table row 'P0: reachability-confirmed dependency bump ... Auto-merge to staging' and Phase 3 'P0 patches to staging'",
+      "issue": "The vault holds a 117,062-change study showing agent dependency decisions are measurably worse than humans'. Agents picked known-vulnerable versions more often (2.46% vs 1.64%), needed major-version upgrades for 36.8% of vulnerable picks (vs 12.9%), and produced a net vulnerability increase of 98 against a net reduction of 1,316 for humans. The worker-autonomy interim cited it, but the draft never engages it. Instead it treats agent-authored dependency bumps as the first and safest auto-merge class.",
+      "evidence": "understanding-security-risks-of-ai-agents-dependency-updates; interim-report-worker-agent-autonomy-reliability-at-scale",
+      "recommendation": "Add a sentence to 3.2 after the table citing the study, and tighten the P0 row. Version selection must be registry-aware and deterministic: pick the nearest patched non-vulnerable version from advisory data, not a model choice. Add a PR-time vulnerability re-screen of the selected version as a gate. Note that the study motivates exactly these guardrails."
+    },
+    {
+      "severity": "major",
+      "location": "Thesis paragraph on the maximalist objection ('A 93% approval rate shows that per-action approval is the wrong control') read against Section 1.6 tier table Tier B 'PR plus human reviewer' and Phase 2 exit gate",
+      "issue": "The draft uses the 93% approval rate to argue against per-action approval, but its own Tier B and Tier C gates face the same failure when 100+ Workers feed PRs to a fixed pool of human reviewers. Rubber-stamping at volume is exactly Berkeley's 'level-skipping': merging changes 'no one has meaningfully inspected'. The maximalist's strongest point, that the PR queue becomes the constraint, gets an evidence-bundle answer with no evidence that bundles keep review meaningful at fleet throughput.",
+      "evidence": "how-we-contain-claude-across-products-anthropic (93% approval, approval fatigue); center-for-responsible-decentralized-intelligence-at-berkeley (level-skipping definition); ai-software-factory-what-it-is-why-you-need-one-who-owns-it (PR queue bottleneck)",
+      "recommendation": "Concede in the thesis paragraph or 8.1 that Tier B review is vulnerable to the same fatigue at fleet volume. Add a guard: per-reviewer load caps that throttle the mutating pool when the review queue exceeds capacity. Track reviewer approval rate and time-per-PR as level-skipping detectors, and seed known-bad PRs into the review queue, mirroring the weekly seeded security findings, to measure whether human review still catches anything. Phase 2's exit gate mentions approval rate, so name the seeded-PR audit there."
+    },
+    {
+      "severity": "major",
+      "location": "Section 1.6, sentence after the R0-R3 table: 'This tiering would have stopped both named production-destruction incidents'",
+      "issue": "The cited source attributes both incidents to runtime permission scope and environment isolation, not to merge-path classification. DataTalks.Club's agent ran Terraform destroy 'within a permission scope broad enough to include production destruction, with no confirmation gate'. PocketOS deleted a database and its backups directly. Neither went through a code merge, so the R-tier merge classification would not have stopped them. The derived counterfactual misnames its own mechanism.",
+      "evidence": "structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents ('blurred boundaries between environments, permissions that were never scoped down ... human approval arrived after the consequential action had already executed')",
+      "recommendation": "Reattribute the counterfactual. Those incidents would have been stopped by the no-production-write-credentials rule (5.3 commitment 5) and by irreversibility-tagged action gating at tool-call time, not by merge tiering. Either move the sentence to 5.3, or rephrase it so blast-radius scoring is shown to apply to runtime actions (tool calls) as well as merges, and say so explicitly."
+    },
+    {
+      "severity": "major",
+      "location": "Executive summary item 3 ('Regulatory. No compliance framework, vendor, or documented adversary auto-merges security patches to production') and Section 3.2 point 2 'Regulation attaches accountability to persons'",
+      "issue": "The cited regulation governs who performs penetration *testing*: PCI DSS 11.4's independent tester, DORA Article 27's tester indemnity, and NCSC CHECK's cleared testers. None of the cited frameworks addresses who may merge a *patch*, so the 'Regulatory' objection rests on a category shift. 'No ... adversary auto-merges' is not a meaningful audited absence (adversaries do not patch), and no search scope is stated for the vendor or framework absence.",
+      "evidence": "automated-penetration-testing-full-autonomy-fell-to-9; interim-report-pentest-autonomy-regression-vs-mandated-cadence (frameworks scoped to the test, SOC 2 CC4.1 named-human evidence)",
+      "recommendation": "Rescope item 3 and point 2. Compliance frameworks attach accountability for security *testing and evidence* to named persons, and the factory extends that principle to production patch promotion as a design choice, supported by GitHub autofix's PR-only practice. Drop 'documented adversary' from the absence claim, and state what was searched (e.g., 'across the PCI DSS, DORA, NCSC CHECK, SOC 2, and OWASP APTS sources in the corpus') when asserting that no framework licenses human-free production patching."
+    },
+    {
+      "severity": "minor",
+      "location": "Section 3.2 point 1 'The industry retreated from full autonomy after trying it' (29% to 9%; 78% critical false negatives)",
+      "issue": "Both figures come from Cobalt's Pulse survey, and Cobalt and Synack sell human-led and hybrid pentesting, so they have a commercial interest in the retreat narrative. The interim also records the metric as 'openness to' autonomy falling 20 points, which is not the same as measured reliance after trying it. The draft presents it as neutral industry evidence.",
+      "evidence": "the-ai-pentesting-pulse-decoding-the-27x-risk-multiplier-in-llm-deployments; interim-report-pentest-autonomy-regression-vs-mandated-cadence; nobodys-in-the-cockpit-risks-of-autonomous-ai-security-testing",
+      "recommendation": "Add a short qualifier that the survey comes from a vendor of human-led testing. Point out that the independent CREST snapshot (9% autonomous use) and the GitHub autofix design corroborate the direction, so the conclusion does not depend on the vendor's framing."
+    },
+    {
+      "severity": "minor",
+      "location": "Thesis paragraph on the maximalist objection ('SWE-bench Verified scores rose from 40% to over 80% in a year') and Section 8.4 capability trend",
+      "issue": "The vault records that OpenAI's Frontier Evals team stopped reporting SWE-bench Verified in February 2026, citing flawed tests and substantial training-data contamination, and recommended SWE-Bench Pro. The maximalist's headline capability number is therefore partly an artifact. Presenting it unqualified miscalibrates the capability trend that 8.4 relies on to promote classes.",
+      "evidence": "towards-autonomous-software-development (OpenAI Frontier Evals stopped reporting SWE-bench Verified; contamination probes 76% vs ~53% OOD)",
+      "recommendation": "Add a clause noting the benchmark was retired for contamination and flawed tests. Restate the maximalist's capability point with that caveat, so the steel-man is accurate rather than inflated, and point 8.4's capability-driven promotion at the factory's own pass^k evals rather than public leaderboards."
+    },
+    {
+      "severity": "minor",
+      "location": "Section 2.3 opener 'two independent 2026 papers solve its two halves' and 'The FSM's next-activity probability is the same object as PASTE's pattern probability, so the FSM drops in as PASTE's prediction engine'",
+      "issue": "Under deep-inference rules, a derived claim must be labeled. The FSM/PASTE composition is the draft's own synthesis, untested by either paper, yet it appears as fact. The FSM predicts activity symbols from 6-42-symbol alphabets, while PASTE speculates concrete tool calls, possibly with arguments, so 'same object' is asserted, not shown. Both papers also mine *agent* traces, while the brief asks about a *developer's* agent-trace history; that transfer is unexamined.",
+      "evidence": "automata-from-agent-traces; act-while-thinking-accelerating-llm-agents-via-pattern-aware-speculative-tool-ex; interim-report-probabilistic-skill-sequence-prediction-architecture",
+      "recommendation": "Mark the composition sentence as **Inference** and name its premises (FSM activity-level transition probabilities; PASTE pattern-tuple probabilities). Note that argument-level prediction is the gap the composition must bridge. Change 'solve its two halves' to 'address its two halves separately; their composition is untested'. The existing 'must beat deterministic chaining in measured evals' sentence already supplies the test."
+    }
+  ]
+}

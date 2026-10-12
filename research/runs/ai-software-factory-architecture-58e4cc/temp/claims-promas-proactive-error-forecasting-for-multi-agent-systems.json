@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "Modeling an agent's reasoning trajectory as a first-order Markov process over a latent semantic manifold, with a 'Causal Delta' capturing the semantic displacement introduced by each turn, lets a system forecast failure risk proactively, before the triggering action completes, rather than only auditing it after the fact.",
+    "stance": "supports",
+    "stance_target": "probabilistic sequence modeling of agent-trace history enables proactive (not just retrospective) prediction of agent behavior",
+    "evidence_type": "theoretical",
+    "scope_conditions": "multi-agent LLM reasoning systems",
+    "quoted_support": "We introduce PROMAS, a proactive framework for pre-analysis error prediction. By characterizing logical transitions as causal displacements, PROMAS monitors the 'velocity' of semantic shifts within a latent manifold.",
+    "numbers": [],
+    "entities": ["PROMAS", "Causal Delta", "Vector Markov Space"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "promas-proactive-error-forecasting-for-multi-agent-systems"
+  },
+  {
+    "claim": "A proactive, zero-look-ahead Markov-transition failure predictor (PROMAS) achieves 22.97% step-level failure-localization accuracy on the Who&When benchmark while processing only 26.79% of the dialogue, beating the reactive online baseline MASC (21.62% accuracy, 42.19% of dialogue processed) and more than doubling the full-context All-at-Once baseline (10.37%).",
+    "stance": "supports",
+    "stance_target": "probabilistic sequence models over agent-trace history can match or exceed reactive/full-context baselines while using substantially less information and no look-ahead",
+    "evidence_type": "empirical",
+    "scope_conditions": "Who&When benchmark (127 annotated multi-agent trajectories)",
+    "quoted_support": "PROMAS achieves a total Step-level accuracy of 22.97%, demonstrating a substantial advantage over standard offline LLM-based heuristics, more than doubling the performance of All-at-Once (10.37%)... PROMAS surpasses the reactive baseline MASC (21.62%).",
+    "numbers": ["22.97%", "26.79%", "21.62%", "42.19%", "10.37%"],
+    "entities": ["PROMAS", "MASC", "Who&When", "All-at-Once"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "promas-proactive-error-forecasting-for-multi-agent-systems"
+  },
+  {
+    "claim": "Proactive, causality-constrained (no look-ahead) failure prediction necessarily trades accuracy for latency: full-context offline methods like AgenTracer (31.89% step accuracy) and SBFL-based Famas (29.35%) outperform the real-time PROMAS (22.97%) because they can leverage future information unavailable at prediction time.",
+    "stance": "refutes",
+    "stance_target": "real-time probabilistic prediction of agent behavior can match the accuracy of full-context offline post-hoc analysis",
+    "evidence_type": "empirical",
+    "scope_conditions": "Who&When benchmark",
+    "quoted_support": "supervised offline methods like AgenTracer (31.89% Step-level) naturally outperform online methods by leveraging 'look-ahead' information and full context visibility... PROMAS establishes itself as a viable solution for real-time error interception, trading a controlled margin of accuracy for the crucial ability to act before a task concludes.",
+    "numbers": ["31.89%", "29.35%", "22.97%"],
+    "entities": ["AgenTracer", "Famas", "PROMAS", "Who&When"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "promas-proactive-error-forecasting-for-multi-agent-systems"
+  },
+  {
+    "claim": "Agent-attribution accuracy from trace-history-derived probabilistic models is much higher on algorithmically-generated failure patterns (46.53%) than on hand-crafted, human-designed failure patterns (27.66%), indicating that human-introduced errors are more semantically subtle and context-dependent, which is a load-bearing limitation for any production skill/failure predictor trained mainly on synthetic trace data.",
+    "stance": "neutral",
+    "stance_target": "limitation of probabilistic trace-based prediction: generalization gap between synthetic and human-crafted failure patterns",
+    "evidence_type": "empirical",
+    "scope_conditions": "Who&When benchmark, algorithm-generated vs. hand-crafted log splits",
+    "quoted_support": "on Algorithm-Generated logs, our method reaches a high accuracy of 46.53%, whereas performance on Hand-Crafted logs is lower (27.66%). This suggests that human-designed errors tend to be more semantically subtle and context-dependent.",
+    "numbers": ["46.53%", "27.66%", "40.54%", "23.71%"],
+    "entities": ["PROMAS", "Who&When"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "medium",
+    "source_note_id": "promas-proactive-error-forecasting-for-multi-agent-systems"
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "RAGTruth is a corpus of nearly 18,000 naturally generated LLM responses under standard RAG setups, manually annotated at both the case and word/span level for hallucination type and intensity.",
+    "stance": "supports",
+    "stance_target": "pillar 1: rigid, granular eval dataset for RAG-grounded hallucination detection",
+    "evidence_type": "empirical",
+    "scope_conditions": "RAG hallucination benchmark dataset, multiple domains and tasks",
+    "quoted_support": "RAGTruth comprises nearly 18,000 naturally generated responses from diverse LLMs using RAG. These responses have undergone meticulous manual annotations at both the individual case and word levels, incorporating evaluations of hallucination intensity.",
+    "numbers": ["~18,000 responses"],
+    "entities": ["NewsBreak", "University of Illinois Urbana-Champaign"],
+    "time_period": "2024 (original), cited as a standing benchmark in 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "ragtruth-a-hallucination-corpus-for-developing-trustworthy"
+  },
+  {
+    "claim": "Fine-tuning a relatively small LLM on the RAGTruth dataset achieves hallucination-detection performance competitive with prompt-based detection using state-of-the-art LLMs such as GPT-4, and the fine-tuned detector can be used to actively mitigate hallucination in downstream LLM responses.",
+    "stance": "supports",
+    "stance_target": "pillar 6: cost optimization — small fine-tuned detector models can match frontier-model-as-judge accuracy for hallucination detection at presumably lower cost/latency",
+    "evidence_type": "empirical",
+    "scope_conditions": "RAGTruth-finetuned small LLM vs. GPT-4 prompt-based detection comparison",
+    "quoted_support": "We show that using a high-quality dataset such as RAGTruth, it is possible to finetune a relatively small LLM and achieve a competitive hallucination detection performance when compared to the existing prompt-based approaches using state-of-the-art LLMs such as GPT-4. Furthermore, the fine-tuned model can effectively mitigate hallucination in LLM responses.",
+    "numbers": [],
+    "entities": ["GPT-4"],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "ragtruth-a-hallucination-corpus-for-developing-trustworthy"
+  },
+  {
+    "claim": "Despite RAG integration, LLMs may still present unsupported or contradictory claims relative to the retrieved content, motivating a benchmark specifically for word-level hallucination within RAG frameworks rather than assuming retrieval alone solves hallucination.",
+    "stance": "refutes",
+    "stance_target": "assumption that RAG grounding alone eliminates hallucination",
+    "evidence_type": "theoretical",
+    "scope_conditions": "RAG-based LLM applications",
+    "quoted_support": "Despite the integration of RAG, LLMs may still present unsupported or contradictory claims to the retrieved contents.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "ragtruth-a-hallucination-corpus-for-developing-trustworthy"
+  }
+]

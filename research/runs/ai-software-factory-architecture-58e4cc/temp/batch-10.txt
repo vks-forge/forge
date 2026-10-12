@@ -1,0 +1,10 @@
+https://www.marktechpost.com/2026/08/09/top-llm-observability-and-evaluation-platforms-in-2026-langfuse-langsmith-braintrust-arize-and-more-compared/
+https://cycode.com/blog/ai-sast-tools/
+https://www.port.io/blog/ai-software-factory
+https://rdi.berkeley.edu/blog/auto-software-dev/
+https://repository.kaust.edu.sa/server/api/core/bitstreams/314fe81f-cfa1-4d93-8262-c1cde761c754/content
+https://futureagi.com/blog/taming-hallucination-beast-strategies-reliable-llms/
+https://www.ibm.com/think/topics/agent-swarm
+https://www.quora.com/Why-do-AI-agents-still-struggle-with-long-running-tasks-despite-having-powerful-LLMs-and-what-architectural-improvements-are-needed-to-make-them-truly-autonomous
+https://www.getclaudeskills.com/skills/adversarial-code-review-basicmachines-co
+https://www.confident-ai.com/blog/why-llm-as-a-judge-is-the-best-llm-evaluation-method

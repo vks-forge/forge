@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "Factory uses 'anchored iterative summarization' — merging newly compressed conversation history into a persistent summary of task intent, file changes, decisions, and next steps — as its context-compression technique for long-running coding agents.",
+    "stance": "supports",
+    "stance_target": "feasibility of continuous-operation agent context management via anchored summarization",
+    "evidence_type": "empirical",
+    "scope_conditions": "Factory's Droids / Factory 2.0 platform, as of 2026",
+    "quoted_support": "Its engineering work includes anchored iterative summarization: merging newly compressed conversation history into persistent summaries of task intent, file changes, decisions and next steps.",
+    "numbers": [],
+    "entities": ["Factory", "Droids", "anchored iterative summarization"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "factory-ai-software-engineering-agents-ai-engineer"
+  },
+  {
+    "claim": "Factory developed probes testing whether agents retain enough context to resume work, rather than measuring summary similarity alone, as a quality check for context compression.",
+    "stance": "supports",
+    "stance_target": "task-resumability as the correct evaluation criterion for context-compression techniques (vs. surface summary similarity)",
+    "evidence_type": "empirical",
+    "scope_conditions": "Factory engineering practice, 2026",
+    "quoted_support": "Factory also developed probes that test whether agents retain enough context to resume work, rather than measuring summary similarity alone.",
+    "numbers": [],
+    "entities": ["Factory"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "factory-ai-software-engineering-agents-ai-engineer"
+  },
+  {
+    "claim": "As of April 2026, Factory reported hundreds of thousands of developers using Droids daily, including at NVIDIA, Adobe, EY, Palo Alto Networks, and Adyen, and raised a $150 million Series C led by Khosla Ventures at a $1.5 billion valuation.",
+    "stance": "supports",
+    "stance_target": "commercial/production viability of autonomous multi-agent software-engineering platforms at enterprise scale",
+    "evidence_type": "statistical",
+    "scope_conditions": "April 2026, enterprise customers named",
+    "quoted_support": "In April 2026, Factory reported hundreds of thousands of developers using Droids daily, including at NVIDIA, Adobe, EY, Palo Alto Networks and Adyen. That April, it announced a $150 million Series C led by Khosla Ventures at a stated $1.5 billion valuation.",
+    "numbers": ["$150 million", "$1.5 billion", "hundreds of thousands"],
+    "entities": ["Factory", "NVIDIA", "Adobe", "EY", "Palo Alto Networks", "Adyen", "Khosla Ventures"],
+    "time_period": "April 2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "factory-ai-software-engineering-agents-ai-engineer"
+  },
+  {
+    "claim": "Factory's 'Missions' feature coordinates multiple agents on extended tasks, with 'Droid Computers' providing persistent execution and 'Factory Router' selecting models per coding task.",
+    "stance": "neutral",
+    "stance_target": "architecture pattern for multi-agent coordination with persistent execution and model routing",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Factory 2.0 platform, 2026",
+    "quoted_support": "Missions coordinate multiple agents on extended tasks, Droid Computers provide persistent execution, and Factory Desktop brings agents to developers' machines. Factory Router selects models for coding tasks, supporting a platform designed to work across models.",
+    "numbers": [],
+    "entities": ["Factory", "Missions", "Droid Computers", "Factory Router", "Factory Desktop"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "factory-ai-software-engineering-agents-ai-engineer"
+  }
+]

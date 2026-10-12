@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "AI incident-management platforms use a multi-agent architecture that spawns specialized agents (metrics agent, logs agent, infrastructure agent, code agent) to pursue different root-cause hypotheses in parallel rather than investigating sequentially down a single path.",
+    "stance": "supports",
+    "stance_target": "Director/Worker-style parallel-hypothesis multi-agent architectures are a proven pattern for autonomous operational investigation, directly analogous to a 'software factory' department structure",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Resolve.ai vendor description of multi-agent architecture, 2026",
+    "quoted_support": "Rather than following a single investigation path sequentially, the platform spawns specialized agents that pursue different theories simultaneously. A metrics agent explores dashboards for anomalies, a logs agent iterates on queries to surface relevant events, an infrastructure agent inspects topology changes, and a code agent examines recent changes.",
+    "numbers": [],
+    "entities": ["Resolve AI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "ai-incident-management-tools-complete-evaluation-guide"
+  },
+  {
+    "claim": "Zscaler (50 million users, 160 data centers, 150,000+ monthly alerts) reported 75% faster root-cause identification and 30% fewer engineers required per incident after deploying Resolve AI, with one DNS resolution issue identified two hours before a human incident bridge was even created.",
+    "stance": "supports",
+    "stance_target": "autonomous multi-agent investigation systems materially reduce incident response time and headcount at enterprise scale",
+    "evidence_type": "empirical",
+    "scope_conditions": "vendor-sourced customer case study (Resolve AI / Zscaler), 2026 -- treat as vendor-reported, not independently audited",
+    "quoted_support": "Zscaler, managing 50 million users across 160 data centers with 150,000+ alerts monthly, achieved 75% faster root cause identification and reduced the number of engineers required per incident by 30%. Resolve AI helped identified a DNS resolution issue two hours before their human incident bridge was created.",
+    "numbers": ["50 million users", "160 data centers", "150,000+ alerts/month", "75%", "30%", "2 hours"],
+    "entities": ["Zscaler", "Resolve AI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "ai-incident-management-tools-complete-evaluation-guide"
+  },
+  {
+    "claim": "Coinbase reduced investigation time by 72% (root-cause identification typically under 10 minutes) using Resolve AI, running 250+ investigation sessions weekly from over 100 engineers across its microservices platform serving 120 million users.",
+    "stance": "supports",
+    "stance_target": "multi-agent incident investigation scales to large, high-traffic production environments with measurable time savings",
+    "evidence_type": "empirical",
+    "scope_conditions": "vendor-sourced customer case study (Resolve AI / Coinbase), 2026 -- vendor-reported, not independently audited",
+    "quoted_support": "Coinbase, operating thousands of microservices for 120 million users, reduced investigation time by 72% with root cause identification typically under 10 minutes. Resolve AI handles 250+ investigation sessions weekly from over 100 engineers.",
+    "numbers": ["120 million users", "72%", "under 10 minutes", "250+ sessions/week", "100+ engineers"],
+    "entities": ["Coinbase", "Resolve AI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "ai-incident-management-tools-complete-evaluation-guide"
+  },
+  {
+    "claim": "DoorDash's ads platform (over $1 billion in annualized revenue) saw up to 87% reduction in time-to-root-cause, with investigations dropping from roughly 40 minutes of engineer time to under one minute using AI assistance.",
+    "stance": "supports",
+    "stance_target": "multi-agent incident investigation delivers order-of-magnitude time reductions on revenue-critical production systems",
+    "evidence_type": "empirical",
+    "scope_conditions": "vendor-sourced customer case study (Resolve AI / DoorDash), 2026 -- vendor-reported, not independently audited",
+    "quoted_support": "DoorDash's ads platform, generating over $1 billion in annualized revenue, saw up to 87% reduction in time to root cause. Investigations that previously required 40 minutes of engineer time completed in under one minute with AI assistance.",
+    "numbers": ["$1 billion", "87%", "40 minutes to under 1 minute"],
+    "entities": ["DoorDash", "Resolve AI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "ai-incident-management-tools-complete-evaluation-guide"
+  },
+  {
+    "claim": "AI incident-management platforms incorporate a learning loop where engineer corrections to the agent's reasoning become permanent knowledge that improves future investigations, distinguishing them from static AIOps anomaly-detection tools.",
+    "stance": "supports",
+    "stance_target": "continuous operation requires feedback-driven learning mechanisms, not just static rule execution, to improve over time",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Resolve.ai platform description, 2026",
+    "quoted_support": "When an engineer corrects the system's reasoning—\"no, check the Redis cluster first, this pattern usually means cache invalidation\"—that correction becomes permanent knowledge.",
+    "numbers": [],
+    "entities": ["Resolve AI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "ai-incident-management-tools-complete-evaluation-guide"
+  }
+]

@@ -1,0 +1,98 @@
+{
+  "loci": [
+    {
+      "name": "worker-agent-autonomy-reliability-at-scale",
+      "flavor": "dialectical",
+      "one_line": "Can a Director spinning up 100+ Worker Agents with minimal human review be production-reliable today, or does current evidence require heavy governance scaffolding (permission scoping, kill-switches, escalation triggers) before that concurrency target is safe?",
+      "importance": 9, "uncertainty": 8, "disagreement": 9, "decision_impact": 10,
+      "composite_score": 36, "source_budget": 13,
+      "rationale": "Independently surfaced by both analysts as the single highest-relevance locus, pre-validated against contradiction-graph cluster 'autonomy-reliability-fight'. Directly determines whether the whitepaper's core '5,000-person software company' claim is credible as-is or must be reframed around graduated autonomy with explicit governance. Corpus gestures at the resolution but never cashes out the concrete permission-scoping/kill-switch/escalation design.",
+      "corpus_evidence": ["agency-secure-scalable-sandboxes-for-agents-sierra", "center-for-responsible-decentralized-intelligence-at-berkeley", "structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents", "leveraging-llms-for-legacy-code-modernization-challenges-and-opportunities-for-l", "the-code-review-bug-hunt-is-dead-heres-what-developers-get-wrong-the-new-stack"],
+      "suggested_searches": ["graduated autonomy levels permission scoping AI coding agent fleet governance", "Berkeley RDI autonomy levels framework multi-agent software engineering", "named engineering postmortem AI coding agent production incident 2026 blast radius"]
+    },
+    {
+      "name": "pentest-autonomy-regression-vs-mandated-cadence",
+      "flavor": "dialectical",
+      "one_line": "Industry data shows full autonomous-pentest reliance falling 29%→9% YoY with no compliance framework accepting a fully human-free AI pentest — does the query's ask for a ~90-min autonomous vuln-sweep-with-auto-patch loop match where the field is converging, or does it require a named human-sign-off gate the query didn't ask for?",
+      "importance": 8, "uncertainty": 7, "disagreement": 8, "decision_impact": 9,
+      "composite_score": 32, "source_budget": 11,
+      "rationale": "The vendors selling autonomous pentest agents are the same sources whose own survey data and risk commentary complicate the full-autonomy claim. The corpus names the regression but never designs around it (what auto-patches vs. what only auto-flags). Directly load-bearing for Pillar 3's literal 90-minute sweep design.",
+      "corpus_evidence": ["automated-penetration-testing-full-autonomy-fell-to-9", "nobodys-in-the-cockpit-risks-of-autonomous-ai-security-testing", "automated-penetration-testing-ai-pentest-agent-simbian", "how-are-ai-agents-used-in-penetration-testing-synack"],
+      "suggested_searches": ["OWASP Autonomous Penetration Testing Standard APTS 2026 conformance tiers", "safe auto-patch vs auto-flag threshold AI vulnerability remediation production case study"]
+    },
+    {
+      "name": "probabilistic-skill-sequence-prediction-architecture",
+      "flavor": "convergent",
+      "one_line": "What is the concrete architecture for mining an agent's trace history to probabilistically predict and auto-chain the next Skill/tool call in production, given two unreconciled corpus papers (FSM trace-automata vs. speculative pattern-tuple execution) that point different directions?",
+      "importance": 8, "uncertainty": 6, "disagreement": 4, "decision_impact": 7,
+      "composite_score": 25, "source_budget": 6,
+      "rationale": "Maps directly to Pillar 2's explicit 'probabilistic sequences' ask, flagged thin after wave 1 and only gap-filled late. The corpus has both halves (trace-mining FSM, speculative-execution scheduler) but never bridges them into one actionable architecture — this determines whether the report's Skill-chaining pseudocode is grounded or invented.",
+      "corpus_evidence": ["automata-from-agent-traces", "act-while-thinking-accelerating-llm-agents-via-pattern-aware-speculative-tool-ex", "github-yintonghuoawesome-agent-trajectory-a-collection-of-agent-trajectory-analy"],
+      "suggested_searches": ["FSM automata agent trace skill prediction vs speculative tool execution combined architecture", "Agent Workflow Memory AWM baseline comparison skill chaining"]
+    },
+    {
+      "name": "agent-skills-context-overhead-magnitude",
+      "flavor": "dialectical",
+      "one_line": "Do Agent Skills with progressive disclosure reduce context overhead and token spend as vendor docs claim, or does the corpus's one empirical study show real, budget-relevant overhead that complicates the cost-optimization pillar?",
+      "importance": 6, "uncertainty": 6, "disagreement": 6, "decision_impact": 6,
+      "composite_score": 24, "source_budget": 5,
+      "rationale": "Pre-validated from contradiction-graph cluster 'skills-overhead-fight'. Both sides agree Skills are net-useful; they disagree on magnitude (negligible vs. material), which Pillar 6's cost model needs pinned down rather than inherited from vendor marketing.",
+      "corpus_evidence": ["agent-skills-claude-platform-docs", "agent-skillsskillsperformance-optimizationskillmd-at-main-addyosmaniagent-skills", "agent-skill-evolution-how-revisions-affect-coding-agents"],
+      "suggested_searches": ["Agent Skill token overhead benchmark progressive disclosure measured cost"]
+    },
+    {
+      "name": "consumer-subscription-automation-policy-risk",
+      "flavor": "convergent",
+      "one_line": "If heavy agentic workloads route through flat-rate consumer subscriptions via automation harnesses to beat per-token API costs, what are the vendor ToS, rate-limiting, and account-suspension risks at software-factory scale — an audited absence in the corpus.",
+      "importance": 7, "uncertainty": 7, "disagreement": 2, "decision_impact": 7,
+      "composite_score": 23, "source_budget": 4,
+      "rationale": "The corpus thoroughly answers the dollar-economics half of Pillar 6's subscription-vs-API ask but is silent on the compliance/viability half (ToS, abuse detection, suspension risk) despite deep-inference search. The report's subscription-automation recommendation is incomplete without flagging this risk explicitly.",
+      "corpus_evidence": ["claude-subscription-vs-api-which-is-cheaper-in-2026-real-math-teamorouter", "usage-based-ai-pricing-vs-flat-subscriptions-what-the-github-copilot-shift-means", "ai-pricing-models-compared-seats-tokens-outcomes-zuora"],
+      "suggested_searches": ["Anthropic Claude Max acceptable use policy automation CLI rate limit enforcement", "OpenAI ChatGPT Plus Pro API terms of service automation ban account suspension"]
+    },
+    {
+      "name": "agent-self-termination-and-idle-cost-economics",
+      "flavor": "convergent",
+      "one_line": "Beyond infra-level VM idle-shutdown (which vendors are explicit is NOT an agent-logic decision), what decision rule should an agent itself use to conclude 'clean scan, no issues, self-archive' — distinguished from a silently-failed scan — and what does idle-vs-always-on actually cost at 100-agent fleet scale?",
+      "importance": 7, "uncertainty": 6, "disagreement": 2, "decision_impact": 7,
+      "composite_score": 22, "source_budget": 2,
+      "rationale": "Merges two analysts' overlapping convergent loci (cost economics + self-termination decision logic) — both evidenced by the same corpus cluster (Google ADK idle-shutdown, Microsoft Foundry session management, Blaxel sandbox-billing critique). Maps to Pillar 6's explicit 'quietly self-terminate' ask, flagged thin after wave 1. Mostly a synthesis task over already-fetched sources rather than a fetch-heavy one, hence the smaller budget.",
+      "corpus_evidence": ["idle-shutdown-gemini-enterprise-agent-platform-google-cloud-documentation", "ai-agent-development-costs-why-sandbox-billing-breaks-blaxel", "build-long-running-ai-agents-that-pause-resume-and-never-lose-context-with-adk-g", "manage-hosted-agent-sessions-microsoft-foundry-microsoft-learn"],
+      "suggested_searches": ["agent self-archive clean health check no issues found self-terminate design pattern"]
+    }
+  ],
+  "skip_loci": [
+    {
+      "slug": "sandbox-provider-benchmark-comparison",
+      "reason": "E2B, Sierra Agency, Microsoft Foundry, and Blaxel notes already give qualitative architecture comparisons without a quantified head-to-head gesture to chase. Cost-relevant portion folded into agent-self-termination-and-idle-cost-economics."
+    },
+    {
+      "slug": "rogue-agent-incident-forensics",
+      "reason": "OpenAI-Hugging-Face rogue agent breach is a strong case study but its evidentiary role is already core to worker-agent-autonomy-reliability-at-scale; a separate locus would duplicate rather than add a new question."
+    },
+    {
+      "slug": "adr-enforcement-mechanism",
+      "reason": "Corpus sources describe ADRs as something agents read, not a concrete enforcement mechanism — a real but diffuse gap, weaker than the six retained candidates; Pillar 4 coverage is otherwise adequate (2 sources)."
+    },
+    {
+      "slug": "code-blast-radius-identification-tooling",
+      "reason": "Adequate (3 sources) and triangulated on a concrete method (dependency graph + reachability analysis). Not a gesture-without-resolution gap."
+    },
+    {
+      "slug": "reverse-engineering-decompilation-dependency-mapping",
+      "reason": "Well-covered (6+) with concrete named tools (Janus-LLM, codeflow-map, dynamics-consulting). Deepening here would be garnish given other thinner areas."
+    },
+    {
+      "slug": "orchestration-framework-feature-comparison-langgraph-autogen-crewai",
+      "reason": "Four redundant, convergent comparison articles already in corpus — a tech-stack-table input the draft step can synthesize directly without further fetching."
+    },
+    {
+      "slug": "docs-folder-adr-ingestion-rule-enforcement",
+      "reason": "Adequate (2 sources) with a complete-enough scan-and-enforce mechanism described; thin in count but not gesturing at an unresolved question."
+    },
+    {
+      "slug": "agent-authored-dependency-supply-chain-risk",
+      "reason": "Composite score 20 — lowest-ranked of 7 candidates after dedup; dropped to stay within the 6-locus cap. The underlying Purdue empirical study (understanding-security-risks-of-ai-agents-dependency-updates) remains available in the corpus and will be cited directly in the draft under Pillar 1/3 without a dedicated depth investigator."
+    }
+  ]
+}

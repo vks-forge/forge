@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "The most stable production Claude Agent SDK architectures follow a rule of orchestrator-plus-single-responsibility-subagents: the orchestrator holds narrow 'read and route' permissions for global planning and delegation, while each subagent has one clearly defined job.",
+    "stance": "supports",
+    "stance_target": "a director/worker (orchestrator/subagent) architecture with single-responsibility subagents is the recommended pattern for AI software factory agent design",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Claude Agent SDK production deployments, 2025",
+    "quoted_support": "In production, the most stable agents follow a simple rule: give each subagent one job, and let an orchestrator coordinate. Make the orchestrator responsible for global planning, delegation, and state. Keep its tool permissions narrow - mostly \"read and route.\"",
+    "numbers": [],
+    "entities": ["Claude Agent SDK", "Anthropic"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "mastering-claude-agent-sdk-best-practices-for-developing-ai-agents-2025"
+  },
+  {
+    "claim": "Safe agent permissioning should start from a deny-all baseline, allowlisting only the specific commands and directories a subagent needs, requiring explicit confirmation for sensitive actions (git push, infrastructure changes), and blocking dangerous commands (rm -rf, sudo) outright.",
+    "stance": "supports",
+    "stance_target": "least-privilege permission scoping is required quality-control infrastructure for autonomous coding agents, directly addressing the blast-radius pillar",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Claude Agent SDK and MCP-exposed tool permissioning, 2025",
+    "quoted_support": "Start from deny-all; allowlist only the commands and directories a subagent needs. Require explicit confirmations for sensitive actions (e.g., git push, infrastructure changes) and block dangerous commands (rm -rf, sudo).",
+    "numbers": [],
+    "entities": ["Claude Agent SDK"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "mastering-claude-agent-sdk-best-practices-for-developing-ai-agents-2025"
+  },
+  {
+    "claim": "Agents should never have API keys or other secrets accessible in their visible context by default; secrets should be passed as short-lived, env-injected, aggressively rotated tokens, because a jailbroken agent could trivially exfiltrate directly accessible credentials.",
+    "stance": "supports",
+    "stance_target": "secrets management architecture for autonomous coding agents (echoes the same principle Sierra implemented in Agency's LLM proxy design)",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Claude Agent SDK production deployments, 2025",
+    "quoted_support": "Keep secrets out of agent-visible contexts; pass short-lived tokens via secure env injection and rotate aggressively.",
+    "numbers": [],
+    "entities": ["Claude Agent SDK"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "mastering-claude-agent-sdk-best-practices-for-developing-ai-agents-2025"
+  },
+  {
+    "claim": "A recommended autonomous coding loop is test-first: a TestWriter subagent writes failing tests first and confirms they fail, then an Implementer subagent writes code to pass those tests without being permitted to edit the tests themselves, followed by a dedicated code-review subagent enforcing linting, complexity bounds, and security checks.",
+    "stance": "supports",
+    "stance_target": "test-first, role-separated subagent pipelines are the recommended probabilistic-sequence pattern for zero-hallucination code generation",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Claude Agent SDK multi-subagent coding workflow, 2025",
+    "quoted_support": "Ask the testing subagent to write tests first; run them and confirm failures; then instruct the implementer subagent to make the tests pass without changing the tests. Keep a dedicated code-review subagent that enforces linting, complexity bounds, and security checks.",
+    "numbers": [],
+    "entities": ["Claude Agent SDK"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "mastering-claude-agent-sdk-best-practices-for-developing-ai-agents-2025"
+  },
+  {
+    "claim": "Production agent observability should capture OpenTelemetry traces for prompts, tool invocations, and token usage with correlation IDs across subagents, with hooks version-controlled and validated pre-commit, and deployments gated behind feature flags with anomaly-triggered rollback.",
+    "stance": "supports",
+    "stance_target": "continuous operation and quality control for AI software factories require full-stack observability and automated rollback triggers, not just logging",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Claude Agent SDK production deployments, 2025",
+    "quoted_support": "Capture OpenTelemetry traces for prompts, tool invocations, token usage, and orchestration steps. Include correlation IDs across subagents. ... Gate deployments with automated tests for agent outputs; stage rollouts behind feature flags; set rollback triggers on anomaly detection.",
+    "numbers": [],
+    "entities": ["Claude Agent SDK", "OpenTelemetry"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "mastering-claude-agent-sdk-best-practices-for-developing-ai-agents-2025"
+  }
+]

@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "A GitHub Copilot developer's bill was projected to jump from $28/month flat to approximately $700/month (a 25x increase) under Copilot's shift to usage-based 'premium request' billing for heavy use of expensive models.",
+    "stance": "supports",
+    "stance_target": "flat AI subscription pricing is structurally unsustainable for heavy/agentic usage patterns, forcing a shift to usage-based billing",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "GitHub Copilot pricing shift, circa early 2025, widely cited case",
+    "quoted_support": "Under GitHub Copilot's new usage-based pricing model, their typical monthly usage would have cost them around $700. Their current flat subscription? $28. That's not a rounding error. That's a 25x difference.",
+    "numbers": ["$28", "$700", "25x"],
+    "entities": ["GitHub Copilot"],
+    "time_period": "early 2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "usage-based-ai-pricing-vs-flat-subscriptions-what-the-github-copilot-shift-means"
+  },
+  {
+    "claim": "Under GitHub Copilot's hybrid model, Free tier users get 50 premium requests/month, Pro subscribers ($10/month) get 300 premium requests then pay $0.04 per additional request, with Business/Enterprise tiers having larger allocations plus overage.",
+    "stance": "neutral",
+    "stance_target": "structure of hybrid flat-plus-metered AI pricing models",
+    "evidence_type": "empirical",
+    "scope_conditions": "GitHub Copilot pricing tiers, circa 2025",
+    "quoted_support": "Pro subscribers ($10/month) get 300 premium requests, then pay $0.04 per additional request",
+    "numbers": ["50 premium requests", "$10/month", "300 premium requests", "$0.04 per request"],
+    "entities": ["GitHub Copilot"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "usage-based-ai-pricing-vs-flat-subscriptions-what-the-github-copilot-shift-means"
+  },
+  {
+    "claim": "Agentic workflows can consume orders of magnitude more tokens per task than single-turn Q&A because a single agent run may involve dozens of LLM calls, web searches, file reads, and code executions, making flat pricing for agentic AI 'almost impossible to sustain.'",
+    "stance": "supports",
+    "stance_target": "autonomous multi-step agent workloads structurally require usage-based rather than flat billing",
+    "evidence_type": "theoretical",
+    "scope_conditions": "general agentic AI cost structure discussion, 2025",
+    "quoted_support": "Flat pricing for agentic AI is almost impossible to sustain. Usage-based billing isn't just financially rational — for autonomous agents, it's essentially required.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "usage-based-ai-pricing-vs-flat-subscriptions-what-the-github-copilot-shift-means"
+  },
+  {
+    "claim": "A rough 2025 per-1M-token cost comparison shows up to a 40-100x gap between the cheapest and most expensive models for the same task (e.g., Gemini 1.5 Flash ~$0.075 input vs Claude Sonnet 3.5 ~$3 input per 1M tokens), making model selection a direct cost-management decision under usage-based pricing.",
+    "stance": "supports",
+    "stance_target": "model routing (assigning cheap models to simple sub-tasks and expensive models only to complex sub-tasks) is a required cost-optimization practice for AI software factories",
+    "evidence_type": "statistical",
+    "scope_conditions": "approximate 2025 model pricing comparison across OpenAI, Anthropic, Google",
+    "quoted_support": "The difference between using the cheapest and most expensive models for the same task can be 40–100x. For high-volume workflows, that's the difference between a profitable product and an unsustainable one.",
+    "numbers": ["40-100x", "GPT-4o ~$2.50/$10", "GPT-4o-mini ~$0.15/$0.60", "Claude Sonnet 3.5 ~$3/$15", "Gemini 1.5 Flash ~$0.075/$0.30"],
+    "entities": ["OpenAI", "Anthropic", "Google", "GitHub Copilot"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "usage-based-ai-pricing-vs-flat-subscriptions-what-the-github-copilot-shift-means"
+  },
+  {
+    "claim": "Setting hard spend limits on API keys used by non-production workloads is a recommended guardrail to catch runaway agent loops or misconfigured agents before they generate unexpectedly large bills.",
+    "stance": "supports",
+    "stance_target": "cost and resource optimization for autonomous agent infrastructure requires hard spend caps as a safety mechanism, not just monitoring",
+    "evidence_type": "theoretical",
+    "scope_conditions": "recommended practice for teams building on usage-based AI pricing, 2025",
+    "quoted_support": "Setting a hard monthly cap on API keys used by non-production workloads catches runaway loops and misconfigured agents before they generate expensive bills.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "usage-based-ai-pricing-vs-flat-subscriptions-what-the-github-copilot-shift-means"
+  }
+]

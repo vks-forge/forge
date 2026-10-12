@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Finding bugs purely by examining a changeset during code review is not generally possible and requires luck; the real function of code review is to identify code that will be hard to maintain.",
+    "stance": "refutes",
+    "stance_target": "relying on code review (human or AI) as the primary bug-catching mechanism in a software factory QC pipeline",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "general software engineering practice, stated 2026",
+    "quoted_support": "anyone who depends on code review to find bugs is living in a fool's paradise... Finding bugs, just from examining a change set, is extremely difficult and requires a certain amount of luck.",
+    "numbers": [],
+    "entities": ["Mark Dominus"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "the-code-review-bug-hunt-is-dead-heres-what-developers-get-wrong-the-new-stack"
+  },
+  {
+    "claim": "A time-boxed review protocol (e.g. 'look at this for two hours, note what you don't understand, note where you stopped') gives reviewers a well-defined deliverable and signals when a change set is too large/complex and should be split.",
+    "stance": "supports",
+    "stance_target": "rigid evals / structured review SOPs for AI agent skill sequences",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "proposed practice, not empirically validated at scale",
+    "quoted_support": "Look at this for two hours, write a note about anything you don't understand, and if you don't get all the way through, make a note about where you stopped.",
+    "numbers": ["two hours"],
+    "entities": ["Mark Dominus"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "the-code-review-bug-hunt-is-dead-heres-what-developers-get-wrong-the-new-stack"
+  },
+  {
+    "claim": "Human review of diffs cannot detect runtime-state bugs like race conditions or values going negative under load; those require tests against real inputs, not review.",
+    "stance": "supports",
+    "stance_target": "separating automated correctness testing from maintainability-focused review in the factory's blast-radius containment design",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "general, high-load e-commerce engineering context",
+    "quoted_support": "A human skimming a diff cannot see a race condition or a discount that goes negative under load. Review is for code you will hate maintaining later; tests are for code that is broken now.",
+    "numbers": [],
+    "entities": ["Mikhail Golikov"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "the-code-review-bug-hunt-is-dead-heres-what-developers-get-wrong-the-new-stack"
+  },
+  {
+    "claim": "As agentic coding tools proliferate, the engineering review role is shifting from inspecting code line-by-line to reviewing AI-generated reviews of code, and ultimately to validating architecture, intent, and business logic -- a shift that may itself eventually be automated.",
+    "stance": "supports",
+    "stance_target": "the software factory's director/worker agent hierarchy where human oversight moves up a level of abstraction",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "forward-looking prediction, 2026",
+    "quoted_support": "The role of the engineer continues to move further away from the actual code and toward validating architecture, intent and business logic. In the future, even that may be automated.",
+    "numbers": [],
+    "entities": ["Judah Taub", "Hetz Ventures"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "the-code-review-bug-hunt-is-dead-heres-what-developers-get-wrong-the-new-stack"
+  },
+  {
+    "claim": "Code review catches style, architecture, readability, and maintainability; tests catch bugs; production catches everything else -- best engineering organizations build automated correctness verification rather than relying on a human spotting an edge case in a pull request.",
+    "stance": "supports",
+    "stance_target": "layered QC architecture (automated test gates before any human/AI review) for an autonomous software factory",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "general software engineering practice",
+    "quoted_support": "Code review catches style, architecture, readability and maintainability. Tests catch bugs. Production catches everything else. The best engineering organizations don't rely on another developer spotting a subtle edge case buried in hundreds of lines of code.",
+    "numbers": [],
+    "entities": ["Judah Taub"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "the-code-review-bug-hunt-is-dead-heres-what-developers-get-wrong-the-new-stack"
+  }
+]

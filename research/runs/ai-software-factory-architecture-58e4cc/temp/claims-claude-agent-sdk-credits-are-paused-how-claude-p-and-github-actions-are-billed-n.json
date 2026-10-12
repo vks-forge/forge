@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "As of September 25, 2026 -- over three months after the paused June 15, 2026 effective date -- Anthropic has still not given any new effective date or revised terms for separating Agent SDK/claude -p usage from subscription pools; Agent SDK, claude -p, and third-party app usage continue drawing from subscription usage limits.",
+    "stance": "refutes",
+    "stance_target": "the Agent SDK billing split is active or imminent Anthropic policy as of late 2026",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic Claude subscriptions, as of September 25 2026",
+    "quoted_support": "The top of Anthropic's help article carries a June 15 update stating 'For now, nothing has changed': Agent SDK, claude -p, and third-party app usage still draw from your subscription's usage limits, and the previously announced monthly credit isn't available.",
+    "numbers": ["September 25, 2026"],
+    "entities": ["Anthropic"],
+    "time_period": "September 2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "claude-agent-sdk-credits-are-paused-how-claude-p-and-github-actions-are-billed-n"
+  },
+  {
+    "claim": "Under the still-active (non-split) policy, heavy automation and interactive Claude Code usage share the same subscription usage limits, meaning heavy background automation on a given day makes interactive sessions more likely to hit the usage cap.",
+    "stance": "supports",
+    "stance_target": "flat-rate subscriptions pooling automated and interactive usage create resource contention that heavy automated workloads can exhaust",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic Claude subscriptions, current (paused) policy state, 2026",
+    "quoted_support": "Put the other way round: while the change is paused, automation and interactive use share the same usage limits. It is still the case that heavy automation on a given day makes your interactive Claude Code sessions more likely to hit the usage limit.",
+    "numbers": [],
+    "entities": ["Anthropic", "Claude Code"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "claude-agent-sdk-credits-are-paused-how-claude-p-and-github-actions-are-billed-n"
+  },
+  {
+    "claim": "The original (paused) Agent SDK credit plan would have granted credit per individual user with no pooling or sharing across a team, no rollover of unused credit, and required a one-time opt-in claim.",
+    "stance": "supports",
+    "stance_target": "vendor-proposed automation billing structures are designed around individually-owned, non-pooled accounts rather than team-shared resources",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic's paused Agent SDK credit proposal, announced May 2026",
+    "quoted_support": "Granted per user (no pooling or sharing across a team); No rollover (unused credit disappears at the monthly refresh); A one-time opt-in (claim) was required.",
+    "numbers": [],
+    "entities": ["Anthropic"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "claude-agent-sdk-credits-are-paused-how-claude-p-and-github-actions-are-billed-n"
+  },
+  {
+    "claim": "Anthropic's official June 15 pause update named only three usage types (Agent SDK, claude -p, third-party apps) as unaffected, implying the change was also never applied to Claude Code GitHub Actions even though GitHub Actions was part of the original scope.",
+    "stance": "neutral",
+    "stance_target": "precision of which automated surfaces the paused policy covers",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic Help Center wording, 2026",
+    "quoted_support": "The official update names three usage types (Agent SDK, claude -p, and third-party apps), but because it says 'nothing has changed,' the change has not been applied to GitHub Actions either, which was part of the original plan.",
+    "numbers": [],
+    "entities": ["Anthropic", "GitHub Actions"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "claude-agent-sdk-credits-are-paused-how-claude-p-and-github-actions-are-billed-n"
+  },
+  {
+    "claim": "Community tool ccusage aggregates local Claude Code session logs (stored at ~/.claude/projects/ in JSONL format) to back-calculate monthly token consumption and dollar-equivalent cost by task type, enabling operators to measure automation cost even while no formal metering policy is in effect.",
+    "stance": "neutral",
+    "stance_target": "practical methods for measuring heavy agentic workload cost under flat-rate subscriptions",
+    "evidence_type": "empirical",
+    "scope_conditions": "Claude Code local usage logging, 2026",
+    "quoted_support": "Claude Code saves session logs locally (under ~/.claude/projects/) in JSONL format. Using a community-built CLI tool that aggregates these (such as ccusage, distributed on npm) lets you list daily and per-model token consumption with dollar conversions.",
+    "numbers": [],
+    "entities": ["ccusage", "Claude Code"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "claude-agent-sdk-credits-are-paused-how-claude-p-and-github-actions-are-billed-n"
+  }
+]

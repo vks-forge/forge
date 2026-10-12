@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "Anthropic's enforcement against harnesses spoofing the Claude Code client manifested as a specific, documented server-side credential rejection message across multiple third-party tools simultaneously: 'This credential is only authorized for use with Claude Code and cannot be used for other API requests.'",
+    "stance": "supports",
+    "stance_target": "Anthropic has concrete, documented enforcement mechanisms against subscription-token spoofing by third-party automation harnesses",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic Claude Pro/Max subscription OAuth tokens, OpenClaw/OpenCode/Roo Code harnesses, around February 2026",
+    "quoted_support": "They wake up, open their Telegram bot, send 'summarise my inbox and clean my tasks', and instead of the usual stream of actions they see a silent failure, then logs that say 'This credential is only authorized for use with Claude Code and cannot be used for other API requests'.",
+    "numbers": ["February 20, 2026"],
+    "entities": ["Anthropic", "OpenClaw", "OpenCode", "Roo Code"],
+    "time_period": "February 2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "the-end-of-the-claude-subscription-hack"
+  },
+  {
+    "claim": "Anthropic's countermeasure against subscription-token spoofing consisted of three technical mechanisms: token scope/client binding (tokens only work when the caller is verified as the genuine Claude Code client), telemetry gating (official tools emit extra debugging/safety telemetry that harnesses cannot replicate), and dedicated abuse/misuse pattern detection.",
+    "stance": "supports",
+    "stance_target": "specific technical mechanisms vendors use to distinguish genuine official-client subscription usage from automated harness impersonation",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Anthropic Claude Code, 2026",
+    "quoted_support": "Claude Pro or Max OAuth tokens are now scoped so they only work when Anthropic can verify the caller is the real Claude Code client, not a harness replaying its headers... Official tools like Claude Code send extra telemetry that Anthropic uses for debugging, rate limiting, and safety; third party harnesses either do not send this or fake it, which creates blind spots Anthropic says it will no longer accept.",
+    "numbers": [],
+    "entities": ["Anthropic", "Claude Code"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "the-end-of-the-claude-subscription-hack"
+  },
+  {
+    "claim": "Prior to the crackdown, OpenClaw users on a fixed Claude Pro/Max subscription could burn token volume Hacker News commenters estimated would cost $1,000 or more on a straight metered API plan, via harnesses spoofing the official Claude Code client.",
+    "stance": "supports",
+    "stance_target": "flat-rate consumer subscriptions, when exploited via client-spoofing, created a severe cost subsidy for heavy automated agentic workloads",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "OpenClaw + Claude Pro/Max subscription arbitrage, prior to February 2026 crackdown",
+    "quoted_support": "You paid a fixed subscription, yet could burn token volume that Hacker News users estimated would cost 1,000 dollars or more on a straight API plan.",
+    "numbers": ["$1,000+"],
+    "entities": ["OpenClaw", "Anthropic", "Hacker News"],
+    "time_period": "early 2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "the-end-of-the-claude-subscription-hack"
+  },
+  {
+    "claim": "Following Anthropic's crackdown, OpenClaw officially pivoted its default/endorsed integration path to OpenAI Codex-based subscriptions rather than Claude subscriptions, as confirmed on camera by OpenClaw's founder.",
+    "stance": "supports",
+    "stance_target": "when one vendor closes a subscription-automation arbitrage loophole, automation-tool builders migrate to a competing vendor's subscription rather than switching to metered API billing",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "OpenClaw project, 2026",
+    "quoted_support": "In a recent episode of 'The Next New Thing', OpenClaw's founder confirms on camera that 'Anthropic made it official, you cannot use a Claude subscription to power OpenClaw anymore', and then walks through exactly how to switch OpenClaw to an OpenAI Codex based subscription.",
+    "numbers": [],
+    "entities": ["OpenClaw", "OpenAI", "Codex", "Anthropic"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "the-end-of-the-claude-subscription-hack"
+  }
+]

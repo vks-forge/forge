@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "GPUs, unlike CPUs, remain at high power draw even when visible compute/memory/communication activity is near zero -- a state the authors term 'execution-idle', directly measured via controlled benchmark on an Intel Xeon 6226R (CPU) vs NVIDIA L40S (GPU).",
+    "stance": "supports",
+    "stance_target": "idle GPU-hosted agent processes carry a disproportionate, non-intuitive energy/cost burden that justifies aggressive idle-detection policy",
+    "evidence_type": "empirical",
+    "scope_conditions": "GPU vs CPU power measurement, controlled matrix-multiplication benchmark",
+    "quoted_support": "GPUs are becoming a major contributor to data center power, yet unlike CPUs, they can remain at high power even when visible activity is near zero. We call this state execution-idle.",
+    "numbers": [],
+    "entities": ["NVIDIA L40S", "Intel Xeon 6226R"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "the-energy-cost-of-execution-idle-in-gpu-clusters"
+  },
+  {
+    "claim": "Among academic AI cluster jobs, online serving (handling live latency-sensitive requests -- the workload type closest to a running agent) is the most exposed regime: GPUs spend 61% of in-execution time in execution-idle, consuming 48% of energy during those idle intervals.",
+    "stance": "supports",
+    "stance_target": "idle time dominates GPU-hosted agent/serving workloads and is a primary cost/energy driver that auto-killing idle agents directly addresses",
+    "evidence_type": "empirical",
+    "scope_conditions": "large academic AI cluster, online serving workload category specifically",
+    "quoted_support": "Among academic jobs, online serving (i.e., handling live latency-sensitive requests) is by far the most exposed regime: GPUs spend 61% of in-execution time in execution-idle, and 48% of energy is consumed during those intervals.",
+    "numbers": ["61% of in-execution time", "48% of energy"],
+    "entities": ["online serving workloads"],
+    "time_period": "2026",
+    "region": "academic AI cluster",
+    "confidence": "high",
+    "source_note_id": "the-energy-cost-of-execution-idle-in-gpu-clusters"
+  },
+  {
+    "claim": "Industry-derived serving trace replays show execution-idle ranging from 14% to 76% of time and 7% to 65% of energy depending on specific workload (Azure Chat, Azure Code, BurstGPT Chat, Qwen Reason, Qwen Chat), with Azure Code the worst offender and Qwen Chat the best.",
+    "stance": "neutral",
+    "stance_target": "execution-idle exposure varies widely by workload type, meaning idle-kill thresholds should not be one-size-fits-all",
+    "evidence_type": "empirical",
+    "scope_conditions": "industry-derived serving trace replays (Azure Chat, Azure Code, BurstGPT Chat, Qwen Reason, Qwen Chat)",
+    "quoted_support": "Low-activity periods account for 29%/17% of time/energy for Azure Chat, 76%/65% for Azure Code, 72%/52% for BurstGPT Chat, 18%/8% for Qwen Reason, and 14%/7% for Qwen Chat.",
+    "numbers": ["29%/17% Azure Chat", "76%/65% Azure Code", "72%/52% BurstGPT Chat", "18%/8% Qwen Reason", "14%/7% Qwen Chat"],
+    "entities": ["Azure Chat", "Azure Code", "BurstGPT", "Qwen"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "the-energy-cost-of-execution-idle-in-gpu-clusters"
+  },
+  {
+    "claim": "Execution-idle onsets are most commonly preceded by PCIe transfers (48% of cases) and network-backed I/O / NIC-heavy activity (17%), suggesting the idle state is caused by software bottlenecks waiting on I/O rather than genuine computational completion.",
+    "stance": "neutral",
+    "stance_target": "root cause of GPU idle time is I/O-bound waiting, a mechanism relevant to designing health-check / idle-detection signals for agent infrastructure",
+    "evidence_type": "empirical",
+    "scope_conditions": "academic AI cluster telemetry, root-cause attribution of execution-idle onset",
+    "quoted_support": "By examining the activity immediately preceding execution-idle intervals, we find that they often follow PCIe transfers (48% of cases), network-backed I/O (17%), NVLink communication (2%), and other events, suggesting that execution-idle likely arises from software bottlenecks waiting on I/O.",
+    "numbers": ["48% PCIe transfers", "17% network-backed I/O", "2% NVLink"],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "the-energy-cost-of-execution-idle-in-gpu-clusters"
+  }
+]

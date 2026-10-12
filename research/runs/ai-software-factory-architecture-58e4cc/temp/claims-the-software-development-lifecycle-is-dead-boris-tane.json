@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Agent-driven development collapses the sequential SDLC (Requirements, System Design, Implementation, Testing, Code Review, Deployment, Monitoring) into a single loop of Intent-Agent-Code+Tests+Deployment-Ship, eliminating discrete stage handoffs.",
+    "stance": "supports",
+    "stance_target": "architecture of a continuous-operation agentic software factory replacing staged human SDLC",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "AI-native engineering teams using coding agents, 2026",
+    "quoted_support": "The stages collapsed. They didn't get faster. They merged. The agent doesn't know what step it's on because there are no steps. There's just intent, context, and iteration.",
+    "numbers": [],
+    "entities": ["Boris Tane"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "the-software-development-lifecycle-is-dead-boris-tane"
+  },
+  {
+    "claim": "The human pull-request review queue becomes a structural bottleneck at agent-driven PR volume, since a team can review roughly 10 PRs while an agent can generate roughly 500 per day, making the review queue a 'fake bottleneck.'",
+    "stance": "supports",
+    "stance_target": "necessity of replacing human-gated PR review with automated/adversarial agent review at software-factory scale",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "high-throughput agent-driven code generation teams",
+    "quoted_support": "An agent generates 500 PRs a day. Your team can review maybe 10. The review queue backs up. This isn't a bottleneck worth optimising. It's a fake bottleneck.",
+    "numbers": ["500 PRs/day", "10 PRs reviewable"],
+    "entities": [],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "the-software-development-lifecycle-is-dead-boris-tane"
+  },
+  {
+    "claim": "Code review should be restructured as either agent self-verification against a plan document, or adversarial second-agent review, with human-in-the-loop made exception-based -- triggered only when automated verification cannot resolve a conflict or the change is genuinely novel.",
+    "stance": "supports",
+    "stance_target": "adversarial multi-agent review architecture as a replacement for human PR review",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "proposed architecture for agent-driven development pipelines",
+    "quoted_support": "Either it becomes part of the code generation itself, the agent verifies its own work against the plan document, runs the tests, checks for regressions, validates against architectural constraints, or a second agent reviews the first agent's output. Adversarial agents plough through the proposed changes, try to break it in every dimension.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "the-software-development-lifecycle-is-dead-boris-tane"
+  },
+  {
+    "claim": "Monitoring/observability is the only SDLC stage that survives agentic collapse and becomes the primary safety mechanism, but traditional human-paced alert/dashboard observability breaks down at agent-driven change volume and must evolve into closed-loop systems feeding telemetry directly back to the agent that shipped the change.",
+    "stance": "supports",
+    "stance_target": "continuous-operation / triggers pillar requiring event-driven, closed-loop observability rather than human-triaged monitoring",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "high-velocity agent-driven deployment environments",
+    "quoted_support": "If an agent ships 500 changes a day and your observability setup requires a human to investigate each anomaly, you've created a new bottleneck... The future of observability isn't dashboards, it's closed-loop systems where telemetry data becomes context for the agent that shipped the code.",
+    "numbers": ["500 changes/day"],
+    "entities": [],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "the-software-development-lifecycle-is-dead-boris-tane"
+  },
+  {
+    "claim": "Agent-driven deployment naturally decouples deployment from release via feature flags and canary rollouts, enabling continuous deployment where every verified change produces a production artifact while release remains a separate, traffic-rule-driven decision.",
+    "stance": "supports",
+    "stance_target": "continuous operation / infrastructure pillar for autonomous software factories",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "proposed/observed agent-driven deployment pipelines",
+    "quoted_support": "Code gets deployed continuously, every change, as soon as it's generated and verified, produces an artifact that lands in production behind a gate. Release is a separate decision, driven by feature flags or traffic rules.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "the-software-development-lifecycle-is-dead-boris-tane"
+  }
+]

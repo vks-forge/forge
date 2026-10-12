@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "A preregistered statistical test on tau-bench fails to significantly distinguish the predictive power of a recovered agent-trace dependency graph from a degree-matched counterfeit control that rewires which earlier steps each step depends on while preserving the same number of dependency edges (ROC-AUC 0.665 vs. 0.654, difference +0.011, not significant).",
+    "stance": "refutes",
+    "stance_target": "graph/dependency structure extracted from agent-trace history carries genuine predictive signal beyond simple edge-count/density statistics",
+    "evidence_type": "empirical",
+    "scope_conditions": "tau-bench corpus, within-corpus logistic regression evaluation",
+    "quoted_support": "Within-corpus ROC-AUC on tau-bench: the recovered layer adds to the run-size baseline and scores slightly above the counterfeit, a gap that does not survive correction... Recovered minus Counterfeit = +0.011, not significant.",
+    "numbers": ["0.619", "0.665", "0.654", "+0.011"],
+    "entities": ["GRADE", "tau-bench", "degree-matched counterfeit"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "grade-graph-representation-of-llm-agent-dependency-and-execution"
+  },
+  {
+    "claim": "A dependency layer recovered from agent traces under the weak 'full history' inference assumption (every step depends on every earlier step) essentially just restates run size (step/tool-call/decision/agent counts), meaning inferred structural features can appear informative while carrying no information beyond a trivial baseline.",
+    "stance": "refutes",
+    "stance_target": "inferred (as opposed to directly observed) dependency/structural features extracted from agent traces are reliable signals of behavioral structure",
+    "evidence_type": "empirical",
+    "scope_conditions": "general finding across tested corpora, under full-history inference grade",
+    "quoted_support": "Graph structure can also pass for signal it does not carry: a layer inferred under full history restates run size.",
+    "numbers": [],
+    "entities": ["GRADE", "full history assumption"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "grade-graph-representation-of-llm-agent-dependency-and-execution"
+  },
+  {
+    "claim": "A costly dependency graph layer recovered from agent traces improves failure prediction over a cheap linear run-size baseline (step/tool-call/decision/agent counts) on only 3 of 6 tested corpora, and the size of the gain is sensitive to which learner algorithm and task-sampling scheme is used.",
+    "stance": "neutral",
+    "stance_target": "structural/dependency features derived from trace history provide consistent, learner-independent predictive gains over trivial baselines",
+    "evidence_type": "empirical",
+    "scope_conditions": "six tool-use, coding, and web agent-trace corpora",
+    "quoted_support": "Over a linear run-size baseline, the recovered dependency layer improves failure prediction on three of the six corpora, but the gain depends on the learner and task sampling.",
+    "numbers": ["3 of 6 corpora"],
+    "entities": ["GRADE"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "grade-graph-representation-of-llm-agent-dependency-and-execution"
+  },
+  {
+    "claim": "The dependency layer's cross-corpus transfer advantage over a degree-matched counterfeit control reverses when the held-out corpus's task family is withheld, indicating that apparent cross-dataset generalization of trace-derived structural predictors may depend on task-family overlap rather than genuine transferable structure.",
+    "stance": "refutes",
+    "stance_target": "probabilistic/structural models learned from one agent-trace corpus generalize reliably to held-out corpora with different task families",
+    "evidence_type": "empirical",
+    "scope_conditions": "cross-corpus transfer evaluation, task-family withholding ablation",
+    "quoted_support": "The recovered layer's largest transfer lead over it reverses when the held-out corpus's task family is withheld.",
+    "numbers": [],
+    "entities": ["GRADE"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "grade-graph-representation-of-llm-agent-dependency-and-execution"
+  },
+  {
+    "claim": "Six published agent-run graph representations (ReAct reason-act traces, MetaGPT orchestration graphs, GPTSwarm graphs, computation graphs, PROV/data-lineage graphs, agent anomaly graphs) can be formally unified as projections of a single two-layer (execution + graded-dependency) graph schema, suggesting cross-framework agent-trace analysis tooling is feasible without bespoke per-framework representations.",
+    "stance": "supports",
+    "stance_target": "a unified cross-framework representation of agent execution/dependency structure is achievable, a prerequisite for general-purpose probabilistic sequence prediction tooling",
+    "evidence_type": "theoretical",
+    "scope_conditions": "general agent-trace representation theory",
+    "quoted_support": "Six published graph views of agent runs, from reason-act traces to lineage graphs, are its projections under the conditions in Table 1.",
+    "numbers": ["6 graph views"],
+    "entities": ["GRADE", "ReAct", "MetaGPT", "GPTSwarm", "PROV"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "medium",
+    "source_note_id": "grade-graph-representation-of-llm-agent-dependency-and-execution"
+  }
+]

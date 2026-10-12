@@ -1,0 +1,388 @@
+{
+  "recommendations": [
+    {
+      "id": "rec-1",
+      "category": "break-paragraph",
+      "severity": "major",
+      "section": "<exec summary>",
+      "current": "[[towards-autonomous-software-development]]. The objection's best fact supports the ledger:",
+      "recommended": "[[towards-autonomous-software-development]].\n\nThe objection's best fact supports the ledger:",
+      "rationale": "The maximalist-objection paragraph runs roughly 2,100 characters; splitting between the objection's evidence and the rebuttal gives each its own paragraph."
+    },
+    {
+      "id": "rec-2",
+      "category": "break-paragraph",
+      "severity": "moderate",
+      "section": "<exec summary>",
+      "current": "[[the-hugging-face-incident-and-the-road-ahead-openai]]. The skeptic's sharper point survives:",
+      "recommended": "[[the-hugging-face-incident-and-the-road-ahead-openai]].\n\nThe skeptic's sharper point survives:",
+      "rationale": "The skeptical-objection paragraph runs about 1,700 characters, and the concession ('sharper point survives') is a natural point to split it."
+    },
+    {
+      "id": "rec-3",
+      "category": "break-paragraph",
+      "severity": "major",
+      "section": "## 5. Triggers, Infrastructure, and Continuous Operation (Crucial)",
+      "current": "[[webhook-triggers-automate-your-agents-dust-academy]]. Triage correlates before dispatch,",
+      "recommended": "[[webhook-triggers-automate-your-agents-dust-academy]].\n\nTriage correlates before dispatch,",
+      "rationale": "This paragraph of about 2,300 characters moves from trigger security (injection, allowlisting) to operational hygiene (correlation, exporters, spin detection), so it should be split where the topic changes."
+    },
+    {
+      "id": "rec-4",
+      "category": "break-paragraph",
+      "severity": "major",
+      "section": "## 6. Cost & Resource Optimization",
+      "current": "[[claude-credit-overhaul-2026-anthropic-pauses-the-june-15-change]]. Since October 7, 2026, Max and Team plans",
+      "recommended": "[[claude-credit-overhaul-2026-anthropic-pauses-the-june-15-change]].\n\nSince October 7, 2026, Max and Team plans",
+      "rationale": "This paragraph of about 1,900 characters joins the steel-man restatement to the current-billing details, and splitting them makes the instability argument easier to follow."
+    },
+    {
+      "id": "rec-5",
+      "category": "break-paragraph",
+      "severity": "moderate",
+      "section": "## 3. Reverse Engineering & Codebase Mastery",
+      "current": "[[gtig-ai-threat-tracker-from-prompting-to-autonomy-the-evolution-of-adversarial-a]]. The nearest evaluation is SentinelLABS'",
+      "recommended": "[[gtig-ai-threat-tracker-from-prompting-to-autonomy-the-evolution-of-adversarial-a]].\n\nThe nearest evaluation is SentinelLABS'",
+      "rationale": "The decompilation paragraph runs about 1,700 characters, and the move from tooling to evaluation evidence is its natural break."
+    },
+    {
+      "id": "rec-6",
+      "category": "break-paragraph",
+      "severity": "moderate",
+      "section": "## 3. Reverse Engineering & Codebase Mastery",
+      "current": "On this view a named-human production gate opens an exposure window machine-speed attackers will use. Two further readings complete the case:",
+      "recommended": "On this view a named-human production gate opens an exposure window machine-speed attackers will use.\n\nTwo further readings complete the case:",
+      "rationale": "The steel-man paragraph runs about 2,000 characters. Splitting it before the 'two further readings' changes only the formatting, keeps every word of the opposing case, and makes it easier to read."
+    },
+    {
+      "id": "rec-7",
+      "category": "break-paragraph",
+      "severity": "moderate",
+      "section": "## 5. Triggers, Infrastructure, and Continuous Operation (Crucial)",
+      "current": "[[how-we-contain-claude-across-products-anthropic]]. E2B offers Firecracker microVMs",
+      "recommended": "[[how-we-contain-claude-across-products-anthropic]].\n\nE2B offers Firecracker microVMs",
+      "rationale": "The sandbox paragraph runs about 1,500 characters, and splitting the isolation decision rule from the vendor capacity specifics gives two paragraphs that each cover one topic."
+    },
+    {
+      "id": "rec-8",
+      "category": "merge-paragraphs",
+      "severity": "moderate",
+      "section": "## 6. Cost & Resource Optimization",
+      "current": "E2B prices a light 100-concurrent Pro configuration at $316 a month [[pricing-e2b-the-ai-agent-cloud]].\n\nThe billing model matters more than the rate.",
+      "recommended": "E2B prices a light 100-concurrent Pro configuration at $316 a month [[pricing-e2b-the-ai-agent-cloud]], but the billing model matters more than the rate.",
+      "rationale": "A single orphan sentence after the table belongs with the next paragraph's opening claim about pricing versus billing model."
+    },
+    {
+      "id": "rec-9",
+      "category": "break-paragraph",
+      "severity": "moderate",
+      "section": "## 6. Cost & Resource Optimization",
+      "current": "[[ai-agent-development-costs-why-sandbox-billing-breaks-blaxel]]. **Inference:** for a scheduled fleet",
+      "recommended": "[[ai-agent-development-costs-why-sandbox-billing-breaks-blaxel]].\n\n**Inference:** for a scheduled fleet",
+      "rationale": "The idle-compute paragraph (about 1,600 characters, more once rec-8 is applied) ends with an inference that reads more clearly as its own paragraph, separate from the evidence."
+    },
+    {
+      "id": "rec-10",
+      "category": "make-list",
+      "severity": "moderate",
+      "section": "## 1. Zero-Hallucination & Quality Control (Adversarial Validation)",
+      "current": "Three disciplines keep evals rigid [[demystifying-evals-for-ai-agents-anthropic]]: clean sandboxes per trial (Claude once gained \"an unfair advantage on some tasks by examining the git history from previous trials\"); audited graders (Opus 4.5 scored 42% on CORE-Bench until grading bugs were fixed, then 95%); and living suites seeded from 20–50 real failures, with weekly human transcript reads.",
+      "recommended": "Three disciplines keep evals rigid [[demystifying-evals-for-ai-agents-anthropic]]:\n\n- **Clean sandboxes per trial.** Claude once gained \"an unfair advantage on some tasks by examining the git history from previous trials.\"\n- **Audited graders.** Opus 4.5 scored 42% on CORE-Bench until grading bugs were fixed, then 95%.\n- **Living suites** seeded from 20–50 real failures, with weekly human transcript reads.",
+      "rationale": "Three named disciplines packed into one semicolon chain are easier to scan as a bulleted list."
+    },
+    {
+      "id": "rec-11",
+      "category": "make-list",
+      "severity": "moderate",
+      "section": "## 2. Advanced Skill Sequences (Beyond Prompting)",
+      "current": "The largest study of Skill revisions (3,159 Skills, 21 models) yields three authoring rules [[agent-skill-evolution-how-revisions-affect-coding-agents]]: name the command, path, or identifier (+0.41 compliance across 16 models); never silently delete a load-bearing rule (removing one that had *replaced* an older rule cut compliance by 0.58, against 0.12 for a duplicate); and keep Skills small (an added rule's benefit fell from +0.424 at low context occupancy to +0.270 at three-quarters full). Cost sits in which Skills fire:",
+      "recommended": "The largest study of Skill revisions (3,159 Skills, 21 models) yields three authoring rules [[agent-skill-evolution-how-revisions-affect-coding-agents]]:\n\n- **Name the command, path, or identifier** (+0.41 compliance across 16 models).\n- **Never silently delete a load-bearing rule** (removing one that had *replaced* an older rule cut compliance by 0.58, against 0.12 for a duplicate).\n- **Keep Skills small** (an added rule's benefit fell from +0.424 at low context occupancy to +0.270 at three-quarters full).\n\nCost sits in which Skills fire:",
+      "rationale": "Authoring rules are directives readers will look up again, so a bold-labeled list makes them actionable, and the cost discussion then gets its own paragraph."
+    },
+    {
+      "id": "rec-12",
+      "category": "make-list",
+      "severity": "moderate",
+      "section": "## 1. Zero-Hallucination & Quality Control (Adversarial Validation)",
+      "current": "No source publishes a scoring formula, so the blueprint infers one as the product of three factors. **Reach**",
+      "recommended": "No source publishes a scoring formula, so the blueprint infers one as the product of three factors:\n\n- **Reach**",
+      "rationale": "The three blast-radius factors are already bold-labeled. Turning them into bullets (apply together with rec-13 and rec-14) makes the formula visible at a glance."
+    },
+    {
+      "id": "rec-13",
+      "category": "make-list",
+      "severity": "minor",
+      "section": "## 1. Zero-Hallucination & Quality Control (Adversarial Validation)",
+      "current": "[[vulnerability-blast-radius-how-to-measure-and-reduce-impact-blog-endor-labs]]. **Irreversibility** is high",
+      "recommended": "[[vulnerability-blast-radius-how-to-measure-and-reduce-impact-blog-endor-labs]].\n- **Irreversibility** is high",
+      "rationale": "This is the second bullet of the blast-radius factor list started in rec-12."
+    },
+    {
+      "id": "rec-14",
+      "category": "make-list",
+      "severity": "minor",
+      "section": "## 1. Zero-Hallucination & Quality Control (Adversarial Validation)",
+      "current": "credentials, force-pushes, and public APIs. **Sensitivity** is high",
+      "recommended": "credentials, force-pushes, and public APIs.\n- **Sensitivity** is high",
+      "rationale": "This is the third bullet of the blast-radius factor list started in rec-12."
+    },
+    {
+      "id": "rec-15",
+      "category": "make-list",
+      "severity": "moderate",
+      "section": "## 1. Zero-Hallucination & Quality Control (Adversarial Validation)",
+      "current": "mostly deterministically. Execution breaks ties: a fix-guided verification filter runs the original and revised code against benchmark and spec-constrained tests and keeps whichever they support [[are-llms-reliable-code-reviewers-systematic]]. Panel synthesis runs as code, since \"A fourth model invocation would cost more, add another failure mode, and inherit the same single-model bias\" [[github-addyosmaniadverse-multi-agent-adversarial-code-review-for-any-coding-agen]]. Reliability weights are learned offline: learned consensus resolved disputed problems correctly 78% of the time against 68% for majority vote, with two rounds capturing most of the gain [[adaptive-heterogeneous-multi-agent-debate-for-enhanced-educational-and-factual-r]].",
+      "recommended": "mostly deterministically:\n\n- **Execution breaks ties.** A fix-guided verification filter runs the original and revised code against benchmark and spec-constrained tests and keeps whichever they support [[are-llms-reliable-code-reviewers-systematic]].\n- **Panel synthesis runs as code,** since \"A fourth model invocation would cost more, add another failure mode, and inherit the same single-model bias\" [[github-addyosmaniadverse-multi-agent-adversarial-code-review-for-any-coding-agen]].\n- **Reliability weights are learned offline.** Learned consensus resolved disputed problems correctly 78% of the time against 68% for majority vote, with two rounds capturing most of the gain [[adaptive-heterogeneous-multi-agent-debate-for-enhanced-educational-and-factual-r]].",
+      "rationale": "The arbiter's three deterministic mechanisms are enumerated in prose, and as a list each becomes a separate design component."
+    },
+    {
+      "id": "rec-16",
+      "category": "make-list",
+      "severity": "minor",
+      "section": "## 2. Advanced Skill Sequences (Beyond Prompting)",
+      "current": "The translation is mechanical: the applicability clause becomes the `description`, which must say \"both what the Skill does and when to use it\" [[agent-skills-claude-platform-docs]]; deterministic steps become scripts that make a workflow \"consistent and repeatable\" [[equipping-agents-for-the-real-world-with-agent-skills-anthropic]]; judgment becomes the body; the escalation clause becomes a reversibility tag the dispatcher gates on.",
+      "recommended": "The translation is mechanical:\n\n- **Applicability clause** becomes the `description`, which must say \"both what the Skill does and when to use it\" [[agent-skills-claude-platform-docs]].\n- **Deterministic steps** become scripts that make a workflow \"consistent and repeatable\" [[equipping-agents-for-the-real-world-with-agent-skills-anthropic]].\n- **Judgment** becomes the body.\n- **Escalation clause** becomes a reversibility tag the dispatcher gates on.",
+      "rationale": "The four-part SOP-to-Skill mapping is a list in all but format, and bullets line it up with the table that follows."
+    },
+    {
+      "id": "rec-17",
+      "category": "make-list",
+      "severity": "moderate",
+      "section": "## 8. Implementation Phasing",
+      "current": "At Level I (Code Autonomy), humans review at pull-request granularity. At Level II (Pipeline Autonomy), humans \"neither author nor review the code,\" which assumes trustworthy verification, but \"neither assumption holds at scale today.\" At Level III (Demand Autonomy), the AI decides what to build. The named risk is",
+      "recommended": "\n\n- **Level I (Code Autonomy):** humans review at pull-request granularity.\n- **Level II (Pipeline Autonomy):** humans \"neither author nor review the code,\" which assumes trustworthy verification, but \"neither assumption holds at scale today.\"\n- **Level III (Demand Autonomy):** the AI decides what to build.\n\nThe named risk is",
+      "rationale": "Berkeley's three autonomy levels are the vocabulary for the whole phasing plan, and a bold-labeled list makes them easy to refer back to."
+    },
+    {
+      "id": "rec-18",
+      "category": "make-list",
+      "severity": "moderate",
+      "section": "## 8. Implementation Phasing",
+      "current": "Three guards apply: per-reviewer load caps that throttle the mutating pool when the review queue exceeds capacity; approval rate and time-per-PR tracked as level-skipping detectors; and known-bad PRs seeded into the queue, mirroring the security sweep's seeded findings, to measure whether human review still catches anything.",
+      "recommended": "Three guards apply:\n\n- **Reviewer load caps** throttle the mutating pool when the review queue exceeds capacity.\n- **Approval rate and time-per-PR** are tracked as level-skipping detectors.\n- **Seeded known-bad PRs** enter the queue, mirroring the security sweep's seeded findings, to measure whether human review still catches anything.",
+      "rationale": "Three separate controls written as one semicolon chain are easier to implement and audit as list items."
+    },
+    {
+      "id": "rec-19",
+      "category": "make-list",
+      "severity": "moderate",
+      "section": "## 8. Implementation Phasing",
+      "current": "Three trends will move the ledger's lines without forcing a rewrite. Capability will promote classes faster as the factory's own pass^k thresholds [[demystifying-evals-for-ai-agents-anthropic]] are met sooner, with agents operating on \"progressively less human curation\" [[effective-context-engineering-for-ai-agents-anthropic]]. Pricing will keep fragmenting into \"separate consumption pools for agents, premium models, tool use, background tasks\" [[anthropic-puts-claude-agents-on-a-meter-across-its-subscriptions-infoworld]], which proxy-level token accounting absorbs. Assurance will shift from reviewing artifacts to certifying agents, as organizations come to \"inspect agent specifications, permissions, memories, execution traces, provenance\" [[center-for-responsible-decentralized-intelligence-at-berkeley]], a trail a factory with a signed ledger already holds.",
+      "recommended": "Three trends will move the ledger's lines without forcing a rewrite:\n\n- **Capability** will promote classes faster as the factory's own pass^k thresholds [[demystifying-evals-for-ai-agents-anthropic]] are met sooner, with agents operating on \"progressively less human curation\" [[effective-context-engineering-for-ai-agents-anthropic]].\n- **Pricing** will keep fragmenting into \"separate consumption pools for agents, premium models, tool use, background tasks\" [[anthropic-puts-claude-agents-on-a-meter-across-its-subscriptions-infoworld]], which proxy-level token accounting absorbs.\n- **Assurance** will shift from reviewing artifacts to certifying agents, as organizations come to \"inspect agent specifications, permissions, memories, execution traces, provenance\" [[center-for-responsible-decentralized-intelligence-at-berkeley]], a trail a factory with a signed ledger already holds.",
+      "rationale": "Each of the three trends starts with a category word, which makes them a natural bold-labeled list."
+    },
+    {
+      "id": "rec-20",
+      "category": "make-list",
+      "severity": "moderate",
+      "section": "## 8. Implementation Phasing",
+      "current": "Four developments would justify widening autonomy faster than this plan allows: published, sustained telemetry from 100 or more production-capable Workers; repository-scale, execution-grounded review benchmarks; APTS Tier 3 text or an audit precedent licensing human-free production merges; and a stable vendor billing posture.",
+      "recommended": "Four developments would justify widening autonomy faster than this plan allows:\n\n- Published, sustained telemetry from 100 or more production-capable Workers.\n- Repository-scale, execution-grounded review benchmarks.\n- APTS Tier 3 text or an audit precedent licensing human-free production merges.\n- A stable vendor billing posture.",
+      "rationale": "The four acceleration triggers work as a checklist for readers, so they should be formatted as one."
+    },
+    {
+      "id": "rec-21",
+      "category": "make-list",
+      "severity": "minor",
+      "section": "## 10. Example Pseudo-code — Adversarial Agentic Loop",
+      "current": "The loop omits open-ended debate rounds, because debate does not help on programming [[arxiv250208788v3-cscl-21-jun-2025]]; elaborate critique prompts, because they inflate false rejection [[are-llms-reliable-code-reviewers-systematic]]; and any path from a model verdict straight to a production merge, because not even the most mature agentic fix loop takes one [[agentic-autofix-for-code-scanning-alerts-in-public-preview-github-changelog]]. Every expensive judgment",
+      "recommended": "The loop omits three things:\n\n- **Open-ended debate rounds,** because debate does not help on programming [[arxiv250208788v3-cscl-21-jun-2025]].\n- **Elaborate critique prompts,** because they inflate false rejection [[are-llms-reliable-code-reviewers-systematic]].\n- **Any path from a model verdict straight to a production merge,** because not even the most mature agentic fix loop takes one [[agentic-autofix-for-code-scanning-alerts-in-public-preview-github-changelog]].\n\nEvery expensive judgment",
+      "rationale": "The three deliberate omissions, each with its reason, are enumerative and scan better as a list."
+    },
+    {
+      "id": "rec-22",
+      "category": "bold-keyterms",
+      "severity": "minor",
+      "section": "## 8. Implementation Phasing",
+      "current": "A (autonomous behind machine gates), B (PR or merge with human audit), or C (a named human signs)",
+      "recommended": "**A** (autonomous behind machine gates), **B** (PR or merge with human audit), or **C** (a named human signs)",
+      "rationale": "The tier letters are used throughout the report, so bolding them where they are defined makes the definitions easy to find."
+    },
+    {
+      "id": "rec-23",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "<exec summary>",
+      "current": "[[center-for-responsible-decentralized-intelligence-at-berkeley]], falling from above 80%",
+      "recommended": "[[center-for-responsible-decentralized-intelligence-at-berkeley]]. They fall from above 80%",
+      "rationale": "This sentence of about 350 characters is the report's central limit, and splitting it lets the 80%-to-38% figure stand on its own."
+    },
+    {
+      "id": "rec-24",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 2. Advanced Skill Sequences (Beyond Prompting)",
+      "current": "for a verbose dump), and one FSM built from four models' traces",
+      "recommended": "for a verbose dump). One FSM built from four models' traces",
+      "rationale": "This splits a compound sentence of about 230 characters that carries two unrelated findings."
+    },
+    {
+      "id": "rec-25",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 2. Advanced Skill Sequences (Beyond Prompting)",
+      "current": "that binds arguments late, for example taking a visit URL",
+      "recommended": "that binds arguments late. For example, it takes a visit URL",
+      "rationale": "This splits a 300-character definition-plus-example sentence at the example."
+    },
+    {
+      "id": "rec-26",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 3. Reverse Engineering & Codebase Mastery",
+      "current": "[[ai-reverse-engineering-of-legacy-platforms-dynamics-consulting]]: generating the map is autonomous",
+      "recommended": "[[ai-reverse-engineering-of-legacy-platforms-dynamics-consulting]]. Generating the map is autonomous",
+      "rationale": "Separating the evidence sentence from its interpretation makes the 'autonomous map, human-authoritative' rule stand out."
+    },
+    {
+      "id": "rec-27",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 3. Reverse Engineering & Codebase Mastery",
+      "current": "generally hallucination-free,\" but on mainframe assembly only readability cleared 7/10",
+      "recommended": "generally hallucination-free.\" On mainframe assembly, however, only readability cleared 7/10",
+      "rationale": "This splits a 330-character sentence at the contrast between the two languages MITRE tested."
+    },
+    {
+      "id": "rec-28",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 3. Reverse Engineering & Codebase Mastery",
+      "current": "filter; the checkpoints mark a 2025 limit",
+      "recommended": "filter. The checkpoints mark a 2025 limit",
+      "rationale": "Splitting at the semicolon separates the error-type match from the cadence conclusion."
+    },
+    {
+      "id": "rec-29",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 3. Reverse Engineering & Codebase Mastery",
+      "current": "and 1,100 fresh ones appeared [[automated-penetration-testing-full-autonomy-fell-to-9]], and cURL shut down its bug bounty after 95% of submissions proved invalid [[nobodys-in-the-cockpit-risks-of-autonomous-ai-security-testing]] (both vendor-sourced).",
+      "recommended": "and 1,100 fresh ones appeared [[automated-penetration-testing-full-autonomy-fell-to-9]]. cURL shut down its bug bounty after 95% of submissions proved invalid [[nobodys-in-the-cockpit-risks-of-autonomous-ai-security-testing]]. Both figures are vendor-sourced.",
+      "rationale": "This sentence of about 400 characters strings together two separate data points and a sourcing caveat."
+    },
+    {
+      "id": "rec-30",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 4. Open Source Architecture Reading & Context Ingestion",
+      "current": "It reproduces it\" [[structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents]], and stuffing all of `docs/` into the prompt degrades recall",
+      "recommended": "It reproduces it\" [[structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents]]. Stuffing all of `docs/` into the prompt also degrades recall",
+      "rationale": "This splits two independent objections to LLM-read ADRs into separate sentences."
+    },
+    {
+      "id": "rec-31",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 5. Triggers, Infrastructure, and Continuous Operation (Crucial)",
+      "current": "[[large-language-model-based-multi-agents-a-survey-of-progress-and-challenges]], and they fail often:",
+      "recommended": "[[large-language-model-based-multi-agents-a-survey-of-progress-and-challenges]]. They fail often:",
+      "rationale": "This splits a sentence of about 450 characters so the failure evidence starts a fresh sentence."
+    },
+    {
+      "id": "rec-32",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 5. Triggers, Infrastructure, and Continuous Operation (Crucial)",
+      "current": "exchanged over 70,000 messages; of the 533 active during the attack",
+      "recommended": "exchanged over 70,000 messages. Of the 533 active during the attack",
+      "rationale": "Splitting at the semicolon breaks up a sentence of more than 350 characters about the incident."
+    },
+    {
+      "id": "rec-33",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 5. Triggers, Infrastructure, and Continuous Operation (Crucial)",
+      "current": "Each Worker's IAM scope is narrower than the Director's; the Cloud Security Alliance names",
+      "recommended": "Each Worker's IAM scope is narrower than the Director's. The Cloud Security Alliance names",
+      "rationale": "Separating the rule from its supporting evidence shortens a sentence of about 350 characters."
+    },
+    {
+      "id": "rec-34",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 5. Triggers, Infrastructure, and Continuous Operation (Crucial)",
+      "current": "[[structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents]]; at Replit, an agent deleted",
+      "recommended": "[[structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents]]. At Replit, an agent deleted",
+      "rationale": "The Replit incident is a separate case and reads more clearly as its own sentence."
+    },
+    {
+      "id": "rec-35",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 6. Cost & Resource Optimization",
+      "current": "with 80% cache hits, so Pro beats the API",
+      "recommended": "with 80% cache hits. At that rate, Pro beats the API",
+      "rationale": "This separates the per-session cost from the break-even conclusion drawn from it."
+    },
+    {
+      "id": "rec-36",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 6. Cost & Resource Optimization",
+      "current": "[[usage-policies-openai]]; its lever is throttling",
+      "recommended": "[[usage-policies-openai]]. Its lever is throttling",
+      "rationale": "Splitting at the semicolon shortens a sentence of about 300 characters about OpenAI's posture."
+    },
+    {
+      "id": "rec-37",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 6. Cost & Resource Optimization",
+      "current": "with graduated throttling, but publishes no figure for continuous monitoring",
+      "recommended": "with graduated throttling. It publishes no figure for continuous monitoring",
+      "rationale": "This splits a sentence of about 330 characters so the evidence gap gets its own sentence."
+    },
+    {
+      "id": "rec-38",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 6. Cost & Resource Optimization",
+      "current": "[[agency-secure-scalable-sandboxes-for-agents-sierra]], and one GKE agent fleet spent",
+      "recommended": "[[agency-secure-scalable-sandboxes-for-agents-sierra]]. One GKE agent fleet spent",
+      "rationale": "This splits a sentence of about 500 characters that joins the Sierra and GKE examples."
+    },
+    {
+      "id": "rec-39",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 6. Cost & Resource Optimization",
+      "current": "[[idle-shutdown-gemini-enterprise-agent-platform-google-cloud-documentation]], and Azure Foundry warns",
+      "recommended": "[[idle-shutdown-gemini-enterprise-agent-platform-google-cloud-documentation]]. Azure Foundry warns",
+      "rationale": "Giving each platform example its own sentence shortens a sentence of about 400 characters."
+    },
+    {
+      "id": "rec-40",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 7. High-Level Architecture (Mermaid Diagram)",
+      "current": "[[memorygraft-persistent-compromise-of-llm-agents]], so only traces from authenticated triggers that passed the verification plane are admitted",
+      "recommended": "[[memorygraft-persistent-compromise-of-llm-agents]]. Only traces from authenticated triggers that passed the verification plane are therefore admitted",
+      "rationale": "Separating the threat from the admission rule makes the control easier to see."
+    },
+    {
+      "id": "rec-41",
+      "category": "split-sentence",
+      "severity": "minor",
+      "section": "## 9. Recommended Tech Stack",
+      "current": "[[openai-agents-sdk-vs-langgraph-vs-autogen-building-production-agents-openhelm]], whereas migrating off CrewAI later means",
+      "recommended": "[[openai-agents-sdk-vs-langgraph-vs-autogen-building-production-agents-openhelm]]. By contrast, migrating off CrewAI later means",
+      "rationale": "This splits a sentence of about 450 characters at the point where it moves from LangGraph to CrewAI."
+    }
+  ],
+  "summary": {
+    "total_recommendations": 41,
+    "by_category": {
+      "merge-paragraphs": 1,
+      "break-paragraph": 8,
+      "make-list": 12,
+      "make-table": 0,
+      "bold-keyterms": 1,
+      "split-sentence": 19,
+      "remove-hr": 0,
+      "add-whitespace": 0
+    },
+    "highest_severity": "major",
+    "expected_net_char_delta": 450
+  }
+}

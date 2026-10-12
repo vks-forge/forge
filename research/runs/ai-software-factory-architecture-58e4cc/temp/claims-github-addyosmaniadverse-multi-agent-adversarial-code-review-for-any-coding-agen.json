@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "The 'adverse' tool implements adversarial code review as one LLM running three orthogonal personas (Auditor for correctness/logic, Adversary for security/trust boundaries, Pragmatist for maintainability/design) rather than two separate models, as a cheaper alternative to prior two-provider review designs.",
+    "stance": "supports",
+    "stance_target": "single-model multi-persona adversarial review as a viable, cheaper alternative to two-model adversarial review",
+    "evidence_type": "theoretical",
+    "scope_conditions": "adverse CLI/Skill tool, 2026",
+    "quoted_support": "adverse does the third thing: one model, three personas, with explicit cross-examination between them. The personas are designed to be orthogonal.",
+    "numbers": ["three"],
+    "entities": ["adverse", "Auditor", "Adversary", "Pragmatist"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "github-addyosmaniadverse-multi-agent-adversarial-code-review-for-any-coding-agen"
+  },
+  {
+    "claim": "adverse's synthesis step is deterministic Node.js code, not an additional LLM call, because an LLM synthesizer would cost more, add another failure mode, and inherit the same single-model bias as the personas.",
+    "stance": "supports",
+    "stance_target": "non-LLM deterministic aggregation as a bias-avoidance strategy in adversarial review pipelines",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "adverse tool design rationale, 2026",
+    "quoted_support": "Synthesis is deterministic Node code, not another LLM call. A fourth model invocation would cost more, add another failure mode, and inherit the same single-model bias the personas have.",
+    "numbers": [],
+    "entities": ["adverse"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "github-addyosmaniadverse-multi-agent-adversarial-code-review-for-any-coding-agen"
+  },
+  {
+    "claim": "adverse's two-round review process (3 parallel independent reviews + 3 parallel cross-examination reviews) costs 6 total model invocations per review, halved to 3 with --single-round.",
+    "stance": "neutral",
+    "stance_target": "cost structure of a concrete multi-agent adversarial review implementation",
+    "evidence_type": "empirical",
+    "scope_conditions": "adverse tool, 2026",
+    "quoted_support": "Per review: 6 model invocations (3 round-1 + 3 round-2). --single-round halves it.",
+    "numbers": ["6", "3"],
+    "entities": ["adverse"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "github-addyosmaniadverse-multi-agent-adversarial-code-review-for-any-coding-agen"
+  },
+  {
+    "claim": "A single model running three personas produces more correlated outputs (anchoring bias) than three genuinely independent models would, and the author recommends running the tool twice with different underlying agents to decorrelate if needed.",
+    "stance": "refutes",
+    "stance_target": "claim that single-model multi-persona review is equivalent to multi-model adversarial review",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "adverse tool, explicitly acknowledged limitation, 2026",
+    "quoted_support": "Honest answer: a single model running three personas correlates more than three independent models would. ... running adverse twice with different agents decorrelates. Don't pretend this is the same thing as two-provider review.",
+    "numbers": [],
+    "entities": ["adverse"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "github-addyosmaniadverse-multi-agent-adversarial-code-review-for-any-coding-agen"
+  },
+  {
+    "claim": "adverse's CI gate uses exit code 1 for a reject verdict and exit code 3 when fewer than 2 reviewers produced valid output, aborting synthesis as a fail-closed behavior.",
+    "stance": "supports",
+    "stance_target": "fail-closed design as a necessary property of automated quality gates in a software factory pipeline",
+    "evidence_type": "empirical",
+    "scope_conditions": "adverse CLI exit codes, 2026",
+    "quoted_support": "0 Review completed; verdict was approve, conditional, or hold / 1 Review completed; verdict was reject / 3 Fewer than 2 reviewers produced valid output — synthesis aborted. Code 1 is what you wire into a CI gate.",
+    "numbers": ["0", "1", "2", "3"],
+    "entities": ["adverse"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "github-addyosmaniadverse-multi-agent-adversarial-code-review-for-any-coding-agen"
+  }
+]

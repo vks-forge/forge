@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "AUDITED ABSENCE: A secondary source (Coworker.ai) attributed the statistic 'agentic and multi-turn API tasks account for over 50% of enterprise API token consumption' and a '$2 cost by the 260th exchange' figure to this Anthropic Economic Index September 2025 Report, but neither figure appears anywhere in the report's actual text; this undermines reuse of that statistic without independent verification.",
+    "stance": "refutes",
+    "stance_target": "Coworker.ai's claim that this report documents agentic/multi-turn token consumption exceeding 50% of enterprise usage",
+    "evidence_type": "empirical",
+    "scope_conditions": "full-text search of the official Sept 15 2025 Anthropic Economic Index report",
+    "quoted_support": "[Searched report text for 'agentic', 'multi-turn', and the enterprise API chapter directly: no occurrence of a '>50% of enterprise API token consumption is agentic/multi-turn' claim or a per-exchange dollar-cost figure was found.]",
+    "numbers": ["0 occurrences found"],
+    "entities": ["Anthropic", "Coworker.ai"],
+    "time_period": "September 2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "economic-index-uneven-ai-adoption-anthropic"
+  },
+  {
+    "claim": "Anthropic's actual verified finding on enterprise API usage: 77% of first-party (1P) API business uses involve automation usage patterns, compared to about 50% for Claude.ai consumer users -- reflecting the programmatic nature of API usage, not a measure of agentic/multi-turn token share.",
+    "stance": "neutral",
+    "stance_target": "true automation-vs-augmentation split in enterprise AI deployment, relevant context for Pillar 5/6",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic Economic Index, first-party API traffic sample, Sept 2025",
+    "quoted_support": "1P API usage is automation dominant: 77% of business uses involve automation usage patterns, compared to about 50% for Claude.ai users. This reflects the programmatic nature of API usage.",
+    "numbers": ["77%", "~50%"],
+    "entities": ["Anthropic", "Anthropic Economic Index"],
+    "time_period": "September 2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "economic-index-uneven-ai-adoption-anthropic"
+  },
+  {
+    "claim": "Business API deployment shows weak price sensitivity: the most-used tasks in Anthropic's API data tend to cost more than less frequent ones, suggesting model capabilities and the economic value of automating a task matter more than per-token cost in shaping enterprise AI adoption decisions.",
+    "stance": "supports",
+    "stance_target": "cost vs capability tradeoffs in enterprise agent deployment decisions (Pillar 6)",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic 1P API traffic analysis, Sept 2025",
+    "quoted_support": "Capabilities seem to matter more than cost in shaping business deployment: The most-used tasks in our API data tend to cost more than the less frequent ones... we find evidence of weak price sensitivity.",
+    "numbers": [],
+    "entities": ["Anthropic"],
+    "time_period": "September 2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "economic-index-uneven-ai-adoption-anthropic"
+  },
+  {
+    "claim": "'Directive' conversations on Claude.ai, where users delegate complete tasks to Claude rather than iterating with it, jumped from 27% to 39% over an eight-month window, indicating rising user trust in agent autonomy.",
+    "stance": "supports",
+    "stance_target": "trend toward delegated/autonomous agent usage underpinning the software-factory thesis (Pillar 5)",
+    "evidence_type": "empirical",
+    "scope_conditions": "Claude.ai consumer usage data, prior eight months as of Sept 2025",
+    "quoted_support": "Users are entrusting Claude with more autonomy: \"Directive\" conversations, where users delegate complete tasks to Claude, jumped from 27% to 39%.",
+    "numbers": ["27% to 39%"],
+    "entities": ["Anthropic", "Claude.ai"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "economic-index-uneven-ai-adoption-anthropic"
+  }
+]

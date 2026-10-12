@@ -1,0 +1,10 @@
+https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview
+https://github.com/addyosmani/agent-skills/blob/main/skills/performance-optimization/SKILL.md
+https://www.tcs.com/insights/blogs/agentic-ai-for-smarter-standard-operating-procedures-sop-management
+https://arxiv.org/html/2610.04832v1
+https://www.ibm.com/think/tutorials/llm-agent-orchestration-with-langchain-and-granite
+https://levelup.gitconnected.com/this-ai-project-on-github-trending-can-read-software-you-did-not-write-51f0a211dc35
+https://gtidocs.virustotal.com/docs/agentic-platform
+https://arxiv.org/html/2411.14971v1
+https://medium.com/@harrinair2000/legacy-code-and-ai-why-caution-is-key-before-integrating-ai-63b4abfded96
+https://simbian.ai/solutions/use-case/automated-penetration-testing

@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "Anthropic offers two distinct paths to building production agents: Managed Agents (hosted autonomous agent runtime, launched April 2026, Anthropic handles infra/scaling/safety) and the Agent SDK (released April 2025, developer toolkit for self-hosted agents with full control over orchestration and data residency).",
+    "stance": "supports",
+    "stance_target": "infrastructure/deployment architecture choices for a software factory (Pillar 5)",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Anthropic product lineup as of 2026, per consulting partner",
+    "quoted_support": "Managed agents are Anthropic's hosted autonomous agent runtime, launched in April 2026... The second path is the Agent SDK, released in April 2025. The SDK gives you the building blocks -- agent loops, tool definitions, context management, multi-agent handoffs, and guardrails -- to build and host agents on your own infrastructure.",
+    "numbers": ["April 2026 (Managed Agents launch)", "April 2025 (Agent SDK release)"],
+    "entities": ["Anthropic", "Claude", "Agent SDK", "OneWave AI"],
+    "time_period": "2025-2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "claude-agents-anthropic-agent-sdk-consulting-onewave-ai"
+  },
+  {
+    "claim": "Production-grade agent deployments require structured logging of every action/decision, human-in-the-loop checkpoints for high-stakes operations, hard per-run cost budget limits, output validation, escalation rules, and real-time oversight dashboards.",
+    "stance": "supports",
+    "stance_target": "quality control and cost-control architecture for autonomous agents (Pillar 1/6)",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Anthropic Agent SDK consulting practice, 2026",
+    "quoted_support": "Every agent we deploy includes structured logging of every action and decision, human-in-the-loop checkpoints for high-stakes operations, cost tracking with hard budget limits per run, output validation against quality criteria, escalation rules for edge cases, and real-time dashboards for team oversight.",
+    "numbers": [],
+    "entities": ["OneWave AI", "Anthropic"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "claude-agents-anthropic-agent-sdk-consulting-onewave-ai"
+  },
+  {
+    "claim": "Typical deployment timelines reported by an Anthropic consulting partner: a single managed-agent workflow in 1-2 weeks; a multi-agent system with SDK orchestration, MCP integrations, and full monitoring in 3-5 weeks.",
+    "stance": "neutral",
+    "stance_target": "implementation phasing estimates for software factory build-out (phasing section)",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "single consulting vendor's self-reported client timelines, unverified, vendor marketing content",
+    "quoted_support": "A single managed agent workflow: 1 to 2 weeks from kickoff to production. A multi-agent system with SDK orchestration, MCP integrations, and full monitoring: 3 to 5 weeks.",
+    "numbers": ["1-2 weeks", "3-5 weeks"],
+    "entities": ["OneWave AI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "claude-agents-anthropic-agent-sdk-consulting-onewave-ai"
+  }
+]

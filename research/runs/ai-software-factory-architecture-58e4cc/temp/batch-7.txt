@@ -1,0 +1,10 @@
+https://github.com/addyosmani/agent-skills/blob/main/skills/ci-cd-and-automation/SKILL.md
+https://fin.ai/glossary/ai-agent-sop
+https://papers.ssrn.com/sol3/Delivery.cfm/7186738.pdf?abstractid=7186738&mirid=1
+https://www.accelirate.com/llm-agent-orchestration/
+https://www.dynamicsconsulting.it/research/ai-reverse-engineering
+https://www.sentinelone.com/labs/context-engineering-compaction-agent-memory-for-automated-malware-analysis/
+https://ieeexplore.ieee.org/iel8/6287639/11323511/11503233.pdf
+https://www.freecodecamp.org/news/understand-a-legacy-codebase-with-ai/
+https://www.synack.com/learning-center/how-are-ai-agents-used-in-penetration-testing/
+https://devops.com/sonar-ai-agent-discovers-vulnerabilities-hidden-in-business-logic-workflows/

@@ -1,0 +1,61 @@
+{
+  "sub_questions": [
+    "How should an adversarial code-review workflow work where one frontier model generates code and a different frontier model critiques it to invalidate bad tests and reject slop?",
+    "How should automated benchmarking/eval loops be structured to gate human review?",
+    "How should code blast-radius be identified and surfaced before merge?",
+    "How can human SOPs be mapped into modular, callable agent Skills (e.g., git rebasing, DB optimization, deep web scraping)?",
+    "How can a system analyze a developer's agent-trace history to probabilistically predict and auto-chain skill sequences?",
+    "What strategies let agents deep-scan network calls, decompile unknown structures, and auto-map dependencies in legacy/unknown codebases?",
+    "How should a scheduled (~90 min) automated penetration-testing / vulnerability-sweep loop be designed, including auto-flag and auto-patch?",
+    "How should agents autonomously scan docs/ folders and ADRs, then enforce those architectural rules on newly generated code?",
+    "How should context be isolated to relevant workspace trees to prevent context-window bloat?",
+    "What event-driven triggers (webhooks, cron schedules, DB connection spikes, customer bug reports) can replace human-typed prompts as the system's activation source?",
+    "How should isolated, scalable cloud sandboxes be architected so a Director Agent can spin up 100+ Worker Agents each in its own VM without CPU starvation or conflicts?",
+    "What are the token/cost economics of routing heavy agentic workloads through flat-rate consumer subscriptions (via automation/harnesses) versus per-token API pricing?",
+    "How should idle/clean-result agents self-archive and self-terminate without paging a human?"
+  ],
+  "entities": [
+    {"name": "Frontier model (generator)", "type": "model-role", "required_fields": ["example models (Claude 3.5 Sonnet/Opus)", "role: primary code generation"]},
+    {"name": "Frontier model (adversarial critic)", "type": "model-role", "required_fields": ["example models (GPT-4o/GPT-6)", "role: adversarial critique, invalidate bad tests, spot logic gaps, reject slop"]},
+    {"name": "LLM-as-judge / decision arbitration layer (query says 'Jav AI')", "type": "concept-tool", "required_fields": ["role in adjudicating generator vs critic disagreement"]},
+    {"name": "Director Agent", "type": "role", "required_fields": ["spins up Worker Agents", "orchestration authority"]},
+    {"name": "Worker Agents", "type": "role", "required_fields": ["100+ concurrent", "isolated cloud VM sandbox each"]},
+    {"name": "Architecture Decision Records (ADRs)", "type": "artifact", "required_fields": ["autonomous scanning", "rule enforcement on new code"]}
+  ],
+  "required_formats": [
+    "High-level architecture diagram (text-based/Mermaid)",
+    "Step-by-step implementation phasing",
+    "Recommended tech stack table (models, orchestration frameworks, cloud providers)",
+    "Example pseudo-code for an adversarial agentic loop"
+  ],
+  "required_sections": [],
+  "required_section_headings": [
+    "## 1. Zero-Hallucination & Quality Control (Adversarial Validation)",
+    "## 2. Advanced Skill Sequences (Beyond Prompting)",
+    "## 3. Reverse Engineering & Codebase Mastery",
+    "## 4. Open Source Architecture Reading & Context Ingestion",
+    "## 5. Triggers, Infrastructure, and Continuous Operation (Crucial)",
+    "## 6. Cost & Resource Optimization",
+    "## 7. High-Level Architecture (Mermaid Diagram)",
+    "## 8. Implementation Phasing",
+    "## 9. Recommended Tech Stack",
+    "## 10. Example Pseudo-code — Adversarial Agentic Loop"
+  ],
+  "time_horizons": ["current state (2024-2026 tooling)", "forward-looking implementation roadmap, no fixed end date given"],
+  "time_periods": [],
+  "scope_conditions": [
+    "cloud-native, continuously-operating multi-agent system (not single-session human-in-the-loop prompting)",
+    "scale target: mimicking a 5,000-person software org via specialized agent 'departments'",
+    "must cover both greenfield code generation and legacy/unknown codebase reverse engineering"
+  ],
+  "pipeline_tier": "full",
+  "response_format": "argumentative",
+  "citation_style": "wikilink",
+  "levers": {
+    "register": "advocate",
+    "register_confidence": "high",
+    "domain_notes": "Sourcing: current multi-agent orchestration frameworks (LangGraph, AutoGen/AG2, CrewAI, OpenAI Agents SDK, Claude Agent SDK, MCP), eval/observability tooling (promptfoo, DeepEval, Braintrust, LangSmith, OpenAI Evals), static/security scanning (Semgrep, CodeQL, Snyk, OWASP ZAP, Trivy), cloud agent-sandbox providers (E2B, Modal, Fly Machines, Daytona, Northflank, Kubernetes-based isolation). Prefer sources within the last 12-18 months given how fast agent tooling moves; engineering blogs, vendor docs, GitHub repos, and arXiv multi-agent-systems papers all count as primary for this domain. Measured benchmark numbers and documented production architectures outrank marketing claims.",
+    "inference_depth": "deep",
+    "rationale": {"register": "query explicitly asks to 'design', 'architect', and 'propose' a concrete blueprint and recommend a tech stack — advocacy-shaped, not neutral survey", "inference_depth": "cost economics of subscription-vs-API automation and cross-model adversarial review patterns live mostly in gray literature/engineering blogs rather than clean canonical docs"}
+  }
+}

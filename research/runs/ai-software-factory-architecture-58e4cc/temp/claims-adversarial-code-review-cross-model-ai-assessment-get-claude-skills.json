@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Cross-vendor adversarial code review using two different model families (Claude and Codex/GPT) reviewing the same diff independently, then each attempting to refute the other's findings, is designed to eliminate self-ratification (a model won't critique its own work) and confident false positives.",
+    "stance": "supports",
+    "stance_target": "pillar 1: adversarial model review architecture for zero-hallucination quality control",
+    "evidence_type": "theoretical",
+    "scope_conditions": "implemented as an open Agent Skill, basicmachines-co/basic-memory repo, 3.6k GitHub stars",
+    "quoted_support": "This kills the two failure modes of solo LLM review: self-ratification (a model won't critique its own work) and confident false positives.",
+    "numbers": ["3.6k GitHub stars"],
+    "entities": ["basicmachines-co", "Claude", "Codex", "GPT"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "adversarial-code-review-cross-model-ai-assessment-get-claude-skills"
+  },
+  {
+    "claim": "Convergence/agreement between two adversarial model reviewers is not correctness — the skill explicitly instructs the orchestrator to surface a ranked, cross-examined list rather than declare the code branch clean.",
+    "stance": "refutes",
+    "stance_target": "assumption that model agreement equals verified correctness",
+    "evidence_type": "theoretical",
+    "scope_conditions": "adversarial code review skill design",
+    "quoted_support": "Convergence between the models is not correctness — your job is to surface a ranked, cross-examined list, not to declare the branch clean.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "adversarial-code-review-cross-model-ai-assessment-get-claude-skills"
+  },
+  {
+    "claim": "Mechanical house rules (lint, typecheck, grep for known-bad patterns like bare except or silent-default getattr) must be enforced via deterministic tools, not prompts, because models are statistically blind to negation instructions such as 'never do X'.",
+    "stance": "supports",
+    "stance_target": "pillar 1: deterministic gates vs probabilistic model judgment for rigid evals",
+    "evidence_type": "theoretical",
+    "scope_conditions": "pre-review deterministic gate phase",
+    "quoted_support": "Models are statistically blind to negation (\"never do X\"). Enforce mechanical house rules with tools, not prompts, and treat hits as high-confidence facts (reported separately from model findings).",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "adversarial-code-review-cross-model-ai-assessment-get-claude-skills"
+  },
+  {
+    "claim": "A three-tier confidence taxonomy for cross-model findings: High (both models independently found it, or one found it and the other upheld it under refutation), Medium (one found it, the other could not refute it but did not independently find it), Low/contested (one found it and the other refuted it — never silently dropped).",
+    "stance": "supports",
+    "stance_target": "pillar 1: structured confidence scoring for adversarial review output",
+    "evidence_type": "theoretical",
+    "scope_conditions": "adversarial code review finding synthesis phase",
+    "quoted_support": "Low / contested — one raised it and the other refuted it. Keep it, show both sides, let the human judge. Never silently drop a contested finding.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "adversarial-code-review-cross-model-ai-assessment-get-claude-skills"
+  },
+  {
+    "claim": "The adversarial review skill explicitly avoids a loop-until-both-models-agree pattern because models converge by going silent, not by being right, and it never auto-applies fixes — a human must pick which findings to address.",
+    "stance": "supports",
+    "stance_target": "pillar 1: human-gated remediation, avoiding false confidence from forced consensus loops",
+    "evidence_type": "theoretical",
+    "scope_conditions": "adversarial review skill non-goals",
+    "quoted_support": "No loop-until-both-agree (models converge by going silent, not by being right). ... No auto-applying fixes.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "adversarial-code-review-cross-model-ai-assessment-get-claude-skills"
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "Blaxel sandboxes automatically shut down and stop billing active compute after 1-5 seconds of inactivity, metered down to the gigabyte-second, so idle agents cost nothing beyond snapshot/volume storage.",
+    "stance": "supports",
+    "stance_target": "auto-killing idle agents at the infrastructure/billing layer is a solved, productized pattern with sub-5-second granularity",
+    "evidence_type": "empirical",
+    "scope_conditions": "Blaxel Sandboxes product, micro-VM backbone",
+    "quoted_support": "They automatically spin up when you connect and shut down after a period of inactivity ranging between 1 to 5s. Pay only for the active seconds an agent is running code, not for the hours it sits idle.",
+    "numbers": ["1-5 second inactivity shutdown", "GB-s pricing $0.000006 to $0.0000115 per GB-s"],
+    "entities": ["Blaxel"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "stop-paying-for-idle-how-we-built-per-second-metering-for-blaxel-sandboxes-blaxe"
+  },
+  {
+    "claim": "Blaxel's idle-detection/billing pipeline is fail-safe toward under-billing: it combines discrete lifecycle state-transition logs (STARTING/RUNNING/STOPPING/STOPPED) with continuous heartbeats specifically so that a missed heartbeat or lost log can only result in lost revenue for the vendor, never an over-charge to the customer.",
+    "stance": "supports",
+    "stance_target": "reliable idle-kill billing requires redundant signals (state logs + heartbeats), not a single event type",
+    "evidence_type": "empirical",
+    "scope_conditions": "Blaxel's internal metering architecture",
+    "quoted_support": "Any internal failure in our logging or heartbeat chain can only result in under-billing, never over-billing. A gap in our data is a loss for us, not our users.",
+    "numbers": [],
+    "entities": ["Blaxel"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "stop-paying-for-idle-how-we-built-per-second-metering-for-blaxel-sandboxes-blaxe"
+  },
+  {
+    "claim": "At fleet scale, usage-based agent billing requires dedicated real-time observability infrastructure (Blaxel combined Stripe for payments with the open-source OpenMeter for real-time usage tracking and threshold alerting) because standard payment platforms like Stripe lack real-time balance/consumption observability needed to prevent runaway spend.",
+    "stance": "neutral",
+    "stance_target": "monitoring overhead for fleet-scale agent cost tracking requires purpose-built tooling beyond standard billing stacks",
+    "evidence_type": "empirical",
+    "scope_conditions": "Blaxel's production billing architecture, prepaid credits model",
+    "quoted_support": "The real problem is that Stripe isn't an observability tool... OpenMeter gave us what Stripe lacked: real-time observability... It also provided consumption alerting through webhooks that fire when a user's consumption hits a certain threshold.",
+    "numbers": ["$200 total starting credits (sign-up + payment-method bonus)"],
+    "entities": ["Blaxel", "Stripe", "OpenMeter"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "stop-paying-for-idle-how-we-built-per-second-metering-for-blaxel-sandboxes-blaxe"
+  }
+]

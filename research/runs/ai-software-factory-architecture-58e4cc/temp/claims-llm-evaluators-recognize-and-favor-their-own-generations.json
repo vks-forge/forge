@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "GPT-3.5 Turbo, GPT-4, and Llama 2 all disproportionately favor summaries they themselves generated over equal-quality summaries from other LLMs or humans, as measured on XSUM and CNN/DailyMail summarization tasks.",
+    "stance": "refutes",
+    "stance_target": "using the same model as both code/content generator and evaluator in the software factory's adversarial review pipeline without bias correction",
+    "evidence_type": "empirical",
+    "scope_conditions": "text summarization tasks, GPT-3.5 Turbo/GPT-4/Llama 2, 2024",
+    "quoted_support": "Frontier LLMs exhibit self-preference in self-evaluation. On two summarization tasks, LLMs (GPT-3.5 Turbo, GPT-4, and Llama 2) disproportionately favor summaries written by themselves over those by other LLMs and from humans.",
+    "numbers": [],
+    "entities": ["GPT-3.5 Turbo", "GPT-4", "Llama 2", "XSUM", "CNN/DailyMail"],
+    "time_period": "2024",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "llm-evaluators-recognize-and-favor-their-own-generations"
+  },
+  {
+    "claim": "Out of the box, without any fine-tuning, GPT-4 achieves 73.5% accuracy distinguishing its own outputs from two other LLMs' and humans' outputs using simple prompts; all three evaluated LLMs exceed 50% self-recognition accuracy without fine-tuning.",
+    "stance": "supports",
+    "stance_target": "the mechanistic finding that LLMs have non-trivial innate self-recognition capability, which this paper causally links to self-preference bias",
+    "evidence_type": "empirical",
+    "scope_conditions": "zero-shot/no-fine-tuning self-recognition experiment, 2024",
+    "quoted_support": "All three LLMs we evaluate achieve over 50% accuracy at distinguishing their own outputs from other sources using simple prompts without fine-tuning. GPT-4 is 73.5% accurate distinguishing itself from two other LLMs and humans.",
+    "numbers": ["73.5% GPT-4 accuracy", ">50% all three models"],
+    "entities": ["GPT-4"],
+    "time_period": "2024",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "llm-evaluators-recognize-and-favor-their-own-generations"
+  },
+  {
+    "claim": "Fine-tuning GPT-3.5 and Llama 2 on just 500 examples pushes self-recognition accuracy above 90% for both models.",
+    "stance": "supports",
+    "stance_target": "the ease with which self-recognition (and by extension self-preference bias) can be amplified via small-scale fine-tuning, a risk relevant to continuously fine-tuned agent deployments",
+    "evidence_type": "empirical",
+    "scope_conditions": "fine-tuning on 500 examples, GPT-3.5 and Llama 2, 2024",
+    "quoted_support": "Fine-tuning leads to near-perfect self-recognition. GPT-3.5 and Llama 2 both achieve over 90% accuracy at self-recognition after fine-tuning on 500 examples.",
+    "numbers": ["500 fine-tuning examples", ">90% accuracy"],
+    "entities": ["GPT-3.5", "Llama 2"],
+    "time_period": "2024",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "llm-evaluators-recognize-and-favor-their-own-generations"
+  },
+  {
+    "claim": "The strength of self-preference bias is linearly correlated with a model's self-recognition capability: fine-tuning to increase or decrease self-recognition produces a corresponding change in self-preference strength, and controlled experiments (varying fine-tuning task and data domain) suggest this is a genuine causal relationship, not merely a confound.",
+    "stance": "refutes",
+    "stance_target": "treating self-preference bias as an incidental artifact unrelated to a model's capability to recognize its own outputs, rather than a predictable, controllable mechanism",
+    "evidence_type": "empirical",
+    "scope_conditions": "controlled fine-tuning experiments varying in-domain/out-of-domain data and self-recognition/control tasks, 2024",
+    "quoted_support": "Self-preference strength is linearly correlated with self-recognition. We further fine-tune LLMs to increase or decrease self-recognition, and discover a linear correlation between these two properties... using controlled experiments, we show that the causal explanation resists straightforward confounders.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2024",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "llm-evaluators-recognize-and-favor-their-own-generations"
+  }
+]

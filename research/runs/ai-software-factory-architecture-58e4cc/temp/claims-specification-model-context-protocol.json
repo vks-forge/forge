@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "The official MCP specification states that tools 'represent arbitrary code execution and must be treated with appropriate caution,' and that descriptions of tool behavior (annotations) should be considered untrusted unless obtained from a trusted server.",
+    "stance": "supports",
+    "stance_target": "tool metadata/annotations supplied by third-party MCP servers cannot be treated as ground truth by an orchestrating agent, requiring independent verification before granting tool-call trust",
+    "evidence_type": "theoretical",
+    "scope_conditions": "MCP base protocol specification, version 2025-06-18",
+    "quoted_support": "Tools represent arbitrary code execution and must be treated with appropriate caution. In particular, descriptions of tool behavior such as annotations should be considered untrusted, unless obtained from a trusted server.",
+    "numbers": [],
+    "entities": ["Model Context Protocol"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "specification-model-context-protocol"
+  },
+  {
+    "claim": "MCP intentionally limits server visibility into prompts during sampling, and requires that users explicitly approve any LLM sampling request and control the actual prompt sent and what results the server can see.",
+    "stance": "supports",
+    "stance_target": "context isolation between an MCP server and the model's actual prompt content is a protocol-level design choice, directly relevant to the context-ingestion/isolation pillar",
+    "evidence_type": "theoretical",
+    "scope_conditions": "MCP base protocol specification, version 2025-06-18",
+    "quoted_support": "Users must explicitly approve any LLM sampling requests. Users should control: Whether sampling occurs at all, The actual prompt that will be sent, What results the server can see. The protocol intentionally limits server visibility into prompts.",
+    "numbers": [],
+    "entities": ["Model Context Protocol"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "specification-model-context-protocol"
+  },
+  {
+    "claim": "The MCP specification explicitly states that the protocol itself cannot enforce its security principles at the protocol level -- implementors are responsible for building consent/authorization flows, access controls, and data protections.",
+    "stance": "refutes",
+    "stance_target": "adopting the MCP protocol alone is sufficient to secure an AI software factory's tool-exposure layer without additional engineering",
+    "evidence_type": "theoretical",
+    "scope_conditions": "MCP base protocol specification, version 2025-06-18",
+    "quoted_support": "While MCP itself cannot enforce these security principles at the protocol level, implementors SHOULD: Build robust consent and authorization flows into their applications",
+    "numbers": [],
+    "entities": ["Model Context Protocol"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "specification-model-context-protocol"
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "Google Cloud Workbench instances (notebook/agent execution VMs) default to shutting down after 180 minutes of inactivity.",
+    "stance": "supports",
+    "stance_target": "auto-killing idle agents is a documented production pattern",
+    "evidence_type": "empirical",
+    "scope_conditions": "Google Cloud Gemini Enterprise Agent Platform Workbench instances",
+    "quoted_support": "Idle shutdown is enabled and set to shut down your instance after 180 inactive minutes by default.",
+    "numbers": ["180 minutes default", "10-1440 minute range in console"],
+    "entities": ["Google Cloud", "Gemini Enterprise Agent Platform", "Workbench"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "idle-shutdown-gemini-enterprise-agent-platform-google-cloud-documentation"
+  },
+  {
+    "claim": "Idle shutdown activity detection is defined narrowly as kernel API activity, not raw CPU usage, meaning a compute-bound but non-interactive process does not prevent termination.",
+    "stance": "supports",
+    "stance_target": "quiet self-termination requires a precise health-check / activity-signal definition",
+    "evidence_type": "technical",
+    "scope_conditions": "Workbench JupyterLab kernel instances",
+    "quoted_support": "CPU usage doesn't reset the idle shutdown timer. ... idle shutdown looks for activity in kernels running in the following addresses of the instance: 127.0.0.1:8080/api/sessions, /api/terminals, /api/kernels",
+    "numbers": [],
+    "entities": ["Google Cloud Workbench"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "idle-shutdown-gemini-enterprise-agent-platform-google-cloud-documentation"
+  },
+  {
+    "claim": "Idle shutdown is configured via a single metadata key (idle-timeout-seconds) settable through gcloud CLI or Terraform, making it infrastructure-as-code friendly.",
+    "stance": "neutral",
+    "stance_target": "implementation mechanics of auto-termination",
+    "evidence_type": "technical",
+    "scope_conditions": "Google Cloud Workbench instance provisioning",
+    "quoted_support": "gcloud workbench instances create INSTANCE_NAME --metadata=idle-timeout-seconds=86400",
+    "numbers": ["86400 seconds example", "43200 seconds example"],
+    "entities": ["gcloud CLI", "Terraform", "google_workbench_instance"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "idle-shutdown-gemini-enterprise-agent-platform-google-cloud-documentation"
+  },
+  {
+    "claim": "Billing for idle-shutdown instances drops CPU/GPU charges while shut down but retains disk storage charges, and scheduled executions still fire on schedule even while the instance is nominally shut down.",
+    "stance": "neutral",
+    "stance_target": "cost model of idle/dormant agent infrastructure",
+    "evidence_type": "empirical",
+    "scope_conditions": "Google Cloud Workbench billing model",
+    "quoted_support": "While your instance is shut down, there are no CPU or GPU usage charges except for scheduled executions that run during the shutdown. ... If you have scheduled an execution of a notebook file in a Agent Platform Workbench instance that is shut down, the execution still runs on schedule.",
+    "numbers": [],
+    "entities": ["Google Cloud Workbench", "Pricing"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "idle-shutdown-gemini-enterprise-agent-platform-google-cloud-documentation"
+  }
+]

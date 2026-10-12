@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Confident AI is the only platform among five compared (Confident AI, LangSmith, Langfuse, Braintrust, Arize AI) with native red teaming covering 120+ vulnerabilities and 20+ attack vectors mapped to OWASP Top 10, NIST AI RMF, and MITRE ATLAS.",
+    "stance": "supports",
+    "stance_target": "need for integrated red-teaming/adversarial security testing in eval platforms for an AI software factory",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "5-platform comparison published by DeepEval (vendor of Confident AI), 2026",
+    "quoted_support": "Native red teaming: 120+ vulnerabilities such as PII leakage and tool misuse, 20+ attack vectors such as linear jailbreaking, scanned on agentic traces — with shareable risk assessments aligned to OWASP Top 10, NIST AI RMF, and MITRE ATLAS",
+    "numbers": ["120+", "20+"],
+    "entities": ["Confident AI", "DeepTeam", "OWASP Top 10", "NIST AI RMF", "MITRE ATLAS"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "top-5-llm-evaluation-platforms-in-2026-compared-deepeval-the-llm-evaluation-fram"
+  },
+  {
+    "claim": "An evaluation framework (e.g. DeepEval, Ragas) runs in code for a single engineer, while an evaluation platform adds collaboration workflows, production monitoring, and regression tracking for cross-functional teams.",
+    "stance": "neutral",
+    "stance_target": "distinction between eval frameworks and eval platforms",
+    "evidence_type": "theoretical",
+    "scope_conditions": "general LLM tooling category definitions, 2026",
+    "quoted_support": "A framework runs in one engineer's terminal. A platform is necessary when teams need cross-functional collaboration — and enterprises, standardization.",
+    "numbers": [],
+    "entities": ["DeepEval", "Ragas"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "top-5-llm-evaluation-platforms-in-2026-compared-deepeval-the-llm-evaluation-fram"
+  },
+  {
+    "claim": "LangSmith's evaluation layer is lighter than its observability/tracing layer, requiring custom judge prompts rather than a built-in metric library, and it lacks native multi-turn simulation, red teaming, or safety evaluation.",
+    "stance": "refutes",
+    "stance_target": "LangSmith as a complete quality-gate solution for agentic systems",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "LangChain/LangGraph-centric stacks, 2026",
+    "quoted_support": "LangSmith is not for you if... You need multi-turn simulation, red teaming, or safety evaluation",
+    "numbers": [],
+    "entities": ["LangSmith", "LangChain", "LangGraph"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "top-5-llm-evaluation-platforms-in-2026-compared-deepeval-the-llm-evaluation-fram"
+  },
+  {
+    "claim": "Langfuse is a 100% MIT-licensed, self-hostable LLM engineering platform with full data ownership via Docker, but its evaluation layer (prebuilt judge evaluators) is lighter than its tracing/observability layer and it lacks native multi-turn simulation or red teaming.",
+    "stance": "neutral",
+    "stance_target": "self-hosting as a constraint-driven platform choice",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "teams requiring full data ownership / self-hosting, 2026",
+    "quoted_support": "Fully open-source and self-hostable, with unlimited users on all tiers ... Langfuse is not for you if... You need multi-turn evaluation, simulation, or red teaming",
+    "numbers": [],
+    "entities": ["Langfuse"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "top-5-llm-evaluation-platforms-in-2026-compared-deepeval-the-llm-evaluation-fram"
+  },
+  {
+    "claim": "Trace-cost pricing varies substantially across eval platforms: Confident AI charges $1/GB-month with unlimited traces while Braintrust charges $3/GB.",
+    "stance": "neutral",
+    "stance_target": "cost/resource optimization of observability infrastructure at scale",
+    "evidence_type": "statistical",
+    "scope_conditions": "pricing as published 2026",
+    "quoted_support": "Evaluating at scale? Compare trace costs: Confident AI is $1/GB-month with unlimited traces; Braintrust is $3/GB.",
+    "numbers": ["$1/GB-month", "$3/GB"],
+    "entities": ["Confident AI", "Braintrust"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "top-5-llm-evaluation-platforms-in-2026-compared-deepeval-the-llm-evaluation-fram"
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "Code review's primary function is not catching bugs but answering whether an author's intent was the right thing to build (architectural fit, complexity cost, taste), distinct from what tests and production observability answer.",
+    "stance": "refutes",
+    "stance_target": "framing that AI-driven SDLCs can collapse code review into production observability alone",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "professional software engineering, API/product review contexts",
+    "quoted_support": "Tests answer does the code do what the author intended. Production observability answers what is the system actually doing. Code review answers was the author's intent the right thing to build?",
+    "numbers": [],
+    "entities": ["Charity Majors", "Boris Tane", "Firebase", "Parse", "Google Cloud"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "code-review-is-not-about-catching-bugs-davidpollcom"
+  },
+  {
+    "claim": "Across 850 API proposals reviewed over 5.5 years at Firebase's API council, the most valuable feedback was judgment calls about product fit, not bug reports.",
+    "stance": "refutes",
+    "stance_target": "bug-detection framing of code/API review value",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "Firebase API council, cross-language/ecosystem review, ~850 proposals",
+    "quoted_support": "The most valuable feedback from that council was never you have a bug in this spec. It was this API implies a mental model that contradicts what you shipped last quarter.",
+    "numbers": ["5.5 years", "850 proposals"],
+    "entities": ["Firebase"],
+    "time_period": "unspecified historical period at Firebase",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "code-review-is-not-about-catching-bugs-davidpollcom"
+  },
+  {
+    "claim": "As automated tooling increasingly handles style, security patterns, API compatibility, and performance regressions, the remaining human-review surface area shrinks to judgment-based decisions about whether something should be part of the product.",
+    "stance": "neutral",
+    "stance_target": "scope of human-gated review in an agentic/automated software factory",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "evolving code review tooling landscape, 2026",
+    "quoted_support": "The kinds of things we can review in an automated way -- style consistency, security patterns, API compatibility, performance regressions -- are changing dramatically.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "code-review-is-not-about-catching-bugs-davidpollcom"
+  },
+  {
+    "claim": "A system can work perfectly in production (fully observable, no runtime errors) and still be the wrong thing to have built -- a defect class invisible to observability-based validation.",
+    "stance": "refutes",
+    "stance_target": "sufficiency of production observability as the sole quality-control mechanism for AI-generated code",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "API design and product architecture decisions",
+    "quoted_support": "the system can work perfectly and still be the wrong thing to have built... No amount of production observability surfaces them.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "code-review-is-not-about-catching-bugs-davidpollcom"
+  }
+]

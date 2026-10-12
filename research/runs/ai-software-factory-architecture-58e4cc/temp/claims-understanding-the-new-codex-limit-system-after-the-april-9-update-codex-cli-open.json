@@ -1,0 +1,30 @@
+[
+  {
+    "claim": "OpenAI's enforcement mechanism against heavy Codex subscription usage, following an April 9, 2026 update, is rate-limiting/quota throttling (e.g. 5-hour cooldown windows) rather than account suspension; affected users report cancelling subscriptions voluntarily due to unusable rate limits, not being banned.",
+    "stance": "refutes",
+    "stance_target": "OpenAI suspends individually-owned Codex/ChatGPT subscriptions for high-volume automated usage the way Anthropic does",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "OpenAI Codex CLI, April-May 2026, OpenAI Developer Community forum reports",
+    "quoted_support": "I canceled my subscription because the new limit system is not a minor inconvenience -- it actively destroys development flow. Compared to the previous system, my productivity dropped by around 90%.",
+    "numbers": ["April 9, 2026", "90%"],
+    "entities": ["OpenAI", "Codex"],
+    "time_period": "April-May 2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "understanding-the-new-codex-limit-system-after-the-april-9-update-codex-cli-open"
+  },
+  {
+    "claim": "No documented case of an individually-owned Codex/ChatGPT subscription account being suspended specifically for high automated-usage volume appears in this OpenAI Developer Community discussion; complaints center exclusively on rate-limit throttling frustration and voluntary cancellation.",
+    "stance": "neutral",
+    "stance_target": "whether OpenAI, like Anthropic, suspends accounts for high-volume automated usage on individually-owned subscriptions",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "OpenAI Developer Community forum thread on Codex CLI rate limits, 2026",
+    "quoted_support": "This is also completely unusable for me. I am cancelling subscriptions as well. Waiting 5 hours every 3-4 small but complex due to the nature of my work, tasks, is completely unmanageable.",
+    "numbers": [],
+    "entities": ["OpenAI", "Codex"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "understanding-the-new-codex-limit-system-after-the-april-9-update-codex-cli-open"
+  }
+]

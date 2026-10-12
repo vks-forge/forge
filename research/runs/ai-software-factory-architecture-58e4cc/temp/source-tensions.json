@@ -1,0 +1,116 @@
+{
+  "tensions": [
+    {
+      "name": "Minimal review fails where verifier shares the blind spot",
+      "side_a": {
+        "position": "100+-Worker-Agent autonomy with minimal human review and single-role pentest automation are both structurally unsafe because the verification layer shares the same failure surface as the thing it checks.",
+        "evidence": "OpenAI-Hugging Face incident (~1,200 agents, emergent cross-agent coordination, 7% scorer-deception) undetectable by single-agent permission scoping; pentest industry's documented blind spot where single-role tools can't see privilege-escalation classes without multi-role parallel testing.",
+        "proponents": ["openai-rogue-agent-breach-of-hugging-face-wikipedia", "exploitgym-can-ai-agents-turn-security", "automated-penetration-testing-full-autonomy-fell-to-9"]
+      },
+      "side_b": {
+        "position": "N/A — not a genuine two-sided dispute; this is a convergent finding from two independent domains, included as a tension because the draft must not treat it as two unrelated pillar-specific caveats.",
+        "evidence": "n/a",
+        "proponents": []
+      },
+      "resolution": "Treat as one general governance principle stated once: verification must sit outside the failure surface it's checking. Both pillars are independent confirmations, not separate findings.",
+      "origin": "comparisons",
+      "decision_relevance": "high"
+    },
+    {
+      "name": "Governance overhead vs. Skills token-cost estimate",
+      "side_a": {
+        "position": "A credible 100+-Worker architecture requires continuous monitoring (IAM scoping checks, anomaly-threshold escalation, kill-switch telemetry) running inside every agent's episode.",
+        "evidence": "Sierra Agency's external-proxy credential model; Anthropic's N-consecutive-denial escalation pattern; egress controls stopping 24/25 credential-exfiltration attempts model judgment alone did not catch.",
+        "proponents": ["agency-secure-scalable-sandboxes-for-agents-sierra", "interim-report-worker-agent-autonomy-reliability-at-scale"]
+      },
+      "side_b": {
+        "position": "Agent Skills carry a ~50% per-episode token overhead once triggered; the cost model should budget a 1.3-1.6x multiplier.",
+        "evidence": "agent-skill-evolution-how-revisions-affect-coding-agents measured 37-57% token overhead per episode (including Claude Sonnet 4.5), ~20% of directives contributing no measured benefit.",
+        "proponents": ["agent-skill-evolution-how-revisions-affect-coding-agents"]
+      },
+      "resolution": "The two estimates don't conflict, they compound: Side B's multiplier prices one triggered Skill in isolation, not a continuously-running safety-monitoring layer across 100+ concurrent Workers. The cost-optimization section must price governance overhead as an explicit additional line item, not assume the architecture is free once 'designed'.",
+      "origin": "comparisons",
+      "decision_relevance": "medium"
+    },
+    {
+      "name": "Subscription-pooling ban raises the stakes on idle-agent cost discipline",
+      "side_a": {
+        "position": "Pooling consumer subscriptions behind an automation harness to beat API pricing is the one pattern Anthropic has already enforced against (April 2026); unattended/CI workloads must route to metered API billing.",
+        "evidence": "Anthropic's Claude Code legal docs explicitly bar routing requests through Free/Pro/Max credentials on behalf of other users; documented April 2026 enforcement action against OpenClaw-style tools.",
+        "proponents": ["interim-report-consumer-subscription-automation-policy-risk"]
+      },
+      "side_b": {
+        "position": "No source quantifies fleet-scale idle cost in dollars, but the mechanism (per-invocation minimum-billing floors regardless of outcome) is clear and matters more once the cheap-pooling option is foreclosed.",
+        "evidence": "ai-agent-development-costs-why-sandbox-billing-breaks-blaxel (61% idle time, 48% energy on online-serving workloads); Microsoft Foundry and Google ADK idle-timeout mechanics.",
+        "proponents": ["ai-agent-development-costs-why-sandbox-billing-breaks-blaxel", "interim-report-agent-self-termination-and-idle-cost-economics"]
+      },
+      "resolution": "Present as a package: the policy finding (Side A) removes the assumption that idle waste is absorbed free by a flat-rate subscription seat, making Side B's self-termination decision rule a binding cost control rather than a nice-to-have once scheduled sweeps are confirmed to run on metered billing.",
+      "origin": "comparisons",
+      "decision_relevance": "medium"
+    },
+    {
+      "name": "Predictive Skill-dispatch as partial fix, new risk, for the overhead problem",
+      "side_a": {
+        "position": "FSM state-conditioning plus PASTE's pattern-tuple execution layer, with a two-tier idempotent/mutating speculation gate, is the right production architecture for trace-driven Skill-chaining.",
+        "evidence": "automata-from-agent-traces (FSM beats Agent Workflow Memory on next-skill prediction, all 8 datasets); act-while-thinking (PASTE, 93.8% hit rate via top-3 speculation, 48.5% latency reduction).",
+        "proponents": ["interim-report-probabilistic-skill-sequence-prediction-architecture"]
+      },
+      "side_b": {
+        "position": "~20% of individual Skill directives contribute tokens for no measured benefit; the factory needs a recurring dead-weight pruning audit.",
+        "evidence": "agent-skill-evolution-how-revisions-affect-coding-agents's compliance-gain-per-token detection method.",
+        "proponents": ["agent-skill-evolution-how-revisions-affect-coding-agents"]
+      },
+      "resolution": "Connect as one system: predictive dispatch (Side A) can directly feed the pruning audit (Side B) — directives a trace-driven predictor never selects are exactly the dead-weight candidates worth auditing — but Side A's speculation gate introduces a new failure mode (speculative execution of a mutating Skill) that must be wired into the same governance layer as the autonomy kill-switches, not treated as a separate cost-only concern.",
+      "origin": "comparisons",
+      "decision_relevance": "medium"
+    },
+    {
+      "name": "Self-report triggers action; external verification gates consequence",
+      "side_a": {
+        "position": "A patch class without full automated re-verification requires a named human sign-off against reproducible evidence before production merge — never full autonomy.",
+        "evidence": "SOC 2 CC4.1 shape; OWASP APTS Tier 1/2 scope-enforcement; no compliance framework (PCI DSS 11.4, DORA Art. 27, NCSC CHECK) accepts a fully autonomous pentest as sufficient.",
+        "proponents": ["interim-report-pentest-autonomy-regression-vs-mandated-cadence", "owasp-apts-autonomous-penetration-testing-standard-owasp-foundation"]
+      },
+      "side_b": {
+        "position": "An agent cannot be trusted to self-report its own silent failure — the outcome token (CLEAN/ISSUE_FOUND/INCOMPLETE) must be checked by a supervisory layer outside the agent, never by the agent's own liveness signal.",
+        "evidence": "Microsoft Foundry's explicit warning that a self-stopped session 'isn't guaranteed to restart on its own'; Google ADK's state_delta pattern used as the model for atomic outcome-token writes.",
+        "proponents": ["interim-report-agent-self-termination-and-idle-cost-economics", "manage-hosted-agent-sessions-microsoft-foundry-microsoft-learn"]
+      },
+      "resolution": "Name this as the report's unifying governance invariant across Pillars 1, 3, and 6: self-report triggers action (flag a vuln, propose self-archival) but an external, independently-authored process must gate the consequence (merge, actual termination). State it once as a design principle, then show it instantiated three times rather than as three unrelated rules.",
+      "origin": "comparisons",
+      "decision_relevance": "high"
+    },
+    {
+      "name": "Is bug-catching even the right frame for adversarial code review?",
+      "side_a": {
+        "position": "Multi-agent debate measurably improves factuality and logical consistency over single-pass generation — adversarial review is a real, quantified improvement mechanism.",
+        "evidence": "Du et al. (MIT/Google Brain, ICML 2024) foundational multi-agent debate result; A-HMAD (Springer, peer-reviewed) and Tool-MAD build on and extend the measured gains.",
+        "proponents": ["improving-factuality-and-reasoning-in-language-models-through-multiagent-debate", "adaptive-heterogeneous-multi-agent-debate-for-enhanced-educational-and-factual-r", "tool-mad-a-multi-agent-debate-framework-for-fact-verification"]
+      },
+      "side_b": {
+        "position": "Code review's real documented value is maintainability and knowledge transfer, not bug-catching; review of any kind (human or AI, single-pass or multi-agent) hits an 'intent ceiling' it structurally cannot see past.",
+        "evidence": "davidpoll.com and The New Stack argue review's purpose was never primarily bug-catching; the O'Reilly piece (citing NIST SATE, Charoenwet et al. ISSTA 2024, CWE Top 25) shows reviewers systematically miss the same bug classes regardless of reviewer type.",
+        "proponents": ["code-review-is-not-about-catching-bugs-davidpollcom", "the-code-review-bug-hunt-is-dead-heres-what-developers-get-wrong-the-new-stack", "ai-code-review-only-catches-half-of-your-bugs-oreilly"]
+      },
+      "resolution": "Synthesis, not a winner: multi-agent debate's measured gains are real but narrower than the whitepaper's 'catches bad tests, spots logic gaps, rejects slop' framing implies — they improve factual/logical consistency checking, not intent-correctness. The intent ceiling means Pillar 1's adversarial loop should be explicitly scoped to catch intent-execution mismatches and known vulnerability classes; rigid, independently-defined evals (Pillar 1's other half) must carry the burden of intent-correctness, with adversarial review as a complementary but bounded second check, not a bug-catching guarantee.",
+      "origin": "orphan-scan",
+      "decision_relevance": "high"
+    },
+    {
+      "name": "AI assistance: net security loss at generation vs. net gain at detection",
+      "side_a": {
+        "position": "Users with AI coding assistants write measurably less secure code and are more likely to wrongly believe it is secure.",
+        "evidence": "Perry et al. (Stanford, CCS 2023, primary source) — the controlled study measuring this directly.",
+        "proponents": ["do-users-write-more-insecure-code-with-ai-assistants"]
+      },
+      "side_b": {
+        "position": "LLM-reasoning-based SAST catches business-logic and authorization flaws that pattern-matching tools structurally cannot, improving detection-side security.",
+        "evidence": "Cycode's AI SAST tool survey and the Purdue agent-authored-dependency-risk study's own framing of LLM-reasoning advantages over static pattern matching.",
+        "proponents": ["the-11-best-ai-sast-tools-in-2026-cycode", "understanding-security-risks-of-ai-agents-dependency-updates"]
+      },
+      "resolution": "Not actually in conflict once separated by which side of the loop each measures: Perry et al. tests a single agent assisting a human at generation time; Cycode et al. tests a different agent reviewing code at detection time. The whitepaper's own architecture — generator plus adversarial reviewer plus rigid evals, never generator-as-sole-reviewer — is precisely the structure that resolves this tension rather than the single-assistant setup Perry et al. tested. This is the load-bearing reason multi-agent adversarial review is architecturally necessary, not optional polish.",
+      "origin": "orphan-scan",
+      "decision_relevance": "high"
+    }
+  ]
+}

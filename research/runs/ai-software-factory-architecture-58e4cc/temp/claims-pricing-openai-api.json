@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "As of October 2026, OpenAI's flagship model lineup is gpt-6-astra (top tier, $10 input/$1 cached-input/$12.50 cache-write/$50 output per 1M tokens, short-context Standard), gpt-6.1-sol (mid tier, $2/$0.10/$2.50/$10), and gpt-6-luna (cheapest, $0.10/$0.01/$0.125/$0.50 per 1M tokens).",
+    "stance": "neutral",
+    "stance_target": "current ground-truth API pricing baseline for cost modeling an AI software factory",
+    "evidence_type": "empirical",
+    "scope_conditions": "OpenAI API official pricing documentation, fetched October 2026",
+    "quoted_support": "gpt-6-astra $10.00 $1.00 $12.50 $50.00 ... gpt-6.1-sol $2.00 $0.10 $2.50 $10.00 ... gpt-6-luna $0.10 $0.01 $0.125 $0.50",
+    "numbers": ["$10.00", "$1.00", "$12.50", "$50.00", "$2.00", "$0.10", "$2.50", "$10.00", "$0.125", "$0.50"],
+    "entities": ["OpenAI", "gpt-6-astra", "gpt-6.1-sol", "gpt-6-luna"],
+    "time_period": "October 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "pricing-openai-api"
+  },
+  {
+    "claim": "OpenAI's Batch processing tier is priced at roughly half of Standard-tier rates across all flagship models, while Fast and Ultrafast processing modes carry roughly 2x and 6x premiums over Standard, respectively, giving a built-in cost/latency dial for agent task scheduling.",
+    "stance": "supports",
+    "stance_target": "cost and resource optimization for AI agent infrastructure should route latency-insensitive batch work to the cheapest processing tier",
+    "evidence_type": "empirical",
+    "scope_conditions": "OpenAI API pricing tiers (Standard/Batch/Flex/Fast/Ultrafast), October 2026",
+    "quoted_support": "gpt-6-astra $5.00 $0.50 $6.25 $25.00 [Batch] ... gpt-6-astra $20.00 $2.00 $25.00 $100.00 [Fast] ... gpt-6-astra $60.00 $6.00 $75.00 $300.00 [Ultrafast]",
+    "numbers": ["$5.00", "$20.00", "$60.00"],
+    "entities": ["OpenAI"],
+    "time_period": "October 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "pricing-openai-api"
+  },
+  {
+    "claim": "OpenAI charges a 10% uplift on regional data-residency and FedRAMP endpoints for models released on or after March 5, 2026, directly affecting the cost model for regulated-industry AI software factory deployments.",
+    "stance": "neutral",
+    "stance_target": "compliance/data-residency cost overhead for enterprise agent deployments",
+    "evidence_type": "empirical",
+    "scope_conditions": "OpenAI API, models released on/after March 5, 2026",
+    "quoted_support": "Regional processing (data residency) endpoints are charged a 10% uplift for models released on or after March 5, 2026. FedRAMP endpoints are also charged a 10% uplift.",
+    "numbers": ["10%", "March 5, 2026"],
+    "entities": ["OpenAI", "FedRAMP"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "pricing-openai-api"
+  },
+  {
+    "claim": "OpenAI's hosted agent sandbox containers (Hosted Shell and Code Interpreter) are billed per 20-minute session by RAM tier: $0.03 for 1GB, $0.12 for 4GB, $0.48 for 16GB, and $1.92 for 64GB, with a 5-minute minimum billing per session.",
+    "stance": "neutral",
+    "stance_target": "concrete unit economics for cloud agent sandbox infrastructure (directly relevant to the triggers/infrastructure pillar)",
+    "evidence_type": "empirical",
+    "scope_conditions": "OpenAI Agents API hosted sandboxes, October 2026",
+    "quoted_support": "Hosted Shell and Code Interpreter 1 GB $0.03, 4 GB $0.12, 16 GB $0.48, 64 GB $1.92 per 20-minute session per container.",
+    "numbers": ["$0.03", "$0.12", "$0.48", "$1.92", "20-minute session", "5-minute minimum"],
+    "entities": ["OpenAI", "Code Interpreter", "Hosted Shell"],
+    "time_period": "October 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "pricing-openai-api"
+  },
+  {
+    "claim": "OpenAI's Codex Security product line offers a distinct pricing/capability surface for automated codebase security sweeps, including bulk scans, CI/CD integration (including GitLab CI/CD), deep scans, and a threat-model workbench, separate from general-purpose agent/model pricing.",
+    "stance": "supports",
+    "stance_target": "vendor-native tooling now exists for the automated cybersecurity sweep pillar of an AI software factory, reducing the need to build this capability entirely in-house",
+    "evidence_type": "empirical",
+    "scope_conditions": "OpenAI Codex Security CLI/Cloud documentation, as referenced in the pricing doc's navigation structure, October 2026",
+    "quoted_support": "Codex Security CLI Quickstart Run bulk scans Run scans in CI GitLab CI/CD Reference FAQ TypeScript SDK Codex Security Cloud Setup Security Review Improving the threat model FAQ",
+    "numbers": [],
+    "entities": ["OpenAI", "Codex Security"],
+    "time_period": "October 2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "pricing-openai-api"
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "claim": "85% of organizations are using some form of AI, per Wiz Research's analysis of hundreds of thousands of public cloud accounts in its second annual State of AI in the Cloud 2025 report.",
+    "stance": "neutral",
+    "stance_target": "primary data source for AI adoption prevalence cited in downstream agent-orchestration security analysis",
+    "evidence_type": "statistical",
+    "scope_conditions": "Wiz State of AI in the Cloud 2025 report, sample of hundreds of thousands of public cloud accounts",
+    "quoted_support": "85% of organizations are using some form of AI. As this technology cements itself, its potential for innovation—and disruption—has never been greater.",
+    "numbers": ["85%"],
+    "entities": ["Wiz"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "the-state-of-ai-in-the-cloud-2025-wiz"
+  },
+  {
+    "claim": "75% of organizations now use self-hosted AI models and 77% use dedicated AI/ML software, while OpenAI and Azure OpenAI SDKs remain dominant at 67% of cloud environments.",
+    "stance": "neutral",
+    "stance_target": "cloud AI/ML tooling adoption baseline relevant to sizing the addressable market for a multi-agent software factory",
+    "evidence_type": "statistical",
+    "scope_conditions": "Wiz State of AI in the Cloud 2025 report",
+    "quoted_support": "AI adoption in cloud environments continues to rise, with 75% of organizations now using self-hosted AI models and 77% utilizing dedicated AI/ML software. OpenAI and Azure OpenAI SDKs maintain their dominance, used by 67% of cloud environments.",
+    "numbers": ["75%", "77%", "67%"],
+    "entities": ["Wiz", "OpenAI", "Azure OpenAI"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "the-state-of-ai-in-the-cloud-2025-wiz"
+  }
+]

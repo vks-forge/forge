@@ -1,0 +1,219 @@
+{
+  "ok": true,
+  "data": {
+    "issues": [
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"catches style, architecture, readability and maintainability. Tests catch bugs\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"often corroborate rather than catch errors\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"an unfair advantage on some tasks by examining the git history from previous trials.\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"whether a real user consent signal actually covers the blast radius of that specific action (e.g. 'clean up the PR' does\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"all internet traffic … through a filtering egress proxy\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"You can still use the Claude Agent SDK, `claude -p`, and third-party apps with your subscription limits\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Trigger Plane (authenticated, untrusted input)\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Router + Triage: typed record, free text quarantined,<br/>dedupe/correlate, allowlisted workflow + risk ceiling\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Director: deterministic workflow engine<br/>effort-scaling, budgets, checkpoints\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Autonomy Ledger: action class -> tier -> named owner\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Signed Skill Registry + FSM predictor\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Context Lake: code graph, ADR index, compiled rules\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Execution Plane (isolated microVMs, snapshot fan-out, async queues)\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Read-only pool (scales to 100+)\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"LLM proxy: JIT (just-in-time, short-lived) keys, metering, routing\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Egress proxy + per-worker cache namespaces\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Per-runner IAM; no prod write creds\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Claims-vs-tool-records; lint, types, AST API check\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Compiled ADR rules; SAST/SCA + reachability\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Independent intent tests (frozen, hidden)\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Critic: mutation, guard deletion, counterexamples\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Execution arbiter + pass^k evals\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Residual judge: order-swapped, Unknown exit\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Blast radius: reach x irreversibility x sensitivity\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Oversight Plane (no agent can halt it)\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Trace + CoT (chain-of-thought) monitors; FSM brake\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Cost governor: budgets, 2σ/3σ throttle\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"Observability: cost per change, incidents\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      },
+      {
+        "rule": "quote-integrity",
+        "severity": "error",
+        "note_id": "<report>",
+        "note_path": "D:\\VIKASH\\software-factory\\research\\notes\\final_report_ai-software-factory-architecture-58e4cc.md",
+        "message": "Quoted span not found verbatim in any vault note: \"the burden of proof [rising] with the autonomy, duration, and risk.\"... Either the quote is hallucinated/mangled or its source was never fetched. Fix the quote or drop the quotation marks."
+      }
+    ],
+    "summary": {
+      "errors": 29,
+      "warnings": 0,
+      "info": 0,
+      "total": 29
+    }
+  },
+  "count": 29,
+  "vault": "D:\\VIKASH\\software-factory",
+  "timestamp": "2026-10-12T10:56:05.576044+00:00"
+}

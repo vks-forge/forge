@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "Multi-agent debate systems suffer from a 'cognitive islands' problem where agents with limited, different knowledge backgrounds can reach consistent but factually wrong consensus; a shared retrieval knowledge pool mitigates this by connecting agents' knowledge spaces.",
+    "stance": "supports",
+    "stance_target": "necessity of shared/external evidence grounding in multi-agent adversarial review architectures to prevent correlated hallucination",
+    "evidence_type": "theoretical",
+    "scope_conditions": "LLM-based multi-agent debate systems",
+    "quoted_support": "It is challenging to make various agents perform right and highly consistent cognition due to their limited and different knowledge backgrounds (i.e., cognitive islands), which hinders the search for the optimal solution.",
+    "numbers": [],
+    "entities": ["MADKE"],
+    "time_period": "2023-2024",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "learning-to-break"
+  },
+  {
+    "claim": "MADKE running on the open-source Qwen1.5-72B-Chat model surpasses GPT-4 by +1.26% on average across six benchmark datasets when using knowledge-enhanced multi-agent debate.",
+    "stance": "supports",
+    "stance_target": "economic argument that multi-agent orchestration architecture can substitute for raw single-model scale/cost in a software factory",
+    "evidence_type": "empirical",
+    "scope_conditions": "six NLP benchmark datasets, Qwen1.5-72B-Chat vs GPT-4 backbone comparison",
+    "quoted_support": "MADKE using Qwen1.5-72B-Chat surpasses GPT-4 by +1.26% on average in six datasets, which validates that our method can help open-source LLMs achieve or even surpass the performance of GPT-4.",
+    "numbers": ["+1.26%", "six datasets"],
+    "entities": ["MADKE", "Qwen1.5-72B-Chat", "GPT-4"],
+    "time_period": "2023-2024",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "learning-to-break"
+  },
+  {
+    "claim": "MADKE's adaptive knowledge selection allows each agent to independently decide, per debate round, whether to use retrieved external knowledge or rely on internal reasoning, rather than forcing uniform retrieval.",
+    "stance": "neutral",
+    "stance_target": "design pattern for selective/adaptive tool use within multi-agent review pipelines",
+    "evidence_type": "theoretical",
+    "scope_conditions": "MADKE architecture",
+    "quoted_support": "This method allows agents to choose whether to use external knowledge in each conversation round according to their own needs.",
+    "numbers": [],
+    "entities": ["MADKE"],
+    "time_period": "2023-2024",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "learning-to-break"
+  }
+]

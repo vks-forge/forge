@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Plurality voting over LLM-generated code samples fails as a correctness-verification strategy because LLMs produce correlated errors, meaning voting amplifies shared mistakes rather than catching them.",
+    "stance": "refutes",
+    "stance_target": "majority/plurality voting as a sufficient zero-hallucination quality-control mechanism",
+    "evidence_type": "theoretical",
+    "scope_conditions": "LLM code generation, black-box setting, 2026",
+    "quoted_support": "since LLMs are prone to generating correlated errors, this is equivalent to interrogating a group of suspects who have already colluded on the same fake alibi. In such cases, plurality voting does not identify the truth; it merely amplifies their shared deception.",
+    "numbers": [],
+    "entities": ["plurality voting"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "reducing-hallucinations-in-llm-generated-code"
+  },
+  {
+    "claim": "LLM-generated tests and auto-formalized specifications, used as correctness proxies in prior work, are produced by the same imperfect model that wrote the code and thus often corroborate rather than catch errors.",
+    "stance": "refutes",
+    "stance_target": "same-model-generated tests/specifications as reliable adversarial-review proxies",
+    "evidence_type": "theoretical",
+    "scope_conditions": "black-box code-correctness assessment, 2026",
+    "quoted_support": "these proxies are produced by the same imperfect models and thus often corroborate rather than catch errors, especially when the model exhibits correlated errors.",
+    "numbers": [],
+    "entities": ["semantic triangulation"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "reducing-hallucinations-in-llm-generated-code"
+  },
+  {
+    "claim": "Semantic triangulation increases the probability of selecting a correct program by 16% over baselines (test generation, metamorphic testing, auto-formalized specifications), evaluated on LiveCodeBench and CodeElo across GPT-4o, DeepSeek-V3, and Gemini 2.5 Flash.",
+    "stance": "supports",
+    "stance_target": "effectiveness of decorrelated dual-problem consistency checking as a hallucination-reduction technique",
+    "evidence_type": "empirical",
+    "scope_conditions": "LiveCodeBench, CodeElo benchmarks; GPT-4o, DeepSeek-V3, Gemini 2.5 Flash; 2026",
+    "quoted_support": "our tool increases the probability of selecting a correct program by 16% over baselines (test generation, metamorphic testing, and auto-formalized specifications) and achieves 7% higher reliability and 7% higher F1 score in selection-or-abstention scenarios",
+    "numbers": ["16%", "7%", "7%"],
+    "entities": ["semantic triangulation", "LiveCodeBench", "CodeElo", "GPT-4o", "DeepSeek-V3", "Gemini 2.5 Flash"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "reducing-hallucinations-in-llm-generated-code"
+  },
+  {
+    "claim": "Semantic triangulation is reported as the only evaluated method that consistently handles 'inexact' problems admitting multiple valid solutions, a known failure mode for exact-match/test-based correctness proxies.",
+    "stance": "supports",
+    "stance_target": "advantage of triangulation-based verification over exact-match test-based verification for open-ended/inexact coding tasks",
+    "evidence_type": "empirical",
+    "scope_conditions": "LiveCodeBench, CodeElo evaluation, 2026",
+    "quoted_support": "while being the only method that consistently handles inexact problems admitting multiple valid solutions.",
+    "numbers": [],
+    "entities": ["semantic triangulation"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "reducing-hallucinations-in-llm-generated-code"
+  },
+  {
+    "claim": "The 'vibe coding' trend, where developers continuously prompt without thoroughly reviewing generated code, exacerbates the risk of undetected bugs and vulnerabilities from LLM hallucination.",
+    "stance": "supports",
+    "stance_target": "necessity of automated, decorrelated verification layers given reduced human review in AI-driven coding workflows",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "general LLM code-generation practice, 2026",
+    "quoted_support": "This is exacerbated by the growing trend of 'vibe coding', where developers engage in continuous prompting without thoroughly reviewing the generated code.",
+    "numbers": [],
+    "entities": ["vibe coding"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "reducing-hallucinations-in-llm-generated-code"
+  }
+]

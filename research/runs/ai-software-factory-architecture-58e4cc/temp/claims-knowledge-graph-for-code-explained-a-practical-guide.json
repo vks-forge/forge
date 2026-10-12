@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "A code knowledge graph that stores functions/files/modules/endpoints as nodes and calls/imports/depends-on relationships as edges can answer blast-radius questions ('what breaks if we rename this function') that grep (text match), AST parsing (syntax only), and vector search (similarity only) cannot answer.",
+    "stance": "supports",
+    "stance_target": "structured dependency/blast-radius mapping is a necessary context-ingestion layer for AI coding agents operating on real codebases",
+    "evidence_type": "theoretical",
+    "scope_conditions": "product codebases with cross-module reuse, as opposed to toy repos",
+    "quoted_support": "If grep finds formatCurrency, that tells you where text appears. If a graph shows formatCurrency -> BillingService -> /api/invoices -> nightly reconciliation job, you can reason about blast radius.",
+    "numbers": [],
+    "entities": ["Tree-sitter", "Neo4j"],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "knowledge-graph-for-code-explained-a-practical-guide"
+  },
+  {
+    "claim": "A graph-backed structural query can return the same architectural answer that would otherwise require an agent to read files and spend roughly 40,000 tokens, in roughly 2,000 tokens, with zero further LLM cost per query after the repo is mapped once via deterministic parsing.",
+    "stance": "supports",
+    "stance_target": "deterministic structural context retrieval reduces both token cost and non-determinism versus LLM-based repo exploration",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "vendor-reported figures from Pharaoh, not independently benchmarked",
+    "quoted_support": "Without a structural layer, the agent often spends 40K tokens reading files just to guess how a subsystem fits together. A graph query can return the same architectural answer in roughly 2K tokens.",
+    "numbers": ["40K tokens vs 2K tokens"],
+    "entities": ["Pharaoh"],
+    "time_period": null,
+    "region": null,
+    "confidence": "low",
+    "source_note_id": "knowledge-graph-for-code-explained-a-practical-guide"
+  },
+  {
+    "claim": "An agent that refactors a shared function without first checking a dependency/blast-radius graph can miss transitive callers reachable only through intermediate indirection, producing silent regressions that pass local tests but break unrelated production endpoints.",
+    "stance": "supports",
+    "stance_target": "file-by-file exploration without a structural dependency map is a primary root cause of AI-agent regression bugs",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "worked example from vendor blog, illustrative rather than measured",
+    "quoted_support": "Before the graph, an agent edits formatNotificationPayload() in isolation. It updates the direct unit tests and maybe one obvious caller. Looks fine. Hidden problem: two indirect callers depend on a field the refactor removed. That's where regressions come from.",
+    "numbers": [],
+    "entities": [],
+    "time_period": null,
+    "region": null,
+    "confidence": "low",
+    "source_note_id": "knowledge-graph-for-code-explained-a-practical-guide"
+  },
+  {
+    "claim": "Deterministic parsing tools like Tree-sitter, rather than LLM-inferred structure, should be the basis of a code knowledge graph so that structural answers come from actual code relationships rather than model improvisation.",
+    "stance": "supports",
+    "stance_target": "codebase mastery/reverse-engineering tooling should rely on deterministic static parsing, not probabilistic inference",
+    "evidence_type": "theoretical",
+    "scope_conditions": "TypeScript and Python repo parsing",
+    "quoted_support": "Tools like Tree-sitter read source code structure without guessing. That matters because the graph should come from actual code relationships, not from a model improvising what it thinks the repo probably does.",
+    "numbers": [],
+    "entities": ["Tree-sitter"],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "knowledge-graph-for-code-explained-a-practical-guide"
+  }
+]

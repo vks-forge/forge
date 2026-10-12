@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "A 2023 Stanford study found developers using AI coding assistants wrote significantly less secure code than those without, while rating their own insecure output as more secure.",
+    "stance": "supports",
+    "stance_target": "AI-generated code requires machine-checkable quality gates rather than trust in reviewer confidence",
+    "evidence_type": "empirical",
+    "scope_conditions": "developers using AI coding assistants, 2023 study",
+    "quoted_support": "Stanford researchers found that developers using AI assistants \"wrote significantly less secure code\" than those without — and rated their own insecure output as more secure (Perry et al., 2023).",
+    "numbers": [],
+    "entities": ["Perry et al.", "Stanford"],
+    "time_period": "2023",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "ai-code-quality-gates-an-automated-review-pipeline-axiom-studio"
+  },
+  {
+    "claim": "A four-gate automated pipeline (style/correctness, security scanning, test coverage enforcement, compliance verification) converts categories of human-review burden into deterministic, machine-checkable CI evidence before a human ever reviews an AI-generated diff.",
+    "stance": "supports",
+    "stance_target": "rigid, automated quality gates as the primary defense against AI-generated code defects",
+    "evidence_type": "theoretical",
+    "scope_conditions": "CI/CD pipelines merging agent-authored commits",
+    "quoted_support": "The fix is not to demand more careful humans. It is to push every claim a reviewer would otherwise have to take on faith into a machine-checkable gate that runs before the human ever opens the diff.",
+    "numbers": ["4 gates"],
+    "entities": ["Semgrep", "CodeQL", "OSV-Scanner", "Gitleaks", "TruffleHog"],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "ai-code-quality-gates-an-automated-review-pipeline-axiom-studio"
+  },
+  {
+    "claim": "Diff-level test coverage enforcement plus mutation testing (not merely line coverage) is necessary because AI agents write tests that prove their own code works on inputs they thought of, but are weak at adversarial cases and boundary conditions.",
+    "stance": "supports",
+    "stance_target": "test coverage alone is insufficient; mutation testing verifies tests actually catch regressions",
+    "evidence_type": "theoretical",
+    "scope_conditions": "coding-agent-generated test suites",
+    "quoted_support": "The bar is not \"tests exist.\" The bar is \"tests would have caught a regression.\" Mutation testing is what makes that statement falsifiable.",
+    "numbers": [],
+    "entities": ["pitest", "Stryker", "mutmut", "Hypothesis", "fast-check"],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "ai-code-quality-gates-an-automated-review-pipeline-axiom-studio"
+  },
+  {
+    "claim": "A compliance verification gate should check that every PR carries the prompt that produced the diff, the agent identity, the model version, and the human approver, failing the gate on missing fields -- an explicit audit-trail requirement for AI-generated commits.",
+    "stance": "supports",
+    "stance_target": "audit trail completeness as a mandatory CI gate for AI software factories",
+    "evidence_type": "theoretical",
+    "scope_conditions": "regulated or control-framework-aligned engineering organizations",
+    "quoted_support": "the gate verifies that the PR carries the prompt that produced the diff, the agent identity, the model version, and the human approver. Missing fields fail the gate.",
+    "numbers": [],
+    "entities": ["SOC 2 CC6", "NIST AI RMF", "EU AI Act"],
+    "time_period": null,
+    "region": "EU/US",
+    "confidence": "medium",
+    "source_note_id": "ai-code-quality-gates-an-automated-review-pipeline-axiom-studio"
+  },
+  {
+    "claim": "Gate intensity should scale with code blast radius: risk-tiered rulesets apply heavier checks (e.g. mutation testing) to high-impact paths like authentication code and lighter checks to low-impact paths like marketing pages.",
+    "stance": "supports",
+    "stance_target": "blast-radius-aware quality gating keeps pipeline latency low without sacrificing rigor on critical code",
+    "evidence_type": "theoretical",
+    "scope_conditions": "CI/CD gate design",
+    "quoted_support": "A tweak to a marketing landing page does not need mutation testing. A change to authentication code does. Use a path-based ruleset that scales gate intensity with blast radius.",
+    "numbers": [],
+    "entities": [],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "ai-code-quality-gates-an-automated-review-pipeline-axiom-studio"
+  }
+]

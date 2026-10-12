@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "68.3% of the original SWE-bench test samples were filtered out by human annotators (93 professional Python developers) for underspecified problem statements, unfair unit tests, or other quality issues when constructing SWE-bench Verified, demonstrating that the original benchmark systematically underestimated coding-agent capability.",
+    "stance": "supports",
+    "stance_target": "a rigid-evals architecture for AI software factories must independently audit benchmark/test quality, since nearly 70% of a widely-used coding benchmark's samples were found to be unfairly scored",
+    "evidence_type": "empirical",
+    "scope_conditions": "OpenAI's SWE-bench Verified annotation campaign, published Aug 2024",
+    "quoted_support": "This filtering process is likely to be overzealous but allows us to have high confidence in the feasibility of the unfiltered samples. ... 38.3% of samples were flagged for underspecified problem statements, and 61.1% were flagged for unit tests that may unfairly mark valid solutions as incorrect.",
+    "numbers": ["68.3%", "38.3%", "61.1%", "93 developers", "500 samples", "1,699 annotated samples"],
+    "entities": ["OpenAI", "SWE-bench"],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "introducing-swe-bench-verified-openai"
+  },
+  {
+    "claim": "GPT-4o's best-performing open-source scaffold resolved 33.2% of SWE-bench Verified tasks, more than double its 16% score on the original SWE-bench, with the performance gain occurring within every individual difficulty bucket -- not merely from shifting the overall difficulty distribution -- confirming the original benchmark undercounted true model capability.",
+    "stance": "supports",
+    "stance_target": "benchmark quality directly and substantially affects measured agent capability scores; a flawed benchmark can understate true coding-agent performance by half or more",
+    "evidence_type": "empirical",
+    "scope_conditions": "GPT-4o-2024-05-13, Agentless scaffold, SWE-bench vs SWE-bench Verified, 2024",
+    "quoted_support": "GPT‑4o’s performance on the best-performing scaffold reaches 33.2% on SWE-bench Verified, more than doubling its score of 16% on the original SWE-bench.",
+    "numbers": ["33.2%", "16%"],
+    "entities": ["OpenAI", "GPT-4o", "SWE-bench Verified", "Agentless"],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "introducing-swe-bench-verified-openai"
+  },
+  {
+    "claim": "SWE-bench samples are scraped from public GitHub repositories, so large foundation models pretrained on internet text are likely contaminated on these exact tasks, and the benchmark covers only a narrow slice of the Model Autonomy risk category, requiring supplementation with other evaluations.",
+    "stance": "refutes",
+    "stance_target": "SWE-bench or SWE-bench Verified scores alone are a sufficient, uncontaminated measure of autonomous coding agent capability for rigid-evals purposes",
+    "evidence_type": "theoretical",
+    "scope_conditions": "stated limitations of SWE-bench, OpenAI Preparedness Framework context, 2024",
+    "quoted_support": "Given that the benchmark is composed of scrapes of public GitHub repos, large foundation models that are pre-trained on internet text are likely to be contaminated on the tasks. Furthermore, SWE-bench only covers a narrow distribution of the Medium risk level for model autonomy and so must be supplemented with other evaluations.",
+    "numbers": [],
+    "entities": ["OpenAI", "SWE-bench"],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "introducing-swe-bench-verified-openai"
+  },
+  {
+    "claim": "A single poorly-specified unit test can make a SWE-bench task nearly impossible for an agent to solve even with a correct understanding of the underlying bug, as illustrated by a scikit-learn TfidfVectorizer sample requiring an agent to produce an exact deprecation-warning message string that was only settled through PR discussion the agent never had access to.",
+    "stance": "supports",
+    "stance_target": "evaluation harness design (specifically test specificity and issue-description completeness) is itself a major confound in measuring coding-agent capability, a concrete illustration of why rigid evals require careful construction",
+    "evidence_type": "empirical",
+    "scope_conditions": "SWE-bench sample scikit-learn__scikit-learn-14520, as documented by OpenAI, 2024",
+    "quoted_support": "This test explicitly checks that the solution must raise a DeprecationWarning whenever the copy parameter is used, although the original problem statement in the issue text above does not convey this requirement. ... it would be nearly impossible for an agent to solve this sample in SWE-bench.",
+    "numbers": [],
+    "entities": ["OpenAI", "scikit-learn", "SWE-bench"],
+    "time_period": "2024",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "introducing-swe-bench-verified-openai"
+  }
+]

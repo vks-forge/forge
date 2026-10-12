@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "AI-augmented SAST tools run a five-stage pipeline: dual detection (rules + LLM reasoning), cross-file/service taint tracing, AI exploitability validation, developer workflow integration, and AI-drafted fix generation with re-scan verification.",
+    "stance": "supports",
+    "stance_target": "pillar 1: zero-hallucination & quality control / code blast radius mechanisms",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "AppSec/SAST tooling market, 2026",
+    "quoted_support": "The pipeline detects candidate vulnerabilities, traces how data moves through them, validates which ones are actually exploitable, routes the survivors into developer workflows, and helps generate and check the fix.",
+    "numbers": [],
+    "entities": ["Cycode", "Snyk Code", "Checkmarx One", "GitHub Advanced Security", "Semgrep"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "the-11-best-ai-sast-tools-in-2026-cycode"
+  },
+  {
+    "claim": "Cycode's agentic code scanning reports 94% fewer false positives than popular commercial and open-source SAST alternatives on OWASP benchmark suites.",
+    "stance": "supports",
+    "stance_target": "AI SAST reduces false-positive triage burden",
+    "evidence_type": "statistical",
+    "scope_conditions": "Cycode-reported benchmark, vendor self-assessment, not independently verified",
+    "quoted_support": "Detection runs on proprietary scanning refined against OWASP benchmark suites, where Cycode reports 94% fewer false positives than popular commercial and open-source alternatives.",
+    "numbers": ["94% fewer false positives"],
+    "entities": ["Cycode", "OWASP"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "the-11-best-ai-sast-tools-in-2026-cycode"
+  },
+  {
+    "claim": "In a 10-repository, 6-language benchmark, Cycode's agentic LLM reasoning caught authorization CVEs that rule-based engines Semgrep and CodeQL missed, running on an affordable open-weights model.",
+    "stance": "supports",
+    "stance_target": "LLM reasoning catches business-logic/authorization flaws that pattern-matching SAST cannot express",
+    "evidence_type": "empirical",
+    "scope_conditions": "vendor-run benchmark, 10 repos, 6 languages",
+    "quoted_support": "In Cycode's benchmark of ten repositories across six languages, it caught both authorization CVEs that Semgrep, CodeQL, and rule-based engines missed, and it ran on an affordable open-weights model.",
+    "numbers": ["10 repositories", "6 languages"],
+    "entities": ["Cycode", "Semgrep", "CodeQL"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "the-11-best-ai-sast-tools-in-2026-cycode"
+  },
+  {
+    "claim": "A validated AI-drafted code fix must be re-scanned to confirm it resolves the finding without introducing a new one, otherwise it is just more unreviewed AI code entering the repository.",
+    "stance": "supports",
+    "stance_target": "pillar 1: code blast radius containment for AI-generated fixes",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "AI-assisted remediation stage of SAST pipelines",
+    "quoted_support": "That last verification step separates mature implementations from autocomplete, since an unvalidated AI fix is just more unreviewed AI code entering the repository.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "the-11-best-ai-sast-tools-in-2026-cycode"
+  },
+  {
+    "claim": "AI-native SAST tools (built around LLM reasoning from the start) catch logic flaws rules cannot express but trade away some determinism compared to AI-powered (rules + AI layer) tools.",
+    "stance": "neutral",
+    "stance_target": "AI-native vs AI-powered SAST tradeoff",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "SAST tool architecture comparison, 2026",
+    "quoted_support": "Native tools catch logic flaws rules cannot express but trade some determinism, while layered tools keep the auditable consistency of classic static application security testing underneath the AI.",
+    "numbers": [],
+    "entities": ["DryRun Security", "Corgea"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "the-11-best-ai-sast-tools-in-2026-cycode"
+  }
+]

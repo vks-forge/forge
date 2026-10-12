@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "Sonar launched the 'SonarQube Hunter Agent,' an AI agent that analyzes an entire codebase to find three specific flaw categories -- broken access control, business-logic vulnerabilities, and authentication/session-management issues -- categories that historically required manual testing or a penetration test because they are not detectable by deterministic static-analysis patterns alone.",
+    "stance": "supports",
+    "stance_target": "automated 90-minute-style security sweeps can be extended beyond deterministic scanning to business-logic flaws via AI agents",
+    "evidence_type": "empirical",
+    "scope_conditions": "Sonar product launch, Aug 27 2026",
+    "quoted_support": "The SonarQube Hunter Agent first analyzes an entire codebase to find three categories of flaws: broken access control, business-logic vulnerabilities, and authentication or session-management issues... historically, discovering these issues would have required manual testing or a penetration test.",
+    "numbers": [],
+    "entities": ["Sonar", "SonarQube Hunter Agent", "Satinder Khasriya"],
+    "time_period": "August 2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "sonar-ai-agent-discovers-vulnerabilities-hidden-in-business-logic-workflows-devo"
+  },
+  {
+    "claim": "Business-logic vulnerabilities such as privilege escalation only become detectable when a tool has an understanding of how the code is supposed to function, which deterministic scanning tools (effective for injection flaws, unsafe data flows, insecure patterns) cannot provide on their own.",
+    "stance": "supports",
+    "stance_target": "zero-hallucination/rigid-evals pillar must combine deterministic scanning with semantic/intent-aware AI analysis for full vulnerability coverage",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "application security scanning, per Sonar product marketing",
+    "quoted_support": "Deterministic scanning tools are good for catching flaws that look wrong in the code, such as injection vulnerabilities, unsafe data flows, and insecure patterns, but some vulnerabilities aren't detectable in code... A privilege escalation issue, for example, only becomes visible when there is an understanding of how the code is supposed to function.",
+    "numbers": [],
+    "entities": ["Sonar"],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "sonar-ai-agent-discovers-vulnerabilities-hidden-in-business-logic-workflows-devo"
+  },
+  {
+    "claim": "The time between vulnerability disclosure and exploitation has shrunk dramatically because AI now allows attackers to discover and exploit vulnerabilities within hours, pressuring DevSecOps teams to move from monthly patch cycles toward near-real-time, continuously verified patch deployment.",
+    "stance": "supports",
+    "stance_target": "continuous-operation infrastructure pillar is necessitated by compressed attacker timelines, not merely a convenience",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "general DevSecOps threat landscape as of Aug 2026, vendor framing",
+    "quoted_support": "advances in AI now make it possible for cybercriminals to discover and exploit vulnerabilities in a matter of hours... The time to exploitation after a vulnerability has dramatically shrunk.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "low",
+    "source_note_id": "sonar-ai-agent-discovers-vulnerabilities-hidden-in-business-logic-workflows-devo"
+  }
+]

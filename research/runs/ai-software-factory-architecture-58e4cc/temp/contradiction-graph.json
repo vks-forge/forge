@@ -1,0 +1,52 @@
+[
+  {
+    "cluster_id": "autonomy-reliability-fight",
+    "fight": "Can a software factory run 100+ worker agents with minimal human review and expect production-grade reliability, or does current evidence show agent autonomy at that scale requires heavy governance scaffolding before it is safe?",
+    "side_a": {
+      "position": "Vertically-integrated, in-house multi-agent infrastructure accelerates delivery and parallel multi-agent software construction at scale is feasible today, justifying ambitious concurrency targets.",
+      "claims": [
+        "Sierra built its own Kubernetes-native agent sandbox orchestration layer (Agency) because the agent-sandbox problem space was too undefined to inherit someone else's trade-offs; vertically-integrated infra accelerates feature delivery.",
+        "Feasibility of parallel multi-agent software construction at scale (Berkeley RDI)."
+      ],
+      "sources": ["agency-secure-scalable-sandboxes-for-agents-sierra", "center-for-responsible-decentralized-intelligence-at-berkeley"]
+    },
+    "side_b": {
+      "position": "Frontier agents are not yet reliably autonomous across long-horizon software maintenance; blast radius from excess permissions can be catastrophic and near-instantaneous, architectural drift is self-reinforcing across sessions absent governance, and existing security/review tooling is insufficient to audit agent-generated code at this scale.",
+      "claims": [
+        "Refutes claim that frontier agents are already reliably autonomous across long-horizon software maintenance tasks (Berkeley RDI).",
+        "Agent blast radius can be catastrophic and near-instantaneous when permissions exceed task scope; AI-generated architectural drift is self-reinforcing across successive agent sessions absent hard constraints; existing security tooling is insufficient for auditing agent-generated code (Shipped by Agents).",
+        "LLM code-understanding quality is not uniform; direct LLM code translation cannot be trusted for critical modules (legacy modernization survey).",
+        "Human oversight moves up a level rather than disappearing in a layered QC architecture (The New Stack)."
+      ],
+      "sources": ["center-for-responsible-decentralized-intelligence-at-berkeley", "structural-risks-of-autonomous-coding-agents-in-production-shipped-by-agents", "leveraging-llms-for-legacy-code-modernization-challenges-and-opportunities-for-l", "the-code-review-bug-hunt-is-dead-heres-what-developers-get-wrong-the-new-stack"]
+    },
+    "evidence_quality_delta": "Side B is stronger: empirical production-incident framing (Shipped by Agents), a peer-reviewed-adjacent survey on LLM code-understanding limits, and an academic autonomy-levels framework (Berkeley) that explicitly refutes the strong claim. Side A's feasibility claims are real but narrower in scope (infra capability, not reliability-at-scale) — the same Berkeley source straddles both sides, which is itself evidence the fight is genuine rather than manufactured.",
+    "scope_overlap": "Partially scoped differently: Side A argues capability/feasibility of building the infrastructure; Side B argues reliability/safety of operating it with reduced human oversight. Both can be true simultaneously — the resolution is that scale is achievable but only with the governance layer Side B demands, which is exactly the architectural answer this report must give.",
+    "decision_relevance": "high"
+  },
+  {
+    "cluster_id": "skills-overhead-fight",
+    "fight": "Do Agent Skills (SOPs-as-callable-capabilities) reduce operating cost and context overhead as vendor guidance claims, or does empirical measurement show real, non-negligible token overhead that complicates the cost-optimization pillar?",
+    "side_a": {
+      "position": "Encoding SOPs as Agent Skills with progressive disclosure reduces context overhead and token spend versus loading full procedural instructions inline; deterministic Skill sequences improve reliability at lower cost.",
+      "claims": [
+        "SOPs encoded as Agent Skills reduce context overhead at scale (Claude platform docs).",
+        "Deterministic code execution via Skills reduces token spend versus naive prompting (Claude platform docs).",
+        "Converting SOPs into deterministic Agent Skill sequences improves reliability (addyosmani agent-skills performance-optimization SKILL.md)."
+      ],
+      "sources": ["agent-skills-claude-platform-docs", "agent-skillsskillsperformance-optimizationskillmd-at-main-addyosmaniagent-skills"]
+    },
+    "side_b": {
+      "position": "Measured independently, Skill-body loading carries a real, quantified token overhead; adding rules to Skills is not free, and progressive disclosure does not fully neutralize that cost — Skill content measurably changes agent behavior and Skill size directly trades off against runtime context budget.",
+      "claims": [
+        "Refutes that progressive disclosure (Anthropic's recommended context-isolation pattern) eliminates overhead.",
+        "Refutes that adding rules to Skills is free; a meaningful fraction of the context budget is consumed.",
+        "Skill size directly trades off against runtime context budget (agent-skill-evolution empirical study)."
+      ],
+      "sources": ["agent-skill-evolution-how-revisions-affect-coding-agents"]
+    },
+    "evidence_quality_delta": "Side B is a single source but it is the only one in the corpus doing direct empirical measurement (quantified token overhead, reproducible effect of Skill content on behavior) versus Side A's vendor-documentation framing. Empirical-single-source still outranks documentation-framing-multiple-source on this specific numeric question.",
+    "scope_overlap": "Genuine disagreement on magnitude, not direction — both sides agree Skills are net-useful; they disagree on whether the overhead is negligible (vendor framing) or material enough to budget for explicitly (empirical study). The report should present Skills as a net win while explicitly budgeting for their non-zero context cost, rather than treating them as free.",
+    "decision_relevance": "medium"
+  }
+]

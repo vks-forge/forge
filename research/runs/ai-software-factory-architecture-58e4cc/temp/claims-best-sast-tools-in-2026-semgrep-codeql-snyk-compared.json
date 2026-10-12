@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "AppSec teams in 2026 still spend roughly 30 to 50 percent of their review time on SAST findings that turn out to be non-exploitable.",
+    "stance": "supports",
+    "stance_target": "need for reachability analysis / blast-radius-aware scanning to reduce wasted triage effort",
+    "evidence_type": "statistical",
+    "scope_conditions": "industry write-ups in 2026, general AppSec teams",
+    "quoted_support": "Industry write-ups in 2026 still put AppSec teams at roughly 30 to 50 percent of their time spent reviewing findings that turn out to be non-exploitable.",
+    "numbers": ["30-50%"],
+    "entities": ["SAST", "AppSec"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "best-sast-tools-in-2026-semgrep-codeql-snyk-compared"
+  },
+  {
+    "claim": "CodeQL findings feed GitHub Copilot Autofix, which generates patches against CodeQL's semantic analysis directly in the GitHub workflow, and the Copilot coding agent now runs CodeQL on its own generated code before finalizing a PR.",
+    "stance": "supports",
+    "stance_target": "feasibility of closed-loop agentic detect-and-fix pipelines for code security",
+    "evidence_type": "empirical",
+    "scope_conditions": "GitHub ecosystem, 2026",
+    "quoted_support": "The 2026 story is the loop around it: CodeQL findings feed Copilot Autofix, which generates patches against CodeQL's semantic analysis directly in the GitHub workflow, and the Copilot coding agent now runs CodeQL on its own generated code before finalizing a PR.",
+    "numbers": [],
+    "entities": ["CodeQL", "GitHub Copilot Autofix", "Copilot coding agent"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "high",
+    "source_note_id": "best-sast-tools-in-2026-semgrep-codeql-snyk-compared"
+  },
+  {
+    "claim": "Reachability analysis (filtering SAST/SCA findings by whether the vulnerable code path is actually reachable/executed) is described as the most credible lever on the SAST false-positive problem in 2026.",
+    "stance": "supports",
+    "stance_target": "reachability-aware scanning as the key noise-reduction technique for automated security sweeps",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "SCA and SAST tooling, 2026, vendors Endor Labs/Socket cited for SCA precedent",
+    "quoted_support": "The same idea applied to SAST findings is the most credible lever on the false-positive problem.",
+    "numbers": [],
+    "entities": ["Endor Labs", "Socket", "reachability analysis"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "best-sast-tools-in-2026-semgrep-codeql-snyk-compared"
+  },
+  {
+    "claim": "The CyberGym benchmark is cited as evidence that the precision/recall frontier on real vulnerability work is moved by orchestration and verification layered on top of models, not by raw model size alone.",
+    "stance": "supports",
+    "stance_target": "orchestration/verification layers mattering more than base model scale for security tasks",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "2026 AI-security tooling commentary citing CyberGym",
+    "quoted_support": "Benchmarks like CyberGym are a useful reminder here — they show that the precision and recall frontier on real vulnerability work is moved by orchestration and verification layered on top of models, not by raw model size alone.",
+    "numbers": [],
+    "entities": ["CyberGym"],
+    "time_period": "2026",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "best-sast-tools-in-2026-semgrep-codeql-snyk-compared"
+  }
+]

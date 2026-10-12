@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "In Moffatt v. Air Canada, 2024 BCCRT 149, the British Columbia Civil Resolution Tribunal explicitly rejected Air Canada's argument that its chatbot was a separate legal entity responsible for its own statements, holding that a chatbot 'is still just a part of Air Canada's website... it makes no difference whether the information comes from a static page or a chatbot' (Para. 27).",
+    "stance": "supports",
+    "stance_target": "an organization bears full legal liability for autonomous agent/chatbot outputs; attempting to treat an AI system as a separate responsible entity is not a viable legal defense",
+    "evidence_type": "legal",
+    "scope_conditions": "British Columbia Civil Resolution Tribunal, Moffatt v. Air Canada, 2024 BCCRT 149",
+    "quoted_support": "In effect, Air Canada suggests the chatbot is a separate legal entity that is responsible for its own actions. This is a remarkable submission. While a chatbot has an interactive component, it is still just a part of Air Canada's website. It should be obvious to Air Canada that it is responsible for all the information on its website.",
+    "numbers": ["2024 BCCRT 149"],
+    "entities": ["Air Canada", "Moffatt v. Air Canada"],
+    "time_period": "2024",
+    "region": "Canada",
+    "confidence": "high",
+    "source_note_id": "airline-ordered-to-compensate-a-bc-man-because-its-chatbot-provided-inaccurate-i"
+  },
+  {
+    "claim": "The Tribunal in Moffatt v. Air Canada rejected the airline's argument that a chatbot's inaccurate statement was cured by its linking to a webpage containing the correct policy, holding there is no reason a customer should know that one section of a company's website is accurate and another is not (Para. 28), and awarded Mr. Moffatt CAD $650.88 in damages for negligent misrepresentation plus $36.14 pre-judgment interest and $125 in tribunal fees.",
+    "stance": "supports",
+    "stance_target": "providing a correct-information link alongside an agent's inaccurate output does not discharge an organization's duty of care; a Constitution-Bound-style gating mechanism checking commitments against actual policy is the more durable fix",
+    "evidence_type": "legal",
+    "scope_conditions": "British Columbia Civil Resolution Tribunal, Moffatt v. Air Canada, 2024 BCCRT 149",
+    "quoted_support": "While Air Canada argues Mr. Moffatt could find the correct information on another part of its website, it does not explain why the webpage titled “Bereavement travel” was inherently more trustworthy than its chatbot. ... Mr. Moffat was awarded $650.88 in damages for negligent misrepresentation. In addition, the airline was ordered to pay $36.14 in pre-judgment interest and $125 in Tribunal fees.",
+    "numbers": ["$650.88", "$36.14", "$125"],
+    "entities": ["Air Canada", "Moffatt v. Air Canada"],
+    "time_period": "2024",
+    "region": "Canada",
+    "confidence": "high",
+    "source_note_id": "airline-ordered-to-compensate-a-bc-man-because-its-chatbot-provided-inaccurate-i"
+  },
+  {
+    "claim": "Air Canada's own representative admitted in writing that the chatbot had provided 'misleading words' and that the airline had noted the issue to update the chatbot, yet Mr. Moffatt was still unable to obtain a refund for over two and a half months after first raising the discrepancy, before filing a tribunal claim.",
+    "stance": "supports",
+    "stance_target": "organizations frequently identify agent/chatbot errors internally well before correcting the downstream harm, underscoring the need for fast remediation processes once a factual error is confirmed",
+    "evidence_type": "empirical",
+    "scope_conditions": "Moffatt v. Air Canada factual background, 2023-2024",
+    "quoted_support": "An airline representative responded and admitted the chatbot had provided “misleading words.” ... However, Mr. Moffatt was still unable to get a partial refund, prompting him to file the claim with the tribunal.",
+    "numbers": ["two-and-a-half months"],
+    "entities": ["Air Canada"],
+    "time_period": "2023",
+    "region": "Canada",
+    "confidence": "high",
+    "source_note_id": "airline-ordered-to-compensate-a-bc-man-because-its-chatbot-provided-inaccurate-i"
+  }
+]

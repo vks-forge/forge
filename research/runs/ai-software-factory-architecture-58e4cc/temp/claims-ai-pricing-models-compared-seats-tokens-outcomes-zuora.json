@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "GitHub Copilot's per-seat subscription pricing created a structural loss: the Wall Street Journal reported in October 2023 that Copilot averaged a $20/user/month loss against a $10/user/month subscription price because heavy users' inference cost exceeded the seat fee by 2-3x.",
+    "stance": "supports",
+    "stance_target": "subscription vs API/usage-based economics for AI agent products (Pillar 6)",
+    "evidence_type": "empirical",
+    "scope_conditions": "GitHub Copilot business, reported October 2023",
+    "quoted_support": "The Wall Street Journal reported in October 2023 that the Copilot business averaged a $20-per-user monthly loss against a $10-per-user-per-month subscription price. Heavy users were consuming inference compute that exceeded the seat fee by 2-3x.",
+    "numbers": ["$20/user/month loss", "$10/user/month subscription price", "2-3x cost overage"],
+    "entities": ["GitHub Copilot", "Microsoft", "Wall Street Journal"],
+    "time_period": "October 2023",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "ai-pricing-models-compared-seats-tokens-outcomes-zuora"
+  },
+  {
+    "claim": "Per-outcome pricing (charging only for a defined business result) transfers cost-variance risk from buyer to seller and is viable only when the seller can predict average cost-per-outcome within a tight band and the outcome is auditable.",
+    "stance": "supports",
+    "stance_target": "cost/resource optimization model selection for AI software factory outputs (Pillar 6)",
+    "evidence_type": "theoretical",
+    "scope_conditions": "general AI SaaS pricing strategy, 2026",
+    "quoted_support": "Per Outcome transfers cost variance from the buyer to the seller. If the AI consumes more compute than the outcome's price covers for a specific customer, the seller absorbs the gap.",
+    "numbers": [],
+    "entities": ["Intercom Fin", "Zendesk", "Zuora"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "ai-pricing-models-compared-seats-tokens-outcomes-zuora"
+  },
+  {
+    "claim": "Most mature production AI businesses run hybrid pricing models combining a subscription base with consumption overage or prepaid credits, balancing buyer predictability with seller margin protection.",
+    "stance": "supports",
+    "stance_target": "cost architecture pattern for agentic software factory billing (Pillar 6)",
+    "evidence_type": "empirical",
+    "scope_conditions": "AI SaaS industry, 2026",
+    "quoted_support": "Most production AI businesses run Hybrid models. A subscription base plus consumption overage or prepaid credits balances predictability for the buyer with margin protection for the seller.",
+    "numbers": [],
+    "entities": ["Microsoft Security Copilot", "Adobe Firefly", "Zuora"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "ai-pricing-models-compared-seats-tokens-outcomes-zuora"
+  },
+  {
+    "claim": "Salesforce Agentforce launched at $2 per AI-handled conversation, a per-activity price designed to roughly track Salesforce's marginal cost per conversation.",
+    "stance": "neutral",
+    "stance_target": "per-activity pricing benchmarks for agentic AI products",
+    "evidence_type": "empirical",
+    "scope_conditions": "Salesforce Agentforce launch pricing",
+    "quoted_support": "Salesforce Agentforce launched at $2 per AI-handled conversation, with the per-conversation unit aligning roughly with the variable cost Salesforce incurs to handle each one.",
+    "numbers": ["$2 per AI-handled conversation"],
+    "entities": ["Salesforce", "Agentforce"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "ai-pricing-models-compared-seats-tokens-outcomes-zuora"
+  }
+]

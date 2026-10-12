@@ -1,0 +1,82 @@
+{
+  "gaps": [
+    {
+      "id": "cc-1",
+      "type": "overturning",
+      "target_position": "Tension 1 / worker-agent-autonomy-reliability-at-scale locus: '100+-Worker autonomy with minimal human review is reliably unsafe as literally described,' resting primarily on the OpenAI-Hugging Face incident (~1,200 agents). The interim report never notes that OpenAI's own disclosure describes this as an internal red-team cybersecurity capability evaluation (ExploitGym-based) run with safety classifiers DELIBERATELY DISABLED to test offensive capability -- a materially different configuration from a normally-configured production software-factory fleet. The draft would inherit an overclaimed generalization if this confound isn't addressed.",
+      "search_queries": [
+        "OpenAI Hugging Face incident safety classifiers disabled red team evaluation confound",
+        "METR Redwood independent investigation OpenAI agents scale vs disabled safeguards causal factor",
+        "would OpenAI-HuggingFace incident have happened with safety classifiers enabled production agents"
+      ],
+      "source_type": "investigative",
+      "priority": "critical",
+      "rationale": "This is the single most load-bearing case study for the whitepaper's core governance claim (Tension 1, Tension 5, and the entire 'Director spins up 100+ Workers' pillar). If the incident's failure mode was driven by deliberately-disabled safety classifiers + an offensive-cyber red-team task rather than by scale/autonomy per se, the draft must scope its central warning more narrowly (disabled-safety-mode fleets, not all 100+-agent fleets) or explicitly argue why the confound doesn't matter. Either way this is a critical fact the draft cannot silently inherit uncaveated."
+    },
+    {
+      "id": "cc-2",
+      "type": "overturning",
+      "target_position": "Orphan tension 6 (source-tensions.json): the whitepaper's Pillar 1 claims adversarial multi-model review 'catches bad tests, spots logic gaps, rejects slop' for CODE, and the corpus's only quantified support for multi-agent debate improving factuality (Du et al. ICML 2024, A-HMAD, Tool-MAD) measures gains on factual-QA/educational tasks, not code review. The one code-specific adversarial-review source in the corpus (Adversarial Code Review Agent Skill) is a design/docs page with no measured defect-catch-rate data.",
+      "search_queries": [
+        "multi-agent adversarial code review measured bug catch rate production study",
+        "cross-model LLM code review defect detection rate benchmark 2026",
+        "does multi-agent debate improve code review accuracy empirical evaluation"
+      ],
+      "source_type": "academic",
+      "priority": "critical",
+      "rationale": "Pillar 1 is the whitepaper's lead pillar and its central mechanism (adversarial cross-model review) currently rests on domain-shifted evidence (text/factual debate, not code defect-catching). If no code-specific quantified study exists, the draft must state this as an audited absence and scope its confidence claim down to 'plausible mechanism, unquantified for code' rather than implying Du-et-al-level measured gains apply directly to code review."
+    },
+    {
+      "id": "cc-3",
+      "type": "independent-verification",
+      "target_position": "Tension 3 / consumer-subscription-automation-policy-risk locus: committed at medium-high confidence for Anthropic's enforcement stance, explicitly low confidence and an open question for whether OpenAI enforces an equivalent ChatGPT-subscription-automation restriction. Comparisons.md calibration summary flags this as the one position the draft should hedge rather than assert parity on.",
+      "search_queries": [
+        "OpenAI ChatGPT Plus Pro Team terms of service automation bot API credential sharing enforcement 2026",
+        "OpenAI banned third-party tool ChatGPT subscription automation account suspension",
+        "OpenAI Codex CLI subscription vs API usage policy programmatic access restriction"
+      ],
+      "source_type": "government",
+      "priority": "high",
+      "rationale": "The draft's cost-optimization section will likely generalize the subscription-vs-API guidance across vendors. Without OpenAI-specific ToS/enforcement evidence, the draft either overclaims parity with Anthropic's documented stance or must explicitly flag OpenAI as unresolved -- finding (or confirming the absence of) a source here directly determines which the draft can responsibly do."
+    },
+    {
+      "id": "cc-4",
+      "type": "overturning",
+      "target_position": "consumer-subscription-automation-policy-risk locus's own named open question (interim report line 43): whether an individually-owned, non-pooled, self-authenticated subscription running one agent per seat could still be suspended purely for automation volume/pattern at fleet scale (as distinct from the April 2026 third-party-intermediation/OpenClaw action). This is the exact boundary case the report's 'one subscription per agent' recommendation depends on.",
+      "search_queries": [
+        "Anthropic Claude Max account suspended high volume automated usage individually owned not pooled",
+        "Claude Code subscription rate limit detection scripted CLI usage pattern ban 2026",
+        "Anthropic client fingerprinting detect non-interactive subscription usage enforcement"
+      ],
+      "source_type": "industry",
+      "priority": "high",
+      "rationale": "The draft's recommended mitigation ('route unattended workloads to API, keep subscriptions per-agent for bounded interactive tasks') is only safe if this boundary case holds. If a source shows volume-based detection/suspension independent of pooling, the mitigation needs tightening before the draft states it as a settled recommendation."
+    },
+    {
+      "id": "cc-5",
+      "type": "overturning",
+      "target_position": "Calibration summary audited absence (b): 'whether governance/monitoring overhead compounds additively or super-additively across simultaneously-triggered Skills' -- load-bearing for Tension 2 (governance fixes compound the token-cost problem) and Pillar 6's cost model.",
+      "search_queries": [
+        "AI agent fleet monitoring overhead cost scaling concurrent agents benchmark",
+        "continuous anomaly detection token cost overhead multi-agent system production",
+        "named case study cost of safety monitoring layer per agent at scale 2026"
+      ],
+      "source_type": "industry",
+      "priority": "high",
+      "rationale": "Without this, the draft's cost-optimization pillar must either invent a multiplier (which the calibration summary explicitly warns against) or state the absence plainly; finding real data here would let the draft give an actual number instead of a qualitative warning."
+    },
+    {
+      "id": "cc-6",
+      "type": "overturning",
+      "target_position": "Calibration summary audited absence (a): 'no source quantifies fleet-scale idle cost in dollars' at 100-agent scale -- load-bearing for Tension 3 and the self-termination/idle-cost locus, whose own source budget (2) was the thinnest of all six loci.",
+      "search_queries": [
+        "AI agent sandbox idle cost dollars per month 100 agents fleet calculator",
+        "cloud agent VM idle billing cost benchmark enterprise scale 2026",
+        "Blaxel E2B Sierra Agency idle runner cost per agent month published pricing"
+      ],
+      "source_type": "industry",
+      "priority": "high",
+      "rationale": "This is the thinnest-evidenced locus in the whole corpus (source_budget 2) and the draft's cost section needs at least one concrete dollar figure or vendor pricing calculator to avoid the whole fleet-cost discussion remaining qualitative; confirming the absence (if none exists) also lets the draft state it as a named limitation rather than silently omitting a number."
+    }
+  ]
+}

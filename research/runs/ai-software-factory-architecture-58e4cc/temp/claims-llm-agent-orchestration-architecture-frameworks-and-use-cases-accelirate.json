@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "Over 60% of enterprise AI deployments that stall do so due to inadequate coordination/orchestration architecture rather than underlying model limitations.",
+    "stance": "supports",
+    "stance_target": "orchestration architecture, not model quality, is the primary bottleneck for multi-agent software factories",
+    "evidence_type": "statistical",
+    "scope_conditions": "enterprise AI deployments generally; figure is unsourced in the vendor blog post",
+    "quoted_support": "Over 60% of enterprise AI initiatives that stall does so due to inadequate coordination architecture, not the underlying model itself.",
+    "numbers": ["60%"],
+    "entities": [],
+    "time_period": null,
+    "region": null,
+    "confidence": "low",
+    "source_note_id": "llm-agent-orchestration-architecture-frameworks-and-use-cases-accelirate"
+  },
+  {
+    "claim": "Most production multi-agent systems use a hybrid orchestration pattern: hierarchical orchestration at the system level combined with sequential or parallel sub-patterns applied within individual workflow segments.",
+    "stance": "supports",
+    "stance_target": "Director/Worker hierarchical architecture pillar of the software factory blueprint",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "enterprise multi-agent LLM deployments",
+    "quoted_support": "In most of the use cases, the execution of the enterprise ultimately follows the hybrid approach, where hierarchical orchestration is deployed at the system level, along with the use of sequential or parallel patterns at the level of individual workflow segments.",
+    "numbers": [],
+    "entities": [],
+    "time_period": null,
+    "region": null,
+    "confidence": "low",
+    "source_note_id": "llm-agent-orchestration-architecture-frameworks-and-use-cases-accelirate"
+  },
+  {
+    "claim": "The Model Context Protocol (MCP) is identified as an emerging standard addressing cross-framework agent communication, a currently significant technical challenge for connecting agents built on different frameworks.",
+    "stance": "supports",
+    "stance_target": "tech-stack selection for interoperable multi-agent architectures",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "multi-agent LLM orchestration ecosystem",
+    "quoted_support": "Connectivity between agents built on different frameworks remains a significant technical challenge. Emerging standards such as the Model Context Protocol (MCP) are beginning to establish the foundation for cross-framework agent communication.",
+    "numbers": [],
+    "entities": ["Model Context Protocol", "MCP"],
+    "time_period": null,
+    "region": null,
+    "confidence": "low",
+    "source_note_id": "llm-agent-orchestration-architecture-frameworks-and-use-cases-accelirate"
+  },
+  {
+    "claim": "Five orchestration frameworks (LangChain/LangGraph, AutoGen, CrewAI, LlamaIndex, Semantic Kernel) are all open-source/free at the core library level, with paid tiers reserved for hosted/cloud execution (LangGraph Cloud from $39/mo, CrewAI Professional from $25/mo, LlamaIndex hosted from $50/mo).",
+    "stance": "neutral",
+    "stance_target": "cost/subscription economics for tech-stack selection",
+    "evidence_type": "empirical",
+    "scope_conditions": "pricing as of vendor blog publication (dated March 2026 per page)",
+    "quoted_support": "LangChain ... Pricing - Open-source and free. LangGraph cloud plans start at $39/month ... CrewAI ... Pricing - Free open-source library. Professional plan starts at $25/month ... LlamaIndex ... Pricing - Free open-source library. Starter-hosted platform from $50/month",
+    "numbers": ["$39/month", "$25/month", "$50/month"],
+    "entities": ["LangChain", "LangGraph", "AutoGen", "CrewAI", "LlamaIndex", "Semantic Kernel", "Microsoft", "Azure"],
+    "time_period": "as of publication date",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "llm-agent-orchestration-architecture-frameworks-and-use-cases-accelirate"
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "OpenAI Agents SDK's three core primitives are Agents (LLM + instructions + tools), Handoffs (task delegation between agents), and Guardrails (parallel input/output validation that can abort execution early).",
+    "stance": "supports",
+    "stance_target": "rigid evals and safety-net architecture for agent frameworks (Pillar 1)",
+    "evidence_type": "theoretical",
+    "scope_conditions": "OpenAI Agents SDK, 2026",
+    "quoted_support": "Guardrails: Safety nets are used to validate inputs to agents... Provides input validation and safety checks that run parallel to your agents and can break execution early if checks fail.",
+    "numbers": ["three primitives"],
+    "entities": ["OpenAI Agents SDK", "Composio"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "openai-agents-sdk-vs-langgraph-vs-autogen-vs-crewai-composio"
+  },
+  {
+    "claim": "Among the four compared frameworks, LangGraph alone is rated as having first-class, sophisticated state persistence via graph structures with conditional-edge transitions and LangSmith-integrated debugging, at the cost of the steepest learning curve.",
+    "stance": "neutral",
+    "stance_target": "framework selection for complex, stateful director/worker orchestration (Pillar 5)",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "hands-on comparison, 2026, author's own testing",
+    "quoted_support": "LangGraph: Excels in managing state through graph structures. Transitions are sophisticated, leveraging conditional edges, and debugging is well-supported via LangSmith integration.",
+    "numbers": [],
+    "entities": ["LangGraph", "LangSmith", "Composio"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "openai-agents-sdk-vs-langgraph-vs-autogen-vs-crewai-composio"
+  },
+  {
+    "claim": "OpenAI Agents SDK has 'limited built-in support' for parallel multi-agent execution compared to LangGraph (good via graph structure) and AutoGen (supported via agent networks).",
+    "stance": "refutes",
+    "stance_target": "OpenAI Agents SDK as the default choice for highly parallel director/worker fleets (Pillar 5)",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "framework comparison table, 2026",
+    "quoted_support": "OpenAI Agents SDK: Strong in agent handoffs but lacks built-in parallel execution.",
+    "numbers": [],
+    "entities": ["OpenAI Agents SDK", "LangGraph", "AutoGen"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "openai-agents-sdk-vs-langgraph-vs-autogen-vs-crewai-composio"
+  },
+  {
+    "claim": "AutoGen's human-in-the-loop support is comparatively limited to three modes only: never, always, or at-termination intervention, versus LangGraph's ability to intervene at any point in the workflow.",
+    "stance": "neutral",
+    "stance_target": "human oversight granularity across frameworks (Pillar 1)",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "framework comparison, 2026",
+    "quoted_support": "Human-in-the-Loop Support... LangGraph: Very flexible, intervention at any point... AutoGen: Limited (never, always, or at termination)",
+    "numbers": [],
+    "entities": ["AutoGen", "LangGraph"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "openai-agents-sdk-vs-langgraph-vs-autogen-vs-crewai-composio"
+  }
+]

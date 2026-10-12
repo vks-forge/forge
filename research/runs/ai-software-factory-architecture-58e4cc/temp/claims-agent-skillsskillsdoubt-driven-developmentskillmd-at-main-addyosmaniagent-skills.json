@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "The doubt-driven-development skill requires passing a fresh-context adversarial reviewer ONLY the artifact and contract — never the original claim or reasoning — because handing over conclusions biases the reviewer toward validating agreement rather than finding issues.",
+    "stance": "supports",
+    "stance_target": "Adversarial Model Review pillar — a concrete, implementation-ready rule preventing a classic bias failure mode in agent self-review loops",
+    "evidence_type": "theoretical",
+    "scope_conditions": "doubt-driven-development skill, addyosmani/agent-skills pack",
+    "quoted_support": "Pass ARTIFACT + CONTRACT only. Do NOT pass the CLAIM. Handing the reviewer your conclusion biases it toward agreement. The reviewer must independently determine whether the artifact satisfies the contract.",
+    "numbers": [],
+    "entities": ["doubt-driven-development"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "agent-skillsskillsdoubt-driven-developmentskillmd-at-main-addyosmaniagent-skills"
+  },
+  {
+    "claim": "Cross-model escalation to a second LLM (e.g. Gemini CLI, Codex CLI) for adversarial review must run in a read-only sandbox because the artifact under review may itself contain a prompt injection that could make the reviewing CLI execute unintended actions against the workspace.",
+    "stance": "supports",
+    "stance_target": "Zero-Hallucination & Quality Control pillar — explicit named threat model (prompt injection via the artifact under review) and a corresponding sandboxing control for cross-model adversarial review",
+    "evidence_type": "theoretical",
+    "scope_conditions": "doubt-driven-development skill's cross-model escalation step",
+    "quoted_support": "A read-only sandbox is the load-bearing detail: a doubt artifact may itself contain instructions (intentional or accidental prompt injection) that the cross-model CLI would otherwise execute against your workspace.",
+    "numbers": [],
+    "entities": ["Codex", "Gemini CLI"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "agent-skillsskillsdoubt-driven-developmentskillmd-at-main-addyosmaniagent-skills"
+  },
+  {
+    "claim": "The skill forbids agent personas from invoking other personas (to prevent uncontrolled recursive agent spawning), restricting the adversarial-review loop to the main-session orchestrator, with nested subagent contexts required to surface a degraded-fallback warning rather than silently recursing.",
+    "stance": "supports",
+    "stance_target": "Triggers/Infrastructure pillar — a concrete governance constraint on Director/Worker hierarchies preventing uncontrolled recursive agent-calling-agent chains",
+    "evidence_type": "theoretical",
+    "scope_conditions": "Claude Code harness, addyosmani/agent-skills orchestration rules",
+    "quoted_support": "Do NOT add this skill to a persona's skills: frontmatter. A persona that follows Step 3 would spawn another persona — the orchestration anti-pattern explicitly forbidden by ../../references/orchestration-patterns.md (\"personas do not invoke other personas\").",
+    "numbers": [],
+    "entities": ["Claude Code"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "agent-skillsskillsdoubt-driven-developmentskillmd-at-main-addyosmaniagent-skills"
+  },
+  {
+    "claim": "The skill defines 'Doubt theater' as a detectable anti-pattern: across 2 or more review cycles where the reviewer surfaces substantive findings, if zero findings are ever classified as actionable, the agent is validating rather than genuinely doubting and must stop and escalate.",
+    "stance": "supports",
+    "stance_target": "Zero-Hallucination & Rigid Evals pillar — a machine-checkable heuristic for detecting when an agent's self-review process is theater rather than substantive, directly useful for designing meta-evals of adversarial review loops themselves",
+    "evidence_type": "theoretical",
+    "scope_conditions": "doubt-driven-development skill, Red Flags section",
+    "quoted_support": "Doubt theater (checkable signal): across 2 or more cycles where the reviewer surfaced substantive findings, zero findings were classified as actionable. You are validating, not doubting. Stop and escalate.",
+    "numbers": ["2+ cycles threshold", "3-cycle hard cap"],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "agent-skillsskillsdoubt-driven-developmentskillmd-at-main-addyosmaniagent-skills"
+  },
+  {
+    "claim": "In non-interactive/autonomous contexts (CI pipelines, scheduled runs, continuous agentic loops), cross-model escalation is automatically skipped, but the skip must be explicitly announced in the agent's output rather than happening silently.",
+    "stance": "supports",
+    "stance_target": "Continuous Operation pillar — a concrete rule for how adversarial review degrades gracefully (with transparency) in unattended/always-on agentic loops rather than silently dropping a safety check",
+    "evidence_type": "theoretical",
+    "scope_conditions": "doubt-driven-development skill, non-interactive mode behavior",
+    "quoted_support": "Non-interactive contexts (CI, /loop, autonomous-loop, scheduled runs): Cross-model is skipped, and the skip must be announced in the output: \"Cross-model skipped: non-interactive context.\"",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "agent-skillsskillsdoubt-driven-developmentskillmd-at-main-addyosmaniagent-skills"
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "In January 2026 Anthropic blocked third-party tools (OpenCode, Cline, Roo Code, Goose, OpenClaw) from using Claude Pro or Max subscription OAuth tokens, and from April 4, 2026 subscriptions no longer cover third-party tool usage at all, requiring a move to pay-as-you-go API.",
+    "stance": "supports",
+    "stance_target": "Anthropic progressively restricted subscription-based automation access across early-to-mid 2026",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic Claude Pro/Max subscriptions, January-April 2026",
+    "quoted_support": "In January 2026 Anthropic blocked third-party tools such as OpenCode, Cline, Roo Code, Goose and OpenClaw from using Claude Pro or Max subscription OAuth tokens. From 4 April 2026 subscriptions no longer cover third-party tools, and that usage must move to the pay-as-you-go API.",
+    "numbers": ["January 2026", "April 4, 2026"],
+    "entities": ["Anthropic", "OpenCode", "Cline", "Roo Code", "Goose", "OpenClaw"],
+    "time_period": "January-April 2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "claude-and-codex-subscription-bans-explained-qcodecc"
+  },
+  {
+    "claim": "Per Anthropic's Transparency Hub, approximately 1.45 million accounts were banned in the second half of 2025, with roughly 3.3 percent of appeals succeeding.",
+    "stance": "supports",
+    "stance_target": "scale of Anthropic's consumer-account enforcement activity and low appeal-success baseline",
+    "evidence_type": "statistical",
+    "scope_conditions": "Anthropic Transparency Hub, H2 2025",
+    "quoted_support": "Per Anthropic's Transparency Hub, around 1.45 million accounts were banned in the second half of 2025, with roughly 3.3 percent of appeals succeeding.",
+    "numbers": ["1.45 million", "3.3%"],
+    "entities": ["Anthropic"],
+    "time_period": "H2 2025",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "claude-and-codex-subscription-bans-explained-qcodecc"
+  },
+  {
+    "claim": "Common ban-risk signals across both OpenAI and Anthropic consumer subscriptions include datacenter/shared IP addresses, rapid IP or region switching (VPN hopping), and virtual/prepaid card payments combined with frequent payment-method changes.",
+    "stance": "supports",
+    "stance_target": "vendors use infrastructure and payment-pattern heuristics, not just usage volume, to flag subscription automation/abuse",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "OpenAI and Anthropic consumer subscriptions, 2026",
+    "quoted_support": "Datacenter or shared IP addresses and rapid IP or region switching, such as VPN hopping, are common ban signals on both platforms. Traffic that looks automated or shared draws extra scrutiny.",
+    "numbers": [],
+    "entities": ["OpenAI", "Anthropic"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "medium",
+    "source_note_id": "claude-and-codex-subscription-bans-explained-qcodecc"
+  }
+]

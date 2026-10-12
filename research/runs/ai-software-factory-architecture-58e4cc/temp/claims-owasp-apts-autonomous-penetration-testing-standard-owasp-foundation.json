@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "OWASP APTS defines 173 tier-required requirements across 8 governance domains for autonomous penetration testing platforms.",
+    "stance": "neutral",
+    "stance_target": "structure of autonomous pentest governance standards",
+    "evidence_type": "legal",
+    "scope_conditions": "OWASP incubator-stage project, v0.1.0, as of Oct 2026",
+    "quoted_support": "173 tier-required requirements | 8 domains | 3 compliance tiers",
+    "numbers": ["173", "8", "3"],
+    "entities": ["OWASP", "APTS", "Jinson Varghese Behanan", "Shikhil Sharma"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "owasp-apts-autonomous-penetration-testing-standard-owasp-foundation"
+  },
+  {
+    "claim": "The 8 OWASP APTS domains are Scope Enforcement (26 reqs), Safety Controls (20), Human Oversight (19), Graduated Autonomy (28), Auditability (20), Manipulation Resistance (23), Supply Chain Trust (22), and Reporting (15).",
+    "stance": "neutral",
+    "stance_target": "taxonomy of autonomous pentest governance domains",
+    "evidence_type": "legal",
+    "scope_conditions": "OWASP APTS v0.1.0",
+    "quoted_support": "Scope Enforcement (SE) — 26 requirements / Safety Controls (SC) — 20 requirements / Human Oversight (HO) — 19 requirements / Graduated Autonomy (AL) — 28 requirements",
+    "numbers": ["26", "20", "19", "28", "20", "23", "22", "15"],
+    "entities": ["OWASP APTS"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "owasp-apts-autonomous-penetration-testing-standard-owasp-foundation"
+  },
+  {
+    "claim": "OWASP APTS has three cumulative compliance tiers: Tier 1 Foundation (72 requirements, minimum bar for responsible deployment), Tier 2 Verified (157 cumulative, full transparency and tamper-proof audit trails), and Tier 3 Comprehensive (173 cumulative, highest assurance for critical infrastructure).",
+    "stance": "neutral",
+    "stance_target": "tiered conformance structure for autonomous pentest platforms",
+    "evidence_type": "legal",
+    "scope_conditions": "OWASP APTS v0.1.0",
+    "quoted_support": "Tier 1 - Foundation: 72 requirements. Minimum bar for responsible deployment. / Tier 2 - Verified: 157 cumulative. Full transparency and tamper-proof audit trails. / Tier 3 - Comprehensive: 173 cumulative. Highest assurance for critical infrastructure.",
+    "numbers": ["72", "157", "173"],
+    "entities": ["OWASP APTS"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "owasp-apts-autonomous-penetration-testing-standard-owasp-foundation"
+  },
+  {
+    "claim": "OWASP APTS is explicitly a governance standard, not a testing methodology, and is designed to complement existing methodologies by addressing problems unique to autonomous operation.",
+    "stance": "supports",
+    "stance_target": "need for separate governance layer on top of existing pentest methodologies for autonomous agents",
+    "evidence_type": "legal",
+    "scope_conditions": "OWASP APTS v0.1.0",
+    "quoted_support": "APTS is not a testing methodology. It complements PTES, OWASP WSTG, and OSSTMM by addressing the problems unique to autonomous operation: scope enforcement, safe autonomy, manipulation resistance, and accountability.",
+    "numbers": [],
+    "entities": ["OWASP APTS", "PTES", "OWASP WSTG", "OSSTMM", "NIST SP 800-115", "ISO 27001"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "owasp-apts-autonomous-penetration-testing-standard-owasp-foundation"
+  },
+  {
+    "claim": "The OWASP APTS landing page does not specify an explicit recommended scan cadence or frequency for autonomous pentest operations.",
+    "stance": "neutral",
+    "stance_target": "whether APTS mandates a specific testing cadence",
+    "evidence_type": "legal",
+    "scope_conditions": "based on the public project landing page content only, not the full requirement documents on GitHub",
+    "quoted_support": "Building a platform? Use the Checklists for your target tier, then the domain requirement documents.",
+    "numbers": [],
+    "entities": ["OWASP APTS"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "owasp-apts-autonomous-penetration-testing-standard-owasp-foundation"
+  }
+]

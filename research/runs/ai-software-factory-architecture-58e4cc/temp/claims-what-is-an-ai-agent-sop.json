@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "An AI Agent SOP differs structurally from a human SOP by requiring explicit encoding of ambiguity-handling, decision logic (if/else conditions rather than narrative judgment), and system access authorization, because an AI reader cannot infer unstated judgment the way a human can.",
+    "stance": "supports",
+    "stance_target": "SOP-to-Agent-Skill conversion requires precision beyond human documentation standards",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "customer-service AI agent deployments, per Fin.ai product guidance",
+    "quoted_support": "Unlike a human SOP, which relies on the reader's judgment to fill gaps and handle ambiguity, an AI Agent SOP must anticipate decision points, define fallback behaviors, and specify what system data the agent needs to access in order to complete the process reliably.",
+    "numbers": [],
+    "entities": ["Fin.ai"],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "what-is-an-ai-agent-sop"
+  },
+  {
+    "claim": "SOP authors should design around the worst-case/hardest version of a workflow rather than the happy path, because the value of a written procedure lies in exception handling, not easy cases.",
+    "stance": "supports",
+    "stance_target": "rigid evals and SOP authoring best practice",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "AI agent SOP design",
+    "quoted_support": "Write for the worst-case conversation: Design your SOP around the hardest version of the query, not the easiest. Happy-path conversations are easy to handle. The value of a well-written SOP is in how it handles exceptions.",
+    "numbers": [],
+    "entities": [],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "what-is-an-ai-agent-sop"
+  },
+  {
+    "claim": "Handoff/escalation rate is prescribed as the primary quality signal for detecting gaps in an AI Agent SOP: a high escalation rate on a given SOP indicates the instructions are incomplete.",
+    "stance": "supports",
+    "stance_target": "measurable quality-control signals for agent SOPs, relevant to rigid evals pillar",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "customer-support AI agent deployments",
+    "quoted_support": "If a high percentage of conversations that trigger your SOP result in human escalation, the SOP has gaps. Handoff rate is your most direct signal for where to improve the instructions.",
+    "numbers": [],
+    "entities": [],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "what-is-an-ai-agent-sop"
+  },
+  {
+    "claim": "SOPs should separate 'what' (decision logic the agent must follow) from 'how' (the agent's own conversational phrasing), avoiding over-scripting of dialogue.",
+    "stance": "supports",
+    "stance_target": "probabilistic sequences retain flexibility within deterministic decision boundaries",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "AI agent SOP design",
+    "quoted_support": "The SOP should tell the agent what to do at each decision point. The agent's AI reasoning handles how to collect information conversationally. Do not over-script the dialogue — specify the logic and the required data, not every word the agent should say.",
+    "numbers": [],
+    "entities": [],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "what-is-an-ai-agent-sop"
+  },
+  {
+    "claim": "SOPs should be validated via simulated conversations covering the full range of scenarios -- including out-of-order information and mid-conversation changes of mind -- before production deployment.",
+    "stance": "supports",
+    "stance_target": "rigid evals / adversarial testing before agent deployment",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "AI agent SOP deployment",
+    "quoted_support": "Validate with simulation before deployment: Run simulated conversations across the full range of scenarios the SOP is meant to cover before deploying. Include edge cases: a customer who provides information in the wrong order, a customer who changes their mind mid-conversation, a customer whose account state is unusual.",
+    "numbers": [],
+    "entities": [],
+    "time_period": null,
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "what-is-an-ai-agent-sop"
+  }
+]

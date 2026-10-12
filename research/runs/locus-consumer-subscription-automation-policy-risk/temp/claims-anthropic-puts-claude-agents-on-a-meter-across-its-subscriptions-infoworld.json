@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Starting June 15 (2026), Anthropic separates programmatic Claude usage (Agent SDK, GitHub Actions, third-party frameworks) from standard chat subscription limits via a dedicated monthly credit system billed at API-style rates.",
+    "stance": "supports",
+    "stance_target": "Anthropic is formally separating metered programmatic/automated usage from flat-rate subscription usage",
+    "evidence_type": "empirical",
+    "scope_conditions": "Claude Pro, Max 5x, Max 20x subscription tiers",
+    "quoted_support": "Beginning June 15, Anthropic will separate programmatic Claude usage from standard chat subscription limits, introducing a dedicated monthly credit system, billed at API-style rates, for tools including its Agent SDK, GitHub Actions, and third-party frameworks such as OpenClaw.",
+    "numbers": ["June 15", "$20 (Pro)", "$100 (Max 5x)", "$200 (Max 20x)"],
+    "entities": ["Anthropic", "Agent SDK", "GitHub Actions", "OpenClaw"],
+    "time_period": "effective June 15, 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "anthropic-puts-claude-agents-on-a-meter-across-its-subscriptions-infoworld"
+  },
+  {
+    "claim": "In April 2026, Anthropic announced via X that Claude subscriptions would no longer cover usage on third-party agent tools like OpenClaw, citing compute capacity restraints.",
+    "stance": "supports",
+    "stance_target": "specific policy change date on banning subscription-funded third-party automation tool usage",
+    "evidence_type": "empirical",
+    "scope_conditions": "third-party agent frameworks (e.g., OpenClaw) using Claude subscription credentials",
+    "quoted_support": "In April, Anthropic had announced via a post on X that Claude subscriptions would \"no longer cover usage on third-party tools like OpenClaw\", citing compute capacity restraints, and effectively forcing developers using external agent frameworks either to purchase additional usage bundles or switch to direct API access.",
+    "numbers": ["April 2026"],
+    "entities": ["Anthropic", "OpenClaw"],
+    "time_period": "April 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "anthropic-puts-claude-agents-on-a-meter-across-its-subscriptions-infoworld"
+  },
+  {
+    "claim": "Before the April/June 2026 policy changes, programmatic workloads and interactive Claude usage drew from the same subscription usage pool, so agent/CI/automation usage was effectively covered under flat subscription limits.",
+    "stance": "supports",
+    "stance_target": "historically, routing agentic workloads through Claude Pro/Max did not trigger separate metering",
+    "evidence_type": "empirical",
+    "scope_conditions": "pre-April 2026 Claude subscription billing architecture",
+    "quoted_support": "Before that change, programmatic workloads and interactive Claude usage drew from the same subscription pool, allowing developers to use higher-tier Claude plans not only for chat and coding assistance, but also for autonomous agents, scripts, CI pipelines, and other automated workflows.",
+    "numbers": [],
+    "entities": ["Anthropic", "Claude"],
+    "time_period": "prior to April 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "anthropic-puts-claude-agents-on-a-meter-across-its-subscriptions-infoworld"
+  },
+  {
+    "claim": "Developers warn the new programmatic credit pool is small relative to heavy agentic usage, with one engineer stating it 'won't even last a day of serious work' for features like Claude Agent SDK and claude -p.",
+    "stance": "refutes",
+    "stance_target": "the new metered credit allowance is sufficient for continued heavy agentic automation under subscription pricing",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "senior data scientist commentary on X, post-policy-change",
+    "quoted_support": "The monthly limit you are providing won't even last a day of serious work. You are just reducing/removing the usage of some of the most used features like Claude Agent SDK and claude -p [in Claude Code] and calling it a perk.",
+    "numbers": [],
+    "entities": ["Yadesh Salvi", "Claude Agent SDK", "claude -p"],
+    "time_period": "May 2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "anthropic-puts-claude-agents-on-a-meter-across-its-subscriptions-infoworld"
+  },
+  {
+    "claim": "Industry analysts frame Anthropic's programmatic-usage metering as part of a broader shift across vendors (OpenAI, GitHub Copilot) toward separate consumption pools for agentic AI workloads distinct from interactive subscriptions.",
+    "stance": "neutral",
+    "stance_target": "whether metered separation of agentic/automated usage is an industry-wide trend, not an Anthropic-specific anomaly",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "AI vendor pricing trends, 12-24 month outlook from May 2026",
+    "quoted_support": "OpenAI, he noted, has long relied on usage-based API pricing while reserving subscription offerings such as ChatGPT Plus primarily for interactive use cases.",
+    "numbers": ["12 to 24 months"],
+    "entities": ["Sanchit Vir Gogia", "Greyhound Research", "OpenAI", "GitHub Copilot", "Anthropic"],
+    "time_period": "May 2026 forward-looking",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "anthropic-puts-claude-agents-on-a-meter-across-its-subscriptions-infoworld"
+  }
+]

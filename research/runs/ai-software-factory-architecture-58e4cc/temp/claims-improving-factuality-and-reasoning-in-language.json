@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Multi-agent debate (3 agents, 2 rounds) improved arithmetic reasoning accuracy from 67.0% (single agent) to 81.8%, outperforming both a single agent with self-reflection (72.1%) and multi-agent majority voting without debate (69.0%).",
+    "stance": "supports",
+    "stance_target": "multi-agent adversarial debate as superior to single-model self-reflection or simple majority voting for the factory's QC pipeline",
+    "evidence_type": "empirical",
+    "scope_conditions": "arithmetic reasoning benchmark, 3-agent 2-round debate configuration, 2023",
+    "quoted_support": "Single Agent 67.0 ± 4.7 ... Single Agent (Reflection) 72.1 ± 4.5 ... Multi-Agent (Majority) 69.0 ± 4.6 ... Multi-Agent (Debate) 81.8 ± 2.3",
+    "numbers": ["67.0%", "72.1%", "69.0%", "81.8%"],
+    "entities": [],
+    "time_period": "2023",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "improving-factuality-and-reasoning-in-language"
+  },
+  {
+    "claim": "On Grade School Math (GSM8K), multi-agent debate raised accuracy from 77.0% (single agent) to 85.0%; on chess move quality, debate raised the delta-playing-strength score from 91.4 (single agent) to 122.9.",
+    "stance": "supports",
+    "stance_target": "generalizability of multi-agent debate gains across math reasoning and strategic/game domains relevant to agentic software-factory decision-making",
+    "evidence_type": "empirical",
+    "scope_conditions": "GSM8K and chess move-quality benchmarks, 3-agent 2-round debate, 2023",
+    "quoted_support": "Grade School Math (%): Single Agent 77.0 ± 4.2 ... Multi-Agent (Debate) 85.0 ± 3.5. Chess (ΔPS): Single Agent 91.4 ± 10.6 ... Multi-Agent (Debate) 122.9 ± 7.6.",
+    "numbers": ["77.0%", "85.0%", "91.4 delta-PS", "122.9 delta-PS"],
+    "entities": [],
+    "time_period": "2023",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "improving-factuality-and-reasoning-in-language"
+  },
+  {
+    "claim": "In some observed debate instances, all participating agents initially gave an incorrect answer, yet the multi-round debate process still converged on the correct answer through mutual critique -- demonstrating debate's value extends beyond merely amplifying an already-correct answer within the group.",
+    "stance": "supports",
+    "stance_target": "the capacity of adversarial multi-agent review to correct errors that no single reviewing agent initially recognized, relevant to the factory's error-correction guarantees",
+    "evidence_type": "empirical",
+    "scope_conditions": "qualitative case analysis within the multi-agent debate experiments, 2023",
+    "quoted_support": "we find cases in which all models initially give an incorrect response, yet the result of debate still obtains the correct answer as agents critique each others' reasoning. Thus, the purpose of our debate isn't just to amplify a correct answer – all models can initially be wrong but arrive at the correct answer through the debate process.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2023",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "improving-factuality-and-reasoning-in-language"
+  },
+  {
+    "claim": "Multiagent debate requires only black-box access to the underlying language models and uses an identical procedure and prompts across all evaluated tasks, making it directly applicable to existing proprietary or third-party models without fine-tuning.",
+    "stance": "supports",
+    "stance_target": "feasibility of deploying adversarial debate as a model-agnostic QC layer across heterogeneous vendor models in a software factory",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "method design constraint, 2023",
+    "quoted_support": "Our approach may be directly applied to existing black-box models and uses identical procedure and prompts for all tasks we investigate.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2023",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "improving-factuality-and-reasoning-in-language"
+  },
+  {
+    "claim": "A biography-generation factuality benchmark (524 well-known computer scientists, ground-truth bullet-point facts) was introduced because existing language models had a tendency to hallucinate many facts on this task, providing a controlled way to measure factual accuracy gains from debate.",
+    "stance": "supports",
+    "stance_target": "constructing targeted factuality benchmarks as a methodology for measuring hallucination reduction in the factory's rigid-eval pipeline",
+    "evidence_type": "empirical",
+    "scope_conditions": "biography factuality benchmark, 524 subjects, 2023",
+    "quoted_support": "To evaluate the factuality of language models, we introduce a novel task of accurately generating historical biographies of people. In preliminary testing, we found that existing language models had a tendency to hallucinate many facts on this task. We constructed ground truth bullet point biographies of 524 well-known computer scientists.",
+    "numbers": ["524 computer scientists"],
+    "entities": [],
+    "time_period": "2023",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "improving-factuality-and-reasoning-in-language"
+  }
+]

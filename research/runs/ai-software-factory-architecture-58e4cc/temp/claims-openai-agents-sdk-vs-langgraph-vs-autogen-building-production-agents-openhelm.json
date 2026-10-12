@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "In a head-to-head implementation of the same triage-to-specialist customer-support agent system, OpenAI Agents SDK produced the lowest implementation effort, smallest code volume, lowest latency, and lowest per-query cost of the three frameworks tested (OpenAI Agents SDK, LangGraph, AutoGen), but is OpenAI-only with no multi-provider support.",
+    "stance": "supports",
+    "stance_target": "framework selection trade-off: OpenAI Agents SDK's native handoff primitive minimizes engineering cost for OpenAI-centric production agents at the expense of provider portability",
+    "evidence_type": "empirical",
+    "scope_conditions": "controlled framework comparison building an identical customer-support agent system, OpenHelm, 2026",
+    "quoted_support": "Typically the fastest to implement, with the cleanest code. ... Lower [tokens/cost per query] ... Lower [latency]",
+    "numbers": [],
+    "entities": ["OpenAI Agents SDK", "LangGraph", "AutoGen"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "openai-agents-sdk-vs-langgraph-vs-autogen-building-production-agents-openhelm"
+  },
+  {
+    "claim": "AutoGen's conversation-based multi-agent coordination produced the highest latency and highest token/cost-per-query of the three frameworks tested, because agents converse with each other, and was rated least production-ready and hardest to debug due to difficulty tracing conversation-dynamics failures.",
+    "stance": "refutes",
+    "stance_target": "AutoGen's conversational coordination model is suitable for cost-sensitive or reliability-critical production agent deployments",
+    "evidence_type": "empirical",
+    "scope_conditions": "controlled framework comparison, OpenHelm, 2026",
+    "quoted_support": "Latency Highest of the three (multi-turn conversations) ... Tokens per query Higher (agents talk to each other) ... AutoGen is best reserved for research and experimentation... lacks the reliability and cost-efficiency needed for production systems.",
+    "numbers": [],
+    "entities": ["AutoGen"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "openai-agents-sdk-vs-langgraph-vs-autogen-building-production-agents-openhelm"
+  },
+  {
+    "claim": "LangGraph gives the most explicit and predictable routing control of the three frameworks tested because developers define every node and edge, at the cost of the largest code volume and highest implementation effort; it is the only option that cleanly handles multi-provider routing across OpenAI, Anthropic, and Google models.",
+    "stance": "supports",
+    "stance_target": "LangGraph is the recommended framework when multi-provider flexibility or explicit, auditable routing control is required for a software-factory agent architecture",
+    "evidence_type": "empirical",
+    "scope_conditions": "controlled framework comparison, OpenHelm, 2026",
+    "quoted_support": "Routing control Explicit, most predictable ... Only option that cleanly handles routing between OpenAI, Anthropic, and Google models based on task requirements.",
+    "numbers": [],
+    "entities": ["LangGraph"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "openai-agents-sdk-vs-langgraph-vs-autogen-building-production-agents-openhelm"
+  },
+  {
+    "claim": "Teams can hybridize frameworks by wrapping an OpenAI Agents SDK streaming handoff as a node within a LangGraph state graph, combining OpenAI SDK's streaming UX with LangGraph's multi-provider orchestration and persistence.",
+    "stance": "neutral",
+    "stance_target": "feasibility of mixing multi-agent orchestration frameworks within a single production system",
+    "evidence_type": "theoretical",
+    "scope_conditions": "integration pattern proposed by OpenHelm, 2026",
+    "quoted_support": "This captures OpenAI SDK's streaming while maintaining LangGraph's multi-provider capability.",
+    "numbers": [],
+    "entities": ["OpenAI Agents SDK", "LangGraph"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "openai-agents-sdk-vs-langgraph-vs-autogen-building-production-agents-openhelm"
+  }
+]

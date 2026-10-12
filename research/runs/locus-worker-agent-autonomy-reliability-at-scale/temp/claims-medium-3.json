@@ -1,0 +1,16 @@
+[
+  {
+    "claim": "By mid-2026, the agentic AI investment narrative around Devin/Cognition Labs' roughly $2 billion valuation had reportedly 'burst,' attributed to problems including infinite loops, catastrophic hallucination, and friction with enterprise software realities.",
+    "stance": "supports",
+    "stance_target": "Director/Worker agent concurrency is not yet production-reliable at scale",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "framing claim only; article is paywalled before supporting detail is shown",
+    "quoted_support": "The $2 billion agentic AI bubble has officially burst. Devin, alongside a dozen clone startups that promised to replace human engineering teams, is facing a stark existential crisis... Building a demo that solves a 5-step LeetCode problem is easy; building an agent that can safely...",
+    "numbers": ["$2 billion"],
+    "entities": ["Devin", "Cognition Labs"],
+    "time_period": "early 2024 to mid-2026",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "medium-3"
+  }
+]

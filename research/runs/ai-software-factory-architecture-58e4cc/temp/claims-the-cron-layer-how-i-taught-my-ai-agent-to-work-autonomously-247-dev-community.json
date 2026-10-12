@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "A practitioner built a 'cron layer' gateway daemon (named OpenClaw) that manages scheduled AI-agent jobs, each defined by a Schedule (cron expression/interval/one-shot), a Payload (prompt injected as a system event or full agent turn), and a Session target (shared main session vs. isolated session).",
+    "stance": "supports",
+    "stance_target": "continuous autonomous agent operation requires an explicit scheduling/orchestration layer distinct from the agent's reasoning model",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "single-practitioner production system, South Florida, as of 2026",
+    "quoted_support": "My setup uses a gateway daemon (OpenClaw) that manages cron jobs pointing at an AI agent. Each job has three parts: Schedule... Payload... Session target — main session (shared context) or isolated (standalone).",
+    "numbers": ["3 parts"],
+    "entities": ["OpenClaw"],
+    "time_period": "2026",
+    "region": "South Florida, US",
+    "confidence": "low",
+    "source_note_id": "the-cron-layer-how-i-taught-my-ai-agent-to-work-autonomously-247-dev-community"
+  },
+  {
+    "claim": "Running multiple unrelated cron-triggered agent tasks in one shared session caused context contamination: a prospect-finding job that accumulated 200+ lead records in context caused a subsequent blog-writing job in the same session to hallucinate fabricated business details.",
+    "stance": "supports",
+    "stance_target": "context isolation (separate sessions per triggered task) is necessary to prevent cross-task hallucination in continuously-running agent systems",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "single-practitioner system, documented failure and fix, 2026",
+    "quoted_support": "The prospect finder would burn through context window with 200+ lead records, then the blog writer would hallucinate about dentists in Fort Lauderdale... Isolated sessions solve this. Each cron job spins up fresh, does its work, and reports back.",
+    "numbers": ["200+ lead records"],
+    "entities": [],
+    "time_period": "2026",
+    "region": "South Florida, US",
+    "confidence": "low",
+    "source_note_id": "the-cron-layer-how-i-taught-my-ai-agent-to-work-autonomously-247-dev-community"
+  },
+  {
+    "claim": "In an automated prospecting system, 40-60% of search results on any given run were duplicates already present in a 237-record queue, making deduplication logic (checking phone numbers and business names) the most critical component for avoiding wasted outreach at scale.",
+    "stance": "supports",
+    "stance_target": "autonomous agent loops operating continuously need built-in deduplication/state-checking logic, not just scheduling, to avoid wasted or redundant work",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "single-practitioner sales-prospecting automation, 2026",
+    "quoted_support": "My system now has 237 prospects in the queue. On any given search, 40-60% of results are duplicates we already have... The agent checks phone numbers and business names against the existing queue before adding anything.",
+    "numbers": ["237", "40-60%"],
+    "entities": [],
+    "time_period": "2026",
+    "region": "South Florida, US",
+    "confidence": "low",
+    "source_note_id": "the-cron-layer-how-i-taught-my-ai-agent-to-work-autonomously-247-dev-community"
+  }
+]

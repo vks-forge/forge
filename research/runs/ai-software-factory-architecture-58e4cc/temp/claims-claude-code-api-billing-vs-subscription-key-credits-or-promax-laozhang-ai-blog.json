@@ -1,0 +1,58 @@
+[
+  {
+    "claim": "Claude Code resolves which credential to bill using a fixed precedence order (cloud provider flags > ANTHROPIC_AUTH_TOKEN > ANTHROPIC_API_KEY > apiKeyHelper > CLAUDE_CODE_OAUTH_TOKEN > subscription /login), not based on which plan the user believes is active.",
+    "stance": "supports",
+    "stance_target": "the subscription-vs-API billing boundary in Claude Code is determined by environment-variable precedence, creating silent billing-switch risk for automation",
+    "evidence_type": "empirical",
+    "scope_conditions": "Claude Code authentication docs, as of October 10 2026",
+    "quoted_support": "As of October 10, 2026, Claude Code bills whichever credential comes first in its documented order, not the plan you think you're on... Claude Code doesn't combine credentials. When several are present, it picks one in this order, according to the Claude Code authentication docs.",
+    "numbers": ["October 10, 2026"],
+    "entities": ["Anthropic", "Claude Code", "ANTHROPIC_API_KEY"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "claude-code-api-billing-vs-subscription-key-credits-or-promax-laozhang-ai-blog"
+  },
+  {
+    "claim": "Non-interactive claude -p (headless) invocations use an ANTHROPIC_API_KEY automatically with no approval prompt whenever present, in contrast to interactive sessions which require one-time explicit approval.",
+    "stance": "supports",
+    "stance_target": "automated/headless invocation paths bypass the human-approval gate that governs interactive subscription-vs-API billing switches",
+    "evidence_type": "empirical",
+    "scope_conditions": "Claude Code claude -p mode, 2026",
+    "quoted_support": "Non-interactive runs (claude -p) use the key whenever it's present, with no prompt at all.",
+    "numbers": [],
+    "entities": ["Claude Code", "claude -p"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "claude-code-api-billing-vs-subscription-key-credits-or-promax-laozhang-ai-blog"
+  },
+  {
+    "claim": "Since October 7, 2026, Anthropic's Max and Team plans include monthly API credits that cover API calls, the Agent SDK, and claude -p runs via a linked Console organization key, but these credits explicitly do not pay for interactive Claude Code usage.",
+    "stance": "neutral",
+    "stance_target": "Anthropic has introduced a distinct subscription-linked credit mechanism for automated/headless usage separate from interactive subscription limits",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic Max/Team plans, effective October 7 2026",
+    "quoted_support": "since October 7, 2026, Max and Team plans include monthly API credits. They pay for API calls, the Agent SDK, and claude -p run with a key from the linked Console organization. They don't pay for interactive Claude Code.",
+    "numbers": ["October 7, 2026"],
+    "entities": ["Anthropic", "Claude Max", "Claude Team"],
+    "time_period": "October 2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "claude-code-api-billing-vs-subscription-key-credits-or-promax-laozhang-ai-blog"
+  },
+  {
+    "claim": "A stale or previously-approved ANTHROPIC_API_KEY left in a shell environment can silently bill every subsequent interactive Claude Code session at API rates without re-prompting, producing unexpected charges that users may mistake for subscription-plan behavior.",
+    "stance": "supports",
+    "stance_target": "silent, hard-to-detect billing-path drift is a practical operational hazard for teams relying on flat-rate subscription billing",
+    "evidence_type": "empirical",
+    "scope_conditions": "Claude Code environment variable handling, 2026",
+    "quoted_support": "You approve the key once, perhaps for a quick API test, and from then on every interactive session started from that shell bills the key without asking again.",
+    "numbers": [],
+    "entities": ["Claude Code", "ANTHROPIC_API_KEY"],
+    "time_period": "2026",
+    "region": "",
+    "confidence": "high",
+    "source_note_id": "claude-code-api-billing-vs-subscription-key-credits-or-promax-laozhang-ai-blog"
+  }
+]

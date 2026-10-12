@@ -1,0 +1,10 @@
+No substantive factual conflicts found across drafts A, B, and C.
+
+All three drafts independently converged on the same core evidence and the same governing invariant ("an agent's self-report may trigger action, but only a process the agent cannot control may gate the consequence"), the same four empirical correctives to the brief's literal asks (cross-model review asymmetry, the OpenAI-HF safety-classifier confound, the pentest-autonomy regression, and the subscription-enforcement precedent), and the same committed resolution (build the factory, but as a graduated/risk-tiered system, not a uniformly-autonomous one).
+
+Differences across drafts are differences of EMPHASIS and STRUCTURE, not fact:
+- Draft A gives the most detailed capability/architecture mechanics per pillar and a worked cost-per-merge estimate (~$1.35-1.50).
+- Draft B gives the sharpest adversarial framing (four numbered "fails against the evidence" points up front) and the most explicit "what would change this verdict" forward-looking section.
+- Draft C gives the clearest operational structure: a versioned "autonomy ledger" with promotion/demotion rules and a named-human-signoff table per action class, and is the only draft to make a concrete, evidence-based framework pick (LangGraph) rather than staying framework-agnostic.
+
+One stylistic non-conflict to resolve in synthesis: Draft C recommends LangGraph by name as "most production-ready"; Drafts A and B stay deliberately framework-agnostic, citing Anthropic's own guidance to prefer a thin, auditable custom layer over a heavy framework when safety depends on inspectability. Resolution: present the thin-custom-layer-by-default position (A/B) as the primary recommendation, and name LangGraph as the concrete choice IF a framework is wanted, consistent with C's cited evidence ("most production-ready," multi-provider routing) — both can be true simultaneously since they answer slightly different questions (whether to use a framework at all vs. which one if you do).

@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Context rot is a documented phenomenon where a model's ability to accurately recall information decreases as the number of tokens in its context window increases, observed via needle-in-a-haystack benchmarking across all tested models, with varying degradation severity but no exceptions.",
+    "stance": "refutes",
+    "stance_target": "larger raw context windows alone solve agent context-management problems",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic analysis of needle-in-a-haystack benchmarks, published Sept 29, 2025",
+    "quoted_support": "Studies on needle-in-a-haystack style benchmarking have uncovered the concept of context rot: as the number of tokens in the context window increases, the model's ability to accurately recall information from that context decreases. While some models exhibit more gentle degradation than others, this characteristic emerges across all models.",
+    "numbers": [],
+    "entities": ["Anthropic"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "effective-context-engineering-for-ai-agents-anthropic"
+  },
+  {
+    "claim": "Claude Code's compaction technique summarizes a near-full context window, preserving architectural decisions, unresolved bugs, and implementation details while discarding redundant tool outputs, then reinitiates with the summary plus the five most recently accessed files.",
+    "stance": "supports",
+    "stance_target": "compaction is a concrete, production-proven technique for continuous long-horizon agent operation beyond a single context window",
+    "evidence_type": "empirical",
+    "scope_conditions": "Claude Code production implementation, 2025",
+    "quoted_support": "In Claude Code, for example, we implement this by passing the message history to the model to summarize and compress the most critical details. The model preserves architectural decisions, unresolved bugs, and implementation details while discarding redundant tool outputs or messages. The agent can then continue with this compressed context plus the five most recently accessed files.",
+    "numbers": ["5 files"],
+    "entities": ["Claude Code", "Anthropic"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "effective-context-engineering-for-ai-agents-anthropic"
+  },
+  {
+    "claim": "Structured note-taking (agentic memory written outside the context window and re-read after context resets) enabled a Claude Pokemon-playing agent to track precise long-horizon progress (e.g., exact step counts and level gains) across thousands of game steps with no prompted memory structure, and Anthropic shipped a public-beta memory tool on the Claude Developer Platform implementing this pattern at the Sonnet 4.5 launch.",
+    "stance": "supports",
+    "stance_target": "externalized structured memory is a necessary continuous-operation technique distinct from compaction or multi-agent isolation",
+    "evidence_type": "empirical",
+    "scope_conditions": "Claude playing Pokemon demo and Sonnet 4.5 launch, 2025",
+    "quoted_support": "The agent maintains precise tallies across thousands of game steps—tracking objectives like \"for the last 1,234 steps I've been training my Pokémon in Route 1, Pikachu has gained 8 levels toward the target of 10.\"... As part of our Sonnet 4.5 launch, we released a memory tool in public beta on the Claude Developer Platform.",
+    "numbers": ["1,234 steps", "8 levels"],
+    "entities": ["Anthropic", "Claude Sonnet 4.5"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "effective-context-engineering-for-ai-agents-anthropic"
+  },
+  {
+    "claim": "Sub-agent architectures let specialized subagents explore using tens of thousands of tokens each but return only a condensed 1,000-2,000 token summary to the lead agent, achieving clear separation of concerns between detailed search context (isolated in subagents) and synthesis (handled by the lead agent).",
+    "stance": "supports",
+    "stance_target": "context isolation via subagents is a core architectural technique for the Director/Worker software-factory design, trading token cost for context cleanliness",
+    "evidence_type": "empirical",
+    "scope_conditions": "Anthropic production multi-agent architecture, 2025",
+    "quoted_support": "Each subagent might explore extensively, using tens of thousands of tokens or more, but returns only a condensed, distilled summary of its work (often 1,000-2,000 tokens).",
+    "numbers": ["1,000-2,000 tokens"],
+    "entities": ["Anthropic"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "effective-context-engineering-for-ai-agents-anthropic"
+  },
+  {
+    "claim": "Three long-horizon context-engineering techniques map to distinct task types: compaction suits tasks requiring extensive conversational back-and-forth, structured note-taking suits iterative development with clear milestones, and multi-agent architectures suit complex research/analysis where parallel exploration pays off.",
+    "stance": "neutral",
+    "stance_target": "decision framework for choosing among compaction, note-taking, and multi-agent context strategies",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "Anthropic engineering guidance, 2025",
+    "quoted_support": "Compaction maintains conversational flow for tasks requiring extensive back-and-forth; Note-taking excels for iterative development with clear milestones; Multi-agent architectures handle complex research and analysis where parallel exploration pays dividends.",
+    "numbers": [],
+    "entities": ["Anthropic"],
+    "time_period": "2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "effective-context-engineering-for-ai-agents-anthropic"
+  }
+]

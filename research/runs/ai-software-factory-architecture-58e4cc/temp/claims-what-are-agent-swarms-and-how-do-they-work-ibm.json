@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Agreement/consensus between multiple independent AI agents does not guarantee the result is correct, particularly when agents share the same model, data, or assumptions.",
+    "stance": "refutes",
+    "stance_target": "assumption that multi-agent voting/consensus alone constitutes a reliable quality-control mechanism",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "voting/consensus multi-agent collaboration patterns",
+    "quoted_support": "This can be useful when independent agreement is informative, although agreement between agents does not guarantee that the result is correct.",
+    "numbers": [],
+    "entities": ["IBM"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "what-are-agent-swarms-and-how-do-they-work-ibm"
+  },
+  {
+    "claim": "Current multi-agent frameworks (OpenAI Agents SDK, AutoGen, LangChain) implement different, non-universal subsets of coordination patterns — there is no single standard taxonomy for multi-agent architecture as of 2026.",
+    "stance": "neutral",
+    "stance_target": "pillar 2/5: framework selection for multi-agent software factory orchestration",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "multi-agent framework landscape, 2026",
+    "quoted_support": "These frameworks use different approaches, so the patterns they support do not represent a universal architecture taxonomy.",
+    "numbers": [],
+    "entities": ["OpenAI Agents SDK", "AutoGen", "LangChain"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "what-are-agent-swarms-and-how-do-they-work-ibm"
+  },
+  {
+    "claim": "Error propagation is a named structural risk in agent swarms: an error from one agent can become an unchecked input for another, and without appropriate checks a single mistake can move through the entire workflow and affect the end result.",
+    "stance": "supports",
+    "stance_target": "pillar 1: need for adversarial/independent review gates between agent handoffs",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "sequential/pipeline multi-agent execution",
+    "quoted_support": "An error from one agent can become an input for another. Without appropriate checks, a mistake can move through the workflow and affect the end result.",
+    "numbers": [],
+    "entities": ["IBM"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "what-are-agent-swarms-and-how-do-they-work-ibm"
+  },
+  {
+    "claim": "Multi-agent swarms should only be adopted when the task decomposes into meaningful independent components, genuine parallelism is possible, no single agent is suited to the whole task, workload scale exceeds single-agent capacity, conditions require adaptive redirection, or coordination itself creates value — otherwise a single agent or conventional automation is simpler, cheaper, and easier to govern.",
+    "stance": "neutral",
+    "stance_target": "decision criteria for multi-agent software factory architecture adoption",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "general multi-agent system design guidance, 2026",
+    "quoted_support": "A swarm might not be appropriate when the task is straightforward, when each step depends heavily on the previous one or when the addition coordination of multiple agents would provide little benefit. In those situations, a single agent or conventional automated workflow can be simpler, easier to govern and less costly to operate.",
+    "numbers": [],
+    "entities": ["IBM"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "what-are-agent-swarms-and-how-do-they-work-ibm"
+  },
+  {
+    "claim": "Giving every agent in a swarm the entire task history consumes context window and increases processing overhead, while giving too little context produces incomplete or inconsistent work — swarm design requires deliberate context-scoping, not maximal sharing.",
+    "stance": "supports",
+    "stance_target": "pillar 4: context isolation design principle for multi-agent systems",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "multi-agent information sharing design, 2026",
+    "quoted_support": "Giving every agent the entire history of a task can consume its context window and increase the amount of information the system needs to process. Giving an agent too little context can lead to incomplete or inconsistent work.",
+    "numbers": [],
+    "entities": ["IBM"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "what-are-agent-swarms-and-how-do-they-work-ibm"
+  }
+]

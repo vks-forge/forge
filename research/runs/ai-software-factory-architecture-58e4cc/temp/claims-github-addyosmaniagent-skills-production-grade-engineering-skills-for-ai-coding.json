@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "The /build auto command lets an agent implement an entire approved plan autonomously in a single pass while still enforcing per-task tests and commits and pausing on failures or risky steps.",
+    "stance": "supports",
+    "stance_target": "Triggers/Infrastructure & Continuous Operation pillar — a concrete bounded-autonomy pattern for self-sustaining agentic loops that still gates on verification",
+    "evidence_type": "empirical",
+    "scope_conditions": "addyosmani/agent-skills repo, 105.2k GitHub stars as fetched",
+    "quoted_support": "/build auto generates the plan and implements every task in a single approved pass — you approve the plan once, then it runs autonomously. It removes the human stepping between tasks, not the verification: every task is still test-driven and committed individually, and it pauses on failures or risky steps.",
+    "numbers": ["105.2k stars", "11.0k forks", "25 skills total"],
+    "entities": ["addyosmani", "Claude Code"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "github-addyosmaniagent-skills-production-grade-engineering-skills-for-ai-coding"
+  },
+  {
+    "claim": "Every skill in the pack follows a fixed anatomy including a mandatory 'Rationalizations' table documenting common agent excuses for skipping steps (e.g. 'I'll add tests later') with explicit rebuttals, and a 'Verification' section stating that 'Seems right' is never a sufficient acceptance criterion.",
+    "stance": "supports",
+    "stance_target": "Zero-Hallucination & Rigid Evals pillar — a reusable template pattern (anti-rationalization table + mandatory evidence-based verification) for encoding rigid evals into any Agent Skill",
+    "evidence_type": "empirical",
+    "scope_conditions": "25 production skills across the addyosmani/agent-skills pack",
+    "quoted_support": "Anti-rationalization. Every skill includes a table of common excuses agents use to skip steps (e.g., \"I'll add tests later\") with documented counter-arguments. Verification is non-negotiable. Every skill ends with evidence requirements - tests passing, build output, runtime data. \"Seems right\" is never sufficient.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "github-addyosmaniagent-skills-production-grade-engineering-skills-for-ai-coding"
+  },
+  {
+    "claim": "A 'doubt-driven-development' skill implements a formal adversarial review protocol (CLAIM -> EXTRACT -> DOUBT -> RECONCILE -> STOP) with optional user-authorized cross-model escalation, triggered for high-stakes production, security, or irreversible decisions.",
+    "stance": "supports",
+    "stance_target": "Zero-Hallucination & Quality Control pillar — a named, documented adversarial-model-review Agent Skill pattern, including cross-model escalation as an explicit mechanism",
+    "evidence_type": "empirical",
+    "scope_conditions": "addyosmani/agent-skills pack, review phase skills",
+    "quoted_support": "doubt-driven-development: Adversarial fresh-context review of every non-trivial decision in-flight - CLAIM -> EXTRACT -> DOUBT -> RECONCILE -> STOP, with optional user-authorized cross-model escalation. Use When: Stakes are high (production, security, irreversible), working in unfamiliar code, or a confident output is cheaper to verify now than to debug later.",
+    "numbers": [],
+    "entities": ["doubt-driven-development"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "github-addyosmaniagent-skills-production-grade-engineering-skills-for-ai-coding"
+  },
+  {
+    "claim": "A 'constraint-driven-development' skill explicitly interviews for a quality bar, writes a CONSTRAINTS.md, and is designed to catch agents silencing checks or skipping tests to force a green build.",
+    "stance": "supports",
+    "stance_target": "Zero-Hallucination & Rigid Evals pillar — a direct mechanism against agents gaming their own evaluation gates, a specific named failure mode for autonomous coding agents",
+    "evidence_type": "empirical",
+    "scope_conditions": "addyosmani/agent-skills pack",
+    "quoted_support": "constraint-driven-development: Interviews you for a quality bar with sane default thresholds, writes CONSTRAINTS.md, places each check by cost, and catches agents silencing checks or skipping tests to get green. Use When: No standards are written down, or an agent is producing more than anyone reads.",
+    "numbers": [],
+    "entities": ["constraint-driven-development"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "github-addyosmaniagent-skills-production-grade-engineering-skills-for-ai-coding"
+  },
+  {
+    "claim": "The pack defines an explicit orchestration rule that specialist agent personas (code-reviewer, test-engineer, security-auditor, web-performance-auditor) must not invoke other personas, documented in a dedicated orchestration-patterns.md reference.",
+    "stance": "neutral",
+    "stance_target": "Triggers/Infrastructure pillar — a governance rule preventing uncontrolled recursive agent-calling-agent chains in a multi-persona system",
+    "evidence_type": "empirical",
+    "scope_conditions": "addyosmani/agent-skills pack, 4 specialist personas",
+    "quoted_support": "orchestration-patterns.md: Endorsed multi-persona orchestration patterns, anti-patterns, and the \"personas don't invoke personas\" rule.",
+    "numbers": ["4 agent personas: code-reviewer, test-engineer, security-auditor, web-performance-auditor"],
+    "entities": ["code-reviewer", "test-engineer", "security-auditor", "web-performance-auditor"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "github-addyosmaniagent-skills-production-grade-engineering-skills-for-ai-coding"
+  }
+]

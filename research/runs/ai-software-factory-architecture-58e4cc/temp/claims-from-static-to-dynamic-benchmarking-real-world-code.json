@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "On MCR-Bench, a real-world multi-round PR-level code review benchmark with 2,269 tasks across 5 languages, the best single LLM reviewer (Claude Haiku 4.5) only reaches F1=0.551 overall on defect detection, with recall 0.630 and precision 0.579.",
+    "stance": "neutral",
+    "stance_target": "ceiling on achievable defect detection with current LLM reviewers in real-world settings",
+    "evidence_type": "empirical",
+    "scope_conditions": "2,269 real-world multi-round PR-level code review tasks, Python/Java/JavaScript/TypeScript/C#, ground truth from actual review discussions not synthetic errors",
+    "quoted_support": "mainstream LLMs exhibit only modest performance on MCR-Bench, with F1 scores largely in the low-to-medium range and the best-performing model slightly exceeding 0.55, indicating persistent challenges in defect identification and contextual reasoning under multi-round code review settings.",
+    "numbers": ["F1=0.551 (Claude Haiku 4.5)", "F1=0.542 (GPT-5.2)", "F1=0.357 (Qwen3 Max)", "2,269 tasks"],
+    "entities": ["Claude Haiku 4.5", "GPT-5.2", "DeepSeek V3.2", "Gemini 3 Flash", "GLM-4.7", "Kimi K2", "Qwen3 Max", "MCR-Bench"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "high",
+    "source_note_id": "from-static-to-dynamic-benchmarking-real-world-code"
+  },
+  {
+    "claim": "Production-style PR-level agentic code review baselines (PR-Agent, Hybrid-Review) score even lower than general-purpose LLM reviewers on MCR-Bench, with consistently low recall, showing they struggle to capture defects whose evidence evolves across review rounds.",
+    "stance": "refutes",
+    "stance_target": "existing agentic code-review tooling already solves multi-round defect detection",
+    "evidence_type": "empirical",
+    "scope_conditions": "PR-Agent and Hybrid-Review baselines evaluated on MCR-Bench defect detection task",
+    "quoted_support": "both baselines achieve limited performance, with generally low F1 scores and consistently low recall. This indicates that existing PR-level review baselines still struggle to capture defects whose evidence evolves across review discussions and code revisions.",
+    "numbers": [],
+    "entities": ["PR-Agent", "Hybrid-Review", "MCR-Bench"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "medium",
+    "source_note_id": "from-static-to-dynamic-benchmarking-real-world-code"
+  },
+  {
+    "claim": "LLM defect-detection performance on MCR-Bench drops for TypeScript and C# relative to Python and JavaScript, with most models experiencing a pronounced drop in recall on the former languages.",
+    "stance": "neutral",
+    "stance_target": "generalizability of LLM code review across programming languages",
+    "evidence_type": "empirical",
+    "scope_conditions": "5-language MCR-Bench evaluation",
+    "quoted_support": "Models generally achieve higher F1 scores on Python and JavaScript... For languages such as TypeScript and C#, most models experience a pronounced drop in recall, and some perform substantially worse than their overall averages.",
+    "numbers": [],
+    "entities": ["TypeScript", "C#", "Python", "JavaScript"],
+    "time_period": "2026",
+    "region": "n/a",
+    "confidence": "medium",
+    "source_note_id": "from-static-to-dynamic-benchmarking-real-world-code"
+  }
+]

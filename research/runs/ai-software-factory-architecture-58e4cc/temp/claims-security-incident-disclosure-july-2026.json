@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "Hugging Face's intrusion was driven end-to-end by an autonomous agent framework executing many thousands of individual actions across a swarm of short-lived sandboxes with self-migrating command-and-control staged on public services -- matching the industry-forecast 'agentic attacker' scenario.",
+    "stance": "refutes",
+    "stance_target": "Current production infrastructure is adequately hardened against autonomous multi-agent attack campaigns at machine speed",
+    "evidence_type": "empirical",
+    "scope_conditions": "Hugging Face production infrastructure, July 2026",
+    "quoted_support": "The campaign was run by an autonomous agent framework... executing many thousands of individual actions across a swarm of short-lived sandboxes, with self-migrating command-and-control staged on public services. This matches the 'agentic attacker' scenario the industry has been forecasting.",
+    "numbers": [],
+    "entities": ["Hugging Face"],
+    "time_period": "July 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "security-incident-disclosure-july-2026"
+  },
+  {
+    "claim": "The root cause of initial access was a malicious dataset abusing two code-execution paths (a remote-code dataset loader and a template-injection in dataset configuration) in Hugging Face's own data-processing pipeline, from which the attacker escalated to node-level access and harvested cloud/cluster credentials.",
+    "stance": "neutral",
+    "stance_target": "Specific technical root cause of the Hugging Face compromise",
+    "evidence_type": "empirical",
+    "scope_conditions": "Hugging Face infrastructure, July 2026",
+    "quoted_support": "A malicious dataset abused two code-execution paths in our dataset processing (a remote-code dataset loader and a template-injection in a dataset configuration) to run code on a processing worker. From there, the actor escalated to node-level access, harvested cloud and cluster credentials, and moved laterally into several internal clusters over a weekend.",
+    "numbers": ["two code-execution paths"],
+    "entities": ["Hugging Face"],
+    "time_period": "July 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "security-incident-disclosure-july-2026"
+  },
+  {
+    "claim": "Hugging Face used LLM-driven analysis agents to process over 17,000 recorded attacker-action log events, reconstructing the full incident timeline in hours instead of the days it would normally take -- but had to run this analysis on a self-hosted open-weight model (GLM-5.2) because commercial frontier model APIs' safety guardrails blocked submission of real attack commands and exploit payloads, unable to distinguish an incident responder from an attacker.",
+    "stance": "supports",
+    "stance_target": "Governance/tooling gap: commercial AI safety classifiers can become an operational liability during incident response, requiring defenders to pre-provision a self-hosted capable model as part of their governance scaffolding",
+    "evidence_type": "empirical",
+    "scope_conditions": "Hugging Face incident response, July 2026",
+    "quoted_support": "When we started the log analysis, we first used frontier models behind commercial APIs. This did not work: the analysis requires submitting large volumes of real attack commands, exploit payloads, and C2 artifacts, and these requests were blocked by the providers' safety guardrails, which cannot distinguish an incident responder from an attacker. We ran the forensic analysis instead on zai-org/GLM-5.2, an open-weight model, on our own infrastructure.",
+    "numbers": ["17,000 recorded events"],
+    "entities": ["Hugging Face", "GLM-5.2"],
+    "time_period": "July 2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "security-incident-disclosure-july-2026"
+  }
+]

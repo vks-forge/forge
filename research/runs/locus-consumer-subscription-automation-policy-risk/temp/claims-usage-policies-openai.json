@@ -1,0 +1,30 @@
+[
+  {
+    "claim": "OpenAI's general Usage Policies (effective October 29, 2025) state that breaking or circumventing OpenAI's rules and safeguards may result in loss of access or other penalties, but contain no language distinguishing interactive ChatGPT Plus use from automated/programmatic use.",
+    "stance": "neutral",
+    "stance_target": "whether OpenAI's usage policy explicitly separates subscription (interactive) from API (programmatic) usage rights",
+    "evidence_type": "legal",
+    "scope_conditions": "general OpenAI usage policy, not subscription-tier-specific",
+    "quoted_support": "We hold people accountable for inappropriate use of our services, and breaking or circumventing our rules and safeguards may mean you lose access to our systems or experience other penalties.",
+    "numbers": ["effective October 29, 2025"],
+    "entities": ["OpenAI"],
+    "time_period": "effective October 29, 2025",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "usage-policies-openai"
+  },
+  {
+    "claim": "The OpenAI Usage Policies changelog spanning 2021-2025 shows no entry addressing automation-tool bans, agentic/scripted-access rate limiting, or subscription-vs-API metering separation, indicating this policy document does not govern the ChatGPT Plus automation question.",
+    "stance": "refutes",
+    "stance_target": "this OpenAI document is a relevant source for the Plus-subscription-automation-ban question",
+    "evidence_type": "legal",
+    "scope_conditions": "OpenAI Usage Policies changelog, 2021-10-29-2025",
+    "quoted_support": "2025-10-29: We've updated our Usage Policies to reflect a universal set of policies across OpenAI products and services.",
+    "numbers": [],
+    "entities": ["OpenAI"],
+    "time_period": "2021-2025",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "usage-policies-openai"
+  }
+]

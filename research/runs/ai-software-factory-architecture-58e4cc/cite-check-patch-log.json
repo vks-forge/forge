@@ -1,0 +1,21 @@
+{
+  "total_findings": 13,
+  "applied": [
+    {"n": 1, "severity": "critical", "verdict": "unsupported", "location": "S1.3 rule 3", "fix": "Dropped unsupported 'confidence 75' threshold and 'evidence artifact' gate; now 'Each finding carries a stated confidence level' (note confirms confidence levels are reported). Kept refute/loop-until-both-agree quote. Pseudo-code min_confidence=75 annotated '# tunable; calibrate on own evals' so it reads as a design parameter, not a sourced figure."},
+    {"n": 2, "severity": "critical", "verdict": "partially-supported", "location": "S3.1 final sentence (CyberGym)", "fix": "Corrected inversion: 3.5% is the level-0 rate with NO vulnerability description; text description (L1), stack traces (L2), patches (L3) progressively raise success."},
+    {"n": 3, "severity": "major", "verdict": "partially-supported", "location": "S3.2 steel-man, APTS Tier 1", "fix": "Removed unsupported 'low-friction, non-production operation'; replaced with Tier 1 = 72-requirement 'minimum bar for responsible deployment' vs full 173."},
+    {"n": 4, "severity": "major", "verdict": "wrong-source", "location": "S4.3 Isolate by sub-agent", "fix": "Added [[effective-context-engineering-for-ai-agents-anthropic]] after the 'tens of thousands of tokens or more' clause; kept multi-agent-research note for 'game of telephone'."},
+    {"n": 5, "severity": "major", "verdict": "partially-supported", "location": "Skeptical objection paragraph (exec summary)", "fix": "'7% of agents' -> 'about 7% of evaluated transcripts showed spoofed tool calls'. Same denominator error also corrected in S5.3 commitment 6 ('7% of incident agents' -> 'about 7% of evaluated incident transcripts')."},
+    {"n": 6, "severity": "major", "verdict": "partially-supported", "location": "S5.2 decision rule", "fix": "Framed as 'This blueprint's decision rule'; Northflank citation now backs only what it states (Kata or gVisor depending on infrastructure)."},
+    {"n": 7, "severity": "major", "verdict": "partially-supported", "location": "S5.3 commitment 2", "fix": "Reattributed 'highest-impact vector' to Cloud Security Alliance; OWASP ASI01 Agent Goal Hijack noted as applying with particular force."},
+    {"n": 8, "severity": "major", "verdict": "partially-supported", "location": "S8.1 rule 3", "fix": "Marked signed commits as 'a ledger-design choice of this blueprint'; citation now backs only the CTO quote."},
+    {"n": 9, "severity": "major", "verdict": "partially-supported", "location": "S8.3 trigger-wiring row", "fix": "Rephrased as an explicit extension of Berkeley's level-skipping concept. (Note: S5.1 separately quotes Berkeley on unsecured trigger channels as level-skipping; finding left that sentence untouched.)"},
+    {"n": 10, "severity": "major", "verdict": "partially-supported", "location": "S8.4 capability trend", "fix": "Added [[demystifying-evals-for-ai-agents-anthropic]] for pass^k and [[towards-autonomous-software-development]] for SWE-bench Verified contamination (same note used in exec summary); context-engineering note kept for the quote only."},
+    {"n": 11, "severity": "major", "verdict": "partially-supported", "location": "S9 Generator models row", "fix": "Dropped practical-loop-engineering; replaced with [[claude-api-pricing-a-complete-guide-for-ai-teams-in-2026-coworker-ai]] which supports the Haiku/Opus 5x tier spread (already cited in S6.1)."},
+    {"n": 12, "severity": "major", "verdict": "partially-supported", "location": "S9 Sandboxes row", "fix": "Prefixed with 'Blueprint recommendation:' so pool-based RuntimeClass assignment reads as the report's design, informed by the cited sources."},
+    {"n": 13, "severity": "major", "verdict": "partially-supported", "location": "S9 Evals and observability row", "fix": "Removed promptfoo, DeepEval, OpenTelemetry (no source in corpus names them); row now lists only tools the cited note covers."}
+  ],
+  "skipped": [],
+  "conflicts": [],
+  "orchestrator_escalated": []
+}

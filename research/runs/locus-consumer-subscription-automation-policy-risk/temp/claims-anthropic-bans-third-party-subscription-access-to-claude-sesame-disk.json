@@ -1,0 +1,44 @@
+[
+  {
+    "claim": "Secondary report claims Anthropic enforces subscription-auth bans via OAuth/session-token fingerprinting that blocks requests not originating from official web, mobile, or whitelisted-SDK clients.",
+    "stance": "supports",
+    "stance_target": "Anthropic uses technical enforcement (not just ToS language) against third-party automation using subscription credentials",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "unverified secondary blog summarizing an uncited VentureBeat report",
+    "quoted_support": "Anthropic's backend now identifies when a credential is being used from an unapproved client or IP fingerprint, blocking requests that don't originate from official interfaces (web app, mobile app, or officially whitelisted SDKs).",
+    "numbers": [],
+    "entities": ["Anthropic"],
+    "time_period": "undated (post-ban, specific date not given in this source)",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "anthropic-bans-third-party-subscription-access-to-claude-sesame-disk"
+  },
+  {
+    "claim": "The same report claims suspicious usage patterns, such as high-frequency calls from browser automation tools like Selenium or Puppeteer, are throttled or rejected, and breaching subscriptions may have credentials revoked or accounts suspended.",
+    "stance": "supports",
+    "stance_target": "rate-limiting and account suspension are concrete consequences of automating consumer subscription access",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "unverified secondary blog, low editorial quality",
+    "quoted_support": "Automated Rate-Limiting: Suspicious usage patterns—such as high-frequency calls from browser automation or proxies—are throttled or rejected outright... If a subscription is found to be in breach (e.g., used by a third-party SaaS), credentials may be revoked or accounts suspended.",
+    "numbers": [],
+    "entities": ["Anthropic"],
+    "time_period": "undated",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "anthropic-bans-third-party-subscription-access-to-claude-sesame-disk"
+  },
+  {
+    "claim": "Per this source, unofficial browser plug-ins and third-party SaaS agents that previously worked using Claude subscription credentials now fail authentication with 401/403 errors, while official Claude web/mobile clients remain unaffected.",
+    "stance": "supports",
+    "stance_target": "specific technical consequence (401/403 errors) of the ban, distinguishing official client access from automated/third-party access",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "unverified secondary blog summary",
+    "quoted_support": "Popular browser plug-ins that \"inject\" Claude into Google Docs, VSCode, or custom dashboards fail to authenticate, returning 401 or 403 errors.",
+    "numbers": ["401", "403"],
+    "entities": ["Anthropic"],
+    "time_period": "undated",
+    "region": "global",
+    "confidence": "low",
+    "source_note_id": "anthropic-bans-third-party-subscription-access-to-claude-sesame-disk"
+  }
+]

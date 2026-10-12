@@ -1,0 +1,72 @@
+[
+  {
+    "claim": "Git history preserves what code changed but never why, or which alternatives were rejected -- information that an architecture decision record (ADR) captures and a diff cannot.",
+    "stance": "supports",
+    "stance_target": "durable context artifacts (ADRs) are necessary for multi-session, stateless agent operation",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "AI coding agent workflows, 2026",
+    "quoted_support": "The diff is a perfect record of what changed and a useless record of why. The ADR carries the why forward to whoever, or whatever, touches the code next.",
+    "numbers": [],
+    "entities": ["Michael Nygard", "Martin Fowler"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "architecture-decision-records-for-ai-coding-agents-where-the-why-lives"
+  },
+  {
+    "claim": "The minimal ADR format defined by Michael Nygard in 2011 has five fields: Title, Status, Context, Decision, and Consequences, and accepted records are treated as immutable -- a changed decision produces a new superseding record rather than an edit.",
+    "stance": "neutral",
+    "stance_target": "canonical ADR format specification",
+    "evidence_type": "historical",
+    "scope_conditions": "software architecture documentation convention, originated 2011",
+    "quoted_support": "The convention that matters most: an ADR is immutable. You never edit an accepted record. When a decision changes, you write a new ADR that supersedes the old one, so the trail of why-we-changed-our-mind stays intact.",
+    "numbers": ["5 fields"],
+    "entities": ["Michael Nygard"],
+    "time_period": "2011-2026",
+    "region": "global",
+    "confidence": "high",
+    "source_note_id": "architecture-decision-records-for-ai-coding-agents-where-the-why-lives"
+  },
+  {
+    "claim": "Without a recorded decision rationale, a subsequent agent session can silently revert a deliberate architectural trade-off, illustrated by a hypothetical where an agent 're-fixes' optimistic UI updates back to a 600ms server-await, reintroducing the exact latency problem the first agent solved.",
+    "stance": "supports",
+    "stance_target": "stateless agents require externalized decision memory to avoid regressive 'fixes'",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "illustrative example, 2026",
+    "quoted_support": "Without a record, six days later another agent sees latency complaints in an issue, notices the optimistic update, and \"fixes\" it by making the mutation await the server. It looks like a reasonable change. It quietly reintroduces the exact lag you designed around.",
+    "numbers": ["600ms"],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "architecture-decision-records-for-ai-coding-agents-where-the-why-lives"
+  },
+  {
+    "claim": "ADRs, CLAUDE.md/AGENTS.md convention files, and acceptance-criteria requirement documents serve three distinct, non-overlapping roles in agent context engineering: ADRs record past decisions, convention files carry standing rules loaded every session, and acceptance criteria define forward-looking 'done' for the work ahead.",
+    "stance": "neutral",
+    "stance_target": "taxonomy of durable-context artifact types for AI coding agents",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "AI coding agent context engineering practice, 2026",
+    "quoted_support": "The record tells the next agent why you chose optimistic updates. It does not tell it what \"the comment feature is done\" means... One looks back, one looks forward. You need both.",
+    "numbers": [],
+    "entities": ["CLAUDE.md", "AGENTS.md", "BrainGrid"],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "architecture-decision-records-for-ai-coding-agents-where-the-why-lives"
+  },
+  {
+    "claim": "A reversibility/blast-radius test determines whether a choice warrants an ADR: if undoing the choice later would ripple across the codebase or reintroduce a deliberately solved problem, it is architectural and worth recording.",
+    "stance": "supports",
+    "stance_target": "blast radius is the correct filter for deciding which agent decisions need durable governance artifacts vs. which can remain implicit",
+    "evidence_type": "expert-opinion",
+    "scope_conditions": "ADR authoring guidance, 2026",
+    "quoted_support": "The test is reversibility and blast radius. If undoing the choice later would ripple across the codebase or reintroduce a problem you deliberately solved, it is architectural, and it is worth an ADR.",
+    "numbers": [],
+    "entities": [],
+    "time_period": "2026",
+    "region": "global",
+    "confidence": "medium",
+    "source_note_id": "architecture-decision-records-for-ai-coding-agents-where-the-why-lives"
+  }
+]

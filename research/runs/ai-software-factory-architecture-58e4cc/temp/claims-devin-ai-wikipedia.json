@@ -1,0 +1,30 @@
+[
+  {
+    "claim": "Devin AI, launched by Cognition Labs in 2024, was marketed as an autonomous software engineering agent that plans, codes, and debugs from natural-language prompts, and a Bloomberg test found it could build a working website or recreate a Pong game in about 10 minutes.",
+    "stance": "neutral",
+    "stance_target": "autonomous coding agent capability claims, 2024 generation",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "Bloomberg-conducted demo test, 2024",
+    "quoted_support": "A test conducted by Bloomberg revealed that the tool could create a website within ten minutes and could recreate a Pong website in a similar timeframe.",
+    "numbers": ["~10 minutes"],
+    "entities": ["Devin AI", "Cognition Labs", "Bloomberg"],
+    "time_period": "2024",
+    "region": null,
+    "confidence": "medium",
+    "source_note_id": "devin-ai-wikipedia"
+  },
+  {
+    "claim": "Independent reviewers (YouTube channels Internet of Bugs and Computer Vision Project) found that Devin's widely circulated promotional demo of completing a real Upwork coding task instead wrote, tested, and debugged code irrelevant to the actual request.",
+    "stance": "refutes",
+    "stance_target": "early autonomous coding agent demos reliably reflect real-world task-completion capability",
+    "evidence_type": "anecdotal",
+    "scope_conditions": "Upwork task demo critique, 2024",
+    "quoted_support": "YouTube channels such as Internet of Bugs and Computer Vision Project criticized the tool for failing to deliver on the project request, instead writing, testing, and debugging code irrelevant to the Upwork request.",
+    "numbers": [],
+    "entities": ["Devin AI", "Internet of Bugs", "Computer Vision Project"],
+    "time_period": "2024",
+    "region": null,
+    "confidence": "low",
+    "source_note_id": "devin-ai-wikipedia"
+  }
+]
