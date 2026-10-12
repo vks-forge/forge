@@ -4,13 +4,17 @@
   "version": "0.0.0",
   "type": "module",
   "imports": {
-    "#/*": "./src/*",
+    "#/*": {
+      "development": "./src/*",
+      "default": "./dist/*"
+    },
     "#tests/*": "./__tests__/*"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }

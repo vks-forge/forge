@@ -30,7 +30,6 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0020 — Dogfood target = the factory repo itself
 - d-0021 — git + private GitHub remote, bot token dispatcher-only, PR always, `<type>/<id>-<slug>` branches, `<PROJECT>-n` ids
 - d-0031 — Harness auth is the harness's own; per-agent credential mode in Settings; Workers exclude `user`/`project` setting sources (supersedes d-0022)
-- d-0023 — `StorageAdapter`, SQLite default
 - d-0032 — `DirectorLLM` adapter, default logged-in harness with hygiene flags; subscription-turn counter (supersedes d-0024)
 - d-0025 — Always LLM triage before validation; process correctness over call count
 - d-0033 — Receipt hooks `onFailure: block` + timeout, SessionStart liveness registration, PreToolUse chokepoint (supersedes d-0026)
@@ -40,12 +39,15 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0047 — Storage: raw portable SQL on a `SqlDriver` seam, no ORM; more adapters via `adapters/<name>/` + contract test (supersedes d-0023)
+- d-0046 — Bootstrap commits go straight to `main`, no PR, until the bot dispatches its first ticket; per-commit go still required
 - d-0045 — All hand-written types/interfaces in `src/types/` as `<name>.types.ts` (ports in `types/ports/`); only `z.infer` aliases may sit in `schemas/`; lint-enforced
 - d-0035 — ACP-first driver contract: pinned `@agentclientprotocol/claude-agent-acp`, per-run options via `_meta`, bypass opt-out on every session, resumable not warm (supersedes d-0029)
 - d-0036 — M0 four slices amended: preflight probes + answer endpoint in slice 2, URL precondition (supersedes d-0030)
 
 ## Superseded
 
+- d-0023 — StorageAdapter with Drizzle → superseded by d-0047 (raw SQL, 2026-10-13)
 - d-0039 — worktrees/data/memory paths → superseded by d-0044 (`.forge/` rename, 2026-10-13)
 - d-0004 — Docker container per Worker by default → superseded by d-0005 (2026-10-12)
 - d-0014 — Grill-me before any work → superseded by d-0017 (per-task, lane-scaled) (2026-10-12)

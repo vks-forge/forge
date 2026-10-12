@@ -14,7 +14,8 @@
     "typecheck": "tsc -b",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "build": "tsc -b"
+    "build": "pnpm clean && tsc -b",
+    "clean": "node scripts/clean.mjs"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "5.0.4",

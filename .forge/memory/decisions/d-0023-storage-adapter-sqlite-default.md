@@ -5,9 +5,10 @@ statement: State storage sits behind a `StorageAdapter` (Drizzle dialect per dri
 source: { type: chat, ref: 2026-10-12 grill session, Q6 "make this as adapter ... default to sqlite" }
 author: user
 origin: owner
-status: active
+status: superseded
 valid_from: 2026-10-12
-superseded_by: null
+valid_to: 2026-10-13
+superseded_by: d-0047
 supersedes: null
 tags: [storage, db, adapters]
 pinned: true

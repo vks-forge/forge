@@ -1,6 +1,8 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+allowBuilds:
+  better-sqlite3: false
 minimumReleaseAgeExclude:
   - '@typescript-eslint/eslint-plugin@8.71.2'
   - '@typescript-eslint/parser@8.71.2'
