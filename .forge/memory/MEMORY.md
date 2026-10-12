@@ -39,6 +39,9 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0052 — Layering: core + tools are inner rings; adapters import core+tools only, never each other; standalone processes compose in `apps/<name>/src/main.ts` (amends rule 1)
+- d-0051 — READMEs are living docs: every reader-visible change updates the README in the same commit; stale README = review block (amends d-0050)
+- d-0050 — Package/app README contract: 7 sections (what, why exists, what it does, why this approach, requirements, extending, limits), ≤150 lines, updated with the change
 - d-0049 — ACP-first stays: `session/set_mode default` after every new/load, our `request_permission` handler decides every tool call; follow-up probes for strictMcpConfig + user hooks (amends d-0035)
 - d-0048 — Measured Claude harness facts (setting-sources "", budget subtype, PowerShell tool, hooks fail-closed only with onFailure, ACP auth notification, ACP settingSources leak) (author=director, measured)
 - d-0047 — Storage: raw portable SQL on a `SqlDriver` seam, no ORM; more adapters via `adapters/<name>/` + contract test (supersedes d-0023)

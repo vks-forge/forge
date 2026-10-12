@@ -22,7 +22,7 @@ const forgeImports = (allowed) => ({
         allowed.length > 0 ? ['@forge/*', ...allowed.map((a) => `!${a}`)] : ['@forge/*'],
       message:
         allowed.length > 0
-          ? 'Adapter packages may import only @forge/core (code.md rule 1).'
+          ? `Only ${allowed.join(' and ')} may be imported here (code.md rule 1).`
           : 'packages/core may not import any other @forge package (code.md rule 1).',
     },
   ],
@@ -225,13 +225,23 @@ export default tseslint.config(
     rules: { 'no-restricted-imports': ['error', forgeImports([])] },
   },
   {
-    files: [
-      'packages/db/**/*.ts',
-      'packages/drivers/**/*.ts',
-      'packages/gates/**/*.ts',
-      'packages/memory/**/*.ts',
-      'packages/tools/**/*.ts',
-    ],
+    // Policy ring: pure, imports core only. Source only; tests may use sibling fakes.
+    files: ['packages/tools/src/**/*.ts'],
     rules: { 'no-restricted-imports': ['error', forgeImports(['@forge/core'])] },
+  },
+  {
+    // Adapters import core and tools, never each other (code.md rule 1). Source only:
+    // __tests__ may import a sibling adapter as a devDependency fake.
+    files: [
+      'packages/db/src/**/*.ts',
+      'packages/drivers/src/**/*.ts',
+      'packages/gates/src/**/*.ts',
+      'packages/hooks/src/**/*.ts',
+      'packages/mcp/src/**/*.ts',
+      'packages/memory/src/**/*.ts',
+    ],
+    rules: {
+      'no-restricted-imports': ['error', forgeImports(['@forge/core', '@forge/tools'])],
+    },
   },
 );

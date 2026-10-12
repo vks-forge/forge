@@ -16,7 +16,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   resolve: { conditions: ['development'] },
   test: {
-    include: ['packages/*/__tests__/**/*.test.ts'],
+    include: ['packages/*/__tests__/**/*.test.ts', 'apps/*/__tests__/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**'],
     coverage: {
       provider: 'v8',
@@ -24,12 +24,18 @@ export default defineConfig({
         'packages/core/src/**/*.ts',
         'packages/db/src/**/*.ts',
         'packages/tools/src/**/*.ts',
+        'packages/hooks/src/**/*.ts',
+        'packages/mcp/src/**/*.ts',
+        'apps/mcp/src/**/*.ts',
       ],
-      exclude: ['**/__tests__/**', '**/index.ts'],
+      exclude: ['**/__tests__/**', '**/index.ts', 'apps/*/src/main.ts'],
       thresholds: {
         'packages/core/src/**': { lines: 70 },
         'packages/db/src/**': { lines: 70 },
         'packages/tools/src/**': { lines: 80 },
+        'packages/mcp/src/**': { lines: 80 },
+        'packages/hooks/src/**': { lines: 80 },
+        'apps/mcp/src/**': { lines: 80 },
       },
     },
   },

@@ -1,0 +1,144 @@
+# Signed tool catalogue (tool-system.md section 4). Do not hand-edit `signature` or the
+# forge `schema_hash` values: run `pnpm build && node scripts/sign-catalogue.mjs`.
+entries:
+  - id: read
+    kind: harness-native
+    version: "1"
+    risk: read
+    exposure: direct
+    resources: [ cwd ]
+    schema_hash: sha256:6d4d88eb3b96ed7268141d89111b17a0e68a5964777f247ec9d64168ec54245d
+    support:
+      claude-code: { native: Read, mechanism: allow-flag, enforced: harness }
+  - id: glob
+    kind: harness-native
+    version: "1"
+    risk: read
+    exposure: direct
+    resources: [ cwd ]
+    schema_hash: sha256:550a1d8fef9b16dad64434c15c6cdcbacc725579637e0fee7e4772063db6f0c3
+    support:
+      claude-code: { native: Glob, mechanism: allow-flag, enforced: harness }
+  - id: grep
+    kind: harness-native
+    version: "1"
+    risk: read
+    exposure: direct
+    resources: [ cwd ]
+    schema_hash: sha256:f0498fbc452ee8b6f6c2bc28d0f5ff20f15194278b392443c1ffc55a80dc707e
+    support:
+      claude-code: { native: Grep, mechanism: allow-flag, enforced: harness }
+  - id: edit
+    kind: harness-native
+    version: "1"
+    risk: write-cwd
+    exposure: direct
+    resources: [ cwd ]
+    schema_hash: sha256:a56a2652d7f5b5a397df1621f0a5d48fdf7ae6787eedfe316c661f702eb4d6ee
+    support:
+      claude-code: { native: Edit, mechanism: allow-flag, enforced: harness }
+  - id: write
+    kind: harness-native
+    version: "1"
+    risk: write-cwd
+    exposure: direct
+    resources: [ cwd ]
+    schema_hash: sha256:ce627f8c77c2dba956c21aceda293153babfb8e24a4601ef6d608eb7c2645e2e
+    support:
+      claude-code: { native: Write, mechanism: allow-flag, enforced: harness }
+  # Canonical shell id (d-0048). The Windows dev host maps it to PowerShell; POSIX hosts use Bash.
+  - id: shell
+    kind: harness-native
+    version: "1"
+    risk: exec
+    exposure: direct
+    resources: [ cwd ]
+    schema_hash: sha256:549476e9dda0fe8d4fac6a8348e24ca7d55a89ac7c199b7824ed850de13e347b
+    support:
+      claude-code: { native: PowerShell, mechanism: allow-flag, enforced: harness }
+  # Subagent spawning: can reach every native tool, so it is hidden unless a grant opens it.
+  - id: task
+    kind: harness-native
+    version: "1"
+    risk: exec
+    exposure: hidden
+    reaches_tools: [ read, glob, grep, edit, write, shell ]
+    resources: [ cwd ]
+    schema_hash: sha256:3d02193eab64aacb790cc899be47011e20cb5e253be69988da689c988ee5ee3c
+    support:
+      claude-code: { native: Task, mechanism: allow-flag, enforced: harness }
+  - id: mcp__forge__get_ticket
+    kind: factory-core
+    version: "1"
+    risk: read
+    exposure: direct
+    schema_hash: sha256:af8b696c68738b8d43df0027a45c18d4431adeda8618fb440d51caa13b5389d4
+    support:
+      "*": { mechanism: mcp, enforced: server }
+  - id: mcp__forge__add_comment
+    kind: factory-core
+    version: "1"
+    risk: write-cwd
+    exposure: direct
+    resources: [ forge-state ]
+    schema_hash: sha256:ee7bc1b985ec9630dcacae9733b849e727a0bd52a04e3f42778480cd66953865
+    support:
+      "*": { mechanism: mcp, enforced: server }
+  - id: mcp__forge__ask_director
+    kind: factory-core
+    version: "1"
+    risk: write-cwd
+    exposure: direct
+    resources: [ forge-state ]
+    schema_hash: sha256:c1de6a40741a424dd58b4cabd936ae622f0398d9db575b58c060799493997fa5
+    support:
+      "*": { mechanism: mcp, enforced: server }
+  - id: mcp__forge__report_blocked
+    kind: factory-core
+    version: "1"
+    risk: write-cwd
+    exposure: direct
+    resources: [ forge-state ]
+    schema_hash: sha256:f5d24bbb5285bd9c7a11a490b29384240c8816e201e5632505199a733139d2b3
+    support:
+      "*": { mechanism: mcp, enforced: server }
+  - id: mcp__forge__finish
+    kind: factory-core
+    version: "1"
+    risk: write-cwd
+    exposure: direct
+    resources: [ forge-state ]
+    schema_hash: sha256:2be4e2817fc6afebbd77123013bed3815cd1919b727af0c14cdc0b3cc3150a12
+    support:
+      "*": { mechanism: mcp, enforced: server }
+  - id: mcp__forge__docs_lookup
+    kind: factory-capability
+    version: "1"
+    risk: read
+    exposure: direct
+    schema_hash: sha256:838f81116a594c3aba93b38a587ae61eb73be1113ffd795151e5dff0b115ba3d
+    support:
+      "*": { mechanism: mcp, enforced: server }
+  # Web access exists only here; the harness-native web tools are denied (tool-system.md section 9).
+  - id: mcp__forge__web_search
+    kind: factory-capability
+    version: "1"
+    risk: network
+    exposure: deferred
+    cost_class: metered
+    taints: true
+    schema_hash: sha256:01dcd0a60e3b3e9ee8aa2159d4d51cdcb948557b6b25be5ee99f31f22560cc13
+    support:
+      "*": { mechanism: mcp, enforced: server }
+    denies_native: [ claude-code:WebSearch ]
+  - id: mcp__forge__web_fetch
+    kind: factory-capability
+    version: "1"
+    risk: network
+    exposure: deferred
+    taints: true
+    schema_hash: sha256:3717dff418293d7121dfbca3c9fbdb04f659f6a54a1fa9d2c5eedf4ab06c1944
+    support:
+      "*": { mechanism: mcp, enforced: server }
+    denies_native: [ claude-code:WebFetch ]
+signature: "c93273af00f911526ebb7edf28009db10caf1615d9c71634ceba1ff20afe52d1"

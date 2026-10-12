@@ -1,12 +1,18 @@
 {
   "files": [],
   "references": [
+    { "path": "./apps/mcp" },
+    { "path": "./apps/mcp/tsconfig.test.json" },
     { "path": "./packages/core" },
     { "path": "./packages/core/tsconfig.test.json" },
     { "path": "./packages/db" },
     { "path": "./packages/db/tsconfig.test.json" },
     { "path": "./packages/drivers" },
     { "path": "./packages/drivers/tsconfig.test.json" },
+    { "path": "./packages/hooks" },
+    { "path": "./packages/hooks/tsconfig.test.json" },
+    { "path": "./packages/mcp" },
+    { "path": "./packages/mcp/tsconfig.test.json" },
     { "path": "./packages/tools" },
     { "path": "./packages/tools/tsconfig.test.json" }
   ]

@@ -6,14 +6,23 @@ Short, enforced, long-term. Every PR is checked against these. Design docs
 ## 1. Layers point inward
 
 ```
-apps/*        composition only: wire config → adapters → engine. No logic.
-packages/     adapters: db, drivers, tools, gates, memory. Depend on core only.
-packages/core pure: types, schemas, state machine, policy functions. No IO,
-              no imports from siblings, no harness names.
+apps/*         composition only: wire config → adapters → engine. No logic.
+               The only place that opens a DB, spawns a server or reads env.
+packages/      adapters: db, drivers, hooks, mcp, gates, memory.
+               Import core and tools only, never each other.
+packages/tools inner policy ring: admit(), floors, grants, receipts, tokenizer.
+               Pure (IO only in its own adapters/), imports core only.
+packages/core  pure: types, ports, schemas, state machine. No IO, no imports
+               from siblings, no harness names.
 ```
 
-A dependency from `core` to anything else, or between two adapter packages,
-is a build error (eslint `no-restricted-imports` + dependency-cruiser).
+A dependency from `core` to anything else, from `tools` to anything but
+`core`, or between two adapter packages, is a build error (eslint
+`no-restricted-imports` + dependency-cruiser). A process that runs on its own
+(MCP stdio server, CLI) gets its entry in `apps/<name>/src/main.ts`, which
+composes adapters; the adapter package exports factories that take ports.
+`__tests__/` may import a sibling adapter (e.g. `createMemoryStorage`) as a
+devDependency fake; `src/` may not.
 
 ## 2. One interface, many adapters
 
@@ -119,8 +128,25 @@ need a code edit for a config-shaped thing are a smell.
   `SCREAMING_CASE` constants. Ids `<PROJECT>-<n>`, branches
   `<type>/<id>-<slug>`.
 - No side effects on import. Entry points only under `apps/*/src/main.ts`.
-- Each package has a `README.md` ≤ 1 screen: purpose, public API, how to add
-  an implementation.
+- Every package and app has a `README.md` (≤ 150 lines) with these sections,
+  in order, written as product knowledge like rule 12's `Why:`:
+  1. `# @forge/<name>` + one line: what it is.
+  2. `## Why it exists`: the problem in the running system, the actors
+     (Director, Worker, harness, user), what breaks without it.
+  3. `## What it does`: responsibilities and the public API from `index.ts`.
+  4. `## Why this approach`: each key dependency and design pick with its
+     reason, plus alternatives rejected (decision ids as pointers).
+  5. `## Requirements`: runtime, native binaries, env vars, files under
+     `.forge/`, external services, build steps, how to run its tests.
+  6. `## Extending`: how to add an implementation or a new piece.
+  7. `## Limits`: known gaps and what it deliberately does not do.
+  Placeholder packages keep all seven headings; unknown parts say `none yet`.
+  **The README is a living doc, kept current as the package grows.** Any
+  change that alters what a reader of it would believe (new feature or
+  module, changed behaviour, public API, deps, env vars, `.forge/` files,
+  requirements, a limit closed or found) updates the README in the same
+  commit. Builders check the README before reporting done; a stale README is
+  a review block, same as a red gate.
 
 ## 11. Dependencies
 

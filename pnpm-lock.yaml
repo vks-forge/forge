@@ -190,6 +190,28 @@ importers:
 
   apps/cli: {}
 
+  apps/mcp:
+    dependencies:
+      '@forge/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@forge/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@forge/mcp':
+        specifier: workspace:*
+        version: link:../../packages/mcp
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: 1.32.1
+        version: 1.32.1(zod@4.6.7)
+      '@types/node':
+        specifier: 26.6.5
+        version: 26.6.5
+
   apps/server: {}
 
   apps/web: {}
@@ -230,6 +252,47 @@ importers:
         version: 26.6.5
 
   packages/gates: {}
+
+  packages/hooks:
+    dependencies:
+      '@forge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@forge/tools':
+        specifier: workspace:*
+        version: link:../tools
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@forge/db':
+        specifier: workspace:*
+        version: link:../db
+      '@types/node':
+        specifier: 26.6.5
+        version: 26.6.5
+
+  packages/mcp:
+    dependencies:
+      '@forge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@modelcontextprotocol/sdk':
+        specifier: 1.32.1
+        version: 1.32.1(zod@4.6.7)
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@forge/db':
+        specifier: workspace:*
+        version: link:../db
+      '@forge/tools':
+        specifier: workspace:*
+        version: link:../tools
+      '@types/node':
+        specifier: 26.6.5
+        version: 26.6.5
 
   packages/memory: {}
 
