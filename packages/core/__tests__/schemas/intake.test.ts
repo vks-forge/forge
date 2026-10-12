@@ -1,7 +1,10 @@
 /**
  * Tests for the IntakeEvent schema.
  *
- * Why: intake dedupe is the first line of idempotency for triggers (d-0002).
+ * Why: dedupe is the first defence against redelivered chat messages and webhooks
+ *   creating duplicate tickets. Unknown sources or empty keys would let un-dedupable
+ *   events through, and a key not scoped to its source would let two sources suppress
+ *   each other's events (d-0002, director-core.md §7).
  *
  * Pins: a chat event parses, unknown sources and empty dedupe keys are rejected,
  *   idempotency key is `source:dedupe_key` (director-core.md §7).

@@ -1,7 +1,12 @@
 /**
  * Ticket id and project prefix schemas.
  *
- * Why: ticket ids are public as `<PROJECT>-<n>` (d-0021) and appear in branch names and the UI; the zod schema is the single grammar (code.md rule 4). Prefixes stay short because the dev host has LongPathsEnabled=0 (m0-brief.md §5).
+ * Why: ticket ids are the public key of the system: users type them, branches and PRs
+ *   embed them, and every table references them. Defining the grammar once means a
+ *   malformed id is rejected at the boundary (chat, HTTP, branch parsing, a DB row)
+ *   before it can address the wrong ticket. Project prefixes are capped at 10 uppercase
+ *   characters because ids become folder and branch names and the dev host runs with
+ *   Windows long paths disabled (d-0021).
  *
  * Exports: PROJECT_PREFIX_PATTERN, TICKET_ID_PATTERN, ProjectPrefix, TicketId.
  * Depends on: zod. No IO.

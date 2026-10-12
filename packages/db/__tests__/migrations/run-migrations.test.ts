@@ -1,11 +1,14 @@
 /**
  * Pins the migration runner: idempotent, checksummed, forward-only, full table set.
  *
- * Why: opening a database repeatedly must be safe and history must not be rewritten
- *   (m0-brief.md Slice 1 migrations list; director-core.md §3).
+ * Why: the database is opened on every start. If migrations were not idempotent a
+ *   restart could fail or double-apply, and if an edited migration were accepted,
+ *   installs would silently diverge in schema. Pinning checksum rejection, ordering and
+ *   rollback of a failing migration protects every existing database from a bad schema
+ *   change (director-core.md §3).
  *
  * Pins: runMigrations() applies once, is idempotent, rejects edited or out-of-order
- *   migrations, and creates every Slice 1 table.
+ *   migrations, and creates every state and verification table.
  * Depends on: src/index.
  */
 
@@ -31,7 +34,7 @@ const EXPECTED_TABLES = [
 ];
 
 describe('runMigrations', () => {
-  it('creates every Slice 1 table and records each migration once', () => {
+  it('creates every state and verification table and records each migration once', () => {
     const driver = openSqliteDriver(':memory:');
     const applied = runMigrations(driver);
     const tables = driver

@@ -1,7 +1,11 @@
 /**
  * Lane pre-check input and result shapes.
  *
- * Why: the deterministic pre-check (director-core.md §6 step 1) takes cheap signals and returns a lane with reasons; the types are shared with the Director engine that calls it.
+ * Why: the Director feeds the deterministic lane pre-check whatever signals exist before
+ *   any LLM call (predicted paths, ticket body length, type, the project's tier-C globs,
+ *   a lane already set by an earlier step) and needs a lane back with human-readable
+ *   reasons. The reasons are what the control room shows to explain why a ticket was not
+ *   Express (director-core.md §6, execution-plane.md §2).
  *
  * Exports: PreCheckInput, PreCheckResult.
  * Depends on: schemas/ticket. No IO (types only).

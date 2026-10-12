@@ -1,10 +1,13 @@
 /**
  * WorkerDriver port — the interface every harness driver implements.
  *
- * Why: core stays harness-neutral: it speaks only normalized run shapes and drivers
- *   translate at the boundary (code.md rules 2-3, execution-plane.md §3 the Worker
- *   interface, d-0029 ACP-first driver pattern, d-0035 ACP driver contract). Types
- *   only, so core has no runtime dependency on any driver.
+ * Why: Workers run in third-party harnesses (Claude Code, Codex, OpenCode) that each
+ *   speak their own protocol. The Director must start, steer, resume, cancel and observe
+ *   a run the same way regardless of harness, and must never rely on a harness's own
+ *   permission bypass. WorkerDriver is that boundary: one implementation per harness,
+ *   normalized events out, policy enforced on our side, and declared capabilities in
+ *   place of guesswork. Types only, so core has no runtime dependency on any driver
+ *   (execution-plane.md §3, d-0029, d-0035).
  *
  * Exports: Preflight, WorkerDriver.
  * Depends on: schemas/run. No IO (interfaces only).
@@ -27,7 +30,7 @@ export interface Preflight {
   readonly version?: string;
 }
 
-/** One implementation per harness under packages/drivers (code.md rules 2-3). `events()`/`result()` are additions to the brief so a handle is usable. */
+/** The contract every harness driver implements, so the Director starts, steers, resumes and kills a run the same way on any harness. `events()` and `result()` make a serialisable {@link RunHandle} usable after a restart. */
 export interface WorkerDriver {
   readonly id: string;
   capabilities(): DriverCapabilities;

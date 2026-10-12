@@ -1,8 +1,9 @@
 /**
  * Mutex interface for serializing async storage transactions.
  *
- * Why: the implementation lives in shared/mutex.ts; the interface sits here because
- *   hand-written types live under types/ (code.md rule 10).
+ * Why: both storage adapters serialize transactions through the same single-writer queue
+ *   (director-core.md §2-§3). The contract states the property that matters: tasks run
+ *   one at a time in call order, and a failed task does not block the next.
  *
  * Exports: Mutex.
  * Depends on: nothing. Types only.

@@ -1,8 +1,10 @@
 /**
  * Removes every build output folder (packages/*\/dist, apps/*\/dist).
  *
- * Why: stale dist/ output from an older layout once shadowed source; `build` cleans
- *   first so compiled output always matches src (conditional exports, code.md rule 10).
+ * Why: a stale `dist/` from an older layout once shadowed source files at import time,
+ *   so tests and tools ran code that no longer existed. Build cleans every package and
+ *   app output first, so what runs always matches current source. Missing folders are
+ *   not an error.
  *
  * Exports: none (script).
  * Depends on: node:fs, node:path. IO: deletes dist folders.

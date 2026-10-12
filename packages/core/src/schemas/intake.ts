@@ -1,9 +1,14 @@
 /**
  * Intake event schema — the normalized shape every trigger emits.
  *
- * Why: triggers are pluggable but v1 only produces `chat` (d-0002); the Director
- *   dedupes and quarantines on this one shape before anything reaches a Worker
- *   (director-core.md §7).
+ * Why: work reaches the Director from chat now and from webhooks, cron, telemetry or bug
+ *   reports later, and every source redelivers, retries and races. Normalizing them into
+ *   one envelope lets the Director dedupe, quarantine and map events without knowing any
+ *   source's specifics, so a new trigger never touches the engine. `dedupe_key` is
+ *   unique only within a source, so the idempotency key combines both; without it a
+ *   redelivered message would create duplicate tickets and duplicate spend. The raw
+ *   `payload` is untrusted user or external text and is never forwarded to a Worker
+ *   verbatim (director-core.md §7, d-0002).
  *
  * Exports: IntakeSource, IntakeKind, IntakeActor, IntakeEvent, intakeIdempotencyKey().
  * Depends on: zod. No IO.
@@ -11,7 +16,7 @@
 
 import { z } from 'zod';
 
-/** Where an event came from; open to later emitters, only `chat` is produced in M0. */
+/** Where an event came from. Open enum: new emitters (webhooks, schedulers, CI) add a value without touching the envelope. */
 export const IntakeSource = z.enum([
   'chat',
   'webhook',

@@ -1,8 +1,10 @@
 /**
  * Ordered migration list.
  *
- * Why: one array is the schema history; ids must be strictly increasing and a shipped
- *   migration is never edited, only followed by a new one (forward-only).
+ * Why: the schema's history is one ordered list so a fresh database and a years-old one
+ *   reach the same shape. Ids strictly increase and a shipped migration is never edited,
+ *   because databases that already applied it would silently differ from new ones; every
+ *   change is a new migration, and the runner enforces this with checksums.
  *
  * Exports: MIGRATIONS.
  * Depends on: migrations/0001-state-tables, migrations/0002-verification-tables. No IO.

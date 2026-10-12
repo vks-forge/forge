@@ -1,10 +1,13 @@
 /**
  * Project config schema — the validated form of `.forge/project.yaml`.
  *
- * Why: the factory works on repos of any language through a small per-project config
- *   (d-0034, d-0027); config over code (code.md rule 9) means core validates it at
- *   load. `default_harness` is an opaque id so core never names a harness (code.md rule
- *   3).
+ * Why: the factory must work on repos in any language without code changes, so what
+ *   varies per repo (which commands run tests and lint, whether TypeScript-specific
+ *   gates apply, which harness Workers use, where the remote is) lives in
+ *   `.forge/project.yaml`. Validating it at load, not when a gate first runs it, turns a
+ *   typo into an immediate readable startup error instead of a Worker or gate failing
+ *   mid-ticket. `default_harness` is an opaque id because core must not know which
+ *   harnesses exist; drivers are chosen by config (d-0034, d-0027).
  *
  * Exports: Profile, ProjectCommands, ProjectConfig.
  * Depends on: schemas/ids, zod. No IO.

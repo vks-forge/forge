@@ -1,9 +1,13 @@
 /**
  * JSON column helpers: encode domain values to TEXT and decode them back.
  *
- * Why: payload-like fields (`usage`, `payload`, `answer`, `blocked_by`) are stored as
- *   JSON text in both adapters' row shape; one pair of functions keeps the encoding
- *   identical (code.md rule 5). Decoded values are still parsed by zod afterwards.
+ * Why: payload-like fields (`usage`, `payload`, `answer`, `blocked_by`) are free-form
+ *   structures stored as TEXT, and the encoding must be identical in every repository or
+ *   a row written by one cannot be read by another. Decoding deliberately returns
+ *   untyped data: callers re-validate with the core zod schemas, because a column
+ *   written by an older version or edited by hand must not be trusted as typed.
+ *   `dropNulls` exists because SQL returns NULL where the schemas expect an absent
+ *   optional field.
  *
  * Exports: toJson(), fromJson(), dropNulls().
  * Depends on: nothing. No IO.

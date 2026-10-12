@@ -1,9 +1,11 @@
 /**
  * Result constructors — `ok()` and `err()`.
  *
- * Why: policy paths such as `transition()` and the id parsers must never throw and fail
- *   closed on bad input (code.md rule 6), so they return a value the caller has to
- *   inspect.
+ * Why: the policy paths (ticket transitions, id and branch parsing) must fail closed and
+ *   never throw into the Director tick, because an exception in the scheduler loop could
+ *   stall every ticket. Returning a value the caller must inspect makes rejection an
+ *   ordinary handled outcome: the error travels back to whoever issued the event (API,
+ *   gate, engine) and the ticket stays unchanged.
  *
  * Exports: ok(), err().
  * Depends on: types/result. No IO.

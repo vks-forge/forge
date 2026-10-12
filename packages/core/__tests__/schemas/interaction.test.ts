@@ -1,7 +1,10 @@
 /**
  * Tests for the Interaction schema.
  *
- * Why: the schema is the source of truth for the interactions row (code.md rule 4).
+ * Why: the interactions row is the durable reason a ticket is parked waiting for a
+ *   human. If unknown kinds or statuses parsed, the Director could not tell a pending
+ *   question from a corrupt one and the "Needs you" pane would drift from storage
+ *   (director-core.md §3, §8).
  *
  * Pins: a pending interaction parses; unknown kinds and statuses are rejected
  *   (director-core.md §3 `interactions`).

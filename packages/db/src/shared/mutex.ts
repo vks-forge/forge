@@ -1,9 +1,12 @@
 /**
  * Promise mutex: runs async tasks one at a time, in call order.
  *
- * Why: StorageAdapter is single-writer (director-core.md §2-§3). Transactions span
- *   awaits, so a connection-level lock is not enough; every adapter queues its
- *   transactions through one mutex.
+ * Why: the single-writer rule must hold even though a transaction spans awaits and a
+ *   connection lock protects only individual statements. Without queuing, two async
+ *   transactions could interleave on one connection and commit each other's
+ *   half-finished writes. The mutex runs them strictly in call order, and a failing task
+ *   must not block those behind it, or one thrown error would freeze the Director
+ *   (director-core.md §2-§3).
  *
  * Exports: createMutex().
  * Depends on: types/mutex.types. No IO.

@@ -1,12 +1,14 @@
 /**
  * Migration 0001: the mutable state tables and the append-only run log.
  *
- * Why: director-core.md §3 hybrid store: mutable rows the scheduler decides on
- *   (projects, tickets, wake_requests, runs, interactions) plus append-only logs
- *   (run_events, run_inbox). Columns follow the core zod schemas; `projects`,
- *   `wake_requests` and `run_inbox` have no core schema yet and are provisional.
- *   No foreign keys: rows arrive from independent writers (intake, drivers) and the
- *   Director validates references, so a missing parent must not abort a transaction.
+ * Why: the Director's state is a hybrid: mutable rows the scheduler decides on
+ *   (projects, tickets, wake_requests, runs, interactions) and append-only logs of what
+ *   happened (run_events, run_inbox). Columns mirror the core schemas so the stored row
+ *   is the domain row. There are deliberately no foreign keys: rows arrive from
+ *   independent writers (intake, drivers, the API) and the Director validates references
+ *   itself, so an out-of-order child row must not abort a transaction and lose an event.
+ *   `projects`, `wake_requests` and `run_inbox` have no core schema, so their columns
+ *   follow the design doc literally and are not zod-validated (director-core.md §3).
  *
  * Exports: MIGRATION_0001.
  * Depends on: types/migrations.types. No IO.

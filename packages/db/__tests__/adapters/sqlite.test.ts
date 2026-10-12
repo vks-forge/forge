@@ -1,11 +1,16 @@
 /**
  * Pins the SQLite StorageAdapter: shared contract plus WAL, busy_timeout and persistence.
  *
- * Why: sqlite WAL with a single writer is the default backend (d-0023, director-core.md
- *   §2-§3); the contract runs on a temp file and on `:memory:`, never inside the repo.
+ * Why: the contract proves the adapter is correct; this file pins what only a real
+ *   database shows and the Director relies on: WAL mode (readers do not block the
+ *   writer), data surviving a restart with migrations safely re-applied, and a second
+ *   connection waiting on busy_timeout rather than failing, which is how the API and the
+ *   Director's writer coexist (d-0023, director-core.md §2-§3). The contract runs on a
+ *   temp file and on `:memory:`, never inside the repo.
  *
  * Pins: contract behaviour of createSqliteStorage(), WAL journal mode, reopen durability,
- *   a second connection waiting on busy_timeout.
+ *   idempotent re-migration on reopen, connection pragmas, a second connection waiting
+ *   on busy_timeout.
  * Depends on: contract/storage.contract, src/index, better-sqlite3.
  */
 

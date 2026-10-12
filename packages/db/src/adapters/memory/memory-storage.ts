@@ -1,11 +1,14 @@
 /**
  * In-memory StorageAdapter: Maps behind the same port, with snapshot/rollback transactions.
  *
- * Why: a second implementation proves the StorageAdapter seam (m0-brief.md Slice 1
- *   exit, code.md rule 2). It mirrors sqlite's observable behaviour (duplicate keys
- *   throw, CAS by status_version, intake dedupe on (source, dedupe_key), event order by
- *   seq) and is validated by the same contract test. Rows are parsed with the core zod
- *   schemas on the way in, so bad data fails here exactly as it does on sqlite.
+ * Why: the Director depends on the StorageAdapter contract, not on SQLite. A second,
+ *   in-memory implementation proves the contract is real: engine and gate tests run
+ *   against it fast with no files, and any behaviour the engine accidentally relies on
+ *   from SQLite surfaces as a contract failure. It mirrors sqlite's observable behaviour
+ *   (duplicate keys throw, CAS on status_version, intake dedupe on (source, dedupe_key),
+ *   events ordered by seq, rollback on a throw) and parses rows with the core schemas on
+ *   the way in, so bad data fails here exactly as it would in production. Nothing
+ *   persists, so it is not a production backend.
  *
  * Exports: createMemoryStorage().
  * Depends on: @forge/core, shared/mutex, shared/patches. No IO.

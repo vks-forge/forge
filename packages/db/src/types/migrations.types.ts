@@ -1,8 +1,10 @@
 /**
  * Migration shape.
  *
- * Why: migrations are forward-only, numbered SQL scripts applied once each
- *   (m0-brief.md Slice 1); the runner needs only an id, a name and the SQL.
+ * Why: a migration is just an ordered id, a name and SQL, and the runner checksums the
+ *   SQL. Keeping the shape this small makes history easy to audit and impossible to make
+ *   conditional or environment-dependent: the same migrations produce the same schema
+ *   everywhere.
  *
  * Exports: Migration.
  * Depends on: nothing. Types only.

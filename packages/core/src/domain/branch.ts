@@ -1,10 +1,14 @@
 /**
  * Ticket branch naming — build and parse `<type>/<id>-<slug>`.
  *
- * Why: git branches are the public handle of a ticket; one pure builder and one parser
- *   keep the format in a single place so the git host adapter, worktree manager and PR
- *   bot never hand-roll it (d-0021, control-room-and-platform.md §6 git write policy,
- *   code.md rule 10).
+ * Why: a ticket's branch is the only handle the git host, the PR bot and a human reading
+ *   `git branch` share with the factory. The dispatcher creates it, and the merge policy
+ *   and PR bot recover the ticket id and type from it to decide which tier's rules gate
+ *   the merge. If each caller hand-rolled the format, a branch could drift so a PR no
+ *   longer maps back to its ticket, or maps to the wrong one. One builder and one strict
+ *   parser keep the mapping lossless, and anything that is not a factory branch (`main`,
+ *   a human's branch) is rejected instead of guessed at (d-0021,
+ *   control-room-and-platform.md §6).
  *
  * Exports: MAX_SLUG_LENGTH, slugify(), branchName(), parseBranchName().
  * Depends on: schemas/ids, schemas/ticket, shared/result, types/branch, types/result. No IO.

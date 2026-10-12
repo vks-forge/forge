@@ -14,3 +14,9 @@ pinned: true
 ---
 
 Written into `.claude/rules/code.md` rule 12 with the header template.
+
+Amendment 2026-10-13 (user: "'why' is why this software needs this; it
+should be knowledge data for agents and developers, not local rules"):
+`Why:` describes the problem in the running system, the actors, the failure
+prevented or invariant protected. Doc/decision ids only as pointers. Never
+code rules, slices, milestones or future plans.

@@ -1,10 +1,11 @@
 /**
  * SqlDriver: the minimal synchronous SQL surface the sqlite adapter runs on.
  *
- * Why: repositories and migrations are written once against this interface so the
- *   engine underneath (better-sqlite3 today, node:sqlite as a fallback) can swap without
- *   touching them (code.md rule 2, d-0023). The in-memory adapter does not use it: it
- *   implements `StorageAdapter` directly and shares only the contract test.
+ * Why: repositories and migrations are written once against a small synchronous SQL
+ *   surface, so the engine underneath (better-sqlite3, or node:sqlite as a fallback if
+ *   the native binary ever fails on a host) can be swapped without rewriting them. A
+ *   minimal surface keeps that swap realistic. The in-memory adapter does not use it: it
+ *   implements `StorageAdapter` directly and shares only the contract test (d-0023).
  *
  * Exports: SqlValue, SqlRunResult, SqlDriver, SqliteStorageOptions, SqlRow, ColumnCodec.
  * Depends on: nothing. Types only.

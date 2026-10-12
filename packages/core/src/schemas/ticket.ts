@@ -1,9 +1,14 @@
 /**
  * Ticket schemas — lanes, tiers, types, statuses and the Ticket row.
  *
- * Why: the Zod schema is the source of truth for the ticket table (code.md rule 4,
- *   director-core.md §3 and §4); lanes come from execution-plane.md §2, tiers A/B/C
- *   from verification-plane.md, branch types from d-0021.
+ * Why: the ticket row is what the scheduler decides on every tick, so the engine, HTTP
+ *   API, gates, storage and UI must agree on its fields and on the closed sets that
+ *   steer work: lane (how much process), tier A/B/C (who must sign off), type (branch
+ *   prefix) and status (where the ticket is). Defining them once means a stored row or
+ *   API body that drifts is rejected at the boundary rather than quietly misrouting a
+ *   ticket, for example treating a tier-C change as auto-mergeable. `status_version` is
+ *   the compare-and-swap counter that makes stale writers lose (director-core.md §3-§4,
+ *   verification-plane.md §7, execution-plane.md §2, d-0021).
  *
  * Exports: Lane, Tier, TicketType, TicketStatus, TERMINAL_STATUSES, TicketRelationKind,
  *   Ticket.

@@ -1,11 +1,13 @@
 /**
  * Patch validation shared by both adapters, plus the SQL SET builder.
  *
- * Why: ticket, run and interaction patches cross the storage boundary, so they are
- *   parsed with the core zod schemas (code.md rule 4) before touching a row. The CAS
- *   version rule lives here once so sqlite and memory cannot drift: a patch without
- *   `status_version` bumps it by one, otherwise the CAS would never invalidate readers
- *   (director-core.md §3).
+ * Why: patches are how the Director changes tickets, runs and interactions, and they
+ *   come from many callers. Validating them against the core schemas, strictly so
+ *   unknown fields are rejected, before touching a row means a typo cannot silently
+ *   write nothing or corrupt a column. The CAS version rule lives here once so sqlite
+ *   and memory cannot drift: a patch that does not set `status_version` bumps it by one,
+ *   since otherwise a successful update would not invalidate other readers' versions and
+ *   stale writers would keep winning (director-core.md §3).
  *
  * Exports: parseTicketPatch(), parseRunPatch(), parseInteractionPatch(), buildSetClause().
  * Depends on: @forge/core, types/storage-driver.types. No IO.

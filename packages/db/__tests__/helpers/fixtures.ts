@@ -1,8 +1,9 @@
 /**
  * Shared fixtures for @forge/db tests.
  *
- * Why: the contract and adapter tests need valid baseline domain rows; one place keeps
- *   them in step with the core zod schemas (code.md rule 8, rule 4).
+ * Why: the contract and adapter tests need valid baseline rows for every table. Building
+ *   them from the core types and schemas means tests cannot pass with rows production
+ *   would reject, and a schema change breaks the fixtures in one place.
  *
  * Exports: T0, makeTicket(), makeRun(), makeTextEvent(), makeInteraction(), makeIntake().
  * Depends on: @forge/core. No IO.

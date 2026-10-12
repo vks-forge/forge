@@ -1,10 +1,14 @@
 /**
  * SQLite StorageAdapter: single writer, BEGIN IMMEDIATE transactions, migrations on open.
  *
- * Why: d-0023 and director-core.md §2-§3: one writer applies every mutation inside a
- *   transaction. Transactions span awaits, so they queue through a mutex (in-process
- *   single writer) and take `BEGIN IMMEDIATE` (cross-process: other connections wait on
- *   busy_timeout). A throw rolls everything back and is rethrown unchanged.
+ * Why: all Director state changes happen in the tick under one writer, and a
+ *   half-applied change (ticket moved, run row missing) would leave a ticket no later
+ *   tick can recover. This adapter makes each transaction atomic and serial:
+ *   transactions span awaits, so they queue through an in-process mutex, and they take
+ *   `BEGIN IMMEDIATE` so another process (the API, a CLI) waits on busy_timeout instead
+ *   of interleaving. A throw rolls everything back and is rethrown unchanged, so callers
+ *   see the real error. Migrations run on open so a new database is usable immediately
+ *   (director-core.md §2-§3, d-0023).
  *
  * Exports: createSqliteStorage().
  * Depends on: adapters/sqlite/*, migrations/run-migrations, shared/mutex, @forge/core.

@@ -1,9 +1,13 @@
 /**
  * Ticket id construction and parsing — `<PROJECT>-<n>`.
  *
- * Why: ticket ids are public as `<PROJECT>-<n>` (d-0021) and appear in branch names and
- *   the UI; one constructor and one parser guarantee the same grammar everywhere.
- *   Prefixes stay short because the dev host has LongPathsEnabled=0 (m0-brief.md §5).
+ * Why: ticket ids (`FORGE-12`) are what users type in chat, what appears in branch names
+ *   and the UI, and the key of every row the Director touches. Building or parsing them
+ *   by hand risks two spellings of one ticket, or an id long enough to break a worktree
+ *   path (the dev host has Windows long paths disabled, so project prefixes stay short).
+ *   One constructor and one non-throwing parser keep the grammar identical across
+ *   storage, git and UI, and a malformed id from a user or a foreign branch becomes a
+ *   value to handle rather than a crash inside the Director tick (d-0021).
  *
  * Exports: makeTicketId(), parseTicketId().
  * Depends on: schemas/ids, shared/errors, shared/result, types/ids, types/result. No IO.

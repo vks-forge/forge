@@ -1,7 +1,11 @@
 /**
  * Tests for the run schemas.
  *
- * Why: drivers translate into these shapes at the boundary (code.md rule 3).
+ * Why: these schemas are the boundary between untrusted harness output and the Director.
+ *   If a malformed event parsed, or an error family went missing, retry and kill
+ *   decisions and the run log would act on garbage; pinning every variant stops a driver
+ *   or schema change from silently breaking the harness-neutral contract
+ *   (execution-plane.md §3, §8).
  *
  * Pins: every normalized RunEvent variant parses and unknown types fail, documented
  *   error families exist, RunRequest/RunResult/Run/DriverCapabilities parse

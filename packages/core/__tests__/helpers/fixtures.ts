@@ -1,8 +1,10 @@
 /**
  * Shared test fixtures for @forge/core.
  *
- * Why: one place for a valid baseline Ticket so tests override only what they care
- *   about (code.md rule 8: shared fixtures live in __tests__/helpers/).
+ * Why: state-machine and schema tests need a valid ticket and care about only one or two
+ *   fields. One baseline built through the real id constructor and typed by the real
+ *   schema means tests cannot pass on a ticket production would reject, and a schema
+ *   change breaks the fixture in one place.
  *
  * Exports: T0, makeTicket().
  * Depends on: src/schemas/ticket, src/domain/ids. No IO.

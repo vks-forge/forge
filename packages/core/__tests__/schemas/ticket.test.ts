@@ -1,7 +1,10 @@
 /**
  * Tests for the ticket schemas.
  *
- * Why: the schema is the source of truth for the tickets row (code.md rule 4).
+ * Why: the ticket enums steer work: lane sets how much process runs, tier sets who signs
+ *   off, status sets who acts next. A silently renamed or dropped value would misroute
+ *   tickets (a tier-C change treated as auto-mergeable), so the documented sets are
+ *   pinned and bad rows must be rejected (director-core.md §3-§4).
  *
  * Pins: documented enums (lanes, tiers, 8 types, five relation kinds, waiting_human), a
  *   valid ticket parses, bad id / status / negative version are rejected

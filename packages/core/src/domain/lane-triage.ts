@@ -1,13 +1,16 @@
 /**
  * Deterministic lane pre-check — the first, cheap step of lane triage.
  *
- * Why: lanes start light and only escalate on signal (director-core.md §6 step 1,
- *   execution-plane.md §2). A pure function over path globs, brief size and ticket type
- *   lets the Director raise a lane without an LLM call; tier-C globs force Full
- *   (verification-plane.md, d-0034). Nothing here ever lowers a lane.
+ * Why: process weight is the factory's main cost-versus-safety dial: a typo fix should
+ *   not pay for an epic, an interview and six gates, but a change to auth or migrations
+ *   must never ride the cheap lane. The Director starts every ticket light and escalates
+ *   on signal, and the first free signal is deterministic: touched paths against the
+ *   project's tier-C globs, predicted file count, ticket body length and ticket type. As
+ *   a pure function it needs no LLM call, answers identically on replay, and can only
+ *   raise a lane, so a later model step or an optimistic Worker cannot talk a risky
+ *   ticket down to Express (director-core.md §6, execution-plane.md §2, d-0034).
  *
- * Exports: EXPRESS_MAX_FILES, EXPRESS_MAX_BODY_CHARS, maxLane(), PreCheckInput,
- *   PreCheckResult, preCheckLane().
+ * Exports: EXPRESS_MAX_FILES, EXPRESS_MAX_BODY_CHARS, maxLane(), preCheckLane().
  * Depends on: shared/glob, schemas/ticket, types/lane-triage. No IO.
  */
 

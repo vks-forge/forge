@@ -146,9 +146,30 @@ developer or agent can read instead of the code:
  */
 ```
 
-Required parts: one-line *what*, a *why* paragraph naming the design doc or
-decision id, *exports*, *depends on*. Test files state what behaviour they
-pin and which doc section it comes from. Exported functions and interfaces
+Required parts: one-line *what*, a *why* paragraph, *exports*, *depends on*.
+
+**`Why:` is product knowledge, not process.** It answers "what problem in
+the running system does this file solve, and what goes wrong without it",
+in terms a new engineer or agent can use to make decisions: the actors
+involved (Director, Worker, harness, user), the failure it prevents, the
+invariant it protects. It may cite a design-doc section or decision id in
+parentheses as a pointer, never as the reason. It never mentions code rules,
+milestones, slices, "this file exists because rule N", or what will land
+later.
+
+```
+Bad:  Why: the package boundary is one file (code.md rule 10); the Claude
+      driver lands in slice 2 after the probes pass.
+Good: Why: Workers run inside third-party harnesses (Claude Code, Codex,
+      OpenCode) that each speak their own protocol. The Director must start,
+      steer, resume and kill a run the same way regardless of harness, and
+      must never trust the harness's own permission bypass. This package is
+      that boundary: one WorkerDriver per harness, normalised events out,
+      policy enforced on our side (execution-plane.md §3).
+```
+
+Test files say what behaviour they pin and why that behaviour matters to
+the system, in the same spirit. Exported functions and interfaces
 get a short JSDoc. Inside the body, comments say *why*, not *what*: a
 non-obvious constraint, a decision id, a workaround with its upstream link.
 Dead code is deleted, not commented out. Missing or stale header = lint

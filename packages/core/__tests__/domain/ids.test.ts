@@ -1,8 +1,9 @@
 /**
  * Tests for ticket id construction and parsing.
  *
- * Why: ids are public handles (d-0021) and parse paths must never throw (code.md rule
- *   6).
+ * Why: ids key every row and appear in branches and the UI. A parser that throws would
+ *   crash the Director tick on one bad chat message or foreign branch, and a lax one
+ *   could address the wrong ticket.
  *
  * Pins: `<PROJECT>-<n>` format, rejection of bad prefixes/numbers, non-throwing parse,
  *   make/parse round trip (property).

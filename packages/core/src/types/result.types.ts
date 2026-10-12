@@ -1,7 +1,9 @@
 /**
  * Result type — explicit success/failure value.
  *
- * Why: policy paths such as `transition()` and the id parsers must never throw and fail closed on bad input (code.md rule 6), so they return a value the caller has to inspect.
+ * Why: callers of policy functions must be forced to look at failure. A success/failure
+ *   union makes "the transition was rejected" a typed value the Director, API and gates
+ *   handle explicitly instead of an exception that escapes the tick.
  *
  * Exports: Result.
  * Depends on: No IO (types only).

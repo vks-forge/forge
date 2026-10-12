@@ -1,7 +1,13 @@
 /**
  * ErrorFamily schema — the failure classes that drive retry/stall/kill.
  *
- * Why: retry, stall and kill decisions read the family, never the message (code.md rule 7, execution-plane.md §8 run lifecycle retry policy); one enum is shared by errors, run results and run events.
+ * Why: when a run fails, the Director must decide whether to retry later, kill, escalate
+ *   to a human or give up, and that decision cannot depend on message text that differs
+ *   per harness and version. Drivers map every harness failure onto this one closed
+ *   enum, and rate-limit backoff, a single crash retry, no retry for a refusal and
+ *   escalation after repeated identical failures all key off the family. One enum shared
+ *   by thrown errors, RunResult and run events guarantees a family means the same thing
+ *   everywhere it appears (execution-plane.md §8).
  *
  * Exports: ErrorFamily.
  * Depends on: zod. No IO.

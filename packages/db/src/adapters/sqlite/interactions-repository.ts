@@ -1,9 +1,13 @@
 /**
  * SQLite InteractionRepository for blocking questions and approvals.
  *
- * Why: a parked ticket needs a durable reason to wait (director-core.md §3 invariant,
- *   §8); `listPending` is how the Director finds them. Payload and answer are JSON,
- *   rows are parsed with the core `Interaction` schema (code.md rule 4).
+ * Why: when a Worker asks a human something the ticket parks in WaitingHuman, and the
+ *   question must survive a Director restart. This repository stores the question, its
+ *   timeout and the eventual answer, and `listPending` is how each tick finds parked
+ *   tickets to wake when answered or time out to Blocked. Without it a parked ticket is
+ *   invisible and the "every open ticket has a reason to wait" invariant cannot be
+ *   enforced. Payload and answer are free-form JSON, so rows are re-parsed with the core
+ *   `Interaction` schema on read (director-core.md §3, §8).
  *
  * Exports: createInteractionRepository().
  * Depends on: @forge/core, shared/json, shared/patches, types/storage-driver.types.

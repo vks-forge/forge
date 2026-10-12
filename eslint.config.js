@@ -1,9 +1,13 @@
 /**
  * ESLint flat config — layer rules, local `forge` plugin and the file-header check.
  *
- * Why: code.md rules 1 (layers point inward), 10 (no `../` imports) and 12 (every file
- *   opens with a header, d-0041) must fail the build, not rely on review; the two local
- *   rules live inline so no new dependency is needed (code.md rule 11).
+ * Why: layering and import discipline only hold if the build fails when they break. Core
+ *   may not import any sibling package, adapters may import only core, and `../` imports
+ *   are banned, so the dependency direction is checked by machine on every change
+ *   instead of by reviewers. The same config rejects a file with no header comment, so
+ *   every file explains its purpose to the next developer or agent, and keeps
+ *   hand-written types in `types/`. The local rules are defined inline so the toolchain
+ *   needs no extra dependency.
  *
  * Exports: default export (flat config array).
  * Depends on: typescript-eslint. No IO.

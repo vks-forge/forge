@@ -1,11 +1,13 @@
 /**
  * Tests for the ForgeError hierarchy.
  *
- * Why: retry/stall/kill read the family, so the mapping must not drift (code.md rule 7,
- *   execution-plane.md §8).
+ * Why: retry, stall and kill read the family. If a subclass carried the wrong family (a
+ *   rate limit treated as a crash, a refusal retried) the Director would retry what
+ *   should escalate or give up on what should back off. Keeping `cause` means the
+ *   original harness failure survives for debugging (execution-plane.md §8).
  *
  * Pins: each subclass carries its errorFamily, is an Error, has its class name, and
- *   preserves `cause` (code.md rule 7).
+ *   preserves `cause`.
  * Depends on: src/shared/errors, vitest.
  */
 

@@ -1,10 +1,12 @@
 /**
  * SqlDriver over better-sqlite3 with WAL, busy_timeout and cached statements.
  *
- * Why: d-0023 puts state in SQLite WAL with a single writer. better-sqlite3 ships a
- *   prebuilt win32-x64 binary, so it loads on this host with no compiler (see README
- *   driver decision). Pragmas are applied once per connection: busy_timeout first so
- *   the WAL switch itself can wait on a lock.
+ * Why: the Director's state must survive crashes while the UI and other processes read
+ *   during the single writer's work. SQLite in WAL mode gives both with no server to run
+ *   on this Windows box (d-0023). better-sqlite3 ships a prebuilt win32-x64 binary, so
+ *   it installs without a compiler. Pragmas are set once per connection with
+ *   busy_timeout first, so a second connection waits for the writer's lock instead of
+ *   failing immediately, even during the switch to WAL itself.
  *
  * Exports: openSqliteDriver().
  * Depends on: better-sqlite3, types/storage-driver.types. IO: opens the database file.

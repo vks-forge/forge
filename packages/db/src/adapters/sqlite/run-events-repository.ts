@@ -1,10 +1,13 @@
 /**
  * SQLite RunEventRepository: the append-only `run_events` log.
  *
- * Why: run_events is the UI and replay source (director-core.md §3). (run_id, seq) is
- *   the primary key, so a repeated seq is rejected by the database, and reads are
- *   ordered by seq regardless of append order. The full event is stored as JSON and
- *   re-parsed with the core `RunEvent` schema on read (code.md rule 4).
+ * Why: run_events is the record of what a Worker actually did: the control room's live
+ *   view, the replay source, and the evidence gates compare Worker claims against. It
+ *   has to be trustworthy, so it is append-only: (run_id, seq) is the primary key, a
+ *   repeated seq is rejected by the database, and reads return seq order whatever the
+ *   append order. The scheduler never decides from it. Events are stored as JSON and
+ *   re-parsed with the core `RunEvent` schema on read, so a corrupt row fails loudly
+ *   (director-core.md §3).
  *
  * Exports: createRunEventRepository().
  * Depends on: @forge/core, shared/json, types/storage-driver.types.

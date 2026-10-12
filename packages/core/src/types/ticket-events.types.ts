@@ -1,7 +1,12 @@
 /**
  * Ticket events, transition errors and the internal state delta.
  *
- * Why: `transition()` is the single door for ticket status (code.md rule 6, director-core.md §3-§4); its input events and rejection reasons are part of its contract and are shared with the engine, HTTP API and gates.
+ * Why: every actor that changes a ticket (Director engine, HTTP API, gates, human
+ *   reviewers) speaks to `transition()` in these events and gets back one of a few typed
+ *   rejections: illegal move, failed precondition, stale version, terminal ticket.
+ *   Sharing the shapes lets the API tell a user exactly why an action was refused (for
+ *   example, tier C needs a named signer) and lets the engine tell a lost CAS race,
+ *   which is retried, from a genuine bug (director-core.md §3-§4).
  *
  * Exports: TicketEvent, TransitionError, TicketDelta.
  * Depends on: schemas/ticket. No IO (types only).

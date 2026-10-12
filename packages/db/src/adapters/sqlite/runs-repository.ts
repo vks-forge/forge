@@ -1,9 +1,12 @@
 /**
  * SQLite RunRepository for the `runs` table.
  *
- * Why: run lifecycle rows are updated as the run progresses (execution-plane.md §8);
- *   usage is stored as JSON and every row is parsed with the core `Run` schema (code.md
- *   rule 4).
+ * Why: a run row is the Director's account of one Worker attempt: which harness and
+ *   session, what it cost, how it ended and with which error family. Reconciliation
+ *   reads it to detect stalls and settle finished runs, and retry logic follows
+ *   `retry_of` and `error_family`. Rows are updated as the run progresses and re-parsed
+ *   with the core `Run` schema on read, so a half-written or drifted row cannot reach
+ *   the retry logic (execution-plane.md §8).
  *
  * Exports: createRunRepository().
  * Depends on: @forge/core, shared/json, shared/patches, types/storage-driver.types.

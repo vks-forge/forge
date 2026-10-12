@@ -1,8 +1,10 @@
 /**
  * Tests for branch naming.
  *
- * Why: branch grammar is a contract with the git host and PR bot (d-0021,
- *   control-room-and-platform.md §6).
+ * Why: the branch name is the contract between the factory and the git host. If build
+ *   and parse drift apart the PR bot cannot map a PR back to its ticket, and a
+ *   human-made branch such as `main` could be mistaken for a factory branch and gated or
+ *   merged as one (d-0021, control-room-and-platform.md §6).
  *
  * Pins: branch format `<type>/<id>-<slug>`, accent/non-ascii stripping, 40-char slug
  *   cap, `untitled` fallback, build/parse round trip (property), rejection of foreign

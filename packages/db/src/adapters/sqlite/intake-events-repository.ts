@@ -1,9 +1,12 @@
 /**
  * SQLite IntakeEventRepository with constraint-based dedupe.
  *
- * Why: intake must be idempotent (director-core.md §7). Dedupe relies on
- *   UNIQUE(source, dedupe_key) with `ON CONFLICT DO NOTHING`; `changes === 0` means the
- *   duplicate was dropped. Never a read-then-write, which two writers could race.
+ * Why: chat messages and webhooks are redelivered and can arrive on two connections at
+ *   once; if one event created two tickets the user would get duplicate work and
+ *   duplicate spend. The database therefore enforces dedupe: UNIQUE(source, dedupe_key)
+ *   with `ON CONFLICT DO NOTHING`, where zero changed rows means the duplicate was
+ *   dropped. A read-then-insert would let two writers both see "not seen" and both
+ *   insert (director-core.md §7).
  *
  * Exports: createIntakeEventRepository().
  * Depends on: @forge/core, shared/json, types/storage-driver.types.

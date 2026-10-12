@@ -1,10 +1,15 @@
 /**
  * Ticket state machine — the single door for ticket status changes.
  *
- * Why: the Director engine, HTTP API and gates all move tickets; one pure
- *   `transition()` keeps every rule (illegal moves, automatic rework cap, tier-C named
- *   signer, CAS on status_version) in one place so no caller can skip it (code.md rule
- *   6, director-core.md §3-§4, v1-scope-review.md §4.9).
+ * Why: the Director tick, the HTTP API and the gates all move tickets, and a ticket's
+ *   status decides who may act next: a Worker, a gate, a human reviewer or a named
+ *   tier-C signer. If any caller could write status directly, a ticket could skip
+ *   Verifying, reach Done without the sign-off its tier requires, or loop through
+ *   automatic rework forever. `transition()` is the one pure function that holds those
+ *   rules (legal moves, the two-rework cap that hands a failing ticket to a human, the
+ *   named signer for tier C) and returns the next row with `status_version` bumped, so
+ *   storage can compare-and-swap and a stale writer loses instead of double-dispatching
+ *   the ticket (director-core.md §3-§4, v1-scope-review.md §4.9).
  *
  * Exports: transition(), MAX_AUTO_REWORKS.
  * Depends on: domain/lane-triage, schemas/ticket, shared/result, types/result, types/ticket-events.
@@ -99,7 +104,7 @@ function decide(t: Ticket, e: TicketEvent): Result<TicketDelta, TransitionError>
   }
 }
 
-/** The single door for ticket state (code.md rule 6). Pure; never throws; returns the next ticket with `status_version` bumped, or a {@link TransitionError}. */
+/** The single door for ticket state: every status change goes through here so no caller can skip a gate or sign-off. Pure; never throws; returns the next ticket with `status_version` bumped, or a {@link TransitionError}. */
 export function transition(
   ticket: Ticket,
   event: TicketEvent,

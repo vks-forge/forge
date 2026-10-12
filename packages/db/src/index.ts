@@ -1,9 +1,10 @@
 /**
  * Public API of @forge/db: re-exports only.
  *
- * Why: the package boundary is one file so apps wire storage by importing `@forge/db`
- *   and nothing deeper (code.md rule 10); adding a backend means a new folder under
- *   adapters/ and one export here.
+ * Why: apps compose the factory by choosing a storage backend from config. A single
+ *   entry point means they never reach into repositories or SQL, and a new backend is a
+ *   new folder plus one export with no change to the Director. Importing it has no side
+ *   effects, so no database is opened until an app asks for one (d-0023).
  *
  * Exports: createSqliteStorage, createStorageOnDriver, openSqliteDriver, createMemoryStorage,
  *   runMigrations, MIGRATIONS, and the SqlDriver / Migration types.

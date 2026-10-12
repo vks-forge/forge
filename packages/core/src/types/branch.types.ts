@@ -1,7 +1,10 @@
 /**
  * Parsed factory branch shape.
  *
- * Why: `parseBranchName()` returns the type, ticket id and slug of a `<type>/<id>-<slug>` branch (d-0021, control-room-and-platform.md §6).
+ * Why: the git host adapter, worktree manager and PR bot all need the same three facts
+ *   recovered from a factory branch name (type, ticket id, slug) to map a PR or checkout
+ *   back to its ticket; one named shape keeps them in agreement (d-0021,
+ *   control-room-and-platform.md §6).
  *
  * Exports: ParsedBranch.
  * Depends on: schemas/ids, schemas/ticket. No IO (types only).

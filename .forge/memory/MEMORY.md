@@ -39,6 +39,8 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0049 — ACP-first stays: `session/set_mode default` after every new/load, our `request_permission` handler decides every tool call; follow-up probes for strictMcpConfig + user hooks (amends d-0035)
+- d-0048 — Measured Claude harness facts (setting-sources "", budget subtype, PowerShell tool, hooks fail-closed only with onFailure, ACP auth notification, ACP settingSources leak) (author=director, measured)
 - d-0047 — Storage: raw portable SQL on a `SqlDriver` seam, no ORM; more adapters via `adapters/<name>/` + contract test (supersedes d-0023)
 - d-0046 — Bootstrap commits go straight to `main`, no PR, until the bot dispatches its first ticket; per-commit go still required
 - d-0045 — All hand-written types/interfaces in `src/types/` as `<name>.types.ts` (ports in `types/ports/`); only `z.infer` aliases may sit in `schemas/`; lint-enforced

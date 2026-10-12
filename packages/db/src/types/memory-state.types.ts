@@ -1,8 +1,10 @@
 /**
  * Shape of the in-memory adapter's state.
  *
- * Why: hand-written types live under types/ (code.md rule 10); the memory adapter
- *   snapshots and restores this whole object to roll a transaction back.
+ * Why: the in-memory adapter has to roll a transaction back the way sqlite does. Holding
+ *   all of its tables in one state object lets it snapshot before the callback and
+ *   restore on a throw, so engine failure-path tests see the same atomicity the SQLite
+ *   adapter gives.
  *
  * Exports: MemoryState.
  * Depends on: @forge/core (types). Types only.

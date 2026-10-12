@@ -1,9 +1,14 @@
 /**
  * StorageAdapter contract: one suite every storage backend must pass.
  *
- * Why: the seam only holds if sqlite and in-memory behave identically (code.md rule 8,
- *   m0-brief.md Slice 1 exit). Covers CAS (director-core.md §3), transaction
- *   atomicity, intake dedupe (§7), run_events ordering and pending interactions (§8).
+ * Why: the Director must behave identically on any backend, so this suite is the
+ *   executable definition of StorageAdapter and every backend must pass it. It pins the
+ *   properties engine correctness rests on: a stale writer must lose the CAS race (or
+ *   two Director ticks could double-dispatch a ticket), a throw rolls back every write
+ *   in the transaction (or a ticket could move without its run row), concurrent
+ *   transactions serialize, intake duplicates are dropped per source, run events read
+ *   back in seq order and refuse a repeated seq, and only pending interactions are
+ *   listed (director-core.md §3, §7, §8).
  *
  * Exports: describeStorageContract().
  * Depends on: vitest, @forge/core, helpers/fixtures. IO only through the adapter under test.

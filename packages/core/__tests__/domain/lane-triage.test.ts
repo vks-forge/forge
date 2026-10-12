@@ -1,8 +1,10 @@
 /**
  * Tests for glob matching and the lane pre-check.
  *
- * Why: lane escalation is one-way and deterministic; property tests guard monotonicity
- *   (code.md rule 8).
+ * Why: lane choice is the cost-versus-safety dial. Escalation must be one-way and tier-C
+ *   globs must always force Full; if the pre-check could lower a lane, or a glob missed
+ *   a Windows-style path, a risky change could take the Express path with fewer gates
+ *   (director-core.md §6, execution-plane.md §2).
  *
  * Pins: globMatch semantics (`*`, `**`, `?`, Windows separators, literal
  *   metacharacters); express by default, tier-C hit forces full, more than 3 files /

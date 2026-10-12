@@ -1,7 +1,9 @@
 /**
  * Pins the in-memory StorageAdapter against the shared storage contract.
  *
- * Why: a second implementation proves the StorageAdapter seam (m0-brief.md Slice 1 exit).
+ * Why: the in-memory adapter is what engine tests run on; if it diverged from sqlite
+ *   those tests would pass against behaviour production never has. Running the shared
+ *   contract against it keeps the two interchangeable.
  *
  * Pins: contract behaviour of createMemoryStorage().
  * Depends on: contract/storage.contract, src/index.

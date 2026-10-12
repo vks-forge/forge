@@ -1,9 +1,13 @@
 /**
  * Typed error hierarchy — ForgeError and one subclass per error family.
  *
- * Why: retry, stall and kill decisions read the `errorFamily`, never the message
- *   (code.md rule 7, execution-plane.md §8 run lifecycle retry policy), so every
- *   failure carries a family from one core enum.
+ * Why: the Director's retry, stall and kill logic must branch on a closed set of failure
+ *   classes, not on message strings that change between harnesses and versions. Every
+ *   thrown failure is a ForgeError carrying its errorFamily, so a driver crash, a rate
+ *   limit and a policy denial are handled differently by construction, and an
+ *   unclassified failure lands in `unknown`, which policy treats as fail-closed.
+ *   InvalidInputError marks caller bugs in pure constructors so they are not mistaken
+ *   for harness faults and retried (execution-plane.md §8).
  *
  * Exports: ForgeError, AuthError, RateLimitError, BudgetError,
  *   StallError, RefusalError, CrashError, PolicyDeniedError, UnknownForgeError,

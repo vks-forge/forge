@@ -1,9 +1,12 @@
 /**
  * Public API of @forge/core — re-exports only.
  *
- * Why: the package boundary is one file so adapters import `@forge/core` and nothing
- *   deeper, and the layering rule can be enforced mechanically (code.md rules 1 and 10,
- *   d-0040).
+ * Why: adapters (db, drivers, tools, gates) and apps depend on core's domain rules,
+ *   schemas and ports, and on nothing else in it. A single entry point means consumers
+ *   cannot reach into internals, so core can be reorganised freely, and the dependency
+ *   direction (core imports no sibling, adapters import only core) stays
+ *   machine-checkable instead of resting on reviewer vigilance. Everything
+ *   harness-neutral that the rest of the factory shares is exported from here (d-0040).
  *
  * Exports: everything exported by domain/, schemas/, shared/ and types/.
  * Depends on: every module under src/. No IO.

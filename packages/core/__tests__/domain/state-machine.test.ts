@@ -1,8 +1,11 @@
 /**
  * Tests for the ticket state machine.
  *
- * Why: the state machine is the single door for ticket status (code.md rule 6);
- *   property tests are required for it (code.md rule 8).
+ * Why: ticket status decides who may act and whether work can merge, so a hole here is a
+ *   safety hole: a ticket reaching Done without its tier's sign-off, rework looping
+ *   forever, or a stale writer winning a CAS race and double-dispatching a ticket.
+ *   Property tests cover what examples cannot enumerate: no event leaves a terminal
+ *   state, versions only increase, automatic rework never exceeds the cap.
  *
  * Pins: happy paths Inbox -> Done per tier, tier B/C routing to review/needs_signoff,
  *   purity, block/ask loops, tier-C signer, lane only escalates, errors returned not

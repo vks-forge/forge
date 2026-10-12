@@ -1,8 +1,11 @@
 /**
  * Vitest configuration for the whole workspace.
  *
- * Why: one root config runs every package suite from each package's `__tests__/` folder (code.md
- *   rule 8, d-0040) and enforces the coverage floor on core and db (70% lines).
+ * Why: every package's tests must run from one `pnpm test` at the root with the same
+ *   resolution as the build, so a green run means the whole workspace is green. It also
+ *   enforces a coverage floor (70% lines) on core and db, the packages holding the state
+ *   machine and storage the Director's correctness rests on, so they cannot quietly lose
+ *   test coverage.
  *
  * Exports: default export (vitest config).
  * Depends on: vitest. No IO.

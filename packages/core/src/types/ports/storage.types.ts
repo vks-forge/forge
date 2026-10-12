@@ -1,9 +1,15 @@
 /**
  * StorageAdapter port — repositories and the transaction boundary.
  *
- * Why: state storage sits behind an adapter so the backend can swap, SQLite WAL by
- *   default (d-0023); a single writer applies every mutation inside a transaction, and
- *   ticket updates are compare-and-swap on status_version (director-core.md §2-§3).
+ * Why: the Director's correctness rests on one writer applying every state change
+ *   atomically and on stale writers losing. StorageAdapter encodes that contract: all
+ *   work happens in a transaction, and ticket updates are compare-and-swap on
+ *   `status_version`, so a Director tick and an API call racing on one ticket cannot
+ *   both win and double-dispatch it. Intake inserts report duplicates so redeliveries
+ *   are dropped, run events are append-only so the UI and replay have a trustworthy
+ *   history, and pending interactions are listable so no parked ticket is lost. Behind a
+ *   port, the backend (SQLite WAL by default) can change without touching the engine
+ *   (director-core.md §2-§3, §7-§8, d-0023).
  *
  * Exports: TicketPatch, TicketRepository, RunRepository, RunEventRepository,
  *   IntakeEventRepository, InteractionRepository, StorageTx, StorageAdapter.

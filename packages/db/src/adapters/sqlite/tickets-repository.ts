@@ -1,10 +1,12 @@
 /**
  * SQLite TicketRepository with single-statement compare-and-swap.
  *
- * Why: stale writers must lose (director-core.md §3), so `updateTicketCas` is one
- *   `UPDATE ... WHERE id=? AND status_version=?` and success is `changes === 1`; there
- *   is never a read-then-write. Rows are parsed with the core `Ticket` schema (code.md
- *   rule 4).
+ * Why: ticket status is the one thing two actors can race on (a Director tick and an API
+ *   call, or a gate result and a cancel). `updateTicketCas` is a single `UPDATE ...
+ *   WHERE id=? AND status_version=?` and success is `changes === 1`, so the stale writer
+ *   loses atomically; a read-then-write would let both succeed and the ticket could be
+ *   double-dispatched or moved twice. Rows are re-parsed with the core `Ticket` schema
+ *   on read (director-core.md §3).
  *
  * Exports: createTicketRepository().
  * Depends on: @forge/core, shared/json, shared/patches, types/storage-driver.types.

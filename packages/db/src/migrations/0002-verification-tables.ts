@@ -1,10 +1,14 @@
 /**
  * Migration 0002: gate results, tool receipts and the skills registry.
  *
- * Why: the verification and tool planes record evidence per run (director-core.md §3
- *   `gate_results`, tool-system.md §10 `tool_decisions`/`tool_effects`,
- *   self-improvement.md §4 `skills_registry`/`skill_usage`). None has a core zod schema
- *   yet, so every table here is provisional and follows the doc column list literally.
+ * Why: a ticket is trusted as done only if the evidence is recorded: gate verdicts per
+ *   run, what every tool call was allowed or denied (tool_decisions) and what it
+ *   actually changed (tool_effects), plus which skills Workers used and how they
+ *   performed. Without durable receipts the independent gates would have to trust a
+ *   Worker's own account of what it did, and self-improvement could not measure which
+ *   skills help. None of these tables has a core zod schema, so columns follow the
+ *   design docs literally and rows are not validated on write (director-core.md §3,
+ *   tool-system.md §10, self-improvement.md §4).
  *
  * Exports: MIGRATION_0002.
  * Depends on: types/migrations.types. No IO.

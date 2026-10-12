@@ -1,9 +1,11 @@
 /**
  * Migration runner: applies pending migrations idempotently via `schema_migrations`.
  *
- * Why: opening a database must be safe to repeat (m0-brief.md Slice 1). Each migration
- *   runs in its own transaction and records a checksum; an edited, already-applied
- *   migration is a hard error because history is forward-only.
+ * Why: the factory opens its database on every start, from the API and the Director
+ *   alike, so opening must be safe to repeat and must never leave the schema
+ *   half-applied. Each migration runs in its own transaction and records a checksum; if
+ *   an applied migration was edited, or ids go backwards, the runner refuses to start
+ *   rather than run against a schema nobody can reason about.
  *
  * Exports: runMigrations().
  * Depends on: migrations/registry, types/storage-driver.types, @forge/core, node:crypto.

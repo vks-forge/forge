@@ -1,9 +1,12 @@
 /**
  * Minimal glob matcher (`**`, `*`, `?`) for path rules.
  *
- * Why: tier-C path globs decide lane and tier (director-core.md §6,
- *   verification-plane.md); a ~30-line matcher here keeps core at one dependency, `zod`
- *   (code.md rule 11).
+ * Why: tier-C paths (auth, migrations, secrets, billing) decide a ticket's lane and who
+ *   must sign off, and one glob list drives triage, gates and the merge policy. Matching
+ *   must be exact and identical everywhere: a path that slips past a glob lets a
+ *   high-blast-radius change take the cheap lane, and backslash paths from the Windows
+ *   dev host must match the same patterns. A small in-house matcher keeps core free of
+ *   runtime dependencies beyond zod (director-core.md §6, verification-plane.md §7).
  *
  * Exports: globMatch().
  * Depends on: No IO.

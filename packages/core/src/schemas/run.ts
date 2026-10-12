@@ -1,10 +1,15 @@
 /**
  * Run schemas — normalized driver-boundary shapes and the persisted Run row.
  *
- * Why: drivers translate harness JSON into these shapes at the boundary so core stays
- *   harness-neutral (code.md rule 3, execution-plane.md §3 the Worker interface, §6
- *   permissions and isolation, §8 run lifecycle). Boundary shapes are camelCase as in
- *   the doc; persisted rows are snake_case like other tables.
+ * Why: Workers run in third-party harnesses whose protocols, event formats, cost
+ *   reporting and failure modes all differ. These schemas are the normalized vocabulary
+ *   the Director and storage speak instead: what a run is asked to do (RunRequest with
+ *   its permission policy, tool exposure and budget), what it emits (RunEvent), how it
+ *   ended (RunResult with an error family) and what a driver can do (DriverCapabilities,
+ *   declared, never guessed). Drivers translate into them at the boundary, so adding a
+ *   harness never changes the Director and untrusted harness output is parsed before
+ *   anything acts on it. Boundary shapes are camelCase; persisted `runs` rows are
+ *   snake_case like other tables (execution-plane.md §3, §6, §8).
  *
  * Exports: Usage, UsageReport, SessionRef, Isolation, PermissionPolicy, ToolExposure,
  *   RunBudget, RunRequest, RunHandle, RunResultStatus, RunResult, InteractionKind,
@@ -195,7 +200,7 @@ export type Run = z.infer<typeof Run>;
 export const SteerMode = z.enum(['steer', 'follow_up', 'interrupt']);
 export type SteerMode = z.infer<typeof SteerMode>;
 
-/** Capabilities a driver declares rather than the core inferring them (code.md rule 3). */
+/** Capabilities a driver declares up front, so the Director routes by what a harness can actually do instead of guessing from its name. */
 export const DriverCapabilities = z.object({
   resume: z.boolean(),
   steerModes: z.array(SteerMode),

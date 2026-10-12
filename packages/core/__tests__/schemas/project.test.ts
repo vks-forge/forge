@@ -1,7 +1,9 @@
 /**
  * Tests for the ProjectConfig schema.
  *
- * Why: project.yaml is validated at load (code.md rule 9, d-0034).
+ * Why: project.yaml is the only per-repo configuration, and a bad prefix or slug would
+ *   corrupt every ticket id and branch for that project. Rejecting it at load turns a
+ *   typo into a startup error rather than a gate or Worker failing mid-ticket (d-0034).
  *
  * Pins: minimal config parses, commands/remote parse, unknown profile / bad prefix /
  *   bad slug are rejected (d-0034).
