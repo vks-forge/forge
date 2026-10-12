@@ -2,7 +2,7 @@
 
 Run with `pnpm probes` (sets `FORGE_PROBES=1`). Host: Windows 11, Node 24.20, Claude Code 2.1.296 on a
 Max subscription, `@agentclientprotocol/claude-agent-acp@0.89.1`, `@agentclientprotocol/sdk@1.8.0`.
-All 9 probe tests pass. Every child run strips `CLAUDECODE` and `CLAUDE_CODE_ENTRYPOINT` from its env.
+All 11 probe tests pass. Every child run strips `CLAUDECODE` and `CLAUDE_CODE_ENTRYPOINT` from its env.
 
 ## Cross-cutting surprise: the default model blows the probe budget
 
@@ -109,6 +109,43 @@ allowDangerouslySkipPermissions: false, maxTurns, maxBudgetUsd: 0.05, model: "ha
   hides user hooks/CLAUDE.md inside the adapter (Finding A shows adapter-level reads bypass it, so assume
   user settings leak until proven otherwise). `settings` via `_meta` was not exercised.
 
+## Probe 4: `strictMcpConfig` on ACP (d-0049) - PASS (strict case); control INCONCLUSIVE
+
+Prompt "list the names of every MCP tool available to you, one per line, or say NONE", cwd = empty temp dir
+outside the repo, `session/set_mode default` after `session/new`, haiku, `maxTurns: 2`.
+Servers defined on this host (names only): user `~/.claude.json`: MiniMax, tradingview, caveman, pencil, rea;
+repo `.mcp.json`: graft.
+
+- Strict (`strictMcpConfig: true, mcpServers: {}, settingSources: []`): agent said `NONE`, added that every
+  tool is a built-in harness tool; no `mcp__` string in agent text or any `session/update`. Asserted.
+- Control (`strictMcpConfig: false`, other options unchanged): agent also said `NONE`; no `mcp__` name seen,
+  no user server name matched. Recorded, not asserted.
+- **Why the control proves nothing:** the strict run and the control are indistinguishable here, so this probe
+  does not show that `strictMcpConfig` is what hides the servers. Likely causes: the listed user servers did
+  not connect on this host at probe time (several are known to fail to start), and/or MCP tools are deferred
+  behind tool search so the model does not see names. The project `graft` server was not exercised (cwd is
+  outside the repo by design). To make the check discriminating, add a positive control that starts a known-good
+  stdio MCP server with `strictMcpConfig: false` and shows its tool name appears. Not done.
+- Net: `strictMcpConfig: true` leaks no MCP tool in this setup (observed); that it is the cause is unproven.
+
+## Probe 5: hooks and user settings under ACP (d-0049) - PASS (per-run hook); user hooks not observable
+
+- (a) `_meta.claudeCode.options.settings = <path to per-run settings.json>` with a `PreToolUse` hook
+  (`matcher ".*"`, `node <abs hook.cjs>`, exit 2, `onFailure: "block"`, `timeout: 5`): the hook log line
+  `PreToolUse tool=Bash` exists, the `tool_call_update` ended `failed` with the hook's block message in its
+  content, zero `session/request_permission` requests (the hook denied before the permission step), the
+  agent reported the command did not run. **Per-run hooks via `_meta` settings work on ACP.** Tool name in the
+  hook payload is `Bash` on ACP (not `PowerShell`, which is the CLI's).
+- (b) User hook events defined in `~/.claude/settings.json` (names only): SessionStart, UserPromptSubmit,
+  PreToolUse, PostToolUse, PostToolUseFailure, Stop, StopFailure, SubagentStart, SubagentStop, TeammateIdle,
+  PermissionRequest, PreCompact, PostCompact, SessionEnd. Whether they fire under ACP is **not observable
+  without modifying user settings**: their effects are side effects outside the protocol traffic. The
+  orchestrator should treat all 14 events as potentially live for a Worker (SessionStart, UserPromptSubmit,
+  PreToolUse, PermissionRequest are the ones that could alter or block Worker behaviour).
+- `defaultMode` leak reproduced (d-0048 item 6): the user's `permissions.defaultMode` is `acceptEdits` and
+  the new session's `modes.currentModeId` before our `set_mode` was `acceptEdits` even with
+  `settingSources: []` and `strictMcpConfig: true`. `set_mode default` remains required.
+
 ## Differences from the design docs
 
 - `--setting-sources` takes `""` (empty) to load nothing; there is no `none` keyword.
@@ -117,3 +154,5 @@ allowDangerouslySkipPermissions: false, maxTurns, maxBudgetUsd: 0.05, model: "ha
   `settingSources: []`; driver must `session/set_mode default` after every session creation.
 - Default model exceeds a $0.05 budget; budget errors come back with exit 0 and no `result`.
 - On Windows the CLI's shell tool is `PowerShell`; hook matchers must not assume `Bash`.
+- Per-run hooks via `_meta.claudeCode.options.settings` work on ACP; the hook payload `tool_name` is `Bash`.
+- `strictMcpConfig` effect is unproven (control showed no MCP tools either); user hooks on ACP are unobservable.

@@ -10,7 +10,7 @@ Nothing exported yet.
 ## Probes (`__tests__/probes/`)
 
 Live checks against the real harness on the user's subscription (auth under settings isolation, hooks
-firing/blocking inside `-p`, the ACP adapter). Skipped unless `FORGE_PROBES=1`; run with `pnpm probes`.
+firing/blocking inside `-p`, the ACP adapter, MCP and hook isolation on ACP). Skipped unless `FORGE_PROBES=1`; run with `pnpm probes`.
 Results and surprises: `__tests__/probes/RESULTS.md`. Artefacts go to the gitignored `.forge/data/probes/`.
 
 ## Pinned dependencies

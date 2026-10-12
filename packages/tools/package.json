@@ -2,5 +2,29 @@
   "name": "@forge/tools",
   "private": true,
   "version": "0.0.0",
-  "type": "module"
+  "type": "module",
+  "imports": {
+    "#/*": {
+      "development": "./src/*",
+      "default": "./dist/*"
+    },
+    "#tests/*": "./__tests__/*"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@forge/core": "workspace:*",
+    "yaml": "2.9.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5"
+  }
 }

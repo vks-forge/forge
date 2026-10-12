@@ -7,11 +7,17 @@
  *   change is a new migration, and the runner enforces this with checksums.
  *
  * Exports: MIGRATIONS.
- * Depends on: migrations/0001-state-tables, migrations/0002-verification-tables. No IO.
+ * Depends on: migrations/0001-state-tables, migrations/0002-verification-tables,
+ *   migrations/0003-receipt-chain. No IO.
  */
 
 import { MIGRATION_0001 } from '#/migrations/0001-state-tables.js';
 import { MIGRATION_0002 } from '#/migrations/0002-verification-tables.js';
+import { MIGRATION_0003 } from '#/migrations/0003-receipt-chain.js';
 import type { Migration } from '#/types/migrations.types.js';
 
-export const MIGRATIONS: readonly Migration[] = [MIGRATION_0001, MIGRATION_0002];
+export const MIGRATIONS: readonly Migration[] = [
+  MIGRATION_0001,
+  MIGRATION_0002,
+  MIGRATION_0003,
+];

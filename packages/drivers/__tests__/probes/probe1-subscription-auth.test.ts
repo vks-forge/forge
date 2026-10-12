@@ -85,5 +85,6 @@ describe('probe 1: subscription auth with settings isolation (d-0031)', () => {
       expect(res.stdout).toMatch(/strictly ANTHROPIC_API_KEY/);
       expect(res.stdout).toMatch(/OAuth and\s+keychain are never read/);
     },
+    30_000,
   );
 });

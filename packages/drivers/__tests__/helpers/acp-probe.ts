@@ -34,7 +34,10 @@ export interface AcpHarness {
 }
 
 /** `_meta.claudeCode.options` as d-0035 specifies, plus the cheap probe model. */
-export function claudeOptionsMeta(maxTurns: number): Record<string, unknown> {
+export function claudeOptionsMeta(
+  maxTurns: number,
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     claudeCode: {
       options: {
@@ -44,6 +47,7 @@ export function claudeOptionsMeta(maxTurns: number): Record<string, unknown> {
         maxTurns,
         maxBudgetUsd: 0.05,
         model: PROBE_MODEL,
+        ...overrides,
       },
     },
   };
@@ -102,6 +106,8 @@ export interface TurnOutcome {
   stopReason: string;
   /** `sessionUpdate` discriminants seen during the turn, in order. */
   updateKinds: string[];
+  /** Raw `session/update` payloads of the turn, in order (for tool_call inspection). */
+  updates: Record<string, unknown>[];
 }
 
 /** Sends one prompt and collects agent text until the turn stops. */
@@ -112,13 +118,15 @@ export async function promptTurn(
   const pending = session.prompt(text);
   let out = '';
   const updateKinds: string[] = [];
+  const updates: Record<string, unknown>[] = [];
   for (;;) {
     const msg = await session.nextUpdate();
     if (msg.kind === 'stop') {
       await pending;
-      return { text: out, stopReason: msg.stopReason, updateKinds };
+      return { text: out, stopReason: msg.stopReason, updateKinds, updates };
     }
     updateKinds.push(msg.update.sessionUpdate);
+    updates.push(msg.update as unknown as Record<string, unknown>);
     if (msg.update.sessionUpdate === 'agent_message_chunk') {
       const c = msg.update.content;
       if (c.type === 'text') out += c.text;

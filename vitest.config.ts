@@ -20,11 +20,16 @@ export default defineConfig({
     exclude: ['**/node_modules/**', '**/dist/**'],
     coverage: {
       provider: 'v8',
-      include: ['packages/core/src/**/*.ts', 'packages/db/src/**/*.ts'],
+      include: [
+        'packages/core/src/**/*.ts',
+        'packages/db/src/**/*.ts',
+        'packages/tools/src/**/*.ts',
+      ],
       exclude: ['**/__tests__/**', '**/index.ts'],
       thresholds: {
         'packages/core/src/**': { lines: 70 },
         'packages/db/src/**': { lines: 70 },
+        'packages/tools/src/**': { lines: 80 },
       },
     },
   },

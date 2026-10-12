@@ -58,7 +58,51 @@ describe('runMigrations', () => {
     runMigrations(driver, MIGRATIONS.slice(0, 1));
     const applied = runMigrations(driver);
     driver.close();
-    expect(applied).toEqual([2]);
+    expect(applied).toEqual([2, 3]);
+  });
+
+  describe('0003 receipt chain columns', () => {
+    const columns = (
+      driver: ReturnType<typeof openSqliteDriver>,
+      table: string,
+    ): string[] =>
+      driver.all<{ name: string }>(`PRAGMA table_info(${table})`).map((r) => r.name);
+
+    const expectChainColumns = (driver: ReturnType<typeof openSqliteDriver>): void => {
+      expect(columns(driver, 'tool_decisions')).toEqual(
+        expect.arrayContaining(['reason', 'parent_call_id']),
+      );
+      expect(columns(driver, 'tool_effects')).toEqual(
+        expect.arrayContaining(['run_id', 'chain_seq']),
+      );
+      expect(columns(driver, 'runs')).toContain('final_chain_hash');
+      const indexes = driver
+        .all<{ name: string }>('PRAGMA index_list(tool_effects)')
+        .map((r) => r.name);
+      expect(indexes).toContain('idx_tool_effects_run_chain');
+    };
+
+    it('exists after migrating a fresh database', () => {
+      const driver = openSqliteDriver(':memory:');
+      runMigrations(driver);
+      expectChainColumns(driver);
+      driver.close();
+    });
+
+    it('exists after upgrading a database that already has 0001 and 0002, keeping old rows', () => {
+      const driver = openSqliteDriver(':memory:');
+      runMigrations(driver, MIGRATIONS.slice(0, 2));
+      driver.run(
+        `INSERT INTO tool_effects (decision_id, state, ts, hash) VALUES ('d1', 'read_completed', '2026-01-01T00:00:00.000Z', 'h')`,
+      );
+      runMigrations(driver);
+      expectChainColumns(driver);
+      const row = driver.all<{ run_id: string; chain_seq: number }>(
+        "SELECT run_id, chain_seq FROM tool_effects WHERE decision_id = 'd1'",
+      );
+      driver.close();
+      expect(row).toEqual([{ run_id: '', chain_seq: 0 }]);
+    });
   });
 
   it('rejects a migration edited after it was applied', () => {

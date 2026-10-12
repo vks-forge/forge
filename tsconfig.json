@@ -6,6 +6,8 @@
     { "path": "./packages/db" },
     { "path": "./packages/db/tsconfig.test.json" },
     { "path": "./packages/drivers" },
-    { "path": "./packages/drivers/tsconfig.test.json" }
+    { "path": "./packages/drivers/tsconfig.test.json" },
+    { "path": "./packages/tools" },
+    { "path": "./packages/tools/tsconfig.test.json" }
   ]
 }
