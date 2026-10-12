@@ -69,7 +69,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 
 ## Pending proposals (need user approve / reject)
 
-- none
+- x-0010 — project slug `forge`, ticket prefix `FG`, memory dir `.factory/memory/forge/` (`proposed/x-0010-project-slug-forge-prefix-fg.md`)
 
 ## Outcomes
 

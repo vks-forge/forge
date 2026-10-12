@@ -9,9 +9,9 @@ receipts, a PR merged by the factory bot, and an `outcomes/` record.
 
 | # | Item | Owner | Status |
 |---|---|---|---|
-| P1 | Private GitHub remote URL (d-0021) | user | pending |
-| P2 | `git init`, first commit of docs + memory, `.gitignore` with `.worktrees/`, `.factory/data/`, `.factory/memory/*/.index/` | orchestrator, after P1 and "go" | pending |
-| P3 | Fine-grained GitHub token for the factory bot, repo-scoped, stored via DPAPI, read only by the dispatcher | user creates, orchestrator wires | pending |
+| P1 | Private GitHub remote `https://github.com/vks-forge/forge` (org `vks-forge`) (d-0021) | user | done 2026-10-13 |
+| P2 | `git init -b main`, first commit `56e0551` pushed, `.gitignore` with `.worktrees/`, `.factory/data/`, `.factory/memory/*/.index/`, `research/raw/`, `.hyperresearch/` | orchestrator | done 2026-10-13 |
+| P3 | GitHub App `forge-software-factory-bot` (App ID 5290233, Installation 170713738; Contents/PRs/Checks/Statuses RW, Metadata R) installed on the repo; private key at `.factory/data/secrets/github-app.pem` (ignored). Dispatcher mints installation tokens; DPAPI wrap of the key in slice 2. Rulesets unenforced on free org → dispatcher merge policy is the control. | user created, orchestrator wires | key saved; wiring pending |
 | P4 | Claude Code ≥ 2.1.295 logged in on subscription (have 2.1.296) | done | ok |
 | P5 | Node 24, pnpm 12 | done | ok |
 

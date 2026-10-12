@@ -50,6 +50,13 @@ working preferences. Everything about *this project* lives here.
   now: run only when the user asks, log it in `JANITOR.md`, propose changes
   as a diff, do not apply them silently.
 
+## Code rules
+
+`.claude/rules/code.md` is binding for all source under `apps/` and
+`packages/`: layers point inward, one interface many adapters, harness-neutral
+core, zod schemas as source of truth, one door per policy path, contract tests
+per interface, gates green before merge. Builder subagents read it first.
+
 ## Research base
 
 This repo has a hyperresearch vault under `research/`. Do not load its docs by default. When doing research, searching `research/notes`, running or resuming a hyperresearch run, or citing vault notes, invoke the skill `hyperresearch-vault` first (it holds the CLI path, run/verify commands, vault search, scholar APIs, OA rules, untrusted-content policy, and the curation checklist). `/hyperresearch <query>` still starts the full pipeline.
