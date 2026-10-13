@@ -5,7 +5,7 @@
  *   same resolution as the build, so a green run means the whole workspace is green. It
  *   also enforces per-package line-coverage floors (70% for core and db, the state
  *   machine and storage the Director's correctness rests on; 80% for tools, mcp, hooks,
- *   drivers and apps/mcp, the policy and adapter code) so they cannot quietly lose test
+ *   drivers, engine, git, memory and apps/mcp, the policy and adapter code) so they cannot quietly lose test
  *   coverage. Live harness probes in packages/drivers/__tests__/probes skip themselves
  *   unless FORGE_PROBES=1, so they never count toward or against these floors.
  *
@@ -29,6 +29,9 @@ export default defineConfig({
         'packages/hooks/src/**/*.ts',
         'packages/mcp/src/**/*.ts',
         'packages/drivers/src/**/*.ts',
+        'packages/engine/src/**/*.ts',
+        'packages/git/src/**/*.ts',
+        'packages/memory/src/**/*.ts',
         'apps/mcp/src/**/*.ts',
       ],
       exclude: ['**/__tests__/**', '**/index.ts', 'apps/*/src/main.ts'],
@@ -39,6 +42,9 @@ export default defineConfig({
         'packages/mcp/src/**': { lines: 80 },
         'packages/hooks/src/**': { lines: 80 },
         'packages/drivers/src/**': { lines: 80 },
+        'packages/engine/src/**': { lines: 80 },
+        'packages/git/src/**': { lines: 80 },
+        'packages/memory/src/**': { lines: 80 },
         'apps/mcp/src/**': { lines: 80 },
       },
     },

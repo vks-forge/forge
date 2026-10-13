@@ -8,6 +8,8 @@
  * is written. A first mapping must stand: a late duplicate may not re-point an event at a
  * different ticket (director-core.md §7).
  *
+ * `get` is how the engine reads the requester's hint, type and title back after a restart.
+ *
  * Exports: describeIntakeEventsContract().
  * Depends on: vitest, helpers/fixtures. IO only through the adapter under test.
  */
@@ -76,6 +78,17 @@ export function describeIntakeEventsContract(getDb: () => StorageAdapter): void 
       expect(await tx((t) => t.intakeEvents.markTicket(999, makeTicket(1).id))).toBe(
         false,
       );
+    });
+
+    it('get returns the stored event by id, including its ticket mapping, and null when unknown', async () => {
+      const { event } = await tx((t) => t.intakeEvents.insertIfNew(makeIntake('k1')));
+      expect(await tx((t) => t.intakeEvents.get(event.id))).toEqual(event);
+      await tx((t) => t.intakeEvents.markTicket(event.id, makeTicket(1).id));
+      expect(await tx((t) => t.intakeEvents.get(event.id))).toEqual({
+        ...event,
+        ticket_id: makeTicket(1).id,
+      });
+      expect(await tx((t) => t.intakeEvents.get(999))).toBeNull();
     });
 
     it('rolls back an insert with the transaction without consuming a stored event', async () => {

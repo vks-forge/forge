@@ -222,6 +222,8 @@ const eventArb: fc.Arbitrary<TicketEvent> = fc.oneof(
     { type: 'unblocked', at: T1 },
     { type: 'asked', at: T1 },
     { type: 'answered', at: T1 },
+    { type: 'parked', at: T1, reason: 'p' },
+    { type: 'unparked', at: T1 },
     { type: 'done', at: T1, signer: 's' },
     { type: 'rework', at: T1 },
   ),

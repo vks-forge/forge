@@ -5,10 +5,11 @@ statement: Per ticket, use a git worktree when the change touches 4+ files, runs
 source: { type: chat, ref: 2026-10-12 user message "working in gitree if work is big else directly work as a simple feature branch" }
 author: user
 origin: owner
-status: active
+status: superseded
 valid_from: 2026-10-12
+valid_to: 2026-10-13
 supersedes: null
-superseded_by: null
+superseded_by: d-0059
 tags: [git, worktree, execution-plane]
 pinned: true
 ---

@@ -106,5 +106,9 @@ export function memoryIntakeEvents(state: MemoryState): IntakeEventRepository {
       stored.ticket_id = ticketId;
       return true;
     },
+    async get(id) {
+      const stored = [...state.intake.values()].find((e) => e.id === id);
+      return stored ? structuredClone(stored) : null;
+    },
   };
 }

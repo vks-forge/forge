@@ -59,6 +59,8 @@ export const CliResultLine = z
     subtype: z.string().optional(),
     is_error: z.boolean().optional(),
     result: z.string().optional(),
+    /** Present with `--json-schema`: the model's answer, already parsed (Director steps). */
+    structured_output: z.unknown().optional(),
     errors: z.array(z.string()).optional(),
     session_id: z.string().optional(),
     total_cost_usd: z.number().optional(),

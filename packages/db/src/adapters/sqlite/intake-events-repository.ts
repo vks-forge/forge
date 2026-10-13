@@ -62,5 +62,10 @@ export function createIntakeEventRepository(driver: SqlDriver): IntakeEventRepos
       );
       return res.changes === 1;
     },
+
+    async get(id) {
+      const row = driver.get('SELECT * FROM intake_events WHERE id = ?', [id]);
+      return row ? toStored(row) : null;
+    },
   };
 }

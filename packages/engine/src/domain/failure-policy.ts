@@ -1,0 +1,59 @@
+/**
+ * Run-failure policy: retry with backoff, or hand the ticket to a human.
+ *
+ * Why: a Worker run ends badly all the time (a silent hang, a 429, a crash, a revoked
+ *   login). A retry fixes some of those and wastes budget on others: retrying an auth
+ *   failure, a refusal or a policy denial changes nothing, and retrying a crash forever is
+ *   the re-wake-loop failure this engine exists to avoid (execution-plane.md §8). The table
+ *   is keyed by error family, with attempt caps from config that turn "retry" into "park".
+ *
+ * Exports: decideFailure().
+ * Depends on: types/failure-policy, @forge/core (ErrorFamily). No IO.
+ */
+
+import type { ErrorFamily } from '@forge/core';
+import type { FailureDecision, FailureInput } from '#/types/failure-policy.types.js';
+
+const NEVER_RETRY: readonly ErrorFamily[] = [
+  'auth',
+  'policy_denied',
+  'refusal',
+  'budget',
+  'invalid_input',
+];
+
+const park = (reason: string): FailureDecision => ({ action: 'park', reason });
+
+/** Chooses retry (with the earliest start, epoch ms) or park (with a human-readable reason). */
+export function decideFailure(input: FailureInput): FailureDecision {
+  const { status, attempts, now, policy } = input;
+  if (status === 'max_turns')
+    return park('max_turns: the run used all its turns without finishing');
+  if (status === 'refused') return park('refused: the model declined the task');
+  if (status === 'cancelled') return park('cancelled: the run was stopped unexpectedly');
+  const family: ErrorFamily =
+    input.family ?? (status === 'timeout' ? 'stall' : 'unknown');
+  if (NEVER_RETRY.includes(family)) {
+    return park(`${family}: not retried automatically; needs a human`);
+  }
+  if (family === 'rate_limit') {
+    const cfg = policy.rate_limit;
+    if (attempts > cfg.max_attempts) {
+      return park(`rate_limit: ${attempts - 1} retries used (max ${cfg.max_attempts})`);
+    }
+    const reset =
+      input.retryNotBefore === undefined ? NaN : Date.parse(input.retryNotBefore);
+    const backoff = Math.min(cfg.base_ms * 2 ** (attempts - 1), cfg.max_ms);
+    return { action: 'retry', notBefore: reset > now ? reset : now + backoff, family };
+  }
+  const cfg =
+    family === 'crash'
+      ? policy.crash
+      : family === 'stall'
+        ? policy.stall
+        : policy.unknown;
+  if (attempts > cfg.max_attempts) {
+    return park(`${family}: failed ${attempts} times (retry limit ${cfg.max_attempts})`);
+  }
+  return { action: 'retry', notBefore: now + cfg.delay_ms, family };
+}

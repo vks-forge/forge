@@ -29,6 +29,8 @@ export type TicketEvent =
   | (EventBase & { type: 'unblocked' })
   | (EventBase & { type: 'asked' })
   | (EventBase & { type: 'answered' })
+  | (EventBase & { type: 'parked'; reason: string })
+  | (EventBase & { type: 'unparked' })
   | (EventBase & { type: 'verifying' })
   | (EventBase & { type: 'gate_failed' })
   | (EventBase & { type: 'gate_passed'; tier_actual: Tier })

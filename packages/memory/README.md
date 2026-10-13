@@ -1,43 +1,48 @@
 # @forge/memory
 
-Reader and writer for the Director's per-project memory under `.forge/memory/`. Not implemented yet; this package has only a `package.json`.
+File-backed project memory for the Director. Today it provides a read-only `MemorySource`; the gated writer, index and janitor are still to come.
 
 ## Why it exists
 
-The Director plans every epic from scratch unless it remembers, per project, the decisions the user gave, the approaches already rejected and why, and what happened to past tickets. Workers are ephemeral and must not carry memory between tickets, so memory belongs to the Director. It also has to be safe against an agent writing something wrong once and reading it forever. This package is the code boundary for that memory: the single gated writer, the read paths that put a relevant slice into a Worker's context, and the checks that keep unapproved inferences out of the authoritative set. Design: `docs/design/memory-system.md`.
+The Director plans every epic from scratch unless it remembers, per project, the decisions the user gave, the approaches already rejected and why, and what happened to past tickets. Workers are ephemeral and must not carry memory between tickets, so memory belongs to the Director. It also has to be safe against an agent writing something wrong once and reading it forever. This package is the code boundary for that memory: the read path that puts the active constraints into triage and Worker prompts today, and in future the single gated writer and the checks that keep unapproved inferences out of the authoritative set. Without it the engine would either read markdown itself or plan against superseded decisions. Design: `docs/design/memory-system.md`.
 
 ## What it does
 
-Intended role, from the design (none of it exists yet):
+Public API (from `src/index.ts`):
 
-- Reads the markdown record folders: `decisions/` (`status: active` are constraints), `rejected/`, `proposed/` (pending, never loaded as constraints), `outcomes/YYYY-MM/` (append-only), with `MEMORY.md` as a pointer index of at most 200 lines.
-- Validates records against the schema (ids sequential per folder, `author`, `origin`, `source`, `status`, `supersedes`) and writes them as the Director only: user statements become `decisions/`, user rejections `rejected/`, inferences `proposed/` with `confidence <= 0.8`.
-- Rebuilds a SQLite index from the files at any time; the index is a cache, markdown is truth.
-- Selects a memory slice for intake and for Worker dispatch.
-- Supports a propose-only janitor (dedupe, contradiction flags, index rebuild) that outputs a diff and never applies changes silently.
+- `createFileMemorySource(rootDir, deps?)` returns a `MemorySource` (port from `@forge/core`). `slice(projectSlug)` reads `<rootDir>/<slug>/decisions/*.md` and `<rootDir>/<slug>/rejected/*.md` and returns `{ decisions, rejected }` as `{ id, statement }` lists sorted by id.
+- Decisions count only with `status: active`. Rejected records count with `status` absent, `active` or `rejected`. Superseded records are dropped.
+- `proposed/`, `outcomes/` and `MEMORY.md` are never read, so unapproved inferences cannot become constraints.
+- Fails closed: a file with no front matter, bad YAML, a bad id or an empty statement is skipped and reported through the optional `deps.onSkip(path, reason)`; nothing throws.
+- An unknown project, a missing folder, or a slug that is not `[a-z][a-z0-9-]*` (path traversal guard) gives an empty slice; a bad slug is also reported through `onSkip`.
+- `MemoryRecordFrontMatter`: the zod schema for the minimum header (`id` like `d-0001`, non-empty `statement`, optional `status`; other fields pass through).
 
-Public API: none yet.
+Front matter is the YAML block between `---` fences; BOM and CRLF are tolerated and the markdown body is ignored.
 
 ## Why this approach
 
 - Git-backed markdown per project, SQLite as a rebuildable index, one gated writer, Workers read-only, event-triggered propose-only janitor (d-0007). Git gives diff, blame, revert and human review for free, which is the approval workflow memory writes need.
 - Rejected: vector and graph memory frameworks such as mem0, Zep, LangMem (r-0001); an always-on memory janitor agent (r-0002); a long-lived LLM session as the orchestrator (r-0003).
 - Records are never edited or deleted; a change is a new record with `supersedes`. Provenance (`author`, `origin`) guards against taint.
-- Dependencies: none yet.
+- `yaml` parses the front matter: the records use flow mappings (`source: { type: chat, ref: ... }`) and lists, which a hand-rolled parser would get wrong. If strict YAML fails (hand-written statements often hold an unquoted colon or backtick), a line-based pass recovers only `id`, `statement` and `status`, and still refuses files whose values start with structured YAML.
+- `zod` validates each header at the file boundary (code rules 4); only `id`, `statement` and `status` are enforced so the future writer can add fields freely.
+- Only `node:fs/promises` and `node:path` for IO, confined to `adapters/`; parsing in `domain/` is pure.
 
 ## Requirements
 
-- No TypeScript exists yet, so there is no `tsconfig.json` and the root `tsconfig.json` has no reference to this package. The first source file must add `tsconfig.json` and `tsconfig.test.json` (copy `packages/tools`) and add both to the root `references`; the root `vitest.config.ts` coverage include and threshold need an entry too.
-- Node 24.20 and pnpm. Nothing is required today: no source, no tests, no env vars.
-- Intended files: `.forge/memory/` (the factory repo today; per-project `.forge/memory/<slug>/` as its own git repo is planned, with the project slug `forge` per x-0010). Runtime index directories under it are gitignored.
-- Build and test follow the root scripts once source exists.
+- Node 24.20 and pnpm. Runtime dependencies: `@forge/core`, `yaml` 2.9.1, `zod` 4.6.7.
+- Files: `<rootDir>/<slug>/{decisions,rejected}/*.md`. The caller chooses `rootDir` (an app composition root; this package never reads env).
+- No env vars, no native binaries, no external services.
+- Tests: `pnpm vitest run packages/memory`. One test reads the real `.forge/memory` of this repo to pin that every record parses.
 
 ## Extending
 
-Follow the standard package skeleton (`src/index.ts`, `schemas/`, `types/`, `domain/`, `adapters/`, `__tests__/` mirroring `src/`). Record types come from zod schemas. A new storage or index backend would be a new folder under `adapters/` behind one interface with a contract test.
+Follow the standard package skeleton (`src/index.ts`, `schemas/`, `types/`, `domain/`, `adapters/`, `__tests__/` mirroring `src/`). A different store (for example the SQLite index) is a new folder under `adapters/` returning a `MemorySource`. The gated writer, once built, belongs here as its own module behind a port in `@forge/core`; it must write only `decisions/`, `rejected/` and `proposed/` records per `memory-system.md`.
 
 ## Limits
 
-- Not implemented yet: no source, no API, no tests, no index, no janitor.
-- Memory is currently maintained by hand under `.forge/memory/` following `CLAUDE.md`.
-- `none yet` for dependencies, env vars and configuration.
+- Read-only: no writer, no SQLite index, no janitor, no `MEMORY.md` handling. Memory is still maintained by hand following `CLAUDE.md`.
+- Does not read `proposed/` or `outcomes/`, and does not follow `supersedes` links; it trusts each record `status`.
+- Transitional layout: the factory repo keeps its own memory flat at `.forge/memory/decisions`. When `<rootDir>/<slug>/` does not exist but `<rootDir>/decisions/` does, that flat folder is used for any slug. Remove the fallback when memory moves to per-project folders (x-0010).
+- Lenient parsing recovers only `id`, `statement` and `status`, single-line; multi-line statements need valid YAML.
+- Files are read on every `slice()` call; there is no cache.

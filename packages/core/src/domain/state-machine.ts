@@ -67,6 +67,19 @@ function decide(t: Ticket, e: TicketEvent): Result<TicketDelta, TransitionError>
       return from === 'waiting_human'
         ? ok({ status: 'in_progress' })
         : err(illegal(t, e));
+    case 'parked': {
+      // A hold with no Worker question behind it (lane not enabled, retry caps). The reason
+      // is the only thing the human sees, so a blank one is refused.
+      const reason = e.reason.trim();
+      if ((from !== 'planned' && from !== 'in_progress') || reason === '') {
+        return err(illegal(t, e));
+      }
+      return ok({ status: 'waiting_human', blocked_reason: reason });
+    }
+    case 'unparked':
+      // Not `answered`: that resumes a Worker run (in_progress); a parked ticket may never
+      // have run, so release goes back to planned and dispatch starts from there.
+      return from === 'waiting_human' ? ok({ status: 'planned' }) : err(illegal(t, e));
     case 'verifying':
       // Every verify cycle needs its own gate_passed: drop the previous cycle's tier.
       return from === 'in_progress'

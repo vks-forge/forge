@@ -9,10 +9,16 @@
     { "path": "./packages/db/tsconfig.test.json" },
     { "path": "./packages/drivers" },
     { "path": "./packages/drivers/tsconfig.test.json" },
+    { "path": "./packages/engine" },
+    { "path": "./packages/engine/tsconfig.test.json" },
+    { "path": "./packages/git" },
+    { "path": "./packages/git/tsconfig.test.json" },
     { "path": "./packages/hooks" },
     { "path": "./packages/hooks/tsconfig.test.json" },
     { "path": "./packages/mcp" },
     { "path": "./packages/mcp/tsconfig.test.json" },
+    { "path": "./packages/memory" },
+    { "path": "./packages/memory/tsconfig.test.json" },
     { "path": "./packages/tools" },
     { "path": "./packages/tools/tsconfig.test.json" }
   ]

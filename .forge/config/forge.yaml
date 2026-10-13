@@ -1,0 +1,38 @@
+# Forge default config: model matrix (d-0060) and engine limits (director-core.md §2-§3).
+# Validated by ForgeConfig (packages/core/src/schemas/forge-config.ts) at load.
+
+models:
+  # Director LLM steps run on the logged-in harness subscription (d-0032).
+  director:
+    triage: opus
+    dispatch_prompt: opus
+    steer_reply: opus
+  # Workers: sonnet in every lane until changed in Settings.
+  worker:
+    express: sonnet
+    standard: sonnet
+    full: sonnet
+
+engine:
+  tick_interval_ms: 30000 # minimum 10000
+  global_slots: 3 # concurrent Workers on one machine (execution-plane.md §9)
+  max_concurrent_by_state:
+    in_progress: 3
+    verifying: 1
+  stall_ms: 300000 # no run event for this long = stalled (Symphony default)
+  rewake_cap: # recovery wakes per ticket (director-core.md §3)
+    max: 3
+    window_ms: 3600000
+  step_retries: 1 # an invalid step output is retried once with the validation error
+  step_budget_usd: 0.5 # per Director step call; replace after the measured dry run (d-0060)
+  confidence_threshold: 0.7 # below this triage confidence the lane moves one up
+  interaction_timeout_ms: 14400000 # 4 h, then Blocked (director-core.md §8)
+  run_budget: # placeholder caps until the measured dry run (d-0060)
+    max_turns: 40
+    max_usd: 5
+    turn_ms: 600000
+  retry:
+    rate_limit: { base_ms: 60000, max_ms: 3600000, max_attempts: 5 }
+    crash: { delay_ms: 10000, max_attempts: 1 }
+    stall: { delay_ms: 10000, max_attempts: 2 }
+    unknown: { delay_ms: 30000, max_attempts: 1 }

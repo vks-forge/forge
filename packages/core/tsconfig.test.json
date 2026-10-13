@@ -4,7 +4,7 @@
     "rootDir": ".",
     "outDir": "dist/test",
     "tsBuildInfoFile": "dist/.tsbuildinfo.test",
-    "types": []
+    "types": ["node"]
   },
   "include": ["__tests__"],
   "references": [{ "path": "./tsconfig.json" }]

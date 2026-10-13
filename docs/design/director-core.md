@@ -100,6 +100,9 @@ stateDiagram-v2
   Blocked --> Planned: blockers_resolved wake
   InProgress --> WaitingHuman: asked (question / permission)
   WaitingHuman --> InProgress: answered (response_wake)
+  Planned --> WaitingHuman: parked (reason, no Worker question)
+  InProgress --> WaitingHuman: parked (reason, e.g. retry cap)
+  WaitingHuman --> Planned: unparked (human releases a parked ticket)
   WaitingHuman --> Blocked: blocked (timeout)
   InProgress --> Verifying: run settled with PR
   Verifying --> InProgress: gate_failed (rework, retry_of set)
@@ -124,7 +127,7 @@ stateDiagram-v2
 As implemented (`packages/core/src/domain/state-machine.ts`): `cancelled` is accepted
 from every non-terminal status (inbox, planned, in_progress, blocked, waiting_human,
 verifying, review, needs_signoff); `done` and `cancelled` are terminal and reject all
-events. `asked` and `answered` are the events behind the WaitingHuman edges. A
+events. `asked` and `answered` are the events behind the WaitingHuman edges of a Worker question. `parked` (non-blank reason, sets `blocked_reason`) holds a `planned` or `in_progress` ticket for a human when no question exists (lane not enabled, retry caps), without inventing a dispatch or a question; `unparked` releases it back to `planned`, not `answered`, because a parked ticket may never have run. A
 `gate_failed` beyond `MAX_AUTO_REWORKS` (2) parks the ticket in WaitingHuman with a
 `blocked_reason` instead of looping. Tier A stays in Verifying after `gate_passed` until
 the `merged` event.

@@ -9,7 +9,9 @@ Short, enforced, long-term. Every PR is checked against these. Design docs
 apps/*         composition only: wire config → adapters → engine. No logic.
                The only place that opens a DB, spawns a server or reads env.
 packages/      adapters: db, drivers, hooks, mcp, gates, memory.
-               Import core and tools only, never each other.
+               Import core and tools only, never each other or engine.
+packages/engine inner orchestration ring: tick, dispatch, settle, DirectorLLM
+               steps over ports. No IO; imports core and tools only (d-0058).
 packages/tools inner policy ring: admit(), floors, grants, receipts, tokenizer.
                Pure (IO only in its own adapters/), imports core only.
 packages/core  pure: types, ports, schemas, state machine. No IO, no imports
@@ -17,7 +19,7 @@ packages/core  pure: types, ports, schemas, state machine. No IO, no imports
 ```
 
 A dependency from `core` to anything else, from `tools` to anything but
-`core`, or between two adapter packages, is a build error (eslint
+`core`, from `engine` to anything but `core`/`tools`, or between two adapter packages, is a build error (eslint
 `no-restricted-imports` for static imports + `forge/no-dynamic-cross-package`
 for `import()` / `require`). A process that runs on its own
 (MCP stdio server, CLI) gets its entry in `apps/<name>/src/main.ts`, which

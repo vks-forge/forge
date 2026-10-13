@@ -2,7 +2,7 @@
 
 Run with `pnpm probes` (sets `FORGE_PROBES=1`). Host: Windows 11, Node 24.20, subscription auth,
 `@agentclientprotocol/claude-agent-acp@0.89.1`, `@agentclientprotocol/sdk@1.8.0`.
-All 15 probe tests passed in the 2026-10-13 run (after the two assertion updates noted under probes 1 and 5). Every child run strips `CLAUDECODE` and
+All 16 probe tests passed in the 2026-10-13 runs (probes 1-7; after the two assertion updates noted under probes 1 and 5). Every child run strips `CLAUDECODE` and
 `CLAUDE_CODE_ENTRYPOINT` from its env.
 
 **Which Claude Code binary each probe measured (d-0053).**
@@ -179,6 +179,19 @@ The host had several user-level MCP servers and one repo-level server configured
 - Still open: that PreToolUse fires for `mcp__forge__*` tools under ACP and the `name` the adapter reports for them
   (re-run probe 4 with the forge MCP server as a positive control); whether project `permissions.allow` is applied
   adapter-side before `session/request_permission`; the real ACP wording for budget and turn-cap errors.
+
+## Probe 7: Claude DirectorLLM on the real CLI - PASS
+
+`probe7-director-llm.test.ts` (gated `FORGE_PROBES=1`, haiku, `--max-budget-usd 0.05`, trivial schema `{answer: 'ok'}`),
+run 2026-10-13 on host 2.1.296:
+
+- All eight flags work together live: `--json-schema`, `--tools ""`, `--setting-sources ""`,
+  `--no-session-persistence`, `--permission-prompts none`, `--max-budget-usd`, `--model`, `--output-format json`.
+- `--output-format json` prints **one** `result` object (not an array): `type: result`, `subtype: success`,
+  `is_error: false`, `terminal_reason: completed`, `num_turns: 2`.
+- `structured_output` **is populated** with the schema-shaped value (`{"answer":"ok"}`); `result` carries the same
+  value as a JSON string. The adapter returned `{ ok: true, value: { answer: 'ok' } }`.
+- Cost field is `total_cost_usd` (0.0126 USD for one trivial step on haiku); a schema step takes 2 turns.
 
 ## Differences from the design docs
 

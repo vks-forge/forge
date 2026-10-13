@@ -17,7 +17,6 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0008 — Skills (`SKILL.md`) and agent specs (YAML) are files in git; DB is registry only
 - d-0009 — Stack: TS pnpm monorepo, SQLite WAL, Bifrost gateway, Phoenix traces, assistant-ui threads
 - d-0010 — Control room built in React, lifting from Paperclip (MIT); no embedded tracker
-- d-0011 — Branching: worktree when 4+ files / parallel / schema-auth / long-running; else feature branch
 - d-0012 — Workers never push or hold git creds; dispatcher pushes; factory bot merges by policy
 - d-0013 — This repo uses `.forge/memory/` for project memory, not Claude's auto-memory
 - d-0015 — Major work (Director decides major vs simple) goes through red-green TDD; G1 verifies red→green from receipts
@@ -38,6 +37,9 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0060 — M0 models: Director steps opus, Workers sonnet (all lanes); matrix in `.forge/config` yaml
+- d-0059 — Always a worktree per Worker run (`.worktrees/<id>`), main checkout never a Worker cwd (supersedes d-0011)
+- d-0058 — `@forge/engine`: tick/dispatch/settle/DirectorLLM steps over ports, inner ring beside tools (imports core+tools only); apps/server composes (amends rule 1)
 - d-0057 — Measured: hook tool_use_id == ACP toolCallId; budget exit 0 or 1 (classify by subtype); project-source defaultMode filtered, set_mode still required (author=director, measured)
 - d-0056 — Claude hook client + settings renderers move to `drivers/claude/hooks`; `@forge/hooks` keeps neutral receipt ingress
 - d-0055 — One ticket id `<PROJECT>-<n>` is the primary key, no UUID; rest of d-0021 carries over (supersedes d-0021)
@@ -55,6 +57,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 
 ## Superseded
 
+- d-0011 — worktree only for big/parallel tickets → superseded by d-0059 (always worktree, 2026-10-13)
 - d-0048 — Measured Claude harness facts → superseded by d-0053 (version attribution corrected, 2026-10-13)
 - d-0021 — git/PR/branches/ids incl. internal UUID → superseded by d-0055 (no UUID, 2026-10-13)
 - d-0023 — StorageAdapter with Drizzle → superseded by d-0047 (raw SQL, 2026-10-13)

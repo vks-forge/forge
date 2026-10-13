@@ -151,6 +151,8 @@ export interface IntakeEventRepository {
   // Records which ticket the event became. false when the event is unknown or already
   // mapped (the first mapping stands).
   markTicket(id: number, ticketId: TicketId): Promise<boolean>;
+  // The stored event by id (what `tickets.created_by_intake` points at), or null.
+  get(id: number): Promise<StoredIntakeEvent | null>;
 }
 
 /** Persistence for blocking questions and approvals (director-core.md §8). */
