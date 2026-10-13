@@ -2,5 +2,22 @@
   "name": "@forge/cli",
   "private": true,
   "version": "0.0.0",
-  "type": "module"
+  "type": "module",
+  "imports": {
+    "#/*": {
+      "development": "./src/*",
+      "default": "./dist/*"
+    },
+    "#tests/*": "./__tests__/*"
+  },
+  "bin": {
+    "forge": "./dist/main.js"
+  },
+  "dependencies": {
+    "@forge/core": "workspace:*",
+    "@forge/secrets": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5"
+  }
 }

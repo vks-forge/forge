@@ -10,7 +10,7 @@
 
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
@@ -57,6 +57,8 @@ describeWorktreeContract('git cli', async (): Promise<WorktreeHarness> => {
       await mkdir(dirname(full), { recursive: true });
       await writeFile(full, content);
     },
+    remove: (wt, rel) => rm(join(wt, rel)),
+    rename: (wt, from, to) => rename(join(wt, from), join(wt, to)),
     authorOf: (wt, sha) => git(wt, 'log', '-1', '--format=%an', sha),
     close: async () => undefined,
   };

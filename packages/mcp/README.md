@@ -23,7 +23,7 @@ that the run is active (`isRunActive` from `@forge/core`: `starting` or `running
 `withDefaultNetwork(deps)` (fills in the production DNS resolver, address-pinned transport and `fetch`; only the composition root calls it),
 `verifyRunToken(storage, runId, token)`, `hashToken()` (re-exported from `@forge/tools`, as is the constant-time compare),
 `toolSchemaHash()`, `computeToolSchemaHashes()`, `DEV_CATALOGUE_KEY`, `FORGE_TOOLS`,
-`Claim`, and the dependency type `ForgeMcpDeps`.
+`Claim` (re-exported from `@forge/core`, where the schema now lives so the gates share it), and the dependency type `ForgeMcpDeps`.
 
 | Tool             | Risk      | What it stores or does                                                                                                                          |
 | ---------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |

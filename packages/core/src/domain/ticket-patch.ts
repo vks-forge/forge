@@ -40,5 +40,7 @@ export function toTicketPatch(next: Ticket): TicketPatch {
     checkout_run_id: rest.checkout_run_id,
     epic_id: rest.epic_id,
     created_by_intake: rest.created_by_intake,
+    pr_number: rest.pr_number,
+    pr_url: rest.pr_url,
   };
 }

@@ -5,7 +5,8 @@
  *   from it, commits the result and removes the tree, all through the port (d-0059). It
  *   must behave the same whether git or an in-memory fake is behind it: the tree lands
  *   under `.worktrees/<id>`, create is safe to repeat after a crash, changed-file lists
- *   cover committed, modified and untracked files but not ignored ones, commits carry the
+ *   cover committed, modified and untracked files but not ignored ones, the diff reports
+ *   added, modified, deleted and renamed files plus a readable patch for the gates, commits carry the
  *   Forge author, removal keeps the branch, and hostile refs are refused before git sees
  *   them. A new implementation passes this before it gets tests of its own.
  *
@@ -28,6 +29,10 @@ export interface WorktreeHarness {
   branchExists(branch: string): Promise<boolean>;
   /** Writes (or overwrites) a file relative to a worktree path. */
   write(worktreePath: string, relPath: string, content: string): Promise<void>;
+  /** Deletes a file relative to a worktree path. */
+  remove(worktreePath: string, relPath: string): Promise<void>;
+  /** Renames a file relative to a worktree path. */
+  rename(worktreePath: string, from: string, to: string): Promise<void>;
   /** Author name of a commit. */
   authorOf(worktreePath: string, sha: string): Promise<string>;
   close(): Promise<void>;
@@ -93,6 +98,42 @@ export function describeWorktreeContract(
       const files = await h.manager.changedFiles(wt.path, wt.baseSha);
 
       expect(files).toEqual(['README.md', 'committed.txt', 'src/new file.ts']);
+    });
+
+    it('diff reports added, modified, deleted and untracked files with a patch', async () => {
+      const wt = await h.manager.create(tid(1), 'feat/FRG-1-a', 'main');
+      await h.write(wt.path, 'committed.txt', 'c\n');
+      await h.manager.commitAll(wt.path, 'add committed');
+      await h.write(wt.path, 'README.md', 'changed\n');
+      await h.remove(wt.path, '.gitignore');
+      await h.write(wt.path, 'fresh.ts', 'export const x = 1;\n');
+
+      const d = await h.manager.diff(wt.path, wt.baseSha);
+
+      expect(d.files).toEqual([
+        { status: 'D', path: '.gitignore' },
+        { status: 'M', path: 'README.md' },
+        { status: 'A', path: 'committed.txt' },
+        { status: 'A', path: 'fresh.ts' },
+      ]);
+      expect(d.patch).toContain('+changed');
+      expect(d.patch).toContain('+export const x = 1;');
+    });
+
+    it('diff reports a committed rename with its old path', async () => {
+      const wt = await h.manager.create(tid(1), 'feat/FRG-1-a', 'main');
+      await h.rename(wt.path, 'README.md', 'docs.md');
+      await h.manager.commitAll(wt.path, 'rename');
+
+      const d = await h.manager.diff(wt.path, wt.baseSha);
+
+      expect(d.files).toEqual([{ status: 'R', path: 'docs.md', oldPath: 'README.md' }]);
+    });
+
+    it('diff is empty for a fresh worktree', async () => {
+      const wt = await h.manager.create(tid(1), 'feat/FRG-1-a', 'main');
+
+      expect(await h.manager.diff(wt.path, wt.baseSha)).toEqual({ files: [], patch: '' });
     });
 
     it('reports nothing for a fresh worktree', async () => {

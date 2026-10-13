@@ -50,6 +50,8 @@ describe('toTicketPatch', () => {
       'checkout_run_id',
       'epic_id',
       'created_by_intake',
+      'pr_number',
+      'pr_url',
     ]) {
       expect(k in patch, k).toBe(true);
       expect((patch as Record<string, unknown>)[k], k).toBeUndefined();

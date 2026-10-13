@@ -11,7 +11,7 @@
  */
 
 import { InvalidInputError } from '@forge/core';
-import type { Worktree, WorktreeManager } from '@forge/core';
+import type { Worktree, WorktreeDiffFile, WorktreeManager } from '@forge/core';
 import type { WorktreeHarness } from '#tests/contract/worktree.contract.js';
 
 interface FakeTree {
@@ -80,6 +80,36 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
       }
       return out.sort();
     },
+    async diff(path) {
+      const t = tree(path);
+      const files: WorktreeDiffFile[] = [];
+      const patch: string[] = [];
+      const added: [string, string][] = [];
+      const gone: string[] = [];
+      for (const [name, content] of t.files) {
+        if (ignored(name)) continue;
+        const was = BASE.get(name);
+        if (was === undefined) added.push([name, content]);
+        else if (was !== content) {
+          files.push({ status: 'M', path: name });
+          patch.push(`--- a/${name}\n+++ b/${name}\n+${content}`);
+        }
+      }
+      for (const name of BASE.keys()) if (!t.files.has(name)) gone.push(name);
+      for (const [name, content] of added) {
+        const from = gone.findIndex((g) => BASE.get(g) === content);
+        if (from >= 0) {
+          const [oldPath] = gone.splice(from, 1) as [string];
+          files.push({ status: 'R', path: name, oldPath });
+        } else {
+          files.push({ status: 'A', path: name });
+          patch.push(`+++ b/${name}\n+${content}`);
+        }
+      }
+      for (const name of gone) files.push({ status: 'D', path: name });
+      files.sort((a, b) => (a.path < b.path ? -1 : 1));
+      return { files, patch: patch.join('\n') };
+    },
     async commitAll(path) {
       const t = tree(path);
       const visible = new Map([...t.files].filter(([n]) => !ignored(n)));
@@ -103,6 +133,14 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
     branchExists: async (b) => branches.has(b),
     write: async (p, rel, content) => {
       tree(p).files.set(rel, content);
+    },
+    remove: async (p, rel) => {
+      tree(p).files.delete(rel);
+    },
+    rename: async (p, from, to) => {
+      const t = tree(p);
+      t.files.set(to, t.files.get(from) ?? '');
+      t.files.delete(from);
     },
     authorOf: async () => 'Forge',
     close: async () => undefined,

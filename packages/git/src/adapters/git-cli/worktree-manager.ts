@@ -11,16 +11,17 @@
  *
  * Exports: createGitWorktreeManager().
  * Depends on: node:fs, node:os, node:path, @forge/core, adapters/git-cli/{run-git,exclude},
- *   domain/{porcelain,ref-check}. IO: runs git, stats paths.
+ *   domain/{name-status,porcelain,ref-check}. IO: runs git, stats paths.
  */
 
 import { existsSync } from 'node:fs';
 import { devNull } from 'node:os';
 import { resolve } from 'node:path';
-import { InvalidInputError } from '@forge/core';
-import type { Worktree, WorktreeManager } from '@forge/core';
+import { CrashError, InvalidInputError } from '@forge/core';
+import type { Worktree, WorktreeDiffFile, WorktreeManager } from '@forge/core';
 import { ensureWorktreesExcluded } from '#/adapters/git-cli/exclude.js';
 import { createGitRunner } from '#/adapters/git-cli/run-git.js';
+import { parseNameStatus } from '#/domain/name-status.js';
 import { normalizePath, parseWorktreeList, samePath } from '#/domain/porcelain.js';
 import { assertSafeRefArg } from '#/domain/ref-check.js';
 import type { GitWorktreeManagerOptions } from '#/types/git-worktree.types.js';
@@ -101,6 +102,37 @@ export function createGitWorktreeManager(
         git.run(path, ['ls-files', '--others', '--exclude-standard', '-z']),
       ]);
       return [...new Set([...names(tracked), ...names(untracked)])].sort();
+    },
+
+    async diff(path, baseSha) {
+      assertSafeRefArg('baseSha', baseSha);
+      // Tracked changes (committed, staged and unstaged) against the base, renames detected.
+      const [status, tracked, untrackedOut] = await Promise.all([
+        git.run(path, ['diff', '--name-status', '-M', '-z', baseSha, '--']),
+        git.run(path, ['diff', '--no-color', '--no-ext-diff', '-M', baseSha, '--']),
+        git.run(path, ['ls-files', '--others', '--exclude-standard', '-z']),
+      ]);
+      const files: WorktreeDiffFile[] = parseNameStatus(status);
+      const patches = [tracked];
+      // Untracked files are in no index: show each as an added file without touching the tree.
+      for (const name of names(untrackedOut).sort()) {
+        files.push({ status: 'A', path: name });
+        // --no-index exits 1 when the files differ, which is the expected case here.
+        const r = await git.try(path, [
+          'diff',
+          '--no-index',
+          '--no-color',
+          '--no-ext-diff',
+          '--',
+          '/dev/null',
+          name,
+        ]);
+        if (r.code > 1)
+          throw new CrashError(`git diff failed for ${name}: ${r.stderr.trim()}`);
+        patches.push(r.stdout);
+      }
+      files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+      return { files, patch: patches.join('') };
     },
 
     async commitAll(path, message) {

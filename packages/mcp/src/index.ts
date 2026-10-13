@@ -9,7 +9,7 @@
  * Exports: createForgeMcpServer, SERVER_NAME, FORGE_TOOLS, serveStdio, withDefaultNetwork, hashToken,
  *   verifyRunToken, toolSchemaHash, computeToolSchemaHashes, DEV_CATALOGUE_KEY, Claim,
  *   and the dependency types.
- * Depends on: every module under src/. No IO on import.
+ * Depends on: every module under src/, @forge/core (Claim re-export). No IO on import.
  */
 
 export * from '#/adapters/default-network.js';
@@ -19,7 +19,7 @@ export * from '#/domain/run-tokens.js';
 export * from '#/domain/schema-hash.js';
 export * from '#/domain/server.js';
 export * from '#/domain/tools/all-tools.js';
-export * from '#/schemas/claims.js';
+export { Claim } from '@forge/core';
 export type * from '#/types/deps.types.js';
 export type * from '#/types/ssrf.types.js';
 export type * from '#/types/tool-spec.types.js';

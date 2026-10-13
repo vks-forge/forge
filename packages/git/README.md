@@ -1,6 +1,6 @@
 # @forge/git
 
-Git worktrees for tickets: the `WorktreeManager` adapter that shells out to the `git` binary.
+Git for tickets: the `WorktreeManager` adapter that shells out to the `git` binary, and the `GitHost` adapters (local bare repo, GitHub App) that push branches and open, check, merge and close PRs.
 
 ## Why it exists
 
@@ -12,6 +12,11 @@ base commit before dispatch, the truth about which files the Worker really chang
 claim), a Forge-authored commit to open the PR from, and removal of the tree when the ticket
 is Done or Cancelled. Without this package the engine would either work in the main checkout
 or embed git calls in its core, breaking the port boundary (execution-plane.md §8).
+
+Finished work then has to leave the worktree. Workers never push (d-0012), so the server pushes the
+branch, opens a PR, lets the gates judge it and merges it. Where that remote lives differs (a bare repo
+on disk for offline runs and the end-to-end fixture, GitHub through an App installation), and the
+credential must never reach a Worker, argv or a log. The `GitHost` adapters here are that boundary (d-0062).
 
 ## What it does
 
@@ -32,6 +37,34 @@ Public API from `src/index.ts`:
 - `commitAll(path, message)`: stages all, returns `null` if nothing is staged, else commits as
   the Forge author and returns the new HEAD sha.
 - `head(path)`: the commit the worktree is at.
+- `diff(path, baseSha)`: `{ files, patch }` for what changed since `baseSha`: committed, staged, unstaged and
+  untracked (shown as added; ignored files are left out). Each file has status `A`, `M`, `D` or `R` (`oldPath`
+  for renames, detected for tracked paths, so a rename of a still-untracked file reads as D plus A). The patch
+  is the unified diff of the tracked changes plus an added-file patch per untracked file; the index is never touched.
+
+GitHost adapters (the port is in `@forge/core`):
+
+- `createLocalBareGitHost({ remotePath, baseBranch, now, gitBinary?, author? })`: `push` runs
+  `git push <remotePath> <branch>:<branch>` from the worktree. A PR is a JSON record
+  `<remotePath>/forge-prs/<n>.json` (sequential numbers, atomic temp-and-rename writes, one open PR per
+  branch, like GitHub). `prStatus` reads the record and computes `mergeable` with `git merge-tree --write-tree`.
+  **Merge** happens inside the bare repo with plumbing, no clone or worktree: `merge-tree` computes the merged
+  tree (a conflict raises a `policy_denied` `GitHostError` and moves nothing), `commit-tree` writes the commit
+  (two parents for `merge`, a true `--no-ff` merge; one parent for `squash`), and `update-ref <base> <new> <old>`
+  moves the base with a compare-and-swap, so a base that moved meanwhile fails instead of being overwritten.
+  Merging a closed or already merged PR is refused. `closePr` is idempotent; `deleteBranch` deletes the ref in
+  the bare repo (a missing branch is fine, the base branch is refused).
+- `createGitHubAppGitHost({ owner, repo, baseBranch, appId, installationId, privateKey, fetch?, apiBase?, gitBase?, now?, git? })`:
+  an RS256 JWT is signed with `node:crypto` (`iat` now-60 s, `exp` now+9 min, `iss` the App id), exchanged at
+  `POST /app/installations/{id}/access_tokens`, and the token is cached until 5 minutes before `expires_at`
+  (concurrent callers share one mint). REST: create PR, get PR (`merged` maps to state `merged`),
+  `PUT /pulls/{n}/merge`, close (`PATCH state=closed`), `DELETE /git/refs/heads/{branch}` (already gone is fine).
+  `push` runs `git push https://github.com/<owner>/<repo>.git <branch>:<branch>` with the token only in the child
+  environment (see "Why this approach").
+- `GitHostError` (extends `ForgeError`) carries `reason` and, for REST failures, `status`. 401 and a plain 403 are
+  `auth`, a quota 403 and 429 are `rate_limit`, 404 and 422 are `invalid_input`, 405 and 409 (a merge GitHub
+  refuses) are `policy_denied`, 5xx and network failures are `crash`. Messages cut the response body to 300
+  characters and replace the token, the JWT and the base64 form of the push header with `[redacted]`.
 
 Returned paths are absolute with forward slashes (`C:/repo/.worktrees/FRG-1`), accepted by both
 Node and git on Windows. Any git failure becomes a `CrashError` with the stderr tail.
@@ -47,6 +80,14 @@ Node and git on Windows. Any git failure becomes a `CrashError` with the stderr 
   process, and signing prompts must not hang a run. Author comes from `-c` and env both.
 - `-z` output everywhere, so file names with spaces or newlines are safe.
 - Always a worktree, never a feature branch in the main checkout (d-0059, superseding d-0011).
+- The GitHub push token goes only through the child process environment: `GIT_CONFIG_COUNT=1`,
+  `GIT_CONFIG_KEY_0=http.https://github.com/.extraheader`,
+  `GIT_CONFIG_VALUE_0=AUTHORIZATION: basic <base64(x-access-token:token)>`, plus `GIT_TERMINAL_PROMPT=0`. It is
+  never in argv, the remote URL, a git config file or logs, and the header is scoped to github.com. This replaces
+  the `GIT_ASKPASS` idea in the E2 brief: the same guarantee with no helper script or file on disk.
+- Local merges use `merge-tree` / `commit-tree` / `update-ref` in the bare repo instead of a temporary clone:
+  nothing to clean up after a crash, and the ref update is a compare-and-swap.
+- The JWT is signed with `node:crypto` and REST calls use the built-in `fetch`: no Octokit (code.md rule 11).
 - Local-first with the git CLI the user already has; PRs and pushes belong to the `GitHost`
   adapter (d-0052), not here.
 - Rejected: libgit2 / isomorphic-git dependencies. Native or large deps with Windows caveats,
@@ -54,15 +95,20 @@ Node and git on Windows. Any git failure becomes a `CrashError` with the stderr 
 
 ## Requirements
 
-- `git` >= 2.5 on PATH (worktrees); no environment variables read besides inheriting
-  `process.env` for git itself.
-- No files under `.forge/`; the only file written outside worktrees is
-  `<git-common-dir>/info/exclude`.
+- `git` >= 2.38 on PATH (`merge-tree --write-tree` for the local host; worktrees need 2.5); no environment
+  variables read besides inheriting `process.env` for git itself. The GitHub host needs the App private key
+  from a `SecretStore` (see `@forge/secrets`) and network access to api.github.com and github.com.
+- No files under `.forge/`; the only files written outside worktrees are `<git-common-dir>/info/exclude` and,
+  for the local host, `<remotePath>/forge-prs/*.json`.
 - Tests: `pnpm test`, or `npx vitest run packages/git`. They create throwaway repos in the OS
-  temp dir (names with a space) and need `git` to run.
+  temp dir (names with a space) and need `git` to run. The GitHub host tests use a fake REST server on
+  127.0.0.1 that verifies the JWT signature, and test push through a recording git runner. Live GitHub is
+  covered later by a probe.
 
 ## Extending
 
+- A new GitHost (for example GitLab) goes in `src/adapters/<name>/`, throws `GitHostError`, and must pass
+  `describeGitHostContract` from `__tests__/contract/git-host.contract.ts`.
 - A new implementation (for example a remote or sandboxed worktree host) goes in
   `src/adapters/<name>/`, takes its dependencies as options, and must pass
   `describeWorktreeContract` from `__tests__/contract/worktree.contract.ts`. Add a
@@ -73,8 +119,14 @@ Node and git on Windows. Any git failure becomes a `CrashError` with the stderr 
 
 ## Limits
 
-- No fetch, push, merge or PR operations; no submodule handling.
+- No fetch or submodule handling; the worktree manager never pushes (only a GitHost does).
+- The local host has no review, comments or branch protection; `mergeable` is only `merge-tree` conflict
+  detection. Its PR numbering is serialised in-process, so run one server per remote path.
+- The GitHub host reports `rate_limit` and leaves `Retry-After` handling to the engine. A global git
+  `credential.helper` (for example Git Credential Manager) is not disabled for the push, so a rejected token may
+  make it prompt; `GIT_TERMINAL_PROMPT=0` only stops terminal prompts.
+- `push` is never forced: a branch whose remote history diverged fails instead of being overwritten.
 - `create` assumes the base ref is a local ref or sha; it does not fetch.
 - Locked worktrees are not unlocked; a `remove` that cannot delete the directory raises.
-- `changedFiles` reports a rename as a delete plus an add.
+- `changedFiles` reports a rename as a delete plus an add; `diff` detects renames only for tracked paths.
 - The fake does not model baseSha history; it tracks changes against the initial commit only.

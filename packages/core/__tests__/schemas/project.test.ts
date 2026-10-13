@@ -13,6 +13,47 @@
 import { describe, expect, it } from 'vitest';
 import { Project, ProjectConfig } from '#/schemas/project.js';
 
+describe('ProjectConfig git_host', () => {
+  const ok = {
+    slug: 'sf',
+    prefix: 'SF',
+    profile: 'ts',
+    default_harness: 'claude-code',
+  };
+  const gh = {
+    kind: 'github',
+    owner: 'o',
+    repo: 'r',
+    app_id: '123',
+    installation_id: '456',
+  };
+
+  it('defaults base_branch and key_secret', () => {
+    const r = ProjectConfig.parse({ ...ok, git_host: gh });
+    expect(r.git_host).toMatchObject({
+      base_branch: 'main',
+      key_secret: 'github-app-key',
+    });
+    const l = ProjectConfig.parse({
+      ...ok,
+      git_host: { kind: 'local', remote_path: 'D:/r.git' },
+    });
+    expect(l.git_host).toMatchObject({ base_branch: 'main' });
+  });
+
+  it('rejects non-numeric ids, a bad secret name and an unknown kind', () => {
+    expect(
+      ProjectConfig.safeParse({ ...ok, git_host: { ...gh, app_id: 'x1' } }).success,
+    ).toBe(false);
+    expect(
+      ProjectConfig.safeParse({ ...ok, git_host: { ...gh, key_secret: '../k' } }).success,
+    ).toBe(false);
+    expect(ProjectConfig.safeParse({ ...ok, git_host: { kind: 'gitlab' } }).success).toBe(
+      false,
+    );
+  });
+});
+
 describe('ProjectConfig', () => {
   const ok = {
     slug: 'software-factory',

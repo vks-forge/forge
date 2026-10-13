@@ -5,7 +5,8 @@
  *   gate checks each claim against the tool receipts, which only works if claims come in
  *   a closed, typed vocabulary instead of free prose. Strict objects and a closed kind
  *   list mean an invented claim kind is rejected at the door rather than silently
- *   skipped by the matcher (verification-plane.md §2).
+ *   skipped by the matcher (verification-plane.md §2). It lives in core because both the
+ *   MCP `finish` tool that accepts claims and the gates that judge them need the same shape.
  *
  * Exports: Claim.
  * Depends on: zod. No IO.

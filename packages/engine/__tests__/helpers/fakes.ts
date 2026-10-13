@@ -45,6 +45,10 @@ export function createFakeWorktrees(): FakeWorktrees {
       fake.removed.push(path);
     },
     changedFiles: async () => [...fake.changed],
+    diff: async () => ({
+      files: fake.changed.map((path) => ({ status: 'M' as const, path })),
+      patch: '',
+    }),
     async commitAll(path, message) {
       fake.commits.push({ path, message });
       return 'commit-sha-1';

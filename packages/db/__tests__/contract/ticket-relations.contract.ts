@@ -186,6 +186,8 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
       checkout_run_id: 'run-1',
       epic_id: B,
       created_by_intake: 4,
+      pr_number: 7,
+      pr_url: 'https://github.com/o/r/pull/7',
     };
 
     it('round-trips through insert and get', async () => {
@@ -205,6 +207,8 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
           checkout_run_id: undefined,
           epic_id: undefined,
           created_by_intake: undefined,
+          pr_number: undefined,
+          pr_url: undefined,
         }),
       );
       const got = await tx((t) => t.tickets.get(A));

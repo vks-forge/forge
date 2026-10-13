@@ -9,12 +9,13 @@
  *   mid-ticket. `default_harness` is an opaque id because core must not know which
  *   harnesses exist; drivers are chosen by config (d-0034, d-0027).
  *
- * Exports: Profile, ProjectCommands, ProjectConfig, Project.
- * Depends on: schemas/ids, zod. No IO.
+ * Exports: Profile, ProjectCommands, GitHostConfig, ProjectConfig, Project.
+ * Depends on: schemas/ids, schemas/secret-name, zod. No IO.
  */
 
 import { z } from 'zod';
 import { ProjectPrefix } from '#/schemas/ids.js';
+import { SecretName } from '#/schemas/secret-name.js';
 
 /** `ts` enables TS-bound gate checks; `generic` skips them with a reason (d-0034). */
 export const Profile = z.enum(['ts', 'generic']);
@@ -28,6 +29,29 @@ export const ProjectCommands = z.object({
   build: z.string().min(1).optional(),
 });
 
+/**
+ * Where branches are pushed and PRs live (d-0062). `local` is a bare repo on disk; `github`
+ * is a GitHub App installation. Ids are not secrets; the App's private key is read from the
+ * SecretStore under `key_secret`.
+ */
+export const GitHostConfig = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('local'),
+    remote_path: z.string().min(1),
+    base_branch: z.string().min(1).default('main'),
+  }),
+  z.object({
+    kind: z.literal('github'),
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    base_branch: z.string().min(1).default('main'),
+    app_id: z.string().regex(/^[0-9]+$/),
+    installation_id: z.string().regex(/^[0-9]+$/),
+    key_secret: SecretName.default('github-app-key'),
+  }),
+]);
+export type GitHostConfig = z.infer<typeof GitHostConfig>;
+
 /** `project.yaml` (d-0034). `default_harness` is an opaque id: core never names harnesses. */
 export const ProjectConfig = z.object({
   slug: z.string().regex(/^[a-z][a-z0-9-]*$/),
@@ -36,6 +60,7 @@ export const ProjectConfig = z.object({
   commands: ProjectCommands.default({}),
   default_harness: z.string().min(1),
   remote: z.string().min(1).optional(),
+  git_host: GitHostConfig.optional(),
 });
 export type ProjectConfig = z.infer<typeof ProjectConfig>;
 

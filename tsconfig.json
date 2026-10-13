@@ -1,6 +1,8 @@
 {
   "files": [],
   "references": [
+    { "path": "./apps/cli" },
+    { "path": "./apps/cli/tsconfig.test.json" },
     { "path": "./apps/mcp" },
     { "path": "./apps/mcp/tsconfig.test.json" },
     { "path": "./packages/core" },
@@ -19,6 +21,8 @@
     { "path": "./packages/mcp/tsconfig.test.json" },
     { "path": "./packages/memory" },
     { "path": "./packages/memory/tsconfig.test.json" },
+    { "path": "./packages/secrets" },
+    { "path": "./packages/secrets/tsconfig.test.json" },
     { "path": "./packages/tools" },
     { "path": "./packages/tools/tsconfig.test.json" }
   ]

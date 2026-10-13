@@ -81,7 +81,7 @@ describe('runMigrations', () => {
     runMigrations(driver, MIGRATIONS.slice(0, 1));
     const applied = runMigrations(driver);
     driver.close();
-    expect(applied).toEqual([2, 3, 4, 5]);
+    expect(applied).toEqual([2, 3, 4, 5, 6]);
   });
 
   describe('0003 receipt chain columns', () => {
@@ -168,12 +168,25 @@ describe('runMigrations', () => {
          VALUES ('old1', 'r1', 1, 't', 'a', 'allow', 'rule', 'ts', 'h'),
                 ('old2', 'r1', 2, 't', 'a', 'allow', 'rule', 'ts', 'h')`,
       );
-      expect(runMigrations(driver)).toEqual([4, 5]);
+      expect(runMigrations(driver)).toEqual([4, 5, 6]);
       const rows = driver.all<{ chain_seq: number }>(
         'SELECT chain_seq FROM tool_decisions',
       );
       driver.close();
       expect(rows).toEqual([{ chain_seq: 0 }, { chain_seq: 0 }]);
+    });
+  });
+
+  describe('0006 ticket PR link', () => {
+    it('adds nullable pr_number and pr_url to tickets and keeps existing rows', () => {
+      const driver = openSqliteDriver(':memory:');
+      runMigrations(driver);
+      const cols = driver
+        .all<{ name: string; notnull: number }>('PRAGMA table_info(tickets)')
+        .filter((c) => c.name === 'pr_number' || c.name === 'pr_url');
+      driver.close();
+      expect(cols.map((c) => c.name).sort()).toEqual(['pr_number', 'pr_url']);
+      expect(cols.every((c) => c.notnull === 0)).toBe(true);
     });
   });
 
@@ -246,7 +259,7 @@ describe('runMigrations', () => {
         `INSERT INTO runs (id, ticket_id, harness, driver_version, cwd, lane, started_at, status)
          VALUES ('old', 'SF-1', 'h', '1', '/w', 'express', '2026-10-13T00:00:00.000Z', 'running')`,
       );
-      expect(runMigrations(driver)).toEqual([5]);
+      expect(runMigrations(driver)).toEqual([5, 6]);
       const edges = driver.all<{ from_id: string; to_id: string; kind: string }>(
         'SELECT from_id, to_id, kind FROM ticket_relations ORDER BY rowid',
       );
@@ -431,7 +444,7 @@ describe('checkSchemaCurrent', () => {
     runMigrations(driver);
     const current = checkSchemaCurrent(driver);
     driver.close();
-    expect(behind).toMatchObject({ status: 'behind', pending: [3, 4, 5] });
+    expect(behind).toMatchObject({ status: 'behind', pending: [3, 4, 5, 6] });
     expect(current).toMatchObject({ status: 'current', pending: [], unknown: [] });
   });
 

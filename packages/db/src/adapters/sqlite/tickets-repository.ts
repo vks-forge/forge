@@ -40,6 +40,8 @@ const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
   checkout_run_id: { column: 'checkout_run_id', clearable: true },
   epic_id: { column: 'epic_id', clearable: true },
   created_by_intake: { column: 'created_by_intake', clearable: true },
+  pr_number: { column: 'pr_number', clearable: true },
+  pr_url: { column: 'pr_url', clearable: true },
   updated_at: { column: 'updated_at' },
 };
 
@@ -92,8 +94,9 @@ export function createTicketRepository(driver: SqlDriver): TicketRepository {
       driver.run(
         `INSERT INTO tickets (id, project, epic_id, title, body, type, lane, tier_predicted,
            tier_actual, status, status_version, rework_count, blocked_reason, assignee_run_id,
-           branch, worktree, checkout_run_id, created_by_intake, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           branch, worktree, checkout_run_id, created_by_intake, pr_number, pr_url, created_at,
+           updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           t.id,
           t.project,
@@ -113,6 +116,8 @@ export function createTicketRepository(driver: SqlDriver): TicketRepository {
           t.worktree ?? null,
           t.checkout_run_id ?? null,
           t.created_by_intake ?? null,
+          t.pr_number ?? null,
+          t.pr_url ?? null,
           t.created_at,
           t.updated_at,
         ],

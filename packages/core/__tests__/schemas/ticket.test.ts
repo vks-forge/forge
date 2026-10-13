@@ -79,6 +79,13 @@ describe('Ticket batch C fields', () => {
     expect(Ticket.parse(full)).toMatchObject(full);
   });
 
+  it('parses the PR link and rejects a non-positive PR number', () => {
+    expect(
+      Ticket.parse({ ...base, pr_number: 7, pr_url: 'https://h/pull/7' }),
+    ).toMatchObject({ pr_number: 7 });
+    expect(Ticket.safeParse({ ...base, pr_number: 0 }).success).toBe(false);
+  });
+
   it('rejects a malformed epic id and a non-integer intake id', () => {
     expect(Ticket.safeParse({ ...base, epic_id: 'nope' }).success).toBe(false);
     expect(Ticket.safeParse({ ...base, created_by_intake: 1.5 }).success).toBe(false);

@@ -9,12 +9,11 @@
  * Exports: TicketIdField, GetTicketInput, AddCommentInput, AskDirectorInput,
  *   ReportBlockedInput, FinishInput, WebSearchInput, DocsLookupInput, WebFetchInput,
  *   MAX_SEARCH_RESULTS.
- * Depends on: @forge/core (TICKET_ID_PATTERN), schemas/claims, zod. No IO.
+ * Depends on: @forge/core (Claim, TICKET_ID_PATTERN), zod. No IO.
  */
 
-import { TICKET_ID_PATTERN } from '@forge/core';
+import { Claim, TICKET_ID_PATTERN } from '@forge/core';
 import { z } from 'zod';
-import { Claim } from '#/schemas/claims.js';
 
 export const MAX_SEARCH_RESULTS = 10;
 
