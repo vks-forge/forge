@@ -114,7 +114,9 @@ describe('probe 1: subscription auth with settings isolation (d-0031)', () => {
         { cwd },
       );
 
-      expect(res.code).toBe(0);
+      // 2.1.296 exits 1 here (an earlier run exited 0); the driver must read `subtype`,
+      // never the exit code, so either is accepted.
+      expect([0, 1]).toContain(res.code);
       const json = JSON.parse(res.stdout) as Record<string, unknown>;
       expect(json['subtype']).toBe('error_max_budget_usd');
       expect(json['is_error']).toBe(true);

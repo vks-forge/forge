@@ -2,7 +2,7 @@
 
 Run with `pnpm probes` (sets `FORGE_PROBES=1`). Host: Windows 11, Node 24.20, subscription auth,
 `@agentclientprotocol/claude-agent-acp@0.89.1`, `@agentclientprotocol/sdk@1.8.0`.
-All 11 probe tests passed in the recorded run. Every child run strips `CLAUDECODE` and
+All 15 probe tests passed in the 2026-10-13 run (after the two assertion updates noted under probes 1 and 5). Every child run strips `CLAUDECODE` and
 `CLAUDE_CODE_ENTRYPOINT` from its env.
 
 **Which Claude Code binary each probe measured (d-0053).**
@@ -16,12 +16,7 @@ The ACP adapter resolves its own bundled binary and Forge does not set `CLAUDE_C
 host version never affects probes 3-5.
 
 **Re-probe trigger (d-0053):** re-run `pnpm probes` and update this file on a host Claude Code upgrade
-**or** an adapter / SDK version bump. Changes since the recorded run, not yet run live: the budget-exhaustion
-probe (probe 1, last test) was added, and probe 5 now plants its `defaultMode` in the session cwd's
-`.claude/settings.json` (a source the adapter's SettingsManager reads itself) so the leak assertion is
-unconditional, without touching the user's config dir or credentials. The next live run must confirm both,
-including that the adapter does not filter an `acceptEdits` default from the project source (the SDK applies a
-trust filter to escalating default modes).
+**or** an adapter / SDK version bump.
 
 ## Cross-cutting surprise: the default model blows the probe budget
 
@@ -54,9 +49,10 @@ Command (cwd = empty temp dir outside the repo):
   CLAUDE.md discovery; "Anthropic auth is strictly ANTHROPIC_API_KEY or apiKeyHelper via --settings (OAuth and
   keychain are never read)". Confirms d-0031: `--bare` is API-key mode only. Not used. The test pins that
   help text.
-- Budget exhaustion (probe added after the recorded run, not yet run live): `--max-budget-usd 0.0001 --model haiku`
-  must give `subtype: error_max_budget_usd`, exit 0, `is_error: true` and no `result`, matching the observation in
-  the cross-cutting section above.
+- Budget exhaustion (measured 2026-10-13, host 2.1.296): `--max-budget-usd 0.0001 --model haiku` gives
+  `subtype: error_max_budget_usd`, `is_error: true`, `terminal_reason: budget_exhausted`, `errors: ["Reached maximum
+budget ($0.0001)"]`, no `result`, and **exit 1** (an earlier run with a larger budget exited 0). The exit code is
+  not a signal: the driver classifies from `subtype` and the probe accepts 0 or 1.
 - New flags seen in `--help` that bear on the design: `--safe-mode`, `--restricted`, `--permission-prompts
 host|none`, `--include-hook-events`, `--system-prompt-snapshot`. Not evaluated.
 
@@ -165,23 +161,24 @@ The host had several user-level MCP servers and one repo-level server configured
   PreToolUse, PermissionRequest are the ones that could alter or block Worker behaviour).
 - `defaultMode` leak reproduced (d-0048 item 6): the host user's `permissions.defaultMode` was `acceptEdits` and
   the new session's `modes.currentModeId` before our `set_mode` was `acceptEdits` even with
-  `settingSources: []` and `strictMcpConfig: true`. `set_mode default` remains required. The probe now asserts this unconditionally by running the session in a
-  fresh cwd whose `.claude/settings.json` sets `acceptEdits`, then checking that `set_mode default` is accepted
-  and no mode update contradicts it.
+  `settingSources: []` and `strictMcpConfig: true` (first recorded run, user settings source). `set_mode default`
+  remains required.
+- Project source (measured 2026-10-13): a session whose cwd `.claude/settings.json` sets `defaultMode: acceptEdits`
+  starts in `default`: the adapter filters an escalating default mode from the project source. The probe now pins
+  that, plus that `set_mode default` is accepted and no mode update contradicts it. The user-source leak is not
+  re-measured (the probe no longer touches the user's config).
 
-## Probe 6: Claude driver on the real ACP adapter - NOT YET RUN
+## Probe 6: Claude driver on the real ACP adapter - PASS
 
-Added with the Claude driver (`probe6-claude-driver.test.ts`, gated `FORGE_PROBES=1`, haiku, $0.05 per run, needs
-`pnpm build` for the hook). No result is recorded here yet. The next live run must record:
+`probe6-claude-driver.test.ts` (gated `FORGE_PROBES=1`, haiku, needs `pnpm build` for the hook), 2026-10-13:
 
-- A plain run (`reply with the single word pong`) ends `success` with a session ref on the subscription.
-- A write the hook server denies creates no file (the hook blocks before any permission request).
-- PreToolUse reaches the hook server under ACP, and whether the hook's `tool_use_id` equals the ACP `toolCallId`.
-  If it does not, the driver's (tool name, args hash) fallback join in `receipts.decisionFor` is what keeps runs alive.
-- Still open from probe 5: that PreToolUse also fires for `mcp__forge__*` tools under ACP (re-run probe 4 with the
-  forge MCP server as a positive control), the tool `name` the adapter reports for MCP tools, whether project
-  `permissions.allow` is applied adapter-side before `session/request_permission`, and whether the real adapter's
-  budget and turn-cap errors carry the wording the classifier matches (`error_max_budget_usd`, `error_max_turns`).
+- A plain run (`reply with the single word pong`) through `createClaudeDriver` ends `success` with a session ref.
+- A write the hook server denies creates no file; the hook fired.
+- **The hook's `tool_use_id` equals the ACP `toolCallId`** for the observed calls, so the receipt cross-check and
+  the permission handler join on the id; the (tool name, args hash) fallback is not needed for native tools.
+- Still open: that PreToolUse fires for `mcp__forge__*` tools under ACP and the `name` the adapter reports for them
+  (re-run probe 4 with the forge MCP server as a positive control); whether project `permissions.allow` is applied
+  adapter-side before `session/request_permission`; the real ACP wording for budget and turn-cap errors.
 
 ## Differences from the design docs
 
@@ -189,7 +186,7 @@ Added with the Claude driver (`probe6-claude-driver.test.ts`, gated `FORGE_PROBE
 - Auth/account reporting is the `_auth/status_update` notification, not part of `initialize`.
 - `permissions.defaultMode` from the user's settings leaks through the ACP adapter despite
   `settingSources: []`; driver must `session/set_mode default` after every session creation.
-- Default model exceeds a $0.05 budget; budget errors come back with exit 0 and no `result`.
+- Default model exceeds a $0.05 budget; budget errors come back with `subtype: error_max_budget_usd`, no `result`, and exit 0 or 1 (classify by `subtype`).
 - On Windows the CLI's shell tool is `PowerShell`; hook matchers must not assume `Bash`.
 - Per-run hooks via `_meta.claudeCode.options.settings` work on ACP; the hook payload `tool_name` is `Bash`.
 - `strictMcpConfig` effect is unproven (control showed no MCP tools either); user hooks on ACP are unobservable.

@@ -125,8 +125,10 @@ describe('probe 5: hooks and user settings under ACP (d-0049)', () => {
         // (a) per-run hook via _meta settings.
         expect(log.some((l) => l.startsWith('PreToolUse'))).toBe(true);
         expect(blob).toContain('blocked by probe hook');
-        // (b) d-0048 item 6: initial mode follows the planted project defaultMode, not our options.
-        expect(initialMode).toBe('acceptEdits');
+        // (b) measured 2026-10-13: an escalating defaultMode planted in the PROJECT settings
+        // source is filtered by the adapter (session starts in `default`); the user-settings
+        // leak of d-0048 item 6 is a different source and still needs set_mode (d-0049).
+        expect(initialMode).toBe('default');
         // After set_mode default no mode update may report anything else (an update is not
         // guaranteed to arrive, so this pins "never contradicted", not "announced").
         expect(modeUpdates.every((m) => m === 'default')).toBe(true);

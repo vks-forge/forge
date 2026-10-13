@@ -38,6 +38,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0057 — Measured: hook tool_use_id == ACP toolCallId; budget exit 0 or 1 (classify by subtype); project-source defaultMode filtered, set_mode still required (author=director, measured)
 - d-0056 — Claude hook client + settings renderers move to `drivers/claude/hooks`; `@forge/hooks` keeps neutral receipt ingress
 - d-0055 — One ticket id `<PROJECT>-<n>` is the primary key, no UUID; rest of d-0021 carries over (supersedes d-0021)
 - d-0054 — M0: server restart kills in-flight runs (run secret memory-only); reconcile marks unowned `running` as crash
