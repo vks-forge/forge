@@ -43,7 +43,14 @@ async function makeRepo(): Promise<string> {
 }
 
 afterEach(async () => {
-  await Promise.all(roots.splice(0).map((r) => rm(r, { recursive: true, force: true })));
+  // Retries: antivirus or a lingering git child holds handles on Windows under load (EBUSY).
+  await Promise.all(
+    roots
+      .splice(0)
+      .map((r) =>
+        rm(r, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }),
+      ),
+  );
 });
 
 describeWorktreeContract('git cli', async (): Promise<WorktreeHarness> => {
@@ -66,7 +73,8 @@ describeWorktreeContract('git cli', async (): Promise<WorktreeHarness> => {
   };
 });
 
-describe('git cli worktree manager specifics', () => {
+// 30s: real git spawns several processes per call and is slow on Windows under suite load.
+describe('git cli worktree manager specifics', { timeout: 30_000 }, () => {
   it('keeps .worktrees out of the main checkout status via info/exclude', async () => {
     const repoRoot = await makeRepo();
     const manager = createGitWorktreeManager({ repoRoot });
@@ -114,4 +122,23 @@ describe('git cli worktree manager specifics', () => {
       errorFamily: 'crash',
     });
   }, 30_000); // real git is slow on Windows
+
+  it('shows hunks of a -diff attributed file and unquoted non-ASCII names in the patch', async () => {
+    const repoRoot = await makeRepo();
+    const manager = createGitWorktreeManager({ repoRoot });
+    const wt = await manager.create(tid(1), 'feat/a', 'main');
+    await writeFile(join(wt.path, '.gitattributes'), '*.test.ts -diff\n');
+    await writeFile(join(wt.path, 'a.test.ts'), "it.skip('x', () => {})\n");
+    await writeFile(join(wt.path, 'é.test.ts'), "it.only('y', () => {})\n");
+    await git(wt.path, 'add', '-A');
+    await git(wt.path, 'commit', '-m', 'w', '--no-verify');
+    await writeFile(join(wt.path, 'u.test.ts'), "it.skip('z', () => {})\n");
+
+    const { patch } = await manager.diff(wt.path, wt.baseSha);
+
+    expect(patch).toContain("+it.skip('x', () => {})");
+    expect(patch).toContain("+it.only('y', () => {})");
+    expect(patch).toContain("+it.skip('z', () => {})");
+    expect(patch).toContain('diff --git a/é.test.ts b/é.test.ts');
+  });
 });

@@ -70,4 +70,45 @@ describe('checkTestDiff', () => {
 
     expect(run(patch).status).toBe('passed');
   });
+
+  it('fails a non-ASCII test file name that adds .only', () => {
+    const path = 'src/é.test.ts';
+    const out = run(patchFor(path, ["it.only('x', () => {})"]), [{ status: 'A', path }]);
+
+    expect(out.status).toBe('failed');
+    expect(out.findings[0]?.message).toContain('é.test.ts');
+  });
+
+  it('fails a test file whose hunks are hidden as binary (.gitattributes -diff)', () => {
+    const patch = [
+      'diff --git a/a.test.ts b/a.test.ts',
+      'new file mode 100644',
+      'Binary files /dev/null and b/a.test.ts differ',
+      '',
+    ].join('\n');
+
+    const out = run(patch, [{ status: 'A', path: 'a.test.ts' }]);
+
+    expect(out.status).toBe('failed');
+    expect(out.findings[0]?.message).toContain('binary');
+  });
+
+  it('passes a non-test file that is binary', () => {
+    const patch = [
+      'diff --git a/logo.png b/logo.png',
+      'Binary files /dev/null and b/logo.png differ',
+      '',
+    ].join('\n');
+
+    expect(run(patch, [{ status: 'A', path: 'logo.png' }]).status).toBe('passed');
+  });
+
+  it('fails closed on a diff header it cannot parse', () => {
+    const patch = 'diff --git "a/we\\"ird.test.ts" "b/we\\"ird.test.ts"\n';
+
+    const out = run(patch, []);
+
+    expect(out.status).toBe('failed');
+    expect(out.findings[0]?.message).toContain('could not be parsed');
+  });
 });

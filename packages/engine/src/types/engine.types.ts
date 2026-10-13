@@ -142,4 +142,6 @@ export interface Engine {
   cancelTicket(ticketId: string): Promise<boolean>;
   /** Ids of runs with a live pump in this process. */
   liveRunIds(): string[];
+  /** Gate runs currently executing in the background (finished ones await the next tick). */
+  gateJobsInFlight(): number;
 }

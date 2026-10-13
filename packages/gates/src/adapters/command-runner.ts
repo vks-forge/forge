@@ -7,13 +7,19 @@
  *   pipes or `&&`, so they run through the shell. A hung test run must not hang the
  *   server: on timeout the whole process tree is killed (on Windows `taskkill /T /F`,
  *   because killing the shell alone leaves node children holding the worktree open).
+ *   The cwd is the Worker's tree, so the first token is resolved to an absolute executable
+ *   outside it first (cmd.exe would otherwise run a Worker-committed `pnpm.cmd`), and the
+ *   child gets `NoDefaultCurrentDirectoryInExePath=1` for the later segments of the line.
  *
  * Exports: runShellCommand(), MAX_CAPTURE_BYTES.
- * Depends on: node:child_process, types/g1-deps. Spawns processes.
+ * Depends on: node:child_process, node:fs, domain/command-resolver, types/g1-deps. Spawns processes.
  */
 
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
+import { statSync } from 'node:fs';
+import { InvalidInputError } from '@forge/core';
+import { resolveCommand } from '#/domain/command-resolver.js';
 import type { CommandRequest, CommandResult } from '#/types/g1-deps.types.js';
 
 /** Output kept in memory; older output is dropped. */
@@ -43,12 +49,40 @@ function killTree(child: ChildProcess): void {
   }
 }
 
-/** Runs `req.command` with `shell: true`; resolves with the exit code, or `timedOut`. */
+function isFile(path: string): boolean {
+  try {
+    return statSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Runs `req.command` with `shell: true` after pinning its first token to an absolute
+ * executable outside `req.cwd`; resolves with the exit code, or `timedOut`. Rejects when the
+ * command cannot be resolved safely or the process cannot start.
+ */
 export function runShellCommand(req: CommandRequest): Promise<CommandResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(req.command, {
+    const env = { ...req.env, NoDefaultCurrentDirectoryInExePath: '1' };
+    const resolved = resolveCommand(req.command, {
+      platform: process.platform === 'win32' ? 'win32' : 'posix',
       cwd: req.cwd,
-      env: { ...req.env },
+      env,
+      isFile,
+    });
+
+    if (!resolved.ok) {
+      reject(
+        new InvalidInputError(`refusing to run \`${req.command}\`: ${resolved.reason}`),
+      );
+
+      return;
+    }
+
+    const child = spawn(resolved.command, {
+      cwd: req.cwd,
+      env,
       shell: true,
       windowsHide: true,
       detached: process.platform !== 'win32',

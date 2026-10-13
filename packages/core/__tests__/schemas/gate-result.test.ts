@@ -25,6 +25,12 @@ describe('GateResult', () => {
     );
   });
 
+  it('carries the judged head sha when given and rejects an empty one', () => {
+    expect(GateResult.parse({ ...gate, head_sha: 'abc123' }).head_sha).toBe('abc123');
+    expect(GateResult.parse(gate).head_sha).toBeUndefined();
+    expect(GateResult.safeParse({ ...gate, head_sha: '' }).success).toBe(false);
+  });
+
   it('rejects an unknown gate or status', () => {
     expect(GateResult.safeParse({ ...gate, gate: 'G7' }).success).toBe(false);
     expect(GateResult.safeParse({ ...gate, status: 'meh' }).success).toBe(false);

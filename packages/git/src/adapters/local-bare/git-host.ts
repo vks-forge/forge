@@ -8,7 +8,10 @@
  *   the bare repo (`merge-tree` computes the merged tree, `commit-tree` writes the commit,
  *   `update-ref` moves the base with a compare-and-swap on the old value): no temporary
  *   clone or worktree is created, so a crash cannot leave stray directories, and a
- *   concurrent push to the base makes the update fail instead of being overwritten.
+ *   concurrent push to the base makes the update fail instead of being overwritten. The merge
+ *   is pinned to the head sha the gates judged, and a merge that would change nothing (the
+ *   base already holds the PR, e.g. after a crash before the record was saved) is recorded
+ *   as merged instead of writing an empty commit.
  *   Failures are `GitHostError` so the engine branches on `errorFamily` (d-0062).
  *
  * Exports: createLocalBareGitHost().
@@ -18,6 +21,7 @@
 
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { HeadMovedError } from '@forge/core';
 import type { GitHost, MergeMethod, PrStatus, PullRequest } from '@forge/core';
 import { createGitRunner } from '#/adapters/git-cli/run-git.js';
 import { createPrStore } from '#/adapters/local-bare/pr-store.js';
@@ -30,7 +34,7 @@ const DEFAULT_AUTHOR = { name: 'Forge', email: 'forge@localhost' } as const;
 
 /** Creates a GitHost whose remote is a bare repository on disk. */
 export function createLocalBareGitHost(opts: LocalBareGitHostOptions): GitHost {
-  const git = createGitRunner(opts.gitBinary ?? 'git');
+  const git = opts.git ?? createGitRunner(opts.gitBinary ?? 'git');
   const remote = resolve(opts.remotePath);
   const author = opts.author ?? DEFAULT_AUTHOR;
   const store = createPrStore(remote);
@@ -143,7 +147,7 @@ export function createLocalBareGitHost(opts: LocalBareGitHostOptions): GitHost {
       return toStatus(await store.get(n));
     },
 
-    merge: (n, method: MergeMethod) =>
+    merge: (n, method: MergeMethod, expectedHeadSha) =>
       store.locked(async () => {
         const rec = await store.get(n);
         if (rec.state !== 'open') {
@@ -159,12 +163,36 @@ export function createLocalBareGitHost(opts: LocalBareGitHostOptions): GitHost {
           );
         }
 
+        // Under the store lock, so a push that lands after this check still cannot be merged:
+        // the branch ref is read once and every later step uses that sha.
+        if (head !== expectedHeadSha) {
+          throw new HeadMovedError(
+            `PR ${n} head is ${head}, not the ${expectedHeadSha} the gates judged`,
+          );
+        }
+
         const tree = await mergedTree(base, head);
         if (tree === null) {
           throw new GitHostError(
             'merge_refused',
             `PR ${n} has merge conflicts with ${rec.base}`,
           );
+        }
+
+        // A crash between `update-ref` and the record save leaves the base already holding
+        // this PR's changes while the record still says open. Merging again would write an
+        // empty commit, so when the merge changes nothing the PR is recorded as merged at the
+        // current base instead.
+        const baseTree = (await git.run(remote, ['rev-parse', `${base}^{tree}`])).trim();
+        if (tree === baseTree) {
+          await store.save({
+            ...rec,
+            state: 'merged',
+            merged_sha: base,
+            merged_head_sha: head,
+          });
+
+          return { sha: base };
         }
 
         // merge = two parents (a true --no-ff merge commit); squash = one parent, same tree.

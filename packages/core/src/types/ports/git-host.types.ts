@@ -50,9 +50,15 @@ export interface GitHost {
   prStatus(n: number): Promise<PrStatus>;
   /**
    * Merges an open PR and returns the resulting commit sha. Only the engine's merge step
-   * may call this, after `gate_passed` at tier A (one door, code.md rule 6).
+   * may call this, after `gate_passed` at tier A (one door, code.md rule 6). The merge is
+   * pinned to `expectedHeadSha`, the commit the gates judged: if the PR head is anywhere
+   * else the host refuses with a `HeadMovedError` and merges nothing.
    */
-  merge(n: number, method: MergeMethod): Promise<{ readonly sha: string }>;
+  merge(
+    n: number,
+    method: MergeMethod,
+    expectedHeadSha: string,
+  ): Promise<{ readonly sha: string }>;
   closePr(n: number): Promise<void>;
   deleteBranch(branch: string): Promise<void>;
 }

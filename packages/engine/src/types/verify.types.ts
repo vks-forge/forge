@@ -8,7 +8,7 @@
  *   supplies a `ProjectRuntime` per project and the engine stays free of IO. The records
  *   below carry one ticket through those steps and report what happened to it.
  *
- * Exports: ProjectRuntime, VerifyTarget, GateRun, GateRows, GateSummary, VerifyOutcome, VerifiedTicket.
+ * Exports: ProjectRuntime, VerifyTarget, GateRun, GateRows, GateSummary, GateJob, GateJobOutcome, MergeOutcome, VerifyOutcome, VerifiedTicket.
  * Depends on: @forge/core (ports, schemas). Types only.
  */
 
@@ -41,6 +41,8 @@ export interface VerifyTarget {
   /** Worktree path of the ticket. */
   readonly worktree: string;
   readonly branch: string;
+  /** The project's base branch: worktree base, diff base and PR target are all this one ref. */
+  readonly baseRef: string;
   readonly baseSha: string;
 }
 
@@ -54,11 +56,31 @@ export interface GateRun {
   readonly errorFamily?: ErrorFamily;
 }
 
+/** How a background gate run ended; stored rows are already written when this is set. */
+export type GateJobOutcome =
+  | { readonly ok: true; readonly run: GateRun }
+  | { readonly ok: false; readonly error: unknown };
+
+/** One gate run in flight (or just finished and not yet applied by a tick). */
+export interface GateJob {
+  readonly ticketId: string;
+  readonly runId: string;
+  /** The commit the gates are judging. */
+  readonly headSha: string;
+  /** Set once, when the gates are done; the next tick consumes the job. */
+  outcome?: GateJobOutcome;
+  /** Settles when the gates are done and the outcome is set (tests and shutdown await it). */
+  done: Promise<void>;
+}
+
 /** What the gate rows say together; failures outrank errors, and any non-pass blocks the merge. */
 export type GateSummary =
   | { readonly kind: 'pass' }
   | { readonly kind: 'fail'; readonly gates: readonly string[] }
   | { readonly kind: 'error'; readonly gates: readonly string[] };
+
+/** `done`: the cycle ended (merged, or handed to a human). `regate`: the PR head moved and the gates must judge it again. */
+export type MergeOutcome = 'done' | 'regate';
 
 export type VerifyOutcome =
   'merged' | 'review' | 'needs_signoff' | 'rework' | 'parked' | 'retry_scheduled';

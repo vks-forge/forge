@@ -105,6 +105,8 @@ export function createEngine(deps: EngineDeps): Engine {
     pumps: new Map(),
     holds: new Map(),
     baseShas: new Map(),
+    gateJobs: new Map(),
+    regates: new Map(),
     replies: [],
   };
 
@@ -154,6 +156,8 @@ export function createEngine(deps: EngineDeps): Engine {
       return true;
     },
     liveRunIds: () => [...state.pumps.keys()],
+    gateJobsInFlight: () =>
+      [...state.gateJobs.values()].filter((j) => j.outcome === undefined).length,
   };
 
   return engine;

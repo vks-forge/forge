@@ -96,7 +96,7 @@ describe('verify: duplicate PR after a crash', () => {
 
     const restarted = rig.restart('srv-a');
     rig.clock.advance(61_000);
-    await restarted.tick();
+    await rig.tickOn(restarted);
 
     expect(await rig.ticket(id)).toMatchObject({
       status: 'done',

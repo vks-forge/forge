@@ -28,6 +28,13 @@ import type { GitWorktreeManagerOptions } from '#/types/git-worktree.types.js';
 
 const DEFAULT_AUTHOR = { name: 'Forge', email: 'forge@localhost' } as const;
 
+/**
+ * Prefix for every diff invocation: `core.quotePath=false` keeps non-ASCII names readable in
+ * patch headers; `--text` (added per call) stops a Worker-written `.gitattributes -diff`
+ * from replacing hunks with "Binary files differ", which would hide a disabled test.
+ */
+const DIFF_CONFIG = ['-c', 'core.quotePath=false'] as const;
+
 const names = (out: string): string[] => out.split('\0').filter((n) => n.length > 0);
 
 /** Creates a WorktreeManager that shells out to the `git` binary (no shell string, ever). */
@@ -108,7 +115,15 @@ export function createGitWorktreeManager(
     async changedFiles(path, baseSha) {
       assertSafeRefArg('baseSha', baseSha);
       const [tracked, untracked] = await Promise.all([
-        git.run(path, ['diff', '--name-only', '--no-renames', '-z', baseSha, '--']),
+        git.run(path, [
+          ...DIFF_CONFIG,
+          'diff',
+          '--name-only',
+          '--no-renames',
+          '-z',
+          baseSha,
+          '--',
+        ]),
         git.run(path, ['ls-files', '--others', '--exclude-standard', '-z']),
       ]);
 
@@ -119,8 +134,25 @@ export function createGitWorktreeManager(
       assertSafeRefArg('baseSha', baseSha);
       // Tracked changes (committed, staged and unstaged) against the base, renames detected.
       const [status, tracked, untrackedOut] = await Promise.all([
-        git.run(path, ['diff', '--name-status', '-M', '-z', baseSha, '--']),
-        git.run(path, ['diff', '--no-color', '--no-ext-diff', '-M', baseSha, '--']),
+        git.run(path, [
+          ...DIFF_CONFIG,
+          'diff',
+          '--name-status',
+          '-M',
+          '-z',
+          baseSha,
+          '--',
+        ]),
+        git.run(path, [
+          ...DIFF_CONFIG,
+          'diff',
+          '--text',
+          '--no-color',
+          '--no-ext-diff',
+          '-M',
+          baseSha,
+          '--',
+        ]),
         git.run(path, ['ls-files', '--others', '--exclude-standard', '-z']),
       ]);
 
@@ -131,7 +163,9 @@ export function createGitWorktreeManager(
         files.push({ status: 'A', path: name });
         // --no-index exits 1 when the files differ, which is the expected case here.
         const r = await git.try(path, [
+          ...DIFF_CONFIG,
           'diff',
+          '--text',
           '--no-index',
           '--no-color',
           '--no-ext-diff',

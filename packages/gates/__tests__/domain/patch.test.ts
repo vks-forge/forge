@@ -22,8 +22,8 @@ describe('parsePatch', () => {
     );
 
     expect(files).toEqual([
-      { path: 'a.ts', deleted: false, added: ['new'], removed: ['old'] },
-      { path: 'b.ts', deleted: false, added: ['x'], removed: [] },
+      { path: 'a.ts', deleted: false, binary: false, added: ['new'], removed: ['old'] },
+      { path: 'b.ts', deleted: false, binary: false, added: ['x'], removed: [] },
     ]);
   });
 
@@ -34,6 +34,36 @@ describe('parsePatch', () => {
 
     expect(files[0]?.deleted).toBe(true);
     expect(files[0]?.removed).toEqual(['gone']);
+  });
+
+  it('marks a file whose hunks git replaced with "Binary files differ"', () => {
+    const patch = [
+      'diff --git a/a.test.ts b/a.test.ts',
+      'new file mode 100644',
+      'index 0000000..5b99f3f',
+      'Binary files /dev/null and b/a.test.ts differ',
+      '',
+    ].join('\n');
+
+    expect(parsePatch(patch)).toEqual([
+      { path: 'a.test.ts', deleted: false, binary: true, added: [], removed: [] },
+    ]);
+  });
+
+  it('fails closed on a diff header it cannot parse', () => {
+    const patch =
+      'diff --git "a/q\\"x.test.ts" "b/q\\"x.test.ts"\n+++ b/x\n@@ -1 +1 @@\n+it.skip(1)\n';
+
+    const files = parsePatch(patch);
+
+    expect(files).toHaveLength(1);
+    expect(files[0]).toMatchObject({ unparsed: true });
+  });
+
+  it('parses non-ASCII paths as they appear with core.quotePath=false', () => {
+    const files = parsePatch(patchFor('é/ü.test.ts', ['x']));
+
+    expect(files[0]?.path).toBe('é/ü.test.ts');
   });
 });
 

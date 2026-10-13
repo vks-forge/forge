@@ -9,71 +9,23 @@
  * token in argv or a log line, a mint per call, or a 409 retried as if transient would
  * each be a security or reliability bug the engine cannot see from outside (d-0062).
  *
- * Depends on: contract/git-host.contract, helpers/fake-github-server, src/index, node:crypto.
+ * Depends on: contract/git-host.contract, helpers/github-rig.
  */
 
-import { generateKeyPairSync } from 'node:crypto';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createGitHubAppGitHost } from '#/index.js';
-import type { GitHubAppGitHostOptions } from '#/index.js';
 import { describeGitHostContract } from '#tests/contract/git-host.contract.js';
 import type { GitHostHarness } from '#tests/contract/git-host.contract.js';
+import {
+  MIN,
+  T0,
+  closeGitHubRigs,
+  makeGitHubRig as rig,
+  openPr,
+  otherKeys,
+} from '#tests/helpers/github-rig.js';
 import { rejection } from '#tests/helpers/rejection.js';
-import { startFakeGitHub } from '#tests/helpers/fake-github-server.js';
-import type { FakeGitHub } from '#tests/helpers/fake-github-server.js';
 
-const keys = generateKeyPairSync('rsa', {
-  modulusLength: 2048,
-  publicKeyEncoding: { type: 'spki', format: 'pem' },
-  privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
-});
-
-const otherKeys = generateKeyPairSync('rsa', {
-  modulusLength: 2048,
-  publicKeyEncoding: { type: 'spki', format: 'pem' },
-  privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
-});
-
-const T0 = Date.parse('2026-10-13T10:00:00.000Z');
-const MIN = 60_000;
-const cleanups: (() => Promise<void>)[] = [];
-
-interface Rig {
-  readonly server: FakeGitHub;
-  readonly host: ReturnType<typeof createGitHubAppGitHost>;
-  clock: { t: number };
-}
-
-async function rig(extra: Partial<GitHubAppGitHostOptions> = {}): Promise<Rig> {
-  const clock = { t: T0 };
-  const server = await startFakeGitHub({
-    owner: 'o',
-    repo: 'r',
-    appId: '123',
-    installationId: '456',
-    publicKeyPem: keys.publicKey,
-    now: () => clock.t,
-  });
-
-  cleanups.push(server.close);
-  const host = createGitHubAppGitHost({
-    owner: 'o',
-    repo: 'r',
-    baseBranch: 'main',
-    appId: '123',
-    installationId: '456',
-    privateKey: async () => Buffer.from(keys.privateKey),
-    apiBase: server.apiBase,
-    now: () => clock.t,
-    ...extra,
-  });
-
-  return { server, host, clock };
-}
-
-afterEach(async () => {
-  await Promise.all(cleanups.splice(0).map((c) => c()));
-});
+afterEach(closeGitHubRigs);
 
 describeGitHostContract('github app (fake server)', async (): Promise<GitHostHarness> => {
   const { server, host } = await rig();
@@ -94,8 +46,7 @@ describeGitHostContract('github app (fake server)', async (): Promise<GitHostHar
   };
 });
 
-const open = (r: Rig, branch: string) =>
-  r.host.openPr({ branch, base: 'main', title: 't', body: 'b' });
+const open = openPr;
 
 describe('github app host specifics', () => {
   it('mints one installation token with a verified JWT and reuses it', async () => {
@@ -169,9 +120,15 @@ describe('github app host specifics', () => {
       r.server.branches.set('feat/a', 'sha1');
       const pr = await open(r, 'feat/a');
       r.server.failNext(method, '/pulls/', status, headers);
+      if (family === 'auth') {
+        // A rejected credential is retried once with a fresh token; the second refusal is real.
+        r.server.failNext(method, '/pulls/', status, headers);
+      }
 
       const call =
-        method === 'GET' ? r.host.prStatus(pr.number) : r.host.merge(pr.number, 'squash');
+        method === 'GET'
+          ? r.host.prStatus(pr.number)
+          : r.host.merge(pr.number, 'squash', 'sha1');
 
       await expect(call).rejects.toMatchObject({ errorFamily: family });
     },

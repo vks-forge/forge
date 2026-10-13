@@ -11,7 +11,7 @@
  *
  * Exports: ForgeError, AuthError, RateLimitError, BudgetError,
  *   StallError, RefusalError, CrashError, PolicyDeniedError, UnknownForgeError,
- *   InvalidInputError.
+ *   InvalidInputError, HeadMovedError.
  * Depends on: schemas/errors, types/errors. No IO.
  */
 
@@ -80,6 +80,16 @@ export class UnknownForgeError extends ForgeError {
 
 /** Bad caller input (a pure constructor, a rejected patch, a constraint violation); a caller bug, not a runtime/harness fault, so it is never retried as-is. */
 export class InvalidInputError extends ForgeError {
+  constructor(message: string, options?: ForgeErrorOptions) {
+    super('invalid_input', message, options);
+  }
+}
+
+/**
+ * A PR's head is no longer the commit the gates judged (a push or force-push landed after
+ * the verdicts). Not a fault to retry or park: the engine answers it by gating the new head.
+ */
+export class HeadMovedError extends ForgeError {
   constructor(message: string, options?: ForgeErrorOptions) {
     super('invalid_input', message, options);
   }

@@ -6,15 +6,19 @@
  *   becomes a short-lived installation token, used for REST calls (open, read, merge,
  *   close PRs, delete branches) and, through environment-only git config, for `git push`.
  *   The token is never put in argv, the remote URL, a git config file or an error message,
- *   so nothing a log or process listing shows can be replayed. Failures are typed
- *   `GitHostError`s the engine branches on (d-0062).
+ *   so nothing a log or process listing shows can be replayed. A 401 (or a 403 that is not a
+ *   quota) drops the cached token and retries the call once with a fresh one. Merges are
+ *   pinned to the judged head sha: GitHub's `sha` check turns a moved head into a
+ *   `HeadMovedError`, a base that moved a moment ago into a retryable `merge_busy`. Failures
+ *   are typed `GitHostError`s the engine branches on (d-0062).
  *
  * Exports: createGitHubAppGitHost().
  * Depends on: zod, @forge/core, adapters/git-cli/run-git, adapters/github-app/{rest-client,
- *   installation-token}, domain/{push-env,ref-check}, shared/host-errors.
+ *   installation-token}, domain/{push-env,ref-check}, schemas/github-responses, shared/host-errors.
  *   IO: HTTPS to the GitHub API, `git push` to github.com.
  */
 
+import { HeadMovedError } from '@forge/core';
 import type { GitHost, PrState } from '@forge/core';
 import { z } from 'zod';
 import { createGitRunner } from '#/adapters/git-cli/run-git.js';
@@ -22,19 +26,9 @@ import { createTokenSource } from '#/adapters/github-app/installation-token.js';
 import { createRestClient } from '#/adapters/github-app/rest-client.js';
 import { buildPushEnv, redactSecrets } from '#/domain/push-env.js';
 import { assertSafeRefArg } from '#/domain/ref-check.js';
-import { GitHostError } from '#/shared/host-errors.js';
+import { MergeResponse, PullResponse } from '#/schemas/github-responses.js';
+import { GitHostError, refineMergeRefusal } from '#/shared/host-errors.js';
 import type { GitHubAppGitHostOptions } from '#/types/git-host.types.js';
-
-const PullResponse = z.object({
-  number: z.number().int().positive(),
-  html_url: z.string().min(1),
-  state: z.enum(['open', 'closed']),
-  merged: z.boolean().optional(),
-  mergeable: z.boolean().nullable().optional(),
-  head: z.object({ sha: z.string().min(1) }),
-});
-
-const MergeResponse = z.object({ sha: z.string().min(1) });
 
 const parse = <T>(schema: z.ZodType<T>, json: unknown, what: string): T => {
   const r = schema.safeParse(json);
@@ -68,11 +62,29 @@ export function createGitHubAppGitHost(o: GitHubAppGitHostOptions): GitHost {
     path: string,
     body?: unknown,
     accept?: readonly number[],
-  ) =>
-    rest.call(await tokens.token(), method, `${repoPath}${path}`, {
-      ...(body === undefined ? {} : { body }),
-      ...(accept === undefined ? {} : { accept }),
-    });
+  ) => {
+    const call = (token: string) =>
+      rest.call(token, method, `${repoPath}${path}`, {
+        ...(body === undefined ? {} : { body }),
+        ...(accept === undefined ? {} : { accept }),
+      });
+
+    const token = await tokens.token();
+    try {
+      return await call(token);
+    } catch (e) {
+      // 401, or a 403 that is not a quota, can mean the cached token was revoked or the App
+      // was reinstalled while it was still inside its hour. Mint a new one and retry the
+      // call once; a second refusal is a real auth problem for the user.
+      if (!(e instanceof GitHostError) || e.reason !== 'auth' || e.status === undefined) {
+        throw e;
+      }
+
+      tokens.invalidate(token);
+
+      return call(await tokens.token());
+    }
+  };
 
   return {
     async push(worktreePath, branch) {
@@ -82,7 +94,7 @@ export function createGitHubAppGitHost(o: GitHubAppGitHostOptions): GitHost {
         await git.run(
           worktreePath,
           ['push', `${gitBase}/${o.owner}/${o.repo}.git`, `${branch}:${branch}`],
-          { env: buildPushEnv(token) },
+          { env: buildPushEnv(token, gitBase) },
         );
       } catch (cause) {
         // git's stderr can echo the request; scrub before the message leaves this function.
@@ -116,10 +128,31 @@ export function createGitHubAppGitHost(o: GitHubAppGitHostOptions): GitHost {
       return { state, mergeable: pr.mergeable ?? null, headSha: pr.head.sha };
     },
 
-    async merge(n, method) {
-      const { json } = await api('PUT', `/pulls/${n}/merge`, { merge_method: method });
+    async merge(n, method, expectedHeadSha) {
+      try {
+        // `sha` makes GitHub refuse (409) when the head is not the commit the gates judged.
+        const { json } = await api('PUT', `/pulls/${n}/merge`, {
+          merge_method: method,
+          sha: expectedHeadSha,
+        });
 
-      return { sha: parse(MergeResponse, json, 'merge response').sha };
+        return { sha: parse(MergeResponse, json, 'merge response').sha };
+      } catch (e) {
+        if (!(e instanceof GitHostError) || e.reason !== 'merge_refused') {
+          throw e;
+        }
+
+        const kind = refineMergeRefusal(e.message);
+        if (kind === 'head_moved') {
+          throw new HeadMovedError(`PR ${n} head moved: ${e.message}`, { cause: e });
+        }
+
+        if (kind === 'merge_busy') {
+          throw new GitHostError('merge_busy', e.message, e.status);
+        }
+
+        throw e;
+      }
     },
 
     async closePr(n) {

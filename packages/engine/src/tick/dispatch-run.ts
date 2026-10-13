@@ -4,7 +4,7 @@
  * Why: dispatch is the moment the Director commits spend and risk, so its order matters.
  *   The worktree comes first (d-0059: a Worker never runs in the main checkout), then the
  *   `dispatch_prompt` step renders the brief from the ticket, project memory and what
- *   changed since the last run. The run row and the per-run token (stored only as a hash)
+ *   changed since the last run, plus the finish contract (typed claims for every edit). The run row and the per-run token (stored only as a hash)
  *   are written together before the harness starts, so a crash after start leaves a run the
  *   restart rule can find and revoke (d-0054). The ticket moves to `in_progress` only once
  *   the harness accepted the run; a start that throws settles the run as a failure and the
@@ -13,14 +13,16 @@
  *
  * Exports: startRun().
  * Depends on: @forge/core (branchName, DispatchPromptOutput), @forge/tools (sha256Hex),
- *   steps/run-step, tick/pump, tick/settle, tick/ticket-moves, domain/results.
+ *   steps/run-step, domain/worker-contract, tick/project-runtime, tick/pump, tick/settle, tick/ticket-moves, domain/results.
  */
 
 import { DispatchPromptOutput, branchName } from '@forge/core';
 import type { Interaction, Run, RunRequest, Ticket } from '@forge/core';
 import { sha256Hex } from '@forge/tools';
 import { familyOf, failureResult } from '#/domain/results.js';
+import { workerContract } from '#/domain/worker-contract.js';
 import { hold, rejectStep, runStep } from '#/steps/run-step.js';
+import { baseRefFor } from '#/tick/project-runtime.js';
 import { startPump } from '#/tick/pump.js';
 import { settleRun } from '#/tick/settle.js';
 import { moveTicket } from '#/tick/ticket-moves.js';
@@ -102,7 +104,12 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
   }
 
   const branch = ticket.branch ?? branchName(ticket.type, ticket.id, ticket.title);
-  const wt = await deps.worktrees.create(ticket.id, branch, deps.baseRef);
+  const wt = await deps.worktrees.create(
+    ticket.id,
+    branch,
+    baseRefFor(deps, project.slug),
+  );
+
   const slice = await deps.memory.slice(project.slug);
   const drafted = await runStep(
     ctx,
@@ -118,6 +125,10 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
       memory: slice,
       worktree: { path: wt.path, branch },
       wake: wakeDelta(c, answered),
+      // The Worker must finish with typed claims for every edit (G1 fails a finish without).
+      worker_contract: workerContract(
+        c.kind === 'retry' && c.wake?.kind === 'continuation',
+      ),
     },
     DispatchPromptOutput,
   );

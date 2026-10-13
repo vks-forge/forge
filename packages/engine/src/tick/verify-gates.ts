@@ -5,22 +5,23 @@
  *   Each gate gets the same context (ticket, run, real worktree, base sha and the claims
  *   the Worker made in `finish`), its report is saved, and its verdict is stored as a row
  *   before anything is decided, so the decision, the Ticket screen and a restart all read
- *   the same record. A gate that throws is recorded as `error`, never as a pass; the
+ *   the same record. Each row also records the commit the gates judged, so a merge can be
+ *   pinned to it. A gate that throws is recorded as `error`, never as a pass; the
  *   thrown family is kept so the caller can tell a rate limit from a broken gate.
  *
  * Exports: readClaims(), runGates().
- * Depends on: @forge/core (Claim, errors), domain/results, shared/time. IO through ports.
+ * Depends on: @forge/core (Claim, errors), domain/results, schemas/finish-claims, shared/time.
+ *   IO through ports.
  */
 
-import { Claim, InvalidInputError } from '@forge/core';
-import type { ErrorFamily, GateResult, GateVerdict } from '@forge/core';
-import { z } from 'zod';
+import { InvalidInputError } from '@forge/core';
+import type { Claim, ErrorFamily, GateResult, GateVerdict } from '@forge/core';
 import { familyOf } from '#/domain/results.js';
+import { FinishClaims } from '#/schemas/finish-claims.js';
 import { iso } from '#/shared/time.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
+import type { EngineDeps } from '#/types/engine.types.js';
 import type { GateRun, VerifyTarget } from '#/types/verify.types.js';
-
-const FinishClaims = z.object({ claims: z.array(Claim) });
 
 /** The claims of the run's `finish` event; none when it never finished. A malformed list fails closed. */
 export async function readClaims(ctx: EngineCtx, runId: string): Promise<Claim[]> {
@@ -50,11 +51,11 @@ export async function readClaims(ctx: EngineCtx, runId: string): Promise<Claim[]
 
 /** Runs every configured gate in order, saving report and row for each. */
 export async function runGates(
-  ctx: EngineCtx,
+  deps: EngineDeps,
   t: VerifyTarget,
   claims: readonly Claim[],
+  headSha: string,
 ): Promise<GateRun> {
-  const { deps } = ctx;
   const rows: GateResult[] = [];
   const verdicts = new Map<string, GateVerdict>();
   let errorFamily: ErrorFamily | undefined;
@@ -87,6 +88,7 @@ export async function runGates(
         gate: gate.name,
         status: verdict.status,
         ...(ref ? { report_ref: ref } : {}),
+        head_sha: headSha,
         started_at: startedAt,
         ended_at: iso(deps.clock.now()),
       }),

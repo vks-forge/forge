@@ -28,6 +28,10 @@ export interface CheckOutcome {
 export interface PatchFile {
   readonly path: string;
   readonly deleted: boolean;
+  /** Git printed "Binary files ... differ": the hunks are not in the patch. */
+  readonly binary: boolean;
+  /** Set when the `diff --git` header could not be parsed; `path` is then the raw header. */
+  readonly unparsed?: true;
   readonly added: readonly string[];
   readonly removed: readonly string[];
 }
@@ -36,6 +40,8 @@ export interface PatchFile {
 export interface PatchDraft {
   path: string;
   deleted: boolean;
+  binary: boolean;
+  unparsed?: true;
   added: string[];
   removed: string[];
 }
@@ -53,6 +59,8 @@ export interface ProjectCheckInput {
   readonly project: ProjectConfig;
   readonly cwd: string;
   readonly env: Readonly<Record<string, string | undefined>>;
+  /** Extra variable names to copy from `env` beyond the built-in allowlist. */
+  readonly passEnv?: readonly string[] | undefined;
   readonly run: RunCommand;
   readonly timeoutMs: number;
 }

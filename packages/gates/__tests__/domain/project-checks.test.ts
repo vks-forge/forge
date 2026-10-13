@@ -74,6 +74,43 @@ describe('runProjectChecks', () => {
     expect(out.details).toContain('lint exploded');
   });
 
+  it('puts the output tail in the finding message, not only the exit code', async () => {
+    const long = `${'x'.repeat(5000)}
+FAIL src/a.test.ts expected 3 got 4`;
+
+    const out = await runProjectChecks(
+      input(() => Promise.resolve({ exitCode: 1, timedOut: false, output: long }), 'ts', {
+        test: 'X',
+      }),
+    );
+
+    const message = out.findings[0]?.message ?? '';
+
+    expect(message).toContain('exit code 1');
+    expect(message).toContain('FAIL src/a.test.ts expected 3 got 4');
+    expect(message.length).toBeLessThan(2000);
+  });
+
+  it('passes passEnv names through to the scrubber', async () => {
+    let req: CommandRequest | undefined;
+
+    await runProjectChecks({
+      ...input(
+        (r) => {
+          req = r;
+
+          return ok();
+        },
+        'ts',
+        { test: 'X' },
+      ),
+      env: { PATH: '/bin', DATABASE_URL: 'sqlite::memory:' },
+      passEnv: ['DATABASE_URL'],
+    });
+
+    expect(req?.env['DATABASE_URL']).toBe('sqlite::memory:');
+  });
+
   it('fails on timeout', async () => {
     const out = await runProjectChecks(
       input(() => Promise.resolve({ exitCode: null, timedOut: true, output: '' }), 'ts', {
@@ -123,15 +160,54 @@ describe('runProjectChecks', () => {
       ),
     );
 
-    expect(req?.env).toEqual({ PATH: '/bin' });
+    expect(req?.env).toEqual({
+      PATH: '/bin',
+      CI: '1',
+      NoDefaultCurrentDirectoryInExePath: '1',
+    });
+
     expect(req?.cwd).toBe('/wt');
   });
 });
 
 describe('helpers', () => {
-  it('scrubEnv drops FORGE_ keys case-insensitively and undefined values', () => {
-    expect(scrubEnv({ A: '1', FORGE_X: '2', forge_y: '3', B: undefined })).toEqual({
-      A: '1',
+  it('scrubEnv keeps only allowlisted names, case-insensitively, and forces CI and the cwd guard', () => {
+    const out = scrubEnv({
+      Path: 'p',
+      SystemRoot: 'C:/Windows',
+      temp: 't',
+      USERPROFILE: 'u',
+      'ProgramFiles(x86)': 'x',
+      CI: '0',
+      ANTHROPIC_API_KEY: 'sk-x',
+      GH_TOKEN: 'g',
+      FORGE_RUN_TOKEN: 'f',
+      forge_y: '3',
+      NODE_OPTIONS: '--require x',
+      B: undefined,
+    });
+
+    expect(out).toEqual({
+      Path: 'p',
+      SystemRoot: 'C:/Windows',
+      temp: 't',
+      USERPROFILE: 'u',
+      'ProgramFiles(x86)': 'x',
+      CI: '1',
+      NoDefaultCurrentDirectoryInExePath: '1',
+    });
+  });
+
+  it('scrubEnv passes an explicit passEnv list and never lets it override the guard', () => {
+    const out = scrubEnv(
+      { MY_FLAG: 'on', Other: 'no', NoDefaultCurrentDirectoryInExePath: '0' },
+      ['my_flag', 'NoDefaultCurrentDirectoryInExePath'],
+    );
+
+    expect(out).toEqual({
+      MY_FLAG: 'on',
+      CI: '1',
+      NoDefaultCurrentDirectoryInExePath: '1',
     });
   });
 

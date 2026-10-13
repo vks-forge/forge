@@ -7,7 +7,7 @@
  *   secret held in server memory, d-0054) is injected, so the gate is tested with
  *   in-memory fakes and the server decides where the real ones come from.
  *
- * Exports: ToolCallRef, CommandRequest, CommandResult, RunCommand, G1Deps.
+ * Exports: ToolCallRef, CommandRequest, CommandResult, RunCommand, G1Deps, G1CoreDeps.
  * Depends on: @forge/core (WorktreeManager), @forge/tools (ReceiptLog, HmacKey). Types only.
  */
 
@@ -44,8 +44,10 @@ export interface G1Deps {
   readonly listToolCalls: (runId: string) => Promise<readonly ToolCallRef[]>;
   /** The run's receipt secret, or null when the server no longer holds it. */
   readonly runSecret: (runId: string) => HmacKey | null;
-  /** Parent environment for project commands; `FORGE_*` entries are removed. */
+  /** Parent environment; only an allowlist of it reaches project commands (shared/env). */
   readonly env: Readonly<Record<string, string | undefined>>;
+  /** Extra variable names to pass from `env` to project commands (default: none). */
+  readonly passEnv?: readonly string[];
   /** Defaults to the real spawner. */
   readonly runCommand?: RunCommand;
   /** Per-command timeout, default 10 minutes. */
@@ -54,3 +56,6 @@ export interface G1Deps {
   readonly ignoreToolCall?: (call: ToolCallRef) => boolean;
   readonly now?: () => Date;
 }
+
+/** What the domain gate needs: `G1Deps` with the command runner supplied by the caller. */
+export type G1CoreDeps = Omit<G1Deps, 'runCommand'> & { readonly runCommand: RunCommand };

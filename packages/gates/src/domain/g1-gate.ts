@@ -10,12 +10,11 @@
  *   spawn failure) makes the verdict `error`, never `passed`, so the engine retries or
  *   escalates instead of merging on missing evidence (verification-plane.md §2).
  *
- * Exports: createG1Gate().
- * Depends on: @forge/core (Gate), domain/*, adapters/command-runner, types/g1-deps. IO only via injected deps.
+ * Exports: buildG1Gate().
+ * Depends on: @forge/core (Gate), domain/*, types/g1-deps. No IO; every side effect is an injected dep.
  */
 
 import type { Gate, GateContext, GateFinding, GateVerdict } from '@forge/core';
-import { runShellCommand } from '#/adapters/command-runner.js';
 import { checkChain } from '#/domain/chain-check.js';
 import { checkClaims } from '#/domain/claim-check.js';
 import { checkGateConfig } from '#/domain/config-guard.js';
@@ -24,7 +23,7 @@ import { DEFAULT_COMMAND_TIMEOUT_MS, runProjectChecks } from '#/domain/project-c
 import { renderReport } from '#/domain/report.js';
 import { checkTestDiff } from '#/domain/test-diff.js';
 import type { CheckOutcome } from '#/types/check.types.js';
-import type { G1Deps } from '#/types/g1-deps.types.js';
+import type { G1CoreDeps } from '#/types/g1-deps.types.js';
 
 function combine(outcomes: readonly CheckOutcome[]): GateVerdict['status'] {
   if (outcomes.some((o) => o.findings.length > 0 || o.status === 'failed')) {
@@ -34,10 +33,10 @@ function combine(outcomes: readonly CheckOutcome[]): GateVerdict['status'] {
   return outcomes.some((o) => o.status === 'error') ? 'error' : 'passed';
 }
 
-/** Builds the G1 gate over injected evidence sources and a command runner. */
-export function createG1Gate(deps: G1Deps): Gate {
+/** Builds the G1 gate over injected evidence sources and a required command runner. */
+export function buildG1Gate(deps: G1CoreDeps): Gate {
   const now = deps.now ?? ((): Date => new Date());
-  const run = deps.runCommand ?? runShellCommand;
+  const run = deps.runCommand;
   const timeoutMs = deps.commandTimeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS;
 
   return {
@@ -67,6 +66,7 @@ export function createG1Gate(deps: G1Deps): Gate {
           project: ctx.project,
           cwd: ctx.worktreePath,
           env: deps.env,
+          passEnv: deps.passEnv,
           run,
           timeoutMs,
         }),

@@ -19,6 +19,8 @@ export interface LocalBareGitHostOptions {
   /** Epoch milliseconds, for PR record timestamps. */
   readonly now: () => number;
   readonly gitBinary?: string;
+  /** Git process seam; defaults to the real binary named by `gitBinary`. */
+  readonly git?: GitRunner;
   /** Identity on merge commits; defaults to Forge <forge@localhost>. */
   readonly author?: GitAuthor;
 }

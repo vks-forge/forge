@@ -129,6 +129,17 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
       expect(b?.id).toBeGreaterThan(a?.id ?? 0);
     });
 
+    it('round-trips the head sha the gates judged and reads it as absent when not given', async () => {
+      const sha = 'a'.repeat(40);
+      const [withSha, without] = await tx(async (t) => [
+        await t.gateResults.insert(makeGate('r1', { head_sha: sha })),
+        await t.gateResults.insert(makeGate('r1', { gate: 'G2' })),
+      ]);
+
+      expect(withSha?.head_sha).toBe(sha);
+      expect(without?.head_sha).toBeUndefined();
+    });
+
     it('listByTicket returns the results of every run of that ticket, oldest first', async () => {
       await tx(async (t) => {
         await t.runs.insert(makeRun('r1', { ticket_id: 'SF-1' }));

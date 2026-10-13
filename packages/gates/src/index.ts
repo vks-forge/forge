@@ -6,9 +6,9 @@
  *   is internal so check heuristics can change without touching callers.
  *
  * Exports: createG1Gate, runShellCommand, G1Deps and the command seam types.
- * Depends on: domain/g1-gate, adapters/command-runner, types/g1-deps. No IO on import.
+ * Depends on: adapters/g1-gate-factory, adapters/command-runner, types/g1-deps. No IO on import.
  */
 
 export { runShellCommand } from '#/adapters/command-runner.js';
-export { createG1Gate } from '#/domain/g1-gate.js';
+export { createG1Gate } from '#/adapters/g1-gate-factory.js';
 export type * from '#/types/g1-deps.types.js';

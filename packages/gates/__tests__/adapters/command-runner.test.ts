@@ -6,11 +6,14 @@
  *   either pass a failing suite or wedge the dispatcher.
  *
  * Pins: exit 0 and non-zero, combined output, cwd, timeout kill with a long-running
- *   child, spawn error rejection.
+ *   child, spawn error rejection, a Worker-planted `node.cmd` in the cwd never being run
+ *   (Windows), NoDefaultCurrentDirectoryInExePath set for the child, an unresolvable command refused.
  * Depends on: adapters/command-runner (real processes).
  */
 
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { runShellCommand } from '#/adapters/command-runner.js';
 
@@ -22,7 +25,8 @@ const base = {
 
 const node = (code: string): string => `node -e "${code}"`;
 
-describe('runShellCommand', () => {
+// 30s: each case spawns real processes, which are slow under full-suite load on Windows.
+describe('runShellCommand', { timeout: 30_000 }, () => {
   it('returns exit code 0 and captured output', async () => {
     const r = await runShellCommand({ ...base, command: node('console.log(123)') });
 
@@ -66,5 +70,40 @@ describe('runShellCommand', () => {
         command: 'x',
       }),
     ).rejects.toThrow();
+  });
+
+  it.runIf(process.platform === 'win32')(
+    'does not run a node.cmd planted in the worktree (cwd hijack)',
+    async () => {
+      const wt = await mkdtemp(join(tmpdir(), 'forge-hijack '));
+      try {
+        await writeFile(join(wt, 'node.cmd'), '@exit /b 0');
+
+        const r = await runShellCommand({
+          ...base,
+          cwd: wt,
+          command: node('process.exit(3)'),
+        });
+
+        expect(r.exitCode).toBe(3);
+      } finally {
+        await rm(wt, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+      }
+    },
+  );
+
+  it('sets NoDefaultCurrentDirectoryInExePath for the child', async () => {
+    const r = await runShellCommand({
+      ...base,
+      command: node('console.log(process.env.NoDefaultCurrentDirectoryInExePath)'),
+    });
+
+    expect(r.output).toContain('1');
+  });
+
+  it('rejects a command that resolves nowhere instead of running it from the cwd', async () => {
+    await expect(
+      runShellCommand({ ...base, command: 'definitely-not-a-real-binary-xyz test' }),
+    ).rejects.toThrow(/not found/);
   });
 });

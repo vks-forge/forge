@@ -124,7 +124,7 @@ describe('verify: faults', () => {
     expect(host.count('openPr')).toBe(1);
 
     const restarted = rig.restart('srv-a');
-    await restarted.tick();
+    await rig.tickOn(restarted);
 
     expect((await rig.ticket(id)).status).toBe('done');
     expect(host.count('openPr')).toBe(1);

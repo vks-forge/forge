@@ -108,13 +108,27 @@ describe('runMigrations', () => {
                 ('old2', 'r1', 2, 't', 'a', 'allow', 'rule', 'ts', 'h')`,
       );
 
-      expect(runMigrations(driver)).toEqual([4, 5, 6, 7]);
+      expect(runMigrations(driver)).toEqual([4, 5, 6, 7, 8]);
       const rows = driver.all<{ chain_seq: number }>(
         'SELECT chain_seq FROM tool_decisions',
       );
 
       driver.close();
       expect(rows).toEqual([{ chain_seq: 0 }, { chain_seq: 0 }]);
+    });
+  });
+
+  describe('0008 gate head sha', () => {
+    it('adds a nullable head_sha to gate_results', () => {
+      const driver = openSqliteDriver(':memory:');
+      runMigrations(driver);
+      const col = driver
+        .all<{ name: string; notnull: number }>('PRAGMA table_info(gate_results)')
+        .find((c) => c.name === 'head_sha');
+
+      driver.close();
+      expect(col).toBeDefined();
+      expect(col?.notnull).toBe(0);
     });
   });
 
@@ -221,7 +235,7 @@ describe('runMigrations', () => {
          VALUES ('old', 'SF-1', 'h', '1', '/w', 'express', '2026-10-13T00:00:00.000Z', 'running')`,
       );
 
-      expect(runMigrations(driver)).toEqual([5, 6, 7]);
+      expect(runMigrations(driver)).toEqual([5, 6, 7, 8]);
       const edges = driver.all<{ from_id: string; to_id: string; kind: string }>(
         'SELECT from_id, to_id, kind FROM ticket_relations ORDER BY rowid',
       );

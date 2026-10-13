@@ -7,7 +7,7 @@
  *   "intake, tick, run does X, tick, assert" and lets a second engine be created over the
  *   same storage to simulate a server restart (d-0054).
  *
- * Exports: Rig, makeConfig(), makeRig(), intake().
+ * Exports: Rig, makeConfig(), makeRig(), intake(), tickToIdle().
  * Depends on: @forge/core, @forge/db (in-memory storage, dev-only fake), src/tick/engine,
  *   helpers/*. No IO.
  */
@@ -77,6 +77,8 @@ export interface Rig {
   /** Sends a chat `new_request` and returns the created ticket id. */
   request(text: string, over?: Record<string, unknown>): Promise<string>;
   tick(): Promise<TickReport>;
+  /** `tick()` for another engine over the same fakes (a restarted server). */
+  tickOn(engine: Engine): Promise<TickReport>;
   /** Lets the run pump drain pending driver events and results. */
   flush(): Promise<void>;
   ticket(id: string): Promise<Ticket>;
@@ -98,6 +100,46 @@ export function intake(over: Partial<IntakeEvent> = {}, now = Date.now()): Intak
     received_at: new Date(now).toISOString(),
     ...over,
   };
+}
+
+/** Adds the lists of `b` to those of `a`; the tick that applies a gate job reports what the one that started it could not. */
+function mergeReports(a: TickReport, b: TickReport): TickReport {
+  return {
+    ...a,
+    crashed: [...a.crashed, ...b.crashed],
+    settled: [...a.settled, ...b.settled],
+    triaged: [...a.triaged, ...b.triaged],
+    dispatched: [...a.dispatched, ...b.dispatched],
+    steered: [...a.steered, ...b.steered],
+    verified: [...a.verified, ...b.verified],
+    parked: [...a.parked, ...b.parked],
+    violations: [...a.violations, ...b.violations],
+    rejectedSteps: [...a.rejectedSteps, ...b.rejectedSteps],
+    errors: [...a.errors, ...b.errors],
+  };
+}
+
+/**
+ * One tick, plus the follow-up tick a finished gate job asks for. Gates run beside the tick
+ * (verify-gates jobs), so a scenario that reads "tick: merged" needs both. Use `engine.tick()`
+ * directly to look at the in-between state.
+ */
+export async function tickToIdle(
+  engine: Engine,
+  flush: () => Promise<void>,
+  gateJobsStarted: () => number,
+): Promise<TickReport> {
+  const before = gateJobsStarted();
+  const first = await engine.tick();
+  if (gateJobsStarted() === before) {
+    return first;
+  }
+
+  for (let i = 0; i < 20 && engine.gateJobsInFlight() > 0; i++) {
+    await flush();
+  }
+
+  return mergeReports(first, await engine.tick());
 }
 
 export interface RigOptions {
@@ -145,6 +187,9 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
     }
   };
 
+  const gateStarts = (): number =>
+    logs.filter((l) => l.message.startsWith('gates started')).length;
+
   const rig: Rig = {
     storage,
     driver,
@@ -179,7 +224,8 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
 
       return r.ticketId;
     },
-    tick: () => engine.tick(),
+    tick: () => tickToIdle(engine, flush, gateStarts),
+    tickOn: (other) => tickToIdle(other, flush, gateStarts),
     flush,
     async ticket(id) {
       const t = await storage.transaction((tx) => tx.tickets.get(id as Ticket['id']));

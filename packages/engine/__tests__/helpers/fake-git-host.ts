@@ -8,9 +8,10 @@
  *   run, so a scenario reads as "first pass fails with this finding, second passes".
  *
  * Exports: FakeGitHost, createFakeGitHost(), ScriptedGate, createScriptedGate(), verdict().
- * Depends on: @forge/core (GitHost, Gate). No IO.
+ * Depends on: @forge/core (GitHost, Gate, HeadMovedError). No IO.
  */
 
+import { HeadMovedError } from '@forge/core';
 import type {
   Gate,
   GateContext,
@@ -19,6 +20,7 @@ import type {
   GateStatus,
   GateVerdict,
   GitHost,
+  OpenPrInput,
   PrState,
   PullRequest,
 } from '@forge/core';
@@ -31,6 +33,12 @@ export interface FakeGitHost extends GitHost {
   readonly calls: string[];
   prState: PrState;
   mergeable: boolean | null;
+  /** The head the PR reports; the default matches the fake worktree's head. */
+  headSha: string;
+  /** The sha every `merge` was asked to pin to, in order. */
+  readonly mergeShas: string[];
+  /** Every PR opened, in order. */
+  readonly opened: OpenPrInput[];
   /** Throws `error` on the next `times` calls of `call`. */
   failNext(call: Call, error: Error, times?: number): void;
   count(call: Call): number;
@@ -40,6 +48,8 @@ export interface FakeGitHost extends GitHost {
 
 export function createFakeGitHost(): FakeGitHost {
   const calls: string[] = [];
+  const mergeShas: string[] = [];
+  const opened: OpenPrInput[] = [];
   const failures = new Map<Call, { error: Error; times: number }>();
   let nextPr = 41;
   const open = new Map<string, PullRequest>();
@@ -57,6 +67,9 @@ export function createFakeGitHost(): FakeGitHost {
     calls,
     prState: 'open',
     mergeable: true,
+    headSha: 'head-sha-1',
+    mergeShas,
+    opened,
     failNext: (call, error, times = 1) => void failures.set(call, { error, times }),
     count: (call) => calls.filter((c) => c.startsWith(`${call}:`)).length,
     async push(_path, branch) {
@@ -73,6 +86,7 @@ export function createFakeGitHost(): FakeGitHost {
     },
     async openPr(input) {
       enter('openPr', input.branch);
+      opened.push(input);
       nextPr++;
       const pr = { number: nextPr, url: `https://git.test/pr/${nextPr}` };
       open.set(input.branch, pr);
@@ -87,10 +101,15 @@ export function createFakeGitHost(): FakeGitHost {
     async prStatus(n) {
       enter('prStatus', String(n));
 
-      return { state: host.prState, mergeable: host.mergeable, headSha: 'head' };
+      return { state: host.prState, mergeable: host.mergeable, headSha: host.headSha };
     },
-    async merge(n) {
+    async merge(n, _method, expectedHeadSha) {
+      mergeShas.push(expectedHeadSha);
       enter('merge', String(n));
+      if (expectedHeadSha !== host.headSha) {
+        throw new HeadMovedError(`head is ${host.headSha}, not ${expectedHeadSha}`);
+      }
+
       host.prState = 'merged';
 
       return { sha: 'merge-sha' };

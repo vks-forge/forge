@@ -37,7 +37,7 @@ export async function publishBranch(ctx: EngineCtx, t: VerifyTarget): Promise<Ti
     (await runtime.gitHost.findPr(t.branch)) ??
     (await runtime.gitHost.openPr({
       branch: t.branch,
-      base: runtime.config.git_host?.base_branch ?? deps.baseRef,
+      base: t.baseRef,
       title,
       body: `${ticket.body}
 

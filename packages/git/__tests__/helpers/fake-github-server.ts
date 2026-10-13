@@ -11,13 +11,14 @@
  *   it saw so a test can prove nothing but the right credential was sent.
  *
  * Exports: startFakeGitHub(), FakeGitHub.
- * Depends on: node:http, helpers/app-jwt-check.
+ * Depends on: node:http, helpers/app-jwt-check, helpers/http-json.
  */
 
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { appJwtValid } from '#tests/helpers/app-jwt-check.js';
+import { readBody, send } from '#tests/helpers/http-json.js';
 
 interface FakePr {
   number: number;
@@ -43,7 +44,10 @@ export interface FakeGitHub {
     pathPart: string,
     status: number,
     headers?: Record<string, string>,
+    message?: string,
   ): void;
+  /** Every token issued so far stops working (revoked, or the App was reinstalled). */
+  revokeTokens(): void;
   close(): Promise<void>;
 }
 
@@ -59,27 +63,6 @@ export interface FakeGitHubOptions {
   readonly tokenTtlMs?: number;
 }
 
-const readBody = async (req: IncomingMessage): Promise<unknown> => {
-  const chunks: Buffer[] = [];
-  for await (const c of req) {
-    chunks.push(c as Buffer);
-  }
-
-  const text = Buffer.concat(chunks).toString('utf8');
-
-  return text.length > 0 ? JSON.parse(text) : undefined;
-};
-
-const send = (
-  res: ServerResponse,
-  status: number,
-  body?: unknown,
-  headers: Record<string, string> = {},
-): void => {
-  res.writeHead(status, { 'content-type': 'application/json', ...headers });
-  res.end(body === undefined ? undefined : JSON.stringify(body));
-};
-
 export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub> {
   const ttl = o.tokenTtlMs ?? 3_600_000;
   const tokens = new Map<string, number>();
@@ -91,6 +74,7 @@ export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub>
     part: string;
     status: number;
     headers: Record<string, string>;
+    message: string | undefined;
   }[] = [];
 
   let mints = 0;
@@ -117,7 +101,7 @@ export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub>
       return send(
         res,
         f.status,
-        { message: `forced failure carrying ${credential}` },
+        { message: f.message ?? `forced failure carrying ${credential}` },
         f.headers,
       );
     }
@@ -218,13 +202,19 @@ export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub>
       }
 
       if (method === 'PUT' && m[2]) {
-        const b = (await readBody(req)) as { merge_method: string };
+        const b = (await readBody(req)) as { merge_method: string; sha?: string };
         if (!['squash', 'merge'].includes(b.merge_method)) {
           return send(res, 422, { message: 'Invalid merge method' });
         }
 
         if (pr.state !== 'open' || pr.merged) {
           return send(res, 405, { message: 'Pull Request is not mergeable' });
+        }
+
+        if (b.sha !== undefined && b.sha !== branches.get(pr.branch)) {
+          return send(res, 409, {
+            message: 'Head branch was modified. Review and try the merge again.',
+          });
         }
 
         const sha = `merge${(shaCounter += 1)}`;
@@ -264,7 +254,8 @@ export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub>
       state: pr.state,
       merged: pr.merged,
       mergeable: pr.mergeable,
-      head: { sha: pr.headSha },
+      // GitHub's head follows the branch; once the branch is gone the PR keeps its last head.
+      head: { sha: branches.get(pr.branch) ?? pr.headSha },
     };
   };
 
@@ -282,8 +273,9 @@ export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub>
     branches,
     prs,
     baseSha: () => branches.get('main') as string,
-    failNext: (method, part, status, headers = {}) =>
-      failures.push({ method, part, status, headers }),
+    failNext: (method, part, status, headers = {}, message) =>
+      failures.push({ method, part, status, headers, message }),
+    revokeTokens: () => tokens.clear(),
     close: () =>
       new Promise<void>((resolve) => {
         server.closeAllConnections();

@@ -27,13 +27,14 @@ export function createGateResultRepository(driver: SqlDriver): GateResultReposit
     async insert(result) {
       const g = NewGateResult.parse(result);
       driver.run(
-        `INSERT INTO gate_results (run_id, gate, status, report_ref, started_at, ended_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO gate_results (run_id, gate, status, report_ref, head_sha, started_at, ended_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           g.run_id,
           g.gate,
           g.status,
           g.report_ref ?? null,
+          g.head_sha ?? null,
           g.started_at,
           g.ended_at ?? null,
         ],

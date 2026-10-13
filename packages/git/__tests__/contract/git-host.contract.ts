@@ -8,13 +8,14 @@
  *   cannot be merged again (a `policy_denied` answer, never retried), `findPr` finds only an
  *   open PR for a branch (so a caller that crashed after `openPr` adopts it), a second open PR
  *   for one branch is refused, an unknown PR is an `invalid_input` error, and deleting a
- *   branch is idempotent. A new host passes this before it gets tests of its own.
+ *   branch is idempotent. A merge is pinned to the head sha the gates judged: any other head
+ *   is refused with `HeadMovedError` and merges nothing. A new host passes this before it gets tests of its own.
  *
  * Exports: GitHostHarness, describeGitHostContract().
  * Depends on: vitest, @forge/core (GitHost, ForgeError).
  */
 
-import { ForgeError } from '@forge/core';
+import { ForgeError, HeadMovedError } from '@forge/core';
 import type { GitHost } from '@forge/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -77,11 +78,11 @@ export function describeGitHostContract(
 
     it('findPr ignores closed and merged PRs', async () => {
       await h.seedBranch('feat/a');
-      await h.seedBranch('feat/b');
+      const headB = await h.seedBranch('feat/b');
       const closed = await open('feat/a');
       const merged = await open('feat/b');
       await h.host.closePr(closed.number);
-      await h.host.merge(merged.number, 'squash');
+      await h.host.merge(merged.number, 'squash', headB);
 
       expect(await h.host.findPr('feat/a')).toBeNull();
       expect(await h.host.findPr('feat/b')).toBeNull();
@@ -107,11 +108,11 @@ export function describeGitHostContract(
     });
 
     it('squash-merges: the base branch moves to the returned sha and the PR reads merged', async () => {
-      await h.seedBranch('feat/a');
+      const head = await h.seedBranch('feat/a');
       const pr = await open('feat/a');
       const before = await h.baseSha();
 
-      const { sha } = await h.host.merge(pr.number, 'squash');
+      const { sha } = await h.host.merge(pr.number, 'squash', head);
 
       expect(sha).toMatch(/^[0-9a-z]{4,}$/);
       expect(sha).not.toBe(before);
@@ -119,35 +120,49 @@ export function describeGitHostContract(
       expect((await h.host.prStatus(pr.number)).state).toBe('merged');
     });
 
-    it('merge-method merge also moves the base branch', async () => {
+    it('refuses to merge when the PR head is not the commit the gates judged, and merges nothing', async () => {
       await h.seedBranch('feat/a');
       const pr = await open('feat/a');
+      const before = await h.baseSha();
 
-      const { sha } = await h.host.merge(pr.number, 'merge');
+      const err = await h.host
+        .merge(pr.number, 'squash', 'f'.repeat(40))
+        .catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(HeadMovedError);
+      expect(await h.baseSha()).toBe(before);
+      expect((await h.host.prStatus(pr.number)).state).toBe('open');
+    });
+
+    it('merge-method merge also moves the base branch', async () => {
+      const head = await h.seedBranch('feat/a');
+      const pr = await open('feat/a');
+
+      const { sha } = await h.host.merge(pr.number, 'merge', head);
 
       expect(await h.baseSha()).toBe(sha);
     });
 
     it('refuses to merge a PR twice, as a policy denial', async () => {
-      await h.seedBranch('feat/a');
+      const head = await h.seedBranch('feat/a');
       const pr = await open('feat/a');
-      await h.host.merge(pr.number, 'squash');
+      await h.host.merge(pr.number, 'squash', head);
 
-      const err = await h.host.merge(pr.number, 'squash').catch((e: unknown) => e);
+      const err = await h.host.merge(pr.number, 'squash', head).catch((e: unknown) => e);
 
       expect(err).toBeInstanceOf(ForgeError);
       expect(err).toMatchObject({ errorFamily: 'policy_denied' });
     });
 
     it('closing a PR is idempotent and a closed PR cannot be merged', async () => {
-      await h.seedBranch('feat/a');
+      const head = await h.seedBranch('feat/a');
       const pr = await open('feat/a');
 
       await h.host.closePr(pr.number);
       await h.host.closePr(pr.number);
 
       expect((await h.host.prStatus(pr.number)).state).toBe('closed');
-      await expect(h.host.merge(pr.number, 'squash')).rejects.toMatchObject({
+      await expect(h.host.merge(pr.number, 'squash', head)).rejects.toMatchObject({
         errorFamily: 'policy_denied',
       });
     });

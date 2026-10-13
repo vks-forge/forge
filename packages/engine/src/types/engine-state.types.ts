@@ -7,7 +7,8 @@
  *   "hold" stops a failing Director step or worktree from being re-spent on every 10 s
  *   tick. A queued steering reply waits for the next tick because the LLM call must not
  *   happen on the intake request path. Naming the shapes keeps the phases that share them
- *   honest. The requester's hint, type and title are not here: they are read back from the
+ *   honest. A gate job is the same kind of fact: the gates run for minutes, so they run beside
+ *   the tick instead of inside it, and the job map is what the next tick finds their result in. The requester's hint, type and title are not here: they are read back from the
  *   stored intake event, so a restart cannot lose them.
  *
  * Exports: Pump, Hold, QueuedReply, EngineState, EngineCtx.
@@ -16,6 +17,7 @@
 
 import type { RunHandle, RunResult } from '@forge/core';
 import type { EngineDeps, TickReport } from '#/types/engine.types.js';
+import type { GateJob } from '#/types/verify.types.js';
 
 /** One live run: its handle and, once the stream and result are in, the outcome. */
 export interface Pump {
@@ -56,6 +58,10 @@ export interface EngineState {
   readonly pumps: Map<string, Pump>;
   readonly holds: Map<string, Hold>;
   readonly baseShas: Map<string, string>;
+  /** Gate runs in flight or finished-but-unapplied, by `ticket:run`; lost on restart, so the gates simply run again. */
+  readonly gateJobs: Map<string, GateJob>;
+  /** Re-gates after the PR head moved, per `ticket:run`, to stop a branch that never settles. */
+  readonly regates: Map<string, number>;
   replies: QueuedReply[];
 }
 

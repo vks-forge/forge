@@ -13,17 +13,22 @@
  *                and P is in the diff (paths folded: slashes, case, worktree prefix).
  *   read P       allowed `read` decision on P with a `read_completed` effect.
  *   ran_tests    allowed `shell` decision with a completed effect (`mutation_committed`,
- *                or `uncertain` for a failed run, which still ran) whose resource contains
- *                `commands.test` after whitespace and case folding, per ` ; ` segment.
- *   added_test N N appears in an added line of a test file in the diff.
+ *                or `uncertain` for a failed run, which still ran; the report says so)
+ *                one of whose segments starts with `commands.test` (see shell-match).
+ *   added_test N an added line of a test file declares a test (`it(`, `test(`, `describe(`)
+ *                whose title contains N; comments and strings do not count.
+ *
+ * Coverage (no vacuous pass): a non-empty diff with no claims at all is a finding, and every
+ * changed file other than lockfiles and deletions must be named by an `edited` claim.
  *
  * Exports: checkClaims().
- * Depends on: @forge/core (Claim), @forge/tools (Receipt), domain/test-files, shared/paths. No IO.
+ * Depends on: @forge/core (Claim), @forge/tools (Receipt), domain/{test-files,shell-match}, shared/paths. No IO.
  */
 
 import type { Claim, GateFinding } from '@forge/core';
 import type { Receipt } from '@forge/tools';
-import { isTestFile } from '#/domain/test-files.js';
+import { runsTestCommand } from '#/domain/shell-match.js';
+import { declaresTest, isTestFile } from '#/domain/test-files.js';
 import { foldPath } from '#/shared/paths.js';
 import type {
   AllowedCall as Allowed,
@@ -52,19 +57,6 @@ function allowedCalls(receipts: readonly Receipt[]): Allowed[] {
   return out;
 }
 
-const squash = (s: string): string => s.replace(/\s+/g, ' ').trim().toLowerCase();
-
-/** True when any ` ; ` segment of the recorded shell resource contains the test command. */
-function runsTestCommand(resource: string | null, testCommand: string): boolean {
-  if (resource === null) {
-    return false;
-  }
-
-  const wanted = squash(testCommand);
-
-  return resource.split(' ; ').some((segment) => squash(segment).includes(wanted));
-}
-
 function touchedPath(
   calls: readonly Allowed[],
   tools: ReadonlySet<string>,
@@ -90,6 +82,17 @@ function unsupported(claim: Claim, why: string): GateFinding {
     message: `Unsupported claim ${JSON.stringify(claim)}: ${why}`,
     claim,
   };
+}
+
+/** Allowed, completed shell calls whose command runs the project's test command. */
+function testRuns(calls: readonly Allowed[], testCommand: string): Allowed[] {
+  return calls.filter(
+    (c) =>
+      c.decision.tool === 'shell' &&
+      c.state !== undefined &&
+      SHELL_DONE.has(c.state) &&
+      runsTestCommand(c.decision.resource, testCommand),
+  );
 }
 
 function judge(
@@ -134,20 +137,15 @@ function judge(
         return 'the project defines no test command to match a shell receipt against';
       }
 
-      const ran = calls.some(
-        (c) =>
-          c.decision.tool === 'shell' &&
-          c.state !== undefined &&
-          SHELL_DONE.has(c.state) &&
-          runsTestCommand(c.decision.resource, ev.testCommand as string),
-      );
-
-      return ran ? null : `no allowed shell receipt running "${ev.testCommand}"`;
+      return testRuns(calls, ev.testCommand).length > 0
+        ? null
+        : `no allowed shell receipt running "${ev.testCommand}"`;
     }
 
     case 'added_test': {
       const found = ev.patch.some(
-        (f) => isTestFile(f.path) && f.added.some((line) => line.includes(claim.name)),
+        (f) =>
+          isTestFile(f.path) && f.added.some((line) => declaresTest(line, claim.name)),
       );
 
       return found
@@ -157,7 +155,46 @@ function judge(
   }
 }
 
-/** Every claim must be supported; each unsupported one is a finding quoting it. */
+const LOCKFILE =
+  /(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|bun\.lockb|cargo\.lock|poetry\.lock)$/;
+
+/** Findings for a diff nobody claimed: no claims at all, or files no `edited` claim names. */
+function coverage(claims: readonly Claim[], ev: ClaimEvidence): GateFinding[] {
+  const files = ev.diff.files.filter((f) => f.status !== 'D');
+  if (claims.length === 0) {
+    return ev.diff.files.length === 0
+      ? []
+      : [
+          {
+            check: 'claims',
+            message: `finish carried no claims for ${ev.diff.files.length} changed files; the Worker must say what it did`,
+          },
+        ];
+  }
+
+  const claimed = new Set(
+    claims.flatMap((c) =>
+      c.kind === 'edited' ? [foldPath(c.path, ev.worktreePath)] : [],
+    ),
+  );
+
+  const missing = files
+    .map((f) => f.path)
+    .filter(
+      (p) => !LOCKFILE.test(foldPath(p)) && !claimed.has(foldPath(p, ev.worktreePath)),
+    );
+
+  return missing.length === 0
+    ? []
+    : [
+        {
+          check: 'claims',
+          message: `changed files not covered by any edited claim: ${missing.join(', ')}`,
+        },
+      ];
+}
+
+/** Every claim must be supported and the diff covered; each failure is a finding. */
 export function checkClaims(claims: readonly Claim[], ev: ClaimEvidence): CheckOutcome {
   const calls = allowedCalls(ev.receipts);
   const findings: GateFinding[] = [];
@@ -168,9 +205,25 @@ export function checkClaims(claims: readonly Claim[], ev: ClaimEvidence): CheckO
     }
   }
 
+  findings.push(...coverage(claims, ev));
+
+  const notes: string[] = [];
+  const claimedTests = claims.some((c) => c.kind === 'ran_tests');
+  if (claimedTests && ev.testCommand !== undefined) {
+    const runs = testRuns(calls, ev.testCommand);
+    if (runs.length > 0 && runs.every((c) => c.state === 'uncertain')) {
+      notes.push(
+        'ran_tests counted from a shell run that failed or did not complete; the tests did run.',
+      );
+    }
+  }
+
   const details =
     findings.length === 0
-      ? `${claims.length} claim(s), all supported by receipts and the diff.`
+      ? [
+          `${claims.length} claim(s), all supported by receipts and the diff.`,
+          ...notes,
+        ].join('\n')
       : findings.map((f) => `- ${f.message}`).join('\n');
 
   return {

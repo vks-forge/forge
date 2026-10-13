@@ -35,7 +35,7 @@ const tokenFetch: typeof fetch = async () =>
     status: 201,
   });
 
-function pushRig(run: GitRunner['run']) {
+function pushRig(run: GitRunner['run'], gitBase?: string) {
   const calls: {
     cwd: string;
     args: readonly string[];
@@ -61,6 +61,7 @@ function pushRig(run: GitRunner['run']) {
     fetch: tokenFetch,
     now: () => NOW,
     git,
+    ...(gitBase === undefined ? {} : { gitBase }),
   });
 
   return { host, calls };
@@ -96,6 +97,26 @@ describe('github app push', () => {
       GIT_CONFIG_VALUE_1: '',
       GIT_TERMINAL_PROMPT: '0',
     });
+  });
+
+  it('scopes the header to the configured git base URL, normalised with a trailing slash', async () => {
+    const { host, calls } = pushRig(async () => '', 'https://ghe.corp.example/');
+
+    await host.push('C:/wt', 'feat/a');
+
+    const [call] = calls;
+    expect(call?.args[1]).toBe('https://ghe.corp.example/o/r.git');
+    expect(call?.env?.['GIT_CONFIG_KEY_0']).toBe(
+      'http.https://ghe.corp.example/.extraheader',
+    );
+
+    expect(call?.env).toEqual(buildPushEnv(TOKEN, 'https://ghe.corp.example'));
+  });
+
+  it('never scopes the header to github.com when another host is configured', () => {
+    const env = buildPushEnv(TOKEN, 'https://ghe.corp.example');
+
+    expect(Object.values(env).join(' ')).not.toContain('github.com');
   });
 
   it('scrubs the token from a failing git invocation', async () => {

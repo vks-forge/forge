@@ -23,6 +23,9 @@ import type {
 
 export const DEFAULT_COMMAND_TIMEOUT_MS = 10 * 60 * 1000;
 
+/** Output kept in a finding message; the report section keeps a longer tail. */
+const FINDING_TAIL_CHARS = 1500;
+
 const ORDER = ['lint', 'typecheck', 'test'] as const;
 
 async function runOne(
@@ -36,7 +39,7 @@ async function runOne(
     const result = await input.run({
       command,
       cwd: input.cwd,
-      env: scrubEnv(input.env),
+      env: scrubEnv(input.env, input.passEnv),
       timeoutMs: input.timeoutMs,
     });
 
@@ -50,7 +53,14 @@ async function runOne(
     );
 
     if (!ok) {
-      step.findings.push({ check, message: `\`${command}\` failed: ${verdict}` });
+      // The finding is the rework prompt: without the output the Worker cannot tell why.
+      const why = tail(result.output, FINDING_TAIL_CHARS).trimEnd();
+      const detail = why === '' ? '' : `\n${why}`;
+      step.findings.push({
+        check,
+        message: `\`${command}\` failed: ${verdict}${detail}`,
+      });
+
       step.lines.push('```', tail(result.output).trimEnd(), '```');
     }
   } catch (e) {

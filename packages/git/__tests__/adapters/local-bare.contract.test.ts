@@ -14,29 +14,13 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createLocalBareGitHost } from '#/index.js';
 import { describeGitHostContract } from '#tests/contract/git-host.contract.js';
 import type { GitHostHarness } from '#tests/contract/git-host.contract.js';
+import { hostFor, push } from '#tests/helpers/local-bare-rig.js';
 import { git, makeLocalRemote } from '#tests/helpers/local-remote.js';
 import type { LocalRemote } from '#tests/helpers/local-remote.js';
 
 const remotes: LocalRemote[] = [];
-const T0 = Date.parse('2026-10-13T10:00:00.000Z');
-
-const hostFor = (r: LocalRemote) =>
-  createLocalBareGitHost({ remotePath: r.remotePath, baseBranch: 'main', now: () => T0 });
-
-/** Commits a branch in the clone and pushes it through the host, as the engine would. */
-async function push(r: LocalRemote, branch: string, file: string, content: string) {
-  const host = hostFor(r);
-  const sha = await r.commitOnBranch(branch, file, content);
-  await git(r.work, 'checkout', branch);
-  await host.push(r.work, branch);
-  await git(r.work, 'checkout', 'main');
-
-  return { host, sha };
-}
-
 afterEach(async () => {
   await Promise.all(remotes.splice(0).map((r) => r.cleanup()));
 });
@@ -90,7 +74,7 @@ describe('local bare host specifics', { timeout: 60_000 }, () => {
     const r = await makeLocalRemote();
     remotes.push(r);
     const a = await push(r, 'feat/a', 'a.txt', 'a\n');
-    await push(r, 'feat/b', 'b.txt', 'b\n');
+    const b = await push(r, 'feat/b', 'b.txt', 'b\n');
     const prA = await a.host.openPr({
       branch: 'feat/a',
       base: 'main',
@@ -105,8 +89,8 @@ describe('local bare host specifics', { timeout: 60_000 }, () => {
       body: '',
     });
 
-    const merged = await a.host.merge(prA.number, 'merge');
-    const squashed = await a.host.merge(prB.number, 'squash');
+    const merged = await a.host.merge(prA.number, 'merge', a.sha);
+    const squashed = await a.host.merge(prB.number, 'squash', b.sha);
 
     expect(
       (await git(r.remotePath, 'rev-list', '--parents', '-n1', merged.sha)).split(' '),
@@ -126,7 +110,7 @@ describe('local bare host specifics', { timeout: 60_000 }, () => {
   it('refuses a conflicting merge without moving the base, and reports it unmergeable', async () => {
     const r = await makeLocalRemote();
     remotes.push(r);
-    const { host } = await push(r, 'feat/a', 'README.md', 'from branch\n');
+    const { host, sha } = await push(r, 'feat/a', 'README.md', 'from branch\n');
     const pr = await host.openPr({
       branch: 'feat/a',
       base: 'main',
@@ -137,7 +121,7 @@ describe('local bare host specifics', { timeout: 60_000 }, () => {
     const moved = await r.commitOnMain('README.md', 'from main\n');
 
     const status = await host.prStatus(pr.number);
-    const err = await host.merge(pr.number, 'squash').catch((e: unknown) => e);
+    const err = await host.merge(pr.number, 'squash', sha).catch((e: unknown) => e);
 
     expect(status.mergeable).toBe(false);
     expect(err).toMatchObject({ errorFamily: 'policy_denied', reason: 'merge_refused' });
@@ -148,7 +132,7 @@ describe('local bare host specifics', { timeout: 60_000 }, () => {
   it('leaves no clone or temp directory behind after a merge', async () => {
     const r = await makeLocalRemote();
     remotes.push(r);
-    const { host } = await push(r, 'feat/a', 'a.txt', 'a\n');
+    const { host, sha } = await push(r, 'feat/a', 'a.txt', 'a\n');
     const pr = await host.openPr({
       branch: 'feat/a',
       base: 'main',
@@ -158,7 +142,7 @@ describe('local bare host specifics', { timeout: 60_000 }, () => {
 
     const before = (await readdir(r.root)).sort();
 
-    await host.merge(pr.number, 'squash');
+    await host.merge(pr.number, 'squash', sha);
 
     expect((await readdir(r.root)).sort()).toEqual(before);
     expect(await readdir(join(r.remotePath, 'forge-prs'))).toEqual(['1.json']);

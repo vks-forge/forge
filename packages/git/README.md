@@ -41,12 +41,16 @@ Public API from `src/index.ts`:
   untracked (shown as added; ignored files are left out). Each file has status `A`, `M`, `D` or `R` (`oldPath`
   for renames, detected for tracked paths, so a rename of a still-untracked file reads as D plus A). The patch
   is the unified diff of the tracked changes plus an added-file patch per untracked file; the index is never touched.
+  Every diff invocation passes `--text` (so a Worker-written `.gitattributes` `-diff` cannot replace hunks with
+  `Binary files differ` and hide a disabled test) and `-c core.quotePath=false` (non-ASCII names stay readable in
+  patch headers); `changedFiles` passes the same `-c` flag. Names with a quote, tab or backslash are still quoted by git;
+  the gates treat a header they cannot parse as a finding.
 
 GitHost adapters (the port is in `@forge/core`):
 
 - `findPr(branch)` on both hosts returns the open PR whose head is `branch`, or null (closed and merged PRs are
   ignored); the local host scans its PR records, the GitHub host calls `GET /pulls?head=<owner>:<branch>&state=open`.
-- `createLocalBareGitHost({ remotePath, baseBranch, now, gitBinary?, author? })`: `push` runs
+- `createLocalBareGitHost({ remotePath, baseBranch, now, gitBinary?, git?, author? })`: `push` runs
   `git push <remotePath> <branch>:<branch>` from the worktree. A PR is a JSON record
   `<remotePath>/forge-prs/<n>.json` (sequential numbers, atomic temp-and-rename writes, one open PR per
   branch, like GitHub). `prStatus` reads the record and computes `mergeable` with `git merge-tree --write-tree`.
@@ -54,18 +58,25 @@ GitHost adapters (the port is in `@forge/core`):
   tree (a conflict raises a `policy_denied` `GitHostError` and moves nothing), `commit-tree` writes the commit
   (two parents for `merge`, a true `--no-ff` merge; one parent for `squash`), and `update-ref <base> <new> <old>`
   moves the base with a compare-and-swap, so a base that moved meanwhile fails instead of being overwritten.
-  Merging a closed or already merged PR is refused. `closePr` is idempotent; `deleteBranch` deletes the ref in
+  `merge(n, method, expectedHeadSha)` is pinned: under the PR lock the branch ref must equal `expectedHeadSha`, else a
+  `HeadMovedError` and nothing moves. A merge that would change nothing (the base already holds the PR, e.g. the
+  server died between `update-ref` and saving the record) is recorded as merged at the current base instead of
+  writing an empty commit. Merging a closed or already merged PR is refused. `closePr` is idempotent; `deleteBranch` deletes the ref in
   the bare repo (a missing branch is fine, the base branch is refused).
 - `createGitHubAppGitHost({ owner, repo, baseBranch, appId, installationId, privateKey, fetch?, apiBase?, gitBase?, now?, git? })`:
   an RS256 JWT is signed with `node:crypto` (`iat` now-60 s, `exp` now+9 min, `iss` the App id), exchanged at
   `POST /app/installations/{id}/access_tokens`, and the token is cached until 5 minutes before `expires_at`
-  (concurrent callers share one mint). REST: create PR, get PR (`merged` maps to state `merged`),
-  `PUT /pulls/{n}/merge`, close (`PATCH state=closed`), `DELETE /git/refs/heads/{branch}` (already gone is fine).
+  (concurrent callers share one mint). A 401, or a 403 that is not a quota, drops the cached token and retries the call
+  once with a freshly minted one before surfacing `auth` (a revoked token or a reinstalled App). REST: create PR, get PR (`merged` maps to state `merged`),
+  `PUT /pulls/{n}/merge` (with `sha: expectedHeadSha`; GitHub's 409 "Head branch was modified" becomes
+  `HeadMovedError`, a 405/409 saying a branch "was modified" becomes the retryable `merge_busy`, any other 405/409 stays
+  a `merge_refused` park), close (`PATCH state=closed`), `DELETE /git/refs/heads/{branch}` (already gone is fine).
   `push` runs `git push https://github.com/<owner>/<repo>.git <branch>:<branch>` with the token only in the child
   environment (see "Why this approach").
 - `GitHostError` (extends `ForgeError`) carries `reason` and, for REST failures, `status`. 401 and a plain 403 are
   `auth`, a quota 403 and 429 are `rate_limit`, 404 and 422 are `invalid_input`, 405 and 409 (a merge GitHub
-  refuses) are `policy_denied`, 5xx and network failures are `crash`. Messages cut the response body to 300
+  refuses for good) are `policy_denied`, a merge refused only because a branch was just modified is `merge_busy`
+  (family `rate_limit`, so the engine backs off), 5xx and network failures are `crash`. Messages cut the response body to 300
   characters and replace the token, the JWT and the base64 form of the push header with `[redacted]`.
 
 Returned paths are absolute with forward slashes (`C:/repo/.worktrees/FRG-1`), accepted by both
@@ -83,9 +94,9 @@ Node and git on Windows. Any git failure becomes a `CrashError` with the stderr 
 - `-z` output everywhere, so file names with spaces or newlines are safe.
 - Always a worktree, never a feature branch in the main checkout (d-0059, superseding d-0011).
 - The GitHub push token goes only through the child process environment: `GIT_CONFIG_COUNT=2`,
-  `GIT_CONFIG_KEY_0=http.https://github.com/.extraheader`,
+  `GIT_CONFIG_KEY_0=http.<gitBase>/.extraheader` (default `http.https://github.com/.extraheader`; for GitHub Enterprise Server the configured `gitBase`, normalised with a trailing slash),
   `GIT_CONFIG_VALUE_0=AUTHORIZATION: basic <base64(x-access-token:token)>`, plus `GIT_CONFIG_KEY_1=credential.helper` with an empty `GIT_CONFIG_VALUE_1` (resets the helper list so Git Credential Manager is never consulted) and `GIT_TERMINAL_PROMPT=0`. It is
-  never in argv, the remote URL, a git config file or logs, and the header is scoped to github.com. This replaces
+  never in argv, the remote URL, a git config file or logs, and the header is scoped to the configured git base URL. This replaces
   the `GIT_ASKPASS` idea in the E2 brief: the same guarantee with no helper script or file on disk.
 - Local merges use `merge-tree` / `commit-tree` / `update-ref` in the bare repo instead of a temporary clone:
   nothing to clean up after a crash, and the ref update is a compare-and-swap.
@@ -125,6 +136,10 @@ Node and git on Windows. Any git failure becomes a `CrashError` with the stderr 
 - The local host has no review, comments or branch protection; `mergeable` is only `merge-tree` conflict
   detection. Its PR numbering is serialised in-process, so run one server per remote path.
 - The GitHub host reports `rate_limit` and leaves `Retry-After` handling to the engine.
+- The 401 token refresh covers REST calls only; a `git push` that GitHub rejects for a revoked token fails as `unavailable`
+  and succeeds on the engine's retry, which mints a new token.
+- The response schemas (`schemas/github-responses.ts`) are read strictly; a field GitHub renames makes the host fail as
+  `unavailable` rather than guess.
 - `push` is never forced: a branch whose remote history diverged fails instead of being overwritten.
 - `create` assumes the base ref is a local ref or sha; it does not fetch.
 - Locked worktrees are not unlocked; a `remove` that cannot delete the directory raises.

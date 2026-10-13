@@ -31,6 +31,8 @@ export const GateResult = z.object({
   gate: GateName,
   status: GateStatus,
   report_ref: z.string().min(1).optional(),
+  /** The commit the gates judged; the merge must still find the PR at this sha. Absent on rows from before it was recorded. */
+  head_sha: z.string().min(1).optional(),
   started_at: Timestamp,
   ended_at: Timestamp.optional(),
 });

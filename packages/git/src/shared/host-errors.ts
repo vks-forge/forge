@@ -7,7 +7,7 @@
  *   5xx is a transient crash. This class maps each host outcome to the right family while
  *   `reason` keeps the finer cause for logs and tests. Messages never carry credentials.
  *
- * Exports: GitHostError, reasonForStatus().
+ * Exports: GitHostError, reasonForStatus(), refineMergeRefusal().
  * Depends on: @forge/core (ForgeError). No IO.
  */
 
@@ -20,6 +20,8 @@ const FAMILY: Record<GitHostReason, ErrorFamily> = {
   rate_limit: 'rate_limit',
   not_found: 'invalid_input',
   merge_refused: 'policy_denied',
+  // Backoff family: the same merge is expected to work once the branch stops moving.
+  merge_busy: 'rate_limit',
   invalid: 'invalid_input',
   unavailable: 'crash',
 };
@@ -63,4 +65,19 @@ export function reasonForStatus(status: number, rateLimited: boolean): GitHostRe
   }
 
   return 'unavailable';
+}
+
+/**
+ * What a 405/409 on the merge endpoint means, from GitHub's message: the head moved
+ * (re-gate it), the base or something else was modified a moment ago (try again shortly),
+ * or a real refusal (conflict, protection, not open) that only a human fixes.
+ */
+export function refineMergeRefusal(
+  message: string,
+): 'head_moved' | 'merge_busy' | 'refused' {
+  if (/head branch was modified/i.test(message)) {
+    return 'head_moved';
+  }
+
+  return /modified/i.test(message) ? 'merge_busy' : 'refused';
 }

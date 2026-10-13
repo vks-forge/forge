@@ -13,7 +13,7 @@
 
 import type { Claim } from '@forge/core';
 import { describe, expect, it } from 'vitest';
-import { createG1Gate } from '#/domain/g1-gate.js';
+import { createG1Gate } from '#/adapters/g1-gate-factory.js';
 import type { G1Deps } from '#/types/g1-deps.types.js';
 import {
   SECRET,
@@ -51,7 +51,8 @@ function deps(over: Partial<G1Deps> = {}): G1Deps {
   };
 }
 
-const ctx = (claims: readonly Claim[] = []) =>
+// The honest default: one edited file in the diff, covered by an `edited` claim.
+const ctx = (claims: readonly Claim[] = [{ kind: 'edited', path: 'src/a.ts' }]) =>
   context({ claims, commands: { test: 'pnpm test', lint: 'pnpm lint' } });
 
 describe('createG1Gate', () => {
@@ -81,12 +82,55 @@ describe('createG1Gate', () => {
   it('fails a planted false claim and quotes it', async () => {
     const claim = { kind: 'edited', path: 'src/never-touched.ts' } as const;
 
-    const verdict = await createG1Gate(deps()).run(ctx([claim]));
+    const verdict = await createG1Gate(deps()).run(
+      ctx([claim, { kind: 'edited', path: 'src/a.ts' }]),
+    );
 
     expect(verdict.status).toBe('failed');
     expect(verdict.findings).toHaveLength(1);
     expect(verdict.findings[0]?.claim).toEqual(claim);
     expect(verdict.report).toContain('src/never-touched.ts');
+  });
+
+  it('fails a non-empty diff whose finish carried no claims', async () => {
+    const verdict = await createG1Gate(deps()).run(ctx([]));
+
+    expect(verdict.status).toBe('failed');
+    expect(verdict.report).toContain('no claims for 1 changed files');
+  });
+
+  it('carries the output tail in the rework findings', async () => {
+    const verdict = await createG1Gate(
+      deps({
+        runCommand: () =>
+          Promise.resolve({
+            exitCode: 1,
+            timedOut: false,
+            output: 'AssertionError: 3 != 4',
+          }),
+      }),
+    ).run(ctx());
+
+    expect(verdict.findings[0]?.message).toContain('AssertionError: 3 != 4');
+  });
+
+  it('forwards passEnv to the runner environment', async () => {
+    let seen: Readonly<Record<string, string>> = {};
+
+    await createG1Gate(
+      deps({
+        env: { PATH: '/bin', EXTRA: 'e', ANTHROPIC_API_KEY: 'k' },
+        passEnv: ['EXTRA'],
+        runCommand: (r) => {
+          seen = r.env;
+
+          return Promise.resolve({ exitCode: 0, timedOut: false, output: '' });
+        },
+      }),
+    ).run(ctx());
+
+    expect(seen['EXTRA']).toBe('e');
+    expect(seen['ANTHROPIC_API_KEY']).toBeUndefined();
   });
 
   it('fails when a tool call has no receipt', async () => {

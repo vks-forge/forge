@@ -13,7 +13,10 @@
  *   - file deleted, or renamed to a non-test path;
  *   - added line with `.skip`, `.only`, `.todo`, `xit(`, `xdescribe(`, `xtest(`, `fit(`, `fdescribe(`;
  *   - more removed assertion lines (`expect(`, `assert`) than added ones;
- *   - a removed `expect(X).<matcher>` re-added as `expect(X).<weak matcher>`.
+ *   - a removed `expect(X).<matcher>` re-added as `expect(X).<weak matcher>`;
+ *   - fail closed: a test file whose hunks git printed as "Binary files differ" (e.g. a
+ *     Worker-written `.gitattributes -diff`), or any `diff --git` header the parser could
+ *     not read, because then nothing above could be checked.
  *
  * Exports: checkTestDiff().
  * Depends on: @forge/core (WorktreeDiff), domain/test-files, shared/paths. No IO.
@@ -121,6 +124,19 @@ export function checkTestDiff(
   }
 
   for (const file of patch) {
+    if (file.unparsed) {
+      findings.push(
+        finding(file.path, 'diff header could not be parsed; changes cannot be verified'),
+      );
+    } else if (file.binary && isTestFile(file.path)) {
+      findings.push(
+        finding(
+          file.path,
+          'test file diff is binary or hidden; its changes cannot be read',
+        ),
+      );
+    }
+
     // Deleted files are judged from diff.files above; their removed lines are not "weakening".
     if (isTestFile(file.path) && !file.deleted) {
       findings.push(...checkFile(file));

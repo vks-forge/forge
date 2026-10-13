@@ -31,7 +31,7 @@ Public API from `src/index.ts`:
     steering message for the live run.
   - `answerInteraction(id, answer)`: CAS answer, queues the `response_wake`.
   - `cancelTicket(id)`: `cancelled` through `transition()`, cancels the live run, removes the worktree.
-  - `liveRunIds()`.
+  - `liveRunIds()`, `gateJobsInFlight()` (gate runs executing beside the tick).
 - Per tick: restart reconcile on the first tick (runs owned by another server are crash-settled,
   tokens revoked, retry wake queued, d-0054); settle finished runs; cancel runs silent for
   `stall_ms` and settle them as `stall`; expire overdue questions (ticket to `blocked`); deliver
@@ -41,17 +41,31 @@ Public API from `src/index.ts`:
 - Verify phase (`tick/verify*.ts`, up to `max_concurrent_by_state.verifying` tickets per tick), for a
   `verifying` ticket whose current run succeeded and whose project `deps.project(slug)` resolves:
   `commitAll` (Forge author), `GitHost.push`, `openPr` once (after `findPr` finds no open PR for the branch; the number is stored on the ticket by CAS
-  before any gate runs), then every gate of the project's `ProjectRuntime` with a `GateContext`
-  (claims come from the run's `finish` run event). Each report goes through `deps.reports.put`, each
-  verdict is a `gate_results` row. All `passed`/`skipped`: `gate_passed` with `tier_actual` (C when
-  the diff touches the project's `tier_c_globs`, else the predicted tier), tier A then `prStatus`,
-  `merge(squash)`, `merged` (which makes the ticket `done`), worktree removed and branch deleted
+  before any gate runs), then the project's gates as a background job (below) on exactly the pushed
+  commit (`worktrees.head`, stored as `gate_results.head_sha`), with a `GateContext` (claims come from the run's `finish` run event). Each report goes through
+  `deps.reports.put`, each verdict is a `gate_results` row. All `passed`/`skipped`: the PR head must equal
+  the judged sha, else nothing merges and the new head is gated again (at most 3 re-gates per run, then
+  a park); then `gate_passed` with `tier_actual` (C when the diff touches the project's `tier_c_globs`,
+  else the predicted tier; the diff tier must still equal it at merge), tier A then `merge(squash, judgedSha)`
+  (`HeadMovedError` = re-gate, not a park; `mergeable: null` waits under the rate-limit backoff, never merges blind),
+  `merged` (which makes the ticket `done`), worktree removed and branch deleted
   (failures logged only); tier B/C stop in `review` / `needs_signoff`. Any `failed`: `gate_failed`
   (rework run with `retry_of`, the findings carried by a `continuation` wake into the
   `dispatch_prompt` input as `wake.gate_findings`), and at the rework cap the ticket parks naming the
   gate. A gate that cannot run or a git host fault is classified by `ForgeError` family: transient
   ones retry after the failure-policy backoff (counted by the hourly re-wake cap), the rest park.
   `TickReport.verified` lists each outcome.
+- Gate jobs (`tick/gate-jobs.ts`): the gates can run for half an hour, so the tick that publishes
+  starts a job (in-memory, keyed by ticket and run, one per key) and returns; the job writes only
+  `gate_results` rows, then calls `requestTick()`; the next tick consumes it and applies the outcome
+  (rework, merge, retry, park) through the usual CAS moves. A restart loses in-flight jobs; with no rows
+  for the run the next tick gates again. Tickets with a job in flight count toward `max_concurrent_by_state.verifying`.
+- One base branch per project (`tick/project-runtime.ts`): `git_host.base_branch` drives the worktree base, the
+  diff base and the PR target; the engine's `baseRef` only serves projects without a host. A runtime
+  whose `config.slug` is another project is refused (logged as a tick error, nothing published).
+- The `dispatch_prompt` input carries `worker_contract` (`domain/worker-contract.ts`): the Worker must end
+  with `finish` and a typed claim for every file it edited (G1 fails a finish without), plus a rework
+  note after a failed gate.
 - Pure rules, also exported: `decideLane`, `decideFailure`, `findViolations`, `nextTicketNumber`,
   `requestWake`.
 - Run settle records status, usage, cost, error family, the files git says changed, the receipt
@@ -119,6 +133,10 @@ Public API from `src/index.ts`:
 - Ticket numbers come from listing every ticket id of the project (no counter); fine at M0 scale.
 - Failure attempts count failed runs of the same family for the ticket, with no decay.
 - `driver_version` on run rows is the constant `unversioned` until the driver exposes it cheaply.
+- Gate jobs, the re-gate counter and verify holds are process-local. A job that finishes after its ticket was
+  cancelled leaves its rows behind (harmless) and is pruned on a later tick. The re-gate publishes the worktree
+  head: a head someone else pushed to the branch is overwritten or the push is refused (the push fails
+  the verify, which retries or parks); the engine never merges a head it did not gate.
 - Verify retry backoff is a process-local hold (a restart retries at
   once, the re-wake cap still counts). Gate findings reach the rework prompt through the wake's `reason` text (4,000 chars max).
 - Not in the engine: `apps/server` (HTTP, SSE, clock), in-run

@@ -8,7 +8,7 @@
  *   a full pass keeps the ticket from merging. The failure text is what the Worker is
  *   told on rework, so it names the gate, the check and, for a false claim, the claim.
  *
- * Exports: latestPerGate(), summarizeGates(), describeFailures().
+ * Exports: latestPerGate(), summarizeGates(), gatedHeadOf(), describeFailures().
  * Depends on: @forge/core (GateResult, GateVerdict), types/verify. No IO.
  */
 
@@ -47,6 +47,18 @@ export function summarizeGates(rows: GateRows, gates: readonly Gate[]): GateSumm
   return bad.length > 0
     ? { kind: 'error', gates: bad.map((g) => g.name) }
     : { kind: 'pass' };
+}
+
+/**
+ * The one commit every latest row judged, or undefined when a row has no recorded sha
+ * (written before it was tracked) or the rows judged different commits. Without it a pass
+ * cannot be tied to a commit, so it is not trusted for a merge.
+ */
+export function gatedHeadOf(rows: GateRows): string | undefined {
+  const shas = new Set(rows.map((r) => r.head_sha));
+  const [only] = shas;
+
+  return shas.size === 1 && only !== undefined ? only : undefined;
 }
 
 /** Findings of the failed gates as text for the next Worker prompt; falls back to report refs when verdicts are gone (after a restart). */

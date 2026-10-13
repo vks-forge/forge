@@ -31,6 +31,8 @@ export interface RestClient {
 export interface TokenSource {
   /** A valid installation token, minted if the cached one is missing or near expiry. */
   token(): Promise<string>;
+  /** Forgets `stale` if it is still the cached token, so the next `token()` mints a new one. */
+  invalidate(stale: string): void;
 }
 
 export interface TokenSourceOptions {

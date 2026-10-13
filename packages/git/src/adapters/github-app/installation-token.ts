@@ -5,23 +5,21 @@
  *   exchange for a signed App JWT. Minting per call would hit the API and the key store
  *   on every operation; caching until five minutes before `expires_at` keeps the key
  *   read rare while never handing out a token about to expire mid-push. Concurrent
- *   callers share one in-flight mint so a burst of operations makes one request.
+ *   callers share one in-flight mint so a burst of operations makes one request. A token
+ *   GitHub rejects before its expiry (revoked, App uninstalled and reinstalled) is dropped
+ *   with `invalidate` so the next call mints a fresh one.
  *
  * Exports: createTokenSource().
- * Depends on: zod, adapters/github-app/{app-jwt,rest-client}, shared/host-errors.
+ * Depends on: adapters/github-app/app-jwt, schemas/github-responses, shared/host-errors.
  *   IO: key read and one POST per refresh.
  */
 
-import { z } from 'zod';
 import { createAppJwt } from '#/adapters/github-app/app-jwt.js';
+import { TokenResponse } from '#/schemas/github-responses.js';
 import type { TokenSource, TokenSourceOptions } from '#/types/github-rest.types.js';
 import { GitHostError } from '#/shared/host-errors.js';
 
 const REFRESH_MARGIN_MS = 5 * 60 * 1000;
-const TokenResponse = z.object({
-  token: z.string().min(1),
-  expires_at: z.iso.datetime(),
-});
 
 export function createTokenSource(o: TokenSourceOptions): TokenSource {
   let cached: { token: string; refreshAt: number } | null = null;
@@ -63,6 +61,13 @@ export function createTokenSource(o: TokenSourceOptions): TokenSource {
       });
 
       return inflight;
+    },
+
+    invalidate(stale) {
+      // Only drop the token that failed: a concurrent call may already have replaced it.
+      if (cached?.token === stale) {
+        cached = null;
+      }
     },
   };
 }
