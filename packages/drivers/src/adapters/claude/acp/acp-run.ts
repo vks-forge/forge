@@ -14,7 +14,7 @@
  *
  * Exports: launchAcp().
  * Depends on: @agentclientprotocol/sdk, @forge/core (InvalidInputError), acp-meta,
- *   acp-permission, acp-process, domain/{acp-events,failure-classify},
+ *   acp-permission, acp-process, acp-steer, acp-turns, domain/{acp-events,failure-classify},
  *   schemas/claude-acp. IO: the adapter process and its stdio.
  */
 
@@ -25,15 +25,12 @@ import type { SteerMode } from '@forge/core';
 import { sessionMeta, toAcpMcpServers } from '#/adapters/claude/acp/acp-meta.js';
 import { answerPermission } from '#/adapters/claude/acp/acp-permission.js';
 import { startAdapterProcess } from '#/adapters/claude/acp/acp-process.js';
+import { deliverSteer } from '#/adapters/claude/acp/acp-steer.js';
+import { runTurns } from '#/adapters/claude/acp/acp-turns.js';
 import { normaliseAcpUpdate } from '#/domain/acp-events.js';
-import {
-  classifyRejection,
-  classifyStopReason,
-  retryNotBeforeFrom,
-} from '#/domain/failure-classify.js';
+import { classifyRejection, retryNotBeforeFrom } from '#/domain/failure-classify.js';
 import { AuthStatusUpdate, readSteering } from '#/schemas/claude-acp.js';
-import type { RateLimitInfo } from '#/schemas/claude-acp.js';
-import type { AuthState } from '#/types/claude/acp.types.js';
+import type { AcpRunState, AuthState } from '#/types/claude/acp.types.js';
 import type {
   EngineDeps,
   EngineEnd,
@@ -52,9 +49,9 @@ export function launchAcp(
 ): EngineHandle {
   const { clock, config, log } = deps;
   const { req } = launch;
-  const state = {
-    rateLimit: null as RateLimitInfo | null,
-    sessionId: null as string | null,
+  const state: AcpRunState = {
+    rateLimit: null,
+    sessionId: null,
     steering: false,
     accepting: false,
     closed: false,
@@ -163,51 +160,6 @@ export function launchAcp(
     });
   }
 
-  async function turns(sessionId: string): Promise<EngineEnd> {
-    for (;;) {
-      const next = queue.shift();
-      if (next === undefined) {
-        return { kind: 'completed' };
-      }
-
-      sink.turnStarted();
-      let end: EngineEnd;
-      try {
-        const resp = await ctx.request('session/prompt', {
-          sessionId,
-          prompt: [{ type: 'text', text: next }],
-        });
-
-        const u = resp.usage;
-        if (u) {
-          const usage = {
-            in: u.inputTokens,
-            out: u.outputTokens,
-            cachedIn: u.cachedReadTokens ?? 0,
-            cacheWrite: u.cachedWriteTokens ?? 0,
-          };
-
-          sink.setUsage(usage);
-          sink.emit({ type: 'usage', usage });
-        }
-
-        end = classifyStopReason(resp.stopReason, state.rateLimit, rate);
-      } catch (e) {
-        end = classifyRejection(e, state.rateLimit, rate);
-      }
-
-      sink.turnEnded();
-      if (end.kind === 'cancelled' && state.interrupting) {
-        state.interrupting = false;
-        continue;
-      }
-
-      if (end.kind !== 'completed') {
-        return end;
-      }
-    }
-  }
-
   async function run(): Promise<EngineEnd> {
     const init = await ctx.request('initialize', {
       protocolVersion: PROTOCOL_VERSION,
@@ -258,7 +210,7 @@ export function launchAcp(
     state.accepting = true;
     markReady();
 
-    return turns(sessionId);
+    return runTurns(ctx, sink, state, queue, rate, sessionId);
   }
 
   const running = run().catch((e: unknown): EngineEnd =>
@@ -286,29 +238,7 @@ export function launchAcp(
       }
 
       await ready;
-      if (mode === 'steer' && !(config.acpSteering && state.steering)) {
-        throw new InvalidInputError('this adapter does not support live steering');
-      }
-
-      const sessionId = state.sessionId ?? '';
-      if (mode === 'follow_up') {
-        queue.push(text);
-      } else if (mode === 'interrupt') {
-        state.interrupting = true;
-        queue.unshift(text);
-        await ctx.notify('session/cancel', { sessionId });
-      } else {
-        const out = await ctx.request<{ outcome?: string }>('_session/steering', {
-          sessionId,
-          prompt: [{ type: 'text', text }],
-          _meta: { steering: { idleBehavior: 'promptRequired' } },
-        });
-
-        // Between turns there is nothing to inject into; the host owns the continuation.
-        if (out.outcome === 'promptRequired') {
-          queue.push(text);
-        }
-      }
+      await deliverSteer(ctx, config, state, queue, text, mode);
     },
     async cancel() {
       if (state.closed) {

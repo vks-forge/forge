@@ -14,25 +14,17 @@
  *   (tool-system.md §5, §5.5, §12).
  *
  * Exports: admit(), visibleTools().
- * Depends on: domain/catalogue, domain/grants, domain/lane-defaults, domain/rules, domain/budgets, domain/tokenizer,
- *   domain/call-resource, domain/tool-id, schemas/decision, types/admit. No IO.
+ * Depends on: domain/catalogue, domain/grants, domain/lane-defaults, domain/budgets,
+ *   domain/admit-draft, domain/admit-call-rules, schemas/decision, types/admit. No IO.
  */
 
+import { SEVERITY, deny, raise } from '#/domain/admit-draft.js';
+import { callRules } from '#/domain/admit-call-rules.js';
 import { checkBudget } from '#/domain/budgets.js';
-import {
-  PATH_TOOLS,
-  pathResources,
-  resourceOf,
-  shellDialect,
-} from '#/domain/call-resource.js';
 import { schemaMatches } from '#/domain/catalogue.js';
 import { checkToolGranted } from '#/domain/grants.js';
 import { LANE_UNATTENDED } from '#/domain/lane-defaults.js';
-import { evaluateShell, evaluateToolRules } from '#/domain/rules.js';
-import { SHELL_TOOL_ID, toolAction } from '#/domain/tool-id.js';
-import { tokenizeShell } from '#/domain/tokenizer.js';
-import type { Decision, DecisionLayer, ReasonCode } from '#/schemas/decision.js';
-import type { Effect } from '#/schemas/grant.js';
+import type { Decision } from '#/schemas/decision.js';
 import type { ToolDefinition } from '#/schemas/tool-definition.js';
 import { toolMatch } from '#/shared/pattern.js';
 import type {
@@ -41,8 +33,6 @@ import type {
   AdmitDraft as Draft,
   InspectorResult,
 } from '#/types/admit.types.js';
-
-const SEVERITY: Record<Effect, number> = { allow: 0, ask: 1, deny: 2 };
 
 function finish(
   call: AdmitCall,
@@ -59,25 +49,6 @@ function finish(
     finding_ids: d.findings,
     tool: call.tool,
   };
-}
-
-const deny = (
-  reason: ReasonCode,
-  layer: DecisionLayer,
-  rule: string | null = null,
-): Draft => ({
-  decision: 'deny',
-  reason,
-  layer,
-  rule,
-  findings: [],
-});
-
-/** Raises `cur` to `next` only if `next` is stricter; findings accumulate. */
-function raise(cur: Draft, next: Draft): Draft {
-  return SEVERITY[next.decision] > SEVERITY[cur.decision]
-    ? { ...next, findings: [...cur.findings, ...next.findings] }
-    : cur;
 }
 
 function checkReach(
@@ -100,57 +71,6 @@ function checkReach(
   }
 
   return null;
-}
-
-function callRules(ctx: AdmitContext, def: ToolDefinition, call: AdmitCall): Draft {
-  if (def.id !== SHELL_TOOL_ID) {
-    const action = toolAction(def.id);
-    if (PATH_TOOLS.has(action)) {
-      const resources = pathResources(action, call.input);
-      if (resources === null) {
-        return deny('invalid_resource', 'rule');
-      }
-
-      let worst: Draft | null = null;
-      for (const r of resources) {
-        const d = outcomeDraft(evaluateToolRules(ctx.grant, action, r, ctx.cwd));
-        worst = worst === null ? d : raise(worst, d);
-      }
-
-      return worst ?? deny('invalid_resource', 'rule');
-    }
-
-    return outcomeDraft(
-      evaluateToolRules(ctx.grant, action, resourceOf(def, call), ctx.cwd),
-    );
-  }
-
-  const command = call.input?.['command'];
-  if (typeof command !== 'string') {
-    return deny('untokenizable', 'rule');
-  }
-
-  const dialect = shellDialect(call.native);
-  const tokens = tokenizeShell(command, dialect);
-  if (!tokens.ok) {
-    return deny(tokens.error, 'rule');
-  }
-
-  return outcomeDraft(evaluateShell(ctx.grant, tokens.value, dialect, ctx.cwd));
-}
-
-function outcomeDraft(o: {
-  effect: Effect;
-  reason: ReasonCode;
-  rule: string | null;
-}): Draft {
-  return {
-    decision: o.effect,
-    reason: o.reason,
-    layer: o.reason === 'managed_deny' ? 'floor' : 'rule',
-    rule: o.rule,
-    findings: [],
-  };
 }
 
 function decide(

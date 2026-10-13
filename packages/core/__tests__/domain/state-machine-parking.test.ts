@@ -14,25 +14,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { transition } from '#/domain/state-machine.js';
-import type { Ticket } from '#/schemas/ticket.js';
-import type { TicketEvent } from '#/types/ticket-events.types.js';
 import { makeTicket } from '#tests/helpers/fixtures.js';
-
-const T1 = '2026-10-13T01:00:00.000Z';
-
-function apply(ticket: Ticket, ...events: TicketEvent[]): Ticket {
-  let cur = ticket;
-  for (const e of events) {
-    const r = transition(cur, e);
-    if (!r.ok) {
-      throw new Error(`unexpected ${JSON.stringify(r.error)}`);
-    }
-
-    cur = r.value;
-  }
-
-  return cur;
-}
+import { T1, apply } from '#tests/helpers/transition-events.js';
 
 describe('parked / unparked: an honest hold for a human', () => {
   it.each(['planned', 'in_progress'] as const)(

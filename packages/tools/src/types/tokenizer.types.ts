@@ -7,7 +7,8 @@
  *   wrappers, interpreter eval, redirect targets). Naming those once keeps the tokenizer
  *   and the rule evaluator agreeing on what "needs a human" means (tool-system.md §5.2).
  *
- * Exports: ShellDialect, ShellFlag, ShellRedirect, ShellSegment, TokenizeFailure, NestedScript.
+ * Exports: ShellDialect, ShellFlag, ShellRedirect, ShellSegment, TokenizeFailure, NestedScript,
+ *   QuoteHost, RedirectScan.
  * Depends on: No IO (types only).
  */
 
@@ -46,4 +47,27 @@ export interface NestedScript {
   readonly text: string;
   /** `null` when the text is not shell (python, node ...): scan loosely, do not tokenise. */
   readonly dialect: ShellDialect | null;
+}
+
+/**
+ * What a quote or substitution scanner may do to the word being built; the tokenizer
+ * owns the state, the scanners only append text and request nested parsing.
+ */
+export interface QuoteHost {
+  readonly src: string;
+  /** True for the PowerShell dialect (doubled-quote and backtick escapes). */
+  readonly ps: boolean;
+  /** Parses `body` from `from` as a nested sequence; returns the index after it. */
+  sub(body: string, from: number, closeParen: boolean): number;
+  /** Adds literal text to the word under construction. */
+  append(text: string): void;
+  /** Marks the current word as present even if empty (`""`). */
+  markStarted(): void;
+}
+
+/** Where a redirect operator ends and what it redirects to, if it names a file. */
+export interface RedirectScan {
+  readonly next: number;
+  /** `null` for fd duplication (`2>&1`, `<&3`), which names no file. */
+  readonly mode: 'read' | 'write' | null;
 }

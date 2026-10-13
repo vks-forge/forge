@@ -9,7 +9,8 @@
  *
  * Pins: every normalized RunEvent variant parses and unknown types fail, documented
  *   error families exist, RunRequest/RunResult/Run/DriverCapabilities parse
- *   (execution-plane.md §3, §8).
+ *   (execution-plane.md §3, §8). Run lifecycle and newer event kinds are in
+ *   run-lifecycle.test.ts and run-events.test.ts.
  * Depends on: src/schemas/run, vitest.
  */
 
@@ -19,10 +20,8 @@ import {
   ErrorFamily,
   Run,
   RunEvent,
-  InteractionKind,
   RunRequest,
   RunResult,
-  RunStatus,
   Sha256Hex,
 } from '#/schemas/run.js';
 
@@ -146,145 +145,6 @@ const request = {
   env: {},
   isolation: 'host',
 };
-
-const usage = { in: 1, out: 1, cachedIn: 0, cacheWrite: 0 };
-const baseRun = {
-  id: 'r1',
-  ticket_id: 'SF-1',
-  harness: 'h',
-  driver_version: '1',
-  cwd: 'x',
-  lane: 'express',
-  started_at: ts,
-  status: 'running',
-  owner: 'server-1',
-};
-
-describe('run lifecycle (batch C item 2)', () => {
-  it('RunStatus has starting, settling and settled next to the terminal values', () => {
-    for (const s of [
-      'starting',
-      'running',
-      'settling',
-      'settled',
-      'success',
-      'cancelled',
-    ]) {
-      expect(RunStatus.safeParse(s).success).toBe(true);
-    }
-  });
-
-  it('Run requires an owner and carries the optional lifecycle columns', () => {
-    expect(Run.safeParse({ ...baseRun, owner: undefined }).success).toBe(false);
-    const full = {
-      ...baseRun,
-      pid: 4242,
-      last_event_at: ts,
-      final_chain_hash: 'b'.repeat(64),
-      catalogue_hash: 'c'.repeat(64),
-      prompt_hash: 'd'.repeat(64),
-      retry_of: 'r0',
-      hook_registered_at: ts,
-    };
-
-    expect(Run.parse(full)).toEqual(full);
-    expect(Run.safeParse({ ...baseRun, pid: -1 }).success).toBe(false);
-    expect(Run.safeParse({ ...baseRun, prompt_hash: 'nope' }).success).toBe(false);
-  });
-});
-
-describe('RunResult paused (batch C item 6)', () => {
-  const paused = {
-    status: 'paused',
-    session: 's1',
-    usage,
-    costUsd: null,
-    filesTouched: [],
-    pauseReason: 'interaction',
-    interactionId: 'int-1',
-  };
-
-  it('parses a paused result that names its interaction', () => {
-    expect(RunResult.safeParse(paused).success).toBe(true);
-  });
-
-  it('refuses paused without a reason or interaction, and a pause field on any other status', () => {
-    expect(RunResult.safeParse({ ...paused, pauseReason: undefined }).success).toBe(
-      false,
-    );
-
-    expect(RunResult.safeParse({ ...paused, interactionId: undefined }).success).toBe(
-      false,
-    );
-
-    expect(RunResult.safeParse({ ...paused, status: 'success' }).success).toBe(false);
-  });
-});
-
-describe('RunEvent kinds (batch C item 7)', () => {
-  it('parses permission, inbox_delivered, session and hook_liveness', () => {
-    const events = [
-      { type: 'permission', seq: 0, ts, call_id: 'c1', tool: 'shell', decision: 'ask' },
-      {
-        type: 'permission',
-        seq: 1,
-        ts,
-        interaction_id: 'i1',
-        call_id: 'c1',
-        tool: 'shell',
-        decision: 'allow',
-      },
-      { type: 'inbox_delivered', seq: 2, ts, inbox_seq: 0, mode: 'steer' },
-      { type: 'session', seq: 3, ts, session_ref: 'sess-1' },
-      { type: 'hook_liveness', seq: 4, ts, fingerprint: 'f'.repeat(16) },
-    ];
-
-    for (const e of events) {
-      expect(RunEvent.safeParse(e).success).toBe(true);
-    }
-  });
-
-  it('rejects malformed new events', () => {
-    expect(
-      RunEvent.safeParse({
-        type: 'permission',
-        seq: 0,
-        ts,
-        call_id: 'c',
-        tool: 't',
-        decision: 'maybe',
-      }).success,
-    ).toBe(false);
-
-    expect(
-      RunEvent.safeParse({
-        type: 'inbox_delivered',
-        seq: 0,
-        ts,
-        inbox_seq: 0,
-        mode: 'shout',
-      }).success,
-    ).toBe(false);
-
-    expect(
-      RunEvent.safeParse({ type: 'session', seq: 0, ts, session_ref: '' }).success,
-    ).toBe(false);
-  });
-
-  it('InteractionKind gains blocked, and the ask event carries it', () => {
-    expect(InteractionKind.safeParse('blocked').success).toBe(true);
-    const ask = {
-      type: 'ask',
-      seq: 0,
-      ts,
-      interaction_id: 'i',
-      kind: 'blocked',
-      prompt: 'x',
-    };
-
-    expect(RunEvent.safeParse(ask).success).toBe(true);
-  });
-});
 
 describe('RunRequest (batch C item 9)', () => {
   it('parses without permissionPolicy and tools (derived by the app from visibleTools())', () => {

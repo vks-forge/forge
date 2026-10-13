@@ -4,52 +4,19 @@
  * Why: ticket status decides who may act and whether work can merge, so a hole here is a
  *   safety hole: a ticket reaching Done without its tier's sign-off, rework looping
  *   forever, or a stale writer winning a CAS race and double-dispatching a ticket.
- *   Property tests cover what examples cannot enumerate: no event leaves a terminal
- *   state, versions only increase, automatic rework never exceeds the cap.
  *
  * Pins: happy paths Inbox -> Done per tier, tier B/C routing to review/needs_signoff,
  *   purity, block/ask loops, tier-C signer, lane only escalates, errors returned not
- *   thrown, CAS stale version, terminal states, 2-rework cap, and properties (version
- *   monotonic, no exit from terminal) (director-core.md §3-§4, v1-scope-review.md
- *   §4.9).
+ *   thrown, CAS stale version, terminal states and the 2-rework cap (director-core.md
+ *   §3-§4, v1-scope-review.md §4.9). Properties are in state-machine-properties.test.ts.
  * Depends on: src/domain/state-machine, src/schemas/ticket, helpers/fixtures,
- *   fast-check, vitest.
+ *   helpers/transition-events, vitest.
  */
 
-import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { MAX_AUTO_REWORKS, transition } from '#/domain/state-machine.js';
-import type { TicketEvent } from '#/types/ticket-events.types.js';
-import { TERMINAL_STATUSES, type Ticket } from '#/schemas/ticket.js';
-import { makeTicket, T0 } from '#tests/helpers/fixtures.js';
-
-const T1 = '2026-10-13T01:00:00.000Z';
-
-function apply(ticket: Ticket, ...events: TicketEvent[]): Ticket {
-  let cur = ticket;
-  for (const e of events) {
-    const r = transition(cur, e);
-    if (!r.ok) {
-      throw new Error(`unexpected ${JSON.stringify(r.error)}`);
-    }
-
-    cur = r.value;
-  }
-
-  return cur;
-}
-
-const ev = {
-  triaged: { type: 'triaged', at: T1, lane: 'standard', tier_predicted: 'B' },
-  dispatched: { type: 'dispatched', at: T1 },
-  verifying: { type: 'verifying', at: T1 },
-  gate_failed: { type: 'gate_failed', at: T1 },
-  passA: { type: 'gate_passed', at: T1, tier_actual: 'A' },
-  passB: { type: 'gate_passed', at: T1, tier_actual: 'B' },
-  passC: { type: 'gate_passed', at: T1, tier_actual: 'C' },
-  merged: { type: 'merged', at: T1 },
-  cancelled: { type: 'cancelled', at: T1 },
-} as const satisfies Record<string, TicketEvent>;
+import { makeTicket } from '#tests/helpers/fixtures.js';
+import { T1, apply, ev } from '#tests/helpers/transition-events.js';
 
 describe('transition: happy paths', () => {
   it('walks Inbox to Done for tier A', () => {
@@ -218,111 +185,5 @@ describe('rework cap', () => {
     expect(t.status).toBe('waiting_human');
     expect(t.blocked_reason).toMatch(/rework/);
     expect(t.rework_count).toBe(MAX_AUTO_REWORKS);
-  });
-});
-
-const eventArb: fc.Arbitrary<TicketEvent> = fc.oneof(
-  fc.constantFrom<TicketEvent>(
-    ev.triaged,
-    ev.dispatched,
-    ev.verifying,
-    ev.gate_failed,
-    ev.passA,
-    ev.passB,
-    ev.passC,
-    ev.merged,
-    ev.cancelled,
-  ),
-  fc.constantFrom<TicketEvent>(
-    { type: 'blocked', at: T1, reason: 'r' },
-    { type: 'unblocked', at: T1 },
-    { type: 'asked', at: T1 },
-    { type: 'answered', at: T1 },
-    { type: 'parked', at: T1, reason: 'p' },
-    { type: 'unparked', at: T1 },
-    { type: 'done', at: T1, signer: 's' },
-    { type: 'rework', at: T1 },
-  ),
-);
-
-describe('transition: properties', () => {
-  it('status_version strictly increases on accept, is untouched on reject', () => {
-    fc.assert(
-      fc.property(fc.array(eventArb, { maxLength: 40 }), (events) => {
-        let t = makeTicket();
-        for (const e of events) {
-          const r = transition(t, e);
-          if (r.ok) {
-            expect(r.value.status_version).toBe(t.status_version + 1);
-            t = r.value;
-          }
-        }
-
-        expect(t.created_at).toBe(T0);
-      }),
-    );
-  });
-
-  it('no path leaves a terminal state', () => {
-    fc.assert(
-      fc.property(
-        fc.constantFrom(...TERMINAL_STATUSES),
-        fc.array(eventArb, { maxLength: 10 }),
-        (status, events) => {
-          const t = makeTicket({ status });
-          for (const e of events) {
-            expect(transition(t, e).ok).toBe(false);
-          }
-        },
-      ),
-    );
-  });
-
-  it('merged / done imply a gate_passed since the last verifying', () => {
-    fc.assert(
-      fc.property(fc.array(eventArb, { maxLength: 80 }), (events) => {
-        let t = makeTicket();
-        let passedThisCycle = false;
-        for (const e of events) {
-          const r = transition(t, e);
-          if (!r.ok) {
-            continue;
-          }
-
-          if (e.type === 'verifying') {
-            passedThisCycle = false;
-          }
-
-          if (e.type === 'gate_passed') {
-            passedThisCycle = true;
-          }
-
-          if (r.value.status === 'done' && (e.type === 'merged' || e.type === 'done')) {
-            expect(passedThisCycle).toBe(true);
-          }
-
-          t = r.value;
-        }
-      }),
-    );
-  });
-
-  it('automatic reworks never exceed the cap and lane never lowers', () => {
-    const rank = { express: 0, standard: 1, full: 2 } as const;
-    fc.assert(
-      fc.property(fc.array(eventArb, { maxLength: 80 }), (events) => {
-        let t = makeTicket();
-        for (const e of events) {
-          const r = transition(t, e);
-          if (!r.ok) {
-            continue;
-          }
-
-          expect(r.value.rework_count).toBeLessThanOrEqual(MAX_AUTO_REWORKS);
-          expect(rank[r.value.lane]).toBeGreaterThanOrEqual(rank[t.lane]);
-          t = r.value;
-        }
-      }),
-    );
   });
 });

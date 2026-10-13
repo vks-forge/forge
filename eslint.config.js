@@ -426,6 +426,11 @@ export default tseslint.config(
     },
   },
   {
+    // One concept per file, at most 300 lines, tests included (code.md rule 10).
+    files: [`packages/**/*.${EXT}`, `apps/**/*.${EXT}`],
+    rules: { 'max-lines': ['error', { max: 300 }] },
+  },
+  {
     files: [`packages/core/**/*.${EXT}`],
     rules: { 'no-restricted-imports': ['error', forgeImports([])] },
   },
