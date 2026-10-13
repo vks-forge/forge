@@ -41,14 +41,21 @@ export function preCheckLane(input: PreCheckInput): PreCheckResult {
 
   const paths = input.touchedPaths ?? [];
   const hits = paths.filter((p) => input.tierCGlobs.some((g) => globMatch(g, p)));
-  if (hits.length > 0) raise('full', `tier-C path touched: ${hits.join(', ')}`);
+  if (hits.length > 0) {
+    raise('full', `tier-C path touched: ${hits.join(', ')}`);
+  }
+
   if (paths.length > EXPRESS_MAX_FILES) {
     raise('standard', `${paths.length} files predicted (> ${EXPRESS_MAX_FILES})`);
   }
+
   if (input.bodyLength > EXPRESS_MAX_BODY_CHARS) {
     raise('standard', `body length ${input.bodyLength} > ${EXPRESS_MAX_BODY_CHARS}`);
   }
-  if (input.type === 'ci') raise('standard', 'ci changes touch infra surface');
+
+  if (input.type === 'ci') {
+    raise('standard', 'ci changes touch infra surface');
+  }
 
   return { lane, reasons };
 }

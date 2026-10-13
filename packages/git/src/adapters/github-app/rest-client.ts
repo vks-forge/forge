@@ -19,6 +19,7 @@ const BODY_LIMIT = 300;
 
 export function createRestClient(apiBase: string, doFetch: typeof fetch): RestClient {
   const base = apiBase.replace(/\/+$/, '');
+
   return {
     async call(credential, method, path, opts) {
       const accept = opts?.accept ?? [200, 201, 204];
@@ -44,6 +45,7 @@ export function createRestClient(apiBase: string, doFetch: typeof fetch): RestCl
           ]),
         );
       }
+
       const text = await res.text();
       if (accept.includes(res.status)) {
         let json: unknown = null;
@@ -58,11 +60,14 @@ export function createRestClient(apiBase: string, doFetch: typeof fetch): RestCl
             );
           }
         }
+
         return { status: res.status, json };
       }
+
       const rateLimited =
         res.headers.get('x-ratelimit-remaining') === '0' ||
         res.headers.has('retry-after');
+
       const shown = redactSecrets(text, [credential]).slice(0, BODY_LIMIT);
       throw new GitHostError(
         reasonForStatus(res.status, rateLimited),

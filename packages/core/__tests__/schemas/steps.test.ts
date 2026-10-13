@@ -48,8 +48,10 @@ describe('DispatchPromptOutput / SteerReplyOutput', () => {
   });
 
   it('accepts the four steer modes and rejects others', () => {
-    for (const mode of ['steer', 'follow_up', 'interrupt', 'none'])
+    for (const mode of ['steer', 'follow_up', 'interrupt', 'none']) {
       expect(SteerReplyOutput.safeParse({ mode, text: 'x' }).success).toBe(true);
+    }
+
     expect(SteerReplyOutput.safeParse({ mode: 'shout', text: 'x' }).success).toBe(false);
   });
 });
@@ -59,6 +61,7 @@ describe('NewRequestPayload / STEP_NAMES', () => {
     expect(NewRequestPayload.safeParse({ text: 'fix typo', hint: 'quick' }).success).toBe(
       true,
     );
+
     expect(NewRequestPayload.safeParse({ hint: 'quick' }).success).toBe(false);
   });
 

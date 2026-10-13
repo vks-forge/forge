@@ -38,6 +38,7 @@ describe('buildChildEnv', () => {
       { A: 'req', CLAUDE_CODE_ENTRYPOINT: 'x' },
       { A: 'prepared', FORGE_HOOK_CONFIG: '/x' },
     );
+
     expect(env).toEqual({ PATH: 'p', A: 'prepared' });
   });
 });
@@ -60,8 +61,10 @@ describe('classification', () => {
       message,
       data,
     });
+
     const kind = (e: unknown, r = null as { status?: string } | null) =>
       classifyRejection(e, r, rate).kind;
+
     expect(kind(err('x', undefined, -32000))).toBe('auth');
     expect(kind(err('x', { errorKind: 'authentication_failed' }))).toBe('auth');
     expect(kind(err('x', { errorKind: 'rate_limit' }))).toBe('rate_limit');
@@ -88,6 +91,7 @@ describe('classification', () => {
     expect(r({ subtype: 'success', result: 'This violates our usage policy.' })).toBe(
       'refused',
     );
+
     expect(r({ subtype: 'error_during_execution', is_error: true })).toBe('crash');
     expect(
       r({ subtype: 'error_during_execution', is_error: true, errors: ['overloaded'] }),
@@ -98,9 +102,11 @@ describe('classification', () => {
     expect(retryNotBeforeFrom({ resetsAt: 2_000_000_000 }, 0, 5)).toBe(
       new Date(2_000_000_000_000).toISOString(),
     );
+
     expect(retryNotBeforeFrom({ resetsAt: 1 }, 1_000_000, 5_000)).toBe(
       new Date(1_005_000).toISOString(),
     );
+
     expect(retryNotBeforeFrom(null, 0, 5_000)).toBe(new Date(5_000).toISOString());
   });
 });
@@ -122,6 +128,7 @@ describe('buildRunResult', () => {
         end: { kind: isEnd ? (kind as 'completed') : 'completed' },
         override: isEnd ? null : { kind: kind as 'stall', detail: 'd' },
       });
+
       expect(res.status).toBe(row.status);
       expect(res.errorFamily).toBe(row.family);
     }
@@ -133,12 +140,14 @@ describe('buildRunResult', () => {
       end: { kind: 'crash' },
       override: { kind: 'cancelled', detail: '' },
     });
+
     expect(o.status).toBe('cancelled');
     const r = buildRunResult({
       ...base,
       end: { kind: 'rate_limit', retryNotBefore: rate() },
       override: null,
     });
+
     expect(r.retryNotBefore).toBe(rate());
   });
 
@@ -151,6 +160,7 @@ describe('buildRunResult', () => {
         pendingAsk: 'i1',
       }),
     ).toMatchObject({ status: 'paused', interactionId: 'i1' });
+
     expect(
       buildRunResult({
         ...base,
@@ -171,6 +181,7 @@ describe('pending ask', () => {
     expect(findInteractionId([{ content: { text: '{"interaction_id":"b"}' } }])).toBe(
       'b',
     );
+
     expect(findInteractionId({ x: { interaction_id: 'c' } })).toBe('c');
     expect(findInteractionId('plain')).toBeNull();
     expect(findInteractionId('{bad')).toBeNull();
@@ -183,6 +194,7 @@ describe('normalisation', () => {
     expect(readRateLimit({ '_claude/rateLimit': { status: 'rejected' } })?.status).toBe(
       'rejected',
     );
+
     expect(readRateLimit('x')).toBeNull();
     expect(readSteering({ steering: { supported: true } })).toBe(true);
     expect(readSteering(null)).toBe(false);
@@ -196,15 +208,18 @@ describe('normalisation', () => {
         content: { type: 'text', text: '' },
       }).events,
     ).toEqual([]);
+
     expect(normaliseAcpUpdate({ sessionUpdate: 'plan', entries: [] }).dropped).toBe(
       'plan',
     );
+
     const n = normaliseAcpUpdate({
       sessionUpdate: 'tool_call',
       toolCallId: 't',
       title: 'Run it',
       status: 'failed',
     });
+
     expect(n.events.map((e) => e.type)).toEqual(['tool_call', 'tool_result']);
     expect(n.events[0]).toMatchObject({ name: 'Run it' });
   });
@@ -218,6 +233,7 @@ describe('normalisation', () => {
         rate_limit_info: { status: 'rejected' },
       }),
     );
+
     expect(normaliseCliLine(limit!).rateLimit?.status).toBe('rejected');
     const res = parseCliLine(
       JSON.stringify({
@@ -226,6 +242,7 @@ describe('normalisation', () => {
         modelUsage: { m: { inputTokens: 1, outputTokens: 2 } },
       }),
     );
+
     expect(usageFromResult(normaliseCliLine(res!).result!)).toMatchObject({
       in: 3,
       out: 0,
@@ -239,6 +256,7 @@ describe('normalisation', () => {
       { settingsPath: 's', hookConfigPath: 'h', mcpConfigPath: 'm' },
       undefined,
     );
+
     expect(args).not.toContain('--allowedTools');
     expect(args).not.toContain('--resume');
   });
@@ -250,6 +268,7 @@ describe('config and event log', () => {
       engine: 'acp',
       receiptGraceMs: 3000,
     });
+
     expect(() => parseClaudeConfig({ engine: 'x' })).toThrow();
   });
 
@@ -258,8 +277,11 @@ describe('config and event log', () => {
     log.push(1);
     const seen: number[] = [];
     const done = (async () => {
-      for await (const n of log.iterate()) seen.push(n);
+      for await (const n of log.iterate()) {
+        seen.push(n);
+      }
     })();
+
     log.push(2);
     log.close();
     log.push(3);

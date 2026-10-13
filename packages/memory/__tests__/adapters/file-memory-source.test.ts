@@ -31,6 +31,7 @@ function rec(
   statement = `statement of ${id}`,
 ): string {
   const st = status === null ? '' : `status: ${status}\n`;
+
   return `---\nid: ${id}\nstatement: ${statement}\n${st}---\nbody\n`;
 }
 
@@ -43,6 +44,7 @@ beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), 'forge-mem-'));
   skips.length = 0;
 });
+
 afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
@@ -104,6 +106,7 @@ describe('createFileMemorySource', () => {
       'empty-statement.md',
       '---\nid: d-0005\nstatement: ""\nstatus: active\n---\n',
     );
+
     await put(dir, 'notes.txt', 'ignored, not markdown');
 
     const slice = await createFileMemorySource(root, { onSkip }).slice('proj');
@@ -115,6 +118,7 @@ describe('createFileMemorySource', () => {
       'empty-statement.md',
       'no-fm.md',
     ]);
+
     expect(skips.every((s) => s.reason.length > 0)).toBe(true);
   });
 
@@ -131,6 +135,7 @@ describe('createFileMemorySource', () => {
     for (const slug of bad) {
       expect(await source.slice(slug)).toEqual({ decisions: [], rejected: [] });
     }
+
     expect(skips).toHaveLength(bad.length);
   });
 
@@ -140,6 +145,7 @@ describe('createFileMemorySource', () => {
       'd-0001.md',
       rec('d-0001', 'active', 'slug'),
     );
+
     await put(join(root, 'decisions'), 'd-0002.md', rec('d-0002', 'active', 'flat'));
     const slice = await createFileMemorySource(root).slice('proj');
     expect(slice.decisions.map((d) => d.statement)).toEqual(['slug']);

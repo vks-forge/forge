@@ -47,6 +47,7 @@ const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
 
 function toRun(row: SqlRow): Run {
   const { usage_json, ...rest } = dropNulls(row);
+
   return parseStored(
     Run,
     {
@@ -61,6 +62,7 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
   return {
     async get(id) {
       const row = driver.get('SELECT * FROM runs WHERE id = ?', [id]);
+
       return row ? toRun(row) : null;
     },
 
@@ -71,8 +73,12 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
     },
 
     async listByStatus(statuses) {
-      if (statuses.length === 0) return [];
+      if (statuses.length === 0) {
+        return [];
+      }
+
       const marks = statuses.map(() => '?').join(', ');
+
       return driver
         .all(`SELECT * FROM runs WHERE status IN (${marks}) ORDER BY rowid`, [
           ...statuses,
@@ -119,10 +125,17 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
         'SELECT ended_at FROM runs WHERE id = ?',
         [id],
       );
-      if (!current) throw new UnknownForgeError(`Run not found: ${id}`);
+
+      if (!current) {
+        throw new UnknownForgeError(`Run not found: ${id}`);
+      }
+
       assertNotReopened(id, current.ended_at !== null, parsed);
       const { sql, params } = buildSetClause(COLUMNS, parsed);
-      if (sql === '') return;
+      if (sql === '') {
+        return;
+      }
+
       driver.run(`UPDATE runs SET ${sql} WHERE id = ?`, [...params, id]);
     },
   };

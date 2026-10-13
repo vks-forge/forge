@@ -81,6 +81,7 @@ export interface Rig {
 }
 
 let dedupe = 0;
+
 export function intake(over: Partial<IntakeEvent> = {}, now = Date.now()): IntakeEvent {
   return {
     source: 'chat',
@@ -127,10 +128,14 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
     onTickRequested: () => void tickRequests.count++,
     log,
   };
+
   const engine = createEngine(deps);
   const flush = async (): Promise<void> => {
-    for (let i = 0; i < 8; i++) await new Promise<void>((r) => setImmediate(r));
+    for (let i = 0; i < 8; i++) {
+      await new Promise<void>((r) => setImmediate(r));
+    }
   };
+
   const rig: Rig = {
     storage,
     driver,
@@ -157,18 +162,26 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
     },
     async request(text, over = {}) {
       const r = await engine.ingest(intake({ payload: { text, ...over } }, clock.now()));
-      if (r.status !== 'ticket_created') throw new Error(`not created: ${r.status}`);
+      if (r.status !== 'ticket_created') {
+        throw new Error(`not created: ${r.status}`);
+      }
+
       return r.ticketId;
     },
     tick: () => engine.tick(),
     flush,
     async ticket(id) {
       const t = await storage.transaction((tx) => tx.tickets.get(id as Ticket['id']));
-      if (!t) throw new Error(`no ticket ${id}`);
+      if (!t) {
+        throw new Error(`no ticket ${id}`);
+      }
+
       return t;
     },
     restart: (owner) => createEngine({ ...deps, owner }),
   };
+
   await rig.seedProject();
+
   return rig;
 }

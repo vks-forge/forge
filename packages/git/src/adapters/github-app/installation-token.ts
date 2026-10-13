@@ -35,25 +35,33 @@ export function createTokenSource(o: TokenSourceOptions): TokenSource {
       `/app/installations/${encodeURIComponent(o.installationId)}/access_tokens`,
       { accept: [201] },
     );
+
     const parsed = TokenResponse.safeParse(json);
-    if (!parsed.success)
+    if (!parsed.success) {
       throw new GitHostError(
         'unavailable',
         'GitHub returned an unreadable installation token response',
       );
+    }
+
     cached = {
       token: parsed.data.token,
       refreshAt: Date.parse(parsed.data.expires_at) - REFRESH_MARGIN_MS,
     };
+
     return parsed.data.token;
   };
 
   return {
     async token() {
-      if (cached !== null && o.now() < cached.refreshAt) return cached.token;
+      if (cached !== null && o.now() < cached.refreshAt) {
+        return cached.token;
+      }
+
       inflight ??= mint().finally(() => {
         inflight = null;
       });
+
       return inflight;
     },
   };

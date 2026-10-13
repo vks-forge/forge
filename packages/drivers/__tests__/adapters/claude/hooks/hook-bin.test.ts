@@ -28,8 +28,10 @@ beforeAll(() => {
     '-b',
     join(pkg, 'tsconfig.json'),
   ]);
+
   dir = mkdtempSync(join(tmpdir(), 'forge-hook-'));
 }, 180_000);
+
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 function exec(stdin: unknown, env: Record<string, string>) {
@@ -37,6 +39,7 @@ function exec(stdin: unknown, env: Record<string, string>) {
     const child = spawn(process.execPath, [bin], {
       env: { PATH: process.env['PATH'] ?? '', ...env },
     });
+
     let stderr = '';
     child.stderr.on('data', (c) => (stderr += String(c)));
     child.on('close', (code) => done({ code, stderr }));
@@ -51,6 +54,7 @@ async function withServer(reply: Reply, timeout_ms = 2000) {
     path,
     JSON.stringify({ run_id: 'r', server_url: s.url, token: 't', timeout_ms }),
   );
+
   return { s, env: { FORGE_HOOK_CONFIG: path } };
 }
 
@@ -72,6 +76,7 @@ describe('bin/hook.js', { timeout: 30_000 }, () => {
       reason: 'rule_deny',
       receipt_hash: '',
     });
+
     const { s, env } = await withServer({ body });
     const r = await exec(pre(), env);
     expect(r.code).toBe(2);
@@ -114,11 +119,13 @@ describe('bin/hook.js', { timeout: 30_000 }, () => {
       const child = spawn(process.execPath, [join(bare, 'bin', 'hook.js')], {
         env: { PATH: process.env['PATH'] ?? '' },
       });
+
       let stderr = '';
       child.stderr.on('data', (c) => (stderr += String(c)));
       child.on('close', (code) => done({ code, stderr }));
       child.stdin.end(JSON.stringify(pre()));
     });
+
     expect(r.code).toBe(2);
     expect(r.stderr).toContain('cannot load hook');
     expect(r.stderr).toContain('Run pnpm build');

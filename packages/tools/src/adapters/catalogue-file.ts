@@ -28,5 +28,6 @@ export async function readCatalogueFile(
   } catch {
     return { status: 'quarantined', reason: 'malformed' };
   }
+
   return loadCatalogue(text, key, opts);
 }

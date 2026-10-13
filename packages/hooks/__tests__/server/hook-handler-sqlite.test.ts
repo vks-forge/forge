@@ -30,6 +30,7 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'forge-hooks-'));
   path = join(dir, 'forge.sqlite');
 });
+
 afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
@@ -43,11 +44,13 @@ describe('hook handler over SQLite', () => {
         env.handler.handle(RUN_ID, TOKEN, req(pre('PowerShell', `echo ${i}`, `tu${i}`))),
       ),
     );
+
     await Promise.all(
       Array.from({ length: 20 }, (_, i) =>
         env.handler.handle(RUN_ID, TOKEN, req(post('PowerShell', `tu${i}`))),
       ),
     );
+
     await env.close();
 
     const reopened = openSqlite(path);
@@ -65,10 +68,12 @@ describe('hook handler over SQLite', () => {
       TOKEN,
       req(pre('PowerShell', 'echo hi', 'tu1')),
     );
+
     const bytes = [path, `${path}-wal`]
       .filter((f) => existsSync(f))
       .map((f) => readFileSync(f).toString('latin1'))
       .join('');
+
     await env.close();
     // Positive control: the receipt itself is on disk, so absence of the secret means something.
     expect(bytes).toContain(r.receipt_hash);

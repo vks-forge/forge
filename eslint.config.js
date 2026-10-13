@@ -15,6 +15,7 @@
  * Depends on: typescript-eslint. No IO.
  */
 
+import stylistic from '@stylistic/eslint-plugin';
 import tseslint from 'typescript-eslint';
 
 const EXT = '{ts,mts,cts,tsx,js,mjs,cjs}';
@@ -55,15 +56,23 @@ const normalize = (filename) => filename.split(String.fromCharCode(92)).join('/'
 
 /** Static text of a specifier node, or null when it has any substitution or is not a string. */
 const staticText = (node) => {
-  if (node?.type === 'Literal' && typeof node.value === 'string') return node.value;
-  if (node?.type === 'TemplateLiteral' && node.expressions.length === 0)
+  if (node?.type === 'Literal' && typeof node.value === 'string') {
+    return node.value;
+  }
+
+  if (node?.type === 'TemplateLiteral' && node.expressions.length === 0) {
     return node.quasis[0]?.value.cooked ?? '';
+  }
+
   return null;
 };
 
 /** Leading static text of a specifier (template literals with substitutions included). */
 const staticPrefix = (node) => {
-  if (node?.type === 'TemplateLiteral') return node.quasis[0]?.value.cooked ?? '';
+  if (node?.type === 'TemplateLiteral') {
+    return node.quasis[0]?.value.cooked ?? '';
+  }
+
   return staticText(node);
 };
 
@@ -75,6 +84,7 @@ const requireArg = (node) => {
     c.type === 'CallExpression' &&
     c.callee.type === 'Identifier' &&
     c.callee.name === 'createRequire';
+
   return isRequire || isCreated ? (node.arguments[0] ?? null) : undefined;
 };
 
@@ -100,6 +110,7 @@ const fileHeader = {
           first.type === 'Block' &&
           first.value.startsWith('*') &&
           text.slice(0, first.range[0]).trim() === '';
+
         // Test files pin behaviour (`Pins:`); every other file, helpers and contracts
         // included, declares what it exports.
         const isTest = /\.test\.[cm]?[jt]sx?$/.test(normalize(context.filename));
@@ -108,8 +119,10 @@ const fileHeader = {
           startsWithComment &&
           first.value.includes(marker) &&
           HEADER_REQUIRED.every((k) => first.value.includes(k));
-        if (!ok)
+
+        if (!ok) {
           context.report({ node, loc: { line: 1, column: 0 }, messageId: 'missing' });
+        }
       },
     };
   },
@@ -129,21 +142,26 @@ const noParentImports = {
     const climbs = (value) => /(^|\/)\.\.(\/|$)/.test(value);
     const check = (specifier) => {
       const value = staticPrefix(specifier);
-      if (value !== null && climbs(value))
+      if (value !== null && climbs(value)) {
         context.report({ node: specifier, messageId: 'parent', data: { path: value } });
+      }
     };
+
     return {
       ImportDeclaration: (node) => check(node.source),
       ExportAllDeclaration: (node) => check(node.source),
       ExportNamedDeclaration: (node) => check(node.source),
       ImportExpression: (node) => check(node.source),
       TSImportEqualsDeclaration(node) {
-        if (node.moduleReference.type === 'TSExternalModuleReference')
+        if (node.moduleReference.type === 'TSExternalModuleReference') {
           check(node.moduleReference.expression);
+        }
       },
       CallExpression(node) {
         const arg = requireArg(node);
-        if (arg) check(arg);
+        if (arg) {
+          check(arg);
+        }
       },
     };
   },
@@ -167,28 +185,41 @@ const noDynamicCrossPackage = {
   },
   create(context) {
     const match = /\/packages\/([^/]+)\/src\//.exec(normalize(context.filename));
-    if (!match) return {};
+    if (!match) {
+      return {};
+    }
+
     const pkg = match[1];
     const allowed = LAYER_ALLOWED[pkg];
-    if (!allowed) return {};
+    if (!allowed) {
+      return {};
+    }
+
     const checkName = (spec, node) => {
       const name = /^@forge\/[^/]+/.exec(staticText(spec) ?? '')?.[0];
-      if (name && name !== `@forge/${pkg}` && !allowed.includes(name))
+      if (name && name !== `@forge/${pkg}` && !allowed.includes(name)) {
         context.report({ node, messageId: 'layer', data: { name, pkg } });
+      }
     };
+
     return {
       ImportExpression(node) {
-        if (staticText(node.source) === null)
+        if (staticText(node.source) === null) {
           context.report({ node: node.source, messageId: 'dynamic' });
-        else checkName(node.source, node.source);
+        } else {
+          checkName(node.source, node.source);
+        }
       },
       CallExpression(node) {
         const arg = requireArg(node);
-        if (arg) checkName(arg, arg);
+        if (arg) {
+          checkName(arg, arg);
+        }
       },
       TSImportEqualsDeclaration(node) {
-        if (node.moduleReference.type === 'TSExternalModuleReference')
+        if (node.moduleReference.type === 'TSExternalModuleReference') {
           checkName(node.moduleReference.expression, node);
+        }
       },
     };
   },
@@ -216,7 +247,10 @@ const typesInTypesFolder = {
   },
   create(context) {
     const file = normalize(context.filename);
-    if (!/\/(packages|apps)\/[^/]+\/src\//.test(file)) return {};
+    if (!/\/(packages|apps)\/[^/]+\/src\//.test(file)) {
+      return {};
+    }
+
     const inTypes = /\/src\/types\//.test(file);
     const inSchemas = /\/src\/schemas\//.test(file);
     const isZInfer = (n) =>
@@ -224,18 +258,25 @@ const typesInTypesFolder = {
       n.typeAnnotation.typeName.type === 'TSQualifiedName' &&
       n.typeAnnotation.typeName.left.name === 'z' &&
       n.typeAnnotation.typeName.right.name === 'infer';
+
     const shared = {
       TSEnumDeclaration: (node) => context.report({ node, messageId: 'enum' }),
       TSModuleDeclaration(node) {
-        if (node.kind !== 'namespace') context.report({ node, messageId: 'ambient' });
+        if (node.kind !== 'namespace') {
+          context.report({ node, messageId: 'ambient' });
+        }
       },
     };
+
     if (inTypes) {
       const runtime = (node) => context.report({ node, messageId: 'runtime' });
+
       return {
         ...shared,
         ExportAllDeclaration(node) {
-          if (node.exportKind !== 'type') context.report({ node, messageId: 'reexport' });
+          if (node.exportKind !== 'type') {
+            context.report({ node, messageId: 'reexport' });
+          }
         },
         ExportDefaultDeclaration: runtime,
         ExportNamedDeclaration(node) {
@@ -248,8 +289,9 @@ const typesInTypesFolder = {
                 'ClassDeclaration',
                 'TSEnumDeclaration',
               ].includes(d.type)
-            )
+            ) {
               runtime(node);
+            }
           } else if (
             node.exportKind !== 'type' &&
             node.specifiers.some((sp) => sp.exportKind !== 'type')
@@ -259,11 +301,15 @@ const typesInTypesFolder = {
         },
       };
     }
+
     return {
       ...shared,
       TSInterfaceDeclaration: (node) => context.report({ node, messageId: 'misplaced' }),
       TSTypeAliasDeclaration(node) {
-        if (inSchemas && isZInfer(node)) return;
+        if (inSchemas && isZInfer(node)) {
+          return;
+        }
+
         context.report({ node, messageId: 'misplaced' });
       },
     };
@@ -283,15 +329,22 @@ const typesFileSuffix = {
   },
   create(context) {
     const file = normalize(context.filename);
-    if (!/\/(packages|apps)\/[^/]+\/src\//.test(file)) return {};
+    if (!/\/(packages|apps)\/[^/]+\/src\//.test(file)) {
+      return {};
+    }
+
     const inTypes = /\/src\/types\//.test(file);
     const suffixed = file.endsWith('.types.ts');
+
     return {
       Program(node) {
-        if (inTypes && !suffixed)
+        if (inTypes && !suffixed) {
           context.report({ node, loc: { line: 1, column: 0 }, messageId: 'missing' });
-        if (!inTypes && suffixed)
+        }
+
+        if (!inTypes && suffixed) {
           context.report({ node, loc: { line: 1, column: 0 }, messageId: 'stray' });
+        }
       },
     };
   },
@@ -323,6 +376,35 @@ export default tseslint.config(
     ],
   },
   ...tseslint.configs.recommended,
+  // Readable layout for many contributors (d-0063). Prettier keeps blank lines but never
+  // adds them and folds a short braceless `if` onto one line, so these auto-fixable rules
+  // supply what it cannot: every body in braces, and blank lines between logical steps.
+  {
+    files: [
+      `packages/**/*.${EXT}`,
+      `apps/**/*.${EXT}`,
+      `scripts/**/*.${EXT}`,
+      `*.${EXT}`,
+    ],
+    plugins: { '@stylistic': stylistic },
+    rules: {
+      curly: ['error', 'all'],
+      '@stylistic/padding-line-between-statements': [
+        'error',
+        { blankLine: 'always', prev: '*', next: 'return' },
+        { blankLine: 'always', prev: 'multiline-block-like', next: '*' },
+        {
+          blankLine: 'always',
+          prev: ['multiline-const', 'multiline-let', 'multiline-expression'],
+          next: '*',
+        },
+        { blankLine: 'always', prev: 'import', next: '*' },
+        { blankLine: 'any', prev: 'import', next: 'import' },
+        { blankLine: 'always', prev: '*', next: ['function', 'class', 'export'] },
+        { blankLine: 'any', prev: 'export', next: 'export' },
+      ],
+    },
+  },
   {
     files: [
       `packages/**/*.${EXT}`,

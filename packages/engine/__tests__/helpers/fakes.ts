@@ -34,10 +34,17 @@ export function createFakeWorktrees(): FakeWorktrees {
     changed: ['src/a.ts'],
     failCreate: null,
     async create(ticketId: TicketId, branch, baseRef) {
-      if (fake.failCreate) throw fake.failCreate;
+      if (fake.failCreate) {
+        throw fake.failCreate;
+      }
+
       const path = `/repo/.worktrees/${ticketId}`;
-      if (!live.has(path)) fake.created.push({ ticketId, branch, baseRef, path });
+      if (!live.has(path)) {
+        fake.created.push({ ticketId, branch, baseRef, path });
+      }
+
       live.set(path, branch);
+
       return { path, baseSha: 'base-sha-1' };
     },
     async remove(path) {
@@ -51,19 +58,23 @@ export function createFakeWorktrees(): FakeWorktrees {
     }),
     async commitAll(path, message) {
       fake.commits.push({ path, message });
+
       return 'commit-sha-1';
     },
     head: async () => 'head-sha-1',
   };
+
   return fake;
 }
 
 export function createFakeMemory(): MemorySource & { calls: string[] } {
   const calls: string[] = [];
+
   return {
     calls,
     async slice(slug) {
       calls.push(slug);
+
       return {
         decisions: [{ id: 'd-0001', statement: 'Use pnpm.' }],
         rejected: [{ id: 'r-0001', statement: 'No vector memory.' }],
@@ -79,6 +90,7 @@ export interface FakeReceipts extends ReceiptLog {
 
 export function createFakeReceipts(): FakeReceipts {
   const chains = new Map<string, readonly Receipt[]>();
+
   return {
     setChain(runId, lastHash) {
       chains.set(runId, [{ hash: lastHash } as unknown as Receipt]);
@@ -98,6 +110,7 @@ export interface FakeClock extends Clock {
 
 export function createFakeClock(start = Date.UTC(2026, 9, 13, 12, 0, 0)): FakeClock {
   let current = start;
+
   return {
     now: () => current,
     after: () => () => undefined,
@@ -109,6 +122,7 @@ export function createFakeClock(start = Date.UTC(2026, 9, 13, 12, 0, 0)): FakeCl
 
 export function createIds(): IdSource {
   const n = { run: 0, wake: 0, interaction: 0, token: 0 };
+
   return {
     runId: () => `run-${++n.run}`,
     wakeId: () => `wake-${++n.wake}`,

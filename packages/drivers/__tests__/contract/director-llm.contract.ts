@@ -48,6 +48,7 @@ export function describeDirectorLLMContract(
     beforeEach(async () => {
       h = await make();
     });
+
     afterEach(async () => {
       await h.close();
     });
@@ -98,14 +99,18 @@ export function describeDirectorLLMContract(
       await h.script({ kind: scripted });
       const r = await run();
       expect(r.ok).toBe(false);
-      if (!r.ok) expect(r.error.kind).toBe(kind);
+      if (!r.ok) {
+        expect(r.error.kind).toBe(kind);
+      }
     });
 
     it('maps a dead process to crash and never throws', async () => {
       await h.script({ kind: 'crash' });
       const r = await run();
       expect(r.ok).toBe(false);
-      if (!r.ok) expect(['crash', 'unknown']).toContain(r.error.kind);
+      if (!r.ok) {
+        expect(['crash', 'unknown']).toContain(r.error.kind);
+      }
     });
 
     it('does not throw for any scripted failure', async () => {

@@ -39,7 +39,11 @@ describe('run schemas', () => {
       { type: 'error', seq: 6, ts, family: 'crash', message: 'boom' },
       { type: 'usage', seq: 7, ts, usage: { in: 1, out: 2, cachedIn: 0, cacheWrite: 0 } },
     ];
-    for (const e of events) expect(RunEvent.safeParse(e).success).toBe(true);
+
+    for (const e of events) {
+      expect(RunEvent.safeParse(e).success).toBe(true);
+    }
+
     expect(RunEvent.safeParse({ type: 'weird', seq: 1, ts }).success).toBe(false);
   });
 
@@ -51,8 +55,9 @@ describe('run schemas', () => {
       'A'.repeat(64),
       'g'.repeat(64),
       'a'.repeat(65),
-    ])
+    ]) {
       expect(Sha256Hex.safeParse(bad).success).toBe(false);
+    }
   });
 
   it('has the documented error families', () => {
@@ -87,6 +92,7 @@ describe('run schemas', () => {
       env: {},
       isolation: 'host',
     };
+
     expect(RunRequest.safeParse(req).success).toBe(true);
     const res = {
       status: 'success',
@@ -95,6 +101,7 @@ describe('run schemas', () => {
       costUsd: null,
       filesTouched: [],
     };
+
     expect(RunResult.safeParse(res).success).toBe(true);
   });
 
@@ -110,6 +117,7 @@ describe('run schemas', () => {
       status: 'running',
       owner: 'server-1',
     };
+
     expect(Run.safeParse(run).success).toBe(true);
     const caps = {
       resume: true,
@@ -119,6 +127,7 @@ describe('run schemas', () => {
       structuredOutput: false,
       permissionRequests: true,
     };
+
     expect(DriverCapabilities.safeParse(caps).success).toBe(true);
   });
 });
@@ -137,6 +146,7 @@ const request = {
   env: {},
   isolation: 'host',
 };
+
 const usage = { in: 1, out: 1, cachedIn: 0, cacheWrite: 0 };
 const baseRun = {
   id: 'r1',
@@ -159,8 +169,9 @@ describe('run lifecycle (batch C item 2)', () => {
       'settled',
       'success',
       'cancelled',
-    ])
+    ]) {
       expect(RunStatus.safeParse(s).success).toBe(true);
+    }
   });
 
   it('Run requires an owner and carries the optional lifecycle columns', () => {
@@ -175,6 +186,7 @@ describe('run lifecycle (batch C item 2)', () => {
       retry_of: 'r0',
       hook_registered_at: ts,
     };
+
     expect(Run.parse(full)).toEqual(full);
     expect(Run.safeParse({ ...baseRun, pid: -1 }).success).toBe(false);
     expect(Run.safeParse({ ...baseRun, prompt_hash: 'nope' }).success).toBe(false);
@@ -200,9 +212,11 @@ describe('RunResult paused (batch C item 6)', () => {
     expect(RunResult.safeParse({ ...paused, pauseReason: undefined }).success).toBe(
       false,
     );
+
     expect(RunResult.safeParse({ ...paused, interactionId: undefined }).success).toBe(
       false,
     );
+
     expect(RunResult.safeParse({ ...paused, status: 'success' }).success).toBe(false);
   });
 });
@@ -224,7 +238,10 @@ describe('RunEvent kinds (batch C item 7)', () => {
       { type: 'session', seq: 3, ts, session_ref: 'sess-1' },
       { type: 'hook_liveness', seq: 4, ts, fingerprint: 'f'.repeat(16) },
     ];
-    for (const e of events) expect(RunEvent.safeParse(e).success).toBe(true);
+
+    for (const e of events) {
+      expect(RunEvent.safeParse(e).success).toBe(true);
+    }
   });
 
   it('rejects malformed new events', () => {
@@ -238,6 +255,7 @@ describe('RunEvent kinds (batch C item 7)', () => {
         decision: 'maybe',
       }).success,
     ).toBe(false);
+
     expect(
       RunEvent.safeParse({
         type: 'inbox_delivered',
@@ -247,6 +265,7 @@ describe('RunEvent kinds (batch C item 7)', () => {
         mode: 'shout',
       }).success,
     ).toBe(false);
+
     expect(
       RunEvent.safeParse({ type: 'session', seq: 0, ts, session_ref: '' }).success,
     ).toBe(false);
@@ -262,6 +281,7 @@ describe('RunEvent kinds (batch C item 7)', () => {
       kind: 'blocked',
       prompt: 'x',
     };
+
     expect(RunEvent.safeParse(ask).success).toBe(true);
   });
 });
@@ -277,6 +297,7 @@ describe('RunRequest (batch C item 9)', () => {
       permissionPolicy: { allow: [], deny: [], onUnlisted: 'deny' },
       tools: { mcpServers: ['forge'], allow: [], deny: [] },
     };
+
     expect(RunRequest.safeParse(withBoth).success).toBe(true);
   });
 

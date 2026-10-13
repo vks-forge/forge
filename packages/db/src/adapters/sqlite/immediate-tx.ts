@@ -25,9 +25,11 @@ export async function runImmediate<T>(
   } catch (error) {
     throw mapDbError(error);
   }
+
   try {
     const result = await body();
     driver.exec('COMMIT');
+
     return result;
   } catch (error) {
     try {
@@ -35,6 +37,7 @@ export async function runImmediate<T>(
     } catch {
       // The transaction may already be gone (failed COMMIT); the original error matters.
     }
+
     throw mapDbError(error);
   }
 }

@@ -62,7 +62,10 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
   const result = new Promise<RunResult>((resolve) => (resolveResult = resolve));
 
   function touch(): void {
-    if (settling) return;
+    if (settling) {
+      return;
+    }
+
     cancelStall();
     cancelStall = clock.after(req.budget.stallMs, () =>
       impose({ kind: 'stall', detail: `no event for ${req.budget.stallMs} ms` }),
@@ -71,17 +74,27 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
 
   function cancelEngine(): Promise<void> {
     // Not memoised before the engine exists, so an override imposed during launch still cancels it.
-    if (!engine) return Promise.resolve();
+    if (!engine) {
+      return Promise.resolve();
+    }
+
     engineCancel ??= engine.cancel();
+
     return engineCancel;
   }
 
   /** The driver's own verdict on the run; the first one wins and the engine is cancelled. */
   function impose(o: Override): void {
-    if (override || settling) return;
+    if (override || settling) {
+      return;
+    }
+
     override = o;
     const family = familyOf(o.kind);
-    if (family) emit({ type: 'error', family, message: o.detail });
+    if (family) {
+      emit({ type: 'error', family, message: o.detail });
+    }
+
     void cancelEngine().catch((e: unknown) =>
       log('warn', 'engine cancel failed', { error: String(e) }),
     );
@@ -92,6 +105,7 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
       name: call.name,
       argsHash: sha256Hex(canonicalJson(call.input ?? null)),
     };
+
     const deadline = clock.now() + config.receiptGraceMs;
     for (;;) {
       let found: Decision | null = null;
@@ -100,32 +114,42 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
       } catch (e) {
         log('warn', 'receipt lookup failed', { error: String(e), call: call.id });
       }
+
       const left = deadline - clock.now();
-      if (found || left <= 0 || settling) return found;
+      if (found || left <= 0 || settling) {
+        return found;
+      }
+
       await new Promise<void>((resolve) => clock.after(Math.min(POLL_MS, left), resolve));
     }
   }
 
   async function crossCheck(call: ToolCallRef): Promise<void> {
     const decision = await decisionFor(call);
-    if (decision === null && !settling)
+    if (decision === null && !settling) {
       impose({
         kind: 'policy_denied',
         detail: `tool call ${call.id} (${call.name}) has no server-side decision receipt`,
       });
+    }
   }
 
   function inspect(e: RunEvent): void {
     if (e.type === 'tool_call') {
       pendingAsk = null;
-      if (isAskTool(e.name, req.mcpIdentity)) askCalls.add(e.call_id);
+      if (isAskTool(e.name, req.mcpIdentity)) {
+        askCalls.add(e.call_id);
+      }
+
       if (config.receiptCrossCheck && !checked.has(e.call_id)) {
         checked.add(e.call_id);
         void crossCheck({ id: e.call_id, name: e.name, input: e.input });
       }
     } else if (e.type === 'tool_result' && askCalls.has(e.call_id) && !e.is_error) {
       pendingAsk = findInteractionId(e.output) ?? pendingAsk;
-    } else if (e.type === 'error') errorFamilies.add(e.family);
+    } else if (e.type === 'error') {
+      errorFamilies.add(e.family);
+    }
   }
 
   function emit(draft: EventDraft): void {
@@ -133,8 +157,10 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
     const parsed = RunEvent.safeParse({ ...draft, seq, ts });
     if (!parsed.success) {
       log('warn', 'dropped malformed event', { type: draft.type });
+
       return;
     }
+
     seq += 1;
     events.push(parsed.data);
     touch();
@@ -165,7 +191,10 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
   };
 
   async function settle(end: EngineEnd): Promise<void> {
-    if (settling) return;
+    if (settling) {
+      return;
+    }
+
     settling = true;
     cancelStall();
     cancelTurn();
@@ -177,10 +206,13 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
         log('warn', 'git changedFiles failed; reporting no files', { error: String(e) });
       }
     }
+
     const kind = override?.kind ?? end.kind;
     const family = familyOf(kind);
-    if (family && !errorFamilies.has(family))
+    if (family && !errorFamilies.has(family)) {
       emit({ type: 'error', family, message: override?.detail ?? end.detail ?? kind });
+    }
+
     const built = RunResult.safeParse(
       buildRunResult({
         end,
@@ -192,6 +224,7 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
         pendingAsk,
       }),
     );
+
     events.close();
     resolveResult(
       built.success
@@ -213,7 +246,10 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
     engine.ended.then(settle, (e: unknown) =>
       settle({ kind: 'crash', detail: e instanceof Error ? e.message : String(e) }),
     );
-    if (override) void cancelEngine();
+
+    if (override) {
+      void cancelEngine();
+    }
   } catch (e) {
     void settle({ kind: 'crash', detail: e instanceof Error ? e.message : String(e) });
   }
@@ -225,14 +261,19 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
     session: () => session,
     isSettled: () => settling,
     async steer(message, mode, inboxSeq) {
-      if (settling || !engine)
+      if (settling || !engine) {
         throw new InvalidInputError('run has ended; start or resume a new run');
+      }
+
       await engine.steer(message, mode);
       emit({ type: 'inbox_delivered', inbox_seq: inboxSeq ?? deliveries, mode });
       deliveries += 1;
     },
     async cancel() {
-      if (settling) return;
+      if (settling) {
+        return;
+      }
+
       impose({ kind: 'cancelled', detail: 'cancelled by request' });
       await cancelEngine();
     },

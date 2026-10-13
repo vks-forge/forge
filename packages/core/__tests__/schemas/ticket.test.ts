@@ -50,6 +50,7 @@ describe('ticket schemas', () => {
       'supersedes',
       'spawned_from',
     ]);
+
     expect(TicketStatus.options).toContain('waiting_human');
   });
 
@@ -76,6 +77,7 @@ describe('Ticket batch C fields', () => {
       epic_id: 'SF-9',
       created_by_intake: 12,
     };
+
     expect(Ticket.parse(full)).toMatchObject(full);
   });
 
@@ -83,6 +85,7 @@ describe('Ticket batch C fields', () => {
     expect(
       Ticket.parse({ ...base, pr_number: 7, pr_url: 'https://h/pull/7' }),
     ).toMatchObject({ pr_number: 7 });
+
     expect(Ticket.safeParse({ ...base, pr_number: 0 }).success).toBe(false);
   });
 

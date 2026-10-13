@@ -21,6 +21,7 @@ function res(
   headers: Record<string, string> = {},
 ): HttpResponse {
   const bytes = typeof body === 'string' ? new TextEncoder().encode(body) : body;
+
   return {
     status,
     headers: { 'content-type': 'text/html', ...headers },
@@ -59,6 +60,7 @@ describe('guardedFetchText: refusals before any socket', () => {
     await expect(guardedFetchText(url, opts(transport))).rejects.toThrow(
       /private|loopback|blocked|not allowed/i,
     );
+
     expect(transport).not.toHaveBeenCalled();
   });
 
@@ -70,6 +72,7 @@ describe('guardedFetchText: refusals before any socket', () => {
         opts(transport, async () => ['93.184.216.34', '10.0.0.5']),
       ),
     ).rejects.toThrow(/private|blocked/i);
+
     expect(transport).not.toHaveBeenCalled();
   });
 
@@ -78,12 +81,15 @@ describe('guardedFetchText: refusals before any socket', () => {
     await expect(
       guardedFetchText('file:///etc/passwd', opts(transport)),
     ).rejects.toThrow();
+
     await expect(
       guardedFetchText('ftp://example.com/', opts(transport)),
     ).rejects.toThrow();
+
     await expect(
       guardedFetchText('https://user:pw@example.com/', opts(transport)),
     ).rejects.toThrow(/credentials/i);
+
     expect(transport).not.toHaveBeenCalled();
   });
 
@@ -103,9 +109,11 @@ describe('guardedFetchText: redirects', () => {
     const transport = vi.fn<HttpTransport>(async () =>
       res(302, '', { location: 'http://127.0.0.1:8888/' }),
     );
+
     await expect(
       guardedFetchText('http://example.com/', opts(transport)),
     ).rejects.toThrow(/private|blocked/i);
+
     expect(transport).toHaveBeenCalledTimes(1);
   });
 
@@ -113,9 +121,11 @@ describe('guardedFetchText: redirects', () => {
     const resolve = vi.fn(async (h: string) =>
       h === 'internal.example' ? ['192.168.0.9'] : ['93.184.216.34'],
     );
+
     const transport = vi.fn<HttpTransport>(async () =>
       res(301, '', { location: 'https://internal.example/x' }),
     );
+
     await expect(
       guardedFetchText('https://example.com/', opts(transport, resolve)),
     ).rejects.toThrow(/private|blocked/i);
@@ -125,6 +135,7 @@ describe('guardedFetchText: redirects', () => {
     const transport = vi.fn<HttpTransport>(async ({ url }) =>
       url.pathname === '/a' ? res(302, '', { location: '/b' }) : res(200, '<p>done</p>'),
     );
+
     const out = await guardedFetchText('https://example.com/a', opts(transport));
     expect(out.text).toContain('done');
     expect(out.finalUrl).toBe('https://example.com/b');
@@ -134,9 +145,11 @@ describe('guardedFetchText: redirects', () => {
     const transport = vi.fn<HttpTransport>(async () =>
       res(302, '', { location: 'https://example.com/loop' }),
     );
+
     await expect(
       guardedFetchText('https://example.com/', opts(transport)),
     ).rejects.toThrow(/redirect/i);
+
     expect(transport).toHaveBeenCalledTimes(6);
   });
 });
@@ -153,10 +166,12 @@ describe('guardedFetchText: bounds and content', () => {
     const transport = vi.fn<HttpTransport>(async () =>
       res(200, 'a'.repeat(5_000), { 'content-type': 'text/plain' }),
     );
+
     const out = await guardedFetchText('https://example.com/', {
       ...opts(transport),
       maxBytes: 1_000,
     });
+
     expect(out.text.length).toBe(1_000);
     expect(out.truncated).toBe(true);
   });
@@ -165,6 +180,7 @@ describe('guardedFetchText: bounds and content', () => {
     const transport = vi.fn<HttpTransport>(async () =>
       res(200, 'x', { 'content-type': 'application/octet-stream' }),
     );
+
     await expect(
       guardedFetchText('https://example.com/', opts(transport)),
     ).rejects.toThrow(/content type/i);
@@ -182,6 +198,7 @@ describe('guardedFetchText: bounds and content', () => {
       new Promise((_resolve, reject) => {
         signal.addEventListener('abort', () => reject(new Error('aborted')));
       });
+
     await expect(
       guardedFetchText('https://example.com/', { ...opts(transport), timeoutMs: 20 }),
     ).rejects.toThrow(/timed out/i);
@@ -206,6 +223,7 @@ describe('guardedFetchText: ports, downgrade and DNS time-box', () => {
       ...opts(transport),
       allowHosts: ['example.com'],
     });
+
     expect(out.text).toBe('ok');
     await expect(
       guardedFetchText('https://example.com:9000/', {
@@ -226,9 +244,11 @@ describe('guardedFetchText: ports, downgrade and DNS time-box', () => {
     const transport = vi.fn<HttpTransport>(async () =>
       res(302, '', { location: 'http://example.com/plain' }),
     );
+
     await expect(
       guardedFetchText('https://example.com/', opts(transport)),
     ).rejects.toThrow(/downgrade/i);
+
     expect(transport).toHaveBeenCalledTimes(1);
   });
 
@@ -241,6 +261,7 @@ describe('guardedFetchText: ports, downgrade and DNS time-box', () => {
         timeoutMs: 50,
       }),
     ).rejects.toThrow(/timed out/i);
+
     expect(Date.now() - started).toBeLessThan(2_000);
     expect(transport).not.toHaveBeenCalled();
   });

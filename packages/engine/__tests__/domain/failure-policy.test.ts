@@ -25,6 +25,7 @@ const policy: RetryPolicy = {
   stall: { delay_ms: 700, max_attempts: 2 },
   unknown: { delay_ms: 900, max_attempts: 1 },
 };
+
 const now = 1_000_000;
 
 describe('decideFailure', () => {
@@ -37,8 +38,9 @@ describe('decideFailure', () => {
   );
 
   it('parks on max_turns, refused and an unexplained cancel', () => {
-    for (const status of ['max_turns', 'refused', 'cancelled'] as const)
+    for (const status of ['max_turns', 'refused', 'cancelled'] as const) {
       expect(decideFailure({ status, attempts: 1, now, policy }).action).toBe('park');
+    }
   });
 
   it('retries a crash once, then parks', () => {
@@ -49,6 +51,7 @@ describe('decideFailure', () => {
       now,
       policy,
     });
+
     expect(first).toMatchObject({ action: 'retry', notBefore: now + 500 });
     const second = decideFailure({
       status: 'error',
@@ -57,6 +60,7 @@ describe('decideFailure', () => {
       now,
       policy,
     });
+
     expect(second.action).toBe('park');
     expect(second.action === 'park' && second.reason).toMatch(/crash/);
   });
@@ -66,6 +70,7 @@ describe('decideFailure', () => {
       action: 'retry',
       family: 'stall',
     });
+
     expect(decideFailure({ status: 'timeout', attempts: 3, now, policy }).action).toBe(
       'park',
     );
@@ -75,6 +80,7 @@ describe('decideFailure', () => {
     expect(decideFailure({ status: 'error', attempts: 1, now, policy }).action).toBe(
       'retry',
     );
+
     expect(decideFailure({ status: 'error', attempts: 2, now, policy }).action).toBe(
       'park',
     );
@@ -90,6 +96,7 @@ describe('decideFailure', () => {
       now,
       policy,
     });
+
     expect(d).toMatchObject({ action: 'retry', notBefore: now + 60_000 });
   });
 
@@ -102,8 +109,10 @@ describe('decideFailure', () => {
         now,
         policy,
       });
+
       return d.action === 'retry' ? d.notBefore - now : -1;
     });
+
     expect(delays).toEqual([1000, 2000, 4000, 8000, 8000]);
     expect(
       decideFailure({ status: 'error', family: 'rate_limit', attempts: 6, now, policy })
@@ -120,6 +129,7 @@ describe('decideFailure', () => {
       now,
       policy,
     });
+
     expect(d).toMatchObject({ action: 'retry', notBefore: now + 1000 });
   });
 });

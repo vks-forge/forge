@@ -105,9 +105,13 @@ export function makeEnv(
       liveness.push(id);
     },
     admit: (_c, call): Decision => {
-      if (over.throwOnAdmit) throw new Error('admit exploded');
+      if (over.throwOnAdmit) {
+        throw new Error('admit exploded');
+      }
+
       admitted.push(call);
       const denied = String(call.input?.['command'] ?? '').includes('deny');
+
       return {
         decision: denied ? 'deny' : 'allow',
         reason: denied ? 'rule_deny' : 'rule_allow',
@@ -120,6 +124,7 @@ export function makeEnv(
       };
     },
   });
+
   const ready = db.transaction((tx) =>
     tx.runs.insert({
       id: RUN_ID,
@@ -133,5 +138,6 @@ export function makeEnv(
       owner: 'server-1',
     }),
   );
+
   return { handler, receipts, admitted, liveness, ready, db, close: () => db.close() };
 }

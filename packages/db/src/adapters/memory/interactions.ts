@@ -32,6 +32,7 @@ export function memoryInteractions(state: MemoryState): InteractionRepository {
   return {
     async get(id) {
       const i = state.interactions.get(id);
+
       return i ? structuredClone(i) : null;
     },
     async listPending() {
@@ -52,7 +53,10 @@ export function memoryInteractions(state: MemoryState): InteractionRepository {
     },
     async update(id, patch) {
       const current = state.interactions.get(id);
-      if (!current) throw new UnknownForgeError(`Interaction not found: ${id}`);
+      if (!current) {
+        throw new UnknownForgeError(`Interaction not found: ${id}`);
+      }
+
       state.interactions.set(
         id,
         withoutUndefined(
@@ -62,7 +66,10 @@ export function memoryInteractions(state: MemoryState): InteractionRepository {
     },
     async answer(id, answer, at) {
       const current = state.interactions.get(id);
-      if (current?.status !== 'pending') return false;
+      if (current?.status !== 'pending') {
+        return false;
+      }
+
       state.interactions.set(
         id,
         Interaction.parse({
@@ -72,12 +79,17 @@ export function memoryInteractions(state: MemoryState): InteractionRepository {
           answered_at: at,
         }),
       );
+
       return true;
     },
     async expire(id, at) {
       const current = state.interactions.get(id);
-      if (current?.status !== 'pending' || current.timeout_at > at) return false;
+      if (current?.status !== 'pending' || current.timeout_at > at) {
+        return false;
+      }
+
       state.interactions.set(id, { ...current, status: 'timed_out' });
+
       return true;
     },
   };
@@ -89,25 +101,35 @@ export function memoryIntakeEvents(state: MemoryState): IntakeEventRepository {
       const e = IntakeEvent.parse(event);
       const key = JSON.stringify([e.source, e.dedupe_key]);
       const existing = state.intake.get(key);
-      if (existing) return { inserted: false, event: structuredClone(existing) };
+      if (existing) {
+        return { inserted: false, event: structuredClone(existing) };
+      }
+
       // JSON-normalise like the payload_json column, so undefined reads back as null.
       const stored = StoredIntakeEvent.parse({
         ...e,
         payload: normaliseJson(e.payload),
         id: state.intakeSeq + 1,
       });
+
       state.intakeSeq = stored.id;
       state.intake.set(key, stored);
+
       return { inserted: true, event: structuredClone(stored) };
     },
     async markTicket(id, ticketId) {
       const stored = [...state.intake.values()].find((e) => e.id === id);
-      if (!stored || stored.ticket_id !== undefined) return false;
+      if (!stored || stored.ticket_id !== undefined) {
+        return false;
+      }
+
       stored.ticket_id = ticketId;
+
       return true;
     },
     async get(id) {
       const stored = [...state.intake.values()].find((e) => e.id === id);
+
       return stored ? structuredClone(stored) : null;
     },
   };

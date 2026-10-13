@@ -19,7 +19,10 @@ import { hashToken } from '#/domain/run-tokens.js';
 
 function canonical(value: unknown): string {
   const sort = (v: unknown): unknown => {
-    if (Array.isArray(v)) return v.map(sort);
+    if (Array.isArray(v)) {
+      return v.map(sort);
+    }
+
     if (v !== null && typeof v === 'object') {
       return Object.fromEntries(
         Object.keys(v)
@@ -27,8 +30,10 @@ function canonical(value: unknown): string {
           .map((k) => [k, sort((v as Record<string, unknown>)[k])]),
       );
     }
+
     return v;
   };
+
   return JSON.stringify(sort(value));
 }
 
@@ -47,16 +52,19 @@ export async function computeToolSchemaHashes(): Promise<Record<string, string>>
       } as never),
     close: async () => undefined,
   };
+
   const server = await createForgeMcpServer({
     storage: storage as never,
     runId: 'probe',
     runToken: 'probe',
   });
+
   const [a, b] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'schema-hash', version: '0.0.0' });
   await Promise.all([server.connect(a), client.connect(b)]);
   try {
     const { tools } = await client.listTools();
+
     return Object.fromEntries(
       tools.map((t) => [`mcp__${SERVER_NAME}__${t.name}`, toolSchemaHash(t)]),
     );

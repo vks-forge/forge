@@ -33,12 +33,17 @@ function errorText(err: unknown): string {
 
 /** Verifies the run token and that the run is active, then returns an unconnected server. */
 export async function createForgeMcpServer(deps: ForgeMcpDeps): Promise<McpServer> {
-  if (!(await verifyRunToken(deps.storage, deps.runId, deps.runToken)))
+  if (!(await verifyRunToken(deps.storage, deps.runId, deps.runToken))) {
     throw new AuthError('run token does not match the run');
+  }
+
   try {
     await loadActiveRun(deps.storage, deps.runId);
   } catch (err) {
-    if (err instanceof PolicyDeniedError) throw new AuthError(err.message);
+    if (err instanceof PolicyDeniedError) {
+      throw new AuthError(err.message);
+    }
+
     throw err;
   }
 
@@ -49,6 +54,7 @@ export async function createForgeMcpServer(deps: ForgeMcpDeps): Promise<McpServe
         'Forge tools for this run. Questions and blockers are recorded for the Director; stop working after ask_director or report_blocked.',
     },
   );
+
   const now = deps.now ?? (() => new Date());
   const newId = deps.newId ?? (() => randomUUID().replaceAll('-', '').slice(0, 24));
 
@@ -69,6 +75,7 @@ export async function createForgeMcpServer(deps: ForgeMcpDeps): Promise<McpServe
           const run = await loadActiveRun(deps.storage, deps.runId);
           const ctx: ToolContext = { deps, run, now, newId };
           const text = await spec.run(ctx, args);
+
           return { content: [{ type: 'text' as const, text }] };
         } catch (err) {
           return {
@@ -79,6 +86,8 @@ export async function createForgeMcpServer(deps: ForgeMcpDeps): Promise<McpServe
       },
     );
   };
+
   FORGE_TOOLS.forEach(register);
+
   return server;
 }

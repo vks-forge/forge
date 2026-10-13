@@ -18,6 +18,8 @@ export function wrapUntrusted(text: string, id: string, source: string): string 
   const safe = text
     .replaceAll(`<${TAG}`, `<${TAG.replace('-', '_')}`)
     .replaceAll(`</${TAG}`, `</${TAG.replace('-', '_')}`);
+
   const src = source.replaceAll('"', '%22').replaceAll('\n', ' ');
+
   return `<${TAG} id="${id}" source="${src}">\n${safe}\n</${TAG} id="${id}">\n`;
 }

@@ -40,7 +40,10 @@ function io(stdin: unknown, cfg: object | null, over: Partial<HookIo> = {}): Hoo
     argv: [],
     fetch: (u, i) => fetch(u, i),
     readFile: async () => {
-      if (cfg === null) throw new Error('ENOENT');
+      if (cfg === null) {
+        throw new Error('ENOENT');
+      }
+
       return JSON.stringify(cfg);
     },
     now: () => 42,
@@ -51,6 +54,7 @@ function io(stdin: unknown, cfg: object | null, over: Partial<HookIo> = {}): Hoo
 async function run(reply: Reply, payload: unknown, timeout_ms = 2000) {
   server = await startServer(reply);
   const cfg = { run_id: 'r 1', server_url: `${server.url}/`, token: 'tok', timeout_ms };
+
   return runHook(io(payload, cfg));
 }
 
@@ -108,6 +112,7 @@ describe('runHook', () => {
     expect((await runHook(io(pre(), null, { env: {} }))).stderr).toContain(
       'config_missing',
     );
+
     expect((await runHook(io(pre(), null))).stderr).toContain('config_unreadable');
     const bad = io(pre(), {}, { readFile: async () => 'nope' });
     expect((await runHook(bad)).stderr).toContain('config_invalid');
@@ -124,10 +129,12 @@ describe('runHook', () => {
         argv: ['--config', '/a.json'],
         readFile: async (p) => {
           asked = p;
+
           return JSON.stringify(cfg);
         },
       }),
     );
+
     expect(r.exitCode).toBe(0);
     expect(asked).toBe('/a.json');
     const eq = io(pre(), cfg, {
@@ -135,6 +142,7 @@ describe('runHook', () => {
       argv: ['--config=/b.json'],
       readFile: async (p) => (asked = p),
     });
+
     await runHook(eq);
     expect(asked).toBe('/b.json');
   });
@@ -147,9 +155,11 @@ describe('runHook', () => {
       env: { FORGE_HOOK_CONFIG: '/from-env.json' },
       readFile: async (p: string) => {
         asked.push(p);
+
         return JSON.stringify(cfg);
       },
     };
+
     await runHook(io(pre(), cfg, { ...base, argv: ['--config', '/from-argv.json'] }));
     await runHook(io(pre(), cfg, { ...base, argv: ['--config=/eq.json'] }));
     await runHook(io(pre(), cfg, { ...base, argv: [] }));
@@ -183,6 +193,7 @@ describe('runHook', () => {
 describe('main and readStream', () => {
   const fake = (input: string, env: Record<string, string>) => {
     const out = { stdout: '', stderr: '' };
+
     return {
       out,
       proc: {
@@ -208,6 +219,7 @@ describe('main and readStream', () => {
         timeout_ms: 1000,
       }),
     );
+
     const { proc, out } = fake(JSON.stringify(pre()), { FORGE_HOOK_CONFIG: cfg });
     expect(await main(proc)).toBe(2);
     expect(out.stderr).toContain('denied: nope');
@@ -219,6 +231,7 @@ describe('main and readStream', () => {
       await new Promise(() => undefined);
       yield Buffer.alloc(0);
     })();
+
     await expect(readStream(never, 20)).rejects.toThrow('stdin_timeout');
     const { proc, out } = fake('', {});
     expect(await main({ ...proc, stdin: never })).toBe(2);

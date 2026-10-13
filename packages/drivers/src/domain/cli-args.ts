@@ -29,6 +29,7 @@ export function buildCliArgs(
 ): string[] {
   const allow = unique(req.permissionPolicy?.allow, req.tools?.allow);
   const deny = unique(req.permissionPolicy?.deny, req.tools?.deny);
+
   return [
     '-p',
     '--output-format',

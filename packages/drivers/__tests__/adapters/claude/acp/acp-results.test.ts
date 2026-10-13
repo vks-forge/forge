@@ -22,6 +22,7 @@ async function finish(over: Partial<FakeAcpOptions>, config = {}) {
   const rig = makeAcpRig(config);
   rig.next = { auth: 'account', steering: true, ...over };
   const h = await rig.driver.start(rig.request());
+
   return { rig, h, result: await rig.driver.result(h) };
 }
 
@@ -37,6 +38,7 @@ describe('ACP engine: result table', () => {
       onPrompt: async () =>
         RequestError.internalError(undefined, 'Reached maximum budget ($0.05)'),
     });
+
     expect(result).toMatchObject({ status: 'error', errorFamily: 'budget' });
   });
 
@@ -44,6 +46,7 @@ describe('ACP engine: result table', () => {
     const { result } = await finish({
       onPrompt: async () => ({ stopReason: 'max_turn_requests' }),
     });
+
     expect(result).toMatchObject({ status: 'max_turns', session: null });
     expect(result.errorFamily).toBeUndefined();
   });
@@ -52,6 +55,7 @@ describe('ACP engine: result table', () => {
     const { result } = await finish({
       onPrompt: async () => RequestError.internalError(undefined, 'error_max_turns'),
     });
+
     expect(result.status).toBe('max_turns');
   });
 
@@ -59,6 +63,7 @@ describe('ACP engine: result table', () => {
     const { result } = await finish({
       onPrompt: async () => ({ stopReason: 'refusal' }),
     });
+
     expect(result).toMatchObject({ status: 'refused', errorFamily: 'refusal' });
   });
 
@@ -71,9 +76,11 @@ describe('ACP engine: result table', () => {
           resetsAt: reset,
           rateLimitType: 'five_hour',
         });
+
         return RequestError.internalError({ errorKind: 'rate_limit' }, 'rate limited');
       },
     });
+
     expect(result).toMatchObject({
       status: 'error',
       errorFamily: 'rate_limit',
@@ -88,6 +95,7 @@ describe('ACP engine: result table', () => {
       onPrompt: async () =>
         RequestError.internalError(undefined, 'API Error: 429 overloaded'),
     };
+
     const result = await rig.driver.result(await rig.driver.start(rig.request()));
     expect(result.errorFamily).toBe('rate_limit');
     expect(result.retryNotBefore).toBe(new Date(rig.clock.now() + 120_000).toISOString());
@@ -104,9 +112,11 @@ describe('ACP engine: result table', () => {
       auth: 'account',
       onPrompt: async (ctx) => {
         await ctx.cancelled;
+
         return { stopReason: 'cancelled' };
       },
     };
+
     const h = await rig.driver.start(rig.request());
     await waitFor(promptSeen(rig), 'prompt');
     await rig.clock.advance(60_000);
@@ -114,6 +124,7 @@ describe('ACP engine: result table', () => {
       status: 'timeout',
       errorFamily: 'stall',
     });
+
     expect(rig.agents[0]?.methods()).toContain('session/cancel');
   });
 
@@ -127,9 +138,11 @@ describe('ACP engine: result table', () => {
           await rig.clock.advance(25_000);
           await ctx.update({ sessionUpdate: 'plan', entries: [] });
         }
+
         return { stopReason: 'end_turn' };
       },
     };
+
     const h = await rig.driver.start(rig.request());
     expect((await rig.driver.result(h)).status).toBe('success');
   });
@@ -142,14 +155,18 @@ describe('ACP engine: result table', () => {
         const beat = setInterval(() => {
           void ctx.update({ sessionUpdate: 'plan', entries: [] });
         }, 5);
+
         await ctx.cancelled;
         clearInterval(beat);
+
         return { stopReason: 'cancelled' };
       },
     };
+
     const req = rig.request({
       budget: { maxTurns: 5, maxUsd: 0.05, stallMs: 1_000_000, turnMs: 30_000 },
     });
+
     const h = await rig.driver.start(req);
     await waitFor(promptSeen(rig), 'prompt');
     await rig.clock.advance(30_000);
@@ -169,20 +186,24 @@ describe('ACP engine: result table', () => {
           title: 'ask_director',
           rawInput: { question: 'which db?' },
         });
+
         await ctx.update({
           sessionUpdate: 'tool_call_update',
           toolCallId: 'q1',
           status: 'completed',
           rawOutput: JSON.stringify({ interaction_id: 'int-9', status: 'pending' }),
         });
+
         return { stopReason: 'end_turn' };
       },
     });
+
     expect(result).toMatchObject({
       status: 'paused',
       pauseReason: 'interaction',
       interactionId: 'int-9',
     });
+
     expect(rig).toBeDefined();
   });
 
@@ -196,6 +217,7 @@ describe('ACP engine: result table', () => {
           title: 'ask',
           rawInput: {},
         });
+
         await ctx.update({
           sessionUpdate: 'tool_call_update',
           toolCallId: 'q1',
@@ -210,6 +232,7 @@ describe('ACP engine: result table', () => {
             },
           ],
         });
+
         await ctx.update({
           sessionUpdate: 'tool_call',
           toolCallId: 'next',
@@ -217,9 +240,11 @@ describe('ACP engine: result table', () => {
           title: 'read',
           rawInput: {},
         });
+
         return { stopReason: 'end_turn' };
       },
     });
+
     expect(result.status).toBe('success');
   });
 
@@ -239,6 +264,7 @@ describe('ACP engine: result table', () => {
     const { result } = await finish({
       onPrompt: async () => RequestError.internalError(undefined, 'something odd'),
     });
+
     expect(result).toMatchObject({ status: 'error', errorFamily: 'unknown' });
   });
 
@@ -247,6 +273,7 @@ describe('ACP engine: result table', () => {
       {},
       { head: async () => 'b1', changedFiles: async () => ['x.ts', 'y.ts'] },
     );
+
     const result = await rig.driver.result(await rig.driver.start(rig.request()));
     expect(result.filesTouched).toEqual(['x.ts', 'y.ts']);
   });
@@ -261,6 +288,7 @@ describe('ACP engine: result table', () => {
         },
       },
     );
+
     const result = await rig.driver.result(await rig.driver.start(rig.request()));
     expect(result).toMatchObject({ status: 'success', filesTouched: [] });
     expect(rig.logs.some((l) => l.level === 'warn' && l.message.includes('git'))).toBe(

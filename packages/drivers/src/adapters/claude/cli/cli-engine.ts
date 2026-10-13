@@ -49,6 +49,7 @@ function launchCli(
     rateLimit: null as RateLimitInfo | null,
     session: null as string | null,
   };
+
   const rate = (): string =>
     retryNotBeforeFrom(state.rateLimit, clock.now(), config.rateLimitBackoffMs);
 
@@ -79,6 +80,7 @@ function launchCli(
     'data',
     (d: Buffer) => (stderrTail = (stderrTail + d.toString('utf8')).slice(-1500)),
   );
+
   child.stdin.on('error', () => undefined);
   child.stdin.end(launch.prompt);
   sink.turnStarted();
@@ -86,7 +88,10 @@ function launchCli(
   let exited = false;
   let killed = false;
   const kill = async (): Promise<void> => {
-    if (killed || exited) return;
+    if (killed || exited) {
+      return;
+    }
+
     killed = true;
     await killTree(child, {
       platform: deps.platform,
@@ -98,19 +103,32 @@ function launchCli(
   const lines = createInterface({ input: child.stdout });
   lines.on('line', (raw) => {
     const parsed = parseCliLine(raw);
-    if (!parsed) return;
+    if (!parsed) {
+      return;
+    }
+
     sink.activity();
     const n = normaliseCliLine(parsed);
     if (n.session && n.session !== state.session) {
       state.session = n.session;
       sink.setSession(n.session);
     }
-    if (n.rateLimit) state.rateLimit = n.rateLimit;
-    for (const e of n.events) sink.emit(e);
+
+    if (n.rateLimit) {
+      state.rateLimit = n.rateLimit;
+    }
+
+    for (const e of n.events) {
+      sink.emit(e);
+    }
+
     if (n.result) {
       state.result = n.result;
       sink.turnEnded();
-      if (n.result.total_cost_usd !== undefined) sink.setCostUsd(n.result.total_cost_usd);
+      if (n.result.total_cost_usd !== undefined) {
+        sink.setCostUsd(n.result.total_cost_usd);
+      }
+
       const usage = usageFromResult(n.result);
       sink.setUsage(usage);
       sink.emit({ type: 'usage', usage });
@@ -118,6 +136,7 @@ function launchCli(
       clock.after(config.cancelGraceMs, () => void kill());
     }
   });
+
   const drained = new Promise<void>((resolve) => lines.on('close', () => resolve()));
 
   const exit = new Promise<{
@@ -129,6 +148,7 @@ function launchCli(
       exited = true;
       resolve({ code, signal });
     });
+
     child.on('error', (e) => {
       exited = true;
       resolve({ code: null, signal: null, error: e.message });
@@ -137,26 +157,34 @@ function launchCli(
 
   const ended: Promise<EngineEnd> = Promise.all([exit, drained]).then(([x]) => {
     sink.turnEnded();
-    if (x.error) return { kind: 'crash', detail: `claude failed: ${x.error}` };
+    if (x.error) {
+      return { kind: 'crash', detail: `claude failed: ${x.error}` };
+    }
+
     if (state.result) {
       const end = classifyCliResult(state.result, rate);
       if (
         (end.kind === 'unknown' || end.kind === 'crash') &&
         state.rateLimit?.status === 'rejected'
-      )
+      ) {
         return {
           kind: 'rate_limit',
           detail: end.detail ?? 'rate limit rejected',
           retryNotBefore: rate(),
         };
+      }
+
       return end;
     }
-    if (state.rateLimit?.status === 'rejected')
+
+    if (state.rateLimit?.status === 'rejected') {
       return {
         kind: 'rate_limit',
         detail: 'rate limit rejected',
         retryNotBefore: rate(),
       };
+    }
+
     return {
       kind: 'crash',
       detail:
@@ -171,15 +199,21 @@ function launchCli(
         new InvalidInputError('the CLI engine cannot steer a running claude -p'),
       ),
     async cancel() {
-      if (exited) return;
+      if (exited) {
+        return;
+      }
+
       child.kill('SIGTERM');
       let stopTimer = (): void => undefined;
       const graceElapsed = new Promise<boolean>((resolve) => {
         stopTimer = clock.after(config.cancelGraceMs, () => resolve(false));
       });
+
       const stopped = await Promise.race([ended.then(() => true), graceElapsed]);
       stopTimer();
-      if (!stopped) await kill();
+      if (!stopped) {
+        await kill();
+      }
     },
   };
 }
@@ -204,6 +238,7 @@ export function createCliEngine(deps: EngineDeps): ClaudeEngine {
         ['--version'],
         env,
       );
+
       return version === null
         ? {
             ok: false,

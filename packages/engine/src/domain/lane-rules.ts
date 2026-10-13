@@ -32,13 +32,16 @@ export function decideLane(input: LaneInput): LaneDecision {
       reasons: [...reasons, 'user asked for the full process'],
     };
   }
+
   if (hint === 'quick' && clean) {
     return { lane: 'express', tier, reasons: ['user asked for a quick change'] };
   }
+
   let lane = clean ? llm.lane : maxLane(pre.lane, llm.lane);
   if (llm.confidence < threshold) {
     lane = UP[lane];
     reasons.push(`confidence ${llm.confidence} < ${threshold}: one lane up`);
   }
+
   return { lane, tier, reasons };
 }

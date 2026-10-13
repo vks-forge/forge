@@ -51,11 +51,14 @@ async function startHookServer(verdict: Decision['decision']) {
         event: string;
         payload: { tool_use_id?: string; tool_name?: string };
       };
-      if (parsed.event === 'PreToolUse')
+
+      if (parsed.event === 'PreToolUse') {
         seen.push({
           ...(parsed.payload.tool_use_id ? { id: parsed.payload.tool_use_id } : {}),
           ...(parsed.payload.tool_name ? { tool: parsed.payload.tool_name } : {}),
         });
+      }
+
       res.setHeader('content-type', 'application/json');
       res.end(
         JSON.stringify({
@@ -66,9 +69,11 @@ async function startHookServer(verdict: Decision['decision']) {
       );
     });
   });
+
   await new Promise<void>((r) => server?.listen(0, '127.0.0.1', r));
   const addr = server.address();
   const port = typeof addr === 'object' && addr ? addr.port : 0;
+
   return { seen, url: `http://127.0.0.1:${port}` };
 }
 
@@ -92,10 +97,14 @@ async function liveRun(name: string, verdict: Decision['decision'], prompt: stri
     clock: systemClock,
     spawn: nodeSpawn,
   });
+
   const req = makeRequest({ cwd, prompt, runId: `probe6-${name}` });
   const handle = await driver.start(req);
   const events: RunEvent[] = [];
-  for await (const e of driver.events(handle)) events.push(e);
+  for await (const e of driver.events(handle)) {
+    events.push(e);
+  }
+
   return { hook, cwd, events, result: await driver.result(handle) };
 }
 
@@ -108,6 +117,7 @@ describe('probe 6: Claude driver on the real ACP adapter', () => {
         'allow',
         'reply with the single word pong',
       );
+
       expect(result.status).toBe('success');
       expect(result.session).not.toBeNull();
     },
@@ -122,6 +132,7 @@ describe('probe 6: Claude driver on the real ACP adapter', () => {
         'deny',
         'use the shell tool to run: echo hi > denied.txt',
       );
+
       expect(existsSync(join(cwd, 'denied.txt'))).toBe(false);
       expect(hook.seen.length).toBeGreaterThan(0);
     },
@@ -136,6 +147,7 @@ describe('probe 6: Claude driver on the real ACP adapter', () => {
         'allow',
         'use the shell tool to run: echo hi',
       );
+
       const callIds = events.flatMap((e) => (e.type === 'tool_call' ? [e.call_id] : []));
       expect(hook.seen.length).toBeGreaterThan(0);
       // Recorded, not assumed: if this fails the (name, args hash) join must be used.

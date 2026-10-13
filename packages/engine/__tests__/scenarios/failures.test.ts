@@ -26,6 +26,7 @@ const iso = (ms: number): string => new Date(ms).toISOString();
 async function started(rig: Rig): Promise<string> {
   const id = await rig.request('Do a thing');
   await rig.tick();
+
   return id;
 }
 
@@ -52,6 +53,7 @@ describe('stall', () => {
         status: 'timeout',
         errorFamily: 'stall',
       });
+
       expect((await rig.ticket(id)).status).toBe('in_progress');
       const wakes = await pendingWakes(rig);
       expect(wakes).toHaveLength(1);
@@ -65,6 +67,7 @@ describe('stall', () => {
       expect(next.dispatched).toEqual([
         { ticketId: id, runId: `run-${n + 1}`, kind: 'retry' },
       ]);
+
       const row = await rig.storage.transaction((tx) => tx.runs.get(`run-${n + 1}`));
       expect(row?.retry_of).toBe(runId);
     }
@@ -74,6 +77,7 @@ describe('stall', () => {
     expect(last.parked).toEqual([
       { ticketId: id, reason: expect.stringMatching(/stall/) },
     ]);
+
     const t = await rig.ticket(id);
     expect(t.status).toBe('waiting_human');
     expect(t.blocked_reason).toMatch(/stall/);
@@ -89,6 +93,7 @@ describe('stall', () => {
       await rig.flush();
       expect((await rig.tick()).settled).toEqual([]);
     }
+
     expect(rig.driver.cancels).toEqual([]);
   });
 });
@@ -106,6 +111,7 @@ describe('rate limit', () => {
         retryNotBefore: iso(reset),
       }),
     );
+
     await rig.flush();
     await rig.tick();
     expect((await pendingWakes(rig))[0]!.not_before).toBe(iso(reset));
@@ -125,6 +131,7 @@ describe('rate limit', () => {
       'run-1',
       makeResult({ status: 'error', errorFamily: 'rate_limit' }),
     );
+
     await rig.flush();
     await rig.tick();
     expect((await pendingWakes(rig))[0]!.not_before).toBe(iso(rig.clock.now() + 60_000));
@@ -134,6 +141,7 @@ describe('rate limit', () => {
       'run-2',
       makeResult({ status: 'error', errorFamily: 'rate_limit' }),
     );
+
     await rig.flush();
     await rig.tick();
     expect((await pendingWakes(rig))[0]!.not_before).toBe(iso(rig.clock.now() + 120_000));
@@ -194,6 +202,7 @@ describe('start failures', () => {
     expect(
       await rig.storage.transaction((tx) => tx.runTokens.getHash('run-1')),
     ).toBeNull();
+
     expect((await rig.ticket(id)).status).toBe('waiting_human');
   });
 

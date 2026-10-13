@@ -23,9 +23,14 @@ export function normaliseRunEvent(event: NewRunEvent): NewRunEvent {
   } catch (error) {
     throw new InvalidInputError('run event is not JSON-serialisable', { cause: error });
   }
-  if (plain['type'] === 'tool_call' && plain['input'] === undefined)
+
+  if (plain['type'] === 'tool_call' && plain['input'] === undefined) {
     plain['input'] = null;
-  if (plain['type'] === 'tool_result' && plain['output'] === undefined)
+  }
+
+  if (plain['type'] === 'tool_result' && plain['output'] === undefined) {
     plain['output'] = null;
+  }
+
   return plain as NewRunEvent;
 }

@@ -76,6 +76,7 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
       native,
       input,
     } as const;
+
     const decision = deps.admit(ctx, call);
     const def = toolDefinition(ctx, toolId);
     const [receipt] = await deps.receipts.append(run.id, (view) => [
@@ -96,6 +97,7 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
         creds.secret,
       ),
     ]);
+
     return {
       decision: decision.decision,
       reason: decision.reason,
@@ -119,7 +121,10 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
       // Only the harness's own id links an effect to a decision; no id, no effect.
       const decision = useId ? view.openDecision(useId) : null;
       // Never admitted, already closed, or refused: nothing to attach an effect to.
-      if (!decision || decision.decision !== 'allow') return [];
+      if (!decision || decision.decision !== 'allow') {
+        return [];
+      }
+
       return [
         makeEffectReceipt(
           decision,
@@ -133,7 +138,9 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
         ),
       ];
     });
+
     const receipt = written[0];
+
     return {
       decision: 'allow',
       reason: receipt
@@ -150,6 +157,7 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
     req: Extract<HookRequest, { event: 'SessionStart' }>,
   ): Promise<HookResponse> {
     await deps.onLiveness?.(run.id, req.payload);
+
     return {
       decision: 'allow',
       reason: 'liveness_registered',
@@ -163,23 +171,46 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
       let creds: RunCredentials | null = null;
       try {
         run = await deps.db.transaction((tx) => tx.runs.get(runId));
-        if (!run) return failed('unknown_run');
+        if (!run) {
+          return failed('unknown_run');
+        }
+
         creds = await deps.credentials(runId);
-        if (!creds) return failed('no_credentials');
+        if (!creds) {
+          return failed('no_credentials');
+        }
+
         if (!constantTimeEqual(token, creds.token)) {
           await audit(run.id, 'bad_token').catch(() => undefined);
+
           return failed('bad_token');
         }
+
         // After the token, so only the run's own Worker learns that the run is over.
-        if (!isRunActive(run)) return failed('inactive_run');
+        if (!isRunActive(run)) {
+          return failed('inactive_run');
+        }
+
         const parsed = HookRequest.safeParse(request);
-        if (!parsed.success) return failed('bad_request');
+        if (!parsed.success) {
+          return failed('bad_request');
+        }
+
         const req = parsed.data;
-        if (req.event === 'SessionStart') return await sessionStart(run, req);
-        if (req.event === 'PreToolUse') return await preToolUse(run, creds, req);
+        if (req.event === 'SessionStart') {
+          return await sessionStart(run, req);
+        }
+
+        if (req.event === 'PreToolUse') {
+          return await preToolUse(run, creds, req);
+        }
+
         return await postToolUse(run, creds, req);
       } catch {
-        if (run && creds) await audit(run.id, 'internal').catch(() => undefined);
+        if (run && creds) {
+          await audit(run.id, 'internal').catch(() => undefined);
+        }
+
         return failed('internal');
       }
     },

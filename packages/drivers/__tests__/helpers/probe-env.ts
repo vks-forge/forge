@@ -35,6 +35,7 @@ export function childEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv 
   const env: NodeJS.ProcessEnv = { ...process.env, ...extra };
   delete env['CLAUDECODE'];
   delete env['CLAUDE_CODE_ENTRYPOINT'];
+
   return env;
 }
 
@@ -43,6 +44,7 @@ export function freshProbeDir(...segments: string[]): string {
   const dir = join(REPO_ROOT, '.forge', 'data', 'probes', ...segments);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }
 
@@ -73,6 +75,7 @@ export function runClaude(
       env: childEnv(),
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (d: Buffer) => (stdout += d.toString('utf8')));
@@ -81,10 +84,12 @@ export function runClaude(
       child.kill();
       reject(new Error(`claude timed out after ${opts.timeoutMs ?? 120_000}ms`));
     }, opts.timeoutMs ?? 120_000);
+
     child.on('error', (e) => {
       clearTimeout(timer);
       reject(e);
     });
+
     child.on('close', (code) => {
       clearTimeout(timer);
       resolve({ code, stdout, stderr });

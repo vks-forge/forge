@@ -39,6 +39,7 @@ export function describeGitHostContract(
     beforeEach(async () => {
       h = await make();
     }, 60_000);
+
     afterEach(async () => {
       await h.close();
     });
@@ -156,6 +157,7 @@ export function describeGitHostContract(
       await expect(h.host.deleteBranch(h.baseBranch)).rejects.toMatchObject({
         errorFamily: 'invalid_input',
       });
+
       expect(await h.branchExists(h.baseBranch)).toBe(true);
     });
   });

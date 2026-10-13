@@ -27,6 +27,7 @@ const hash = (id: string): string => `sha256:${sha256Hex(id)}`;
 
 function entry(id: string, over: Record<string, unknown> = {}): Record<string, unknown> {
   const native = id === 'shell' ? 'PowerShell' : id;
+
   return {
     id,
     kind: id.startsWith('mcp__') ? 'factory-capability' : 'harness-native',

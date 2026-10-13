@@ -28,6 +28,7 @@ export function describeWakeRequestsContract(getDb: () => StorageAdapter): void 
       const r = await tx((t) =>
         t.wakeRequests.insertIfNew(makeWake('k1', { not_before: at(HOUR) })),
       );
+
       expect(r.inserted).toBe(true);
       expect(r.request).toEqual({
         ...makeWake('k1', { not_before: at(HOUR) }),
@@ -43,6 +44,7 @@ export function describeWakeRequestsContract(getDb: () => StorageAdapter): void 
           makeWake('k1', { id: 'other-id', created_at: at(HOUR) }),
         ),
       );
+
       const dup2 = await tx((t) => t.wakeRequests.insertIfNew(makeWake('k1')));
       expect([dup1.inserted, dup2.inserted]).toEqual([false, false]);
       expect(dup1.request).toMatchObject({ id: first.request.id, coalesced_count: 1 });
@@ -62,6 +64,7 @@ export function describeWakeRequestsContract(getDb: () => StorageAdapter): void 
           makeWake('k1', { id: 'w-t', ticket_id: 'SF-2' }),
         ),
       ]);
+
       expect(results.map((r) => r.inserted)).toEqual([true, true, true, true]);
     });
 
@@ -72,6 +75,7 @@ export function describeWakeRequestsContract(getDb: () => StorageAdapter): void 
         await t.wakeRequests.insertIfNew(makeWake('past', { not_before: at(-HOUR) }));
         await t.wakeRequests.insertIfNew(makeWake('edge', { not_before: at(HOUR) }));
       });
+
       const due = await tx((t) => t.wakeRequests.listDue(at(HOUR)));
       expect(due.map((r) => r.idempotency_key)).toEqual(['now', 'past', 'edge']);
     });
@@ -100,6 +104,7 @@ export function describeWakeRequestsContract(getDb: () => StorageAdapter): void 
           makeWake('other', { id: 'w-o', ticket_id: 'SF-2' }),
         );
       });
+
       expect(await tx((t) => t.wakeRequests.countSince('SF-1', at(-HOUR)))).toBe(2);
       expect(await tx((t) => t.wakeRequests.countSince('SF-1', at(-3 * HOUR)))).toBe(3);
       expect(await tx((t) => t.wakeRequests.countSince('SF-9', at(-3 * HOUR)))).toBe(0);
@@ -113,15 +118,18 @@ export function describeWakeRequestsContract(getDb: () => StorageAdapter): void 
         await t.wakeRequests.insertIfNew(makeWake('b', { kind: 'response_wake' }));
         await t.wakeRequests.insertIfNew(makeWake('c', { kind: 'continuation' }));
       });
+
       expect(await tx((t) => t.wakeRequests.countSince('SF-1', at(-HOUR)))).toBe(3);
       expect(
         await tx((t) => t.wakeRequests.countSince('SF-1', at(-HOUR), ['retry'])),
       ).toBe(1);
+
       expect(
         await tx((t) =>
           t.wakeRequests.countSince('SF-1', at(-HOUR), ['retry', 'continuation']),
         ),
       ).toBe(2);
+
       expect(await tx((t) => t.wakeRequests.countSince('SF-1', at(-HOUR), []))).toBe(0);
     });
 
@@ -132,6 +140,7 @@ export function describeWakeRequestsContract(getDb: () => StorageAdapter): void 
           throw new Error('boom');
         }),
       ).rejects.toThrow('boom');
+
       expect(await tx((t) => t.wakeRequests.listDue(at(HOUR)))).toEqual([]);
     });
   });

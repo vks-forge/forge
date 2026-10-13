@@ -57,7 +57,10 @@ const GIT_OUTPUT_COMMANDS = new Set(['log', 'diff', 'show', 'format-patch']);
 
 /** Non-option arguments of a reader; `-` (stdin) and empty words are not paths. */
 export function argvReads(cmd: string, args: readonly string[]): string[] {
-  if (!READERS.has(cmd)) return [];
+  if (!READERS.has(cmd)) {
+    return [];
+  }
+
   return args.filter((a) => a !== '' && a !== '-' && !a.startsWith('-'));
 }
 
@@ -66,7 +69,10 @@ const matchesName = (flag: string, long: string): boolean =>
 
 /** Files written by a `git log|diff|show|format-patch` output option. */
 export function argvWrites(cmd: string, args: readonly string[]): string[] {
-  if (cmd !== 'git' || !args.some((a) => GIT_OUTPUT_COMMANDS.has(a))) return [];
+  if (cmd !== 'git' || !args.some((a) => GIT_OUTPUT_COMMANDS.has(a))) {
+    return [];
+  }
+
   const out: string[] = [];
   for (const [i, a] of args.entries()) {
     const [name = '', ...value] = a.split('=');
@@ -74,14 +80,18 @@ export function argvWrites(cmd: string, args: readonly string[]): string[] {
       a.startsWith('--') &&
       (matchesName(name, '--output') || matchesName(name, '--output-directory'))
     ) {
-      if (value.length > 0) out.push(value.join('='));
-      else if (args[i + 1] !== undefined) out.push(args[i + 1] as string);
+      if (value.length > 0) {
+        out.push(value.join('='));
+      } else if (args[i + 1] !== undefined) {
+        out.push(args[i + 1] as string);
+      }
     } else if (a === '-o' && args[i + 1] !== undefined) {
       out.push(args[i + 1] as string);
     } else if (/^-o.+/.test(a) && !a.startsWith('--')) {
       out.push(a.slice(2));
     }
   }
+
   return out;
 }
 
@@ -105,10 +115,15 @@ const PROTECTED_NAMES = [
 function globRegex(segment: string): RegExp {
   let src = '';
   for (const ch of segment) {
-    if (ch === '*') src += '[^/]*';
-    else if (ch === '?') src += '[^/]';
-    else src += /[\\^$.+()[\]{}|]/.test(ch) ? `\\${ch}` : ch;
+    if (ch === '*') {
+      src += '[^/]*';
+    } else if (ch === '?') {
+      src += '[^/]';
+    } else {
+      src += /[\\^$.+()[\]{}|]/.test(ch) ? `\\${ch}` : ch;
+    }
   }
+
   return new RegExp(`^${src}$`);
 }
 
@@ -118,13 +133,20 @@ function globRegex(segment: string): RegExp {
  * with at least one literal character besides dots in the last segment is matched against the protected names.
  */
 export function wildcardHitsFloor(arg: string): boolean {
-  if (!/[*?[]/.test(arg)) return false;
+  if (!/[*?[]/.test(arg)) {
+    return false;
+  }
+
   const norm = normalizePath(arg.replaceAll('[', '?').replaceAll(']', '?'));
   const segs = norm.split('/').filter((s) => s !== '');
   const last = segs[segs.length - 1];
-  if (last === undefined || !/[*?]/.test(last) || /^[*?.]+$/.test(last)) return false;
+  if (last === undefined || !/[*?]/.test(last) || /^[*?.]+$/.test(last)) {
+    return false;
+  }
+
   const tail2 = segs.slice(-2).join('/');
   const re2 = globRegex(tail2);
   const re1 = globRegex(last);
+
   return PROTECTED_NAMES.some((n) => re1.test(n) || re2.test(n));
 }

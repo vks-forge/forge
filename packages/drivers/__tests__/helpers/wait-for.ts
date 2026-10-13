@@ -19,9 +19,13 @@ export async function waitFor(
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (condition()) return;
+    if (condition()) {
+      return;
+    }
+
     // A short real sleep, not just setImmediate: real child processes need wall time.
     await new Promise<void>((resolve) => setTimeout(resolve, 1));
   }
+
   throw new Error(`waitFor: ${label} never became true`);
 }

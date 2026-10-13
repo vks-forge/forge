@@ -21,9 +21,13 @@ const WT = 'C:/work/repo/.worktrees/t1';
 
 function segments(cmd: string, dialect: 'bash' | 'powershell') {
   const t = tokenizeShell(cmd, dialect);
-  if (!t.ok) throw new Error(t.error);
+  if (!t.ok) {
+    throw new Error(t.error);
+  }
+
   return t.value;
 }
+
 const verdict = (cmd: string, dialect: 'bash' | 'powershell' = 'bash') =>
   evaluateShell(effectiveGrant('full'), segments(cmd, dialect), dialect, CWD);
 
@@ -64,6 +68,7 @@ describe('argv floors deny', () => {
       effect: 'deny',
       reason: 'managed_deny',
     });
+
     expect(verdict(cmd, dialect).rule).toBeTruthy();
   });
 

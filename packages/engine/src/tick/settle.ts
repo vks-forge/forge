@@ -20,9 +20,18 @@ import type { EngineCtx, Pump } from '#/types/engine-state.types.js';
 
 /** The family stored on the run row: the driver's, else implied by the status. */
 function resolveFamily(result: RunResult): ErrorFamily | undefined {
-  if (result.errorFamily) return result.errorFamily;
-  if (result.status === 'error') return 'unknown';
-  if (result.status === 'timeout') return 'stall';
+  if (result.errorFamily) {
+    return result.errorFamily;
+  }
+
+  if (result.status === 'error') {
+    return 'unknown';
+  }
+
+  if (result.status === 'timeout') {
+    return 'stall';
+  }
+
   return undefined;
 }
 
@@ -47,6 +56,7 @@ export async function settleRun(
       });
     }
   }
+
   let chainHash: string | undefined;
   try {
     chainHash = (await deps.receipts.list(run.id)).at(-1)?.hash;
@@ -69,6 +79,7 @@ export async function settleRun(
       ...(session ? { session_ref: session } : {}),
       ...(chainHash ? { final_chain_hash: chainHash } : {}),
     });
+
     await tx.runTokens.revoke(run.id, ctx.nowIso);
     await applyOutcome(ctx, tx, run, result, family, pump);
   });

@@ -15,10 +15,12 @@ import { assertSecretName } from '#/shared/secret-name.js';
 
 export function createMemorySecretStore(): SecretStore {
   const secrets = new Map<string, Uint8Array>();
+
   return {
     async get(name) {
       assertSecretName(name);
       const found = secrets.get(name);
+
       return found === undefined ? null : new Uint8Array(found);
     },
     async put(name, bytes) {

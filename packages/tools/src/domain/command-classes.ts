@@ -133,6 +133,7 @@ export const ALWAYS_ASK_COMMANDS: readonly string[] = [
 /** True for an eval flag, including bundled short flags such as `-lc` and `-ec`. */
 export function isEvalFlag(arg: string): boolean {
   const a = arg.toLowerCase();
+
   return EVAL_FLAGS.has(a) || /^-[a-z]*c[a-z]*$/.test(a);
 }
 

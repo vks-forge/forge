@@ -21,7 +21,10 @@ export function insertUnique<T>(
   value: T,
   what: string,
 ): void {
-  if (map.has(id)) throw new InvalidInputError(`Duplicate ${what}: ${id}`);
+  if (map.has(id)) {
+    throw new InvalidInputError(`Duplicate ${what}: ${id}`);
+  }
+
   map.set(id, value);
 }
 

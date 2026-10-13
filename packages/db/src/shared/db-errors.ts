@@ -34,24 +34,34 @@ const isZodError = (e: unknown): boolean =>
 
 /** Classify `error` for the Director; ForgeErrors and unrelated exceptions are returned as they are. */
 export function mapDbError(error: unknown): unknown {
-  if (error instanceof ForgeError) return error;
+  if (error instanceof ForgeError) {
+    return error;
+  }
+
   if (hasCode(error)) {
     const { code } = error;
     const message = (error as { message?: string }).message ?? code;
-    if (code.startsWith('SQLITE_BUSY') || code.startsWith('SQLITE_LOCKED'))
+    if (code.startsWith('SQLITE_BUSY') || code.startsWith('SQLITE_LOCKED')) {
       return new StallError(`database is busy (${code}): ${message}`, { cause: error });
-    if (code.startsWith('SQLITE_CONSTRAINT'))
+    }
+
+    if (code.startsWith('SQLITE_CONSTRAINT')) {
       return new InvalidInputError(`constraint violated (${code}): ${message}`, {
         cause: error,
       });
+    }
+
     return new UnknownForgeError(`database error (${code}): ${message}`, {
       cause: error,
     });
   }
-  if (isZodError(error))
+
+  if (isZodError(error)) {
     return new InvalidInputError('value rejected by schema validation', {
       cause: error,
     });
+  }
+
   return error;
 }
 

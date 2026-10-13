@@ -33,6 +33,7 @@ async function push(r: LocalRemote, branch: string, file: string, content: strin
   await git(r.work, 'checkout', branch);
   await host.push(r.work, branch);
   await git(r.work, 'checkout', 'main');
+
   return { host, sha };
 }
 
@@ -43,6 +44,7 @@ afterEach(async () => {
 describeGitHostContract('local bare', async (): Promise<GitHostHarness> => {
   const r = await makeLocalRemote();
   const host = hostFor(r);
+
   return {
     host,
     baseBranch: 'main',
@@ -52,9 +54,11 @@ describeGitHostContract('local bare', async (): Promise<GitHostHarness> => {
         `${branch.replaceAll('/', '_')}.txt`,
         'x\n',
       );
+
       await git(r.work, 'checkout', branch);
       await host.push(r.work, branch);
       await git(r.work, 'checkout', 'main');
+
       return sha;
     },
     branchExists: async (b) => (await r.remoteSha(b)) !== null,
@@ -93,6 +97,7 @@ describe('local bare host specifics', { timeout: 60_000 }, () => {
       title: 'A',
       body: '',
     });
+
     const prB = await a.host.openPr({
       branch: 'feat/b',
       base: 'main',
@@ -106,9 +111,11 @@ describe('local bare host specifics', { timeout: 60_000 }, () => {
     expect(
       (await git(r.remotePath, 'rev-list', '--parents', '-n1', merged.sha)).split(' '),
     ).toHaveLength(3);
+
     expect(
       (await git(r.remotePath, 'rev-list', '--parents', '-n1', squashed.sha)).split(' '),
     ).toHaveLength(2);
+
     expect(await git(r.remotePath, 'show', 'main:a.txt')).toBe('a');
     expect(await git(r.remotePath, 'show', 'main:b.txt')).toBe('b');
     expect(
@@ -126,6 +133,7 @@ describe('local bare host specifics', { timeout: 60_000 }, () => {
       title: 'A',
       body: '',
     });
+
     const moved = await r.commitOnMain('README.md', 'from main\n');
 
     const status = await host.prStatus(pr.number);
@@ -147,6 +155,7 @@ describe('local bare host specifics', { timeout: 60_000 }, () => {
       title: 'A',
       body: '',
     });
+
     const before = (await readdir(r.root)).sort();
 
     await host.merge(pr.number, 'squash');

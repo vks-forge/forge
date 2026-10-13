@@ -28,8 +28,10 @@ export const webFetchTool = defineTool({
   inputSchema: WebFetchInput,
   async handler(ctx, { url }) {
     const { resolve, transport } = ctx.deps;
-    if (!resolve || !transport)
+    if (!resolve || !transport) {
       throw new InvalidInputError('web_fetch is not configured (no network ports)');
+    }
+
     const out = await guardedFetchText(url, {
       resolve,
       transport,
@@ -37,7 +39,9 @@ export const webFetchTool = defineTool({
       timeoutMs: ctx.deps.fetchTimeoutMs ?? FETCH_TIMEOUT_MS,
       maxBytes: MAX_FETCH_BYTES,
     });
+
     const note = out.truncated ? '\n[truncated at 2 MB]' : '';
+
     return wrapUntrusted(out.text + note, ctx.newId(), out.finalUrl);
   },
 });

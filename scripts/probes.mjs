@@ -30,12 +30,16 @@ const vitestArgs = [
   'packages/drivers/__tests__/probes',
   ...args.filter((a) => a !== '--dry' && a !== '--no-build'),
 ];
+
 const tscArgs = [tscEntry, '-b'];
 const show = (argv) =>
   `${JSON.stringify(process.execPath)} ${argv.map((a) => JSON.stringify(a)).join(' ')}`;
 
 if (dry) {
-  if (build) console.log(show(tscArgs));
+  if (build) {
+    console.log(show(tscArgs));
+  }
+
   console.log(`FORGE_PROBES=1 ${show(vitestArgs)}`);
   process.exit(0);
 }

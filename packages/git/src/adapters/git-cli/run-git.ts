@@ -33,10 +33,15 @@ export function createGitRunner(gitBinary: string): GitRunner {
           env: { ...process.env, ...opts?.env },
         },
         (error, stdout, stderr) => {
-          if (!error) return resolve({ code: 0, stdout, stderr });
+          if (!error) {
+            return resolve({ code: 0, stdout, stderr });
+          }
+
           // A numeric code is a git exit status; a string code (ENOENT, ...) means git never ran.
-          if (typeof error.code === 'number')
+          if (typeof error.code === 'number') {
             return resolve({ code: error.code, stdout, stderr });
+          }
+
           reject(
             new CrashError(`could not run git ${args[0] ?? ''}: ${error.message}`, {
               cause: error,
@@ -54,6 +59,7 @@ export function createGitRunner(gitBinary: string): GitRunner {
         const tail = r.stderr.trim().slice(-STDERR_TAIL);
         throw new CrashError(`git ${args[0] ?? ''} failed (exit ${r.code}): ${tail}`);
       }
+
       return r.stdout;
     },
   };

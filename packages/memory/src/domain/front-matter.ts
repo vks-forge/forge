@@ -31,21 +31,37 @@ function lenientParse(block: string): Record<string, string> | undefined {
     const m = /^([A-Za-z_][\w-]*):[ \t]+(.*?)[ \t]*$/.exec(line);
     const key = m?.[1];
     const value = m?.[2];
-    if (key === undefined || value === undefined) continue;
-    if (!(LENIENT_KEYS as readonly string[]).includes(key) || key in out) continue;
-    if (value === '' || STRUCTURED.test(value)) return undefined;
+    if (key === undefined || value === undefined) {
+      continue;
+    }
+
+    if (!(LENIENT_KEYS as readonly string[]).includes(key) || key in out) {
+      continue;
+    }
+
+    if (value === '' || STRUCTURED.test(value)) {
+      return undefined;
+    }
+
     out[key] = value;
   }
+
   return out.id !== undefined && out.statement !== undefined ? out : undefined;
 }
 
 /** Parses the `---` fenced YAML block at the top of `text`; the markdown body is ignored. */
 export function parseFrontMatter(text: string): FrontMatterResult {
   const src = text.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
-  if (!src.startsWith('---\n')) return { ok: false, reason: 'no front matter' };
+  if (!src.startsWith('---\n')) {
+    return { ok: false, reason: 'no front matter' };
+  }
+
   const rest = src.slice(4);
   const end = /^---[ \t]*$/m.exec(rest);
-  if (end === null) return { ok: false, reason: 'unterminated front matter' };
+  if (end === null) {
+    return { ok: false, reason: 'unterminated front matter' };
+  }
+
   const block = rest.slice(0, end.index);
 
   let value: unknown;
@@ -53,14 +69,19 @@ export function parseFrontMatter(text: string): FrontMatterResult {
     value = parse(block);
   } catch (err) {
     const lenient = lenientParse(block);
-    if (lenient !== undefined) return { ok: true, data: lenient };
+    if (lenient !== undefined) {
+      return { ok: true, data: lenient };
+    }
+
     return {
       ok: false,
       reason: `invalid YAML: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
+
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return { ok: false, reason: 'front matter is not a mapping' };
   }
+
   return { ok: true, data: value as Record<string, unknown> };
 }

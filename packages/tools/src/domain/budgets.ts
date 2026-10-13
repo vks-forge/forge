@@ -41,11 +41,20 @@ function over(
   usd: number,
   hard: boolean,
 ): 'calls' | 'usd' | null {
-  if (!caps) return null;
+  if (!caps) {
+    return null;
+  }
+
   const maxCalls = hard ? caps.max_calls : caps.soft_calls;
   const maxUsd = hard ? caps.max_usd : caps.soft_usd;
-  if (maxCalls !== undefined && counter.calls + 1 > maxCalls) return 'calls';
-  if (maxUsd !== undefined && counter.usd + usd > maxUsd) return 'usd';
+  if (maxCalls !== undefined && counter.calls + 1 > maxCalls) {
+    return 'calls';
+  }
+
+  if (maxUsd !== undefined && counter.usd + usd > maxUsd) {
+    return 'usd';
+  }
+
   return null;
 }
 
@@ -65,6 +74,7 @@ export function checkBudget(
   if (!parsedLimits.success || !parsedUsage.success || !sane(estimatedUsd)) {
     return { verdict: 'deny', scope: 'run', kind: 'invalid' };
   }
+
   const limits = parsedLimits.data;
   const usage = parsedUsage.data;
   const toolCounter = own(usage.per_tool, tool) ?? { calls: 0, usd: 0 };
@@ -72,16 +82,23 @@ export function checkBudget(
   const toolCaps = own(limits.per_tool, tool);
   for (const hard of [true, false]) {
     const t = over(toolCaps, toolCounter, estimatedUsd, hard);
-    if (t) return { verdict: hard ? 'deny' : 'ask', scope: 'tool', kind: t };
+    if (t) {
+      return { verdict: hard ? 'deny' : 'ask', scope: 'tool', kind: t };
+    }
+
     const r = over(limits.run, run, estimatedUsd, hard);
-    if (r) return { verdict: hard ? 'deny' : 'ask', scope: 'run', kind: r };
+    if (r) {
+      return { verdict: hard ? 'deny' : 'ask', scope: 'run', kind: r };
+    }
   }
+
   return { verdict: 'ok' };
 }
 
 /** Returns usage after one more call of `tool` costing `usd`; does not mutate its input. */
 export function recordUsage(usage: BudgetUsage, tool: string, usd: number): BudgetUsage {
   const t = own(usage.per_tool, tool) ?? { calls: 0, usd: 0 };
+
   return {
     run: { calls: usage.run.calls + 1, usd: usage.run.usd + usd },
     per_tool: { ...usage.per_tool, [tool]: { calls: t.calls + 1, usd: t.usd + usd } },

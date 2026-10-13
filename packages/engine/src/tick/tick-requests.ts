@@ -18,9 +18,14 @@ import type { EngineDeps } from '#/types/engine.types.js';
 export function requestTick(deps: EngineDeps, state: EngineState): void {
   if (state.running) {
     state.requested = true;
+
     return;
   }
-  if (state.notified) return;
+
+  if (state.notified) {
+    return;
+  }
+
   state.notified = true;
   deps.onTickRequested?.();
 }

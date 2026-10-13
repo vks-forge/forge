@@ -56,7 +56,10 @@ describe('branchName', () => {
           const name = branchName(type, tid, title);
           const parsed = parseBranchName(name);
           expect(parsed.ok).toBe(true);
-          if (!parsed.ok) return;
+          if (!parsed.ok) {
+            return;
+          }
+
           expect(parsed.value.type).toBe(type);
           expect(parsed.value.ticketId).toBe(tid);
           expect(parseTicketId(parsed.value.ticketId).ok).toBe(true);

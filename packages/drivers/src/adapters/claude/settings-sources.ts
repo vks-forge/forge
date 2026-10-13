@@ -29,6 +29,7 @@ export function settingsSourcePaths(
   platform: NodeJS.Platform,
 ): string[] {
   const managed = MANAGED[platform];
+
   return [
     join(homeDir, '.claude', 'settings.json'),
     join(cwd, '.claude', 'settings.json'),
@@ -50,5 +51,6 @@ export async function existingSettingsSources(
       // absent is the normal case
     }
   }
+
   return found;
 }

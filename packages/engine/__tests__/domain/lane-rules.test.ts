@@ -43,6 +43,7 @@ const run = (
     bodyLength: extra.bodyLength ?? 100,
     type: out.type,
   });
+
   return decideLane({
     pre,
     llm: out,
@@ -108,6 +109,7 @@ describe('decideLane', () => {
             bodyLength,
             type: 'fix',
           });
+
           const d = decideLane({
             pre,
             llm: out,
@@ -115,10 +117,12 @@ describe('decideLane', () => {
             threshold: 0.7,
             tierCGlobs: ['**/auth/**'],
           });
+
           const rank = { express: 0, standard: 1, full: 2 } as const;
           // A pre-check hit can never be talked down (the quick hint only applies to a clean one).
-          if (pre.reasons.length > 0)
+          if (pre.reasons.length > 0) {
             expect(rank[d.lane]).toBeGreaterThanOrEqual(rank[pre.lane]);
+          }
         },
       ),
     );

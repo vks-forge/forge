@@ -23,6 +23,7 @@ export function createMutex(): Mutex {
   let tail: Promise<unknown> = Promise.resolve();
   // One store per mutex, so holding mutex A never makes a call into mutex B look nested.
   const held = new AsyncLocalStorage<true>();
+
   return {
     run<T>(task: () => Promise<T>): Promise<T> {
       if (held.getStore() === true) {
@@ -32,9 +33,11 @@ export function createMutex(): Mutex {
           ),
         );
       }
+
       const start = (): Promise<T> => held.run(true, task);
       const result = tail.then(start, start);
       tail = result.catch(() => undefined);
+
       return result;
     },
   };

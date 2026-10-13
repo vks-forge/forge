@@ -42,6 +42,7 @@ describe('hook handler', () => {
       TOKEN,
       req(pre('PowerShell', 'echo hi', 'tu1')),
     );
+
     const b = await env.handler.handle(RUN_ID, TOKEN, req(post('PowerShell', 'tu1')));
     const c = await env.handler.handle(RUN_ID, TOKEN, req(pre('Bash', 'ls', 'tu2')));
     const chain = await env.receipts.list(RUN_ID);
@@ -84,6 +85,7 @@ describe('hook handler', () => {
     const states = (await env.receipts.list(RUN_ID)).flatMap((r) =>
       r.kind === 'effect' ? [r.state] : [],
     );
+
     expect(states).toEqual(['uncertain', 'failed_no_effect']);
   });
 
@@ -94,6 +96,7 @@ describe('hook handler', () => {
       reason: 'effect_unmatched',
       receipt_hash: '',
     });
+
     expect(await env.receipts.list(RUN_ID)).toHaveLength(0);
   });
 
@@ -121,6 +124,7 @@ describe('hook handler', () => {
       payload: {},
       seq: 1,
     });
+
     expect(r.reason).toBe('fail_closed_bad_request');
   });
 
@@ -138,6 +142,7 @@ describe('hook handler', () => {
         env.handler.handle(RUN_ID, TOKEN, req(pre('PowerShell', `echo ${i}`))),
       ),
     );
+
     const chain = await env.receipts.list(RUN_ID);
     const seqs = chain.flatMap((r) => (r.kind === 'decision' ? [r.seq] : []));
     expect(seqs).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
@@ -161,6 +166,7 @@ describe('hook handler', () => {
       TOKEN,
       req(pre('PowerShell', 'deny me', 'tu-d')),
     );
+
     expect(denied.decision).toBe('deny');
     const r = await env.handler.handle(RUN_ID, TOKEN, req(make('PowerShell', 'tu-d')));
     expect(r).toMatchObject({ decision: 'allow', receipt_hash: '' });
@@ -174,7 +180,10 @@ describe('audit of refused requests', () => {
   it('1000 bad-token posts leave the signed chain unchanged', async () => {
     await env.handler.handle(RUN_ID, TOKEN, req(pre('PowerShell', 'echo hi', 'tu1')));
     const before = (await env.receipts.list(RUN_ID)).length;
-    for (let i = 0; i < 1000; i++) await env.handler.handle(RUN_ID, 'nope', req(pre()));
+    for (let i = 0; i < 1000; i++) {
+      await env.handler.handle(RUN_ID, 'nope', req(pre()));
+    }
+
     expect(await env.receipts.list(RUN_ID)).toHaveLength(before);
   });
 
@@ -187,8 +196,12 @@ describe('audit of refused requests', () => {
         seen.push({ runId, code: entry.code, suppressed: entry.suppressed });
       },
     });
+
     await e.ready;
-    for (let i = 0; i < 5; i++) await e.handler.handle(RUN_ID, 'nope', req(pre()));
+    for (let i = 0; i < 5; i++) {
+      await e.handler.handle(RUN_ID, 'nope', req(pre()));
+    }
+
     expect(seen).toHaveLength(1);
     ms += 10_000;
     await e.handler.handle(RUN_ID, 'nope', req(pre()));
@@ -212,6 +225,7 @@ describe('receipt resource (same resolver admit() uses)', () => {
       TOKEN,
       req(preWith('Read', { file_path: 'SRC/./a/../A.ts' }, 'u1')),
     );
+
     expect((await decisions())[0]?.resource).toBe('src/a.ts');
   });
 
@@ -251,6 +265,7 @@ describe('inactive runs get no receipts (one liveness rule)', () => {
         TOKEN,
         req(pre('PowerShell', 'echo hi', 'u1')),
       );
+
       expect(r).toMatchObject({ decision: 'deny', reason: 'fail_closed_inactive_run' });
       expect(await env.receipts.list(RUN_ID)).toHaveLength(0);
       expect(env.admitted).toHaveLength(0);

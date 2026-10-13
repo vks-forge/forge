@@ -111,8 +111,10 @@ export function insertReceipt(
         chainSeq,
       ],
     );
+
     return;
   }
+
   driver.run(
     `INSERT INTO tool_effects (${EFFECT_COLUMNS}) VALUES (${placeholders(12)})`,
     [

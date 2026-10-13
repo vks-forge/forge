@@ -46,7 +46,10 @@ function decide(t: Ticket, e: TicketEvent): Result<TicketDelta, TransitionError>
   const from = t.status;
   switch (e.type) {
     case 'triaged':
-      if (from !== 'inbox') return err(illegal(t, e));
+      if (from !== 'inbox') {
+        return err(illegal(t, e));
+      }
+
       return ok({
         status: 'planned',
         lane: maxLane(t.lane, e.lane),
@@ -55,7 +58,10 @@ function decide(t: Ticket, e: TicketEvent): Result<TicketDelta, TransitionError>
     case 'dispatched':
       return from === 'planned' ? ok({ status: 'in_progress' }) : err(illegal(t, e));
     case 'blocked':
-      if (from !== 'in_progress' && from !== 'waiting_human') return err(illegal(t, e));
+      if (from !== 'in_progress' && from !== 'waiting_human') {
+        return err(illegal(t, e));
+      }
+
       return ok({ status: 'blocked', blocked_reason: e.reason });
     case 'unblocked':
       return from === 'blocked' ? ok({ status: 'planned' }) : err(illegal(t, e));
@@ -74,8 +80,10 @@ function decide(t: Ticket, e: TicketEvent): Result<TicketDelta, TransitionError>
       if ((from !== 'planned' && from !== 'in_progress') || reason === '') {
         return err(illegal(t, e));
       }
+
       return ok({ status: 'waiting_human', blocked_reason: reason });
     }
+
     case 'unparked':
       // Not `answered`: that resumes a Worker run (in_progress); a parked ticket may never
       // have run, so release goes back to planned and dispatch starts from there.
@@ -86,7 +94,10 @@ function decide(t: Ticket, e: TicketEvent): Result<TicketDelta, TransitionError>
         ? ok({ status: 'verifying', tier_actual: undefined })
         : err(illegal(t, e));
     case 'gate_failed':
-      if (from !== 'verifying') return err(illegal(t, e));
+      if (from !== 'verifying') {
+        return err(illegal(t, e));
+      }
+
       if (t.rework_count >= MAX_AUTO_REWORKS) {
         return ok({
           status: 'waiting_human',
@@ -94,34 +105,51 @@ function decide(t: Ticket, e: TicketEvent): Result<TicketDelta, TransitionError>
           tier_actual: undefined,
         });
       }
+
       return ok({
         status: 'in_progress',
         rework_count: t.rework_count + 1,
         tier_actual: undefined,
       });
     case 'gate_passed': {
-      if (from !== 'verifying') return err(illegal(t, e));
+      if (from !== 'verifying') {
+        return err(illegal(t, e));
+      }
+
       // Tier A stays in Verifying until the merge event; B/C wait on a human.
       const status = { A: 'verifying', B: 'review', C: 'needs_signoff' } as const;
+
       return ok({ status: status[e.tier_actual], tier_actual: e.tier_actual });
     }
+
     case 'merged':
-      if (from !== 'verifying') return err(illegal(t, e));
+      if (from !== 'verifying') {
+        return err(illegal(t, e));
+      }
+
       if (t.tier_actual !== 'A') {
         return err(precondition(e, 'merge needs gate_passed at tier A'));
       }
+
       return ok({ status: 'done' });
     case 'done':
-      if (from !== 'review' && from !== 'needs_signoff') return err(illegal(t, e));
+      if (from !== 'review' && from !== 'needs_signoff') {
+        return err(illegal(t, e));
+      }
+
       if (
         from === 'needs_signoff' &&
         (e.signer === undefined || e.signer.trim() === '')
       ) {
         return err(precondition(e, 'tier C needs a named signer'));
       }
+
       return ok({ status: 'done' });
     case 'rework':
-      if (from !== 'review' && from !== 'needs_signoff') return err(illegal(t, e));
+      if (from !== 'review' && from !== 'needs_signoff') {
+        return err(illegal(t, e));
+      }
+
       return ok({ status: 'in_progress', tier_actual: undefined });
     case 'cancelled':
       return ok({ status: 'cancelled' });
@@ -136,6 +164,7 @@ export function transition(
   if (TERMINAL_STATUSES.includes(ticket.status)) {
     return err({ kind: 'terminal', status: ticket.status, event: event.type });
   }
+
   if (
     event.expected_version !== undefined &&
     event.expected_version !== ticket.status_version
@@ -146,8 +175,11 @@ export function transition(
       actual: ticket.status_version,
     });
   }
+
   const decided = decide(ticket, event);
-  if (!decided.ok) return decided;
+  if (!decided.ok) {
+    return decided;
+  }
 
   // blocked_reason only lives while the ticket is parked. The clear is explicit
   // (present-but-undefined) so a storage patch built from the result NULLs the column

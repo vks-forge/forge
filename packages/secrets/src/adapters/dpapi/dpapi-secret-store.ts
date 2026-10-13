@@ -24,10 +24,12 @@ import { assertSecretName } from '#/shared/secret-name.js';
 
 /** Creates a SecretStore that keeps DPAPI-encrypted blobs in `dir`. Throws PolicyDeniedError off Windows. */
 export function createDpapiSecretStore(opts: DpapiSecretStoreOptions): SecretStore {
-  if ((opts.platform ?? process.platform) !== 'win32')
+  if ((opts.platform ?? process.platform) !== 'win32') {
     throw new PolicyDeniedError(
       'the DPAPI secret store only works on Windows; refusing to fall back to plaintext',
     );
+  }
+
   const dir = resolve(opts.dir);
   const fileOf = (name: string): string => join(dir, `${name}.dpapi`);
 
@@ -38,9 +40,13 @@ export function createDpapiSecretStore(opts: DpapiSecretStoreOptions): SecretSto
       try {
         blob = await readFile(fileOf(name));
       } catch (cause) {
-        if ((cause as NodeJS.ErrnoException).code === 'ENOENT') return null;
+        if ((cause as NodeJS.ErrnoException).code === 'ENOENT') {
+          return null;
+        }
+
         throw cause;
       }
+
       return dpapiUnprotect(blob, opts);
     },
 

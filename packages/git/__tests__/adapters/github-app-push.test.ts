@@ -26,6 +26,7 @@ const keys = generateKeyPairSync('rsa', {
   publicKeyEncoding: { type: 'spki', format: 'pem' },
   privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
 });
+
 const TOKEN = 'ghs_secretTOKEN123';
 const NOW = Date.parse('2026-10-13T10:00:00.000Z');
 
@@ -40,13 +41,16 @@ function pushRig(run: GitRunner['run']) {
     args: readonly string[];
     env: Record<string, string> | undefined;
   }[] = [];
+
   const git: GitRunner = {
     run: async (cwd, args, opts) => {
       calls.push({ cwd, args, env: opts?.env ? { ...opts.env } : undefined });
+
       return run(cwd, args, opts);
     },
     try: async () => ({ code: 0, stdout: '', stderr: '' }),
   };
+
   const host = createGitHubAppGitHost({
     owner: 'o',
     repo: 'r',
@@ -58,6 +62,7 @@ function pushRig(run: GitRunner['run']) {
     now: () => NOW,
     git,
   });
+
   return { host, calls };
 }
 
@@ -74,12 +79,14 @@ describe('github app push', () => {
       'https://github.com/o/r.git',
       'feat/FRG-1-a:feat/FRG-1-a',
     ]);
+
     expect(JSON.stringify(call?.args)).not.toContain(TOKEN);
     expect(call?.env).toEqual(buildPushEnv(TOKEN));
     const basic = (call?.env?.['GIT_CONFIG_VALUE_0'] ?? '').replace(
       'AUTHORIZATION: basic ',
       '',
     );
+
     expect(Buffer.from(basic, 'base64').toString()).toBe(`x-access-token:${TOKEN}`);
     expect(call?.env).toMatchObject({
       GIT_CONFIG_COUNT: '1',
@@ -108,6 +115,7 @@ describe('github app push', () => {
     await expect(host.push('C:/wt', '--receive-pack=x')).rejects.toMatchObject({
       errorFamily: 'invalid_input',
     });
+
     expect(calls).toEqual([]);
   });
 });
@@ -121,11 +129,13 @@ describe('github app JWT', () => {
       alg: 'RS256',
       typ: 'JWT',
     });
+
     expect(JSON.parse(Buffer.from(p, 'base64url').toString())).toEqual({
       iat: NOW / 1000 - 60,
       exp: NOW / 1000 + 540,
       iss: '123',
     });
+
     expect(
       createVerify('RSA-SHA256')
         .update(`${h}.${p}`)

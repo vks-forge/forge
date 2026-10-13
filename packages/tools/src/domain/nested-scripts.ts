@@ -36,6 +36,7 @@ const NON_SHELL_EVAL = new Set([
 /** True when `flag` abbreviates `-name` (PowerShell accepts any unambiguous prefix). */
 const abbreviates = (flag: string, name: string, min = 1): boolean => {
   const f = flag.toLowerCase();
+
   return f.startsWith('-') && f.length - 1 >= min && name.startsWith(f.slice(1));
 };
 
@@ -49,6 +50,7 @@ function powershell(args: readonly string[]): NestedScript[] {
       out.push({ text, dialect: 'powershell' });
     }
   }
+
   return out;
 }
 
@@ -57,11 +59,17 @@ export function nestedScripts(cmd: string, args: readonly string[]): NestedScrip
   if (EVAL_BUILTINS.has(cmd)) {
     return cmd === 'eval' ? [{ text: args.join(' '), dialect: 'bash' }] : [];
   }
+
   if (cmd === 'cmd') {
     const i = args.findIndex((a) => /^\/[ck]$/i.test(a));
+
     return i === -1 ? [] : [{ text: args.slice(i + 1).join(' '), dialect: 'bash' }];
   }
-  if (cmd === 'powershell' || cmd === 'pwsh') return powershell(args);
+
+  if (cmd === 'powershell' || cmd === 'pwsh') {
+    return powershell(args);
+  }
+
   if (SHELL_INTERPRETERS.has(cmd)) {
     const out: NestedScript[] = [];
     for (const [i, a] of args.entries()) {
@@ -69,13 +77,16 @@ export function nestedScripts(cmd: string, args: readonly string[]): NestedScrip
         out.push({ text: args[i + 1] as string, dialect: 'bash' });
       }
     }
+
     return out;
   }
+
   if (NON_SHELL_EVAL.has(cmd)) {
     return args
       .filter((_a, i) => i > 0 && isEvalFlag(args[i - 1] ?? ''))
       .map((text) => ({ text, dialect: null }));
   }
+
   return [];
 }
 
@@ -88,7 +99,13 @@ const PUBLISH = /\b(npm|pnpm|yarn|cargo|twine)\b[^;&|]*\b(publish|upload)\b/;
  */
 export function looseFloorHit(text: string): string | null {
   const flat = text.toLowerCase().replace(/[^a-z0-9_:./\-]+/g, ' ');
-  if (PUSH.test(flat)) return 'floor:argv:eval-text';
-  if (PUBLISH.test(flat)) return 'floor:argv:eval-text';
+  if (PUSH.test(flat)) {
+    return 'floor:argv:eval-text';
+  }
+
+  if (PUBLISH.test(flat)) {
+    return 'floor:argv:eval-text';
+  }
+
   return null;
 }

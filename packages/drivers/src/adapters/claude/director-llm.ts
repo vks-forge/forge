@@ -61,6 +61,7 @@ async function runChild(
     'data',
     (d: Buffer) => (stderrTail = (stderrTail + d.toString('utf8')).slice(-STDERR_TAIL)),
   );
+
   child.stdin.on('error', () => undefined);
   child.stdin.end(prompt);
 
@@ -68,16 +69,23 @@ async function runChild(
     child.stdout.on('end', resolve);
     child.stdout.on('close', resolve);
   });
+
   const exited = new Promise<{ exit: string; error?: string }>((resolve) => {
     child.on('exit', (code, signal) =>
       resolve({ exit: `code ${code}, signal ${signal}` }),
     );
+
     child.on('error', (e) => resolve({ exit: 'not started', error: e.message }));
   });
+
   const settled = exited.then(async (x) => {
-    if (!x.error) await drained;
+    if (!x.error) {
+      await drained;
+    }
+
     return x;
   });
+
   let cancelTimer = (): void => undefined;
   const timedOut = new Promise<'timeout'>((resolve) => {
     cancelTimer = deps.clock.after(timeoutMs, () => resolve('timeout'));
@@ -91,6 +99,7 @@ async function runChild(
       spawn: deps.spawn,
       ...(deps.signalGroup ? { signalGroup: deps.signalGroup } : {}),
     });
+
     return {
       stdout,
       tail: stderrTail,
@@ -99,7 +108,9 @@ async function runChild(
       detail: `claude timed out after ${timeoutMs}ms and was killed`,
     };
   }
+
   const tail = `${stderrTail} ${stdout.slice(-STDOUT_TAIL)}`.trim();
+
   return winner.error
     ? { stdout, tail, exit: winner.exit, failure: 'spawn', detail: winner.error }
     : { stdout, tail, exit: winner.exit };
@@ -125,25 +136,32 @@ export function createClaudeDirectorLLM(deps: ClaudeDirectorLLMDeps): DirectorLL
       const prompt = buildStepPrompt(name, input);
       const raw = await runChild(deps, args, prompt);
       let error: StepError | undefined;
-      if (raw.failure === 'timeout')
+      if (raw.failure === 'timeout') {
         error = { kind: 'stall', message: raw.detail ?? 'claude timed out' };
-      else if (raw.failure === 'spawn')
+      } else if (raw.failure === 'spawn') {
         error = { kind: 'crash', message: `cannot run claude: ${raw.detail}` };
+      }
+
       if (error) {
         deps.log?.('warn', 'director step failed', { step: name, kind: error.kind });
+
         return err(error);
       }
+
       const result = interpretOutput(parseCliOutput(raw.stdout), schema, {
         nowMs: deps.clock.now(),
         backoffMs: deps.rateLimitBackoffMs ?? DEFAULT_BACKOFF_MS,
         tail: raw.tail,
         exit: raw.exit,
       });
-      if (!result.ok)
+
+      if (!result.ok) {
         deps.log?.('warn', 'director step failed', {
           step: name,
           kind: result.error.kind,
         });
+      }
+
       return result;
     },
   };

@@ -16,8 +16,10 @@ describe('GateResult', () => {
   const gate = { id: 1, run_id: 'r1', gate: 'G1', status: 'passed', started_at: ts };
 
   it('parses G1..G6 and BR, with optional report_ref and ended_at', () => {
-    for (const g of ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'BR'])
+    for (const g of ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'BR']) {
       expect(GateResult.safeParse({ ...gate, gate: g }).success).toBe(true);
+    }
+
     expect(GateResult.safeParse({ ...gate, report_ref: 'x', ended_at: ts }).success).toBe(
       true,
     );

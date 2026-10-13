@@ -42,24 +42,33 @@ const SearxResponse = z.object({
 
 /** Returns the base URL when it is loopback or allow-listed; throws PolicyDeniedError otherwise. */
 export function validateSearxngBase(cfg: SearxngConfig | undefined): URL {
-  if (!cfg?.baseUrl)
+  if (!cfg?.baseUrl) {
     throw new InvalidInputError('web_search is not configured (FORGE_SEARXNG_URL)');
+  }
+
   let url: URL;
   try {
     url = new URL(cfg.baseUrl);
   } catch {
     throw new InvalidInputError('FORGE_SEARXNG_URL is not a valid URL');
   }
-  if (url.protocol !== 'http:' && url.protocol !== 'https:')
+
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new PolicyDeniedError('SearXNG URL must be http or https');
-  if (url.username || url.password)
+  }
+
+  if (url.username || url.password) {
     throw new PolicyDeniedError('SearXNG URL must not embed credentials');
+  }
+
   const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
   const loopback = host === 'localhost' || (isIP(host) !== 0 && isLoopbackAddress(host));
-  if (!loopback && !(cfg.allowHosts ?? []).includes(host))
+  if (!loopback && !(cfg.allowHosts ?? []).includes(host)) {
     throw new PolicyDeniedError(
       `SearXNG host ${host} is not loopback and not allow-listed`,
     );
+  }
+
   return url;
 }
 
@@ -74,9 +83,15 @@ export const webSearchTool = defineTool({
     const url = new URL('search', base.href.endsWith('/') ? base.href : `${base.href}/`);
     url.searchParams.set('q', query);
     url.searchParams.set('format', 'json');
-    if (engines && engines.length > 0) url.searchParams.set('engines', engines.join(','));
+    if (engines && engines.length > 0) {
+      url.searchParams.set('engines', engines.join(','));
+    }
+
     const doFetch = ctx.deps.searchFetch;
-    if (!doFetch) throw new InvalidInputError('web_search is not configured (no fetch)');
+    if (!doFetch) {
+      throw new InvalidInputError('web_search is not configured (no fetch)');
+    }
+
     const res = await doFetch(url, {
       redirect: 'error',
       signal: AbortSignal.timeout(ctx.deps.fetchTimeoutMs ?? TIMEOUT_MS),
@@ -86,13 +101,22 @@ export const webSearchTool = defineTool({
         `SearXNG request failed: ${e instanceof Error ? e.message : 'error'}`,
       );
     });
-    if (!res.ok) throw new InvalidInputError(`SearXNG returned HTTP ${res.status}`);
+
+    if (!res.ok) {
+      throw new InvalidInputError(`SearXNG returned HTTP ${res.status}`);
+    }
+
     const source = res.body as
       (AsyncIterable<Uint8Array> & { cancel(): Promise<void> }) | null;
+
     const { bytes, truncated } = source
       ? await readCapped(source, MAX_BODY_BYTES, () => source.cancel())
       : { bytes: new Uint8Array(), truncated: false };
-    if (truncated) throw new InvalidInputError('SearXNG response too large');
+
+    if (truncated) {
+      throw new InvalidInputError('SearXNG response too large');
+    }
+
     const raw = new TextDecoder().decode(bytes);
     let parsed: z.infer<typeof SearxResponse>;
     try {
@@ -100,6 +124,7 @@ export const webSearchTool = defineTool({
     } catch {
       throw new InvalidInputError('SearXNG returned an unexpected response');
     }
+
     const results = parsed.results
       .filter((r) => /^https?:\/\//i.test(r.url))
       .slice(0, max_results)
@@ -108,6 +133,7 @@ export const webSearchTool = defineTool({
         url: r.url,
         snippet: r.content.slice(0, SNIPPET_CHARS),
       }));
+
     return wrapUntrusted(JSON.stringify({ query, results }), ctx.newId(), base.href);
   },
 });

@@ -32,11 +32,13 @@ export function startAdapterProcess(
   } catch {
     return null;
   }
+
   let stderrTail = '';
   child.stderr.on(
     'data',
     (d: Buffer) => (stderrTail = (stderrTail + d.toString('utf8')).slice(-1500)),
   );
+
   let exited = false;
   const exitedEnd = new Promise<EngineEnd>((resolve) => {
     child.on('exit', (code, signal) => {
@@ -46,14 +48,19 @@ export function startAdapterProcess(
         detail: `adapter exited (code ${code}, signal ${signal}) ${stderrTail}`.trim(),
       });
     });
+
     child.on('error', (e) => {
       exited = true;
       resolve({ kind: 'crash', detail: `adapter failed: ${e.message}` });
     });
   });
+
   let killed = false;
   const kill = async (): Promise<void> => {
-    if (killed || exited) return;
+    if (killed || exited) {
+      return;
+    }
+
     killed = true;
     await killTree(child, {
       platform: deps.platform,
@@ -61,5 +68,6 @@ export function startAdapterProcess(
       ...(deps.signalGroup ? { signalGroup: deps.signalGroup } : {}),
     });
   };
+
   return { child, exitedEnd, kill, hasExited: () => exited };
 }

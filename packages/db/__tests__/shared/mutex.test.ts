@@ -24,10 +24,13 @@ describe('createMutex', () => {
       order.push(1);
       throw new Error('boom');
     });
+
     const b = m.run(async () => {
       order.push(2);
+
       return 'b';
     });
+
     await expect(a).rejects.toThrow('boom');
     await expect(b).resolves.toBe('b');
     expect(order).toEqual([1, 2]);
@@ -39,11 +42,13 @@ describe('createMutex', () => {
       m
         .run(async () => {
           await Promise.resolve();
+
           return m.run(async () => 'inner');
         })
         .catch((e: unknown) => e),
       new Promise((r) => setTimeout(() => r('deadlock'), 500)),
     ]);
+
     expect(outcome).toBeInstanceOf(InvalidInputError);
   });
 

@@ -33,6 +33,7 @@ const BREAK = new Set([
   'ol',
   'table',
 ]);
+
 const NAMED: Record<string, string> = {
   amp: '&',
   lt: '<',
@@ -47,8 +48,10 @@ function decodeEntities(s: string): string {
     if (e.startsWith('#')) {
       const code =
         e[1]?.toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : Number(e.slice(1));
+
       return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : m;
     }
+
     return NAMED[e.toLowerCase()] ?? m;
   });
 }
@@ -65,12 +68,14 @@ export function htmlToText(html: string): string {
       out += html.slice(pos);
       break;
     }
+
     out += html.slice(pos, lt);
     const gt = html.indexOf('>', lt + 1);
     if (gt === -1) {
       out += html.slice(lt);
       break;
     }
+
     const m = /^<\/?([a-z][a-z0-9]*)/.exec(lower.slice(lt, Math.min(gt, lt + 40)));
     const name = m?.[1];
     if (!name) {
@@ -79,15 +84,23 @@ export function htmlToText(html: string): string {
       pos = lt + 1;
       continue;
     }
+
     pos = gt + 1;
     if (DROP.has(name) && lower[lt + 1] !== '/') {
       const close = lower.indexOf(`</${name}`, pos);
-      if (close === -1) break;
+      if (close === -1) {
+        break;
+      }
+
       const closeGt = html.indexOf('>', close);
       pos = closeGt === -1 ? html.length : closeGt + 1;
     }
-    if (BREAK.has(name)) out += '\n';
+
+    if (BREAK.has(name)) {
+      out += '\n';
+    }
   }
+
   return decodeEntities(out)
     .replace(/[ \t\r\f\v]+/g, ' ')
     .replace(/ ?\n ?/g, '\n')

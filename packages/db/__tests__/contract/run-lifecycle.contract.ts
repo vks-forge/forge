@@ -50,6 +50,7 @@ export function describeRunLifecycleContract(getDb: () => StorageAdapter): void 
           final_chain_hash: 'e'.repeat(64),
         });
       });
+
       expect(await tx((t) => t.runs.get('r1'))).toMatchObject({
         status: 'running',
         pid: 77,
@@ -57,9 +58,11 @@ export function describeRunLifecycleContract(getDb: () => StorageAdapter): void 
         last_event_at: T1,
         final_chain_hash: 'e'.repeat(64),
       });
+
       await tx((t) =>
         t.runs.update('r1', { pid: undefined, hook_registered_at: undefined }),
       );
+
       const got = await tx((t) => t.runs.get('r1'));
       expect('pid' in (got ?? {})).toBe(false);
       expect('hook_registered_at' in (got ?? {})).toBe(false);
@@ -69,10 +72,12 @@ export function describeRunLifecycleContract(getDb: () => StorageAdapter): void 
       const bad = await tx((t) =>
         t.runs.insert({ ...makeRun('r1'), owner: undefined } as never),
       ).catch((e: unknown) => e);
+
       await tx((t) => t.runs.insert(makeRun('r2')));
       const clear = await tx((t) =>
         t.runs.update('r2', { owner: undefined } as never),
       ).catch((e: unknown) => e);
+
       expect(bad).toBeInstanceOf(InvalidInputError);
       expect(clear).toBeInstanceOf(InvalidInputError);
     });
@@ -81,6 +86,7 @@ export function describeRunLifecycleContract(getDb: () => StorageAdapter): void 
       for (const [i, status] of RunStatus.options.entries()) {
         await tx((t) => t.runs.insert(makeRun(`r${i}`, { status })));
       }
+
       const all = await tx((t) => t.runs.listByStatus(RunStatus.options));
       expect(all.map((r) => r.status)).toEqual([...RunStatus.options]);
     });
@@ -92,6 +98,7 @@ export function describeRunLifecycleContract(getDb: () => StorageAdapter): void 
         await t.runs.insert(makeRun('r3', { status: 'starting' }));
         await t.runs.insert(makeRun('r4', { status: 'running' }));
       });
+
       const active = await tx((t) => t.runs.listByStatus(['starting', 'running']));
       const none = await tx((t) => t.runs.listByStatus([]));
       expect(active.map((r) => r.id)).toEqual(['r1', 'r3', 'r4']);
@@ -104,6 +111,7 @@ export function describeRunLifecycleContract(getDb: () => StorageAdapter): void 
         await t.runs.update('r1', { status: 'success', ended_at: T1 });
         await t.runs.insert(makeRun('r2', { retry_of: 'r1', started_at: T1 }));
       });
+
       const list = await tx((t) => t.runs.listByTicket('SF-1'));
       expect(list.map((r) => [r.id, r.status, r.retry_of, r.ended_at])).toEqual([
         ['r1', 'success', undefined, T1],
@@ -120,6 +128,7 @@ export function describeRunLifecycleContract(getDb: () => StorageAdapter): void 
         const failure = await tx((t) => t.runs.update('r1', { status })).catch(
           (e: unknown) => e,
         );
+
         expect(failure).toBeInstanceOf(InvalidInputError);
         expect((await tx((t) => t.runs.get('r1')))?.status).toBe('settling');
       });
@@ -129,6 +138,7 @@ export function describeRunLifecycleContract(getDb: () => StorageAdapter): void 
         const failure = await tx((t) =>
           t.runs.update('r1', { ended_at: undefined }),
         ).catch((e: unknown) => e);
+
         expect(failure).toBeInstanceOf(InvalidInputError);
         expect((await tx((t) => t.runs.get('r1')))?.ended_at).toBe(T1);
       });
@@ -138,6 +148,7 @@ export function describeRunLifecycleContract(getDb: () => StorageAdapter): void 
         await tx((t) =>
           t.runs.update('r1', { status: 'settled', final_chain_hash: 'e'.repeat(64) }),
         );
+
         expect(await tx((t) => t.runs.get('r1'))).toMatchObject({
           status: 'settled',
           ended_at: T1,
@@ -151,6 +162,7 @@ export function describeRunLifecycleContract(getDb: () => StorageAdapter): void 
           await t.runs.update('r2', { status: 'running' });
           await t.runs.update('r2', { status: 'success', ended_at: T1 });
         });
+
         expect(await tx((t) => t.runs.get('r2'))).toMatchObject({
           status: 'success',
           ended_at: T1,

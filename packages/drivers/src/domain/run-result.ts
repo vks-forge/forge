@@ -53,13 +53,16 @@ export function buildRunResult(i: SettleInput): RunResult {
     costUsd: i.costUsd,
     filesTouched: [...i.filesTouched],
   };
-  if (paused)
+
+  if (paused) {
     return {
       ...base,
       status: 'paused',
       pauseReason: 'interaction',
       interactionId: i.pendingAsk ?? '',
     };
+  }
+
   return {
     ...base,
     status: row.status,

@@ -25,8 +25,10 @@ export const finishTool = defineTool({
   async handler(ctx, { summary, claims }) {
     await ctx.deps.storage.transaction(async (tx) => {
       const events = await tx.runEvents.listByRun(ctx.run.id);
-      if (events.some((e) => e.type === 'finish'))
+      if (events.some((e) => e.type === 'finish')) {
         throw new PolicyDeniedError('this run has already called finish');
+      }
+
       await appendRunEvent(tx, ctx, (ts) => ({
         type: 'finish',
         ts,
@@ -34,6 +36,7 @@ export const finishTool = defineTool({
         structured: { claims },
       }));
     });
+
     return JSON.stringify({ recorded: true, claims: claims.length });
   },
 });

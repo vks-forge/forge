@@ -22,10 +22,12 @@ export const addCommentTool = defineTool({
   risk: 'write-cwd',
   inputSchema: AddCommentInput,
   async handler(ctx, { ticket, text }) {
-    if (ticket !== ctx.run.ticket_id)
+    if (ticket !== ctx.run.ticket_id) {
       throw new PolicyDeniedError(
         `comments are limited to this run's ticket (${ctx.run.ticket_id})`,
       );
+    }
+
     const event = await ctx.deps.storage.transaction((tx) =>
       appendRunEvent(tx, ctx, (ts) => ({
         type: 'text',
@@ -33,6 +35,7 @@ export const addCommentTool = defineTool({
         text: `[comment on ${ticket}] ${text}`,
       })),
     );
+
     return `comment recorded (seq ${event.seq})`;
   },
 });

@@ -35,6 +35,7 @@ describe('checkBudget', () => {
       scope: 'tool',
       kind: 'calls',
     });
+
     expect(checkBudget(l, u, 'read').verdict).toBe('ok');
   });
 
@@ -46,6 +47,7 @@ describe('checkBudget', () => {
       scope: 'run',
       kind: 'usd',
     });
+
     expect(checkBudget(l, u, 'web_search', 0.05).verdict).toBe('ok');
   });
 
@@ -57,6 +59,7 @@ describe('checkBudget', () => {
       scope: 'run',
       kind: 'calls',
     });
+
     const u3 = recordUsage(recordUsage(u1, 'a', 0), 'a', 0);
     expect(checkBudget(l, u3, 'a').verdict).toBe('deny');
   });
@@ -110,6 +113,7 @@ describe('checkBudget parses its inputs', () => {
     expect(checkBudget(limits({}), EMPTY_USAGE, 'constructor')).toEqual({
       verdict: 'ok',
     });
+
     expect(checkBudget(limits({}), EMPTY_USAGE, '__proto__')).toEqual({ verdict: 'ok' });
   });
 });

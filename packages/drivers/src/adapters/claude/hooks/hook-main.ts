@@ -35,11 +35,13 @@ function peekEvent(stdin: string): string | undefined {
     const v: unknown = JSON.parse(stdin);
     if (v !== null && typeof v === 'object' && 'hook_event_name' in v) {
       const name = (v as { hook_event_name: unknown }).hook_event_name;
+
       return typeof name === 'string' ? name : undefined;
     }
   } catch {
     // unparsable stdin is treated as a blocking event
   }
+
   return undefined;
 }
 
@@ -57,23 +59,37 @@ async function post(io: HookIo, cfg: HookConfig, body: unknown): Promise<HookRes
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(cfg.timeout_ms),
   });
-  if (!res.ok) throw new Error(`server_status_${res.status}`);
+
+  if (!res.ok) {
+    throw new Error(`server_status_${res.status}`);
+  }
+
   let json: unknown;
   try {
     json = await res.json();
   } catch {
     throw new Error('response_malformed');
   }
+
   const parsed = HookResponse.safeParse(json);
-  if (!parsed.success) throw new Error('response_malformed');
+  if (!parsed.success) {
+    throw new Error('response_malformed');
+  }
+
   return parsed.data;
 }
 
 function codeOf(error: unknown): string {
   if (error instanceof Error) {
-    if (error.name === 'TimeoutError' || error.name === 'AbortError') return 'timeout';
-    if (/^[a-z_0-9]+$/.test(error.message)) return error.message;
+    if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+      return 'timeout';
+    }
+
+    if (/^[a-z_0-9]+$/.test(error.message)) {
+      return error.message;
+    }
   }
+
   return 'server_unreachable';
 }
 
@@ -87,12 +103,17 @@ export async function runHook(io: HookIo): Promise<HookResult> {
     } catch {
       return failClosed(rawEvent, 'stdin_not_json');
     }
+
     const payload = HookPayload.safeParse(json);
-    if (!payload.success) return failClosed(rawEvent, 'payload_invalid');
+    if (!payload.success) {
+      return failClosed(rawEvent, 'payload_invalid');
+    }
+
     const event = payload.data.hook_event_name;
     const cfg = await loadHookConfig(io);
     try {
       const res = await post(io, cfg, { event, payload: payload.data, seq: io.now() });
+
       return fromResponse(event, res);
     } catch (error) {
       return failClosed(event, codeOf(error));
@@ -109,12 +130,17 @@ export async function readStream(
 ): Promise<string> {
   const chunks: Buffer[] = [];
   const read = (async () => {
-    for await (const chunk of stream) chunks.push(Buffer.from(chunk as Uint8Array));
+    for await (const chunk of stream) {
+      chunks.push(Buffer.from(chunk as Uint8Array));
+    }
   })();
+
   const timer = new Promise<void>((_, reject) => {
     setTimeout(() => reject(new Error('stdin_timeout')), timeoutMs).unref();
   });
+
   await Promise.race([read, timer]);
+
   return Buffer.concat(chunks).toString('utf8');
 }
 
@@ -141,7 +167,9 @@ export async function main(proc: HookProcess = process): Promise<number> {
   } catch (error) {
     result = failClosed(undefined, codeOf(error));
   }
+
   await write(proc.stdout, result.stdout);
   await write(proc.stderr, result.stderr);
+
   return result.exitCode;
 }

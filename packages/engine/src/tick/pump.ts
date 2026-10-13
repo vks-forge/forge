@@ -20,8 +20,10 @@ import type { EngineState, Pump } from '#/types/engine-state.types.js';
 import type { EngineDeps } from '#/types/engine.types.js';
 
 async function record(deps: EngineDeps, pump: Pump, event: RunEvent): Promise<void> {
-  if (event.type === 'ask')
+  if (event.type === 'ask') {
     pump.asks.set(event.interaction_id, { kind: event.kind, prompt: event.prompt });
+  }
+
   const { seq: _seq, ...rest } = event;
   void _seq;
   try {
@@ -49,12 +51,14 @@ export function startPump(
     asks: new Map(),
     finished: Promise.resolve(),
   };
+
   pump.finished = (async () => {
     try {
       for await (const event of deps.driver.events(handle)) {
         await record(deps, pump, event);
         requestTick(deps, state);
       }
+
       pump.result = await deps.driver.result(handle);
     } catch (e) {
       pump.error = e;
@@ -63,7 +67,9 @@ export function startPump(
       requestTick(deps, state);
     }
   })();
+
   state.pumps.set(runId, pump);
+
   return pump;
 }
 

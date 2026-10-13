@@ -39,26 +39,31 @@ export async function writeRunFiles(
     settingsPath: join(prepared.runDir, 'settings.json'),
     mcpConfigPath: join(prepared.runDir, 'mcp.json'),
   };
+
   const hookConfig = HookConfig.parse({
     run_id: runId,
     server_url: prepared.hookServerUrl,
     token: prepared.hookToken,
     timeout_ms: HOOK_TIMEOUT_MS,
   });
+
   const settings = renderHookSettings({
     hookJsPath,
     configPath: files.hookConfigPath,
     timeoutMs: HOOK_TIMEOUT_MS,
   });
+
   const mcpServers = Object.fromEntries(
     prepared.mcpServers.map((s) => [
       s.name,
       { command: s.command, args: [...s.args], env: { ...s.env } },
     ]),
   );
+
   await mkdir(prepared.runDir, { recursive: true });
   await writeFile(files.hookConfigPath, json(hookConfig), { mode: 0o600 });
   await writeFile(files.settingsPath, json(settings));
   await writeFile(files.mcpConfigPath, json({ mcpServers }));
+
   return files;
 }

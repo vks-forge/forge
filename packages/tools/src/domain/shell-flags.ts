@@ -46,6 +46,7 @@ export function baseName(cmd: string, dialect: ShellDialect): string {
   const rooted = cmd.startsWith('/') || /^[A-Za-z]:[\\/]/.test(cmd);
   const bare = rooted ? (cmd.split(/[\\/]/).pop() ?? cmd) : cmd;
   const noExe = bare.replace(/\.exe$/i, '');
+
   return dialect === 'powershell' ? noExe.toLowerCase() : noExe;
 }
 
@@ -56,12 +57,23 @@ function classify(
 ): ShellFlag[] {
   const flags: ShellFlag[] = [];
   const cmd = baseName(argv[0] ?? '', dialect).toLowerCase();
-  if (dialect === 'powershell' && DYNAMIC_POWERSHELL.has(cmd)) bail('dynamic_execution');
+  if (dialect === 'powershell' && DYNAMIC_POWERSHELL.has(cmd)) {
+    bail('dynamic_execution');
+  }
+
   const evalArg = argv.slice(1).some(isEvalFlag);
-  if (EVAL_BUILTINS.has(cmd) || (INTERPRETERS.has(cmd) && evalArg))
+  if (EVAL_BUILTINS.has(cmd) || (INTERPRETERS.has(cmd) && evalArg)) {
     flags.push('interpreter_eval');
-  if (isWrapper(cmd)) flags.push('wrapper');
-  if (piped && INTERPRETERS.has(cmd)) flags.push('pipe_to_interpreter');
+  }
+
+  if (isWrapper(cmd)) {
+    flags.push('wrapper');
+  }
+
+  if (piped && INTERPRETERS.has(cmd)) {
+    flags.push('pipe_to_interpreter');
+  }
+
   return flags;
 }
 
@@ -81,9 +93,14 @@ export function buildSegment(
   while (dialect === 'bash' && args.length > 0 && ASSIGNMENT.test(args[0] ?? '')) {
     assignments.push(args.shift() as string);
   }
+
   const all = new Set<ShellFlag>([...flags, ...classify(args, dialect, piped)]);
-  if (extra) all.add(extra);
+  if (extra) {
+    all.add(extra);
+  }
+
   const head = args[0] === undefined ? '' : baseName(args[0], dialect);
+
   return {
     argv: args,
     text: args.join(' '),

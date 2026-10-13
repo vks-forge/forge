@@ -52,6 +52,7 @@ export function createClaudeDriver(deps: ClaudeDriverDeps): WorkerDriver {
   const git = deps.git ?? createGitCli();
   const hookJsPath =
     deps.hookJsPath ?? fileURLToPath(new URL('../../../bin/hook.js', import.meta.url));
+
   const factory = deps.engineFactories?.[config.engine] ?? ENGINES[config.engine];
   const engine = factory({
     config,
@@ -63,12 +64,16 @@ export function createClaudeDriver(deps: ClaudeDriverDeps): WorkerDriver {
     baseEnv,
     acpEntry: deps.acpEntry,
   });
+
   const capabilities = engine.capabilities();
   const runs = new Map<string, SupervisedRun>();
 
   const get = (handle: RunHandle): SupervisedRun => {
     const run = runs.get(handle.runId);
-    if (!run) throw new InvalidInputError(`unknown run ${handle.runId}`);
+    if (!run) {
+      throw new InvalidInputError(`unknown run ${handle.runId}`);
+    }
+
     return run;
   };
 
@@ -84,12 +89,14 @@ export function createClaudeDriver(deps: ClaudeDriverDeps): WorkerDriver {
       checked,
       existing: await existingSettingsSources(checked),
     });
+
     let base: string | null = null;
     try {
       base = await git.head(req.cwd);
     } catch (e) {
       log('warn', 'git head failed; files touched will be empty', { error: String(e) });
     }
+
     const env = buildChildEnv(baseEnv, req.env, prepared.env);
     const run = superviseRun({
       req,
@@ -103,7 +110,9 @@ export function createClaudeDriver(deps: ClaudeDriverDeps): WorkerDriver {
       launch: (sink) =>
         engine.launch({ req, prepared, files, env, prompt, resumeSession }, sink),
     });
+
     runs.set(req.runId, run);
+
     return { runId: req.runId, ...(resumeSession ? { session: resumeSession } : {}) };
   }
 
@@ -113,22 +122,30 @@ export function createClaudeDriver(deps: ClaudeDriverDeps): WorkerDriver {
     preflight: () => engine.preflight(),
     async start(req) {
       const parsed = RunRequest.safeParse(req);
-      if (!parsed.success)
+      if (!parsed.success) {
         throw new InvalidInputError(`invalid run request: ${parsed.error.message}`, {
           cause: parsed.error,
         });
+      }
+
       const live = runs.get(parsed.data.runId);
-      if (live && !live.isSettled())
+      if (live && !live.isSettled()) {
         throw new InvalidInputError(`run ${parsed.data.runId} is already active`);
+      }
+
       return begin(parsed.data, parsed.data.resume, parsed.data.prompt);
     },
     async resume(handle) {
       const prior = get(handle);
-      if (!prior.isSettled())
+      if (!prior.isSettled()) {
         throw new InvalidInputError(`run ${handle.runId} is still active`);
+      }
+
       const session = handle.session ?? prior.session();
-      if (!session)
+      if (!session) {
         throw new InvalidInputError(`run ${handle.runId} has no session to resume`);
+      }
+
       return begin(prior.req, session, CONTINUE_PROMPT);
     },
     steer: (handle, message, mode, inboxSeq) =>

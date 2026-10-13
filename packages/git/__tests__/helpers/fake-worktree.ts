@@ -27,6 +27,7 @@ const BASE = new Map([
   ['README.md', 'hello\n'],
   ['.gitignore', '*.log\n'],
 ]);
+
 const sha = (n: number): string => n.toString(16).padStart(40, '0');
 const ignored = (name: string): boolean => name.endsWith('.log');
 
@@ -38,7 +39,10 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
 
   const tree = (path: string): FakeTree => {
     const t = trees.get(path);
-    if (!t) throw new InvalidInputError(`no such worktree: ${path}`);
+    if (!t) {
+      throw new InvalidInputError(`no such worktree: ${path}`);
+    }
+
     return t;
   };
 
@@ -47,16 +51,21 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
       if (baseRef.startsWith('-') || branch.startsWith('-') || branch.includes('..')) {
         throw new InvalidInputError('unsafe ref');
       }
+
       const path = `${repoRoot}/.worktrees/${ticketId}`;
       const existing = trees.get(path);
       if (existing) {
-        if (existing.branch !== branch)
+        if (existing.branch !== branch) {
           throw new InvalidInputError('path on another branch');
+        }
+
         return { path, baseSha: existing.baseSha };
       }
+
       if ([...trees.values()].some((t) => t.branch === branch)) {
         throw new InvalidInputError('branch checked out elsewhere');
       }
+
       const baseSha = sha(counter++);
       branches.add(branch);
       trees.set(path, {
@@ -67,6 +76,7 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
         files: new Map(BASE),
         committed: new Map(BASE),
       });
+
       return { path, baseSha };
     },
     async remove(path) {
@@ -76,8 +86,11 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
       const t = tree(path);
       const out: string[] = [];
       for (const [name, content] of t.files) {
-        if (!ignored(name) && BASE.get(name) !== content) out.push(name);
+        if (!ignored(name) && BASE.get(name) !== content) {
+          out.push(name);
+        }
       }
+
       return out.sort();
     },
     async diff(path) {
@@ -87,15 +100,25 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
       const added: [string, string][] = [];
       const gone: string[] = [];
       for (const [name, content] of t.files) {
-        if (ignored(name)) continue;
+        if (ignored(name)) {
+          continue;
+        }
+
         const was = BASE.get(name);
-        if (was === undefined) added.push([name, content]);
-        else if (was !== content) {
+        if (was === undefined) {
+          added.push([name, content]);
+        } else if (was !== content) {
           files.push({ status: 'M', path: name });
           patch.push(`--- a/${name}\n+++ b/${name}\n+${content}`);
         }
       }
-      for (const name of BASE.keys()) if (!t.files.has(name)) gone.push(name);
+
+      for (const name of BASE.keys()) {
+        if (!t.files.has(name)) {
+          gone.push(name);
+        }
+      }
+
       for (const [name, content] of added) {
         const from = gone.findIndex((g) => BASE.get(g) === content);
         if (from >= 0) {
@@ -106,8 +129,13 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
           patch.push(`+++ b/${name}\n+${content}`);
         }
       }
-      for (const name of gone) files.push({ status: 'D', path: name });
+
+      for (const name of gone) {
+        files.push({ status: 'D', path: name });
+      }
+
       files.sort((a, b) => (a.path < b.path ? -1 : 1));
+
       return { files, patch: patch.join('\n') };
     },
     async commitAll(path) {
@@ -116,9 +144,14 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
       const same =
         visible.size === t.committed.size &&
         [...visible].every(([n, c]) => t.committed.get(n) === c);
-      if (same) return null;
+
+      if (same) {
+        return null;
+      }
+
       t.committed = visible;
       t.head = sha(counter++);
+
       return t.head;
     },
     async head(path) {

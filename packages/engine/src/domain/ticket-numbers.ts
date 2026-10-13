@@ -15,11 +15,18 @@ export function nextTicketNumber(ids: readonly string[], prefix: string): number
   const lead = `${prefix}-`;
   let max = 0;
   for (const id of ids) {
-    if (!id.startsWith(lead)) continue;
+    if (!id.startsWith(lead)) {
+      continue;
+    }
+
     const rest = id.slice(lead.length);
-    if (!/^[1-9][0-9]*$/.test(rest)) continue;
+    if (!/^[1-9][0-9]*$/.test(rest)) {
+      continue;
+    }
+
     max = Math.max(max, Number(rest));
   }
+
   return max + 1;
 }
 

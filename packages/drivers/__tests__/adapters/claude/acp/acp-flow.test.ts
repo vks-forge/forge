@@ -19,6 +19,7 @@ import { waitFor } from '#tests/helpers/wait-for.js';
 
 const promptSeen = (rig: ReturnType<typeof makeAcpRig>) => () =>
   rig.agents[0]?.methods().includes('session/prompt') ?? false;
+
 const receiptAsked = (rig: ReturnType<typeof makeAcpRig>) => () =>
   rig.receipts.asked.length > 0;
 
@@ -31,7 +32,10 @@ const bash = (id: string, command = 'echo hi') => ({
 
 async function events(rig: ReturnType<typeof makeAcpRig>, runId = 'run-1') {
   const out: RunEvent[] = [];
-  for await (const e of rig.driver.events({ runId })) out.push(e);
+  for await (const e of rig.driver.events({ runId })) {
+    out.push(e);
+  }
+
   return out;
 }
 
@@ -48,6 +52,7 @@ describe('ACP engine: update normalisation (rule 5)', () => {
           sessionUpdate: 'agent_message_chunk',
           content: { type: 'text', text: 'hi' },
         });
+
         await ctx.update({ sessionUpdate: 'tool_call', ...bash('t1') });
         await ctx.update({
           sessionUpdate: 'tool_call_update',
@@ -55,6 +60,7 @@ describe('ACP engine: update normalisation (rule 5)', () => {
           status: 'completed',
           rawOutput: 'out',
         });
+
         await ctx.update({ sessionUpdate: 'plan', entries: [] });
         await ctx.update({
           sessionUpdate: 'usage_update',
@@ -62,6 +68,7 @@ describe('ACP engine: update normalisation (rule 5)', () => {
           size: 100,
           cost: { amount: 0.02, currency: 'USD' },
         });
+
         return {
           stopReason: 'end_turn',
           usage: {
@@ -74,6 +81,7 @@ describe('ACP engine: update normalisation (rule 5)', () => {
         };
       },
     };
+
     const h = await rig.driver.start(rig.request());
     const result = await rig.driver.result(h);
     const all = await events(rig);
@@ -84,11 +92,13 @@ describe('ACP engine: update normalisation (rule 5)', () => {
       'tool_result',
       'usage',
     ]);
+
     expect(all[2]).toMatchObject({
       call_id: 't1',
       name: 'Bash',
       input: { command: 'echo hi' },
     });
+
     expect(all[3]).toMatchObject({ call_id: 't1', output: 'out', is_error: false });
     expect(result).toMatchObject({
       status: 'success',
@@ -97,6 +107,7 @@ describe('ACP engine: update normalisation (rule 5)', () => {
       usage: { in: 20, out: 10, cachedIn: 4, cacheWrite: 2 },
       filesTouched: ['src/a.ts'],
     });
+
     expect(rig.logs.some((l) => l.level === 'debug' && l.message.includes('plan'))).toBe(
       true,
     );
@@ -113,11 +124,14 @@ describe('ACP engine: permission handler answers from receipts (one door)', () =
       auth: 'account',
       onPrompt: async (ctx: PromptContext) => {
         answer = selected(await ctx.permission(bash(id)));
+
         return { stopReason: 'end_turn' };
       },
     };
+
     const h = await rig.driver.start(rig.request());
     await rig.driver.result(h);
+
     return { answer, evs: await events(rig) };
   }
 
@@ -132,6 +146,7 @@ describe('ACP engine: permission handler answers from receipts (one door)', () =
       tool: 'shell',
       decision: 'allow',
     });
+
     const asked = rig.receipts.asked[0];
     expect(asked).toMatchObject({ runId: 'run-1', id: 'p1' });
     expect(asked?.match).toEqual({
@@ -164,6 +179,7 @@ describe('ACP engine: permission handler answers from receipts (one door)', () =
     expect(evs.find((e) => e.type === 'error')).toMatchObject({
       family: 'policy_denied',
     });
+
     expect(evs.find((e) => e.type === 'permission')).toMatchObject({ decision: 'deny' });
   });
 });
@@ -174,6 +190,7 @@ describe('ACP engine: receipt cross-check', () => {
     onPrompt: async (ctx: PromptContext) => {
       await ctx.update({ sessionUpdate: 'tool_call', ...bash('ghost') });
       await ctx.cancelled;
+
       return { stopReason: 'cancelled' as const };
     },
   };
@@ -200,9 +217,11 @@ describe('ACP engine: receipt cross-check', () => {
       auth: 'account',
       onPrompt: async (ctx) => {
         await ctx.update({ sessionUpdate: 'tool_call', ...bash('late') });
+
         return { stopReason: 'end_turn' };
       },
     };
+
     const h = await rig.driver.start(rig.request());
     await waitFor(receiptAsked(rig), 'receipt lookup');
     await rig.clock.advance(400);
@@ -218,13 +237,16 @@ describe('ACP engine: receipt cross-check', () => {
       { name: 'Bash', argsHash: sha256Hex(canonicalJson({ command: 'echo hi' })) },
       'allow',
     );
+
     rig.next = {
       auth: 'account',
       onPrompt: async (ctx) => {
         await ctx.update({ sessionUpdate: 'tool_call', ...bash('acp-id') });
+
         return { stopReason: 'end_turn' };
       },
     };
+
     const h = await rig.driver.start(rig.request());
     expect((await rig.driver.result(h)).status).toBe('success');
   });
@@ -236,9 +258,11 @@ describe('ACP engine: receipt cross-check', () => {
       auth: 'account',
       onPrompt: async (ctx) => {
         await ctx.update({ sessionUpdate: 'tool_call', ...bash('x') });
+
         return { stopReason: 'end_turn' };
       },
     };
+
     const h = await rig.driver.start(rig.request());
     expect((await rig.driver.result(h)).status).toBe('success');
   });
@@ -251,6 +275,7 @@ describe('ACP engine: steering (rule 6)', () => {
     rig.next = { ...rig.next, steering };
     const h = await rig.driver.start(rig.request());
     await waitFor(promptSeen(rig), 'prompt');
+
     return { rig, h };
   }
 
@@ -262,6 +287,7 @@ describe('ACP engine: steering (rule 6)', () => {
       prompt: [{ type: 'text', text: 'change course' }],
       _meta: { steering: { idleBehavior: 'promptRequired' } },
     });
+
     await rig.driver.cancel(h);
     await rig.driver.result(h);
     expect((await events(rig)).find((e) => e.type === 'inbox_delivered')).toMatchObject({
@@ -275,6 +301,7 @@ describe('ACP engine: steering (rule 6)', () => {
     await expect(rig.driver.steer(h, 'x', 'steer')).rejects.toMatchObject({
       errorFamily: 'invalid_input',
     });
+
     expect(rig.agents[0]?.methods()).not.toContain('_session/steering');
     await rig.driver.cancel(h);
   });
@@ -330,6 +357,7 @@ describe('ACP engine: cancel and process tree (rule 7)', () => {
       auth: 'account',
       onPrompt: async () => new Promise(() => undefined),
     };
+
     const h = await rig.driver.start(rig.request());
     await waitFor(promptSeen(rig), 'prompt');
     const cancelling = rig.driver.cancel(h);

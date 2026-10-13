@@ -26,4 +26,5 @@ try {
     `forge-hook: fail-closed: cannot load hook (${why.split('\n')[0]}). Run pnpm build.\n`,
   );
 }
+
 process.exit(code);

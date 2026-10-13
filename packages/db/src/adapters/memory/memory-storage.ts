@@ -71,6 +71,7 @@ export function createMemoryStorage(): StorageAdapter {
   const state = emptyState();
   const tx = buildTx(state);
   const mutex = createMutex();
+
   return {
     transaction: (fn) =>
       mutex.run(async () => {

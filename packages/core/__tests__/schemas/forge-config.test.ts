@@ -38,6 +38,7 @@ describe('default .forge/config/forge.yaml', () => {
       dispatch_prompt: 'opus',
       steer_reply: 'opus',
     });
+
     expect(models.worker).toEqual({
       express: 'sonnet',
       standard: 'sonnet',

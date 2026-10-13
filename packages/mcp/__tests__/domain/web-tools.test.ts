@@ -48,12 +48,14 @@ const fake = createServer((req, res) => {
     }),
   );
 });
+
 let base = '';
 beforeAll(async () => {
   fake.listen(0, '127.0.0.1');
   await once(fake, 'listening');
   base = `http://127.0.0.1:${(fake.address() as AddressInfo).port}`;
 });
+
 afterAll(() => {
   fake.close();
 });
@@ -70,10 +72,12 @@ describe('web_search', () => {
         engines: ['google', 'github'],
       },
     });
+
     expect(res.isError).toBeFalsy();
     expect(textOf(res)).toMatch(
       /^<untrusted-content id="[0-9a-f]+" source="http:\/\/127\.0\.0\.1/,
     );
+
     const body = unwrapJson(textOf(res));
     expect(body.results).toHaveLength(3);
     expect(Object.keys(body.results[0] ?? {}).sort()).toEqual([
@@ -81,6 +85,7 @@ describe('web_search', () => {
       'title',
       'url',
     ]);
+
     expect(body.results[0]?.snippet.length).toBeLessThanOrEqual(300);
     expect(lastUrl).toContain('format=json');
     expect(lastUrl).toContain('q=vitest+coverage');
@@ -94,6 +99,7 @@ describe('web_search', () => {
       name: 'web_search',
       arguments: { query: 'x', max_results: 10 },
     });
+
     const urls = unwrapJson(textOf(res)).results.map((r: { url: string }) => r.url);
     expect(urls).not.toContain('javascript:alert(1)');
     expect(urls.length).toBeLessThanOrEqual(10);
@@ -101,6 +107,7 @@ describe('web_search', () => {
       name: 'web_search',
       arguments: { query: 'x', max_results: 11 },
     });
+
     expect(over.isError).toBe(true);
   });
 
@@ -111,6 +118,7 @@ describe('web_search', () => {
       name: 'web_search',
       arguments: { query: 'x' },
     });
+
     expect(res.isError).toBe(true);
     expect(textOf(res)).toMatch(/loopback|allow/i);
   });
@@ -123,15 +131,18 @@ describe('web_search', () => {
           headers: { 'content-type': 'application/json' },
         },
       );
+
     const c = await connect({
       searxng: { baseUrl: 'http://search.lan:8888', allowHosts: ['search.lan'] },
       searchFetch: stub,
     });
+
     close = c.close;
     const res = await c.client.callTool({
       name: 'web_search',
       arguments: { query: 'x' },
     });
+
     expect(res.isError).toBeFalsy();
   });
 
@@ -144,12 +155,14 @@ describe('web_search', () => {
           ],
         }),
       );
+
     const c = await connect({ searxng: { baseUrl: base }, searchFetch: stub });
     close = c.close;
     const res = await c.client.callTool({
       name: 'web_search',
       arguments: { query: 'x' },
     });
+
     expect(textOf(res).match(/<\/untrusted-content/g)).toHaveLength(1);
   });
 
@@ -164,12 +177,14 @@ describe('web_search', () => {
           },
         }),
       );
+
     const c = await connect({ searxng: { baseUrl: base }, searchFetch: stub });
     close = c.close;
     const res = await c.client.callTool({
       name: 'web_search',
       arguments: { query: 'x' },
     });
+
     expect(res.isError).toBe(true);
     expect(textOf(res)).toMatch(/too large/i);
     expect(pulled).toBeLessThan(40);
@@ -182,16 +197,19 @@ describe('web_search', () => {
       (await none.client.callTool({ name: 'web_search', arguments: { query: 'x' } }))
         .isError,
     ).toBe(true);
+
     await close();
     const bad = await connect({
       searxng: { baseUrl: base },
       searchFetch: async () => new Response('boom', { status: 500 }),
     });
+
     close = bad.close;
     const res = await bad.client.callTool({
       name: 'web_search',
       arguments: { query: 'x' },
     });
+
     expect(res.isError).toBe(true);
     expect(textOf(res)).toMatch(/500/);
   });
@@ -215,6 +233,7 @@ describe('web_fetch', () => {
       name: 'web_fetch',
       arguments: { url: 'https://rebind.example/' },
     });
+
     expect(res.isError).toBe(true);
   });
 
@@ -232,11 +251,13 @@ describe('web_fetch', () => {
         ),
       }),
     });
+
     close = c.close;
     const res = await c.client.callTool({
       name: 'web_fetch',
       arguments: { url: 'https://example.com/' },
     });
+
     expect(res.isError).toBeFalsy();
     const text = textOf(res);
     expect(text).toContain('Hello');
@@ -261,6 +282,7 @@ describe('docs_lookup', () => {
       // symlinks may need privileges on Windows; the escape test then relies on `..`.
     }
   });
+
   afterAll(() => {
     rmSync(root, { recursive: true, force: true });
   });
@@ -272,6 +294,7 @@ describe('docs_lookup', () => {
       name: 'docs_lookup',
       arguments: { path: 'design/a.md' },
     });
+
     expect(textOf(res)).toContain('hello');
   });
 
@@ -282,6 +305,7 @@ describe('docs_lookup', () => {
       name: 'docs_lookup',
       arguments: { path: 'design/*.md' },
     });
+
     const text = textOf(res);
     expect(text).toContain('design/a.md');
     expect(text).toContain('design/big.md');
@@ -295,6 +319,7 @@ describe('docs_lookup', () => {
       name: 'docs_lookup',
       arguments: { path: 'design/big.md', max_bytes: 5_000 },
     });
+
     const text = textOf(res);
     expect(text).toMatch(/truncated/i);
     expect(text.length).toBeLessThan(1_300);
@@ -323,6 +348,7 @@ describe('docs_lookup', () => {
       name: 'docs_lookup',
       arguments: { path: '*a*a*a*a*a*a*a*a*a*.md' },
     });
+
     expect(res.isError).toBe(true);
     expect(textOf(res)).toMatch(/wildcard/i);
   });
@@ -335,12 +361,14 @@ describe('docs_lookup', () => {
       name: 'docs_lookup',
       arguments: { path: `${'**/'.repeat(30)}${'*'.repeat(200)}x.md` },
     });
+
     expect(Date.now() - started).toBeLessThan(1_000);
     expect(hostile.isError).toBe(true);
     const ok = await c.client.callTool({
       name: 'docs_lookup',
       arguments: { path: 'design/*****.md' },
     });
+
     expect(textOf(ok)).toContain('design/a.md');
   });
 
@@ -351,6 +379,7 @@ describe('docs_lookup', () => {
       name: 'docs_lookup',
       arguments: { path: 'a.md' },
     });
+
     expect(res.isError).toBe(true);
   });
 });

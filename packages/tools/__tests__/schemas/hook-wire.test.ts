@@ -41,6 +41,7 @@ describe('hook wire schemas', () => {
     expect(
       HookResponse.safeParse({ decision: 'maybe', reason: '', receipt_hash: '' }).success,
     ).toBe(false);
+
     expect(
       HookResponse.safeParse({ decision: 'deny', reason: 'r', receipt_hash: '' }).success,
     ).toBe(true);

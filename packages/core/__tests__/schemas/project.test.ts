@@ -20,6 +20,7 @@ describe('ProjectConfig git_host', () => {
     profile: 'ts',
     default_harness: 'claude-code',
   };
+
   const gh = {
     kind: 'github',
     owner: 'o',
@@ -34,10 +35,12 @@ describe('ProjectConfig git_host', () => {
       base_branch: 'main',
       key_secret: 'github-app-key',
     });
+
     const l = ProjectConfig.parse({
       ...ok,
       git_host: { kind: 'local', remote_path: 'D:/r.git' },
     });
+
     expect(l.git_host).toMatchObject({ base_branch: 'main' });
   });
 
@@ -45,9 +48,11 @@ describe('ProjectConfig git_host', () => {
     expect(
       ProjectConfig.safeParse({ ...ok, git_host: { ...gh, app_id: 'x1' } }).success,
     ).toBe(false);
+
     expect(
       ProjectConfig.safeParse({ ...ok, git_host: { ...gh, key_secret: '../k' } }).success,
     ).toBe(false);
+
     expect(ProjectConfig.safeParse({ ...ok, git_host: { kind: 'gitlab' } }).success).toBe(
       false,
     );
@@ -72,6 +77,7 @@ describe('ProjectConfig', () => {
       commands: { test: 'pnpm test' },
       remote: 'https://github.com/x/y',
     });
+
     expect(r.success).toBe(true);
   });
 

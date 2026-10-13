@@ -127,6 +127,13 @@ need a code edit for a config-shaped thing are a smell.
   `@forge/<name>`. A `./` import is allowed only for a sibling file in
   the same folder; `../` is a lint error.
 - ≤ 300 lines per file, one concept per file, `index.ts` re-exports only.
+- **Layout reads like a careful human wrote it** (d-0063): every `if`/`else`/loop
+  body in braces on its own lines; a blank line before `return`, after each
+  multi-line block or statement, after imports, and between top-level
+  declarations. Group related lines, separate logical steps. Prettier formats,
+  ESLint `--fix` adds what Prettier cannot (`curly`,
+  `@stylistic/padding-line-between-statements`); run `pnpm lint --fix` before
+  `pnpm format`.
 - `kebab-case.ts`, `PascalCase` types, `camelCase` functions,
   `SCREAMING_CASE` constants. Ids `<PROJECT>-<n>`, branches
   `<type>/<id>-<slug>`.

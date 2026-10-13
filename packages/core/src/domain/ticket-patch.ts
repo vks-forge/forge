@@ -29,7 +29,9 @@ export function toTicketPatch(next: Ticket): TicketPatch {
     blocked_by: _blockedBy,
     ...rest
   } = next;
+
   void [_id, _project, _created, _v, _parent, _blockedBy];
+
   return {
     ...rest,
     blocked_reason: rest.blocked_reason,

@@ -66,7 +66,10 @@ export function appendEffect(
 ): Promise<readonly Receipt[]> {
   return log.append(runId, (view) => {
     const d = view.openDecision(decisionId);
-    if (!d) throw new Error(`no open decision ${decisionId}`);
+    if (!d) {
+      throw new Error(`no open decision ${decisionId}`);
+    }
+
     return [
       makeEffectReceipt(
         d,

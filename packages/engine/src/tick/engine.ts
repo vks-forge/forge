@@ -73,11 +73,13 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
     now,
     nowIso: iso(now),
   };
+
   beginTick(state);
   if (state.firstTick) {
     await phase(ctx, 'restart reconcile', crashForeignRuns);
     state.firstTick = false;
   }
+
   await phase(ctx, 'settle runs', settleFinishedPumps);
   await phase(ctx, 'stall scan', cancelStalled);
   await phase(ctx, 'expire interactions', expireInteractions);
@@ -85,6 +87,7 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
   await phase(ctx, 'triage', triageInbox);
   await phase(ctx, 'dispatch', dispatchReady);
   await phase(ctx, 'invariants', checkInvariants);
+
   return ctx.report;
 }
 
@@ -103,9 +106,13 @@ export function createEngine(deps: EngineDeps): Engine {
 
   const engine: Engine = {
     tick() {
-      if (state.running) return state.running;
+      if (state.running) {
+        return state.running;
+      }
+
       const tick = runTick(deps, state).finally(() => endTick(deps, state));
       state.running = tick;
+
       return tick;
     },
     requestTick: () => requestTick(deps, state),
@@ -116,7 +123,11 @@ export function createEngine(deps: EngineDeps): Engine {
       const moved = await moveTicket(deps.storage, ticketId, nowIso, (t: Ticket) =>
         TERMINAL_STATUSES.includes(t.status) ? null : { events: [{ type: 'cancelled' }] },
       );
-      if (!moved.ok) return false;
+
+      if (!moved.ok) {
+        return false;
+      }
+
       const runId = moved.ticket.assignee_run_id;
       const pump = runId ? state.pumps.get(runId) : undefined;
       if (pump) {
@@ -125,6 +136,7 @@ export function createEngine(deps: EngineDeps): Engine {
           deps.log?.('error', `cancel of ${pump.runId} failed`, { error: String(e) });
         });
       }
+
       if (moved.ticket.worktree) {
         await deps.worktrees.remove(moved.ticket.worktree).catch((e: unknown) => {
           deps.log?.('warn', `could not remove worktree of ${ticketId}`, {
@@ -132,10 +144,13 @@ export function createEngine(deps: EngineDeps): Engine {
           });
         });
       }
+
       requestTick(deps, state);
+
       return true;
     },
     liveRunIds: () => [...state.pumps.keys()],
   };
+
   return engine;
 }

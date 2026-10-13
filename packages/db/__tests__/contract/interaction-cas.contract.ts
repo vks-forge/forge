@@ -29,6 +29,7 @@ export function describeInteractionCasContract(getDb: () => StorageAdapter): voi
       const won = await tx((t) =>
         t.interactions.answer('i1', { choice: 'sqlite' }, ANSWERED),
       );
+
       expect(won).toBe(true);
       expect(await tx((t) => t.interactions.get('i1'))).toMatchObject({
         status: 'answered',
@@ -43,6 +44,7 @@ export function describeInteractionCasContract(getDb: () => StorageAdapter): voi
       const second = await tx((t) =>
         t.interactions.answer('i1', 'second', '2026-10-13T04:00:00.000Z'),
       );
+
       expect(second).toBe(false);
       expect(await tx((t) => t.interactions.get('i1'))).toMatchObject({
         answer: 'first',
@@ -55,11 +57,13 @@ export function describeInteractionCasContract(getDb: () => StorageAdapter): voi
         await t.interactions.insert(makeInteraction('c1', { status: 'cancelled' }));
         await t.interactions.insert(makeInteraction('t1', { status: 'timed_out' }));
       });
+
       const results = await tx(async (t) => [
         await t.interactions.answer('nope', 'x', ANSWERED),
         await t.interactions.answer('c1', 'x', ANSWERED),
         await t.interactions.answer('t1', 'x', ANSWERED),
       ]);
+
       expect(results).toEqual([false, false, false]);
       expect((await tx((t) => t.interactions.get('c1')))?.status).toBe('cancelled');
     });
@@ -78,6 +82,7 @@ export function describeInteractionCasContract(getDb: () => StorageAdapter): voi
       expect(await tx((t) => t.interactions.get('i1'))).toMatchObject({
         status: 'timed_out',
       });
+
       expect('answer' in ((await tx((t) => t.interactions.get('i1'))) ?? {})).toBe(false);
     });
 
@@ -87,11 +92,13 @@ export function describeInteractionCasContract(getDb: () => StorageAdapter): voi
         await t.interactions.insert(makeInteraction('i2'));
         await t.interactions.answer('i2', 'x', ANSWERED);
       });
+
       const results = await tx(async (t) => [
         await t.interactions.expire('i1', '2026-10-13T12:00:00.000Z'),
         await t.interactions.expire('i2', DUE),
         await t.interactions.expire('nope', DUE),
       ]);
+
       expect(results).toEqual([false, false, false]);
       expect((await tx((t) => t.interactions.get('i1')))?.status).toBe('pending');
       expect((await tx((t) => t.interactions.get('i2')))?.status).toBe('answered');
@@ -103,6 +110,7 @@ export function describeInteractionCasContract(getDb: () => StorageAdapter): voi
         getDb().transaction((t) => t.interactions.answer('i1', 'a', DUE)),
         getDb().transaction((t) => t.interactions.expire('i1', DUE)),
       ]);
+
       expect([a, e].filter(Boolean)).toHaveLength(1);
       const status = (await tx((t) => t.interactions.get('i1')))?.status;
       expect(status).toBe(a ? 'answered' : 'timed_out');
@@ -120,10 +128,12 @@ export function describeInteractionCasContract(getDb: () => StorageAdapter): voi
         await t.interactions.insert(
           makeInteraction('i2', { asked_at: '2026-10-13T02:00:00.000Z' }),
         );
+
         await t.interactions.insert(makeInteraction('i1'));
         await t.interactions.insert(makeInteraction('i3', { status: 'cancelled' }));
         await t.interactions.insert(makeInteraction('i4', { ticket_id: 'SF-2' }));
       });
+
       const list = await tx((t) => t.interactions.listByTicket('SF-1'));
       expect(list.map((i) => i.id)).toEqual(['i1', 'i3', 'i2']);
       expect(await tx((t) => t.interactions.listByTicket('SF-9'))).toEqual([]);

@@ -32,6 +32,7 @@ export function parseEnv(env: Env): ForgeEnv {
     const names = parsed.error.issues.map((i) => i.path.join('.')).join(', ');
     throw new InvalidInputError(`missing or invalid environment: ${names}`);
   }
+
   return parsed.data;
 }
 
@@ -41,6 +42,7 @@ export function parseEnv(env: Env): ForgeEnv {
  */
 export function depsFromEnv(env: Env): ForgeMcpDeps {
   const e = parseEnv(env);
+
   return withDefaultNetwork({
     storage: openExistingStorage(e.FORGE_DB_PATH),
     runId: e.FORGE_RUN_ID,

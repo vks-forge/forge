@@ -22,8 +22,10 @@ export async function killTree(
   const pid = child.pid;
   if (pid === undefined) {
     child.kill('SIGKILL');
+
     return;
   }
+
   if (options.platform === 'win32') {
     await new Promise<void>((resolve) => {
       try {
@@ -34,9 +36,12 @@ export async function killTree(
         resolve();
       }
     });
+
     child.kill('SIGKILL');
+
     return;
   }
+
   const signalGroup = options.signalGroup ?? ((p, s) => process.kill(-p, s));
   try {
     signalGroup(pid, 'SIGKILL');

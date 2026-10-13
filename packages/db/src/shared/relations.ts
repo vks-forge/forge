@@ -25,9 +25,14 @@ export function deriveTicketRelations(
   let parent: TicketId | undefined;
   const blockers = new Set<TicketId>();
   for (const e of edges) {
-    if (e.from_id === id && e.kind === 'spawned_from') parent ??= e.to_id;
-    else if (e.from_id === id && e.kind === 'depends_on') blockers.add(e.to_id);
-    else if (e.to_id === id && e.kind === 'blocks') blockers.add(e.from_id);
+    if (e.from_id === id && e.kind === 'spawned_from') {
+      parent ??= e.to_id;
+    } else if (e.from_id === id && e.kind === 'depends_on') {
+      blockers.add(e.to_id);
+    } else if (e.to_id === id && e.kind === 'blocks') {
+      blockers.add(e.from_id);
+    }
   }
+
   return { parent, blocked_by: [...blockers] };
 }

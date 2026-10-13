@@ -40,8 +40,13 @@ const V6_BLOCKED: readonly [string, number][] = [
 ];
 
 const blocked = new BlockList();
-for (const [net, prefix] of V4_BLOCKED) blocked.addSubnet(net, prefix, 'ipv4');
-for (const [net, prefix] of V6_BLOCKED) blocked.addSubnet(net, prefix, 'ipv6');
+for (const [net, prefix] of V4_BLOCKED) {
+  blocked.addSubnet(net, prefix, 'ipv4');
+}
+
+for (const [net, prefix] of V6_BLOCKED) {
+  blocked.addSubnet(net, prefix, 'ipv6');
+}
 
 /** Expands an IPv6 text address to 16 bytes, or null when malformed. */
 function v6Bytes(ip: string): number[] | null {
@@ -49,29 +54,47 @@ function v6Bytes(ip: string): number[] | null {
   const dotted = /(\d+\.\d+\.\d+\.\d+)$/.exec(text);
   if (dotted) {
     const parts = (dotted[1] as string).split('.').map(Number);
-    if (parts.some((p) => p > 255)) return null;
+    if (parts.some((p) => p > 255)) {
+      return null;
+    }
+
     const hi = ((parts[0] as number) << 8) | (parts[1] as number);
     const lo = ((parts[2] as number) << 8) | (parts[3] as number);
     text = text.slice(0, dotted.index) + `${hi.toString(16)}:${lo.toString(16)}`;
   }
+
   const halves = text.split('::');
-  if (halves.length > 2) return null;
+  if (halves.length > 2) {
+    return null;
+  }
+
   const head = halves[0] ? halves[0].split(':') : [];
   const tail = halves.length === 2 && halves[1] ? halves[1].split(':') : [];
   const missing = 8 - head.length - tail.length;
-  if (halves.length === 1 ? missing !== 0 : missing < 0) return null;
+  if (halves.length === 1 ? missing !== 0 : missing < 0) {
+    return null;
+  }
+
   const groups = [
     ...head,
     ...Array<string>(halves.length === 2 ? missing : 0).fill('0'),
     ...tail,
   ];
-  if (groups.length !== 8) return null;
+
+  if (groups.length !== 8) {
+    return null;
+  }
+
   const bytes: number[] = [];
   for (const g of groups) {
-    if (!/^[0-9a-f]{1,4}$/i.test(g)) return null;
+    if (!/^[0-9a-f]{1,4}$/i.test(g)) {
+      return null;
+    }
+
     const n = parseInt(g, 16);
     bytes.push(n >> 8, n & 255);
   }
+
   return bytes;
 }
 
@@ -85,33 +108,54 @@ function embeddedV4(bytes: number[]): string | null {
     bytes[2] === 0xff &&
     bytes[3] === 0x9b &&
     zeros(4, 12);
+
   return mapped || nat64 ? bytes.slice(12).join('.') : null;
 }
 
 /** True when `ip` is private, loopback, link-local, multicast, reserved or not a valid IP. */
 export function isBlockedAddress(ip: string): boolean {
   const family = isIP(ip);
-  if (family === 4) return blocked.check(ip, 'ipv4');
+  if (family === 4) {
+    return blocked.check(ip, 'ipv4');
+  }
+
   if (family === 6) {
     const bytes = v6Bytes(ip);
-    if (!bytes) return true;
+    if (!bytes) {
+      return true;
+    }
+
     const v4 = embeddedV4(bytes);
-    if (v4) return blocked.check(v4, 'ipv4');
+    if (v4) {
+      return blocked.check(v4, 'ipv4');
+    }
+
     return blocked.check(ip, 'ipv6');
   }
+
   return true;
 }
 
 /** True for 127.0.0.0/8 and ::1 (also IPv4-mapped loopback). */
 export function isLoopbackAddress(ip: string): boolean {
   const family = isIP(ip);
-  if (family === 4) return ip.startsWith('127.');
+  if (family === 4) {
+    return ip.startsWith('127.');
+  }
+
   if (family === 6) {
     const bytes = v6Bytes(ip);
-    if (!bytes) return false;
+    if (!bytes) {
+      return false;
+    }
+
     const v4 = embeddedV4(bytes);
-    if (v4) return v4.startsWith('127.');
+    if (v4) {
+      return v4.startsWith('127.');
+    }
+
     return bytes.slice(0, 15).every((b) => b === 0) && bytes[15] === 1;
   }
+
   return false;
 }

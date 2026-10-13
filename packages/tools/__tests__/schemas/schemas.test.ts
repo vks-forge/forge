@@ -27,6 +27,7 @@ describe('ToolDefinition', () => {
       cost_class: 'free',
       taints: false,
     });
+
     expect(ToolDefinition.safeParse(ENTRIES.at(-1)).success).toBe(true);
   });
 
@@ -65,6 +66,7 @@ describe('HarnessSupport.native', () => {
       'Bash',
       'PowerShell',
     ]);
+
     expect(nativeNames(base)).toEqual([]);
     expect(nativeNames(undefined)).toEqual([]);
   });
@@ -81,6 +83,7 @@ describe('Grant and BudgetLimits', () => {
       Grant.safeParse({ rules: [{ action: 'a', resource: 'b', effect: 'maybe' }] })
         .success,
     ).toBe(false);
+
     expect(BudgetLimits.safeParse({ run: { max_usd: -1 } }).success).toBe(false);
   });
 });
@@ -109,6 +112,7 @@ describe('receipt rows mirror the db tables', () => {
         'hash',
       ]),
     );
+
     expect(Object.keys(EffectReceipt.shape)).toEqual(
       expect.arrayContaining([
         'decision_id',

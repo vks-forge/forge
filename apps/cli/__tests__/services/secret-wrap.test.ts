@@ -30,6 +30,7 @@ async function keyFile(content = 'PEM-BYTES\n') {
   dirs.push(dir);
   const file = join(dir, 'app.pem');
   await writeFile(file, content);
+
   return { dir, file };
 }
 
@@ -45,6 +46,7 @@ function cliRig(store: SecretStore) {
     stdout: (t) => out.push(t),
     stderr: (t) => err.push(t),
   };
+
   return { deps, out, err };
 }
 
@@ -63,6 +65,7 @@ describe('wrapSecret', () => {
     expect(
       Buffer.from((await store.get('github-app-key')) as Uint8Array).toString(),
     ).toBe('PEM-BYTES\n');
+
     expect(await readFile(file, 'utf8')).toBe('PEM-BYTES\n');
     expect((await stat(file)).mtimeMs).toBe(before.mtimeMs);
     expect(await readdir(dir)).toEqual(['app.pem']);
@@ -86,6 +89,7 @@ describe('wrapSecret', () => {
     expect(r.deleteCommand).toBe(
       `Remove-Item -LiteralPath '${resolve(file).replaceAll("'", "''")}'`,
     );
+
     expect(text).toContain('still on disk');
     expect(text).toContain(r.deleteCommand);
   });
@@ -100,6 +104,7 @@ describe('wrapSecret', () => {
     await expect(
       wrapSecret({ store: lying, readFile: readBytes, resolvePath: resolve }, 'k', file),
     ).rejects.toMatchObject({ errorFamily: 'crash' });
+
     expect(await readFile(file, 'utf8')).toBe('PEM-BYTES\n');
   });
 
@@ -113,6 +118,7 @@ describe('wrapSecret', () => {
         join(tmpdir(), 'forge-nope.pem'),
       ),
     ).rejects.toThrow();
+
     expect(await store.get('k')).toBeNull();
   });
 });
@@ -143,6 +149,7 @@ describe('runCli', () => {
     expect(
       await runCli(['secret', 'wrap', 'k', join(tmpdir(), 'forge-nope.pem')], c.deps),
     ).toBe(1);
+
     expect(a.err.join('')).toContain('Usage');
     expect(c.err.join('')).toContain('forge:');
   });
@@ -164,6 +171,7 @@ describe('parseCommand', () => {
       name: 'k',
       file: 'f.pem',
     });
+
     expect(() => parseCommand(['secret', 'wrap', 'k'])).toThrow(/usage/);
     expect(() => parseCommand(['secret', 'wrap', 'k', 'f', 'x'])).toThrow(/usage/);
     expect(() => parseCommand(['--bogus'])).toThrow();

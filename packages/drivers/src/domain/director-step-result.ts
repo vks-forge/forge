@@ -33,6 +33,7 @@ import type { EngineEnd } from '#/types/claude/engine.types.js';
 export function extractJsonText(text: string): string {
   const trimmed = text.trim();
   const fenced = /^```[A-Za-z0-9_-]*[ \t]*\r?\n([\s\S]*?)\r?\n?```$/.exec(trimmed);
+
   return fenced?.[1] === undefined ? trimmed : fenced[1].trim();
 }
 
@@ -46,13 +47,17 @@ function documentItems(stdout: string): unknown[] {
     const items: unknown[] = [];
     for (const raw of text.split('\n')) {
       const line = raw.trim();
-      if (!line.startsWith('{') && !line.startsWith('[')) continue;
+      if (!line.startsWith('{') && !line.startsWith('[')) {
+        continue;
+      }
+
       try {
         items.push(...flatten(JSON.parse(line)));
       } catch {
         // skip a broken line
       }
     }
+
     return items;
   }
 }
@@ -62,18 +67,27 @@ export function parseCliOutput(stdout: string): StepOutput {
   let result: CliResultLine | null = null;
   let rateLimit: RateLimitInfo | null = null;
   for (const item of documentItems(stdout)) {
-    if (typeof item !== 'object' || item === null) continue;
+    if (typeof item !== 'object' || item === null) {
+      continue;
+    }
+
     const type = (item as { type?: unknown }).type;
     if (type === 'result') {
       const parsed = CliResultLine.safeParse(item);
-      if (parsed.success) result = parsed.data;
+      if (parsed.success) {
+        result = parsed.data;
+      }
     } else if (type === 'rate_limit_event') {
       const info = RateLimitInfo.safeParse(
         (item as { rate_limit_info?: unknown }).rate_limit_info,
       );
-      if (info.success) rateLimit = info.data;
+
+      if (info.success) {
+        rateLimit = info.data;
+      }
     }
   }
+
   return { result, rateLimit };
 }
 
@@ -112,7 +126,9 @@ function parseAnswer<T>(result: CliResultLine, schema: ZodType<T>): Result<T, St
       });
     }
   }
+
   const parsed = schema.safeParse(candidate);
+
   return parsed.success
     ? ok(parsed.data)
     : err({ kind: 'invalid_output', message: z.prettifyError(parsed.error) });
@@ -126,22 +142,34 @@ export function interpretOutput<T>(
 ): Result<T, StepError> {
   const rate = (): string =>
     retryNotBeforeFrom(output.rateLimit, ctx.nowMs, ctx.backoffMs);
+
   const rejected = output.rateLimit?.status === 'rejected';
   const { result } = output;
   if (result === null) {
     const detail = ctx.exit
       ? `claude ended (${ctx.exit}) without a result`
       : 'claude ended without a result';
+
     const message = `${detail}: ${ctx.tail}`.trim();
-    if (rejected)
+    if (rejected) {
       return err(toStepError({ kind: 'rate_limit', retryNotBefore: rate() }, message));
+    }
+
     const end = classifyText(ctx.tail, rate);
+
     return err(toStepError(end.kind === 'unknown' ? { kind: 'crash' } : end, message));
   }
+
   let end = classifyCliResult(result, rate);
-  if ((end.kind === 'unknown' || end.kind === 'crash') && rejected)
+  if ((end.kind === 'unknown' || end.kind === 'crash') && rejected) {
     end = { kind: 'rate_limit', retryNotBefore: rate() };
-  if (end.kind === 'completed') return parseAnswer(result, schema);
+  }
+
+  if (end.kind === 'completed') {
+    return parseAnswer(result, schema);
+  }
+
   const message = end.detail || `claude ended with ${result.subtype ?? 'an error'}`;
+
   return err(toStepError(end, message));
 }

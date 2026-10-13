@@ -41,7 +41,10 @@ function core(resource: string): string {
  * bare `git`, or any command via a leading wildcard. Narrow forms like `git status*` pass.
  */
 export function assertNotBannedAlwaysAllow(rule: CallRule): void {
-  if (rule.effect !== 'allow' || rule.action !== 'shell') return;
+  if (rule.effect !== 'allow' || rule.action !== 'shell') {
+    return;
+  }
+
   const c = core(rule.resource);
   const first = c.split(' ')[0] ?? '';
   const banned =
@@ -49,7 +52,10 @@ export function assertNotBannedAlwaysAllow(rule: CallRule): void {
     /[*?]/.test(first) ||
     c === 'git' ||
     ALWAYS_ASK_COMMANDS.some((p) => c === p || c.startsWith(`${p} `));
-  if (banned) throw new BannedAlwaysAllowError(`${rule.action} ${rule.resource}`);
+
+  if (banned) {
+    throw new BannedAlwaysAllowError(`${rule.action} ${rule.resource}`);
+  }
 }
 
 /** Validates a rule list; `denyOnly` is used for the managed layer, which may never allow or ask. */
@@ -60,6 +66,7 @@ export function assertValidRules(rules: readonly CallRule[], denyOnly = false): 
         `managed rules may only deny: ${r.action} ${r.resource}`,
       );
     }
+
     assertNotBannedAlwaysAllow(r);
   }
 }
@@ -67,8 +74,12 @@ export function assertValidRules(rules: readonly CallRule[], denyOnly = false): 
 /** Parses an untrusted grant (yaml object); schema failure becomes a typed error. */
 export function parseGrant(input: unknown): Grant {
   const r = Grant.safeParse(input);
-  if (!r.success) throw new InvalidGrantError(`invalid grant: ${r.error.message}`);
+  if (!r.success) {
+    throw new InvalidGrantError(`invalid grant: ${r.error.message}`);
+  }
+
   assertValidRules(r.data.rules);
+
   return r.data;
 }
 
@@ -87,7 +98,11 @@ export function effectiveGrant(
   const layers = [projectGrant, ticketGrant];
   assertValidRules(defaults.rules);
   assertValidRules(managed, true);
-  for (const g of layers) if (g) assertValidRules(g.rules);
+  for (const g of layers) {
+    if (g) {
+      assertValidRules(g.rules);
+    }
+  }
 
   const projectAllow = projectGrant?.allow ?? [];
   const named = defaults.projectGated.filter((t) => projectAllow.includes(t));
@@ -96,6 +111,7 @@ export function effectiveGrant(
     { name: 'project', rules: projectGrant?.rules ?? [] },
     { name: 'ticket', rules: ticketGrant?.rules ?? [] },
   ];
+
   return {
     lane,
     ceiling: [...defaults.allow, ...named],
@@ -111,14 +127,25 @@ export function effectiveGrant(
 /** Capability gate: is `toolId` visible under `grant`? Deny wins over every allow. */
 export function checkToolGranted(grant: EffectiveGrant, toolId: string): GrantVerdict {
   const denied = grant.deny.find((d) => toolMatch(d, toolId));
-  if (denied !== undefined) return { granted: false, rule: `grant:deny:${denied}` };
+  if (denied !== undefined) {
+    return { granted: false, rule: `grant:deny:${denied}` };
+  }
+
   const inCeiling = isProjectMcp(toolId)
     ? grant.projectMcps && grant.projectMcpAllow.some((p) => toolMatch(p, toolId))
     : grant.ceiling.some((p) => toolMatch(p, toolId));
-  if (!inCeiling) return { granted: false, rule: 'grant:ceiling' };
+
+  if (!inCeiling) {
+    return { granted: false, rule: 'grant:ceiling' };
+  }
+
   const miss = grant.narrowing.findIndex(
     (layer) => !layer.some((p) => toolMatch(p, toolId)),
   );
-  if (miss !== -1) return { granted: false, rule: `grant:narrow:${miss}` };
+
+  if (miss !== -1) {
+    return { granted: false, rule: `grant:narrow:${miss}` };
+  }
+
   return { granted: true, rule: null };
 }

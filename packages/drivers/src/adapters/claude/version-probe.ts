@@ -29,11 +29,15 @@ export function probeVersion(
     let out = '';
     let done = false;
     const finish = (value: string | null): void => {
-      if (done) return;
+      if (done) {
+        return;
+      }
+
       done = true;
       cancel();
       resolve(value);
     };
+
     let cancel = (): void => undefined;
     try {
       const child = spawn(command, args, { env });

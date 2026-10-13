@@ -28,6 +28,7 @@ const oneLine = (s: string): string => s.replace(/\s+/g, ' ').trim().slice(0, 30
 export function failClosed(event: string | undefined, code: string): HookResult {
   const blocking = isBlockingEvent(event);
   const label = blocking ? 'fail-closed' : 'not recorded';
+
   return {
     exitCode: blocking ? 2 : 0,
     stdout: '',
@@ -41,9 +42,13 @@ export function failClosed(event: string | undefined, code: string): HookResult 
  * [cmd]: <stderr>` to the model), so no `hookSpecificOutput` JSON is emitted.
  */
 export function fromResponse(event: HookEventName, res: HookResponse): HookResult {
-  if (res.decision === 'allow') return { exitCode: 0, stdout: '', stderr: '' };
+  if (res.decision === 'allow') {
+    return { exitCode: 0, stdout: '', stderr: '' };
+  }
+
   const receipt = res.receipt_hash ? ` [receipt ${res.receipt_hash.slice(0, 12)}]` : '';
   const verb = res.decision === 'ask' ? 'needs approval, denied' : 'denied';
   const stderr = `forge-hook: ${verb}: ${oneLine(res.reason)}${receipt}\n`;
+
   return { exitCode: isBlockingEvent(event) ? 2 : 0, stdout: '', stderr };
 }

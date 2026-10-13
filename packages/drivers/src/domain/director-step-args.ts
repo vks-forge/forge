@@ -22,6 +22,7 @@ export function jsonSchemaArg(schema: ZodType): string {
   try {
     const json = z.toJSONSchema(schema, { target: 'draft-7' }) as Record<string, unknown>;
     delete json['$schema'];
+
     return JSON.stringify(json);
   } catch (e) {
     throw new InvalidInputError(

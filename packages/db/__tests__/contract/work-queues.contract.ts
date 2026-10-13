@@ -37,6 +37,7 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
         ),
         b0: await t.runInbox.append(makeInboxMessage('r2')),
       }));
+
       expect(out.a0).toEqual({ ...makeInboxMessage('r1', { text: 'a' }), seq: 0 });
       expect(out.a1).toMatchObject({ seq: 1, mode: 'interrupt' });
       expect(out.b0.seq).toBe(0);
@@ -46,6 +47,7 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
       const stored = await tx((t) =>
         t.runInbox.append({ ...makeInboxMessage('r1'), seq: 99 } as never),
       );
+
       expect(stored.seq).toBe(0);
     });
 
@@ -56,6 +58,7 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
         await t.runInbox.append(makeInboxMessage('r1', { text: 'c' }));
         await t.runInbox.append(makeInboxMessage('r2', { text: 'other run' }));
       });
+
       const before = await tx((t) => t.runInbox.listUndelivered('r1'));
       const delivered = await tx((t) => t.runInbox.markDelivered('r1', 1, T1));
       const after = await tx((t) => t.runInbox.listUndelivered('r1'));
@@ -75,6 +78,7 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
         await t.runInbox.markDelivered('r1', 7, T1),
         await t.runInbox.markDelivered('ghost', 0, T1),
       ]);
+
       expect(results).toEqual([true, false, false, false]);
     });
 
@@ -86,6 +90,7 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
           ),
         ),
       );
+
       const all = await tx((t) => t.runInbox.listUndelivered('r1'));
       expect(all.map((m) => m.seq)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
     });
@@ -94,6 +99,7 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
       await expect(
         tx((t) => t.runInbox.append(makeInboxMessage('r1', { text: '' }))),
       ).rejects.toThrow();
+
       expect((await tx((t) => t.runInbox.append(makeInboxMessage('r1')))).seq).toBe(0);
     });
   });
@@ -111,6 +117,7 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
           }),
         ),
       ]);
+
       expect(a).toEqual({ ...makeGate('r1'), id: a?.id });
       expect(b).toMatchObject({
         gate: 'G2',
@@ -118,6 +125,7 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
         report_ref: 'generic profile',
         ended_at: T1,
       });
+
       expect(b?.id).toBeGreaterThan(a?.id ?? 0);
     });
 
@@ -131,11 +139,13 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
         await t.gateResults.insert(makeGate('r2', { gate: 'G1' }));
         await t.gateResults.insert(makeGate('ghost', { gate: 'G3' }));
       });
+
       const list = await tx((t) => t.gateResults.listByTicket('SF-1'));
       expect(list.map((g) => [g.run_id, g.status])).toEqual([
         ['r1', 'failed'],
         ['r2', 'passed'],
       ]);
+
       expect(await tx((t) => t.gateResults.listByTicket('SF-9'))).toEqual([]);
     });
 
@@ -143,6 +153,7 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
       const failure = await tx((t) =>
         t.gateResults.insert(makeGate('r1', { gate: 'G9' as never })),
       ).catch((e: unknown) => e);
+
       expect(failure).toBeInstanceOf(InvalidInputError);
     });
   });
@@ -161,6 +172,7 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
         await t.projects.upsert(makeProject('p2'));
         await t.projects.upsert(makeProject('p1', { tier_c_globs: ['db/**'] }));
       });
+
       const list = await tx((t) => t.projects.list());
       expect(list.map((p) => p.id)).toEqual(['p1', 'p2']);
       expect(list[0]).toEqual(makeProject('p1', { tier_c_globs: ['db/**'] }));
@@ -171,6 +183,7 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
       const p = makeProject('p1', {
         harness_defaults: { default: 'claude', models: { fast: 'x' } },
       });
+
       await tx((t) => t.projects.upsert(p));
       expect((await tx((t) => t.projects.get('p1')))?.harness_defaults).toEqual(
         p.harness_defaults,
@@ -182,6 +195,7 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
       const failure = await tx((t) =>
         t.projects.upsert(makeProject('p2', { slug: 'same' })),
       ).catch((e: unknown) => e);
+
       expect(failure).toBeInstanceOf(InvalidInputError);
       expect((await tx((t) => t.projects.list())).map((p) => p.id)).toEqual(['p1']);
     });
@@ -193,6 +207,7 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
           throw new Error('boom');
         }),
       ).rejects.toThrow('boom');
+
       expect(await tx((t) => t.projects.list())).toEqual([]);
     });
   });

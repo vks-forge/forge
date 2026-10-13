@@ -18,12 +18,18 @@ import type { AdmitContext, EffectState, ToolDefinition } from '@forge/tools';
 
 /** Catalogue id for `native` under `ctx`; MCP names are already ids; unknown names pass through. */
 export function resolveToolId(ctx: AdmitContext, native: string): string {
-  if (native.startsWith('mcp__')) return native;
+  if (native.startsWith('mcp__')) {
+    return native;
+  }
+
   if (ctx.catalogue.status === 'verified') {
     for (const def of ctx.catalogue.tools.values()) {
-      if (nativeNames(def.support[ctx.harness]).includes(native)) return def.id;
+      if (nativeNames(def.support[ctx.harness]).includes(native)) {
+        return def.id;
+      }
     }
   }
+
   return native;
 }
 
@@ -40,6 +46,9 @@ export function toolDefinition(ctx: AdmitContext, toolId: string): ToolDefinitio
  */
 export function effectStateFor(def: ToolDefinition | null, failed: boolean): EffectState {
   const read = def?.risk === 'read';
-  if (failed) return read ? 'failed_no_effect' : 'uncertain';
+  if (failed) {
+    return read ? 'failed_no_effect' : 'uncertain';
+  }
+
   return read ? 'read_completed' : 'mutation_committed';
 }

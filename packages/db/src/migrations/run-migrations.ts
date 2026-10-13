@@ -29,7 +29,10 @@ export const migrationChecksum = (m: Migration): string =>
 export function assertIncreasing(migrations: readonly Migration[]): void {
   let last = 0;
   for (const m of migrations) {
-    if (m.id <= last) throw new UnknownForgeError(`Migration ids must increase: ${m.id}`);
+    if (m.id <= last) {
+      throw new UnknownForgeError(`Migration ids must increase: ${m.id}`);
+    }
+
     last = m.id;
   }
 }
@@ -52,6 +55,7 @@ export function runMigrations(
       checksum   TEXT NOT NULL,
       applied_at TEXT NOT NULL
     )`);
+
     // Read under the write lock: another opener may have applied migrations while we waited.
     const done = new Map(
       driver
@@ -60,30 +64,39 @@ export function runMigrations(
         )
         .map((r) => [r.id, r.checksum]),
     );
+
     const known = new Set(migrations.map((m) => m.id));
     const unknown = [...done.keys()].filter((id) => !known.has(id)).sort((a, b) => a - b);
-    if (unknown.length > 0)
+    if (unknown.length > 0) {
       throw new UnknownForgeError(
         `Database schema is newer than this build: unknown migration id(s) ${unknown.join(', ')}`,
       );
+    }
+
     const applied: number[] = [];
     for (const m of migrations) {
       const recorded = done.get(m.id);
       if (recorded !== undefined) {
-        if (recorded !== migrationChecksum(m))
+        if (recorded !== migrationChecksum(m)) {
           throw new UnknownForgeError(
             `Migration ${m.id} (${m.name}) was edited after apply`,
           );
+        }
+
         continue;
       }
+
       driver.exec(m.sql);
       driver.run(
         'INSERT INTO schema_migrations (id, name, checksum, applied_at) VALUES (?, ?, ?, ?)',
         [m.id, m.name, migrationChecksum(m), new Date().toISOString()],
       );
+
       applied.push(m.id);
     }
+
     driver.exec('COMMIT');
+
     return applied;
   } catch (error) {
     driver.exec('ROLLBACK');

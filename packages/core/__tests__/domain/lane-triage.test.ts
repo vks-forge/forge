@@ -31,6 +31,7 @@ describe('globMatch', () => {
     expect(globMatch('packages/db/migrations/**', 'packages/db/migrations/001.sql')).toBe(
       true,
     );
+
     expect(globMatch('**/auth/**', 'apps/server/src/auth/login.ts')).toBe(true);
     expect(globMatch('src/*.ts', 'src/a.ts')).toBe(true);
     expect(globMatch('src/*.ts', 'src/x/a.ts')).toBe(false);
@@ -93,6 +94,7 @@ describe('preCheckLane', () => {
             type: 'feat',
             currentLane: a,
           });
+
           expect(maxLane(r.lane, a)).toBe(r.lane);
         },
       ),

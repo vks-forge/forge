@@ -60,6 +60,7 @@ export function createStorageOnDriver(
     projects: createProjectRepository(driver),
     ticketRelations: createTicketRelationRepository(driver),
   };
+
   return {
     transaction: (fn) => mutex.run(() => runImmediate(driver, () => fn(tx))),
     // Queue behind in-flight transactions so close never cuts one off.
@@ -75,6 +76,7 @@ function openMigrated(path: string, opts: SqliteStorageOptions): SqlDriver {
     driver.close();
     throw mapDbError(error);
   }
+
   return driver;
 }
 
@@ -93,6 +95,7 @@ export function createSqliteStorage(
 export function openSqlite(path: string, opts: SqliteStorageOptions = {}): SqliteBackend {
   const driver = openMigrated(path, opts);
   const mutex = createMutex();
+
   return {
     storage: createStorageOnDriver(driver, mutex),
     receipts: createSqliteReceiptLog(driver, mutex),

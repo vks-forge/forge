@@ -34,7 +34,9 @@ export async function verifyRunToken(
   } catch {
     stored = null;
   }
+
   // Compare against a dummy when absent so timing does not reveal registration.
   const matches = constantTimeEqual(stored ?? hashToken(' '), hashToken(token));
+
   return stored !== null && stored !== '' && matches;
 }

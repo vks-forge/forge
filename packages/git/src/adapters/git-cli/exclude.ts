@@ -29,8 +29,13 @@ export async function ensureWorktreesExcluded(
   } catch {
     // Missing file is the normal case on a fresh repo; it is created below.
   }
-  if (current.split(/\r?\n/).some((l) => l.trim() === RULE || l.trim() === '.worktrees/'))
+
+  if (
+    current.split(/\r?\n/).some((l) => l.trim() === RULE || l.trim() === '.worktrees/')
+  ) {
     return;
+  }
+
   await mkdir(dirname(file), { recursive: true });
   const sep = current.length === 0 || current.endsWith('\n') ? '' : '\n';
   await appendFile(file, `${sep}${RULE}\n`);

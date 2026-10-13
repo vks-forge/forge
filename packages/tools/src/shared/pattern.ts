@@ -20,7 +20,10 @@ function escapeRegex(ch: string): string {
 
 function wildcardSource(body: string): string {
   let src = '';
-  for (const ch of body) src += ch === '*' ? '.*' : escapeRegex(ch);
+  for (const ch of body) {
+    src += ch === '*' ? '.*' : escapeRegex(ch);
+  }
+
   return src;
 }
 
@@ -34,12 +37,14 @@ export function commandMatch(pattern: string, text: string, ignoreCase = false):
   const glued = pattern.length > 1 && pattern.endsWith('*') && !pattern.endsWith(' *');
   const body = glued ? pattern.slice(0, -1) : pattern;
   const src = wildcardSource(body) + (glued ? '(?: .*)?' : '');
+
   return new RegExp(`^${src}$`, ignoreCase ? 'is' : 's').test(text);
 }
 
 /** Length of the literal text before the first `*`; the specificity used for longest-prefix. */
 export function literalPrefixLength(pattern: string): number {
   const i = pattern.indexOf('*');
+
   return i === -1 ? pattern.length : i;
 }
 

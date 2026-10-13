@@ -45,6 +45,7 @@ beforeEach(async () => {
       status: 'running',
       owner: 'server-1',
     });
+
     await tx.runTokens.put(RUN_ID, hashToken(TOKEN), T0);
   });
 });
@@ -64,6 +65,7 @@ const io = () => ({
   stderr: vi.fn(),
   serve: vi.fn(async () => undefined),
 });
+
 const env = (over: Record<string, string> = {}) => ({
   FORGE_RUN_ID: RUN_ID,
   FORGE_RUN_TOKEN: TOKEN,
@@ -109,6 +111,7 @@ describe('start', () => {
         owner: 'server-1',
       }),
     );
+
     const x = io();
     await start(env({ FORGE_RUN_ID: 'run-2' }), x);
     expect(x.exit).toHaveBeenCalledWith(1);
@@ -137,6 +140,7 @@ describe('start', () => {
     expect(
       d.all("SELECT name FROM sqlite_master WHERE name = 'schema_migrations'"),
     ).toHaveLength(0);
+
     d.close();
   });
 
@@ -145,6 +149,7 @@ describe('start', () => {
     d.run(
       'DELETE FROM schema_migrations WHERE id = (SELECT MAX(id) FROM schema_migrations)',
     );
+
     d.close();
     const x = io();
     await start(env(), x);
@@ -172,10 +177,12 @@ describe('env parsing', () => {
         FORGE_FETCH_ALLOW_HOSTS: 'docs.example.org',
       }),
     );
+
     expect(d.searxng).toEqual({
       baseUrl: 'http://localhost:8888',
       allowHosts: ['a.lan', 'b.lan'],
     });
+
     expect(d.fetchAllowHosts).toEqual(['docs.example.org']);
     expect(depsFromEnv(env()).searxng).toBeUndefined();
   });

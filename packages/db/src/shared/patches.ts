@@ -35,6 +35,7 @@ const TicketPatchSchema = Ticket.omit({
 })
   .partial()
   .strict();
+
 const RunPatchSchema = Run.omit({ id: true }).partial().strict();
 const InteractionPatchSchema = Interaction.omit({ id: true }).partial().strict();
 
@@ -43,11 +44,14 @@ export function parseTicketPatch(
   expectedVersion: number,
   patch: TicketPatch,
 ): Partial<Ticket> {
-  if ('status_version' in patch)
+  if ('status_version' in patch) {
     throw new InvalidInputError(
       'status_version cannot be set by a patch; updateTicketCas sets it to expectedVersion + 1',
     );
+  }
+
   const parsed = TicketPatchSchema.parse(patch) as Partial<Ticket>;
+
   return { ...parsed, status_version: expectedVersion + 1 };
 }
 
@@ -65,13 +69,17 @@ export function assertNotReopened(
   hasEnded: boolean,
   patch: Partial<Omit<Run, 'id'>>,
 ): void {
-  if (!hasEnded) return;
+  if (!hasEnded) {
+    return;
+  }
+
   const clearsEnd = 'ended_at' in patch && patch.ended_at === undefined;
   const reactivates = patch.status === 'starting' || patch.status === 'running';
-  if (clearsEnd || reactivates)
+  if (clearsEnd || reactivates) {
     throw new InvalidInputError(
       `run ${id} has ended and is never reopened; resume it as a new run with retry_of`,
     );
+  }
 }
 
 export function parseInteractionPatch(
@@ -93,15 +101,22 @@ export function buildSetClause(
   const params: SqlValue[] = [];
   for (const [field, value] of Object.entries(patch)) {
     const codec = codecs[field];
-    if (!codec) throw new InvalidInputError(`No column mapped for field '${field}'`);
+    if (!codec) {
+      throw new InvalidInputError(`No column mapped for field '${field}'`);
+    }
+
     if (value === undefined) {
-      if (codec.clearable !== true)
+      if (codec.clearable !== true) {
         throw new InvalidInputError(`Field '${field}' is required and cannot be cleared`);
+      }
+
       sets.push(`${codec.column} = NULL`);
       continue;
     }
+
     sets.push(`${codec.column} = ?`);
     params.push(codec.encode ? codec.encode(value) : (value as SqlValue));
   }
+
   return { sql: sets.join(', '), params };
 }

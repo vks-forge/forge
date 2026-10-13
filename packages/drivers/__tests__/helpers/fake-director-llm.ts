@@ -41,21 +41,28 @@ export function createFakeDirectorLLM(
     capabilities: () => ({ structuredOutput: true, reportsCost: false }),
     async step<T>(name: StepName, input: unknown, schema: ZodType<T>, opts: StepOptions) {
       calls.push({ name, input, opts });
-      if (scripted.kind === 'rate_limit')
+      if (scripted.kind === 'rate_limit') {
         return err({
           kind: 'rate_limit',
           message: 'rate limited',
           retryNotBefore: new Date(now() + 60_000).toISOString(),
         });
+      }
+
       const failure = FAILURES[scripted.kind];
-      if (failure) return err(failure);
+      if (failure) {
+        return err(failure);
+      }
+
       const answer = scripted.kind === 'valid' ? scripted.value : { wrong: 1 };
       const parsed = schema.safeParse(answer);
+
       return parsed.success
         ? ok(parsed.data)
         : err({ kind: 'invalid_output', message: z.prettifyError(parsed.error) });
     },
   };
+
   return {
     llm,
     calls,

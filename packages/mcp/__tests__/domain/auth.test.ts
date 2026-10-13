@@ -109,14 +109,17 @@ describe('every call re-checks the run', () => {
       name: 'add_comment',
       arguments: { ticket: 'SF-1', text: 'ok' },
     });
+
     expect(before.isError).toBeFalsy();
     await c.storage.transaction((tx) =>
       tx.runs.update(RUN_ID, { status: 'success', ended_at: '2026-10-13T01:00:00.000Z' }),
     );
+
     const after = await c.client.callTool({
       name: 'add_comment',
       arguments: { ticket: 'SF-1', text: 'late' },
     });
+
     expect(after.isError).toBe(true);
     expect(textOf(after)).toMatch(/not running/i);
   });
@@ -138,6 +141,7 @@ describe('verifyRunToken', () => {
       },
       close: async () => undefined,
     } as StorageAdapter;
+
     expect(await verifyRunToken(broken, RUN_ID, TOKEN)).toBe(false);
   });
 
@@ -148,6 +152,7 @@ describe('verifyRunToken', () => {
         fn({ runTokens: { getHash: async () => 'not-hex' } }),
       close: async () => undefined,
     } as unknown as StorageAdapter;
+
     expect(await verifyRunToken(odd, RUN_ID, TOKEN)).toBe(false);
     expect(await verifyRunToken(storage, RUN_ID, TOKEN)).toBe(true);
   });

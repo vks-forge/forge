@@ -34,11 +34,19 @@ export function parseCommand(argv: readonly string[]): Command {
   } catch (cause) {
     throw new InvalidInputError((cause as Error).message, { cause });
   }
+
   const [group, action, name, file, ...extra] = parsed.positionals;
-  if (parsed.values.help === true || group === undefined) return { kind: 'help' };
-  if (group !== 'secret' || action !== 'wrap')
+  if (parsed.values.help === true || group === undefined) {
+    return { kind: 'help' };
+  }
+
+  if (group !== 'secret' || action !== 'wrap') {
     throw new InvalidInputError(`unknown command: ${parsed.positionals.join(' ')}`);
-  if (name === undefined || file === undefined || extra.length > 0)
+  }
+
+  if (name === undefined || file === undefined || extra.length > 0) {
     throw new InvalidInputError('usage: forge secret wrap <name> <file>');
+  }
+
   return { kind: 'secret-wrap', name, file };
 }

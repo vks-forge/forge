@@ -28,8 +28,10 @@ const j = JSON.stringify;
 async function step(rig = makeDirectorRig(), input: unknown = { text: 'hello' }) {
   return { rig, result: await rig.llm.step('triage', input, Answer, OPTS) };
 }
+
 const errorOf = (r: { ok: boolean; error?: StepError }): StepError => {
   expect(r.ok).toBe(false);
+
   return r.error as StepError;
 };
 
@@ -58,6 +60,7 @@ describe('Claude DirectorLLM: command line and process', { timeout: 30_000 }, ()
       '--model',
       'haiku',
     ]);
+
     const schema = JSON.parse(a[4] as string) as Record<string, unknown>;
     expect(schema).toMatchObject({ type: 'object', required: ['answer'] });
     expect(schema).not.toHaveProperty('$schema');
@@ -111,6 +114,7 @@ describe('Claude DirectorLLM: reading the document', { timeout: 30_000 }, () => 
         resultDoc({ structured_output: { answer: 'last' } }),
       ]),
     );
+
     expect((await step(rig)).result).toEqual({ ok: true, value: { answer: 'last' } });
   });
 
@@ -119,6 +123,7 @@ describe('Claude DirectorLLM: reading the document', { timeout: 30_000 }, () => 
     rig.fixture(
       j(resultDoc({ result: '{"answer":"text"}', structured_output: { answer: 'so' } })),
     );
+
     expect((await step(rig)).result).toEqual({ ok: true, value: { answer: 'so' } });
   });
 
@@ -151,6 +156,7 @@ describe('Claude DirectorLLM: reading the document', { timeout: 30_000 }, () => 
     rig.fixture(j(resultDoc({ subtype: 'error_max_budget_usd', is_error: true })), {
       exit,
     });
+
     expect(errorOf((await step(rig)).result).kind).toBe('budget');
   });
 
@@ -165,6 +171,7 @@ describe('Claude DirectorLLM: reading the document', { timeout: 30_000 }, () => 
     rig.fixture(j(resultDoc({ is_error: true, api_error_status: 429, result: 'slow' })), {
       exit: 1,
     });
+
     const e = errorOf((await step(rig)).result);
     expect(e.kind).toBe('rate_limit');
     expect(e.retryNotBefore).toBe(new Date(rig.clock.now() + 90_000).toISOString());
@@ -189,6 +196,7 @@ describe('Claude DirectorLLM: reading the document', { timeout: 30_000 }, () => 
       j([{ type: 'rate_limit_event', rate_limit_info: { status: 'rejected' } }]),
       { exit: 1 },
     );
+
     expect(errorOf((await step(rig)).result).kind).toBe('rate_limit');
   });
 
@@ -241,6 +249,7 @@ describe('Claude DirectorLLM: timeout and start failures', { timeout: 30_000 }, 
         throw new Error('EACCES');
       },
     });
+
     const e = errorOf((await step(rig)).result);
     expect(e.kind).toBe('crash');
     expect(e.message).toContain('EACCES');
@@ -253,6 +262,7 @@ describe('Claude DirectorLLM: timeout and start failures', { timeout: 30_000 }, 
       spawn: nodeSpawn,
       claudeBinary: 'forge-no-such-binary-xyz',
     });
+
     const e = errorOf(await llm.step('triage', {}, Answer, OPTS));
     expect(e.kind).toBe('crash');
   });

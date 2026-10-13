@@ -14,9 +14,15 @@ import { InvalidInputError } from '@forge/core';
 
 /** Throws InvalidInputError unless `value` is a non-empty string git cannot read as an option. */
 export function assertSafeRefArg(label: string, value: string): void {
-  if (value.length === 0) throw new InvalidInputError(`${label} must not be empty`);
-  if (value.startsWith('-'))
+  if (value.length === 0) {
+    throw new InvalidInputError(`${label} must not be empty`);
+  }
+
+  if (value.startsWith('-')) {
     throw new InvalidInputError(`${label} must not start with '-'`);
-  if (/[\0\r\n]/.test(value))
+  }
+
+  if (/[\0\r\n]/.test(value)) {
     throw new InvalidInputError(`${label} contains a control character`);
+  }
 }

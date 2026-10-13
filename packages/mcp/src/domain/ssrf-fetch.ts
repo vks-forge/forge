@@ -28,6 +28,7 @@ export const MAX_REDIRECTS = 5;
 
 const TEXT_TYPE =
   /^(text\/|application\/(json|xml|xhtml\+xml|[a-z.+-]*\+(json|xml))|application\/javascript)/i;
+
 const WEB_PORTS = new Set([80, 443]);
 const ALT_PORTS = new Set([8080, 8443]);
 
@@ -43,7 +44,10 @@ function portOf(url: URL): number {
 function bindToSignal<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const onAbort = () => reject(new InvalidInputError('fetch timed out'));
-    if (signal.aborted) return onAbort();
+    if (signal.aborted) {
+      return onAbort();
+    }
+
     signal.addEventListener('abort', onAbort, { once: true });
     work
       .then(resolve, reject)
@@ -56,31 +60,50 @@ async function validateHop(
   o: GuardOptions,
   signal: AbortSignal,
 ): Promise<{ address: string; family: 4 | 6 }> {
-  if (url.protocol !== 'http:' && url.protocol !== 'https:')
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new InvalidInputError(`scheme not allowed: ${url.protocol}`);
-  if (url.username || url.password)
+  }
+
+  if (url.username || url.password) {
     throw new InvalidInputError('URLs with embedded credentials are not allowed');
+  }
+
   const host = bareHost(url);
-  if (o.allowHosts.length > 0 && !o.allowHosts.includes(host))
+  if (o.allowHosts.length > 0 && !o.allowHosts.includes(host)) {
     throw new PolicyDeniedError(`host not in the fetch allow-list: ${host}`);
+  }
+
   const port = portOf(url);
   const allowed =
     WEB_PORTS.has(port) ||
     (ALT_PORTS.has(port) && o.allowHosts.length > 0 && o.allowHosts.includes(host));
-  if (!allowed) throw new PolicyDeniedError(`blocked: port ${port} is not allowed`);
-  if (host === 'localhost' || host.endsWith('.localhost'))
+
+  if (!allowed) {
+    throw new PolicyDeniedError(`blocked: port ${port} is not allowed`);
+  }
+
+  if (host === 'localhost' || host.endsWith('.localhost')) {
     throw new PolicyDeniedError(`blocked: ${host} is a loopback name`);
+  }
+
   const literal = isIP(host);
   const addresses = literal
     ? [host]
     : await bindToSignal(o.resolve(host, signal), signal);
-  if (addresses.length === 0) throw new InvalidInputError(`could not resolve ${host}`);
+
+  if (addresses.length === 0) {
+    throw new InvalidInputError(`could not resolve ${host}`);
+  }
+
   // Any private answer poisons the name: an attacker mixes public and private records.
-  if (addresses.some(isBlockedAddress))
+  if (addresses.some(isBlockedAddress)) {
     throw new PolicyDeniedError(
       `blocked: ${host} resolves to a private or loopback address`,
     );
+  }
+
   const address = addresses[0] as string;
+
   return { address, family: isIP(address) === 6 ? 6 : 4 };
 }
 
@@ -98,6 +121,7 @@ export async function guardedFetchText(
     } catch {
       throw new InvalidInputError('invalid URL');
     }
+
     for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
       const target = await validateHop(url, o, ctl.signal);
       const res = await o.transport({ url, ...target, signal: ctl.signal });
@@ -109,30 +133,42 @@ export async function guardedFetchText(
         } catch {
           throw new InvalidInputError('invalid redirect target');
         }
-        if (url.protocol === 'https:' && next.protocol === 'http:')
+
+        if (url.protocol === 'https:' && next.protocol === 'http:') {
           throw new PolicyDeniedError('refused redirect downgrade from https to http');
+        }
+
         url = next;
         continue;
       }
+
       if (res.status < 200 || res.status >= 300) {
         res.body.destroy();
         throw new InvalidInputError(`fetch failed: HTTP ${res.status}`);
       }
+
       const type = res.headers['content-type'] ?? 'text/plain';
       if (!TEXT_TYPE.test(type)) {
         res.body.destroy();
         throw new InvalidInputError(`unsupported content type: ${type.split(';')[0]}`);
       }
+
       const { bytes, truncated } = await readCapped(res.body, o.maxBytes, () =>
         res.body.destroy(),
       );
+
       const raw = new TextDecoder().decode(bytes);
       const isHtml = /html/i.test(type);
+
       return { text: isHtml ? htmlToText(raw) : raw, finalUrl: url.href, truncated };
     }
+
     throw new InvalidInputError(`too many redirects (more than ${MAX_REDIRECTS})`);
   } catch (err) {
-    if (ctl.signal.aborted) throw new InvalidInputError('fetch timed out');
+    if (ctl.signal.aborted) {
+      throw new InvalidInputError('fetch timed out');
+    }
+
     throw err;
   } finally {
     clearTimeout(timer);

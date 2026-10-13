@@ -31,22 +31,36 @@ export async function moveTicketTx(
   plan: (ticket: Ticket) => TicketPlan | null,
 ): Promise<MoveResult> {
   const current = await tx.tickets.get(id as TicketId);
-  if (!current) return { ok: false, reason: `unknown ticket ${id}` };
+  if (!current) {
+    return { ok: false, reason: `unknown ticket ${id}` };
+  }
+
   const p = plan(current);
-  if (!p) return { ok: false, reason: `${id}: nothing to do from ${current.status}` };
+  if (!p) {
+    return { ok: false, reason: `${id}: nothing to do from ${current.status}` };
+  }
+
   let next: Ticket = current;
   for (const spec of p.events) {
     const r = transition(next, { ...spec, at: nowIso } as TicketEvent);
-    if (!r.ok) return { ok: false, reason: `${id}: ${JSON.stringify(r.error)}` };
+    if (!r.ok) {
+      return { ok: false, reason: `${id}: ${JSON.stringify(r.error)}` };
+    }
+
     next = r.value;
   }
+
   next = { ...next, ...p.fields, updated_at: nowIso };
   const stored = await tx.tickets.updateTicketCas(
     current.id,
     current.status_version,
     toTicketPatch(next),
   );
-  if (!stored) return { ok: false, reason: `${id}: stale status_version` };
+
+  if (!stored) {
+    return { ok: false, reason: `${id}: stale status_version` };
+  }
+
   return { ok: true, ticket: { ...next, status_version: current.status_version + 1 } };
 }
 

@@ -38,20 +38,26 @@ const Meta = z.record(z.string(), z.unknown());
 /** Rate-limit info from a usage update's `_meta`, or null when absent or unreadable. */
 export function readRateLimit(meta: unknown): RateLimitInfo | null {
   const m = Meta.safeParse(meta);
-  if (!m.success) return null;
+  if (!m.success) {
+    return null;
+  }
+
   const info = RateLimitInfo.safeParse(m.data['_claude/rateLimit']);
+
   return info.success ? info.data : null;
 }
 
 /** `data.errorKind` of a JSON-RPC error, or undefined. */
 export function readErrorKind(data: unknown): string | undefined {
   const d = z.object({ errorKind: z.string() }).safeParse(data);
+
   return d.success ? d.data.errorKind : undefined;
 }
 
 /** True when `initialize` `_meta.steering.supported` is exactly `true`. */
 export function readSteering(meta: unknown): boolean {
   const m = z.object({ steering: z.object({ supported: z.boolean() }) }).safeParse(meta);
+
   return m.success && m.data.steering.supported;
 }
 
@@ -60,5 +66,6 @@ export function readClaudeToolName(meta: unknown): string | undefined {
   const m = z
     .object({ claudeCode: z.object({ toolName: z.string().min(1) }) })
     .safeParse(meta);
+
   return m.success ? m.data.claudeCode.toolName : undefined;
 }

@@ -21,8 +21,9 @@ describe('Claim', () => {
       { kind: 'edited', path: 'src/a.ts' },
       { kind: 'added_test', name: 'adds' },
       { kind: 'read', path: 'README.md' },
-    ])
+    ]) {
       expect(Claim.parse(c)).toEqual(c);
+    }
   });
 
   it('rejects unknown kinds, extra keys and NUL paths', () => {
@@ -39,7 +40,8 @@ describe('SecretName', () => {
   });
 
   it('rejects anything that could address a path', () => {
-    for (const bad of ['', '../x', 'a/b', 'a\b', 'A', '-a', 'a.b', 'C:x'])
+    for (const bad of ['', '../x', 'a/b', 'a\b', 'A', '-a', 'a.b', 'C:x']) {
       expect(SecretName.safeParse(bad).success, bad).toBe(false);
+    }
   });
 });

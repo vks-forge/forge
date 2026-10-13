@@ -46,35 +46,50 @@ export function createLocalBareGitHost(opts: LocalBareGitHostOptions): GitHost {
       '--quiet',
       `refs/heads/${branch}^{commit}`,
     ]);
+
     return r.code === 0 ? r.stdout.trim() : null;
   };
 
   const checkBranch = async (label: string, branch: string): Promise<void> => {
     assertSafeRefArg(label, branch);
     const r = await git.try(remote, ['check-ref-format', '--branch', branch]);
-    if (r.code !== 0) throw new GitHostError('invalid', `invalid ${label}: ${branch}`);
+    if (r.code !== 0) {
+      throw new GitHostError('invalid', `invalid ${label}: ${branch}`);
+    }
   };
 
   /** Merged tree of base and head, or null when they conflict. Never writes a ref. */
   const mergedTree = async (baseSha: string, headSha: string): Promise<string | null> => {
     const r = await git.try(remote, ['merge-tree', '--write-tree', baseSha, headSha]);
-    if (r.code === 0) return r.stdout.split('\n')[0]?.trim() ?? null;
-    if (r.code === 1) return null;
+    if (r.code === 0) {
+      return r.stdout.split('\n')[0]?.trim() ?? null;
+    }
+
+    if (r.code === 1) {
+      return null;
+    }
+
     throw new GitHostError('unavailable', `git merge-tree failed: ${r.stderr.trim()}`);
   };
 
   const toStatus = async (rec: PrRecord): Promise<PrStatus> => {
-    if (rec.state === 'merged')
+    if (rec.state === 'merged') {
       return { state: 'merged', mergeable: null, headSha: rec.merged_head_sha ?? '' };
+    }
+
     const head = await refSha(rec.branch);
-    if (rec.state === 'closed')
+    if (rec.state === 'closed') {
       return { state: 'closed', mergeable: null, headSha: head ?? '' };
+    }
+
     const base = await refSha(rec.base);
-    if (head === null || base === null)
+    if (head === null || base === null) {
       throw new GitHostError(
         'not_found',
         `branch ${head === null ? rec.branch : rec.base} is gone`,
       );
+    }
+
     return {
       state: 'open',
       mergeable: (await mergedTree(base, head)) !== null,
@@ -93,16 +108,23 @@ export function createLocalBareGitHost(opts: LocalBareGitHostOptions): GitHost {
     async openPr({ branch, base, title, body }): Promise<PullRequest> {
       await checkBranch('branch', branch);
       await checkBranch('base', base);
-      if ((await refSha(branch)) === null)
+      if ((await refSha(branch)) === null) {
         throw new GitHostError('invalid', `branch ${branch} has not been pushed`);
-      if ((await refSha(base)) === null)
+      }
+
+      if ((await refSha(base)) === null) {
         throw new GitHostError('invalid', `base branch ${base} does not exist`);
+      }
+
       // One open PR per head branch: the same refusal GitHub gives (422).
       const rec = await store.create((number, existing) => {
-        if (existing.some((r) => r.state === 'open' && r.branch === branch))
+        if (existing.some((r) => r.state === 'open' && r.branch === branch)) {
           throw new GitHostError('invalid', `an open PR already exists for ${branch}`);
+        }
+
         return { number, branch, base, title, body, state: 'open', created_at: iso() };
       });
+
       return { number: rec.number, url: urlOf(rec.number) };
     },
 
@@ -113,21 +135,26 @@ export function createLocalBareGitHost(opts: LocalBareGitHostOptions): GitHost {
     merge: (n, method: MergeMethod) =>
       store.locked(async () => {
         const rec = await store.get(n);
-        if (rec.state !== 'open')
+        if (rec.state !== 'open') {
           throw new GitHostError('merge_refused', `PR ${n} is ${rec.state}, not open`);
+        }
+
         const base = await refSha(rec.base);
         const head = await refSha(rec.branch);
-        if (base === null || head === null)
+        if (base === null || head === null) {
           throw new GitHostError(
             'not_found',
             `branch ${base === null ? rec.base : rec.branch} is gone`,
           );
+        }
+
         const tree = await mergedTree(base, head);
-        if (tree === null)
+        if (tree === null) {
           throw new GitHostError(
             'merge_refused',
             `PR ${n} has merge conflicts with ${rec.base}`,
           );
+        }
 
         // merge = two parents (a true --no-ff merge commit); squash = one parent, same tree.
         const parents = method === 'merge' ? ['-p', base, '-p', head] : ['-p', base];
@@ -156,6 +183,7 @@ export function createLocalBareGitHost(opts: LocalBareGitHostOptions): GitHost {
             },
           )
         ).trim();
+
         // The old value makes this a compare-and-swap: a base that moved meanwhile fails loudly.
         const moved = await git.try(remote, [
           'update-ref',
@@ -163,33 +191,44 @@ export function createLocalBareGitHost(opts: LocalBareGitHostOptions): GitHost {
           sha,
           base,
         ]);
-        if (moved.code !== 0)
+
+        if (moved.code !== 0) {
           throw new GitHostError(
             'merge_refused',
             `${rec.base} moved during the merge of PR ${n}`,
           );
+        }
+
         await store.save({
           ...rec,
           state: 'merged',
           merged_sha: sha,
           merged_head_sha: head,
         });
+
         return { sha };
       }),
 
     closePr: (n) =>
       store.locked(async () => {
         const rec = await store.get(n);
-        if (rec.state === 'closed') return;
-        if (rec.state === 'merged')
+        if (rec.state === 'closed') {
+          return;
+        }
+
+        if (rec.state === 'merged') {
           throw new GitHostError('invalid', `PR ${n} is already merged`);
+        }
+
         await store.save({ ...rec, state: 'closed' });
       }),
 
     async deleteBranch(branch) {
       await checkBranch('branch', branch);
-      if (branch === opts.baseBranch)
+      if (branch === opts.baseBranch) {
         throw new GitHostError('invalid', `refusing to delete the base branch ${branch}`);
+      }
+
       // `update-ref -d` on a ref that does not exist succeeds, so this is idempotent.
       await git.run(remote, ['update-ref', '-d', `refs/heads/${branch}`]);
     },

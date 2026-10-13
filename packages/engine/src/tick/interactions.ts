@@ -29,13 +29,17 @@ async function answerIn(
   answer: unknown,
 ): Promise<boolean> {
   const won = await tx.interactions.answer(id, answer, iso(deps.clock.now()));
-  if (!won) return false;
+  if (!won) {
+    return false;
+  }
+
   await requestWakeTx(tx, deps, {
     ticketId,
     kind: 'response_wake',
     reason: 'answered',
     key: id,
   });
+
   return true;
 }
 
@@ -48,9 +52,14 @@ export async function answerInteraction(
 ): Promise<boolean> {
   const won = await deps.storage.transaction(async (tx) => {
     const row = await tx.interactions.get(id);
+
     return row ? answerIn(deps, tx, id, row.ticket_id, answer) : false;
   });
-  if (won) requestTick(deps, state);
+
+  if (won) {
+    requestTick(deps, state);
+  }
+
   return won;
 }
 
@@ -61,12 +70,19 @@ export async function answerPending(
   ticket: Ticket,
   text: string,
 ): Promise<string | null> {
-  if (ticket.status !== 'waiting_human') return null;
+  if (ticket.status !== 'waiting_human') {
+    return null;
+  }
+
   const pending = (await tx.interactions.listByTicket(ticket.id)).filter(
     (i) => i.status === 'pending',
   );
+
   const only = pending.length === 1 ? pending[0] : undefined;
-  if (!only) return null;
+  if (!only) {
+    return null;
+  }
+
   return (await answerIn(deps, tx, only.id, ticket.id, text)) ? only.id : null;
 }
 
@@ -75,9 +91,15 @@ export async function expireInteractions(ctx: EngineCtx): Promise<void> {
   const { storage } = ctx.deps;
   const pending = await storage.transaction((tx) => tx.interactions.listPending());
   for (const i of pending) {
-    if (Date.parse(i.timeout_at) > ctx.now) continue;
+    if (Date.parse(i.timeout_at) > ctx.now) {
+      continue;
+    }
+
     await storage.transaction(async (tx) => {
-      if (!(await tx.interactions.expire(i.id, ctx.nowIso))) return;
+      if (!(await tx.interactions.expire(i.id, ctx.nowIso))) {
+        return;
+      }
+
       const moved = await moveTicketTx(tx, i.ticket_id, ctx.nowIso, (t) =>
         t.status === 'waiting_human'
           ? {
@@ -87,8 +109,10 @@ export async function expireInteractions(ctx: EngineCtx): Promise<void> {
             }
           : null,
       );
-      if (moved.ok)
+
+      if (moved.ok) {
         ctx.deps.log?.('info', `interaction ${i.id} timed out`, { ticket: i.ticket_id });
+      }
     });
   }
 }

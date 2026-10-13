@@ -32,11 +32,13 @@ export function createRunInboxRepository(driver: SqlDriver): RunInboxRepository 
         'SELECT COALESCE(MAX(seq), -1) + 1 AS next FROM run_inbox WHERE run_id = ?',
         [m.run_id],
       );
+
       const stored = RunInboxMessage.parse({ ...m, seq: head?.next ?? 0 });
       driver.run(
         'INSERT INTO run_inbox (run_id, seq, mode, author, text) VALUES (?, ?, ?, ?, ?)',
         [stored.run_id, stored.seq, stored.mode, stored.author, stored.text],
       );
+
       return stored;
     },
 
@@ -54,6 +56,7 @@ export function createRunInboxRepository(driver: SqlDriver): RunInboxRepository 
         'UPDATE run_inbox SET delivered_at = ? WHERE run_id = ? AND seq = ? AND delivered_at IS NULL',
         [at, runId, seq],
       );
+
       return res.changes === 1;
     },
   };

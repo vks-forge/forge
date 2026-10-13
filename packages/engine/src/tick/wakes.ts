@@ -31,8 +31,12 @@ export async function requestWakeTx(
       iso(now - window_ms),
       ['retry'],
     );
-    if (recent >= max) return { created: false, capped: true };
+
+    if (recent >= max) {
+      return { created: false, capped: true };
+    }
   }
+
   const { inserted, request } = await tx.wakeRequests.insertIfNew({
     id: deps.ids.wakeId(),
     ticket_id: input.ticketId,
@@ -42,6 +46,7 @@ export async function requestWakeTx(
     created_at: iso(now),
     ...(input.notBefore === undefined ? {} : { not_before: iso(input.notBefore) }),
   });
+
   return { created: inserted, capped: false, wake: request };
 }
 

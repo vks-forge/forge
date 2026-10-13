@@ -50,10 +50,12 @@ export function normaliseAcpUpdate(update: SessionUpdate): AcpNormalised {
   switch (update.sessionUpdate) {
     case 'agent_message_chunk': {
       const c = update.content;
+
       return c.type === 'text' && c.text.length > 0
         ? { events: [{ type: 'text', text: c.text }] }
         : { events: [] };
     }
+
     case 'tool_call': {
       const call: EventDraft = {
         type: 'tool_call',
@@ -61,6 +63,7 @@ export function normaliseAcpUpdate(update: SessionUpdate): AcpNormalised {
         name: toolName(update),
         input: update.rawInput ?? {},
       };
+
       return {
         events:
           update.status && KEPT_STATUSES.has(update.status)
@@ -68,6 +71,7 @@ export function normaliseAcpUpdate(update: SessionUpdate): AcpNormalised {
             : [call],
       };
     }
+
     case 'tool_call_update':
       return {
         events:
@@ -76,12 +80,14 @@ export function normaliseAcpUpdate(update: SessionUpdate): AcpNormalised {
     case 'usage_update': {
       const rateLimit = readRateLimit(update._meta);
       const cost = update.cost;
+
       return {
         events: [],
         ...(cost && cost.currency === 'USD' ? { costUsd: cost.amount } : {}),
         ...(rateLimit ? { rateLimit } : {}),
       };
     }
+
     default:
       return { events: [], dropped: update.sessionUpdate };
   }

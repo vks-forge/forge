@@ -27,9 +27,14 @@ export const DEFAULT_INTERACTION_TIMEOUT_MS = 4 * 60 * 60 * 1000;
 /** The run row, or a PolicyDeniedError when it is missing or no longer `running`. */
 export async function loadActiveRun(storage: StorageAdapter, runId: string) {
   const run = await storage.transaction((tx) => tx.runs.get(runId));
-  if (!run) throw new PolicyDeniedError(`run ${runId} does not exist`);
-  if (!isRunActive(run))
+  if (!run) {
+    throw new PolicyDeniedError(`run ${runId} does not exist`);
+  }
+
+  if (!isRunActive(run)) {
     throw new PolicyDeniedError(`run ${runId} is not running (status: ${run.status})`);
+  }
+
   return run;
 }
 
@@ -65,10 +70,13 @@ export async function raiseInteraction(
     const open = (await tx.interactions.listPending()).some(
       (i) => i.run_id === ctx.run.id,
     );
-    if (open)
+
+    if (open) {
       throw new PolicyDeniedError(
         'this run already has a pending question or blocker; stop working and wait for the answer',
       );
+    }
+
     await tx.interactions.insert({
       id,
       ticket_id: ctx.run.ticket_id,
@@ -79,6 +87,7 @@ export async function raiseInteraction(
       asked_at: asked.toISOString(),
       timeout_at: new Date(asked.getTime() + timeout).toISOString(),
     });
+
     await appendRunEvent(tx, ctx, (ts) => ({
       type: 'ask',
       ts,
@@ -87,5 +96,6 @@ export async function raiseInteraction(
       prompt,
     }));
   });
+
   return id;
 }

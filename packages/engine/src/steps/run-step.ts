@@ -28,6 +28,7 @@ export async function runStep<T>(
     model: config.models.director[name],
     budgetUsd: config.engine.step_budget_usd,
   };
+
   let result = await llm.step(name, input, schema, opts);
   for (
     let i = 0;
@@ -43,12 +44,14 @@ export async function runStep<T>(
       opts,
     );
   }
+
   return result;
 }
 
 /** True while `key` is held off (epoch ms clock of this tick). */
 export function isHeld(ctx: EngineCtx, key: string): boolean {
   const h = ctx.state.holds.get(key);
+
   return h !== undefined && h.until > ctx.now;
 }
 
@@ -71,5 +74,6 @@ export function rejectStep(
   ctx.deps.log?.('warn', `director step ${name} rejected for ${ticketId}`, { reason });
   const reset =
     error.retryNotBefore === undefined ? NaN : Date.parse(error.retryNotBefore);
+
   hold(ctx, `${name}:${ticketId}`, reset > ctx.now ? reset : undefined);
 }

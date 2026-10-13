@@ -25,6 +25,7 @@ const FAR = '9999-12-31T23:59:59.999Z';
 async function running(rig: Rig): Promise<string> {
   const id = await rig.request('Fix it');
   await rig.tick();
+
   return id;
 }
 
@@ -52,13 +53,16 @@ describe('steering', () => {
         inboxSeq: 0,
       },
     ]);
+
     expect(rig.llm.callsTo('steer_reply')[0]!.opts.model).toBe('opus');
     expect(JSON.stringify(rig.llm.callsTo('steer_reply')[0]!.input)).toContain(
       'also update the docs',
     );
+
     const undelivered = await rig.storage.transaction((tx) =>
       tx.runInbox.listUndelivered('run-1'),
     );
+
     expect(undelivered).toEqual([]);
   });
 
@@ -93,6 +97,7 @@ describe('steering', () => {
     const undelivered = await rig.storage.transaction((tx) =>
       tx.runInbox.listUndelivered('run-1'),
     );
+
     expect(undelivered).toHaveLength(1);
   });
 
@@ -120,10 +125,12 @@ describe('cancel', () => {
     expect(report.settled).toEqual([
       expect.objectContaining({ runId: 'run-1', status: 'cancelled' }),
     ]);
+
     expect(report.parked).toEqual([]);
     expect(await rig.storage.transaction((tx) => tx.wakeRequests.listDue(FAR))).toEqual(
       [],
     );
+
     expect((await rig.ticket(id)).status).toBe('cancelled');
     expect(await rig.engine.cancelTicket(id)).toBe(false);
     expect(await rig.engine.cancelTicket('FG-77')).toBe(false);

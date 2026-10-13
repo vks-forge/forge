@@ -25,7 +25,10 @@ async function run(
   const h = await rig.driver.start(rig.request());
   const result = await rig.driver.result(h);
   const events: RunEvent[] = [];
-  for await (const e of rig.driver.events(h)) events.push(e);
+  for await (const e of rig.driver.events(h)) {
+    events.push(e);
+  }
+
   return { rig, result, events };
 }
 
@@ -57,8 +60,9 @@ describe('CLI engine: command line and process', { timeout: 30_000 }, () => {
     const { rig } = await run([STREAM.result()]);
     const env = rig.lastCall().env;
     expect(env['FORGE_TICKET']).toBe('FG-1');
-    for (const k of ['CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'FORGE_HOOK_CONFIG'])
+    for (const k of ['CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'FORGE_HOOK_CONFIG']) {
       expect(env).not.toHaveProperty(k);
+    }
   });
 
   it('runs in the worktree and resumes with --resume <session>', async () => {
@@ -81,6 +85,7 @@ describe('CLI engine: command line and process', { timeout: 30_000 }, () => {
         onUnlisted: 'deny',
       },
     });
+
     await rig.driver.result(await rig.driver.start(req));
     const a = rig.lastCall().argv;
     expect(a[a.indexOf('--allowedTools') + 1]).toBe('Read,Edit');
@@ -94,11 +99,13 @@ describe('CLI engine: command line and process', { timeout: 30_000 }, () => {
       steerModes: [],
       permissionRequests: false,
     });
+
     rig.scriptHang();
     const h = await rig.driver.start(rig.request());
     await expect(rig.driver.steer(h, 'x', 'steer')).rejects.toMatchObject({
       errorFamily: 'invalid_input',
     });
+
     await rig.driver.cancel(h);
     await rig.driver.result(h);
   });
@@ -122,6 +129,7 @@ describe('CLI engine: events', { timeout: 30_000 }, () => {
       STREAM.toolResult('tu1', 'hi', false),
       STREAM.result(),
     ]);
+
     expect(events.map((e) => e.type)).toEqual([
       'session',
       'text',
@@ -129,6 +137,7 @@ describe('CLI engine: events', { timeout: 30_000 }, () => {
       'tool_result',
       'usage',
     ]);
+
     expect(events[2]).toMatchObject({ call_id: 'tu1', name: 'Bash' });
     expect(events[3]).toMatchObject({ call_id: 'tu1', is_error: false });
     expect(result).toMatchObject({
@@ -147,6 +156,7 @@ describe('CLI engine: events', { timeout: 30_000 }, () => {
       line({ type: 'weird' }),
       STREAM.result(),
     ]);
+
     expect(result.status).toBe('success');
   });
 });
@@ -160,6 +170,7 @@ describe('CLI engine: result table', { timeout: 30_000 }, () => {
         result: undefined,
       }),
     ]);
+
     expect(result).toMatchObject({ status: 'error', errorFamily: 'budget' });
   });
 
@@ -167,6 +178,7 @@ describe('CLI engine: result table', { timeout: 30_000 }, () => {
     const { result } = await run([
       STREAM.result({ subtype: 'error_max_turns', is_error: true }),
     ]);
+
     expect(result).toMatchObject({ status: 'max_turns', session: null });
   });
 
@@ -188,6 +200,7 @@ describe('CLI engine: result table', { timeout: 30_000 }, () => {
         api_error_status: 429,
       }),
     ]);
+
     expect(result).toMatchObject({
       status: 'error',
       errorFamily: 'rate_limit',
@@ -207,6 +220,7 @@ describe('CLI engine: result table', { timeout: 30_000 }, () => {
     const { result } = await run([
       STREAM.result({ is_error: true, result: 'Not logged in · Please run /login' }),
     ]);
+
     expect(result).toMatchObject({ status: 'error', errorFamily: 'auth' });
   });
 
@@ -232,6 +246,7 @@ describe('CLI engine: result table', { timeout: 30_000 }, () => {
       ),
       STREAM.result(),
     ]);
+
     expect(result).toMatchObject({
       status: 'paused',
       pauseReason: 'interaction',
@@ -255,7 +270,12 @@ describe('CLI engine: result table', { timeout: 30_000 }, () => {
     const rig = makeCliRig({ cancelGraceMs: 2_000 });
     rig.fixture([STREAM.init, STREAM.result()], { hang: true });
     const h = await rig.driver.start(rig.request());
-    for await (const e of rig.driver.events(h)) if (e.type === 'usage') break;
+    for await (const e of rig.driver.events(h)) {
+      if (e.type === 'usage') {
+        break;
+      }
+    }
+
     await rig.clock.advance(2_000);
     expect((await rig.driver.result(h)).status).toBe('success');
     expect(rig.groupSignals).toHaveLength(1);
@@ -286,6 +306,7 @@ describe('CLI engine: receipt cross-check', { timeout: 30_000 }, () => {
       STREAM.toolResult('tu1'),
       STREAM.result(),
     ]);
+
     const h = await rig.driver.start(rig.request());
     await waitFor(() => rig.receipts.asked.length > 0, 'receipt lookup');
     expect((await rig.driver.result(h)).status).toBe('success');

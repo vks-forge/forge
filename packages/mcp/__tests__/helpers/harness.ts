@@ -66,12 +66,14 @@ export async function seedStorage(): Promise<StorageAdapter> {
     await tx.tickets.insert(
       ticket(1, { parent: makeTicketId('SF', 9), blocked_by: [makeTicketId('SF', 2)] }),
     );
+
     await tx.tickets.insert(ticket(2, { status: 'done' }));
     await tx.tickets.insert(ticket(9));
     await tx.tickets.insert(ticket(5));
     await tx.runs.insert(run());
     await tx.runTokens.put(RUN_ID, hashToken(TOKEN), T0);
   });
+
   return storage;
 }
 
@@ -93,9 +95,11 @@ export async function connect(
     searchFetch: fetch,
     ...over,
   });
+
   const [a, b] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '0.0.0' });
   await Promise.all([server.connect(a), client.connect(b)]);
+
   return {
     client,
     storage: store,
@@ -109,5 +113,6 @@ export async function connect(
 /** Joined text of a tool result's content blocks. */
 export function textOf(result: unknown): string {
   const content = (result as { content?: { type: string; text?: string }[] }).content;
+
   return (content ?? []).map((c) => c.text ?? '').join('\n');
 }

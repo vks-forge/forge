@@ -34,13 +34,16 @@ describe('killTree', () => {
     const { spawn, calls } = recordingSpawn(() => {
       const k = createFakeChild(undefined);
       setImmediate(() => k.exit(0));
+
       return k;
     });
+
     await killTree(child, { platform: 'win32', spawn });
     expect(calls[0]).toMatchObject({
       command: 'taskkill',
       args: ['/T', '/F', '/PID', '77'],
     });
+
     expect(child.kills).toEqual(['SIGKILL']);
   });
 
@@ -52,6 +55,7 @@ describe('killTree', () => {
       spawn: nodeSpawn,
       signalGroup: (p) => void sent.push(p),
     });
+
     expect(sent).toEqual([78]);
     await killTree(child, {
       platform: 'linux',
@@ -60,6 +64,7 @@ describe('killTree', () => {
         throw new Error('ESRCH');
       },
     });
+
     expect(child.kills).toEqual(['SIGKILL']);
     const noPid = createFakeChild(undefined);
     await killTree(noPid, { platform: 'linux', spawn: nodeSpawn });
@@ -76,6 +81,7 @@ describe('probeVersion', () => {
     const missing = () => {
       throw new Error('ENOENT');
     };
+
     expect(await probeVersion(missing, systemClock, 'x', [], {})).toBeNull();
     const clock = createFakeClock();
     const hang = createFakeChild();
@@ -94,6 +100,7 @@ describe('run files and settings sources', () => {
     expect(
       JSON.parse(readFileSync(files.mcpConfigPath, 'utf8')).mcpServers.forge.command,
     ).toBe('node');
+
     expect(readFileSync(files.settingsPath, 'utf8')).toContain('/h/hook.js');
     await expect(
       writeRunFiles(req.runId, { ...prepared, hookServerUrl: 'nope' }, '/h/hook.js'),
@@ -109,6 +116,7 @@ describe('run files and settings sources', () => {
     expect(await existingSettingsSources(paths)).toEqual([
       join(cwd, '.claude', 'settings.json'),
     ]);
+
     expect(settingsSourcePaths(cwd, '/h', 'freebsd' as NodeJS.Platform)).toHaveLength(3);
   });
 });
@@ -139,14 +147,17 @@ describe('driver input and seams', () => {
     await expect(rig.driver.start({ runId: '' } as never)).rejects.toMatchObject({
       errorFamily: 'invalid_input',
     });
+
     rig.scriptHang();
     const h = await rig.driver.start(rig.request());
     await expect(rig.driver.start(rig.request())).rejects.toMatchObject({
       errorFamily: 'invalid_input',
     });
+
     await expect(rig.driver.resume(h)).rejects.toMatchObject({
       errorFamily: 'invalid_input',
     });
+
     await rig.driver.cancel(h);
     await rig.driver.result(h);
     await expect(rig.driver.resume({ runId: 'ghost' })).rejects.toBeDefined();
@@ -174,11 +185,13 @@ describe('driver input and seams', () => {
         }),
       },
     });
+
     const h = await driver.start(rig.request());
     expect(await driver.result(h)).toMatchObject({
       status: 'error',
       errorFamily: 'crash',
     });
+
     await expect(driver.steer(h, 'x', 'steer')).rejects.toMatchObject({
       errorFamily: 'invalid_input',
     });
@@ -192,6 +205,7 @@ describe('driver input and seams', () => {
         throw new Error('EACCES');
       },
     });
+
     const done = await driver.result(await driver.start(rig.request()));
     expect(done.errorFamily).toBe('crash');
     expect((await driver.preflight()).ok).toBe(false);

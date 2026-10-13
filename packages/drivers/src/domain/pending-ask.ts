@@ -23,31 +23,48 @@ export function isAskTool(toolName: string, mcpIdentity: string): boolean {
 
 /** The `interaction_id` inside a tool result, however the harness wrapped it; null if none. */
 export function findInteractionId(value: unknown, depth = 0): string | null {
-  if (depth > MAX_DEPTH) return null;
+  if (depth > MAX_DEPTH) {
+    return null;
+  }
+
   if (typeof value === 'string') {
     const text = value.trim();
-    if (!text.startsWith('{') && !text.startsWith('[')) return null;
+    if (!text.startsWith('{') && !text.startsWith('[')) {
+      return null;
+    }
+
     try {
       return findInteractionId(JSON.parse(text), depth + 1);
     } catch {
       return null;
     }
   }
+
   if (Array.isArray(value)) {
     for (const item of value) {
       const found = findInteractionId(item, depth + 1);
-      if (found) return found;
+      if (found) {
+        return found;
+      }
     }
+
     return null;
   }
+
   if (value !== null && typeof value === 'object') {
     const record = value as Record<string, unknown>;
     const direct = record['interaction_id'];
-    if (typeof direct === 'string' && direct.length > 0) return direct;
+    if (typeof direct === 'string' && direct.length > 0) {
+      return direct;
+    }
+
     for (const inner of Object.values(record)) {
       const found = findInteractionId(inner, depth + 1);
-      if (found) return found;
+      if (found) {
+        return found;
+      }
     }
   }
+
   return null;
 }

@@ -52,9 +52,13 @@ export function createFakeReceipts(): FakeReceipts {
     async decisionFor(runId, id, match) {
       fake.asked.push({ runId, id, match });
       const found = byId.get(id) ?? (match ? byMatch.get(key(match)) : undefined);
-      if (found) return found;
+      if (found) {
+        return found;
+      }
+
       return fake.allowAll ? decisionOf('allow') : null;
     },
   };
+
   return fake;
 }

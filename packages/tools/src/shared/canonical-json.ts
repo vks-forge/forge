@@ -27,23 +27,33 @@ export function canonicalJson(value: unknown): string {
 }
 
 function sortKeys(value: unknown, depth: number, budget: { nodes: number }): unknown {
-  if (depth > CANONICAL_MAX_DEPTH)
+  if (depth > CANONICAL_MAX_DEPTH) {
     throw new RangeError('canonicalJson: nested too deeply');
-  if (++budget.nodes > CANONICAL_MAX_NODES)
+  }
+
+  if (++budget.nodes > CANONICAL_MAX_NODES) {
     throw new RangeError('canonicalJson: value too large');
+  }
+
   if (Array.isArray(value)) {
     return value.map((v) => (v === undefined ? null : sortKeys(v, depth + 1, budget)));
   }
+
   if (value !== null && typeof value === 'object') {
     const out: Record<string, unknown> = {};
     for (const key of Object.keys(value).sort()) {
       const v = (value as Record<string, unknown>)[key];
-      if (v !== undefined) out[key] = sortKeys(v, depth + 1, budget);
+      if (v !== undefined) {
+        out[key] = sortKeys(v, depth + 1, budget);
+      }
     }
+
     return out;
   }
+
   if (typeof value === 'number' && !Number.isFinite(value)) {
     throw new TypeError('canonicalJson: non-finite number');
   }
+
   return value;
 }

@@ -30,6 +30,7 @@ export function resolveAcpEntry(): string {
 
 export function createAcpEngine(deps: EngineDeps): ClaudeEngine {
   const { config } = deps;
+
   return {
     kind: 'acp',
     capabilities: () => ({
@@ -53,6 +54,7 @@ export function createAcpEngine(deps: EngineDeps): ClaudeEngine {
           issues: ['missing binary: claude-agent-acp is not installed'],
         };
       }
+
       const env = buildChildEnv(deps.baseEnv, {}, {});
       const adapter = await probeVersion(
         deps.spawn,
@@ -61,6 +63,7 @@ export function createAcpEngine(deps: EngineDeps): ClaudeEngine {
         [entry, '--version'],
         env,
       );
+
       const cli = await probeVersion(
         deps.spawn,
         deps.clock,
@@ -68,18 +71,23 @@ export function createAcpEngine(deps: EngineDeps): ClaudeEngine {
         [entry, '--cli', '--version'],
         env,
       );
-      if (adapter === null)
+
+      if (adapter === null) {
         issues.push('missing binary: the ACP adapter did not report a version');
-      else if (adapter !== config.pinnedAdapterVersion)
+      } else if (adapter !== config.pinnedAdapterVersion) {
         issues.push(
           `adapter version ${adapter} differs from the pinned ${config.pinnedAdapterVersion}`,
         );
-      if (cli === null)
+      }
+
+      if (cli === null) {
         issues.push('missing binary: the bundled Claude Code did not report a version');
-      else if (cli !== config.pinnedCliVersion)
+      } else if (cli !== config.pinnedCliVersion) {
         issues.push(
           `bundled Claude Code ${cli} differs from the pinned ${config.pinnedCliVersion}`,
         );
+      }
+
       return {
         ok: issues.length === 0,
         issues,

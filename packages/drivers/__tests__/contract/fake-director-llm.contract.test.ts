@@ -13,6 +13,7 @@ import { createFakeDirectorLLM } from '#tests/helpers/fake-director-llm.js';
 
 describeDirectorLLMContract('fake', async () => {
   const fake = createFakeDirectorLLM();
+
   return {
     llm: fake.llm,
     script: (r) => fake.script(r),

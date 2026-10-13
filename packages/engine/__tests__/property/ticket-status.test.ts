@@ -85,8 +85,10 @@ function reachable(from: TicketStatus): Set<TicketStatus> {
         }
       }
     }
+
     frontier = next;
   }
+
   return seen;
 }
 
@@ -106,15 +108,19 @@ function spy(base: StorageAdapter, writes: Write[]): StorageAdapter {
             if (prop === 'updateTicketCas') {
               return async (id: Ticket['id'], version: number, patch: TicketPatch) => {
                 writes.push({ from: (await target.get(id))?.status, patch });
+
                 return target.updateTicketCas(id, version, patch);
               };
             }
+
             const v: unknown = Reflect.get(target, prop);
+
             return typeof v === 'function'
               ? (v as (...a: unknown[]) => unknown).bind(target)
               : v;
           },
         });
+
         return fn(
           new Proxy(tx, {
             get: (t, p) => (p === 'tickets' ? tickets : Reflect.get(t, p)),
@@ -156,11 +162,15 @@ async function play(rig: Rig, ops: readonly Op[]): Promise<string[]> {
     const r = await rig.tick();
     errors.push(...r.errors.map((e) => `${e.where}: ${e.message}`));
   };
+
   for (const o of ops) {
-    if (o.op === 'request') await rig.request('Fix the doctor check');
-    else if (o.op === 'tick') await tick();
-    else if (o.op === 'advance') rig.clock.advance(o.ms);
-    else if (o.op === 'standard') {
+    if (o.op === 'request') {
+      await rig.request('Fix the doctor check');
+    } else if (o.op === 'tick') {
+      await tick();
+    } else if (o.op === 'advance') {
+      rig.clock.advance(o.ms);
+    } else if (o.op === 'standard') {
       rig.llm.script('triage', {
         lane: 'standard',
         confidence: 0.9,
@@ -170,15 +180,22 @@ async function play(rig: Rig, ops: readonly Op[]): Promise<string[]> {
         tier_predicted: 'A',
         title: 'Heavier',
       });
-    } else if (o.op === 'cancel') await rig.engine.cancelTicket(`FG-${o.n}`);
-    else if (o.op === 'answer') {
+    } else if (o.op === 'cancel') {
+      await rig.engine.cancelTicket(`FG-${o.n}`);
+    } else if (o.op === 'answer') {
       const pending = await rig.storage.transaction((tx) =>
         tx.interactions.listPending(),
       );
-      if (pending[0]) await rig.engine.answerInteraction(pending[0].id, 'yes');
+
+      if (pending[0]) {
+        await rig.engine.answerInteraction(pending[0].id, 'yes');
+      }
     } else {
       const runId = rig.engine.liveRunIds().find((id) => !finished.has(id));
-      if (!runId) continue;
+      if (!runId) {
+        continue;
+      }
+
       finished.add(runId);
       const result =
         o.how === 'success'
@@ -190,11 +207,14 @@ async function play(rig: Rig, ops: readonly Op[]): Promise<string[]> {
                 interactionId: `int-p${++pauses}`,
               })
             : makeResult({ status: 'error', errorFamily: o.how });
+
       rig.driver.finish(runId, result);
       await rig.flush();
     }
   }
+
   await tick();
+
   return errors;
 }
 
@@ -210,13 +230,17 @@ describe('ticket status writes', () => {
         expect(errors).toEqual([]);
         for (const w of writes) {
           const to = w.patch.status;
-          if (to === undefined || w.from === undefined || to === w.from) continue;
+          if (to === undefined || w.from === undefined || to === w.from) {
+            continue;
+          }
+
           expect(reachable(w.from), `${w.from} -> ${to}`).toContain(to);
           checked++;
         }
       }),
       { numRuns: 40 },
     );
+
     // Guards against a spy that silently records nothing.
     expect(checked).toBeGreaterThan(20);
   }, 60_000);
@@ -225,17 +249,21 @@ describe('ticket status writes', () => {
     const walk = (dir: string): string[] =>
       readdirSync(dir).flatMap((n) => {
         const p = join(dir, n);
+
         return statSync(p).isDirectory() ? walk(p) : p.endsWith('.ts') ? [p] : [];
       });
+
     const src = join(import.meta.dirname, '..', '..', 'src');
     const files = walk(src).map((p) => ({
       p: p.replaceAll('\\', '/'),
       text: readFileSync(p, 'utf8'),
     }));
+
     const using = (needle: string) =>
       files
         .filter((f) => f.text.includes(needle))
         .map((f) => f.p.slice(f.p.indexOf('/src/') + 5));
+
     expect(using('updateTicketCas(')).toEqual(['tick/ticket-moves.ts']);
     expect(using('tickets.insert(')).toEqual(['tick/intake.ts']);
   });

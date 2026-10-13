@@ -32,6 +32,7 @@ export async function answerPermission(
     name: tc.name || readClaudeToolName(tc._meta) || tc.title || 'unknown',
     input: tc.rawInput ?? {},
   };
+
   const decision = await sink.decisionFor(call);
   const allow = decision?.decision === 'allow';
   sink.emit({
@@ -40,15 +41,19 @@ export async function answerPermission(
     tool: decision?.tool || call.name,
     decision: decision?.decision ?? 'deny',
   });
-  if (!decision)
+
+  if (!decision) {
     sink.emit({
       type: 'error',
       family: 'policy_denied',
       message: `no decision receipt for tool call ${call.id} (${call.name}); rejected`,
     });
+  }
+
   const option = params.options.find(
     (o) => o.kind === (allow ? 'allow_once' : 'reject_once'),
   );
+
   return option
     ? { outcome: { outcome: 'selected', optionId: option.optionId } }
     : { outcome: { outcome: 'cancelled' } };

@@ -29,11 +29,18 @@ export const commandName = (word: string | undefined): string =>
  */
 export function commandCandidates(argv: readonly string[]): string[][] {
   const out: string[][] = [[...argv]];
-  if (!isWrapper(commandName(argv[0]))) return out;
+  if (!isWrapper(commandName(argv[0]))) {
+    return out;
+  }
+
   for (let i = 1; i < argv.length && out.length < MAX_CANDIDATES; i++) {
     const t = argv[i] ?? '';
-    if (t.startsWith('-') || ASSIGNMENT.test(t)) continue;
+    if (t.startsWith('-') || ASSIGNMENT.test(t)) {
+      continue;
+    }
+
     out.push(argv.slice(i));
   }
+
   return out;
 }

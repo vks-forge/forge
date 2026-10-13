@@ -33,11 +33,14 @@ export function createRunTokenRepository(driver: SqlDriver): RunTokenRepository 
        WHERE run_tokens.revoked_at IS NULL`,
       [t.runId, t.tokenSha256, issuedAt],
     );
-    if (res.changes !== 1)
+
+    if (res.changes !== 1) {
       throw new PolicyDeniedError(
         `run ${runId} token was revoked; use reissue to re-arm`,
       );
+    }
   };
+
   return {
     issue,
     put: issue,
@@ -60,6 +63,7 @@ export function createRunTokenRepository(driver: SqlDriver): RunTokenRepository 
         'SELECT token_sha256 FROM run_tokens WHERE run_id = ? AND revoked_at IS NULL',
         [runId],
       );
+
       return row?.token_sha256 ?? null;
     },
 

@@ -13,8 +13,9 @@ import { InvalidInputError, SecretName } from '@forge/core';
 
 /** Throws InvalidInputError unless `name` matches the core `SecretName` grammar. */
 export function assertSecretName(name: string): void {
-  if (!SecretName.safeParse(name).success)
+  if (!SecretName.safeParse(name).success) {
     throw new InvalidInputError(
       `invalid secret name (use lowercase letters, digits and dashes): ${JSON.stringify(name).slice(0, 80)}`,
     );
+  }
 }

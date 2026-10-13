@@ -25,11 +25,13 @@ export function createFakeClock(start = Date.UTC(2026, 9, 13, 12, 0, 0)): FakeCl
   let current = start;
   let nextId = 0;
   const timers = new Map<number, { at: number; fn: () => void }>();
+
   return {
     now: () => current,
     after(ms, fn) {
       const id = nextId++;
       timers.set(id, { at: current + ms, fn });
+
       return () => {
         timers.delete(id);
       };
@@ -40,13 +42,21 @@ export function createFakeClock(start = Date.UTC(2026, 9, 13, 12, 0, 0)): FakeCl
       for (;;) {
         await settle();
         let due: [number, { at: number; fn: () => void }] | undefined;
-        for (const entry of timers)
-          if (entry[1].at <= target && (!due || entry[1].at < due[1].at)) due = entry;
-        if (!due) break;
+        for (const entry of timers) {
+          if (entry[1].at <= target && (!due || entry[1].at < due[1].at)) {
+            due = entry;
+          }
+        }
+
+        if (!due) {
+          break;
+        }
+
         timers.delete(due[0]);
         current = Math.max(current, due[1].at);
         due[1].fn();
       }
+
       current = target;
       await settle();
     },

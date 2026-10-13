@@ -33,12 +33,15 @@ const PullResponse = z.object({
   mergeable: z.boolean().nullable().optional(),
   head: z.object({ sha: z.string().min(1) }),
 });
+
 const MergeResponse = z.object({ sha: z.string().min(1) });
 
 const parse = <T>(schema: z.ZodType<T>, json: unknown, what: string): T => {
   const r = schema.safeParse(json);
-  if (!r.success)
+  if (!r.success) {
     throw new GitHostError('unavailable', `GitHub returned an unreadable ${what}`);
+  }
+
   return r.data;
 };
 
@@ -54,6 +57,7 @@ export function createGitHubAppGitHost(o: GitHubAppGitHostOptions): GitHost {
     privateKey: o.privateKey,
     now,
   });
+
   const repoPath = `/repos/${encodeURIComponent(o.owner)}/${encodeURIComponent(o.repo)}`;
   const gitBase = (o.gitBase ?? 'https://github.com').replace(/\/+$/, '');
   const encodeRef = (branch: string): string =>
@@ -90,6 +94,7 @@ export function createGitHubAppGitHost(o: GitHubAppGitHostOptions): GitHost {
     async openPr({ branch, base, title, body }) {
       const { json } = await api('POST', '/pulls', { title, head: branch, base, body });
       const pr = parse(PullResponse, json, 'pull request');
+
       return { number: pr.number, url: pr.html_url };
     },
 
@@ -97,11 +102,13 @@ export function createGitHubAppGitHost(o: GitHubAppGitHostOptions): GitHost {
       const { json } = await api('GET', `/pulls/${n}`);
       const pr = parse(PullResponse, json, 'pull request');
       const state: PrState = pr.merged === true ? 'merged' : pr.state;
+
       return { state, mergeable: pr.mergeable ?? null, headSha: pr.head.sha };
     },
 
     async merge(n, method) {
       const { json } = await api('PUT', `/pulls/${n}/merge`, { merge_method: method });
+
       return { sha: parse(MergeResponse, json, 'merge response').sha };
     },
 
@@ -111,8 +118,10 @@ export function createGitHubAppGitHost(o: GitHubAppGitHostOptions): GitHost {
 
     async deleteBranch(branch) {
       assertSafeRefArg('branch', branch);
-      if (branch === o.baseBranch)
+      if (branch === o.baseBranch) {
         throw new GitHostError('invalid', `refusing to delete the base branch ${branch}`);
+      }
+
       // 404 and 422 both mean the ref is already gone, so a repeat delete is not an error.
       await api(
         'DELETE',

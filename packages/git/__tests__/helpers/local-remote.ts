@@ -68,6 +68,7 @@ export async function makeLocalRemote(): Promise<LocalRemote> {
     await writeFile(join(work, file), content);
     await git(work, 'add', '-A');
     await git(work, 'commit', '-m', msg);
+
     return git(work, 'rev-parse', 'HEAD');
   };
 
@@ -79,11 +80,13 @@ export async function makeLocalRemote(): Promise<LocalRemote> {
       await git(work, 'checkout', '-b', branch, 'main');
       const sha = await commit(file, content, `work on ${branch}`);
       await git(work, 'checkout', 'main');
+
       return sha;
     },
     async commitOnMain(file, content) {
       const sha = await commit(file, content, `main ${file}`);
       await git(work, 'push', remotePath, 'main:main');
+
       return sha;
     },
     async remoteSha(branch) {

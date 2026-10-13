@@ -14,5 +14,6 @@ import { lookup } from 'node:dns/promises';
 /** Every A/AAAA address for `host` (empty when none). */
 export async function systemResolve(host: string): Promise<string[]> {
   const found = await lookup(host, { all: true, verbatim: true });
+
   return found.map((f) => f.address);
 }

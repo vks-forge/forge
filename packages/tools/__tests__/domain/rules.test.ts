@@ -29,9 +29,13 @@ function sh(
 ) {
   const eff = effectiveGrant(lane, grant({ rules }));
   const t = tokenizeShell(command, dialect);
-  if (!t.ok) throw new Error(t.error);
+  if (!t.ok) {
+    throw new Error(t.error);
+  }
+
   return evaluateShell(eff, t.value, dialect, CWD);
 }
+
 const rule = (
   action: string,
   resource: string,
@@ -106,9 +110,11 @@ describe('shell chains and obfuscation', () => {
     expect(sh('standard', 'pnpm test > .forge/tools/catalog.yaml').reason).toBe(
       'managed_deny',
     );
+
     expect(sh('express', 'pnpm test > migrations/1.sql')).toMatchObject({
       effect: 'deny',
     });
+
     expect(sh('standard', 'pnpm test 2>/dev/null').effect).toBe('allow');
     expect(sh('standard', 'cat < .env').reason).toBe('managed_deny');
   });
@@ -118,6 +124,7 @@ describe('shell chains and obfuscation', () => {
     expect(sh('standard', 'GIT PUSH origin', [], 'powershell').reason).toBe(
       'managed_deny',
     );
+
     expect(sh('standard', 'Get-ChildItem .', [], 'bash').effect).toBe('allow');
     expect(sh('standard', 'get-childitem .', [], 'bash').effect).toBe('ask');
   });
@@ -128,9 +135,11 @@ describe('layers only tighten', () => {
     expect(
       sh('standard', 'pnpm add zod', [rule('shell', 'pnpm add *', 'allow')]).effect,
     ).toBe('ask');
+
     expect(
       sh('express', 'pnpm add zod', [rule('shell', 'pnpm add *', 'allow')]).effect,
     ).toBe('deny');
+
     expect(sh('standard', 'echo hi', [rule('shell', 'echo*', 'allow')]).effect).toBe(
       'ask',
     );
@@ -140,6 +149,7 @@ describe('layers only tighten', () => {
     expect(
       sh('standard', 'pnpm test', [rule('shell', 'pnpm test*', 'deny')]).effect,
     ).toBe('deny');
+
     expect(sh('standard', 'pnpm test', [rule('shell', 'pnpm test*', 'ask')]).effect).toBe(
       'ask',
     );
@@ -151,8 +161,12 @@ describe('layers only tighten', () => {
       undefined,
       grant({ rules: [rule('shell', 'ls*', 'deny')] }),
     );
+
     const t = tokenizeShell('ls -la', 'bash');
-    if (!t.ok) throw new Error('fixture');
+    if (!t.ok) {
+      throw new Error('fixture');
+    }
+
     expect(evaluateShell(eff, t.value, 'bash').effect).toBe('deny');
   });
 });
@@ -171,6 +185,7 @@ describe('last-match wins and longest-prefix for shell', () => {
       rule('shell', 'pnpm test*', 'deny'),
       rule('shell', 'pnpm test*', 'allow'),
     ];
+
     expect(sh('standard', 'pnpm test', rules).effect).toBe('allow');
     expect(sh('standard', 'pnpm test', [...rules].reverse()).effect).toBe('deny');
   });
@@ -182,6 +197,7 @@ describe('last-match wins and longest-prefix for shell', () => {
     expect(
       evaluateToolRules(eff([...base].reverse()), 'edit', 'src/a/x.ts', CWD).effect,
     ).toBe('deny');
+
     expect(evaluateToolRules(eff(base), 'edit', 'src/b/x.ts', CWD).effect).toBe('deny');
   });
 });
@@ -199,16 +215,22 @@ describe('managed deny layer', () => {
       grant({ rules: [rule('shell', 'curl*', 'allow')] }),
       managed,
     );
+
     const t = tokenizeShell('curl https://x', 'bash');
-    if (!t.ok) throw new Error('fixture');
+    if (!t.ok) {
+      throw new Error('fixture');
+    }
+
     expect(evaluateShell(eff, t.value, 'bash')).toMatchObject({
       effect: 'deny',
       reason: 'managed_deny',
     });
+
     expect(evaluateToolRules(eff, 'web_fetch', 'https://evil.com/a')).toMatchObject({
       effect: 'deny',
       reason: 'managed_deny',
     });
+
     expect(evaluateToolRules(eff, 'web_fetch', 'https://docs.good.com/a').effect).toBe(
       'ask',
     );
@@ -274,12 +296,15 @@ describe('path rules', () => {
     expect(
       evaluateToolRules(std, 'web_fetch', 'https://docs.example.com/a/b').effect,
     ).toBe('allow');
+
     expect(evaluateToolRules(std, 'web_fetch', 'https://evil.example.com').effect).toBe(
       'ask',
     );
+
     expect(
       evaluateToolRules(full, 'web_fetch', 'https://docs.example.com/a').effect,
     ).toBe('ask');
+
     expect(evaluateToolRules(full, 'web_search', 'vitest coverage').effect).toBe('allow');
   });
 });

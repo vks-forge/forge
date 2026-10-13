@@ -63,6 +63,7 @@ describe('runMigrations', () => {
     const tables = driver
       .all<{ name: string }>("SELECT name FROM sqlite_master WHERE type = 'table'")
       .map((r) => r.name);
+
     driver.close();
     expect(applied).toEqual(MIGRATIONS.map((m) => m.id));
     expect(tables).toEqual(expect.arrayContaining(EXPECTED_TABLES));
@@ -95,13 +96,16 @@ describe('runMigrations', () => {
       expect(columns(driver, 'tool_decisions')).toEqual(
         expect.arrayContaining(['reason', 'parent_call_id']),
       );
+
       expect(columns(driver, 'tool_effects')).toEqual(
         expect.arrayContaining(['run_id', 'chain_seq']),
       );
+
       expect(columns(driver, 'runs')).toContain('final_chain_hash');
       const indexes = driver
         .all<{ name: string }>('PRAGMA index_list(tool_effects)')
         .map((r) => r.name);
+
       expect(indexes).toContain('idx_tool_effects_run_chain');
     };
 
@@ -118,11 +122,13 @@ describe('runMigrations', () => {
       driver.run(
         `INSERT INTO tool_effects (decision_id, state, ts, hash) VALUES ('d1', 'read_completed', '2026-01-01T00:00:00.000Z', 'h')`,
       );
+
       runMigrations(driver);
       expectChainColumns(driver);
       const row = driver.all<{ run_id: string; chain_seq: number }>(
         "SELECT run_id, chain_seq FROM tool_effects WHERE decision_id = 'd1'",
       );
+
       driver.close();
       expect(row).toEqual([{ run_id: '', chain_seq: 0 }]);
     });
@@ -150,6 +156,7 @@ describe('runMigrations', () => {
            VALUES (?, 'r1', ?, 't', 'a', 'allow', 'rule', 'ts', 'h', ?)`,
           [id, chain, chain],
         );
+
       insert('d1', 1);
       expect(() =>
         driver.run(
@@ -157,6 +164,7 @@ describe('runMigrations', () => {
            VALUES ('d2', 'r1', 2, 't', 'a', 'allow', 'rule', 'ts', 'h', 1)`,
         ),
       ).toThrow();
+
       driver.close();
     });
 
@@ -168,10 +176,12 @@ describe('runMigrations', () => {
          VALUES ('old1', 'r1', 1, 't', 'a', 'allow', 'rule', 'ts', 'h'),
                 ('old2', 'r1', 2, 't', 'a', 'allow', 'rule', 'ts', 'h')`,
       );
+
       expect(runMigrations(driver)).toEqual([4, 5, 6]);
       const rows = driver.all<{ chain_seq: number }>(
         'SELECT chain_seq FROM tool_decisions',
       );
+
       driver.close();
       expect(rows).toEqual([{ chain_seq: 0 }, { chain_seq: 0 }]);
     });
@@ -184,6 +194,7 @@ describe('runMigrations', () => {
       const cols = driver
         .all<{ name: string; notnull: number }>('PRAGMA table_info(tickets)')
         .filter((c) => c.name === 'pr_number' || c.name === 'pr_url');
+
       driver.close();
       expect(cols.map((c) => c.name).sort()).toEqual(['pr_number', 'pr_url']);
       expect(cols.every((c) => c.notnull === 0)).toBe(true);
@@ -207,9 +218,11 @@ describe('runMigrations', () => {
           'hook_registered_at',
         ]),
       );
+
       expect(columns(driver, 'wake_requests')).toEqual(
         expect.arrayContaining(['created_at', 'consumed_at']),
       );
+
       expect(columns(driver, 'tool_decisions')).toContain('resource');
       driver.close();
     });
@@ -228,11 +241,13 @@ describe('runMigrations', () => {
       runMigrations(driver);
       const names = (table: string) =>
         driver.all<{ name: string }>(`PRAGMA index_list(${table})`).map((r) => r.name);
+
       const found = [
         ...names('runs'),
         ...names('wake_requests'),
         ...names('interactions'),
       ];
+
       driver.close();
       expect(found).toEqual(
         expect.arrayContaining([
@@ -253,25 +268,30 @@ describe('runMigrations', () => {
            VALUES (?, 'SF', ?, 't', 'b', 'feat', 'express', 'A', 'inbox', 0, ?, '2026-10-13T00:00:00.000Z', '2026-10-13T00:00:00.000Z')`,
           [id, parent, blockers],
         );
+
       ticket('SF-1', 'SF-9', '["SF-2","SF-3"]');
       ticket('SF-2', null, '[]');
       driver.run(
         `INSERT INTO runs (id, ticket_id, harness, driver_version, cwd, lane, started_at, status)
          VALUES ('old', 'SF-1', 'h', '1', '/w', 'express', '2026-10-13T00:00:00.000Z', 'running')`,
       );
+
       expect(runMigrations(driver)).toEqual([5, 6]);
       const edges = driver.all<{ from_id: string; to_id: string; kind: string }>(
         'SELECT from_id, to_id, kind FROM ticket_relations ORDER BY rowid',
       );
+
       const run = driver.get<{ owner: string }>(
         "SELECT owner FROM runs WHERE id = 'old'",
       );
+
       driver.close();
       expect(edges).toEqual([
         { from_id: 'SF-1', to_id: 'SF-9', kind: 'spawned_from' },
         { from_id: 'SF-1', to_id: 'SF-2', kind: 'depends_on' },
         { from_id: 'SF-1', to_id: 'SF-3', kind: 'depends_on' },
       ]);
+
       expect(run?.owner).toBe('pre-0005');
     });
   });
@@ -280,7 +300,10 @@ describe('runMigrations', () => {
     const driver = openSqliteDriver(':memory:');
     runMigrations(driver);
     const first = MIGRATIONS[0];
-    if (!first) throw new Error('no migrations');
+    if (!first) {
+      throw new Error('no migrations');
+    }
+
     const edited = [{ ...first, sql: `${first.sql} -- edited` }, ...MIGRATIONS.slice(1)];
     expect(() => runMigrations(driver, edited)).toThrow(/edited after apply/);
     driver.close();
@@ -295,9 +318,11 @@ describe('runMigrations', () => {
         { id: 1, name: 'b', sql: 'SELECT 1' },
       ]),
     ).toThrow(/must increase/);
+
     expect(() =>
       runMigrations(driver, [{ id: 3, name: 'bad', sql: 'CREATE TABLE x (' }]),
     ).toThrow();
+
     const rows = driver.all('SELECT id FROM schema_migrations WHERE id = 3');
     driver.close();
     expect(rows).toEqual([]);
@@ -316,9 +341,11 @@ describe('concurrent and mismatched openers', () => {
       },
       all: <T extends SqlRow = SqlRow>(sql: string, params?: readonly SqlValue[]) => {
         log.push(sql.trim().split(/\s+/).slice(0, 4).join(' '));
+
         return real.all<T>(sql, params);
       },
     };
+
     runMigrations(spy);
     real.close();
     const begin = log.indexOf('BEGIN IMMEDIATE');
@@ -348,9 +375,11 @@ describe('concurrent and mismatched openers', () => {
             aBlocked = true;
           }
         }
+
         return rows;
       },
     };
+
     const appliedByB = runMigrations(racing);
     const appliedByA = runMigrations(a);
     a.close();
@@ -381,12 +410,14 @@ describe('concurrent and mismatched openers', () => {
     driver.run(
       "INSERT INTO schema_migrations (id, name, checksum, applied_at) VALUES (99, 'future', 'x', 't')",
     );
+
     let failure: unknown;
     try {
       runMigrations(driver);
     } catch (e) {
       failure = e;
     }
+
     driver.close();
     expect(failure).toBeInstanceOf(ForgeError);
     expect(String((failure as Error).message)).toMatch(/newer|unknown migration/i);
@@ -399,10 +430,12 @@ describe('concurrent and mismatched openers', () => {
     driver.run(
       "INSERT INTO schema_migrations (id, name, checksum, applied_at) VALUES (99, 'future', 'x', 't')",
     );
+
     expect(() => runMigrations(driver)).toThrow();
     const ids = driver
       .all<{ id: number }>('SELECT id FROM schema_migrations ORDER BY id')
       .map((r) => r.id);
+
     driver.close();
     expect(ids).toEqual([1, 2, 99]);
   });
@@ -415,9 +448,11 @@ describe('concurrent and mismatched openers', () => {
         { id: 2, name: 'bad', sql: 'CREATE TABLE (' },
       ]),
     ).toThrow();
+
     const tables = driver.all(
       "SELECT name FROM sqlite_master WHERE name IN ('t1', 'schema_migrations')",
     );
+
     driver.close();
     expect(tables).toEqual([]);
   });
@@ -434,6 +469,7 @@ describe('checkSchemaCurrent', () => {
       pending: MIGRATIONS.map((m) => m.id),
       unknown: [],
     });
+
     expect(tables).toEqual([]);
   });
 
@@ -454,6 +490,7 @@ describe('checkSchemaCurrent', () => {
     driver.run(
       "INSERT INTO schema_migrations (id, name, checksum, applied_at) VALUES (99, 'future', 'x', 't')",
     );
+
     const report = checkSchemaCurrent(driver);
     driver.close();
     expect(report).toMatchObject({ status: 'ahead', unknown: [99] });
@@ -463,11 +500,15 @@ describe('checkSchemaCurrent', () => {
     const driver = openSqliteDriver(':memory:');
     runMigrations(driver);
     const first = MIGRATIONS[0];
-    if (!first) throw new Error('no migrations');
+    if (!first) {
+      throw new Error('no migrations');
+    }
+
     const report = checkSchemaCurrent(driver, [
       { ...first, sql: `${first.sql} -- x` },
       ...MIGRATIONS.slice(1),
     ]);
+
     driver.close();
     expect(report.status).toBe('edited');
     expect(report.edited).toEqual([first.id]);

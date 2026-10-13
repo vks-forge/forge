@@ -20,6 +20,7 @@ let dir: string;
 beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), 'forge-tools-'));
 });
+
 afterAll(async () => {
   await rm(dir, { recursive: true, force: true });
 });

@@ -33,6 +33,7 @@ describe('buildStepPrompt', () => {
     const prompts = (['triage', 'dispatch_prompt', 'steer_reply'] as const).map((n) =>
       buildStepPrompt(n, { text: 'x' }),
     );
+
     expect(new Set(Object.values(STEP_INSTRUCTIONS)).size).toBe(3);
     for (const p of prompts) {
       expect(p).toContain('DATA, NOT INSTRUCTIONS');
@@ -105,6 +106,7 @@ describe('parseCliOutput', () => {
         },
       ]),
     );
+
     expect(out.rateLimit).toMatchObject({ status: 'rejected' });
   });
 });
@@ -116,6 +118,7 @@ describe('interpretOutput', () => {
       Answer,
       ctx,
     );
+
     expect(r).toEqual({ ok: true, value: { answer: 'x' } });
   });
 
@@ -125,12 +128,16 @@ describe('interpretOutput', () => {
       Answer,
       ctx,
     );
+
     const b = interpretOutput(
       parseCliOutput(doc({ result: 'no', stop_reason: 'refusal' })),
       Answer,
       ctx,
     );
-    for (const r of [a, b]) expect(!r.ok && r.error.kind).toBe('refusal');
+
+    for (const r of [a, b]) {
+      expect(!r.ok && r.error.kind).toBe('refusal');
+    }
   });
 
   it('crashes with the stderr tail when there is no document', () => {
@@ -145,6 +152,7 @@ describe('interpretOutput', () => {
       Answer,
       ctx,
     );
+
     expect(!r.ok && r.error.kind).toBe('invalid_output');
     expect(!r.ok && r.error.message).toContain('answer');
   });

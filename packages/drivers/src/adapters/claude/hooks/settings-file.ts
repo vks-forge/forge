@@ -44,15 +44,18 @@ export function renderHookSettings(opts: HookSettingsOptions): HookSettings {
     timeout: Math.ceil(opts.timeoutMs / 1000) + HARNESS_TIMEOUT_MARGIN_S,
     onFailure: 'block',
   };
+
   const matcher = opts.matcher ?? DEFAULT_TOOL_MATCHER;
   const hooks: Partial<
     Record<HookEventName, { matcher?: string; hooks: HookCommand[] }[]>
   > = {};
+
   for (const event of opts.events ?? HOOK_EVENTS) {
     hooks[event] = [
       TOOL_EVENTS.has(event) ? { matcher, hooks: [hook] } : { hooks: [hook] },
     ];
   }
+
   return { hooks };
 }
 

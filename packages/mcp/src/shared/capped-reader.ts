@@ -30,9 +30,14 @@ export async function readCapped(
       truncated = true;
       break;
     }
+
     chunks.push(chunk);
     total += chunk.length;
   }
-  if (truncated) await abandon();
+
+  if (truncated) {
+    await abandon();
+  }
+
   return { bytes: Buffer.concat(chunks), truncated };
 }

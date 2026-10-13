@@ -23,13 +23,17 @@ async function deliverOne(ctx: EngineCtx, reply: QueuedReply): Promise<void> {
   const ticket = await deps.storage.transaction((tx) =>
     tx.tickets.get(reply.ticketId as TicketId),
   );
+
   const pump = ticket?.assignee_run_id
     ? state.pumps.get(ticket.assignee_run_id)
     : undefined;
+
   if (!ticket || !pump || pump.done) {
     deps.log?.('info', `dropping reply for ${reply.ticketId}: no live run`);
+
     return;
   }
+
   const supported = deps.driver.capabilities().steerModes;
   const answer = await runStep(
     ctx,
@@ -41,11 +45,19 @@ async function deliverOne(ctx: EngineCtx, reply: QueuedReply): Promise<void> {
     },
     SteerReplyOutput,
   );
-  if (!answer.ok) return rejectStep(ctx, 'steer_reply', ticket.id, answer.error);
+
+  if (!answer.ok) {
+    return rejectStep(ctx, 'steer_reply', ticket.id, answer.error);
+  }
+
   const { mode, text } = answer.value;
-  if (mode === 'none' || text.trim() === '') return;
+  if (mode === 'none' || text.trim() === '') {
+    return;
+  }
+
   if (!supported.includes(mode)) {
     deps.log?.('warn', `driver cannot ${mode}; reply for ${ticket.id} not delivered`);
+
     return;
   }
 
@@ -58,10 +70,12 @@ async function deliverOne(ctx: EngineCtx, reply: QueuedReply): Promise<void> {
       text,
     }),
   );
+
   await deps.driver.steer(pump.handle, text, sendMode, msg.seq);
   await deps.storage.transaction((tx) =>
     tx.runInbox.markDelivered(pump.runId, msg.seq, ctx.nowIso),
   );
+
   ctx.report.steered.push({ ticketId: ticket.id, runId: pump.runId, mode: sendMode });
 }
 

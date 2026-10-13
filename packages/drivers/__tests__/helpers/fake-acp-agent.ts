@@ -74,6 +74,7 @@ export function createFakeAcp(opts: FakeAcpOptions = {}): FakeAcp {
   const record = (method: string, params: unknown): void => {
     calls.push({ method, params });
   };
+
   let sessionId = 'sess-1';
   let turn = 0;
   let cancelNow: () => void = () => undefined;
@@ -88,7 +89,7 @@ export function createFakeAcp(opts: FakeAcpOptions = {}): FakeAcp {
     .onRequest('initialize', async (c) => {
       record('initialize', c.params);
       toClient = c.client;
-      if (opts.auth !== 'silent')
+      if (opts.auth !== 'silent') {
         setImmediate(() => {
           // The client may already be gone (run killed early): a lost push is fine.
           void c.client
@@ -97,6 +98,8 @@ export function createFakeAcp(opts: FakeAcpOptions = {}): FakeAcp {
             })
             .catch(() => undefined);
         });
+      }
+
       return {
         protocolVersion: PROTOCOL_VERSION,
         agentCapabilities: { loadSession: true },
@@ -107,16 +110,21 @@ export function createFakeAcp(opts: FakeAcpOptions = {}): FakeAcp {
     .onRequest('session/new', (c) => {
       record('session/new', c.params);
       sessionId = 'sess-1';
+
       return { sessionId };
     })
     .onRequest('session/load', (c) => {
       record('session/load', c.params);
       sessionId = c.params.sessionId;
+
       return {};
     })
     .onRequest('session/set_mode', (c) => {
       record('session/set_mode', c.params);
-      if (opts.failSetMode) throw RequestError.invalidParams(undefined, 'no such mode');
+      if (opts.failSetMode) {
+        throw RequestError.invalidParams(undefined, 'no such mode');
+      }
+
       return {};
     })
     .onNotification('session/cancel', (c) => {
@@ -128,6 +136,7 @@ export function createFakeAcp(opts: FakeAcpOptions = {}): FakeAcp {
       (p: unknown) => p,
       (c) => {
         record('_session/steering', c.params);
+
         return { outcome: 'injected' };
       },
     )
@@ -157,6 +166,7 @@ export function createFakeAcp(opts: FakeAcpOptions = {}): FakeAcp {
             _meta: { '_claude/rateLimit': info },
           }),
       };
+
       const run =
         opts.onPrompt ??
         (async (x: PromptContext): Promise<PromptOutcome> => {
@@ -164,10 +174,15 @@ export function createFakeAcp(opts: FakeAcpOptions = {}): FakeAcp {
             sessionUpdate: 'agent_message_chunk',
             content: { type: 'text', text: 'done' },
           });
+
           return { stopReason: 'end_turn' };
         });
+
       const outcome = await run(ctx);
-      if (outcome instanceof RequestError) throw outcome;
+      if (outcome instanceof RequestError) {
+        throw outcome;
+      }
+
       return outcome;
     });
 

@@ -19,6 +19,7 @@
     "clean": "node scripts/clean.mjs"
   },
   "devDependencies": {
+    "@stylistic/eslint-plugin": "5.10.0",
     "@vitest/coverage-v8": "5.0.4",
     "eslint": "10.12.0",
     "fast-check": "4.10.2",

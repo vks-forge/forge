@@ -21,6 +21,7 @@ import type { SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
 
 function toProject(row: SqlRow): Project {
   const { harness_defaults_json, tier_c_globs_json, ...rest } = dropNulls(row);
+
   return parseStored(
     Project,
     {
@@ -36,6 +37,7 @@ export function createProjectRepository(driver: SqlDriver): ProjectRepository {
   return {
     async get(id) {
       const row = driver.get('SELECT * FROM projects WHERE id = ?', [id]);
+
       return row ? toProject(row) : null;
     },
 

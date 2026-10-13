@@ -39,6 +39,7 @@ function runScript(
       ['-NoProfile', '-NonInteractive', '-Command', script],
       { shell: false, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] },
     );
+
     let out = '';
     let err = '';
     child.stdout.setEncoding('utf8').on('data', (d: string) => (out += d));
@@ -46,14 +47,19 @@ function runScript(
     child.on('error', (cause) =>
       reject(new CrashError(`could not run PowerShell: ${cause.message}`, { cause })),
     );
+
     child.on('close', (code) => {
-      if (code === 0) return resolve(out.trim());
+      if (code === 0) {
+        return resolve(out.trim());
+      }
+
       reject(
         new CrashError(
           `DPAPI call failed (exit ${code}): ${err.trim().slice(-STDERR_TAIL)}`,
         ),
       );
     });
+
     child.stdin.on('error', () => undefined); // a dead child is reported by 'close'
     child.stdin.end(base64In);
   });
@@ -65,6 +71,7 @@ export async function dpapiProtect(
   opts: PowerShellOptions = {},
 ): Promise<Uint8Array> {
   const b64 = await runScript(PROTECT, Buffer.from(plain).toString('base64'), opts);
+
   return new Uint8Array(Buffer.from(b64, 'base64'));
 }
 
@@ -74,5 +81,6 @@ export async function dpapiUnprotect(
   opts: PowerShellOptions = {},
 ): Promise<Uint8Array> {
   const b64 = await runScript(UNPROTECT, Buffer.from(blob).toString('base64'), opts);
+
   return new Uint8Array(Buffer.from(b64, 'base64'));
 }

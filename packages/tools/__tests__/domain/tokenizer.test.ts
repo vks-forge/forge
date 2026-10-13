@@ -16,7 +16,10 @@ import { tokenizeShell } from '#/domain/tokenizer.js';
 
 function texts(cmd: string, dialect: 'bash' | 'powershell' = 'bash'): string[] {
   const r = tokenizeShell(cmd, dialect);
-  if (!r.ok) throw new Error(`expected ok, got ${r.error}`);
+  if (!r.ok) {
+    throw new Error(`expected ok, got ${r.error}`);
+  }
+
   return r.value.map((s) => s.text);
 }
 
@@ -63,6 +66,7 @@ describe('tokenizeShell: substitution and flags', () => {
       ['git push', true],
       ['echo $(…)', false],
     ]);
+
     expect(r.ok && r.value[1]?.flags).toContain('subshell');
   });
 
@@ -74,8 +78,10 @@ describe('tokenizeShell: substitution and flags', () => {
   it('flags interpreter eval, wrappers, background and pipe-to-interpreter', () => {
     const flagsOf = (cmd: string) => {
       const r = tokenizeShell(cmd, 'bash');
+
       return r.ok ? r.value.flatMap((s) => [...s.flags]) : [];
     };
+
     expect(flagsOf('bash -c "rm x"')).toContain('interpreter_eval');
     expect(flagsOf('node -e "1"')).toContain('interpreter_eval');
     expect(flagsOf('eval x')).toContain('interpreter_eval');
@@ -224,7 +230,9 @@ describe('tokenizeShell: properties', () => {
         fc.constantFrom('bash', 'powershell'),
         (s, d) => {
           const r = tokenizeShell(s, d);
-          if (r.ok) expect(r.value.length).toBeGreaterThan(0);
+          if (r.ok) {
+            expect(r.value.length).toBeGreaterThan(0);
+          }
         },
       ),
     );

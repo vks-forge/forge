@@ -23,6 +23,7 @@ afterEach(async () => {
 async function setup() {
   const c = await connect();
   close = c.close;
+
   return c;
 }
 
@@ -54,6 +55,7 @@ describe('get_ticket', () => {
     expect(body.relations.blocked_by).toEqual([
       { id: 'SF-2', title: 'Ticket 2', status: 'done' },
     ]);
+
     expect(body.runs).toEqual([
       expect.objectContaining({ id: RUN_ID, status: 'running' }),
     ]);
@@ -82,6 +84,7 @@ describe('get_ticket', () => {
     await storage.transaction(async (tx) => {
       await tx.tickets.updateTicketCas(TICKET_ID, 1, { rework_count: 0 });
     });
+
     const res = await client.callTool({ name: 'get_ticket', arguments: { id: 'SF-77' } });
     expect(res.isError).toBe(true);
   });
@@ -94,6 +97,7 @@ describe('add_comment', () => {
       name: 'add_comment',
       arguments: { ticket: 'SF-1', text: 'found the cause' },
     });
+
     expect(res.isError).toBeFalsy();
     const events = await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID));
     expect(events).toHaveLength(1);
@@ -108,6 +112,7 @@ describe('add_comment', () => {
       name: 'add_comment',
       arguments: { ticket: 'SF-5', text: 'x' },
     });
+
     expect(res.isError).toBe(true);
     expect(await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID))).toEqual([]);
   });
@@ -117,6 +122,7 @@ describe('add_comment', () => {
     for (const text of ['a', 'b']) {
       await client.callTool({ name: 'add_comment', arguments: { ticket: 'SF-1', text } });
     }
+
     const events = await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID));
     expect(events.map((e) => e.seq)).toEqual([0, 1]);
   });
@@ -132,10 +138,12 @@ describe('run event numbering', () => {
         usage: { in: 1, out: 1, cachedIn: 0, cacheWrite: 0 },
       }),
     );
+
     const res = await client.callTool({
       name: 'add_comment',
       arguments: { ticket: 'SF-1', text: 'after the driver event' },
     });
+
     await storage.transaction((tx) =>
       tx.runEvents.append(RUN_ID, {
         type: 'text',
@@ -143,6 +151,7 @@ describe('run event numbering', () => {
         text: 'driver again',
       }),
     );
+
     const events = await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID));
     expect(res.isError).toBeFalsy();
     expect(textOf(res)).toContain('seq 1');
@@ -156,6 +165,7 @@ describe('run event numbering', () => {
         client.callTool({ name: 'add_comment', arguments: { ticket: 'SF-1', text } }),
       ),
     );
+
     const events = await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID));
     expect(events.map((e) => e.seq)).toEqual([0, 1, 2, 3]);
   });
@@ -168,6 +178,7 @@ describe('ask_director', () => {
       name: 'ask_director',
       arguments: { question: 'Which db?' },
     });
+
     expect(res.isError).toBeFalsy();
     const body = JSON.parse(textOf(res));
     expect(body.status).toBe('pending');
@@ -175,6 +186,7 @@ describe('ask_director', () => {
     const row = await storage.transaction((tx) =>
       tx.interactions.get(body.interaction_id),
     );
+
     expect(row).toMatchObject({
       ticket_id: 'SF-1',
       run_id: RUN_ID,
@@ -182,6 +194,7 @@ describe('ask_director', () => {
       status: 'pending',
       payload: { question: 'Which db?' },
     });
+
     const events = await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID));
     expect(events[0]).toMatchObject({
       type: 'ask',
@@ -196,6 +209,7 @@ describe('ask_director', () => {
       name: 'ask_director',
       arguments: { question: 'q' },
     });
+
     const id = JSON.parse(textOf(res)).interaction_id as string;
     const row = await storage.transaction((tx) => tx.interactions.get(id));
     expect(Date.parse(row?.timeout_at ?? '')).toBeGreaterThan(
@@ -229,12 +243,14 @@ describe('one pending interaction per run', () => {
       name: 'ask_director',
       arguments: { question: 'q' },
     });
+
     const id = JSON.parse(textOf(first)).interaction_id as string;
     await storage.transaction((tx) => tx.interactions.update(id, { status: 'answered' }));
     const next = await client.callTool({
       name: 'ask_director',
       arguments: { question: 'q2' },
     });
+
     expect(next.isError).toBeFalsy();
   });
 });
@@ -246,6 +262,7 @@ describe('report_blocked', () => {
       name: 'report_blocked',
       arguments: { reason: 'needs the prod key' },
     });
+
     expect(res.isError).toBeFalsy();
     const id = JSON.parse(textOf(res)).interaction_id as string;
     const row = await storage.transaction((tx) => tx.interactions.get(id));
@@ -254,6 +271,7 @@ describe('report_blocked', () => {
       status: 'pending',
       payload: { reason: 'needs the prod key', source: 'report_blocked' },
     });
+
     expect(row?.payload).not.toHaveProperty('subtype');
     const events = await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID));
     expect(events[0]).toMatchObject({ type: 'ask', kind: 'blocked' });
@@ -270,10 +288,12 @@ describe('finish', () => {
       { kind: 'added_test', name: 'rejects empty input' },
       { kind: 'read', path: 'docs/x.md' },
     ];
+
     const res = await client.callTool({
       name: 'finish',
       arguments: { summary: 'done', claims },
     });
+
     expect(res.isError).toBeFalsy();
     const events = await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID));
     expect(events).toHaveLength(1);
@@ -290,11 +310,13 @@ describe('finish', () => {
       name: 'finish',
       arguments: { summary: 's', claims: [{ kind: 'deployed', env: 'prod' }] },
     });
+
     expect(bad.isError).toBe(true);
     const extra = await client.callTool({
       name: 'finish',
       arguments: { summary: 's', claims: [{ kind: 'ran_tests', passed: true }] },
     });
+
     expect(extra.isError).toBe(true);
     expect(await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID))).toEqual([]);
   });
@@ -307,6 +329,7 @@ describe('finish', () => {
       name: 'finish',
       arguments: { summary: 's2' },
     });
+
     expect(second.isError).toBe(true);
     expect(textOf(second)).toMatch(/already/i);
   });

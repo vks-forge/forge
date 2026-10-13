@@ -47,26 +47,41 @@ describe('committed catalogue', () => {
   });
 
   it('lists the eight forge tools and the native tools', () => {
-    if (state.status !== 'verified') throw new Error('not verified');
-    for (const id of FORGE_TOOLS) expect(state.tools.has(id), id).toBe(true);
-    for (const id of ['read', 'edit', 'write', 'glob', 'grep', 'shell', 'task'])
+    if (state.status !== 'verified') {
+      throw new Error('not verified');
+    }
+
+    for (const id of FORGE_TOOLS) {
       expect(state.tools.has(id), id).toBe(true);
+    }
+
+    for (const id of ['read', 'edit', 'write', 'glob', 'grep', 'shell', 'task']) {
+      expect(state.tools.has(id), id).toBe(true);
+    }
+
     expect(state.tools.get('mcp__forge__web_search')?.denies_native).toContain(
       'claude-code:WebSearch',
     );
+
     expect(state.tools.get('mcp__forge__web_fetch')?.denies_native).toContain(
       'claude-code:WebFetch',
     );
   });
 
   it('maps the shell tool to both Claude Code shell names (d-0048)', () => {
-    if (state.status !== 'verified') throw new Error('not verified');
+    if (state.status !== 'verified') {
+      throw new Error('not verified');
+    }
+
     const native = state.tools.get('shell')?.support['claude-code']?.native;
     expect(native).toEqual(['Bash', 'PowerShell']);
   });
 
   it('pins the schema hash the server really exposes (fix: node scripts/sign-catalogue.mjs)', async () => {
-    if (state.status !== 'verified') throw new Error('not verified');
+    if (state.status !== 'verified') {
+      throw new Error('not verified');
+    }
+
     const live = await computeToolSchemaHashes();
     expect(Object.keys(live).sort()).toEqual([...FORGE_TOOLS].sort());
     for (const [id, hash] of Object.entries(live)) {
@@ -75,7 +90,10 @@ describe('committed catalogue', () => {
   });
 
   it('declares risk per tool as the server reports it', async () => {
-    if (state.status !== 'verified') throw new Error('not verified');
+    if (state.status !== 'verified') {
+      throw new Error('not verified');
+    }
+
     expect(state.tools.get('mcp__forge__web_fetch')?.risk).toBe('network');
     expect(state.tools.get('mcp__forge__web_search')?.risk).toBe('network');
     expect(state.tools.get('mcp__forge__finish')?.risk).toBe('write-cwd');

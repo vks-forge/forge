@@ -21,6 +21,7 @@ export function nodeTransport(req: HttpRequest): Promise<HttpResponse> {
   const { url, address, family, signal } = req;
   const secure = url.protocol === 'https:';
   const hostname = url.hostname.replace(/^\[|\]$/g, '');
+
   return new Promise((resolve, reject) => {
     const client = secure ? https : http;
     const request = client.request(
@@ -46,12 +47,17 @@ export function nodeTransport(req: HttpRequest): Promise<HttpResponse> {
       (res) => {
         const headers: Record<string, string> = {};
         for (const [k, v] of Object.entries(res.headers)) {
-          if (typeof v === 'string') headers[k] = v;
-          else if (Array.isArray(v) && v[0] !== undefined) headers[k] = v[0];
+          if (typeof v === 'string') {
+            headers[k] = v;
+          } else if (Array.isArray(v) && v[0] !== undefined) {
+            headers[k] = v[0];
+          }
         }
+
         resolve({ status: res.statusCode ?? 0, headers, body: res });
       },
     );
+
     request.on('error', reject);
     request.end();
   });

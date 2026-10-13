@@ -31,7 +31,10 @@ const msg = (e: unknown): string => String(e instanceof Error ? e.message : e);
 
 /** What changed since the last run, for the prompt step. */
 function wakeDelta(c: Candidate, answered: Interaction | null): Record<string, unknown> {
-  if (c.kind === 'new') return { kind: 'new_ticket' };
+  if (c.kind === 'new') {
+    return { kind: 'new_ticket' };
+  }
+
   if (c.kind === 'resume') {
     return {
       kind: 'response_wake',
@@ -41,6 +44,7 @@ function wakeDelta(c: Candidate, answered: Interaction | null): Record<string, u
       answer: answered?.answer ?? null,
     };
   }
+
   return {
     kind: 'retry',
     reason: c.wake?.reason ?? 'retry',
@@ -57,6 +61,7 @@ export async function startRun(ctx: EngineCtx, c: Candidate): Promise<boolean> {
     hold(ctx, `dispatch:${ticket.id}`);
     ctx.report.errors.push({ where: `dispatch ${ticket.id}`, message: msg(e) });
     ctx.deps.log?.('error', `dispatch of ${ticket.id} failed`, { error: msg(e) });
+
     return false;
   }
 }
@@ -70,19 +75,23 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
       c.kind === 'resume' && c.wake
         ? await tx.interactions.get(c.wake.idempotency_key)
         : null;
+
     const prev = prevId
       ? await tx.runs.get(prevId)
       : interaction?.run_id
         ? await tx.runs.get(interaction.run_id)
         : null;
+
     return {
       project: await tx.projects.get(ticket.project),
       previous: prev,
       answered: interaction,
     };
   });
-  if (!project)
+
+  if (!project) {
     throw new Error(`ticket ${ticket.id} names unknown project ${ticket.project}`);
+  }
 
   const branch = ticket.branch ?? branchName(ticket.type, ticket.id, ticket.title);
   const wt = await deps.worktrees.create(ticket.id, branch, deps.baseRef);
@@ -104,11 +113,14 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
     },
     DispatchPromptOutput,
   );
+
   if (!drafted.ok) {
     rejectStep(ctx, 'dispatch_prompt', ticket.id, drafted.error);
     hold(ctx, `dispatch:${ticket.id}`);
+
     return false;
   }
+
   const prompt = drafted.value.prompt;
   const promptHash = sha256Hex(prompt);
 
@@ -128,11 +140,15 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
     prompt_hash: promptHash,
     catalogue_hash: deps.catalogueHash,
   };
+
   await deps.storage.transaction(async (tx) => {
     await tx.runs.insert(run);
     await tx.runTokens.issue(runId, sha256Hex(token), ctx.nowIso);
-    if (c.wake) await tx.wakeRequests.markConsumed(c.wake.id, ctx.nowIso);
+    if (c.wake) {
+      await tx.wakeRequests.markConsumed(c.wake.id, ctx.nowIso);
+    }
   });
+
   state.baseShas.set(runId, wt.baseSha);
 
   const b = deps.config.engine.run_budget;
@@ -140,6 +156,7 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
     c.kind === 'resume' && deps.driver.capabilities().resume
       ? previous?.session_ref
       : undefined;
+
   const req: RunRequest = {
     runId,
     projectId: ticket.project,
@@ -167,27 +184,43 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
   } catch (e) {
     deps.log?.('error', `driver.start failed for ${runId}`, { error: msg(e) });
     await settleRun(ctx, run, failureResult(familyOf(e)));
+
     return false;
   }
+
   startPump(deps, state, runId, handle);
   await deps.storage.transaction((tx) => tx.runs.update(runId, { status: 'running' }));
 
   const fields = { assignee_run_id: runId, branch, worktree: wt.path };
   const moved = await moveTicket(deps.storage, ticket.id, ctx.nowIso, (t: Ticket) => {
-    if (t.status === 'planned') return { events: [{ type: 'dispatched' }], fields };
-    if (t.status === 'waiting_human') return { events: [{ type: 'answered' }], fields };
-    if (t.status === 'in_progress') return { events: [], fields };
+    if (t.status === 'planned') {
+      return { events: [{ type: 'dispatched' }], fields };
+    }
+
+    if (t.status === 'waiting_human') {
+      return { events: [{ type: 'answered' }], fields };
+    }
+
+    if (t.status === 'in_progress') {
+      return { events: [], fields };
+    }
+
     return null;
   });
+
   if (!moved.ok) {
     deps.log?.(
       'error',
       `run ${runId} started but ${ticket.id} could not take it; cancelling`,
       { reason: moved.reason },
     );
+
     await deps.driver.cancel(handle).catch(() => undefined);
+
     return false;
   }
+
   ctx.report.dispatched.push({ ticketId: ticket.id, runId, kind: c.kind });
+
   return true;
 }

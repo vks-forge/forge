@@ -29,7 +29,10 @@ describe('canonicalJson', () => {
 
   it('refuses values nested deeper than the cap and oversized values', () => {
     let deep: unknown = 1;
-    for (let i = 0; i < 100; i++) deep = [deep];
+    for (let i = 0; i < 100; i++) {
+      deep = [deep];
+    }
+
     expect(() => canonicalJson(deep)).toThrow(RangeError);
     const wide = Array.from({ length: 200_000 }, (_v, i) => i);
     expect(() => canonicalJson(wide)).toThrow(RangeError);
@@ -109,6 +112,7 @@ describe('hmac helpers', () => {
     expect(constantTimeEqual(h, `${h.slice(0, -1)}${h.endsWith('0') ? '1' : '0'}`)).toBe(
       false,
     );
+
     expect(constantTimeEqual('', '')).toBe(true);
   });
 });

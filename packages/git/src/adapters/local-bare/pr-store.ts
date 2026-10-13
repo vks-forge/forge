@@ -25,8 +25,10 @@ export function createPrStore(remotePath: string): PrStore {
   const locked = <T>(fn: () => Promise<T>): Promise<T> => {
     const run = tail.then(fn, fn);
     tail = run.catch(() => undefined);
+
     return run;
   };
+
   const file = (n: number): string => join(dir, `${n}.json`);
 
   const write = async (record: PrRecord): Promise<void> => {
@@ -41,10 +43,13 @@ export function createPrStore(remotePath: string): PrStore {
     try {
       text = await readFile(file(n), 'utf8');
     } catch (cause) {
-      if ((cause as NodeJS.ErrnoException).code === 'ENOENT')
+      if ((cause as NodeJS.ErrnoException).code === 'ENOENT') {
         throw new InvalidInputError(`no such pull request: ${n}`);
+      }
+
       throw cause;
     }
+
     return PrRecord.parse(JSON.parse(text));
   };
 
@@ -59,9 +64,11 @@ export function createPrStore(remotePath: string): PrStore {
         const existing = await Promise.all(
           names.map((f) => read(Number.parseInt(f, 10))),
         );
+
         const next = Math.max(0, ...existing.map((r) => r.number)) + 1;
         const record = make(next, existing);
         await write(record);
+
         return record;
       }),
   };

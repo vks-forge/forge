@@ -38,6 +38,7 @@ async function makeRepo(): Promise<string> {
   await writeFile(join(dir, '.gitignore'), '*.log\n');
   await git(dir, 'add', '-A');
   await git(dir, 'commit', '-m', 'init');
+
   return dir;
 }
 
@@ -47,6 +48,7 @@ afterEach(async () => {
 
 describeWorktreeContract('git cli', async (): Promise<WorktreeHarness> => {
   const repoRoot = await makeRepo();
+
   return {
     manager: createGitWorktreeManager({ repoRoot }),
     repoRoot,
@@ -83,6 +85,7 @@ describe('git cli worktree manager specifics', () => {
       repoRoot,
       author: { name: 'Bot', email: 'bot@example.com' },
     });
+
     const wt = await manager.create(tid(1), 'feat/a', 'main');
     await writeFile(join(wt.path, 'x.txt'), 'x');
 

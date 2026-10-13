@@ -20,29 +20,43 @@ import type { HookIo } from '#/types/claude/hook-client.types.js';
  */
 export function resolveConfigPath(io: Pick<HookIo, 'env' | 'argv'>): string | null {
   for (const [i, arg] of io.argv.entries()) {
-    if (arg === '--config') return io.argv[i + 1] ?? null;
-    if (arg.startsWith('--config=')) return arg.slice('--config='.length) || null;
+    if (arg === '--config') {
+      return io.argv[i + 1] ?? null;
+    }
+
+    if (arg.startsWith('--config=')) {
+      return arg.slice('--config='.length) || null;
+    }
   }
+
   return io.env[HOOK_CONFIG_ENV] || null;
 }
 
 /** Reads and validates the config; throws an Error whose message is the failure code. */
 export async function loadHookConfig(io: HookIo): Promise<HookConfig> {
   const path = resolveConfigPath(io);
-  if (!path) throw new Error('config_missing');
+  if (!path) {
+    throw new Error('config_missing');
+  }
+
   let raw: string;
   try {
     raw = await io.readFile(path);
   } catch {
     throw new Error('config_unreadable');
   }
+
   let json: unknown;
   try {
     json = JSON.parse(raw);
   } catch {
     throw new Error('config_invalid');
   }
+
   const parsed = HookConfig.safeParse(json);
-  if (!parsed.success) throw new Error('config_invalid');
+  if (!parsed.success) {
+    throw new Error('config_invalid');
+  }
+
   return parsed.data;
 }

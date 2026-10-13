@@ -26,7 +26,7 @@ let stdin = '';
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', (d) => (stdin += d));
 process.stdin.on('end', () => {
-  if (env.FAKE_CLAUDE_RECORD)
+  if (env.FAKE_CLAUDE_RECORD) {
     writeFileSync(
       env.FAKE_CLAUDE_RECORD,
       JSON.stringify({
@@ -38,11 +38,23 @@ process.stdin.on('end', () => {
         ),
       }),
     );
+  }
+
   const lines = readFileSync(env.FAKE_CLAUDE_FIXTURE, 'utf8')
     .split('\n')
     .filter((l) => l.length > 0);
-  for (const line of lines) process.stdout.write(`${line}\n`);
-  if (env.FAKE_CLAUDE_STDERR) process.stderr.write(env.FAKE_CLAUDE_STDERR);
-  if (env.FAKE_CLAUDE_HANG === '1') setInterval(() => undefined, 1_000);
-  else process.exit(Number(env.FAKE_CLAUDE_EXIT ?? '0'));
+
+  for (const line of lines) {
+    process.stdout.write(`${line}\n`);
+  }
+
+  if (env.FAKE_CLAUDE_STDERR) {
+    process.stderr.write(env.FAKE_CLAUDE_STDERR);
+  }
+
+  if (env.FAKE_CLAUDE_HANG === '1') {
+    setInterval(() => undefined, 1_000);
+  } else {
+    process.exit(Number(env.FAKE_CLAUDE_EXIT ?? '0'));
+  }
 });

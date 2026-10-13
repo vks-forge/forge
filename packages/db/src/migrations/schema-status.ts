@@ -29,6 +29,7 @@ export function checkSchemaCurrent(
   const hasTable = driver.get(
     "SELECT 1 AS present FROM sqlite_master WHERE type = 'table' AND name = 'schema_migrations'",
   );
+
   const done = new Map<number, string>(
     hasTable
       ? driver
@@ -38,11 +39,13 @@ export function checkSchemaCurrent(
           .map((r) => [r.id, r.checksum])
       : [],
   );
+
   const known = new Set(migrations.map((m) => m.id));
   const unknown = [...done.keys()].filter((id) => !known.has(id)).sort(byId);
   const edited = migrations
     .filter((m) => done.has(m.id) && done.get(m.id) !== migrationChecksum(m))
     .map((m) => m.id);
+
   const pending = migrations.filter((m) => !done.has(m.id)).map((m) => m.id);
   const status =
     unknown.length > 0
@@ -52,5 +55,6 @@ export function checkSchemaCurrent(
         : pending.length > 0
           ? 'behind'
           : 'current';
+
   return { status, pending, unknown, edited };
 }

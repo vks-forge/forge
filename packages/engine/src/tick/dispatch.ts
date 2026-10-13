@@ -37,33 +37,51 @@ async function classify(
   const drop = async (why: string): Promise<null> => {
     await tx.wakeRequests.markConsumed(w.id, ctx.nowIso);
     ctx.deps.log?.('info', `wake ${w.id} dropped: ${why}`, { ticket: w.ticket_id });
+
     return null;
   };
-  if (!ticket) return drop('unknown ticket');
-  if (TERMINAL_STATUSES.includes(ticket.status))
+
+  if (!ticket) {
+    return drop('unknown ticket');
+  }
+
+  if (TERMINAL_STATUSES.includes(ticket.status)) {
     return drop(`ticket is ${ticket.status}`);
+  }
+
   const assigned = ticket.assignee_run_id
     ? await tx.runs.get(ticket.assignee_run_id)
     : null;
-  if (assigned?.status === 'success') return drop('its run already reported done');
-  if (ticket.assignee_run_id && ctx.state.pumps.has(ticket.assignee_run_id))
+
+  if (assigned?.status === 'success') {
+    return drop('its run already reported done');
+  }
+
+  if (ticket.assignee_run_id && ctx.state.pumps.has(ticket.assignee_run_id)) {
     return drop('a run is live');
+  }
+
   if (
     w.kind === 'retry' &&
     (ticket.status === 'planned' || ticket.status === 'in_progress')
   ) {
     return { ticket, kind: 'retry', wake: w };
   }
+
   if (w.kind === 'response_wake' && ticket.status === 'waiting_human') {
     return { ticket, kind: 'resume', wake: w };
   }
+
   return drop(`${w.kind} wake does not apply to a ${ticket.status} ticket`);
 }
 
 async function unblocked(tx: StorageTx, ticket: Ticket): Promise<boolean> {
   for (const id of ticket.blocked_by) {
-    if ((await tx.tickets.get(id))?.status !== 'done') return false;
+    if ((await tx.tickets.get(id))?.status !== 'done') {
+      return false;
+    }
   }
+
   return true;
 }
 
@@ -77,15 +95,21 @@ export async function dispatchReady(ctx: EngineCtx): Promise<void> {
     const list: Candidate[] = [];
     for (const w of wakes.filter((x) => due(x, ctx.now))) {
       const c = await classify(ctx, tx, w);
-      if (c) list.push(c);
+      if (c) {
+        list.push(c);
+      }
     }
+
     const planned = (await tx.tickets.listByStatus('planned')).sort(
       (a, b) => ticketNumber(a.id) - ticketNumber(b.id),
     );
+
     for (const t of planned) {
-      if (!waking.has(t.id) && (await unblocked(tx, t)))
+      if (!waking.has(t.id) && (await unblocked(tx, t))) {
         list.push({ ticket: t, kind: 'new' });
+      }
     }
+
     const active = await tx.runs.listByStatus(['starting', 'running']);
     const capacity: Capacity = {
       free: engine.global_slots - active.length,
@@ -93,16 +117,28 @@ export async function dispatchReady(ctx: EngineCtx): Promise<void> {
       inProgressLimit:
         engine.max_concurrent_by_state.in_progress ?? Number.POSITIVE_INFINITY,
     };
+
     return { candidates: list, capacity };
   });
 
   for (const c of candidates) {
-    if (capacity.free <= 0) break;
+    if (capacity.free <= 0) {
+      break;
+    }
+
     const id = c.ticket.id;
-    if (isHeld(ctx, `dispatch:${id}`) || isHeld(ctx, `dispatch_prompt:${id}`)) continue;
+    if (isHeld(ctx, `dispatch:${id}`) || isHeld(ctx, `dispatch_prompt:${id}`)) {
+      continue;
+    }
+
     const entering = c.ticket.status !== 'in_progress';
-    if (entering && capacity.inProgress >= capacity.inProgressLimit) continue;
+    if (entering && capacity.inProgress >= capacity.inProgressLimit) {
+      continue;
+    }
+
     capacity.free--;
-    if ((await startRun(ctx, c)) && entering) capacity.inProgress++;
+    if ((await startRun(ctx, c)) && entering) {
+      capacity.inProgress++;
+    }
   }
 }

@@ -23,10 +23,12 @@ export async function wrapSecret(
   file: string,
 ): Promise<WrapSecretResult> {
   // Fail on a bad name before reading the file, so a typo never touches the key.
-  if (!SecretName.safeParse(name).success)
+  if (!SecretName.safeParse(name).success) {
     throw new InvalidInputError(
       `invalid secret name "${name}" (lowercase letters, digits and dashes)`,
     );
+  }
+
   const bytes = await deps.readFile(file);
   await deps.store.put(name, bytes);
   const back = await deps.store.get(name);
@@ -34,11 +36,15 @@ export async function wrapSecret(
     back !== null &&
     back.length === bytes.length &&
     timingSafeEqual(Buffer.from(back), Buffer.from(bytes));
-  if (!same)
+
+  if (!same) {
     throw new CrashError(
       `secret "${name}" did not read back identical after storing; your file was not changed`,
     );
+  }
+
   const sourcePath = deps.resolvePath(file);
+
   return {
     name,
     bytes: bytes.length,

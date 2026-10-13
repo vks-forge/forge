@@ -40,6 +40,7 @@ export function openSqliteDriver(
       s = db.prepare(sql);
       cache.set(sql, s);
     }
+
     return s;
   };
 

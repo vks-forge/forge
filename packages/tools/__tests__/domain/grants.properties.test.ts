@@ -27,6 +27,7 @@ const grantArb = fc.record({
   allow: fc.option(subset, { nil: undefined }),
   deny: fc.subarray(IDS, { maxLength: 3 }),
 });
+
 const toGrant = (g: { allow: string[] | undefined; deny: string[] }) =>
   grant(g.allow === undefined ? { deny: g.deny } : { allow: g.allow, deny: g.deny });
 
@@ -41,18 +42,24 @@ describe('grant properties', () => {
           const eff = effectiveGrant(lane, toGrant(p), toGrant(t));
           const d = LANE_DEFAULTS[lane];
           for (const id of IDS) {
-            if (!granted(eff, id)) continue;
+            if (!granted(eff, id)) {
+              continue;
+            }
+
             const inLane = d.allow.includes(id);
             const gatedByProject =
               (d.projectGated.includes(id) || (d.projectMcps && isProjectMcp(id))) &&
               (p.allow ?? []).some((a) => toolMatch(a, id));
+
             expect(inLane || gatedByProject).toBe(true);
             expect(p.allow === undefined || p.allow.some((a) => toolMatch(a, id))).toBe(
               true,
             );
+
             expect(t.allow === undefined || t.allow.some((a) => toolMatch(a, id))).toBe(
               true,
             );
+
             expect([...p.deny, ...t.deny, ...d.deny].some((x) => toolMatch(x, id))).toBe(
               false,
             );
@@ -72,7 +79,9 @@ describe('grant properties', () => {
           const without = effectiveGrant(lane, toGrant(p));
           const withTicket = effectiveGrant(lane, toGrant(p), toGrant(t));
           for (const id of IDS) {
-            if (granted(withTicket, id)) expect(granted(without, id)).toBe(true);
+            if (granted(withTicket, id)) {
+              expect(granted(without, id)).toBe(true);
+            }
           }
         },
       ),
@@ -90,6 +99,7 @@ describe('grant properties', () => {
             grant({ allow: IDS, deny: [id] }),
             grant({ allow: IDS }),
           );
+
           expect(granted(eff, id)).toBe(false);
         },
       ),

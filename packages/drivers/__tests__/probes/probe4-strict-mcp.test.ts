@@ -40,6 +40,7 @@ function serverNames(file: string): string[] {
     const j = JSON.parse(readFileSync(file, 'utf8')) as {
       mcpServers?: Record<string, unknown>;
     };
+
     return Object.keys(j.mcpServers ?? {});
   } catch {
     return [];
@@ -58,13 +59,16 @@ async function ask(
         _meta: claudeOptionsMeta(2, overrides),
       })
       .start();
+
     await h.ctx.request('session/set_mode', {
       sessionId: session.sessionId,
       modeId: 'default',
     });
+
     const turn = await promptTurn(session, PROMPT);
     const blob = turn.text + JSON.stringify(turn.updates);
     const mcpNames = [...new Set(blob.match(/mcp__[A-Za-z0-9_-]+/g) ?? [])];
+
     return {
       text: turn.text,
       mcpNames,
@@ -86,6 +90,7 @@ describe('probe 4: strictMcpConfig on ACP (d-0049)', () => {
         mcpServers: {},
         settingSources: [],
       });
+
       const control = await ask({ strictMcpConfig: false });
 
       const observed = {
@@ -97,6 +102,7 @@ describe('probe 4: strictMcpConfig on ACP (d-0049)', () => {
           control.mcpNames.some((m) => m.startsWith(`mcp__${n}`)),
         ),
       };
+
       writeFileSync(join(dir, 'observed.json'), JSON.stringify(observed, null, 2));
       console.info('probe4 observed', JSON.stringify(observed));
 

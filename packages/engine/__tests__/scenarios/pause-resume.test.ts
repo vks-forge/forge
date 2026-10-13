@@ -29,7 +29,8 @@ async function pausedTicket(rig: Rig, insertInteraction = true): Promise<string>
     kind: 'question',
     prompt: 'Which colour?',
   });
-  if (insertInteraction)
+
+  if (insertInteraction) {
     await rig.storage.transaction((tx) =>
       tx.interactions.insert({
         id: 'int-q1',
@@ -42,6 +43,8 @@ async function pausedTicket(rig: Rig, insertInteraction = true): Promise<string>
         timeout_at: new Date(rig.clock.now() + 4 * 3_600_000).toISOString(),
       }),
     );
+  }
+
   rig.driver.finish(
     'run-1',
     makeResult({
@@ -51,7 +54,9 @@ async function pausedTicket(rig: Rig, insertInteraction = true): Promise<string>
       session: 'sess-A',
     }),
   );
+
   await rig.flush();
+
   return id;
 }
 
@@ -142,6 +147,7 @@ describe('pause and resume', () => {
         rig.clock.now(),
       ),
     );
+
     expect(r).toEqual({ status: 'answered', interactionId: 'int-q1' });
     await rig.tick();
     expect(JSON.stringify(rig.llm.callsTo('dispatch_prompt')[1]!.input)).toContain(

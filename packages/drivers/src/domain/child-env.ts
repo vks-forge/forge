@@ -29,11 +29,20 @@ export function buildChildEnv(
   preparedEnv: EnvLike,
 ): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const source of [base, requestEnv, preparedEnv])
-    for (const [key, value] of Object.entries(source))
-      if (value !== undefined) out[key] = value;
+  for (const source of [base, requestEnv, preparedEnv]) {
+    for (const [key, value] of Object.entries(source)) {
+      if (value !== undefined) {
+        out[key] = value;
+      }
+    }
+  }
+
   const stripped = new Set<string>(STRIPPED_ENV);
-  for (const key of Object.keys(out))
-    if (stripped.has(key.toUpperCase())) delete out[key];
+  for (const key of Object.keys(out)) {
+    if (stripped.has(key.toUpperCase())) {
+      delete out[key];
+    }
+  }
+
   return out;
 }

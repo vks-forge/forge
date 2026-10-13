@@ -49,6 +49,7 @@ async function loadFolder(
   } catch {
     return [];
   }
+
   const out: MemoryRecordRef[] = [];
   for (const name of names) {
     const path = join(dir, name);
@@ -59,23 +60,28 @@ async function loadFolder(
       onSkip(path, `unreadable: ${err instanceof Error ? err.message : String(err)}`);
       continue;
     }
+
     const fm = parseFrontMatter(text);
     if (!fm.ok) {
       onSkip(path, fm.reason);
       continue;
     }
+
     const rec = MemoryRecordFrontMatter.safeParse(fm.data);
     if (!rec.success) {
       onSkip(
         path,
         rec.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
       );
+
       continue;
     }
+
     if (accepted.includes(rec.data.status)) {
       out.push({ id: rec.data.id, statement: rec.data.statement });
     }
   }
+
   return out.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
@@ -90,21 +96,32 @@ export function createFileMemorySource(
   deps: MemorySourceDeps = {},
 ): MemorySource {
   const onSkip = deps.onSkip ?? ((): void => undefined);
+
   return {
     async slice(projectSlug: string): Promise<MemorySlice> {
       if (!SLUG.test(projectSlug)) {
         onSkip(projectSlug, 'invalid project slug');
+
         return EMPTY;
       }
+
       const slugDir = join(rootDir, projectSlug);
       let base: string | null = null;
-      if (await isDir(slugDir)) base = slugDir;
-      else if (await isDir(join(rootDir, 'decisions'))) base = rootDir;
-      if (base === null) return EMPTY;
+      if (await isDir(slugDir)) {
+        base = slugDir;
+      } else if (await isDir(join(rootDir, 'decisions'))) {
+        base = rootDir;
+      }
+
+      if (base === null) {
+        return EMPTY;
+      }
+
       const [decisions, rejected] = await Promise.all([
         loadFolder(join(base, 'decisions'), DECISION_STATUSES, onSkip),
         loadFolder(join(base, 'rejected'), REJECTED_STATUSES, onSkip),
       ]);
+
       return { decisions, rejected };
     },
   };

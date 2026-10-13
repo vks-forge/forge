@@ -53,21 +53,32 @@ export function createFakeChild(pid: number | undefined = 4242): FakeChild {
     kill(signal = 'SIGTERM') {
       kills.push(signal);
       child.exit(null, signal);
+
       return true;
     },
     on(event: 'exit' | 'error', listener: never) {
-      if (event === 'exit') exitListeners.push(listener);
-      else errorListeners.push(listener);
+      if (event === 'exit') {
+        exitListeners.push(listener);
+      } else {
+        errorListeners.push(listener);
+      }
+
       return child;
     },
     exit(code, signal = null) {
-      if (exited) return;
+      if (exited) {
+        return;
+      }
+
       exited = true;
       stdoutPipe.end();
       stderrPipe.end();
-      for (const l of exitListeners) l(code, signal);
+      for (const l of exitListeners) {
+        l(code, signal);
+      }
     },
   };
+
   return child;
 }
 
@@ -87,7 +98,9 @@ export function recordingSpawn(make: (call: Omit<SpawnCall, 'child'>) => FakeChi
   const spawn: SpawnFn = (command, args, options) => {
     const child = make({ command, args, options });
     calls.push({ command, args, options, child });
+
     return child;
   };
+
   return { spawn, calls };
 }

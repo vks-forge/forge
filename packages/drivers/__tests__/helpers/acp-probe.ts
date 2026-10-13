@@ -58,10 +58,12 @@ export async function withAcp<T>(body: (h: AcpHarness) => Promise<T>): Promise<T
   const entry = createRequire(import.meta.url).resolve(
     '@agentclientprotocol/claude-agent-acp/dist/index.js',
   );
+
   const child = spawn(process.execPath, [entry], {
     env: childEnv(),
     stdio: ['pipe', 'pipe', 'pipe'],
   });
+
   let stderr = '';
   child.stderr.on('data', (d: Buffer) => (stderr += d.toString('utf8')));
   const authUpdates: unknown[] = [];
@@ -71,6 +73,7 @@ export async function withAcp<T>(body: (h: AcpHarness) => Promise<T>): Promise<T
     .onRequest('session/request_permission', (c) => {
       permissionRequests.push(c.params);
       const reject = c.params.options.find((o) => o.kind.startsWith('reject'));
+
       return reject
         ? { outcome: { outcome: 'selected' as const, optionId: reject.optionId } }
         : { outcome: { outcome: 'cancelled' as const } };
@@ -87,6 +90,7 @@ export async function withAcp<T>(body: (h: AcpHarness) => Promise<T>): Promise<T
     Writable.toWeb(child.stdin) as WritableStream<Uint8Array>,
     Readable.toWeb(child.stdout) as ReadableStream<Uint8Array>,
   );
+
   try {
     return await app.connectWith(stream, async (ctx) => {
       const init = await ctx.request('initialize', {
@@ -94,6 +98,7 @@ export async function withAcp<T>(body: (h: AcpHarness) => Promise<T>): Promise<T
         clientCapabilities: {},
         clientInfo: { name: 'forge-probe', version: '0.0.0' },
       });
+
       return body({ ctx, init, authUpdates, permissionRequests, stderr: () => stderr });
     });
   } finally {
@@ -123,13 +128,17 @@ export async function promptTurn(
     const msg = await session.nextUpdate();
     if (msg.kind === 'stop') {
       await pending;
+
       return { text: out, stopReason: msg.stopReason, updateKinds, updates };
     }
+
     updateKinds.push(msg.update.sessionUpdate);
     updates.push(msg.update as unknown as Record<string, unknown>);
     if (msg.update.sessionUpdate === 'agent_message_chunk') {
       const c = msg.update.content;
-      if (c.type === 'text') out += c.text;
+      if (c.type === 'text') {
+        out += c.text;
+      }
     }
   }
 }

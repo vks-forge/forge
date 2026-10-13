@@ -81,9 +81,13 @@ export function createScriptedDriver(): ScriptedDriver {
 
   const chan = (h: RunHandle): Channel => {
     const c = channels.get(h.runId);
-    if (!c) throw new Error(`unknown run ${h.runId}`);
+    if (!c) {
+      throw new Error(`unknown run ${h.runId}`);
+    }
+
     return c;
   };
+
   const closeChannel = (c: Channel): void => {
     c.closed = true;
     c.wake?.();
@@ -106,6 +110,7 @@ export function createScriptedDriver(): ScriptedDriver {
         startError = null;
         throw e;
       }
+
       starts.push(req);
       let settle!: (r: RunResult) => void;
       const result = new Promise<RunResult>((r) => (settle = r));
@@ -117,11 +122,15 @@ export function createScriptedDriver(): ScriptedDriver {
         result,
         settle,
       });
+
       return { runId: req.runId, session: `sess-${req.runId}` };
     },
     resume: async (h) => h,
     async steer(handle, message, mode, inboxSeq) {
-      if (steerError) throw steerError;
+      if (steerError) {
+        throw steerError;
+      }
+
       steers.push({
         runId: handle.runId,
         message,
@@ -139,6 +148,7 @@ export function createScriptedDriver(): ScriptedDriver {
     },
     events(handle) {
       const c = chan(handle);
+
       return {
         async *[Symbol.asyncIterator]() {
           for (;;) {
@@ -147,7 +157,11 @@ export function createScriptedDriver(): ScriptedDriver {
               yield next;
               continue;
             }
-            if (c.closed) return;
+
+            if (c.closed) {
+              return;
+            }
+
             await new Promise<void>((resolve) => (c.wake = resolve));
             c.wake = null;
           }
@@ -164,13 +178,19 @@ export function createScriptedDriver(): ScriptedDriver {
     cancels,
     emit(runId, event) {
       const c = channels.get(runId);
-      if (!c) throw new Error(`unknown run ${runId}`);
+      if (!c) {
+        throw new Error(`unknown run ${runId}`);
+      }
+
       c.queue.push({ seq: seq++, ts: new Date(0).toISOString(), ...event } as RunEvent);
       c.wake?.();
     },
     finish(runId, result) {
       const c = channels.get(runId);
-      if (!c) throw new Error(`unknown run ${runId}`);
+      if (!c) {
+        throw new Error(`unknown run ${runId}`);
+      }
+
       closeChannel(c);
       c.settle(result);
     },

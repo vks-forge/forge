@@ -28,6 +28,7 @@ async function allTicketIds(tx: StorageTx): Promise<string[]> {
   const lists = await Promise.all(
     TicketStatus.options.map((s) => tx.tickets.listByStatus(s)),
   );
+
   return lists.flat().map((t) => t.id);
 }
 
@@ -39,20 +40,27 @@ export async function ingest(
 ): Promise<IngestResult> {
   const result = await deps.storage.transaction(async (tx): Promise<IngestResult> => {
     const project = await tx.projects.get(event.project);
-    if (!project)
+    if (!project) {
       return { status: 'ignored', reason: `unknown project ${event.project}` };
+    }
+
     const { inserted, event: stored } = await tx.intakeEvents.insertIfNew(event);
-    if (!inserted) return { status: 'duplicate' };
+    if (!inserted) {
+      return { status: 'duplicate' };
+    }
 
     if (event.kind === 'new_request') {
       const payload = NewRequestPayload.safeParse(event.payload);
-      if (!payload.success)
+      if (!payload.success) {
         return { status: 'ignored', reason: 'malformed new_request payload' };
+      }
+
       const p = payload.data;
       const id = makeTicketId(
         project.prefix,
         nextTicketNumber(await allTicketIds(tx), project.prefix),
       );
+
       const now = iso(deps.clock.now());
       const ticket: Ticket = {
         id,
@@ -70,31 +78,43 @@ export async function ingest(
         updated_at: now,
         blocked_by: [],
       };
+
       await tx.tickets.insert(ticket);
       await tx.intakeEvents.markTicket(stored.id, id);
+
       return { status: 'ticket_created', ticketId: id };
     }
 
     if (event.kind === 'reply') {
       const payload = ReplyPayload.safeParse(event.payload);
-      if (!payload.success)
+      if (!payload.success) {
         return { status: 'ignored', reason: 'malformed reply payload' };
+      }
+
       const ticket = await tx.tickets.get(payload.data.ticket_id as Ticket['id']);
-      if (!ticket)
+      if (!ticket) {
         return { status: 'ignored', reason: `unknown ticket ${payload.data.ticket_id}` };
+      }
+
       const answered = await answerPending(deps, tx, ticket, payload.data.text);
-      if (answered) return { status: 'answered', interactionId: answered };
+      if (answered) {
+        return { status: 'answered', interactionId: answered };
+      }
+
       const live = ticket.assignee_run_id
         ? state.pumps.get(ticket.assignee_run_id)
         : undefined;
+
       if (live && !live.done) {
         state.replies.push({
           ticketId: ticket.id,
           text: payload.data.text,
           author: event.actor.id,
         });
+
         return { status: 'reply_queued', ticketId: ticket.id };
       }
+
       return {
         status: 'ignored',
         reason: `${ticket.id} has no live run or pending question`,
@@ -103,6 +123,7 @@ export async function ingest(
 
     return { status: 'ignored', reason: `commands are not handled yet (${event.kind})` };
   });
+
   if (
     result.status === 'ticket_created' ||
     result.status === 'reply_queued' ||
@@ -110,5 +131,6 @@ export async function ingest(
   ) {
     requestTick(deps, state);
   }
+
   return result;
 }

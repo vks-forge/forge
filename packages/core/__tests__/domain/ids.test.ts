@@ -40,6 +40,7 @@ describe('ids', () => {
         fc.stringMatching(/^[A-Z0-9]{0,9}$/),
       )
       .map(([a, b]) => a + b);
+
     fc.assert(
       fc.property(prefix, fc.integer({ min: 1, max: 1_000_000 }), (p, n) => {
         const parsed = parseTicketId(makeTicketId(p, n));

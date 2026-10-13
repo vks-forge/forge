@@ -30,6 +30,7 @@ export function memoryRuns(state: MemoryState): RunRepository {
   return {
     async get(id) {
       const r = state.runs.get(id);
+
       return r ? structuredClone(r) : null;
     },
     async listByTicket(ticketId) {
@@ -48,7 +49,10 @@ export function memoryRuns(state: MemoryState): RunRepository {
     },
     async update(id, patch) {
       const current = state.runs.get(id);
-      if (!current) throw new UnknownForgeError(`Run not found: ${id}`);
+      if (!current) {
+        throw new UnknownForgeError(`Run not found: ${id}`);
+      }
+
       const parsed = parseRunPatch(patch);
       assertNotReopened(id, current.ended_at !== undefined, parsed);
       state.runs.set(id, withoutUndefined(Run.parse({ ...current, ...parsed })));
@@ -65,13 +69,18 @@ export function memoryRunEvents(state: MemoryState): RunEventRepository {
         ...normaliseRunEvent(event),
         seq: Math.max(-1, ...log.keys()) + 1,
       });
+
       log.set(e.seq, e);
       state.events.set(runId, log);
+
       return structuredClone(e);
     },
     async listByRun(runId, afterSeq) {
       const log = state.events.get(runId);
-      if (!log) return [];
+      if (!log) {
+        return [];
+      }
+
       return [...log.values()]
         .filter((e) => e.seq > (afterSeq ?? -1))
         .sort((a, b) => a.seq - b.seq)
@@ -88,6 +97,7 @@ export function memoryRunInbox(state: MemoryState): RunInboxRepository {
       const queue = state.inbox.get(m.run_id) ?? [];
       const stored = RunInboxMessage.parse({ ...m, seq: queue.length });
       state.inbox.set(m.run_id, [...queue, stored]);
+
       return structuredClone(stored);
     },
     async listUndelivered(runId) {
@@ -97,8 +107,12 @@ export function memoryRunInbox(state: MemoryState): RunInboxRepository {
     },
     async markDelivered(runId, seq, at) {
       const msg = (state.inbox.get(runId) ?? []).find((m) => m.seq === seq);
-      if (!msg || msg.delivered_at !== undefined) return false;
+      if (!msg || msg.delivered_at !== undefined) {
+        return false;
+      }
+
       msg.delivered_at = at;
+
       return true;
     },
   };

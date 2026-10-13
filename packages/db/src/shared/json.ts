@@ -22,7 +22,10 @@ export function toJson(value: unknown): string {
 
 /** Decode a JSON TEXT column; a null column stays null. */
 export function fromJson(text: unknown): unknown {
-  if (typeof text !== 'string') return null;
+  if (typeof text !== 'string') {
+    return null;
+  }
+
   try {
     return JSON.parse(text) as unknown;
   } catch (error) {

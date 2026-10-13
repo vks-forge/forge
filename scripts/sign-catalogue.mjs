@@ -36,11 +36,13 @@ const { signCatalogue, DEV_CATALOGUE_KEY, MIN_KEY_BYTES } = await import(
 ).catch(() => {
   throw new Error('packages/tools is not built: run `pnpm build` first');
 });
+
 const { computeToolSchemaHashes } = await import(pathToFileURL(mcpDist).href).catch(
   () => {
     throw new Error('packages/mcp is not built: run `pnpm build` first');
   },
 );
+
 const { parseDocument } = createRequire(resolve(root, 'packages/tools/package.json'))(
   'yaml',
 );
@@ -53,11 +55,13 @@ if (dev) {
   console.error(
     `FORGE_CATALOGUE_KEY must be set to at least ${MIN_KEY_BYTES} bytes (or pass --dev for the public dev key).`,
   );
+
   process.exit(1);
 } else if (key === DEV_CATALOGUE_KEY) {
   console.error(
     'FORGE_CATALOGUE_KEY is the public dev key; pass --dev explicitly instead.',
   );
+
   process.exit(1);
 }
 
@@ -77,6 +81,7 @@ for (const entry of entries.items) {
     );
   }
 }
+
 doc.set('signature', signCatalogue(doc.get('entries').toJSON(), key));
 writeFileSync(file, doc.toString({ lineWidth: 0 }));
 console.log(`signed ${file} (${entries.items.length} entries)`);

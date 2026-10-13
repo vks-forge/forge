@@ -45,6 +45,7 @@ function buildChain(secret: string, calls = 3): Receipt[] {
       rows.at(-1) ?? null,
       secret,
     );
+
     rows.push(d);
     rows.push(
       makeEffectReceipt(
@@ -61,6 +62,7 @@ function buildChain(secret: string, calls = 3): Receipt[] {
       ),
     );
   }
+
   return rows;
 }
 
@@ -73,8 +75,9 @@ describe('receipt chain', () => {
   it('links each row to the previous hash, starting from null', () => {
     const rows = buildChain(SECRET);
     expect(rows[0]?.prev_hash).toBeNull();
-    for (let i = 1; i < rows.length; i++)
+    for (let i = 1; i < rows.length; i++) {
       expect(rows[i]?.prev_hash).toBe(rows[i - 1]?.hash);
+    }
   });
 
   it('mirrors the decision fields into the db-shaped row', () => {
@@ -106,10 +109,12 @@ describe('receipt chain', () => {
       ok: false,
       error: { index: 2, reason: 'prev_hash' },
     });
+
     expect(verifyChain(rows.slice(1), SECRET)).toMatchObject({
       ok: false,
       error: { index: 0 },
     });
+
     const swapped = [...rows];
     [swapped[2], swapped[3]] = [swapped[3] as Receipt, swapped[2] as Receipt];
     expect(verifyChain(swapped, SECRET).ok).toBe(false);
@@ -132,11 +137,13 @@ describe('receipt chain', () => {
       ok: false,
       error: { reason: 'prev_hash' },
     });
+
     const lone = makeEffectReceipt(d1, { state: 'uncertain', ts: TS }, null, SECRET);
     expect(verifyChain([lone], SECRET)).toMatchObject({
       ok: false,
       error: { reason: 'orphan_effect' },
     });
+
     const dup = makeDecisionReceipt(
       {
         id: 'd-1',
@@ -149,10 +156,12 @@ describe('receipt chain', () => {
       e1,
       SECRET,
     );
+
     expect(verifyChain([d1, e1, dup], SECRET)).toMatchObject({
       ok: false,
       error: { reason: 'duplicate_decision' },
     });
+
     const gap = makeDecisionReceipt(
       {
         id: 'd-9',
@@ -165,10 +174,12 @@ describe('receipt chain', () => {
       e1,
       SECRET,
     );
+
     expect(verifyChain([d1, e1, gap], SECRET)).toMatchObject({
       ok: false,
       error: { reason: 'seq' },
     });
+
     expect(verifyChain([{ kind: 'nope' }], SECRET)).toMatchObject({
       ok: false,
       error: { reason: 'bad_schema' },
@@ -184,6 +195,7 @@ describe('receipt chain', () => {
       rows[1] as Receipt,
       SECRET,
     );
+
     expect(verifyChain([...rows, second], SECRET)).toMatchObject({
       ok: false,
       error: { index: 2, reason: 'duplicate_effect' },
@@ -208,11 +220,13 @@ describe('receipt chain', () => {
       null,
       SECRET,
     );
+
     const e = makeEffectReceipt(d, { state: 'mutation_committed', ts: TS }, d, SECRET);
     expect(verifyChain([d, e], SECRET)).toMatchObject({
       ok: false,
       error: { index: 1, reason: 'effect_not_allowed' },
     });
+
     expect(verifyChain([d], SECRET)).toEqual({ ok: true, value: 1 });
   });
 
@@ -234,9 +248,11 @@ describe('receipt chain', () => {
                 : v === null
                   ? 'x'
                   : 'x';
+
         const tampered = rows.map((r, i) =>
           i === rowIdx ? { ...r, [key]: mutated } : r,
         );
+
         expect(verifyChain(tampered, SECRET).ok).toBe(false);
       }),
       { numRuns: 300 },
@@ -273,6 +289,7 @@ describe('receipt resource', () => {
       ok: false,
       error: { index: 0, reason: 'hash' },
     });
+
     expect(verifyChain([{ ...make(), resource: 'src/a.ts' }], SECRET)).toMatchObject({
       ok: false,
       error: { index: 0, reason: 'hash' },

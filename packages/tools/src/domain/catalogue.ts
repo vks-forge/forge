@@ -48,7 +48,10 @@ const sameKey = (key: string | Uint8Array, text: string): boolean =>
 
 function keyUsable(key: string | Uint8Array, opts: LoadOptions): boolean {
   const bytes = typeof key === 'string' ? Buffer.byteLength(key, 'utf8') : key.length;
-  if (bytes < MIN_KEY_BYTES) return false;
+  if (bytes < MIN_KEY_BYTES) {
+    return false;
+  }
+
   return opts.allowDevKey === true || !sameKey(key, DEV_CATALOGUE_KEY);
 }
 
@@ -71,7 +74,10 @@ export function loadCatalogue(
   opts: LoadOptions = {},
 ): CatalogueState {
   try {
-    if (!keyUsable(key, opts)) return quarantine('bad_key');
+    if (!keyUsable(key, opts)) {
+      return quarantine('bad_key');
+    }
+
     return verify(yamlText, key);
   } catch {
     return quarantine('malformed');
@@ -80,20 +86,33 @@ export function loadCatalogue(
 
 function verify(yamlText: string, key: string | Uint8Array): CatalogueState {
   const raw: unknown = parse(yamlText);
-  if (raw === null || typeof raw !== 'object') return quarantine('malformed');
-  const { entries, signature } = raw as { entries?: unknown; signature?: unknown };
-  if (typeof signature !== 'string' || entries === undefined)
+  if (raw === null || typeof raw !== 'object') {
     return quarantine('malformed');
+  }
+
+  const { entries, signature } = raw as { entries?: unknown; signature?: unknown };
+  if (typeof signature !== 'string' || entries === undefined) {
+    return quarantine('malformed');
+  }
+
   if (!constantTimeEqual(signCatalogue(entries, key), signature)) {
     return quarantine('bad_signature');
   }
+
   const parsed = CatalogueFile.safeParse(raw);
-  if (!parsed.success) return quarantine('malformed');
+  if (!parsed.success) {
+    return quarantine('malformed');
+  }
+
   const tools = new Map<string, ToolDefinition>();
   for (const def of parsed.data.entries) {
-    if (tools.has(def.id)) return quarantine('malformed');
+    if (tools.has(def.id)) {
+      return quarantine('malformed');
+    }
+
     tools.set(def.id, def);
   }
+
   return {
     status: 'verified',
     tools,
@@ -107,5 +126,6 @@ export function schemaMatches(
   live: Readonly<Record<string, string>>,
 ): boolean {
   const reported = Object.hasOwn(live, def.id) ? live[def.id] : undefined;
+
   return reported !== undefined && reported === def.schema_hash;
 }

@@ -67,6 +67,7 @@ describe('StoredIntakeEvent', () => {
     expect(StoredIntakeEvent.safeParse({ ...stored, ticket_id: 'SF-3' }).success).toBe(
       true,
     );
+
     expect(StoredIntakeEvent.safeParse({ ...stored, id: 0 }).success).toBe(false);
   });
 });

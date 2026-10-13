@@ -48,8 +48,10 @@ describeStorageContract('sqlite (:memory:)', () => createSqliteStorage(':memory:
 
 const receiptHandle = (path: string) => () => {
   const { storage, receipts } = openSqlite(path);
+
   return { log: receipts, close: () => storage.close() };
 };
+
 describeReceiptLogContract('sqlite (file)', () => receiptHandle(nextPath())());
 describeReceiptLogContract('sqlite (:memory:)', () => receiptHandle(':memory:')());
 
@@ -81,10 +83,12 @@ describe('sqlite receipt log specifics', () => {
       string,
       unknown
     >;
+
     const effect = raw.prepare('SELECT * FROM tool_effects').get() as Record<
       string,
       unknown
     >;
+
     raw.close();
     expect(decision).toMatchObject({
       id: 'c1',
@@ -102,6 +106,7 @@ describe('sqlite receipt log specifics', () => {
       prev_hash: null,
       parent_call_id: null,
     });
+
     expect(effect).toMatchObject({
       decision_id: 'c1',
       run_id: 'r1',
@@ -125,6 +130,7 @@ describe('sqlite receipt log specifics', () => {
       ),
       appendDecision(receipts, 'r1', 'c2'),
     ]);
+
     const chain = await receipts.list('r1');
     const run = await storage.transaction((tx) => tx.runs.get('r1'));
     await storage.close();
@@ -138,6 +144,7 @@ describe('sqlite receipt log specifics', () => {
     await storage.transaction((tx) =>
       tx.runTokens.put('r1', 'd'.repeat(64), '2026-10-13T00:00:00.000Z'),
     );
+
     await storage.close();
     const raw = new Database(path, { readonly: true });
     const row = raw.prepare('SELECT * FROM run_tokens').get();
@@ -195,6 +202,7 @@ describe('sqlite file specifics', () => {
     const failure = await db
       .transaction((tx) => tx.tickets.insert(makeTicket(1)))
       .catch((e: unknown) => e);
+
     holder.exec('ROLLBACK');
     holder.close();
     expect(failure).toBeInstanceOf(StallError);
@@ -215,6 +223,7 @@ describe('sqlite file specifics', () => {
     const failure = await db
       .transaction((tx) => tx.tickets.get(makeTicket(1).id))
       .catch((e: unknown) => e);
+
     await db.close();
     expect(failure).toBeInstanceOf(UnknownForgeError);
     expect((failure as ForgeError).cause).toMatchObject({ name: 'ZodError' });
@@ -231,6 +240,7 @@ describe('sqlite file specifics', () => {
         await tx.runs.insert(makeRun('r1'));
       })
       .catch((e: unknown) => e);
+
     await storage.close();
     expect(failure).toBeInstanceOf(InvalidInputError);
   });
@@ -245,6 +255,7 @@ describe('sqlite file specifics', () => {
         .catch((e: unknown) => e),
       new Promise((r) => setTimeout(() => r('deadlock'), 1000)),
     ]);
+
     const chain = await receipts.list('r1');
     await storage.close();
     expect(outcome).toBeInstanceOf(InvalidInputError);

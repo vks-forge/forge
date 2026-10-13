@@ -20,9 +20,13 @@ import { runCli } from '#/services/run-cli.js';
 /** Nearest ancestor of `start` that holds a `.forge` directory. */
 function findRepoRoot(start: string): string {
   for (let dir = resolve(start); ; dir = dirname(dir)) {
-    if (existsSync(join(dir, '.forge'))) return dir;
-    if (dirname(dir) === dir)
+    if (existsSync(join(dir, '.forge'))) {
+      return dir;
+    }
+
+    if (dirname(dir) === dir) {
       throw new Error('run forge inside a Forge repository (no .forge directory found)');
+    }
   }
 }
 

@@ -58,7 +58,9 @@ export function createTicketRepository(driver: SqlDriver): TicketRepository {
       to_id: TicketId;
       kind: TicketRelation['kind'];
     }>(EDGES_SQL, [id, id]);
+
     const { parent, blocked_by } = deriveTicketRelations(id, edges);
+
     return parseStored(
       Ticket,
       { ...dropNulls(row), ...(parent === undefined ? {} : { parent }), blocked_by },
@@ -69,6 +71,7 @@ export function createTicketRepository(driver: SqlDriver): TicketRepository {
   return {
     async get(id: TicketId) {
       const row = driver.get('SELECT * FROM tickets WHERE id = ?', [id]);
+
       return row ? toTicket(row) : null;
     },
 
@@ -91,6 +94,7 @@ export function createTicketRepository(driver: SqlDriver): TicketRepository {
           kind: 'depends_on' as const,
         })),
       ].map((e) => TicketRelation.parse({ ...e, created_at: t.created_at }));
+
       driver.run(
         `INSERT INTO tickets (id, project, epic_id, title, body, type, lane, tier_predicted,
            tier_actual, status, status_version, rework_count, blocked_reason, assignee_run_id,
@@ -122,12 +126,14 @@ export function createTicketRepository(driver: SqlDriver): TicketRepository {
           t.updated_at,
         ],
       );
-      for (const e of edges)
+
+      for (const e of edges) {
         driver.run(
           `INSERT OR IGNORE INTO ticket_relations (from_id, to_id, kind, created_at)
            VALUES (?, ?, ?, ?)`,
           [e.from_id, e.to_id, e.kind, e.created_at ?? null],
         );
+      }
     },
 
     async updateTicketCas(id: TicketId, expectedVersion: number, patch: TicketPatch) {
@@ -135,10 +141,12 @@ export function createTicketRepository(driver: SqlDriver): TicketRepository {
         COLUMNS,
         parseTicketPatch(expectedVersion, patch),
       );
+
       const res = driver.run(
         `UPDATE tickets SET ${sql} WHERE id = ? AND status_version = ?`,
         [...params, id, expectedVersion],
       );
+
       return res.changes === 1;
     },
   };

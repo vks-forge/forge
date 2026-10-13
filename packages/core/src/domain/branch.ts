@@ -34,6 +34,7 @@ export function slugify(title: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, MAX_SLUG_LENGTH)
     .replace(/-+$/g, '');
+
   return slug === '' ? FALLBACK_SLUG : slug;
 }
 
@@ -54,5 +55,6 @@ export function parseBranchName(branch: string): Result<ParsedBranch, string> {
   if (!type.success || !id.success || slug === undefined) {
     return err(`not a Forge branch: ${branch}`);
   }
+
   return ok({ type: type.data, ticketId: id.data, slug });
 }

@@ -58,13 +58,23 @@ async function runEcho(settingsPath: string) {
     ],
     { cwd: freshTempCwd() },
   );
+
   const results: ToolResult[] = [];
   for (const ev of parseJsonLines(res.stdout)) {
-    if (ev['type'] !== 'user') continue;
+    if (ev['type'] !== 'user') {
+      continue;
+    }
+
     const msg = ev['message'] as { content?: unknown } | undefined;
-    if (!Array.isArray(msg?.content)) continue;
+    if (!Array.isArray(msg?.content)) {
+      continue;
+    }
+
     for (const block of msg.content as Record<string, unknown>[]) {
-      if (block['type'] !== 'tool_result') continue;
+      if (block['type'] !== 'tool_result') {
+        continue;
+      }
+
       const meta = ev['tool_use_result'] as { stdout?: string } | undefined;
       results.push({
         isError: block['is_error'] === true,
@@ -73,6 +83,7 @@ async function runEcho(settingsPath: string) {
       });
     }
   }
+
   return { res, results };
 }
 
@@ -112,6 +123,7 @@ describe('probe 2: hooks fire and block inside -p (d-0033)', () => {
       expect(results.some((r) => r.content.includes('blocking because onFailure'))).toBe(
         true,
       );
+
       expect(results.some((r) => r.stdout === 'hi')).toBe(false);
     },
     150_000,
@@ -142,6 +154,7 @@ describe('probe 2: hooks fire and block inside -p (d-0033)', () => {
         script,
         `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'ran');\n`,
       );
+
       writeFileSync(
         join(project, '.claude', 'settings.json'),
         JSON.stringify({
@@ -152,6 +165,7 @@ describe('probe 2: hooks fire and block inside -p (d-0033)', () => {
           },
         }),
       );
+
       const base = [
         '-p',
         'reply with the single word pong',
@@ -169,6 +183,7 @@ describe('probe 2: hooks fire and block inside -p (d-0033)', () => {
       const isolated = await runClaude([...base, '--setting-sources', ''], {
         cwd: project,
       });
+
       const ranWhenIsolated = existsSync(marker);
       const control = await runClaude([...base, '--setting-sources', 'project'], {
         cwd: project,

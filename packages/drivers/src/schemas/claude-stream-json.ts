@@ -127,13 +127,18 @@ export type CliLine = z.infer<typeof CliLine>;
 /** Parses one stdout line; null for blank, non-JSON or schema-foreign lines. */
 export function parseCliLine(line: string): CliLine | null {
   const text = line.trim();
-  if (!text.startsWith('{')) return null;
+  if (!text.startsWith('{')) {
+    return null;
+  }
+
   let json: unknown;
   try {
     json = JSON.parse(text);
   } catch {
     return null;
   }
+
   const parsed = CliLine.safeParse(json);
+
   return parsed.success ? parsed.data : null;
 }

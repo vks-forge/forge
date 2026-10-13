@@ -38,6 +38,7 @@ export function createGitCli(): GitPort {
         git(cwd, ['diff', '--name-only', '-z', base]),
         git(cwd, ['ls-files', '--others', '--exclude-standard', '-z']),
       ]);
+
       return [...new Set([...names(tracked), ...names(untracked)])].sort();
     },
   };

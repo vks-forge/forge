@@ -61,6 +61,7 @@ export function describeStorageContract(
     beforeEach(async () => {
       db = await makeAdapter();
     });
+
     afterEach(async () => {
       await db.close();
     });
@@ -88,6 +89,7 @@ export function describeStorageContract(
           await tx.tickets.insert(makeTicket(2, { status: 'planned' }));
           await tx.tickets.insert(makeTicket(3));
         });
+
         const inbox = await db.transaction((tx) => tx.tickets.listByStatus('inbox'));
         expect(inbox.map((t) => t.id)).toEqual([makeTicket(1).id, makeTicket(3).id]);
       });
@@ -97,6 +99,7 @@ export function describeStorageContract(
         const failure = await db
           .transaction((tx) => tx.tickets.insert(makeTicket(1)))
           .catch((e: unknown) => e);
+
         expect(failure).toBeInstanceOf(InvalidInputError);
       });
 
@@ -105,6 +108,7 @@ export function describeStorageContract(
         const failure = await db
           .transaction((tx) => tx.tickets.insert(bad))
           .catch((e: unknown) => e);
+
         expect(failure).toBeInstanceOf(InvalidInputError);
         expect((failure as ForgeError).cause).toBeDefined();
         expect((failure as ForgeError).errorFamily).toBe('invalid_input');
@@ -116,6 +120,7 @@ export function describeStorageContract(
         const ok = await db.transaction((tx) =>
           tx.tickets.updateTicketCas(t.id, 0, { status: 'planned', rework_count: 1 }),
         );
+
         const got = await db.transaction((tx) => tx.tickets.get(t.id));
         expect(ok).toBe(true);
         expect(got).toMatchObject({
@@ -132,6 +137,7 @@ export function describeStorageContract(
         const failure = await db
           .transaction((tx) => tx.tickets.updateTicketCas(t.id, 0, patch))
           .catch((e: unknown) => e);
+
         const got = await db.transaction((tx) => tx.tickets.get(t.id));
         expect(failure).toBeInstanceOf(InvalidInputError);
         expect(got).toMatchObject({ status: 'inbox', status_version: 0 });
@@ -143,6 +149,7 @@ export function describeStorageContract(
         await db.transaction((tx) =>
           tx.tickets.updateTicketCas(t.id, 7, { rework_count: 2 }),
         );
+
         const got = await db.transaction((tx) => tx.tickets.get(t.id));
         expect(got?.status_version).toBe(8);
       });
@@ -156,6 +163,7 @@ export function describeStorageContract(
             tier_actual: undefined,
           }),
         );
+
         const got = await db.transaction((tx) => tx.tickets.get(t.id));
         expect(got).not.toBeNull();
         expect('blocked_reason' in (got ?? {})).toBe(false);
@@ -172,11 +180,15 @@ export function describeStorageContract(
           { type: 'unblocked', at },
         ] as TicketEvent[]) {
           const r = transition(cur, e);
-          if (!r.ok) throw new Error('unexpected transition error');
+          if (!r.ok) {
+            throw new Error('unexpected transition error');
+          }
+
           const next = r.value;
           const ok = await db.transaction((tx) =>
             tx.tickets.updateTicketCas(cur.id, cur.status_version, toTicketPatch(next)),
           );
+
           expect(ok).toBe(true);
           cur = next;
           const stored = await db.transaction((tx) => tx.tickets.get(cur.id));
@@ -195,13 +207,18 @@ export function describeStorageContract(
           { type: 'gate_failed', at },
         ] as TicketEvent[]) {
           const r = transition(cur, e);
-          if (!r.ok) throw new Error('unexpected transition error');
+          if (!r.ok) {
+            throw new Error('unexpected transition error');
+          }
+
           const next = r.value;
           await db.transaction((tx) =>
             tx.tickets.updateTicketCas(cur.id, cur.status_version, toTicketPatch(next)),
           );
+
           cur = next;
         }
+
         const stored = await db.transaction((tx) => tx.tickets.get(cur.id));
         expect(stored?.status).toBe('in_progress');
         expect('tier_actual' in (stored ?? {})).toBe(false);
@@ -213,9 +230,11 @@ export function describeStorageContract(
         await db.transaction((tx) =>
           tx.tickets.updateTicketCas(t.id, 0, { status: 'planned' }),
         );
+
         const stale = await db.transaction((tx) =>
           tx.tickets.updateTicketCas(t.id, 0, { status: 'cancelled' }),
         );
+
         const got = await db.transaction((tx) => tx.tickets.get(t.id));
         expect(stale).toBe(false);
         expect(got?.status).toBe('planned');
@@ -225,6 +244,7 @@ export function describeStorageContract(
         const ok = await db.transaction((tx) =>
           tx.tickets.updateTicketCas(makeTicket(7).id, 0, { status: 'planned' }),
         );
+
         expect(ok).toBe(false);
       });
     });
@@ -233,8 +253,10 @@ export function describeStorageContract(
       it('commits on success and returns the callback value', async () => {
         const v = await db.transaction(async (tx) => {
           await tx.tickets.insert(makeTicket(1));
+
           return 42;
         });
+
         const got = await db.transaction((tx) => tx.tickets.get(makeTicket(1).id));
         expect(v).toBe(42);
         expect(got).not.toBeNull();
@@ -251,12 +273,14 @@ export function describeStorageContract(
             throw boom;
           }),
         ).rejects.toBe(boom);
+
         const after = await db.transaction(async (tx) => ({
           ticket: await tx.tickets.get(makeTicket(1).id),
           run: await tx.runs.get('r1'),
           events: await tx.runEvents.listByRun('r1'),
           intake: (await tx.intakeEvents.insertIfNew(makeIntake('k'))).inserted,
         }));
+
         expect(after).toEqual({ ticket: null, run: null, events: [], intake: true });
       });
 
@@ -271,6 +295,7 @@ export function describeStorageContract(
             .catch((e: unknown) => e),
           new Promise((r) => setTimeout(() => r('deadlock'), 1000)),
         ]);
+
         expect(outcome).toBeInstanceOf(InvalidInputError);
         expect(String((outcome as Error).message)).toMatch(/re-entr|nested/i);
         // the outer transaction rolled back and the adapter is still usable
@@ -278,6 +303,7 @@ export function describeStorageContract(
           one: await tx.tickets.get(makeTicket(1).id),
           two: await tx.tickets.get(makeTicket(2).id),
         }));
+
         expect(after).toEqual({ one: null, two: null });
       });
 
@@ -289,11 +315,13 @@ export function describeStorageContract(
           await new Promise((r) => setTimeout(r, 20));
           order.push('a:end');
         });
+
         const fast = db.transaction(async (tx) => {
           order.push('b:start');
           await tx.tickets.insert(makeTicket(2));
           order.push('b:end');
         });
+
         await Promise.all([slow, fast]);
         expect(order).toEqual(['a:start', 'a:end', 'b:start', 'b:end']);
       });
@@ -311,15 +339,18 @@ export function describeStorageContract(
             usage: { in: 1, out: 2, cachedIn: 3, cacheWrite: 4 },
           });
         });
+
         const { r1, list } = await db.transaction(async (tx) => ({
           r1: await tx.runs.get('r1'),
           list: await tx.runs.listByTicket('SF-1'),
         }));
+
         expect(r1).toMatchObject({
           status: 'success',
           cost_usd: 0.5,
           usage: { in: 1, out: 2, cachedIn: 3, cacheWrite: 4 },
         });
+
         expect(list.map((r) => r.id)).toEqual(['r1']);
       });
     });
@@ -330,6 +361,7 @@ export function describeStorageContract(
           await tx.runs.insert(makeRun('r1', { error_family: 'crash', cost_usd: 1 }));
           await tx.runs.update('r1', { error_family: undefined });
         });
+
         const got = await db.transaction((tx) => tx.runs.get('r1'));
         expect('error_family' in (got ?? {})).toBe(false);
         expect(got?.cost_usd).toBe(1);
@@ -340,6 +372,7 @@ export function describeStorageContract(
         const failure = await db
           .transaction((tx) => tx.runs.update('r1', { harness: undefined } as never))
           .catch((e: unknown) => e);
+
         expect(failure).toBeInstanceOf(InvalidInputError);
       });
     });
@@ -353,6 +386,7 @@ export function describeStorageContract(
           name: 'noop',
           input: undefined,
         };
+
         const result = {
           type: 'tool_result' as const,
           ts: '2026-10-13T00:00:01.000Z',
@@ -360,10 +394,12 @@ export function describeStorageContract(
           output: undefined,
           is_error: false,
         };
+
         const stored = await db.transaction(async (tx) => [
           await tx.runEvents.append('r1', call),
           await tx.runEvents.append('r1', result),
         ]);
+
         const listed = await db.transaction((tx) => tx.runEvents.listByRun('r1'));
         expect(listed).toStrictEqual(stored);
         expect(listed[0]).toMatchObject({ input: null });
@@ -376,6 +412,7 @@ export function describeStorageContract(
           a1: await tx.runEvents.append('r1', makeTextEvent('b')),
           b0: await tx.runEvents.append('r2', makeTextEvent('other')),
         }));
+
         const all = await db.transaction((tx) => tx.runEvents.listByRun('r1'));
         expect(out.a0).toMatchObject({ seq: 0, text: 'a' });
         expect(out.a1.seq).toBe(1);
@@ -388,6 +425,7 @@ export function describeStorageContract(
         const next = await db.transaction((tx) =>
           tx.runEvents.append('r1', makeTextEvent()),
         );
+
         expect(next.seq).toBe(1);
       });
 
@@ -400,6 +438,7 @@ export function describeStorageContract(
               ),
             ),
           );
+
         await Promise.all([writer('driver-'), writer('mcp-')]);
         const all = await db.transaction((tx) => tx.runEvents.listByRun('r1'));
         expect(all.map((e) => e.seq)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
@@ -414,8 +453,11 @@ export function describeStorageContract(
 
       it('returns only events after afterSeq', async () => {
         await db.transaction(async (tx) => {
-          for (let i = 0; i < 4; i++) await tx.runEvents.append('r1', makeTextEvent());
+          for (let i = 0; i < 4; i++) {
+            await tx.runEvents.append('r1', makeTextEvent());
+          }
         });
+
         const tail = await db.transaction((tx) => tx.runEvents.listByRun('r1', 1));
         expect(tail.map((e) => e.seq)).toEqual([2, 3]);
       });
@@ -425,9 +467,11 @@ export function describeStorageContract(
         await expect(
           db.transaction((tx) => tx.runEvents.append('r1', bad)),
         ).rejects.toThrow();
+
         const ok = await db.transaction((tx) =>
           tx.runEvents.append('r1', makeTextEvent()),
         );
+
         expect(ok.seq).toBe(0);
       });
 
@@ -439,6 +483,7 @@ export function describeStorageContract(
           name: 'bash',
           input: { cmd: 'ls', nested: [1, { a: null }] },
         };
+
         await db.transaction((tx) => tx.runEvents.append('r1', ev));
         const [got] = await db.transaction((tx) => tx.runEvents.listByRun('r1'));
         expect(got).toEqual({ ...ev, seq: 0 });
@@ -455,6 +500,7 @@ export function describeStorageContract(
           r1: await tx.runTokens.getHash('r1'),
           r2: await tx.runTokens.getHash('r2'),
         }));
+
         expect(got).toEqual({ r1: HASH, r2: null });
       });
 
@@ -463,14 +509,17 @@ export function describeStorageContract(
           await tx.runTokens.put('r1', HASH, T1);
           await tx.runTokens.put('r2', 'b'.repeat(64), T1);
         });
+
         await db.transaction(async (tx) => {
           await tx.runTokens.revoke('r1', T1);
           await tx.runTokens.revoke('ghost', T1);
         });
+
         const got = await db.transaction(async (tx) => ({
           r1: await tx.runTokens.getHash('r1'),
           r2: await tx.runTokens.getHash('r2'),
         }));
+
         expect(got).toEqual({ r1: null, r2: 'b'.repeat(64) });
       });
 
@@ -480,6 +529,7 @@ export function describeStorageContract(
           await tx.runTokens.revoke('r1', T1);
           await tx.runTokens.reissue('r1', 'c'.repeat(64), T1);
         });
+
         const got = await db.transaction((tx) => tx.runTokens.getHash('r1'));
         expect(got).toBe('c'.repeat(64));
       });
@@ -491,9 +541,11 @@ export function describeStorageContract(
             await tx.runTokens.issue('r1', HASH, T1);
             await tx.runTokens.revoke('r1', T1);
           });
+
           const failure = await db
             .transaction((tx) => tx.runTokens[method]('r1', 'c'.repeat(64), T1))
             .catch((e: unknown) => e);
+
           const got = await db.transaction((tx) => tx.runTokens.getHash('r1'));
           expect(failure).toBeInstanceOf(PolicyDeniedError);
           expect(got).toBeNull();
@@ -506,10 +558,12 @@ export function describeStorageContract(
           await tx.runTokens.issue('r1', 'c'.repeat(64), T1);
           await tx.runTokens.reissue('r2', 'd'.repeat(64), T1);
         });
+
         const got = await db.transaction(async (tx) => ({
           r1: await tx.runTokens.getHash('r1'),
           r2: await tx.runTokens.getHash('r2'),
         }));
+
         expect(got).toEqual({ r1: 'c'.repeat(64), r2: 'd'.repeat(64) });
       });
 
@@ -517,6 +571,7 @@ export function describeStorageContract(
         await expect(
           db.transaction((tx) => tx.runTokens.put('r1', 'raw-token-value', T1)),
         ).rejects.toThrow();
+
         const got = await db.transaction((tx) => tx.runTokens.getHash('r1'));
         expect(got).toBeNull();
       });
@@ -528,6 +583,7 @@ export function describeStorageContract(
             throw new Error('boom');
           }),
         ).rejects.toThrow('boom');
+
         expect(await db.transaction((tx) => tx.runTokens.getHash('r1'))).toBeNull();
       });
     });
@@ -538,9 +594,11 @@ export function describeStorageContract(
           await tx.interactions.insert(
             makeInteraction('i2', { asked_at: '2026-10-13T02:00:00.000Z' }),
           );
+
           await tx.interactions.insert(makeInteraction('i1'));
           await tx.interactions.insert(makeInteraction('i3', { status: 'cancelled' }));
         });
+
         const pending = await db.transaction((tx) => tx.interactions.listPending());
         expect(pending.map((i) => i.id)).toEqual(['i1', 'i2']);
 
@@ -551,6 +609,7 @@ export function describeStorageContract(
             answered_at: '2026-10-13T03:00:00.000Z',
           }),
         );
+
         const after = await db.transaction((tx) => tx.interactions.listPending());
         const i1 = await db.transaction((tx) => tx.interactions.get('i1'));
         expect(after.map((i) => i.id)).toEqual(['i2']);

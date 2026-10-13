@@ -37,6 +37,7 @@ const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
 
 function toInteraction(row: SqlRow): Interaction {
   const { payload_json, answer_json, ...rest } = dropNulls(row);
+
   return parseStored(
     Interaction,
     {
@@ -52,6 +53,7 @@ export function createInteractionRepository(driver: SqlDriver): InteractionRepos
   return {
     async get(id) {
       const row = driver.get('SELECT * FROM interactions WHERE id = ?', [id]);
+
       return row ? toInteraction(row) : null;
     },
 
@@ -94,12 +96,18 @@ export function createInteractionRepository(driver: SqlDriver): InteractionRepos
 
     async update(id, patch) {
       const { sql, params } = buildSetClause(COLUMNS, parseInteractionPatch(patch));
-      if (sql === '') return;
+      if (sql === '') {
+        return;
+      }
+
       const res = driver.run(`UPDATE interactions SET ${sql} WHERE id = ?`, [
         ...params,
         id,
       ]);
-      if (res.changes !== 1) throw new UnknownForgeError(`Interaction not found: ${id}`);
+
+      if (res.changes !== 1) {
+        throw new UnknownForgeError(`Interaction not found: ${id}`);
+      }
     },
 
     async answer(id, answer, at) {
@@ -108,6 +116,7 @@ export function createInteractionRepository(driver: SqlDriver): InteractionRepos
          WHERE id = ? AND status = 'pending'`,
         [toJson(answer), at, id],
       );
+
       return res.changes === 1;
     },
 
@@ -117,6 +126,7 @@ export function createInteractionRepository(driver: SqlDriver): InteractionRepos
          WHERE id = ? AND status = 'pending' AND timeout_at <= ?`,
         [id, at],
       );
+
       return res.changes === 1;
     },
   };

@@ -24,6 +24,7 @@ import type { ShellDialect } from '#/types/tokenizer.types.js';
 /** Fields a harness uses to name the file or directory of a path tool. */
 const PATH_KEYS = ['file_path', 'path', 'notebook_path'] as const;
 const RESOURCE_KEYS = ['url', 'query', 'name'];
+
 /** Tool actions whose resource is a path. */
 export const PATH_TOOLS = new Set(['read', 'edit', 'write', 'grep', 'glob']);
 /** Receipts keep only this much of a shell line. */
@@ -44,16 +45,32 @@ export function pathResources(
   const given: string[] = [];
   for (const k of [...PATH_KEYS, 'pattern']) {
     const v = input?.[k];
-    if (v === undefined || v === null) continue;
-    if (typeof v !== 'string') return null;
-    if (k !== 'pattern') given.push(v);
+    if (v === undefined || v === null) {
+      continue;
+    }
+
+    if (typeof v !== 'string') {
+      return null;
+    }
+
+    if (k !== 'pattern') {
+      given.push(v);
+    }
   }
+
   const pattern = input?.['pattern'];
   const hasPattern =
     typeof pattern === 'string' && (action === 'grep' || action === 'glob');
+
   if (hasPattern) {
-    if (pattern.trim() === '') return null;
-    if (action === 'grep' && given.length === 0) given.push(pattern);
+    if (pattern.trim() === '') {
+      return null;
+    }
+
+    if (action === 'grep' && given.length === 0) {
+      given.push(pattern);
+    }
+
     if (action === 'glob') {
       const base = given.length > 0 ? given : ['.'];
       given.push(
@@ -63,16 +80,23 @@ export function pathResources(
       );
     }
   }
+
   return given.length === 0 || given.some((g) => g.trim() === '') ? null : given;
 }
 
 /** The plain string a non-path, non-shell tool is judged on (`url`, `query` or `name`; the id for a project MCP tool). */
 export function resourceOf(def: ToolDefinition, call: AdmitCall): string {
-  if (isProjectMcp(def.id)) return def.id;
+  if (isProjectMcp(def.id)) {
+    return def.id;
+  }
+
   for (const k of RESOURCE_KEYS) {
     const v = call.input?.[k];
-    if (typeof v === 'string') return v;
+    if (typeof v === 'string') {
+      return v;
+    }
   }
+
   return '';
 }
 
@@ -82,7 +106,10 @@ export function shellDialect(native: string | undefined): ShellDialect {
 }
 
 function hostOf(url: unknown): string | null {
-  if (typeof url !== 'string') return null;
+  if (typeof url !== 'string') {
+    return null;
+  }
+
   try {
     return new URL(url).host.toLowerCase();
   } catch {
@@ -98,29 +125,49 @@ function hostOf(url: unknown): string | null {
  * nothing safely (unknown tool, quarantined catalogue, bad path, untokenizable command).
  */
 export function callResource(ctx: AdmitContext, call: AdmitCall): string | null {
-  if (ctx.catalogue.status !== 'verified') return null;
-  const def = ctx.catalogue.tools.get(call.tool);
-  if (!def) return null;
+  if (ctx.catalogue.status !== 'verified') {
+    return null;
+  }
 
-  if (isProjectMcp(def.id)) return def.id;
+  const def = ctx.catalogue.tools.get(call.tool);
+  if (!def) {
+    return null;
+  }
+
+  if (isProjectMcp(def.id)) {
+    return def.id;
+  }
+
   if (def.id === SHELL_TOOL_ID) {
     const command = call.input?.['command'];
-    if (typeof command !== 'string') return null;
+    if (typeof command !== 'string') {
+      return null;
+    }
+
     const tokens = tokenizeShell(command, shellDialect(call.native));
-    if (!tokens.ok) return null;
+    if (!tokens.ok) {
+      return null;
+    }
+
     return tokens.value
       .map((s) => s.text)
       .join(' ; ')
       .slice(0, SHELL_RESOURCE_CHARS);
   }
+
   const action = toolAction(def.id);
   if (PATH_TOOLS.has(action)) {
     const first = pathResources(action, call.input)?.[0];
+
     return first === undefined ? null : normalizePath(first, ctx.cwd);
   }
+
   if (def.risk === 'network') {
     const host = hostOf(call.input?.['url']);
-    if (host !== null) return host;
+    if (host !== null) {
+      return host;
+    }
   }
+
   return def.id.startsWith('mcp__') ? def.id : null;
 }

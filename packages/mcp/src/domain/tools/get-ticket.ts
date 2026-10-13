@@ -27,16 +27,25 @@ export const getTicketTool = defineTool({
   async handler(ctx, { id }) {
     return ctx.deps.storage.transaction(async (tx) => {
       const own = await tx.tickets.get(ctx.run.ticket_id as Ticket['id']);
-      if (!own) throw new UnknownForgeError(`run ticket ${ctx.run.ticket_id} not found`);
+      if (!own) {
+        throw new UnknownForgeError(`run ticket ${ctx.run.ticket_id} not found`);
+      }
+
       const allowed = new Set<string>([
         own.id,
         ...(own.parent ? [own.parent] : []),
         ...own.blocked_by,
       ]);
-      if (!allowed.has(id))
+
+      if (!allowed.has(id)) {
         throw new PolicyDeniedError(`ticket ${id} is not related to this run`);
+      }
+
       const ticket = id === own.id ? own : await tx.tickets.get(id as Ticket['id']);
-      if (!ticket) throw new UnknownForgeError(`ticket ${id} not found`);
+      if (!ticket) {
+        throw new UnknownForgeError(`ticket ${id} not found`);
+      }
+
       // Relations only for the run's own ticket: a related ticket's neighbours would be
       // second-degree reads into tickets this run has no business with.
       const isOwn = id === own.id;
@@ -44,7 +53,9 @@ export const getTicketTool = defineTool({
       const blockers = isOwn
         ? await Promise.all(ticket.blocked_by.map((b) => tx.tickets.get(b)))
         : [];
+
       const runs = isOwn ? await tx.runs.listByTicket(own.id) : [];
+
       return JSON.stringify({
         ticket: {
           id: ticket.id,

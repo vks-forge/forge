@@ -22,11 +22,14 @@ export async function checkInvariants(ctx: EngineCtx): Promise<void> {
       ...(await tx.tickets.listByStatus('in_progress')),
       ...(await tx.tickets.listByStatus('waiting_human')),
     ];
+
     const runs = new Map(
       (await tx.runs.listByStatus(['starting', 'running'])).map((r) => [r.id, r]),
     );
+
     const pending = await tx.interactions.listPending();
     const wakes = await tx.wakeRequests.listDue(FAR_FUTURE);
+
     return {
       tickets,
       runs,
@@ -34,6 +37,7 @@ export async function checkInvariants(ctx: EngineCtx): Promise<void> {
       wakeTickets: new Set(wakes.map((w) => w.ticket_id)),
     };
   });
+
   for (const v of findViolations(snapshot)) {
     ctx.report.violations.push(v);
     ctx.deps.log?.('error', `invariant violated: ${v.message}`, {

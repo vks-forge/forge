@@ -70,6 +70,7 @@ describe('probe 5: hooks and user settings under ACP (d-0049)', () => {
           },
         }),
       );
+
       // Plant a known default mode in the project settings source the adapter's
       // SettingsManager reads (<cwd>/.claude/settings.json, settings.js getWatchedPaths),
       // so the leak assertion is unconditional and no credentials or user config are touched.
@@ -88,12 +89,14 @@ describe('probe 5: hooks and user settings under ACP (d-0049)', () => {
             _meta: claudeOptionsMeta(2, { settings: settingsPath }),
           })
           .start();
+
         const initialMode = session.modes?.currentModeId ?? null;
         // Resolves only if the adapter accepts the mode; a rejection fails the probe.
         await h.ctx.request('session/set_mode', {
           sessionId: session.sessionId,
           modeId: 'default',
         });
+
         const turn = await promptTurn(
           session,
           'use the shell tool to run the command: echo hi',
@@ -102,10 +105,12 @@ describe('probe 5: hooks and user settings under ACP (d-0049)', () => {
         const log = existsSync(logPath)
           ? readFileSync(logPath, 'utf8').split('\n').filter(Boolean)
           : [];
+
         const blob = JSON.stringify(turn.updates);
         const modeUpdates = turn.updates
           .filter((u) => u['sessionUpdate'] === 'current_mode_update')
           .map((u) => u['currentModeId']);
+
         const observed = {
           plantedProjectDefaultMode: 'acceptEdits',
           initialModeBeforeSetMode: initialMode,
@@ -119,6 +124,7 @@ describe('probe 5: hooks and user settings under ACP (d-0049)', () => {
           stopReason: turn.stopReason,
           agentText: turn.text.slice(0, 400),
         };
+
         writeFileSync(join(dir, 'observed.json'), JSON.stringify(observed, null, 2));
         console.info('probe5 observed', JSON.stringify(observed));
 

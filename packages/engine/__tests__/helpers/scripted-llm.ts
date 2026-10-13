@@ -71,16 +71,22 @@ export function createScriptedLLM(): ScriptedLLM {
       const queue = queues.get(name);
       const head =
         queue && queue.length > 1 ? queue.shift() : (queue?.[0] ?? DEFAULTS[name]);
+
       const answer =
         typeof head === 'function' ? head(input as Record<string, unknown>) : head;
+
       if (isFail(answer)) {
         const { __fail: _f, ...error } = answer;
         void _f;
+
         return err(error);
       }
+
       const parsed = schema.safeParse(answer);
-      if (!parsed.success)
+      if (!parsed.success) {
         return err({ kind: 'invalid_output', message: z.prettifyError(parsed.error) });
+      }
+
       return ok(parsed.data);
     },
   };

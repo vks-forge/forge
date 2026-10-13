@@ -41,19 +41,26 @@ export function createWakeRequestRepository(driver: SqlDriver): WakeRequestRepos
           w.created_at,
         ],
       );
+
       const inserted = res.changes === 1;
       const key = [w.ticket_id, w.reason, w.idempotency_key];
-      if (!inserted)
+      if (!inserted) {
         driver.run(
           `UPDATE wake_requests SET coalesced_count = coalesced_count + 1
            WHERE ticket_id = ? AND reason = ? AND idempotency_key = ?`,
           key,
         );
+      }
+
       const row = driver.get(
         'SELECT * FROM wake_requests WHERE ticket_id = ? AND reason = ? AND idempotency_key = ?',
         key,
       );
-      if (!row) throw new UnknownForgeError('wake request vanished after insert');
+
+      if (!row) {
+        throw new UnknownForgeError('wake request vanished after insert');
+      }
+
       return { inserted, request: toWake(row) };
     },
 
@@ -74,17 +81,23 @@ export function createWakeRequestRepository(driver: SqlDriver): WakeRequestRepos
          WHERE id = ? AND status = 'pending'`,
         [at, id],
       );
+
       return res.changes === 1;
     },
 
     async countSince(ticketId, since, kinds) {
-      if (kinds !== undefined && kinds.length === 0) return 0;
+      if (kinds !== undefined && kinds.length === 0) {
+        return 0;
+      }
+
       const kindClause =
         kinds === undefined ? '' : ` AND kind IN (${kinds.map(() => '?').join(', ')})`;
+
       const row = driver.get<{ n: number }>(
         `SELECT COUNT(*) AS n FROM wake_requests WHERE ticket_id = ? AND created_at >= ?${kindClause}`,
         [ticketId, since, ...(kinds ?? [])],
       );
+
       return row?.n ?? 0;
     },
   };

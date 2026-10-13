@@ -35,6 +35,7 @@ describe('probe 3: ACP adapter (d-0035)', () => {
             _meta: claudeOptionsMeta(1),
           })
           .start();
+
         const turn = await promptTurn(session, 'reply with the single word pong');
 
         const modeIds = session.modes?.availableModes.map((m) => m.id) ?? [];
@@ -59,6 +60,7 @@ describe('probe 3: ACP adapter (d-0035)', () => {
         const session = await h.ctx
           .buildSession({ cwd, mcpServers: [], _meta: claudeOptionsMeta(2) })
           .start();
+
         // The adapter's own SettingsManager reads the user's settings.json even with
         // settingSources [], so the initial mode follows the user's permissions.defaultMode
         // (acceptEdits here, which auto-approves shell writes). The driver must therefore

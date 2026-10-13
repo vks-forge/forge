@@ -22,6 +22,7 @@ import type { SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
 
 function toStored(row: SqlRow): StoredIntakeEvent {
   const { actor_json, payload_json, ...rest } = dropNulls(row);
+
   return parseStored(
     StoredIntakeEvent,
     { ...rest, actor: fromJson(actor_json), payload: fromJson(payload_json) },
@@ -47,11 +48,16 @@ export function createIntakeEventRepository(driver: SqlDriver): IntakeEventRepos
           e.received_at,
         ],
       );
+
       const row = driver.get(
         'SELECT * FROM intake_events WHERE source = ? AND dedupe_key = ?',
         [e.source, e.dedupe_key],
       );
-      if (!row) throw new UnknownForgeError('intake event vanished after insert');
+
+      if (!row) {
+        throw new UnknownForgeError('intake event vanished after insert');
+      }
+
       return { inserted: res.changes === 1, event: toStored(row) };
     },
 
@@ -60,11 +66,13 @@ export function createIntakeEventRepository(driver: SqlDriver): IntakeEventRepos
         'UPDATE intake_events SET ticket_id = ? WHERE id = ? AND ticket_id IS NULL',
         [ticketId, id],
       );
+
       return res.changes === 1;
     },
 
     async get(id) {
       const row = driver.get('SELECT * FROM intake_events WHERE id = ?', [id]);
+
       return row ? toStored(row) : null;
     },
   };

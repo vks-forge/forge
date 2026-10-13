@@ -24,6 +24,7 @@ export function makeTicketId(project: string, n: number): TicketId {
   if (!PROJECT_PREFIX_PATTERN.test(project) || !Number.isSafeInteger(n) || n < 1) {
     throw new InvalidInputError(`invalid ticket id parts: ${project}, ${n}`);
   }
+
   return TicketId.parse(`${project}-${n}`);
 }
 
@@ -32,8 +33,14 @@ export function parseTicketId(raw: string): Result<ParsedTicketId, string> {
   const m = TICKET_ID_PATTERN.exec(raw);
   const project = m?.[1];
   const num = m?.[2];
-  if (project === undefined || num === undefined) return err(`not a ticket id: ${raw}`);
+  if (project === undefined || num === undefined) {
+    return err(`not a ticket id: ${raw}`);
+  }
+
   const n = Number(num);
-  if (!Number.isSafeInteger(n)) return err(`ticket number out of range: ${raw}`);
+  if (!Number.isSafeInteger(n)) {
+    return err(`ticket number out of range: ${raw}`);
+  }
+
   return ok({ project, n });
 }

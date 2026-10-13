@@ -37,6 +37,7 @@ export function describeReceiptLogContract(
       handle = await makeLog();
       log = handle.log;
     });
+
     afterEach(async () => {
       await handle.close();
     });
@@ -45,8 +46,10 @@ export function describeReceiptLogContract(
       let seen: { last: unknown; lastSeq: number } | undefined;
       await log.append('r1', (view) => {
         seen = { last: view.last, lastSeq: view.lastSeq };
+
         return [];
       });
+
       expect(await log.list('r1')).toEqual([]);
       expect(seen).toEqual({ last: null, lastSeq: 0 });
     });
@@ -64,6 +67,7 @@ export function describeReceiptLogContract(
         'effect',
         'effect',
       ]);
+
       expect(verifyChain(listed, RECEIPT_SECRET)).toEqual({ ok: true, value: 4 });
     });
 
@@ -78,6 +82,7 @@ export function describeReceiptLogContract(
         finding_ids: [],
         tool: 'read',
       });
+
       const [e] = await appendEffect(log, 'r1', 'c1');
       expect(await log.list('r1')).toEqual([d, e]);
     });
@@ -91,15 +96,19 @@ export function describeReceiptLogContract(
         seen['missing'] = view.openDecision('nope')?.id ?? null;
         seen['latest'] = view.latestOpenDecision('shell')?.id ?? null;
         seen['other'] = view.latestOpenDecision('read')?.id ?? null;
+
         return [];
       });
+
       await appendEffect(log, 'r1', 'c2');
       await log.append('r1', (view) => {
         seen['latestAfter'] = view.latestOpenDecision('shell')?.id ?? null;
         seen['closed'] = view.openDecision('c2')?.id ?? null;
         seen['lastKind'] = view.last?.kind ?? null;
+
         return [];
       });
+
       expect(seen).toEqual({
         byId: 'c1',
         missing: null,
@@ -116,6 +125,7 @@ export function describeReceiptLogContract(
       await Promise.all(
         Array.from({ length: N }, (_, i) => appendDecision(log, 'r1', `c${i}`)),
       );
+
       const chain = await log.list('r1');
       const seqs = chain.map((r) => (r as DecisionReceipt).seq);
       expect(seqs).toEqual(Array.from({ length: N }, (_, i) => i + 1));
@@ -129,6 +139,7 @@ export function describeReceiptLogContract(
           await appendEffect(log, 'r1', `c${i}`);
         }),
       );
+
       const chain = await log.list('r1');
       expect(chain).toHaveLength(20);
       expect(verifyChain(chain, RECEIPT_SECRET).ok).toBe(true);
@@ -141,6 +152,7 @@ export function describeReceiptLogContract(
           throw new Error('boom');
         }),
       ).rejects.toThrow('boom');
+
       expect(await log.list('r1')).toHaveLength(1);
       await appendDecision(log, 'r1', 'c2');
       const chain = await log.list('r1');
@@ -158,6 +170,7 @@ export function describeReceiptLogContract(
       await expect(
         log.append('r1', (view) => {
           const next = view.last as DecisionReceipt;
+
           // A second decision reusing id c1 cannot be stored; the whole batch must fail.
           return [
             { ...next, seq: 2, id: 'c2' },
@@ -165,6 +178,7 @@ export function describeReceiptLogContract(
           ];
         }),
       ).rejects.toThrow();
+
       expect(await log.list('r1')).toEqual([d]);
     });
 
@@ -173,6 +187,7 @@ export function describeReceiptLogContract(
       await expect(
         log.append('r1', () => [foreign as DecisionReceipt]),
       ).rejects.toThrow();
+
       expect(await log.list('r1')).toEqual([]);
     });
 
@@ -182,6 +197,7 @@ export function describeReceiptLogContract(
       await expect(
         log.append('r1', () => [{ ...(e as EffectReceipt), decision_id: 'ghost' }]),
       ).rejects.toThrow();
+
       await expect(log.append('r1', () => [e as EffectReceipt])).rejects.toThrow();
       expect(await log.list('r1')).toEqual([d, e]);
     });
@@ -199,6 +215,7 @@ export function describeReceiptLogContract(
         appendDecision(log, 'r1', 'a2'),
         appendDecision(log, 'r2', 'b2'),
       ]);
+
       const r1 = await log.list('r1');
       const r2 = await log.list('r2');
       expect(r1.map((r) => (r as DecisionReceipt).id)).toEqual(['a1', 'a2']);

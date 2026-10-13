@@ -17,6 +17,7 @@ describe('htmlToText', () => {
   it('drops script, style and head, keeps visible text with block breaks', () => {
     const html =
       '<html><head><title>T</title><style>p{}</style></head><body><h1>Hi &amp; bye</h1><script>alert(1)</script><p>one</p><p>two&nbsp;&#33;</p></body></html>';
+
     const text = htmlToText(html);
     expect(text).toContain('Hi & bye');
     expect(text).toContain('one\n');

@@ -48,15 +48,18 @@ export function makeHookScenario(
     timeout: 10,
     ...(opts.onFailure ? { onFailure: opts.onFailure } : {}),
   };
+
   const settings = {
     hooks: {
       SessionStart: [{ hooks: [hook] }],
       PreToolUse: [{ matcher: '.*', hooks: [hook] }],
     },
   };
+
   const settingsPath = join(dir, 'settings.json');
   writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
   const logPath = join(dir, 'log.txt');
+
   return {
     dir,
     settingsPath,

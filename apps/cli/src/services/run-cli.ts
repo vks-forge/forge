@@ -23,22 +23,29 @@ export async function runCli(argv: readonly string[], deps: CliDeps): Promise<nu
     const command = parseCommand(argv);
     if (command.kind === 'help') {
       deps.stdout(USAGE);
+
       return 0;
     }
+
     const store = await deps.openStore();
     const result = await wrapSecret({ ...deps, store }, command.name, command.file);
     deps.stdout(describeWrap(result));
+
     return 0;
   } catch (error) {
     if (error instanceof InvalidInputError) {
       deps.stderr(`forge: ${error.message}\n\n${USAGE}`);
+
       return 2;
     }
+
     const message =
       error instanceof ForgeError || error instanceof Error
         ? error.message
         : String(error);
+
     deps.stderr(`forge: ${message}\n`);
+
     return 1;
   }
 }

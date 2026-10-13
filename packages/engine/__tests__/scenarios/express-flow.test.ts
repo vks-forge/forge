@@ -34,9 +34,11 @@ describe('Express flow', () => {
     expect(report.triaged).toEqual([
       { ticketId: 'FG-1', lane: 'express', parked: false },
     ]);
+
     expect(report.dispatched).toEqual([
       { ticketId: 'FG-1', runId: 'run-1', kind: 'new' },
     ]);
+
     const t = await rig.ticket(id);
     expect(t).toMatchObject({
       status: 'in_progress',
@@ -47,6 +49,7 @@ describe('Express flow', () => {
       branch: 'fix/FG-1-scripted-triage-title',
       worktree: '/repo/.worktrees/FG-1',
     });
+
     expect(rig.worktrees.created).toEqual([
       expect.objectContaining({ ticketId: 'FG-1', baseRef: 'main' }),
     ]);
@@ -62,6 +65,7 @@ describe('Express flow', () => {
       prompt_hash: sha256Hex('Do the ticket.'),
       catalogue_hash: 'c'.repeat(64),
     });
+
     const start = rig.driver.starts[0]!;
     expect(start).toMatchObject({
       runId: 'run-1',
@@ -73,6 +77,7 @@ describe('Express flow', () => {
       projectId: 'forge',
       budget: { maxTurns: 40, maxUsd: 5, stallMs: 300_000, turnMs: 600_000 },
     });
+
     expect(start.env.FORGE_RUN_TOKEN).toBeDefined();
     const stored = await rig.storage.transaction((tx) => tx.runTokens.getHash('run-1'));
     expect(stored).toBe(sha256Hex(start.env.FORGE_RUN_TOKEN!));
@@ -115,6 +120,7 @@ describe('Express flow', () => {
         usage: { in: 100, out: 50, cachedIn: 0, cacheWrite: 0 },
       }),
     );
+
     await rig.flush();
     const report = await rig.tick();
 
@@ -125,6 +131,7 @@ describe('Express flow', () => {
         filesTouched: ['src/a.ts', 'src/b.ts'],
       }),
     ]);
+
     const run = await rig.storage.transaction((tx) => tx.runs.get('run-1'));
     expect(run).toMatchObject({
       status: 'success',
@@ -133,10 +140,12 @@ describe('Express flow', () => {
       final_chain_hash: 'a'.repeat(64),
       session_ref: 'sess-1',
     });
+
     expect(run?.ended_at).toBeDefined();
     expect(
       await rig.storage.transaction((tx) => tx.runTokens.getHash('run-1')),
     ).toBeNull();
+
     expect((await rig.ticket(id)).status).toBe('verifying');
     // The worktree is kept for the PR step (E2); it goes away on Done or Cancelled.
     expect(rig.worktrees.removed).toEqual([]);
@@ -156,10 +165,12 @@ describe('Express flow', () => {
     expect(
       (await rig.engine.ingest(intake({ project: 'nope' }, rig.clock.now()))).status,
     ).toBe('ignored');
+
     expect(
       (await rig.engine.ingest(intake({ payload: { nothing: 1 } }, rig.clock.now())))
         .status,
     ).toBe('ignored');
+
     expect(
       await rig.storage.transaction((tx) => tx.tickets.listByStatus('inbox')),
     ).toHaveLength(0);
@@ -185,6 +196,7 @@ describe('Express flow', () => {
     const rig = await makeRig({
       engine: { max_concurrent_by_state: { in_progress: 1 }, global_slots: 5 },
     });
+
     await rig.request('One');
     await rig.request('Two');
     const report = await rig.tick();
@@ -204,6 +216,7 @@ describe('Express flow', () => {
         kind: 'depends_on',
       }),
     );
+
     const report = await rig.tick();
     expect(report.dispatched.map((d) => d.ticketId)).toEqual(['FG-2']);
     expect((await rig.ticket('FG-1')).status).toBe('planned');

@@ -44,6 +44,7 @@ describe('restart reconcile (d-0054)', () => {
     expect(
       await rig.storage.transaction((tx) => tx.runTokens.getHash('run-1')),
     ).toBeNull();
+
     expect((await rig.ticket(id)).status).toBe('in_progress');
     const wakes = await rig.storage.transaction((tx) => tx.wakeRequests.listDue(FAR));
     expect(wakes).toEqual([expect.objectContaining({ kind: 'retry', ticket_id: id })]);
@@ -94,6 +95,7 @@ describe('wakes', () => {
         },
       },
     });
+
     const id = await rig.request('x');
     await rig.tick();
     for (let n = 1; n <= 3; n++) {
@@ -101,21 +103,25 @@ describe('wakes', () => {
         `run-${n}`,
         makeResult({ status: 'error', errorFamily: 'rate_limit' }),
       );
+
       await rig.flush();
       await rig.tick();
       rig.clock.advance(70_000);
       const r = await rig.tick();
       expect(r.dispatched).toHaveLength(1);
     }
+
     rig.driver.finish(
       'run-4',
       makeResult({ status: 'error', errorFamily: 'rate_limit' }),
     );
+
     await rig.flush();
     const report = await rig.tick();
     expect(report.parked).toEqual([
       { ticketId: id, reason: expect.stringMatching(/re-wake cap/) },
     ]);
+
     expect((await rig.ticket(id)).status).toBe('waiting_human');
   });
 
@@ -132,6 +138,7 @@ describe('wakes', () => {
       reason: 'stray',
       key: 'late',
     });
+
     const report = await rig.tick();
     expect((await rig.ticket(id)).status).toBe('verifying');
     expect(report.dispatched).toEqual([]);
@@ -161,6 +168,7 @@ describe('invariant check', () => {
       updated_at: now,
       blocked_by: [],
     };
+
     await rig.storage.transaction((tx) => tx.tickets.insert(orphan));
 
     const report = await rig.tick();
@@ -171,9 +179,11 @@ describe('invariant check', () => {
         rule: 'in_progress_without_reason_to_wait',
       }),
     ]);
+
     expect(
       rig.logs.some((l) => l.level === 'error' && l.message.includes('invariant')),
     ).toBe(true);
+
     const after = await rig.ticket('FG-9');
     expect(after.status).toBe('in_progress');
     expect(after.status_version).toBe(3);

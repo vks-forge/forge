@@ -14,5 +14,6 @@ export const MAX_TITLE = 120;
 /** First non-empty line of `text`, trimmed and capped at {@link MAX_TITLE}. */
 export function deriveTitle(text: string): string {
   const line = text.split(/\r?\n/).find((l) => l.trim() !== '') ?? 'Untitled request';
+
   return line.trim().slice(0, MAX_TITLE);
 }

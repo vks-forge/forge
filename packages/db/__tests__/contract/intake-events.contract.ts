@@ -30,6 +30,7 @@ export function describeIntakeEventsContract(getDb: () => StorageAdapter): void 
           makeIntake('k1', { payload: { text: 'redelivered' } }),
         ),
       );
+
       expect(first.inserted).toBe(true);
       expect(again.inserted).toBe(false);
       expect(again.event).toEqual(first.event);
@@ -48,6 +49,7 @@ export function describeIntakeEventsContract(getDb: () => StorageAdapter): void 
         (await t.intakeEvents.insertIfNew(makeIntake('b'))).event.id,
         (await t.intakeEvents.insertIfNew(makeIntake('a'))).event.id,
       ]);
+
       expect(b).toBeGreaterThan(a as number);
       expect(c).toBe(a);
     });
@@ -57,6 +59,7 @@ export function describeIntakeEventsContract(getDb: () => StorageAdapter): void 
       const other = await tx((t) =>
         t.intakeEvents.insertIfNew(makeIntake('k1', { source: 'webhook' })),
       );
+
       expect(other.inserted).toBe(true);
     });
 
@@ -65,9 +68,11 @@ export function describeIntakeEventsContract(getDb: () => StorageAdapter): void 
       const mapped = await tx((t) =>
         t.intakeEvents.markTicket(event.id, makeTicket(1).id),
       );
+
       const remap = await tx((t) =>
         t.intakeEvents.markTicket(event.id, makeTicket(2).id),
       );
+
       const redelivered = await tx((t) => t.intakeEvents.insertIfNew(makeIntake('k1')));
       expect([mapped, remap]).toEqual([true, false]);
       expect(redelivered.event.ticket_id).toBe(makeTicket(1).id);
@@ -88,6 +93,7 @@ export function describeIntakeEventsContract(getDb: () => StorageAdapter): void 
         ...event,
         ticket_id: makeTicket(1).id,
       });
+
       expect(await tx((t) => t.intakeEvents.get(999))).toBeNull();
     });
 
@@ -98,6 +104,7 @@ export function describeIntakeEventsContract(getDb: () => StorageAdapter): void 
           throw new Error('boom');
         }),
       ).rejects.toThrow('boom');
+
       const after = await tx((t) => t.intakeEvents.insertIfNew(makeIntake('k')));
       expect(after.inserted).toBe(true);
     });

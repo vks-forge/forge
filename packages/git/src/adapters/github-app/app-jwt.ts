@@ -22,9 +22,11 @@ export function createAppJwt(appId: string, pem: Uint8Array, nowMs: number): str
   const signingInput = `${b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))}.${b64url(
     JSON.stringify({ iat: nowSec - 60, exp: nowSec + 540, iss: appId }),
   )}`;
+
   try {
     const key = createPrivateKey(Buffer.from(pem));
     const signature = createSign('RSA-SHA256').update(signingInput).sign(key);
+
     return `${signingInput}.${b64url(signature)}`;
   } catch {
     // The underlying message can quote key material; say only what the user can act on.

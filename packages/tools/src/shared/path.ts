@@ -22,18 +22,33 @@ function canon(path: string): string {
   let p = path.normalize('NFKC').replaceAll('\\', '/').toLowerCase();
   if (/^\/\/[?.]\//.test(p)) {
     p = p.slice(4);
-    if (p.startsWith('unc/')) p = `//${p.slice(4)}`;
+    if (p.startsWith('unc/')) {
+      p = `//${p.slice(4)}`;
+    }
   }
+
   return p;
 }
 
 function splitRoot(p: string): { root: string; rest: string } {
   const drive = /^([a-z]):\/*/.exec(p);
-  if (drive) return { root: `${drive[1]}:/`, rest: p.slice(drive[0].length) };
-  if (p.startsWith('//')) return { root: '//', rest: p.replace(/^\/+/, '') };
-  if (p.startsWith('/')) return { root: '/', rest: p.replace(/^\/+/, '') };
+  if (drive) {
+    return { root: `${drive[1]}:/`, rest: p.slice(drive[0].length) };
+  }
+
+  if (p.startsWith('//')) {
+    return { root: '//', rest: p.replace(/^\/+/, '') };
+  }
+
+  if (p.startsWith('/')) {
+    return { root: '/', rest: p.replace(/^\/+/, '') };
+  }
+
   // A leading `~` expands to a home directory: outside any worktree.
-  if (/^~(\/|$)/.test(p)) return { root: '/', rest: p };
+  if (/^~(\/|$)/.test(p)) {
+    return { root: '/', rest: p };
+  }
+
   return { root: '', rest: p };
 }
 
@@ -41,7 +56,10 @@ function splitRoot(p: string): { root: string; rest: string } {
 function cleanSegment(raw: string): string {
   const noStream = raw.replace(/:.*$/, '');
   const trimmed = noStream.replace(/ +$/, '');
-  if (trimmed === '.' || trimmed === '..') return trimmed;
+  if (trimmed === '.' || trimmed === '..') {
+    return trimmed;
+  }
+
   return trimmed.replace(/[. ]+$/, '');
 }
 
@@ -50,24 +68,40 @@ function parse(path: string): Parsed {
   const segments: string[] = [];
   for (const raw of rest.split('/')) {
     const seg = cleanSegment(raw);
-    if (seg === '' || seg === '.') continue;
+    if (seg === '' || seg === '.') {
+      continue;
+    }
+
     if (seg === '..') {
-      if (segments.length > 0 && segments[segments.length - 1] !== '..') segments.pop();
-      else if (root === '') segments.push('..');
-    } else segments.push(seg);
+      if (segments.length > 0 && segments[segments.length - 1] !== '..') {
+        segments.pop();
+      } else if (root === '') {
+        segments.push('..');
+      }
+    } else {
+      segments.push(seg);
+    }
   }
+
   return { root, segments };
 }
 
 function resolveAgainst(path: Parsed, cwd: Parsed | undefined): Parsed {
-  if (path.root !== '' || cwd === undefined) return path;
+  if (path.root !== '' || cwd === undefined) {
+    return path;
+  }
+
   const segments: string[] = [...cwd.segments];
   for (const seg of path.segments) {
-    if (seg !== '..') segments.push(seg);
-    else if (segments.length > 0 && segments[segments.length - 1] !== '..')
+    if (seg !== '..') {
+      segments.push(seg);
+    } else if (segments.length > 0 && segments[segments.length - 1] !== '..') {
       segments.pop();
-    else if (cwd.root === '') segments.push('..');
+    } else if (cwd.root === '') {
+      segments.push('..');
+    }
   }
+
   return { root: cwd.root, segments };
 }
 
@@ -88,12 +122,14 @@ function under(path: Parsed, cwd: Parsed): boolean {
  */
 export function absolutePath(path: string, cwd?: string): string {
   const abs = resolveAgainst(parse(path), cwd === undefined ? undefined : parse(cwd));
+
   return render(abs) || '.';
 }
 
 /** True when `path` (resolved against `cwd`) is `cwd` itself or below it. */
 export function isInside(path: string, cwd: string): boolean {
   const c = parse(cwd);
+
   return under(resolveAgainst(parse(path), c), c);
 }
 
@@ -109,5 +145,6 @@ export function normalizePath(path: string, cwd?: string): string {
   if (c !== undefined && under(abs, c)) {
     return abs.segments.slice(c.segments.length).join('/') || '.';
   }
+
   return render(abs) || '.';
 }

@@ -17,10 +17,15 @@ export function parseTokenRecord(
   runId: string,
   tokenSha256: string,
 ): { runId: string; tokenSha256: string } {
-  if (runId.length === 0) throw new InvalidInputError('run id must not be empty');
+  if (runId.length === 0) {
+    throw new InvalidInputError('run id must not be empty');
+  }
+
   const digest = Sha256Hex.safeParse(tokenSha256);
   // Never echo the value: if a raw token was passed by mistake it must not reach logs.
-  if (!digest.success)
+  if (!digest.success) {
     throw new InvalidInputError('run token must be a sha256 hex digest');
+  }
+
   return { runId, tokenSha256: digest.data };
 }

@@ -22,6 +22,7 @@ const dirs: string[] = [];
 const tempDir = async (): Promise<string> => {
   const dir = await mkdtemp(join(tmpdir(), 'forge secrets '));
   dirs.push(dir);
+
   return dir;
 };
 

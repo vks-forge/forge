@@ -61,8 +61,12 @@ export interface FakeGitHubOptions {
 
 const readBody = async (req: IncomingMessage): Promise<unknown> => {
   const chunks: Buffer[] = [];
-  for await (const c of req) chunks.push(c as Buffer);
+  for await (const c of req) {
+    chunks.push(c as Buffer);
+  }
+
   const text = Buffer.concat(chunks).toString('utf8');
+
   return text.length > 0 ? JSON.parse(text) : undefined;
 };
 
@@ -88,21 +92,30 @@ export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub>
     status: number;
     headers: Record<string, string>;
   }[] = [];
+
   let mints = 0;
   let shaCounter = 0;
   const repoPrefix = `/repos/${o.owner}/${o.repo}`;
 
   const jwtValid = (jwt: string): boolean => {
     const [h, p, s] = jwt.split('.');
-    if (!h || !p || !s) return false;
+    if (!h || !p || !s) {
+      return false;
+    }
+
     const verify = createVerify('RSA-SHA256').update(`${h}.${p}`);
-    if (!verify.verify(o.publicKeyPem, Buffer.from(s, 'base64url'))) return false;
+    if (!verify.verify(o.publicKeyPem, Buffer.from(s, 'base64url'))) {
+      return false;
+    }
+
     const claims = JSON.parse(Buffer.from(p, 'base64url').toString('utf8')) as {
       iss: string;
       iat: number;
       exp: number;
     };
+
     const nowSec = o.now() / 1000;
+
     return (
       claims.iss === o.appId && claims.exp > nowSec && claims.exp - claims.iat <= 600
     );
@@ -118,8 +131,10 @@ export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub>
     const forced = failures.findIndex(
       (f) => f.method === method && path.includes(f.part),
     );
+
     if (forced >= 0) {
       const f = failures.splice(forced, 1)[0] as (typeof failures)[number];
+
       return send(
         res,
         f.status,
@@ -132,12 +147,15 @@ export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub>
       method === 'POST' &&
       path === `/app/installations/${o.installationId}/access_tokens`
     ) {
-      if (!jwtValid(credential))
+      if (!jwtValid(credential)) {
         return send(res, 401, { message: 'A JSON web token could not be decoded' });
+      }
+
       mints += 1;
       const token = `ghs_token${mints}`;
       const expires = o.now() + ttl;
       tokens.set(token, expires);
+
       return send(res, 201, {
         token,
         expires_at: new Date(expires).toISOString().replace('.000Z', 'Z'),
@@ -145,18 +163,27 @@ export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub>
     }
 
     const expiry = tokens.get(credential);
-    if (expiry === undefined || expiry <= o.now())
+    if (expiry === undefined || expiry <= o.now()) {
       return send(res, 401, { message: 'Bad credentials' });
-    if (!path.startsWith(repoPrefix)) return send(res, 404, { message: 'Not Found' });
+    }
+
+    if (!path.startsWith(repoPrefix)) {
+      return send(res, 404, { message: 'Not Found' });
+    }
+
     const sub = path.slice(repoPrefix.length);
 
     if (method === 'POST' && sub === '/pulls') {
       const b = (await readBody(req)) as { head: string; base: string };
       const headSha = branches.get(b.head);
-      if (headSha === undefined || !branches.has(b.base))
+      if (headSha === undefined || !branches.has(b.base)) {
         return send(res, 422, { message: 'Validation Failed' });
-      if ([...prs.values()].some((p) => p.state === 'open' && p.branch === b.head))
+      }
+
+      if ([...prs.values()].some((p) => p.state === 'open' && p.branch === b.head)) {
         return send(res, 422, { message: 'A pull request already exists' });
+      }
+
       const number = prs.size + 1;
       prs.set(number, {
         number,
@@ -167,28 +194,42 @@ export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub>
         mergeable: true,
         headSha,
       });
+
       return send(res, 201, view(number));
     }
 
     const m = /^\/pulls\/(\d+)(\/merge)?$/.exec(sub);
     if (m) {
       const pr = prs.get(Number(m[1]));
-      if (!pr) return send(res, 404, { message: 'Not Found' });
-      if (method === 'GET' && !m[2]) return send(res, 200, view(pr.number));
-      if (method === 'PATCH' && !m[2]) {
-        pr.state = 'closed';
+      if (!pr) {
+        return send(res, 404, { message: 'Not Found' });
+      }
+
+      if (method === 'GET' && !m[2]) {
         return send(res, 200, view(pr.number));
       }
+
+      if (method === 'PATCH' && !m[2]) {
+        pr.state = 'closed';
+
+        return send(res, 200, view(pr.number));
+      }
+
       if (method === 'PUT' && m[2]) {
         const b = (await readBody(req)) as { merge_method: string };
-        if (!['squash', 'merge'].includes(b.merge_method))
+        if (!['squash', 'merge'].includes(b.merge_method)) {
           return send(res, 422, { message: 'Invalid merge method' });
-        if (pr.state !== 'open' || pr.merged)
+        }
+
+        if (pr.state !== 'open' || pr.merged) {
           return send(res, 405, { message: 'Pull Request is not mergeable' });
+        }
+
         const sha = `merge${(shaCounter += 1)}`;
         branches.set(pr.base, sha);
         pr.merged = true;
         pr.state = 'closed';
+
         return send(res, 200, {
           sha,
           merged: true,
@@ -200,16 +241,21 @@ export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub>
     const ref = /^\/git\/refs\/heads\/(.+)$/.exec(sub);
     if (method === 'DELETE' && ref) {
       const name = ref[1] as string;
-      if (!branches.has(name))
+      if (!branches.has(name)) {
         return send(res, 422, { message: 'Reference does not exist' });
+      }
+
       branches.delete(name);
+
       return send(res, 204);
     }
+
     return send(res, 404, { message: 'Not Found' });
   };
 
   const view = (n: number) => {
     const pr = prs.get(n) as FakePr;
+
     return {
       number: pr.number,
       html_url: `https://github.test/${o.owner}/${o.repo}/pull/${pr.number}`,
@@ -223,6 +269,7 @@ export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub>
   const server = createServer((req, res) => {
     handle(req, res).catch((e: unknown) => send(res, 500, { message: String(e) }));
   });
+
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const port = (server.address() as AddressInfo).port;
 

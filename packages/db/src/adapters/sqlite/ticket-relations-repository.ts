@@ -29,6 +29,7 @@ export function createTicketRelationRepository(
          ON CONFLICT (from_id, to_id, kind) DO NOTHING`,
         [r.from_id, r.to_id, r.kind, r.created_at ?? null],
       );
+
       return res.changes === 1;
     },
 
@@ -37,6 +38,7 @@ export function createTicketRelationRepository(
         'DELETE FROM ticket_relations WHERE from_id = ? AND to_id = ? AND kind = ?',
         [fromId, toId, kind],
       );
+
       return res.changes === 1;
     },
 

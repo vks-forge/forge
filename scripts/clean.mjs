@@ -20,6 +20,8 @@ for (const group of ['packages', 'apps']) {
   } catch {
     continue;
   }
-  for (const name of names)
+
+  for (const name of names) {
     rmSync(join(group, name, 'dist'), { recursive: true, force: true });
+  }
 }

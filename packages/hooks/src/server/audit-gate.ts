@@ -22,13 +22,16 @@ export function createAuditGate(
   clock: () => Date,
 ): (runId: string, code: AuditEntry['code']) => Promise<void> {
   const state = new Map<string, { last: number; suppressed: number }>();
+
   return async (runId, code) => {
     const at = clock().getTime();
     const s = state.get(runId);
     if (s && at - s.last < AUDIT_WINDOW_MS) {
       s.suppressed += 1;
+
       return;
     }
+
     state.set(runId, { last: at, suppressed: 0 });
     await sink(runId, {
       ts: new Date(at).toISOString(),
@@ -46,7 +49,10 @@ export function createMemoryAudit(): {
   const entries: { runId: string; entry: AuditEntry }[] = [];
   const sink: HookAudit = (runId, entry) => {
     entries.push({ runId, entry });
-    if (entries.length > MEMORY_CAP) entries.shift();
+    if (entries.length > MEMORY_CAP) {
+      entries.shift();
+    }
   };
+
   return { sink, entries };
 }

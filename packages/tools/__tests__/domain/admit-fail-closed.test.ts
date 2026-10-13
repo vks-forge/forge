@@ -28,6 +28,7 @@ import {
 
 const sh = (command: string, native = 'PowerShell') =>
   call('shell', { command }, { native });
+
 const verdict = (d: Decision) => [d.decision, d.reason];
 
 describe('fail closed', () => {
@@ -38,6 +39,7 @@ describe('fail closed', () => {
       'deny',
       'quarantined',
     ]);
+
     expect(visibleTools(ctx)).toEqual([]);
   });
 
@@ -55,6 +57,7 @@ describe('fail closed', () => {
         shell: `sha256:${'a'.repeat(64)}`,
       },
     });
+
     expect(verdict(admit(changed, sh('pnpm test')))).toEqual(['deny', 'schema_changed']);
     expect(admit(changed, call('read', { path: 'a' })).decision).toBe('allow');
     const missing = makeCtx('full', { liveSchemaHashes: {} });
@@ -62,6 +65,7 @@ describe('fail closed', () => {
       'deny',
       'schema_changed',
     ]);
+
     expect(visibleTools(missing)).toEqual([]);
   });
 
@@ -71,6 +75,7 @@ describe('fail closed', () => {
       'deny',
       'unsupported_harness',
     ]);
+
     expect(admit(ctx, call('mcp__forge__finish', {})).decision).toBe('allow');
   });
 
@@ -78,6 +83,7 @@ describe('fail closed', () => {
     const broken = { ...makeCtx('full'), grant: null } as unknown as Parameters<
       typeof admit
     >[0];
+
     expect(verdict(admit(broken, call('read', { path: 'a' })))).toEqual([
       'deny',
       'inspector_error',
@@ -111,6 +117,7 @@ describe('exposure, nesting and code mode', () => {
       'deny',
       'exposure',
     ]);
+
     expect(visibleTools(hidden).map((t) => t.id)).not.toContain('edit');
   });
 
@@ -121,6 +128,7 @@ describe('exposure, nesting and code mode', () => {
       { path: 'a' },
       { via: 'codemode', parent_tool: 'mcp__forge__tool_search' },
     );
+
     expect(verdict(admit(codemode, direct))).toEqual(['deny', 'exposure']);
     expect(admit(codemode, viaScript).decision).toBe('allow');
   });
@@ -133,14 +141,17 @@ describe('exposure, nesting and code mode', () => {
       'deny',
       'not_reachable',
     ]);
+
     expect(verdict(admit(ctx, call('read', { path: '.env' }, via)))).toEqual([
       'deny',
       'managed_deny',
     ]);
+
     expect(verdict(admit(ctx, call('read', { path: 'a' }, { via: 'nested' })))).toEqual([
       'deny',
       'not_reachable',
     ]);
+
     expect(
       verdict(
         admit(ctx, call('read', { path: 'a' }, { via: 'nested', parent_tool: 'ghost' })),
@@ -158,6 +169,7 @@ describe('exposure, nesting and code mode', () => {
         { via: 'nested', parent_tool: 'mcp__forge__tool_search' },
       ),
     );
+
     expect(d.decision).toBe('deny');
   });
 });
@@ -168,10 +180,12 @@ describe('decision shape', () => {
     for (const c of [call('read', { path: 'a' }), sh('git push'), call('nope', {})]) {
       expect(Decision.safeParse(admit(ctx, c)).success).toBe(true);
     }
+
     expect(admit(ctx, call('read', { path: 'a' })).enforcement).toBe('harness');
     expect(admit(ctx, call('mcp__forge__web_search', { query: 'q' })).enforcement).toBe(
       'server',
     );
+
     expect(admit(ctx, call('nope', {})).enforcement).toBeNull();
   });
 
@@ -188,6 +202,7 @@ describe('list and call agree', () => {
   it('lists per lane exactly the granted, exposed, supported tools', () => {
     const ids = (lane: 'express' | 'standard' | 'full') =>
       visibleTools(makeCtx(lane)).map((t) => t.id);
+
     expect(ids('express')).not.toContain('mcp__forge__web_search');
     expect(ids('standard')).toContain('mcp__forge__web_search');
     expect(ids('full')).toContain('shell');
@@ -212,7 +227,10 @@ describe('list and call agree', () => {
             ctx,
             call(tool, { path: 'src/a.ts', command: 'pnpm test', query: 'q' }),
           );
-          if (!listed) expect(called.decision).not.toBe('allow');
+
+          if (!listed) {
+            expect(called.decision).not.toBe('allow');
+          }
         },
       ),
     );
@@ -251,10 +269,12 @@ describe('lane comes from the grant alone', () => {
     const entries = withEntry('mcp__forge__web_fetch', {
       support: { '*': { mechanism: 'mcp', enforced: 'hook' } },
     });
+
     const ctx = {
       ...makeCtx('full', {}, {}, entries),
       lane: 'standard' as const,
     };
+
     expect(
       admit(ctx, call('mcp__forge__web_fetch', { url: 'https://docs.x.com' })),
     ).toMatchObject({

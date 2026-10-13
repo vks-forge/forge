@@ -37,9 +37,11 @@ export async function startServer(reply: Reply): Promise<TestServer> {
       }, reply.delayMs ?? 0);
     });
   });
+
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const addr = server.address();
   const port = typeof addr === 'object' && addr ? addr.port : 0;
+
   return {
     url: `http://127.0.0.1:${port}`,
     seen,

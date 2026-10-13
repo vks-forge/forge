@@ -32,11 +32,13 @@ export function createRunEventRepository(driver: SqlDriver): RunEventRepository 
         'SELECT COALESCE(MAX(seq), -1) + 1 AS next FROM run_events WHERE run_id = ?',
         [runId],
       );
+
       const e = RunEvent.parse({ ...normaliseRunEvent(event), seq: head?.next ?? 0 });
       driver.run(
         'INSERT INTO run_events (run_id, seq, ts, kind, payload_json) VALUES (?, ?, ?, ?, ?)',
         [runId, e.seq, e.ts, e.type, toJson(e)],
       );
+
       return e;
     },
 

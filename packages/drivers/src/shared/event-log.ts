@@ -18,7 +18,10 @@ export class EventLog<T> {
 
   /** Appends an item and wakes waiting iterators; ignored once closed. */
   push(item: T): void {
-    if (this.isClosed) return;
+    if (this.isClosed) {
+      return;
+    }
+
     this.items.push(item);
     this.wake();
   }
@@ -38,8 +41,14 @@ export class EventLog<T> {
   async *iterate(): AsyncGenerator<T> {
     let next = 0;
     for (;;) {
-      while (next < this.items.length) yield this.items[next++] as T;
-      if (this.isClosed) return;
+      while (next < this.items.length) {
+        yield this.items[next++] as T;
+      }
+
+      if (this.isClosed) {
+        return;
+      }
+
       await new Promise<void>((resolve) => this.waiters.push(resolve));
     }
   }
@@ -47,6 +56,8 @@ export class EventLog<T> {
   private wake(): void {
     const waiting = this.waiters;
     this.waiters = [];
-    for (const resolve of waiting) resolve();
+    for (const resolve of waiting) {
+      resolve();
+    }
   }
 }

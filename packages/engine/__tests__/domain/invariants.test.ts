@@ -34,6 +34,7 @@ const ticket = (id: string, over: Partial<Ticket>): Ticket => ({
   blocked_by: [],
   ...over,
 });
+
 const run = (id: string, over: Partial<Run> = {}): Run => ({
   id,
   ticket_id: 'FG-1',
@@ -59,6 +60,7 @@ describe('findViolations', () => {
       ...base,
       tickets: [ticket('FG-1', { assignee_run_id: 'r1' })],
     });
+
     expect(v).toHaveLength(1);
     expect(v[0]).toMatchObject({
       ticketId: 'FG-1',
@@ -71,6 +73,7 @@ describe('findViolations', () => {
     expect(
       findViolations({ ...base, tickets: [t], runs: new Map([['r1', run('r1')]]) }),
     ).toEqual([]);
+
     expect(
       findViolations({
         ...base,
@@ -78,6 +81,7 @@ describe('findViolations', () => {
         pendingInteractionTickets: new Set(['FG-1']),
       }),
     ).toEqual([]);
+
     expect(
       findViolations({ ...base, tickets: [t], wakeTickets: new Set(['FG-1']) }),
     ).toEqual([]);
@@ -96,6 +100,7 @@ describe('findViolations', () => {
     expect(findViolations({ ...base, tickets: [bare] })[0]).toMatchObject({
       rule: 'waiting_human_without_reason',
     });
+
     const parked = ticket('FG-3', { status: 'waiting_human', blocked_reason: 'auth' });
     expect(findViolations({ ...base, tickets: [parked] })).toEqual([]);
   });
@@ -106,8 +111,12 @@ describe('findViolations', () => {
       reason: 'lane not enabled in M0',
       at: T,
     });
+
     expect(t.ok).toBe(true);
-    if (!t.ok) return;
+    if (!t.ok) {
+      return;
+    }
+
     expect(t.value.status).toBe('waiting_human');
     expect(findViolations({ ...base, tickets: [t.value] })).toEqual([]);
   });
@@ -116,6 +125,7 @@ describe('findViolations', () => {
     const others = (
       ['inbox', 'planned', 'blocked', 'verifying', 'review', 'done'] as const
     ).map((status, i) => ticket(`FG-${i + 10}`, { status }));
+
     expect(findViolations({ ...base, tickets: others })).toEqual([]);
   });
 });

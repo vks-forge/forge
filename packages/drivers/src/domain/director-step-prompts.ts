@@ -37,6 +37,7 @@ const CLOSING = 'Reply with JSON only, matching the provided schema.';
 
 function fenceFor(body: string): string {
   const longest = Math.max(0, ...(body.match(/`+/g) ?? []).map((run) => run.length));
+
   return '`'.repeat(Math.max(3, longest + 1));
 }
 
@@ -50,7 +51,9 @@ export function buildStepPrompt(name: StepName, input: unknown): string {
       `step input is not JSON-serialisable: ${e instanceof Error ? e.message : String(e)}`,
     );
   }
+
   const fence = fenceFor(body);
+
   return [
     STEP_INSTRUCTIONS[name],
     '',

@@ -29,9 +29,13 @@ function apply(ticket: Ticket, ...events: TicketEvent[]): Ticket {
   let cur = ticket;
   for (const e of events) {
     const r = transition(cur, e);
-    if (!r.ok) throw new Error(`unexpected ${JSON.stringify(r.error)}`);
+    if (!r.ok) {
+      throw new Error(`unexpected ${JSON.stringify(r.error)}`);
+    }
+
     cur = r.value;
   }
+
   return cur;
 }
 
@@ -57,6 +61,7 @@ describe('transition: happy paths', () => {
       ev.passA,
       ev.merged,
     );
+
     expect(t.status).toBe('done');
     expect(t.status_version).toBe(5);
     expect(t.tier_actual).toBe('A');
@@ -83,6 +88,7 @@ describe('transition: happy paths', () => {
       at: T1,
       reason: 'dep',
     });
+
     expect(t.status).toBe('blocked');
     expect(t.blocked_reason).toBe('dep');
     const u = apply(t, { type: 'unblocked', at: T1 });
@@ -115,7 +121,9 @@ describe('transition: errors never throw', () => {
   it('rejects illegal transitions', () => {
     const r = transition(makeTicket(), ev.dispatched);
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error.kind).toBe('illegal_transition');
+    if (!r.ok) {
+      expect(r.error.kind).toBe('illegal_transition');
+    }
   });
 
   it('rejects merged unless tier A is verified', () => {
@@ -128,14 +136,19 @@ describe('transition: errors never throw', () => {
   it('rejects any event on a terminal ticket', () => {
     const r = transition(makeTicket({ status: 'done' }), ev.cancelled);
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error.kind).toBe('terminal');
+    if (!r.ok) {
+      expect(r.error.kind).toBe('terminal');
+    }
   });
 
   it('rejects stale expected_version (CAS)', () => {
     const t = makeTicket({ status_version: 3 });
     const r = transition(t, { ...ev.triaged, expected_version: 2 });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error.kind).toBe('stale_version');
+    if (!r.ok) {
+      expect(r.error.kind).toBe('stale_version');
+    }
+
     expect(transition(t, { ...ev.triaged, expected_version: 3 }).ok).toBe(true);
   });
 });
@@ -149,6 +162,7 @@ describe('fresh gate pass per verify cycle', () => {
       ev.gate_failed,
       ev.verifying,
     );
+
     expect(t.tier_actual).toBeUndefined();
     const r = transition(t, ev.merged);
     expect(r.ok).toBe(false);
@@ -174,6 +188,7 @@ describe('explicit clears (storage patches must not leave stale columns)', () =>
       makeTicket({ status: 'verifying', tier_actual: 'A' }),
       ev.gate_failed,
     );
+
     expect('tier_actual' in f).toBe(true);
     expect('blocked_reason' in f).toBe(true);
   });
@@ -198,6 +213,7 @@ describe('rework cap', () => {
       expect(t.rework_count).toBe(i);
       t = apply(t, ev.verifying);
     }
+
     t = apply(t, ev.gate_failed);
     expect(t.status).toBe('waiting_human');
     expect(t.blocked_reason).toMatch(/rework/);
@@ -241,6 +257,7 @@ describe('transition: properties', () => {
             t = r.value;
           }
         }
+
         expect(t.created_at).toBe(T0);
       }),
     );
@@ -253,7 +270,9 @@ describe('transition: properties', () => {
         fc.array(eventArb, { maxLength: 10 }),
         (status, events) => {
           const t = makeTicket({ status });
-          for (const e of events) expect(transition(t, e).ok).toBe(false);
+          for (const e of events) {
+            expect(transition(t, e).ok).toBe(false);
+          }
         },
       ),
     );
@@ -266,12 +285,22 @@ describe('transition: properties', () => {
         let passedThisCycle = false;
         for (const e of events) {
           const r = transition(t, e);
-          if (!r.ok) continue;
-          if (e.type === 'verifying') passedThisCycle = false;
-          if (e.type === 'gate_passed') passedThisCycle = true;
+          if (!r.ok) {
+            continue;
+          }
+
+          if (e.type === 'verifying') {
+            passedThisCycle = false;
+          }
+
+          if (e.type === 'gate_passed') {
+            passedThisCycle = true;
+          }
+
           if (r.value.status === 'done' && (e.type === 'merged' || e.type === 'done')) {
             expect(passedThisCycle).toBe(true);
           }
+
           t = r.value;
         }
       }),
@@ -285,7 +314,10 @@ describe('transition: properties', () => {
         let t = makeTicket();
         for (const e of events) {
           const r = transition(t, e);
-          if (!r.ok) continue;
+          if (!r.ok) {
+            continue;
+          }
+
           expect(r.value.rework_count).toBeLessThanOrEqual(MAX_AUTO_REWORKS);
           expect(rank[r.value.lane]).toBeGreaterThanOrEqual(rank[t.lane]);
           t = r.value;

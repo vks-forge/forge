@@ -24,9 +24,13 @@ function apply(ticket: Ticket, ...events: TicketEvent[]): Ticket {
   let cur = ticket;
   for (const e of events) {
     const r = transition(cur, e);
-    if (!r.ok) throw new Error(`unexpected ${JSON.stringify(r.error)}`);
+    if (!r.ok) {
+      throw new Error(`unexpected ${JSON.stringify(r.error)}`);
+    }
+
     cur = r.value;
   }
+
   return cur;
 }
 
@@ -39,6 +43,7 @@ describe('parked / unparked: an honest hold for a human', () => {
         at: T1,
         reason: '  lane not enabled  ',
       });
+
       expect(t.status).toBe('waiting_human');
       expect(t.blocked_reason).toBe('lane not enabled');
     },
@@ -50,8 +55,11 @@ describe('parked / unparked: an honest hold for a human', () => {
       at: T1,
       reason,
     });
+
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error.kind).toBe('illegal_transition');
+    if (!r.ok) {
+      expect(r.error.kind).toBe('illegal_transition');
+    }
   });
 
   it.each(['inbox', 'blocked', 'verifying', 'review'] as const)(
@@ -62,6 +70,7 @@ describe('parked / unparked: an honest hold for a human', () => {
         at: T1,
         reason: 'x',
       });
+
       expect(r.ok).toBe(false);
     },
   );
@@ -72,6 +81,7 @@ describe('parked / unparked: an honest hold for a human', () => {
       at: T1,
       reason: 'x',
     });
+
     const u = apply(parked, { type: 'unparked', at: T1 });
     expect(u.status).toBe('planned');
     expect('blocked_reason' in u).toBe(true);

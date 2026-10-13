@@ -32,6 +32,7 @@ export const askDirectorTool = defineTool({
       { question, source: 'ask_director' },
       question,
     );
+
     return JSON.stringify({ interaction_id: id, status: 'pending', instruction: STOP });
   },
 });
@@ -49,6 +50,7 @@ export const reportBlockedTool = defineTool({
       { reason, source: 'report_blocked' },
       `BLOCKED: ${reason}`,
     );
+
     return JSON.stringify({ interaction_id: id, status: 'pending', instruction: STOP });
   },
 });

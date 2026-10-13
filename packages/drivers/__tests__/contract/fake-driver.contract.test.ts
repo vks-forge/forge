@@ -13,6 +13,7 @@ import { makeRequest } from '#tests/helpers/run-request.js';
 
 describeWorkerDriverContract('fake driver', async () => {
   const fake = createFakeDriver();
+
   return {
     driver: fake.driver,
     request: (over) => makeRequest(over),

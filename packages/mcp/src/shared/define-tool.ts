@@ -23,6 +23,7 @@ export function defineTool<S extends z.ZodRawShape>(def: {
   handler: (ctx: ToolContext, args: z.output<z.ZodObject<S>>) => Promise<string>;
 }): ForgeToolSpec {
   const schema = z.object(def.inputSchema);
+
   return {
     name: def.name,
     description: def.description,
@@ -37,6 +38,7 @@ export function defineTool<S extends z.ZodRawShape>(def: {
             .join('; ')}`,
         );
       }
+
       return def.handler(ctx, parsed.data);
     },
   };

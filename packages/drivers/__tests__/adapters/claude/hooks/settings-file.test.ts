@@ -26,16 +26,19 @@ describe('renderHookSettings', () => {
       'PostToolUse',
       'PostToolUseFailure',
     ]);
-    for (const groups of Object.values(s.hooks))
+
+    for (const groups of Object.values(s.hooks)) {
       for (const h of groups?.[0]?.hooks ?? []) {
         expect(h).toMatchObject({ type: 'command', onFailure: 'block', timeout: 6 });
       }
+    }
   });
 
   it('quotes forward-slash paths and matches every tool by default', () => {
     expect(s.hooks.PreToolUse?.[0]?.hooks[0]?.command).toBe(
       'node "C:/Program Files/forge/bin/hook.js" --config "D:/x/.forge/data/runs/r1/hook.json"',
     );
+
     expect(s.hooks.PreToolUse?.[0]?.matcher).toBe('.*');
     expect(s.hooks.SessionStart?.[0]).not.toHaveProperty('matcher');
   });
@@ -48,6 +51,7 @@ describe('renderHookSettings', () => {
       events: ['PreToolUse'],
       matcher: 'Bash|PowerShell',
     });
+
     expect(Object.keys(only.hooks)).toEqual(['PreToolUse']);
     expect(renderAcpMeta('/s.json')).toEqual({
       claudeCode: { options: { settings: '/s.json' } },

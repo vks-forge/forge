@@ -26,6 +26,7 @@ const READ_TOOLS = [
   'mcp__forge__code_graph',
   'mcp__forge__docs_lookup',
 ];
+
 const CORE_TOOLS = [
   'mcp__forge__get_ticket',
   'mcp__forge__add_comment',
@@ -33,6 +34,7 @@ const CORE_TOOLS = [
   'mcp__forge__report_blocked',
   'mcp__forge__finish',
 ];
+
 const EXPRESS_TOOLS = [...READ_TOOLS, ...CORE_TOOLS, 'edit', 'write', 'shell'];
 const WEB_TOOLS = ['mcp__forge__web_search', 'mcp__forge__web_fetch'];
 
@@ -118,20 +120,30 @@ function laneRules(lane: Lane): CallRule[] {
       rule(t.split('__')[2] as string, '*', 'allow'),
     ),
   ];
+
   if (lane !== 'express') {
     rules.push(rule('web_search', '*', 'allow'));
     rules.push(rule('web_fetch', '*', 'ask'));
-    if (lane === 'standard') rules.push(rule('web_fetch', 'https://docs.*', 'allow'));
+    if (lane === 'standard') {
+      rules.push(rule('web_fetch', 'https://docs.*', 'allow'));
+    }
+
     rules.push(rule('db_query_readonly', '*', 'allow'));
     // Capability gate already requires an explicit project grant for these.
     rules.push(rule('project_mcp', '*', 'allow'));
   }
+
   // Later rules win, so the path restrictions and the protected-path shield come last.
   for (const a of ['edit', 'write']) {
-    for (const p of SENSITIVE_DIRS) rules.push(rule(a, p, sensitive));
-    for (const p of PROTECTED_PATHS)
+    for (const p of SENSITIVE_DIRS) {
+      rules.push(rule(a, p, sensitive));
+    }
+
+    for (const p of PROTECTED_PATHS) {
       rules.push(rule(a, p, lane === 'express' ? 'deny' : 'ask'));
+    }
   }
+
   return rules;
 }
 

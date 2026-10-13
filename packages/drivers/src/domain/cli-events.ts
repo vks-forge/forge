@@ -32,38 +32,50 @@ export function normaliseCliLine(line: CliLine): CliNormalised {
     'session_id' in line && typeof line.session_id === 'string'
       ? { session: line.session_id }
       : {};
+
   switch (line.type) {
     case 'assistant': {
       const events: EventDraft[] = [];
       for (const b of blocksOf((line as { message: { content: unknown } }).message)) {
-        if (b['type'] === 'text' && typeof b['text'] === 'string' && b['text'])
+        if (b['type'] === 'text' && typeof b['text'] === 'string' && b['text']) {
           events.push({ type: 'text', text: b['text'] });
-        if (b['type'] === 'tool_use' && typeof b['id'] === 'string')
+        }
+
+        if (b['type'] === 'tool_use' && typeof b['id'] === 'string') {
           events.push({
             type: 'tool_call',
             call_id: b['id'],
             name: typeof b['name'] === 'string' ? b['name'] : 'unknown',
             input: b['input'] ?? {},
           });
+        }
       }
+
       return { events, ...session };
     }
+
     case 'user': {
       const events: EventDraft[] = [];
-      for (const b of blocksOf((line as { message: { content: unknown } }).message))
-        if (b['type'] === 'tool_result' && typeof b['tool_use_id'] === 'string')
+      for (const b of blocksOf((line as { message: { content: unknown } }).message)) {
+        if (b['type'] === 'tool_result' && typeof b['tool_use_id'] === 'string') {
           events.push({
             type: 'tool_result',
             call_id: b['tool_use_id'],
             output: b['content'] ?? null,
             is_error: b['is_error'] === true,
           });
+        }
+      }
+
       return { events, ...session };
     }
+
     case 'rate_limit_event': {
       const info = (line as { rate_limit_info?: RateLimitInfo }).rate_limit_info;
+
       return { events: [], ...(info ? { rateLimit: info } : {}) };
     }
+
     case 'result':
       return { events: [], ...session, result: line as CliResultLine };
     default:
@@ -87,6 +99,7 @@ export function usageFromResult(r: CliResultLine): UsageReport {
         ]),
       )
     : undefined;
+
   return {
     in: u?.input_tokens ?? 0,
     out: u?.output_tokens ?? 0,

@@ -24,9 +24,11 @@ describe('TicketRelation', () => {
       TicketRelation.safeParse({ from_id: 'SF-1', to_id: 'SF-1', kind: 'blocks' })
         .success,
     ).toBe(false);
+
     expect(
       TicketRelation.safeParse({ from_id: 'SF-1', to_id: 'SF-2', kind: 'likes' }).success,
     ).toBe(false);
+
     expect(
       TicketRelation.safeParse({ from_id: 'sf-1', to_id: 'SF-2', kind: 'blocks' })
         .success,

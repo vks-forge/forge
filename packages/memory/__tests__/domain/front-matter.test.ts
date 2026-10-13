@@ -44,6 +44,7 @@ describe('parseFrontMatter', () => {
     const r = parseFrontMatter(
       '---\nid: d-0002\nsource: { type: chat, ref: "x y" }\n---\n',
     );
+
     expect(r.ok && r.data).toMatchObject({ source: { type: 'chat', ref: 'x y' } });
   });
 
@@ -68,7 +69,9 @@ describe('parseFrontMatter', () => {
   it('rejects invalid YAML with a reason', () => {
     const r = parseFrontMatter('---\nid: [unclosed\n---\n');
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.reason.length).toBeGreaterThan(0);
+    if (!r.ok) {
+      expect(r.reason.length).toBeGreaterThan(0);
+    }
   });
 
   it('rejects front matter that is not a mapping', () => {
@@ -87,6 +90,7 @@ describe('parseFrontMatter', () => {
         '---',
       ].join('\n'),
     );
+
     expect(r).toEqual({
       ok: true,
       data: {

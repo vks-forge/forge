@@ -17,6 +17,7 @@ import { call, grant, makeCtx, withEntry } from '#tests/helpers/fixtures.js';
 
 const sh = (command: string, native = 'PowerShell') =>
   call('shell', { command }, { native });
+
 const verdict = (d: Decision) => [d.decision, d.reason];
 
 describe('Express defaults (unattended: ask becomes deny)', () => {
@@ -94,15 +95,18 @@ describe('Standard defaults (asks go to a human)', () => {
     const project = grant({
       allow: ['mcp__forge__db_query_readonly', 'mcp__github__*', 'read'],
     });
+
     const c = makeCtx('standard', {}, { project });
     expect(verdict(admit(c, call('mcp__forge__db_query_readonly', {})))).toEqual([
       'allow',
       'rule_allow',
     ]);
+
     expect(verdict(admit(c, call('mcp__github__create_issue', {})))).toEqual([
       'allow',
       'rule_allow',
     ]);
+
     expect(verdict(admit(c, sh('pnpm test')))).toEqual(['deny', 'not_granted']);
   });
 
@@ -113,10 +117,12 @@ describe('Standard defaults (asks go to a human)', () => {
         { action: 'project_mcp', resource: 'mcp__github__create_*', effect: 'ask' },
       ],
     });
+
     const d = admit(
       makeCtx('standard', {}, { project }),
       call('mcp__github__create_issue', {}),
     );
+
     expect(verdict(d)).toEqual(['ask', 'rule_ask']);
     expect(d.matched_rule).toBe('project#0');
   });
@@ -143,6 +149,7 @@ describe('Full defaults', () => {
     const entries = withEntry('mcp__forge__web_search', {
       support: { '*': { mechanism: 'hook', enforced: 'hook' } },
     });
+
     const full = makeCtx('full', {}, {}, entries);
     const std = makeCtx('standard', {}, {}, entries);
     const c = call('mcp__forge__web_search', { query: 'x' });

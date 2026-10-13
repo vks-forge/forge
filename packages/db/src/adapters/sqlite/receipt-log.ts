@@ -47,17 +47,26 @@ function chainHead(
        SELECT MAX(chain_seq) AS m FROM tool_effects WHERE run_id = ?)`,
     [runId, runId],
   );
+
   const head = row?.head ?? 0;
-  if (head === 0) return { head, last: null };
+  if (head === 0) {
+    return { head, last: null };
+  }
+
   const d = driver.get(
     `SELECT ${DECISION_COLUMNS} FROM tool_decisions WHERE run_id = ? AND chain_seq = ?`,
     [runId, head],
   );
-  if (d) return { head, last: decisionFromRow(d) };
+
+  if (d) {
+    return { head, last: decisionFromRow(d) };
+  }
+
   const e = driver.get(
     `SELECT ${EFFECT_COLUMNS} FROM tool_effects WHERE run_id = ? AND chain_seq = ?`,
     [runId, head],
   );
+
   return { head, last: e ? effectFromRow(e) : null };
 }
 
@@ -66,8 +75,10 @@ function viewOf(driver: SqlDriver, runId: string, last: Receipt | null): ChainVi
     'SELECT COALESCE(MAX(seq), 0) AS s FROM tool_decisions WHERE run_id = ?',
     [runId],
   );
+
   const decision = (row: SqlRow | undefined): DecisionReceipt | null =>
     row ? decisionFromRow(row) : null;
+
   return {
     last,
     lastSeq: seq?.s ?? 0,
@@ -91,20 +102,25 @@ function viewOf(driver: SqlDriver, runId: string, last: Receipt | null): ChainVi
 /** Throws unless `r` may be stored in `runId`'s chain given what is already stored. */
 function assertBelongs(driver: SqlDriver, runId: string, r: Receipt): void {
   if (r.kind === 'decision') {
-    if (r.run_id !== runId)
+    if (r.run_id !== runId) {
       throw new InvalidInputError(
         `receipt ${r.id} belongs to run ${r.run_id}, not ${runId}`,
       );
+    }
+
     return;
   }
+
   const known = driver.get('SELECT 1 FROM tool_decisions WHERE id = ? AND run_id = ?', [
     r.decision_id,
     runId,
   ]);
-  if (!known)
+
+  if (!known) {
     throw new InvalidInputError(
       `effect receipt has no decision ${r.decision_id} in run ${runId}`,
     );
+  }
 }
 
 /**
@@ -123,6 +139,7 @@ export function createSqliteReceiptLog(driver: SqlDriver, mutex: Mutex): Receipt
             assertBelongs(driver, runId, r);
             insertReceipt(driver, runId, ++position, r);
           }
+
           return built;
         }),
       ),
@@ -136,12 +153,14 @@ export function createSqliteReceiptLog(driver: SqlDriver, mutex: Mutex): Receipt
             [runId],
           )
           .map((row) => ({ at: Number(row['chain_seq']), r: decisionFromRow(row) }));
+
         const effects = driver
           .all(
             `SELECT ${EFFECT_COLUMNS} FROM tool_effects WHERE run_id = ? AND chain_seq > 0`,
             [runId],
           )
           .map((row) => ({ at: Number(row['chain_seq']), r: effectFromRow(row) }));
+
         return [...decisions, ...effects].sort((a, b) => a.at - b.at).map((x) => x.r);
       }),
   };

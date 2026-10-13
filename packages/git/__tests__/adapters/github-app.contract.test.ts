@@ -27,6 +27,7 @@ const keys = generateKeyPairSync('rsa', {
   publicKeyEncoding: { type: 'spki', format: 'pem' },
   privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
 });
+
 const otherKeys = generateKeyPairSync('rsa', {
   modulusLength: 2048,
   publicKeyEncoding: { type: 'spki', format: 'pem' },
@@ -53,6 +54,7 @@ async function rig(extra: Partial<GitHubAppGitHostOptions> = {}): Promise<Rig> {
     publicKeyPem: keys.publicKey,
     now: () => clock.t,
   });
+
   cleanups.push(server.close);
   const host = createGitHubAppGitHost({
     owner: 'o',
@@ -65,6 +67,7 @@ async function rig(extra: Partial<GitHubAppGitHostOptions> = {}): Promise<Rig> {
     now: () => clock.t,
     ...extra,
   });
+
   return { server, host, clock };
 }
 
@@ -75,12 +78,14 @@ afterEach(async () => {
 describeGitHostContract('github app (fake server)', async (): Promise<GitHostHarness> => {
   const { server, host } = await rig();
   let n = 0;
+
   return {
     host,
     baseBranch: 'main',
     async seedBranch(branch) {
       const sha = `sha${(n += 1)}`;
       server.branches.set(branch, sha);
+
       return sha;
     },
     branchExists: async (b) => server.branches.has(b),

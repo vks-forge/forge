@@ -15,6 +15,7 @@
 /** Env vars for one authenticated `git push` to github.com using an installation token. */
 export function buildPushEnv(token: string): Record<string, string> {
   const basic = Buffer.from(`x-access-token:${token}`).toString('base64');
+
   return {
     GIT_CONFIG_COUNT: '1',
     GIT_CONFIG_KEY_0: 'http.https://github.com/.extraheader',
@@ -27,9 +28,13 @@ export function buildPushEnv(token: string): Record<string, string> {
 export function redactSecrets(text: string, secrets: readonly string[]): string {
   let out = text;
   for (const s of secrets) {
-    if (s.length === 0) continue;
+    if (s.length === 0) {
+      continue;
+    }
+
     const basic = Buffer.from(`x-access-token:${s}`).toString('base64');
     out = out.split(basic).join('[redacted]').split(s).join('[redacted]');
   }
+
   return out;
 }

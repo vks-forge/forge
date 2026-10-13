@@ -91,6 +91,7 @@ function baseDeps(
     acpEntry: '/acp/dist/index.js',
     homeDir: tempDir('forge-home-'),
   };
+
   return { deps, clock, receipts, root, logs, groupSignals };
 }
 
@@ -112,30 +113,43 @@ export function makeAcpRig(
     if (call.command === 'taskkill') {
       const killer = createFakeChild(undefined);
       setImmediate(() => killer.exit(0));
+
       return killer;
     }
+
     if (call.args.includes('--version')) {
       const child = createFakeChild();
       child.stdoutPipe.write(
         call.args.includes('--cli') ? '2.1.293 (Claude Code)\n' : '0.89.1\n',
       );
+
       child.exit(0);
+
       return child;
     }
+
     const fake = createFakeAcp(rig.next);
     agents.push(fake);
+
     return fake.child;
   });
+
   const b = baseDeps(spawn, { engine: 'acp', ...over }, git, platform);
   b.deps = {
     ...b.deps,
     // Recorded instead of really signalling; the killed fake adapter then exits like a real one.
     signalGroup: (pid, signal) => {
       b.groupSignals.push({ pid, signal });
-      for (const a of agents) if (a.child.pid === pid) a.child.exit(null, signal);
+      for (const a of agents) {
+        if (a.child.pid === pid) {
+          a.child.exit(null, signal);
+        }
+      }
     },
   };
+
   const driver = createClaudeDriver(b.deps);
+
   return {
     driver,
     deps: b.deps,
@@ -166,15 +180,20 @@ export function makeAcpRig(
               sessionUpdate: 'agent_message_chunk',
               content: { type: 'text', text: 'done' },
             });
+
             return { stopReason: 'end_turn' };
           }
+
           await ctx.cancelled;
+
           return { stopReason: 'cancelled' };
         },
       };
     },
     async close() {
-      for (const a of agents) a.child.exit(0);
+      for (const a of agents) {
+        a.child.exit(0);
+      }
     },
   };
 }
@@ -244,6 +263,7 @@ export function makeCliRig(
     hang: false,
     stderr: '',
   };
+
   writeFileSync(fixturePath, [STREAM.init, STREAM.text, STREAM.result()].join('\n'));
   const children: ReturnType<typeof nodeSpawn>[] = [];
   const rigSpawn: SpawnFn = (_cmd, args, opts) => {
@@ -259,9 +279,12 @@ export function makeCliRig(
       },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
+
     children.push(child);
+
     return child;
   };
+
   // 'linux' so the kill path is the process-group one; the rig signals the single real pid.
   const b = baseDeps(rigSpawn, { engine: 'cli', ...over }, git, 'linux');
   b.deps = {
@@ -275,12 +298,14 @@ export function makeCliRig(
       }
     },
   };
+
   const driver = createClaudeDriver(b.deps);
   const success = [STREAM.init, STREAM.text, STREAM.result()];
   const set = (lines: string[], m: typeof mode): void => {
     writeFileSync(fixturePath, lines.join('\n'));
     mode = m;
   };
+
   return {
     driver,
     deps: b.deps,
@@ -296,7 +321,9 @@ export function makeCliRig(
       set(lines, { exit: o.exit ?? 0, hang: o.hang ?? false, stderr: o.stderr ?? '' }),
     lastCall: () => JSON.parse(readFileSync(recordPath, 'utf8')),
     async close() {
-      for (const c of children) c.kill('SIGKILL');
+      for (const c of children) {
+        c.kill('SIGKILL');
+      }
     },
   };
 }

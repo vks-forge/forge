@@ -56,6 +56,7 @@ describe('narrowing layers', () => {
       'express',
       grant({ allow: ['mcp__forge__web_search', 'read'] }),
     );
+
     expect(granted(g, 'mcp__forge__web_search')).toBe(false);
     expect(granted(g, 'read')).toBe(true);
   });
@@ -66,6 +67,7 @@ describe('narrowing layers', () => {
       grant({ allow: ['read', 'grep', 'shell'] }),
       grant({ allow: ['grep', 'shell', 'edit'] }),
     );
+
     expect(IDS.filter((id) => granted(g, id))).toEqual(['grep', 'shell']);
   });
 
@@ -75,10 +77,12 @@ describe('narrowing layers', () => {
       grant({ allow: ['shell'] }),
       grant({ deny: ['shell'] }),
     );
+
     expect(checkToolGranted(g, 'shell')).toEqual({
       granted: false,
       rule: 'grant:deny:shell',
     });
+
     const h = effectiveGrant('standard', grant({ deny: ['mcp__forge__*'] }));
     expect(granted(h, 'mcp__forge__finish')).toBe(false);
     expect(granted(h, 'read')).toBe(true);
@@ -99,12 +103,15 @@ describe('project-gated tools', () => {
     expect(
       granted(effectiveGrant('standard', named), 'mcp__forge__db_query_readonly'),
     ).toBe(true);
+
     expect(granted(effectiveGrant('full', named), 'mcp__forge__db_query_readonly')).toBe(
       true,
     );
+
     expect(
       granted(effectiveGrant('express', named), 'mcp__forge__db_query_readonly'),
     ).toBe(false);
+
     expect(
       granted(
         effectiveGrant('standard', grant({ allow: ['*'] })),
@@ -118,15 +125,18 @@ describe('project-gated tools', () => {
     expect(granted(effectiveGrant('standard', named), 'mcp__github__create_issue')).toBe(
       true,
     );
+
     expect(granted(effectiveGrant('express', named), 'mcp__github__create_issue')).toBe(
       false,
     );
+
     expect(
       granted(
         effectiveGrant('standard', grant({ allow: ['*'] })),
         'mcp__github__create_issue',
       ),
     ).toBe(false);
+
     const narrowed = effectiveGrant('standard', named, grant({ allow: ['read'] }));
     expect(granted(narrowed, 'mcp__github__create_issue')).toBe(false);
     const denied = effectiveGrant(
@@ -134,6 +144,7 @@ describe('project-gated tools', () => {
       named,
       grant({ deny: ['mcp__github__create_issue'] }),
     );
+
     expect(granted(denied, 'mcp__github__create_issue')).toBe(false);
   });
 });
@@ -187,6 +198,7 @@ describe('banned always-allow list', () => {
         assertNotBannedAlwaysAllow({ action: 'shell', resource: 'bash -c *', effect }),
       ).not.toThrow();
     }
+
     expect(() =>
       assertNotBannedAlwaysAllow({ action: 'edit', resource: '**', effect: 'allow' }),
     ).not.toThrow();
@@ -196,6 +208,7 @@ describe('banned always-allow list', () => {
     const bad = grant({
       rules: [{ action: 'shell', resource: 'bash -c *', effect: 'allow' }],
     });
+
     expect(() => effectiveGrant('standard', bad)).toThrow(BannedAlwaysAllowError);
     expect(() => effectiveGrant('standard', undefined, bad)).toThrow(
       BannedAlwaysAllowError,
@@ -221,6 +234,7 @@ describe('banned always-allow list', () => {
     expect(() =>
       parseGrant({ rules: [{ action: 'shell', resource: 'node -e*', effect: 'allow' }] }),
     ).toThrow(BannedAlwaysAllowError);
+
     expect(parseGrant({ allow: ['read'] }).deny).toEqual([]);
   });
 });

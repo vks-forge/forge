@@ -78,9 +78,12 @@ export function makeDirectorRig(over: Partial<ClaudeDirectorLLMDeps> = {}): Dire
       },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
+
     children.push(child);
+
     return child;
   };
+
   const deps: ClaudeDirectorLLMDeps = {
     spawn,
     clock,
@@ -102,10 +105,12 @@ export function makeDirectorRig(over: Partial<ClaudeDirectorLLMDeps> = {}): Dire
     },
     ...over,
   };
+
   const fixture: DirectorRig['fixture'] = (stdout, o = {}) => {
     writeFileSync(fixturePath, stdout);
     mode = { exit: o.exit ?? 0, hang: o.hang ?? false, stderr: o.stderr ?? '' };
   };
+
   const script = (r: ScriptedResponse): void => {
     const doc = JSON.stringify;
     switch (r.kind) {
@@ -160,6 +165,7 @@ export function makeDirectorRig(over: Partial<ClaudeDirectorLLMDeps> = {}): Dire
         return fixture('segmentation fault', { exit: 139, stderr: 'boom' });
     }
   };
+
   return {
     llm: createClaudeDirectorLLM(deps),
     clock,
@@ -171,7 +177,9 @@ export function makeDirectorRig(over: Partial<ClaudeDirectorLLMDeps> = {}): Dire
     started: () => existsSync(recordPath),
     lastCall: () => JSON.parse(readFileSync(recordPath, 'utf8')),
     async close() {
-      for (const c of children) c.kill('SIGKILL');
+      for (const c of children) {
+        c.kill('SIGKILL');
+      }
     },
   };
 }

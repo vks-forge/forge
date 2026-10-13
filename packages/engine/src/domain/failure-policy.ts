@@ -27,33 +27,49 @@ const park = (reason: string): FailureDecision => ({ action: 'park', reason });
 /** Chooses retry (with the earliest start, epoch ms) or park (with a human-readable reason). */
 export function decideFailure(input: FailureInput): FailureDecision {
   const { status, attempts, now, policy } = input;
-  if (status === 'max_turns')
+  if (status === 'max_turns') {
     return park('max_turns: the run used all its turns without finishing');
-  if (status === 'refused') return park('refused: the model declined the task');
-  if (status === 'cancelled') return park('cancelled: the run was stopped unexpectedly');
+  }
+
+  if (status === 'refused') {
+    return park('refused: the model declined the task');
+  }
+
+  if (status === 'cancelled') {
+    return park('cancelled: the run was stopped unexpectedly');
+  }
+
   const family: ErrorFamily =
     input.family ?? (status === 'timeout' ? 'stall' : 'unknown');
+
   if (NEVER_RETRY.includes(family)) {
     return park(`${family}: not retried automatically; needs a human`);
   }
+
   if (family === 'rate_limit') {
     const cfg = policy.rate_limit;
     if (attempts > cfg.max_attempts) {
       return park(`rate_limit: ${attempts - 1} retries used (max ${cfg.max_attempts})`);
     }
+
     const reset =
       input.retryNotBefore === undefined ? NaN : Date.parse(input.retryNotBefore);
+
     const backoff = Math.min(cfg.base_ms * 2 ** (attempts - 1), cfg.max_ms);
+
     return { action: 'retry', notBefore: reset > now ? reset : now + backoff, family };
   }
+
   const cfg =
     family === 'crash'
       ? policy.crash
       : family === 'stall'
         ? policy.stall
         : policy.unknown;
+
   if (attempts > cfg.max_attempts) {
     return park(`${family}: failed ${attempts} times (retry limit ${cfg.max_attempts})`);
   }
+
   return { action: 'retry', notBefore: now + cfg.delay_ms, family };
 }

@@ -29,7 +29,10 @@ export interface ContractHarness {
 
 async function drain(driver: WorkerDriver, runId: string): Promise<RunEvent[]> {
   const out: RunEvent[] = [];
-  for await (const e of driver.events({ runId })) out.push(RunEvent.parse(e));
+  for await (const e of driver.events({ runId })) {
+    out.push(RunEvent.parse(e));
+  }
+
   return out;
 }
 
@@ -43,6 +46,7 @@ export function describeWorkerDriverContract(
     beforeEach(async () => {
       h = await make();
     });
+
     afterEach(async () => {
       await h.close();
     });
@@ -52,7 +56,9 @@ export function describeWorkerDriverContract(
       expect(h.driver.id.length).toBeGreaterThan(0);
       expect(DriverCapabilities.parse(first)).toEqual(first);
       expect(h.driver.capabilities()).toEqual(first);
-      for (const mode of first.steerModes) expect(SteerMode.options).toContain(mode);
+      for (const mode of first.steerModes) {
+        expect(SteerMode.options).toContain(mode);
+      }
     });
 
     it('preflight returns ok with no issues, or not ok with at least one', async () => {
@@ -72,6 +78,7 @@ export function describeWorkerDriverContract(
       events.forEach((e, i) => {
         expect(e.seq).toBe(i);
       });
+
       const result = await h.driver.result(handle);
       expect(RunResult.parse(result)).toEqual(result);
       expect(result.status).toBe('success');
@@ -99,7 +106,10 @@ export function describeWorkerDriverContract(
     });
 
     it('resumes a finished session via start(req.resume) when resume is declared', async () => {
-      if (!h.driver.capabilities().resume) return;
+      if (!h.driver.capabilities().resume) {
+        return;
+      }
+
       h.scriptSuccess();
       const first = await h.driver.start(h.request());
       const done = await h.driver.result(first);
@@ -108,11 +118,15 @@ export function describeWorkerDriverContract(
       const second = await h.driver.start(
         h.request({ runId: 'run-2', resume: done.session ?? '' }),
       );
+
       expect((await h.driver.result(second)).status).toBe('success');
     });
 
     it('resume(handle) continues a finished run on its session', async () => {
-      if (!h.driver.capabilities().resume) return;
+      if (!h.driver.capabilities().resume) {
+        return;
+      }
+
       h.scriptSuccess();
       const handle = await h.driver.start(h.request());
       const done = await h.driver.result(handle);
@@ -121,6 +135,7 @@ export function describeWorkerDriverContract(
         runId: handle.runId,
         ...(done.session ? { session: done.session } : {}),
       });
+
       expect(resumed.runId).toBe(handle.runId);
       expect((await h.driver.result(resumed)).status).toBe('success');
     });
@@ -136,6 +151,7 @@ export function describeWorkerDriverContract(
         } else {
           await expect(attempt).rejects.toThrow();
         }
+
         await h.driver.cancel(handle);
         const status = (await h.driver.result(handle)).status;
         expect(['cancelled', 'success']).toContain(status);

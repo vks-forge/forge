@@ -27,8 +27,12 @@ export async function crashForeignRuns(ctx: EngineCtx): Promise<void> {
   const open = await ctx.deps.storage.transaction((tx) =>
     tx.runs.listByStatus(['starting', 'running', 'settling']),
   );
+
   for (const run of open) {
-    if (run.owner === ctx.deps.owner) continue;
+    if (run.owner === ctx.deps.owner) {
+      continue;
+    }
+
     await settleRun(ctx, run, failureResult('crash'));
     ctx.report.crashed.push(run.id);
   }
@@ -37,12 +41,16 @@ export async function crashForeignRuns(ctx: EngineCtx): Promise<void> {
 /** Settles every pump whose stream and result are in. */
 export async function settleFinishedPumps(ctx: EngineCtx): Promise<void> {
   for (const pump of [...ctx.state.pumps.values()]) {
-    if (!pump.done) continue;
+    if (!pump.done) {
+      continue;
+    }
+
     const run = await ctx.deps.storage.transaction((tx) => tx.runs.get(pump.runId));
     if (!run) {
       ctx.state.pumps.delete(pump.runId);
       continue;
     }
+
     await settleRun(ctx, run, pumpResult(pump), pump);
   }
 }
@@ -51,29 +59,41 @@ export async function settleFinishedPumps(ctx: EngineCtx): Promise<void> {
 export async function cancelStalled(ctx: EngineCtx): Promise<void> {
   const { deps, state } = ctx;
   for (const pump of [...state.pumps.values()]) {
-    if (pump.done) continue;
+    if (pump.done) {
+      continue;
+    }
+
     const run = await deps.storage.transaction((tx) => tx.runs.get(pump.runId));
-    if (!run) continue;
+    if (!run) {
+      continue;
+    }
+
     const last = Date.parse(run.last_event_at ?? run.started_at);
-    if (ctx.now - last <= deps.config.engine.stall_ms) continue;
+    if (ctx.now - last <= deps.config.engine.stall_ms) {
+      continue;
+    }
 
     pump.stalled = true;
     deps.log?.('warn', `run ${run.id} silent for ${ctx.now - last} ms; cancelling`, {
       ticket: run.ticket_id,
     });
+
     let stopTimer = (): void => undefined;
     try {
       await deps.driver.cancel(pump.handle);
       const grace = new Promise<void>((r) => {
         stopTimer = deps.clock.after(CANCEL_GRACE_MS, r);
       });
+
       await Promise.race([pump.finished, grace]);
     } catch (e) {
       deps.log?.('error', `cancel failed for ${run.id}`, { error: String(e) });
     }
+
     stopTimer();
     const base: RunResult =
       pump.result ?? failureResult('stall', pump.handle.session ?? null);
+
     await settleRun(ctx, run, { ...base, status: 'timeout', errorFamily: 'stall' }, pump);
   }
 }

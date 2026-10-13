@@ -50,6 +50,7 @@ export function describeWorktreeContract(
     beforeEach(async () => {
       h = await make();
     });
+
     afterEach(async () => {
       await h.close();
     });
@@ -116,6 +117,7 @@ export function describeWorktreeContract(
         { status: 'A', path: 'committed.txt' },
         { status: 'A', path: 'fresh.ts' },
       ]);
+
       expect(d.patch).toContain('+changed');
       expect(d.patch).toContain('+export const x = 1;');
     });
@@ -175,6 +177,7 @@ export function describeWorktreeContract(
       await expect(h.manager.create(tid(1), '-bad', 'main')).rejects.toBeInstanceOf(
         InvalidInputError,
       );
+
       await expect(h.manager.create(tid(1), 'bad..name', 'main')).rejects.toBeInstanceOf(
         InvalidInputError,
       );

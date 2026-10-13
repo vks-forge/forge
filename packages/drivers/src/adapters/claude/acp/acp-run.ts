@@ -60,17 +60,20 @@ export function launchAcp(
     closed: false,
     interrupting: false,
   };
+
   const queue: string[] = [launch.prompt];
   const rate = (): string =>
     retryNotBeforeFrom(state.rateLimit, clock.now(), config.rateLimitBackoffMs);
 
   const proc = startAdapterProcess(deps, entry, launch);
-  if (!proc)
+  if (!proc) {
     return {
       ended: Promise.resolve({ kind: 'crash', detail: 'cannot start the ACP adapter' }),
       steer: () => Promise.reject(new InvalidInputError('adapter did not start')),
       cancel: () => Promise.resolve(),
     };
+  }
+
   const { child, exitedEnd, kill, hasExited } = proc;
 
   let authState: AuthState = 'unknown';
@@ -81,49 +84,78 @@ export function launchAcp(
     markReady = resolve;
     failReady = reject;
   });
+
   ready.catch(() => undefined);
 
   const app = client({ name: 'forge-driver' })
     .onRequest('session/request_permission', (c) => answerPermission(sink, c.params))
     .onNotification('session/update', (c) => {
-      if (!state.accepting || c.params.sessionId !== state.sessionId) return;
+      if (!state.accepting || c.params.sessionId !== state.sessionId) {
+        return;
+      }
+
       sink.activity();
       const n = normaliseAcpUpdate(c.params.update);
-      if (n.rateLimit) state.rateLimit = n.rateLimit;
-      if (n.costUsd !== undefined) sink.setCostUsd(n.costUsd);
-      for (const e of n.events) sink.emit(e);
-      if (n.dropped) log('debug', `ignored session update ${n.dropped}`);
+      if (n.rateLimit) {
+        state.rateLimit = n.rateLimit;
+      }
+
+      if (n.costUsd !== undefined) {
+        sink.setCostUsd(n.costUsd);
+      }
+
+      for (const e of n.events) {
+        sink.emit(e);
+      }
+
+      if (n.dropped) {
+        log('debug', `ignored session update ${n.dropped}`);
+      }
     })
     .onNotification(
       '_auth/status_update',
       (p: unknown) => {
         const parsed = AuthStatusUpdate.safeParse(p);
+
         return parsed.success ? parsed.data : { authStatus: { kind: 'unparsed' } };
       },
       (c) => {
         const kind = c.params.authStatus.kind;
-        if (kind === 'account') authState = 'account';
-        else if (kind === 'none') authState = 'none';
+        if (kind === 'account') {
+          authState = 'account';
+        } else if (kind === 'none') {
+          authState = 'none';
+        }
+
         onAuth?.();
       },
     );
+
   const conn = app.connect(
     ndJsonStream(
       Writable.toWeb(child.stdin) as WritableStream<Uint8Array>,
       Readable.toWeb(child.stdout) as ReadableStream<Uint8Array>,
     ),
   );
+
   const ctx = conn.agent;
 
   function waitForAccount(): Promise<AuthState | 'timeout'> {
-    if (authState !== 'unknown') return Promise.resolve(authState);
+    if (authState !== 'unknown') {
+      return Promise.resolve(authState);
+    }
+
     return new Promise((resolve) => {
       const stop = clock.after(config.authTimeoutMs, () => {
         onAuth = null;
         resolve('timeout');
       });
+
       onAuth = () => {
-        if (authState === 'unknown') return;
+        if (authState === 'unknown') {
+          return;
+        }
+
         stop();
         onAuth = null;
         resolve(authState);
@@ -134,7 +166,10 @@ export function launchAcp(
   async function turns(sessionId: string): Promise<EngineEnd> {
     for (;;) {
       const next = queue.shift();
-      if (next === undefined) return { kind: 'completed' };
+      if (next === undefined) {
+        return { kind: 'completed' };
+      }
+
       sink.turnStarted();
       let end: EngineEnd;
       try {
@@ -142,6 +177,7 @@ export function launchAcp(
           sessionId,
           prompt: [{ type: 'text', text: next }],
         });
+
         const u = resp.usage;
         if (u) {
           const usage = {
@@ -150,19 +186,25 @@ export function launchAcp(
             cachedIn: u.cachedReadTokens ?? 0,
             cacheWrite: u.cachedWriteTokens ?? 0,
           };
+
           sink.setUsage(usage);
           sink.emit({ type: 'usage', usage });
         }
+
         end = classifyStopReason(resp.stopReason, state.rateLimit, rate);
       } catch (e) {
         end = classifyRejection(e, state.rateLimit, rate);
       }
+
       sink.turnEnded();
       if (end.kind === 'cancelled' && state.interrupting) {
         state.interrupting = false;
         continue;
       }
-      if (end.kind !== 'completed') return end;
+
+      if (end.kind !== 'completed') {
+        return end;
+      }
     }
   }
 
@@ -172,9 +214,10 @@ export function launchAcp(
       clientCapabilities: {},
       clientInfo: { name: 'forge-driver', version: '0.0.0' },
     });
+
     state.steering = readSteering(init._meta);
     const account = await waitForAccount();
-    if (account !== 'account')
+    if (account !== 'account') {
       return {
         kind: 'auth',
         detail:
@@ -182,6 +225,8 @@ export function launchAcp(
             ? 'the adapter reports no Claude login'
             : `no account report from the adapter within ${config.authTimeoutMs} ms`,
       };
+    }
+
     const meta = sessionMeta(req, launch.files);
     const mcpServers = toAcpMcpServers(launch.prepared.mcpServers);
     let sessionId: string;
@@ -198,6 +243,7 @@ export function launchAcp(
         await ctx.request('session/new', { cwd: req.cwd, mcpServers, _meta: meta })
       ).sessionId;
     }
+
     state.sessionId = sessionId;
     sink.setSession(sessionId);
     try {
@@ -205,10 +251,13 @@ export function launchAcp(
     } catch (e) {
       const detail = `session/set_mode default failed: ${message(e)}`;
       sink.abort('policy_denied', detail);
+
       return { kind: 'policy_denied', detail };
     }
+
     state.accepting = true;
     markReady();
+
     return turns(sessionId);
   }
 
@@ -217,12 +266,14 @@ export function launchAcp(
       ? { kind: 'crash', detail: message(e) }
       : classifyRejection(e, state.rateLimit, rate),
   );
+
   const ended: Promise<EngineEnd> = Promise.race([running, exitedEnd]).then(
     async (end) => {
       state.closed = true;
       failReady(new InvalidInputError('run ended before the session was ready'));
       conn.close();
       await kill();
+
       return end;
     },
   );
@@ -230,10 +281,15 @@ export function launchAcp(
   return {
     ended,
     async steer(text: string, mode: SteerMode) {
-      if (state.closed) throw new InvalidInputError('run is not accepting messages');
+      if (state.closed) {
+        throw new InvalidInputError('run is not accepting messages');
+      }
+
       await ready;
-      if (mode === 'steer' && !(config.acpSteering && state.steering))
+      if (mode === 'steer' && !(config.acpSteering && state.steering)) {
         throw new InvalidInputError('this adapter does not support live steering');
+      }
+
       const sessionId = state.sessionId ?? '';
       if (mode === 'follow_up') {
         queue.push(text);
@@ -247,28 +303,40 @@ export function launchAcp(
           prompt: [{ type: 'text', text }],
           _meta: { steering: { idleBehavior: 'promptRequired' } },
         });
+
         // Between turns there is nothing to inject into; the host owns the continuation.
-        if (out.outcome === 'promptRequired') queue.push(text);
+        if (out.outcome === 'promptRequired') {
+          queue.push(text);
+        }
       }
     },
     async cancel() {
-      if (state.closed) return;
-      if (state.sessionId === null) {
-        await kill();
+      if (state.closed) {
         return;
       }
+
+      if (state.sessionId === null) {
+        await kill();
+
+        return;
+      }
+
       try {
         await ctx.notify('session/cancel', { sessionId: state.sessionId });
       } catch {
         // the connection may already be gone; the grace timer below still ends the run
       }
+
       let stopTimer = (): void => undefined;
       const graceElapsed = new Promise<boolean>((resolve) => {
         stopTimer = clock.after(config.cancelGraceMs, () => resolve(false));
       });
+
       const stopped = await Promise.race([ended.then(() => true), graceElapsed]);
       stopTimer();
-      if (!stopped) await kill();
+      if (!stopped) {
+        await kill();
+      }
     },
   };
 }

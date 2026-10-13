@@ -23,9 +23,11 @@ describe('callResource', () => {
     expect(callResource(ctx, call('edit', { file_path: 'SRC/./a/../A.ts' }))).toBe(
       'src/a.ts',
     );
+
     expect(callResource(ctx, call('read', { path: '/work/repo/docs/x.md' }))).toBe(
       'docs/x.md',
     );
+
     expect(callResource(ctx, call('read', { path: '/etc/passwd' }))).toBe('/etc/passwd');
   });
 
@@ -58,6 +60,7 @@ describe('callResource', () => {
         call('mcp__forge__web_fetch', { url: 'https://Docs.Example.com/a?b=1' }),
       ),
     ).toBe('docs.example.com');
+
     expect(
       callResource(ctx, call('mcp__forge__web_fetch', { url: 'http://x.test:8080/p' })),
     ).toBe('x.test:8080');
@@ -73,6 +76,7 @@ describe('callResource', () => {
     expect(callResource(ctx, call('mcp__forge__get_ticket', {}))).toBe(
       'mcp__forge__get_ticket',
     );
+
     expect(
       callResource(
         ctx,

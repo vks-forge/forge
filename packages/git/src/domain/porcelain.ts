@@ -17,8 +17,10 @@ const DRIVE_ROOT = /^[A-Za-z]:\/$/;
 /** Absolute-path style used everywhere here: forward slashes, no trailing slash, upper-case drive. */
 export function normalizePath(p: string): string {
   let out = p.replaceAll('\\', '/');
-  while (out.length > 1 && out.endsWith('/') && !DRIVE_ROOT.test(out))
+  while (out.length > 1 && out.endsWith('/') && !DRIVE_ROOT.test(out)) {
     out = out.slice(0, -1);
+  }
+
   return out.replace(/^[a-z]:/, (d) => d.toUpperCase());
 }
 
@@ -26,6 +28,7 @@ export function normalizePath(p: string): string {
 export function samePath(a: string, b: string): boolean {
   const x = normalizePath(a);
   const y = normalizePath(b);
+
   return process.platform === 'win32' ? x.toLowerCase() === y.toLowerCase() : x === y;
 }
 
@@ -37,14 +40,19 @@ export function parseWorktreeList(out: string): ParsedWorktree[] {
     let head = '';
     let branch: string | null = null;
     for (const line of block.split(/\r?\n/)) {
-      if (line.startsWith('worktree '))
+      if (line.startsWith('worktree ')) {
         path = normalizePath(line.slice('worktree '.length));
-      else if (line.startsWith('HEAD ')) head = line.slice('HEAD '.length);
-      else if (line.startsWith('branch ')) {
+      } else if (line.startsWith('HEAD ')) {
+        head = line.slice('HEAD '.length);
+      } else if (line.startsWith('branch ')) {
         branch = line.slice('branch '.length).replace(/^refs\/heads\//, '');
       }
     }
-    if (path !== null) result.push({ path, head, branch });
+
+    if (path !== null) {
+      result.push({ path, head, branch });
+    }
   }
+
   return result;
 }

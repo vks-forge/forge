@@ -21,10 +21,12 @@ export function memoryRunTokens(state: MemoryState): RunTokenRepository {
   return {
     async issue(runId, tokenSha256) {
       const t = parseTokenRecord(runId, tokenSha256);
-      if (state.tokens.get(t.runId)?.revoked === true)
+      if (state.tokens.get(t.runId)?.revoked === true) {
         throw new PolicyDeniedError(
           `run ${runId} token was revoked; use reissue to re-arm`,
         );
+      }
+
       state.tokens.set(t.runId, { sha256: t.tokenSha256, revoked: false });
     },
     async reissue(runId, tokenSha256) {
@@ -36,11 +38,14 @@ export function memoryRunTokens(state: MemoryState): RunTokenRepository {
     },
     async getHash(runId) {
       const t = state.tokens.get(runId);
+
       return t && !t.revoked ? t.sha256 : null;
     },
     async revoke(runId) {
       const t = state.tokens.get(runId);
-      if (t) t.revoked = true;
+      if (t) {
+        t.revoked = true;
+      }
     },
   };
 }

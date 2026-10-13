@@ -29,8 +29,11 @@ async function parkIn(
   reason: string,
 ): Promise<void> {
   const moved = await moveTicketTx(tx, ticket.id, ctx.nowIso, (t) => parkPlan(t, reason));
-  if (moved.ok) ctx.report.parked.push({ ticketId: ticket.id, reason });
-  else ctx.deps.log?.('error', `could not park ${ticket.id}`, { reason: moved.reason });
+  if (moved.ok) {
+    ctx.report.parked.push({ ticketId: ticket.id, reason });
+  } else {
+    ctx.deps.log?.('error', `could not park ${ticket.id}`, { reason: moved.reason });
+  }
 }
 
 /** Creates the interaction a pause points at when the Worker side did not write it. */
@@ -41,7 +44,10 @@ async function ensureInteraction(
   id: string,
   pump?: Pump,
 ): Promise<void> {
-  if (await tx.interactions.get(id)) return;
+  if (await tx.interactions.get(id)) {
+    return;
+  }
+
   const ask = pump?.asks.get(id);
   const kind = InteractionKind.safeParse(ask?.kind);
   await tx.interactions.insert({
@@ -66,26 +72,41 @@ export async function applyOutcome(
   pump?: Pump,
 ): Promise<void> {
   const ticket = await tx.tickets.get(run.ticket_id as Ticket['id']);
-  if (!ticket || TERMINAL_STATUSES.includes(ticket.status) || pump?.cancelled) return;
+  if (!ticket || TERMINAL_STATUSES.includes(ticket.status) || pump?.cancelled) {
+    return;
+  }
+
   const current = ticket.assignee_run_id
     ? await tx.runs.get(ticket.assignee_run_id)
     : null;
-  if (current && current.id !== run.id && isRunActive(current)) return;
+
+  if (current && current.id !== run.id && isRunActive(current)) {
+    return;
+  }
 
   const { log } = ctx.deps;
   if (result.status === 'success') {
     const m = await moveTicketTx(tx, ticket.id, ctx.nowIso, () => ({
       events: [{ type: 'verifying' }],
     }));
-    if (!m.ok) log?.('warn', 'success did not move the ticket', { reason: m.reason });
+
+    if (!m.ok) {
+      log?.('warn', 'success did not move the ticket', { reason: m.reason });
+    }
+
     return;
   }
+
   if (result.status === 'paused' && result.interactionId) {
     await ensureInteraction(ctx, tx, run, result.interactionId, pump);
     const m = await moveTicketTx(tx, ticket.id, ctx.nowIso, () => ({
       events: [{ type: 'asked' }],
     }));
-    if (!m.ok) log?.('warn', 'pause did not park the ticket', { reason: m.reason });
+
+    if (!m.ok) {
+      log?.('warn', 'pause did not park the ticket', { reason: m.reason });
+    }
+
     return;
   }
 
@@ -99,7 +120,11 @@ export async function applyOutcome(
     now: ctx.now,
     policy: ctx.deps.config.engine.retry,
   });
-  if (decision.action === 'park') return parkIn(ctx, tx, ticket, decision.reason);
+
+  if (decision.action === 'park') {
+    return parkIn(ctx, tx, ticket, decision.reason);
+  }
+
   const wake = await requestWakeTx(tx, ctx.deps, {
     ticketId: ticket.id,
     kind: 'retry',
@@ -107,6 +132,7 @@ export async function applyOutcome(
     key: run.id,
     notBefore: decision.notBefore,
   });
+
   if (wake.capped) {
     const cap = ctx.deps.config.engine.rewake_cap;
     await parkIn(

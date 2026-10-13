@@ -31,12 +31,15 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
       const first = await tx((t) =>
         t.ticketRelations.add({ from_id: A, to_id: B, kind: 'depends_on' }),
       );
+
       const again = await tx((t) =>
         t.ticketRelations.add({ from_id: A, to_id: B, kind: 'depends_on' }),
       );
+
       const other = await tx((t) =>
         t.ticketRelations.add({ from_id: A, to_id: B, kind: 'related' }),
       );
+
       expect([first, again, other]).toEqual([true, false, true]);
     });
 
@@ -48,9 +51,11 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
           kind: 'blocks',
           created_at: T0,
         });
+
         await t.ticketRelations.add({ from_id: C, to_id: A, kind: 'related' });
         await t.ticketRelations.add({ from_id: B, to_id: C, kind: 'related' });
       });
+
       const forA = await tx((t) => t.ticketRelations.listFor(A));
       expect(forA).toEqual([
         { from_id: A, to_id: B, kind: 'blocks', created_at: T0 },
@@ -71,9 +76,11 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
       const self = await tx((t) =>
         t.ticketRelations.add({ from_id: A, to_id: A, kind: 'related' }),
       ).catch((e: unknown) => e);
+
       const bad = await tx((t) =>
         t.ticketRelations.add({ from_id: 'nope' as never, to_id: A, kind: 'related' }),
       ).catch((e: unknown) => e);
+
       expect(self).toBeInstanceOf(InvalidInputError);
       expect(bad).toBeInstanceOf(InvalidInputError);
     });
@@ -85,6 +92,7 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
           throw new Error('boom');
         }),
       ).rejects.toThrow('boom');
+
       expect(await tx((t) => t.ticketRelations.listFor(A))).toEqual([]);
     });
   });
@@ -102,6 +110,7 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
       await tx((t) =>
         t.ticketRelations.add({ from_id: A, to_id: B, kind: 'spawned_from' }),
       );
+
       const withParent = await tx((t) => t.tickets.get(A));
       await tx((t) => t.ticketRelations.remove(A, B, 'spawned_from'));
       const without = await tx((t) => t.tickets.get(A));
@@ -115,6 +124,7 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
         await t.ticketRelations.add({ from_id: A, to_id: C, kind: 'spawned_from' });
         await t.ticketRelations.add({ from_id: A, to_id: B, kind: 'spawned_from' });
       });
+
       expect((await tx((t) => t.tickets.get(A)))?.parent).toBe(C);
     });
 
@@ -126,9 +136,11 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
         await t.ticketRelations.add({ from_id: B, to_id: A, kind: 'blocks' });
         await t.ticketRelations.add({ from_id: A, to_id: C, kind: 'related' });
       });
+
       const [viaGet] = await tx((t) => t.tickets.listByStatus('inbox')).then((l) =>
         l.filter((x) => x.id === A),
       );
+
       expect(viaGet?.blocked_by).toEqual([B, C]);
       expect((await tx((t) => t.tickets.get(A)))?.blocked_by).toEqual([B, C]);
       expect((await tx((t) => t.tickets.get(B)))?.blocked_by).toEqual([]);
@@ -140,6 +152,7 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
         await t.tickets.insert(makeTicket(3));
         await t.tickets.insert(makeTicket(1, { parent: B, blocked_by: [C] }));
       });
+
       const got = await tx((t) => t.tickets.get(A));
       const edges = await tx((t) => t.ticketRelations.listFor(A));
       expect(got).toMatchObject({ parent: B, blocked_by: [C] });
@@ -155,8 +168,10 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
         const failure = await tx((t) =>
           t.tickets.updateTicketCas(A, 0, patch as never),
         ).catch((e: unknown) => e);
+
         expect(failure).toBeInstanceOf(InvalidInputError);
       }
+
       expect(await tx((t) => t.ticketRelations.listFor(A))).toEqual([]);
       expect((await tx((t) => t.tickets.get(A)))?.status_version).toBe(0);
     });
@@ -166,9 +181,13 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
         await t.tickets.insert(makeTicket(2));
         await t.tickets.insert(makeTicket(1, { status: 'in_progress', parent: B }));
       });
+
       const cur = await tx((t) => t.tickets.get(A));
       const r = transition(cur as NonNullable<typeof cur>, { type: 'verifying', at: T0 });
-      if (!r.ok) throw new Error('unexpected transition error');
+      if (!r.ok) {
+        throw new Error('unexpected transition error');
+      }
+
       const ok = await tx((t) => t.tickets.updateTicketCas(A, 0, toTicketPatch(r.value)));
       expect(ok).toBe(true);
       expect(await tx((t) => t.tickets.get(A))).toMatchObject({
@@ -211,14 +230,18 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
           pr_url: undefined,
         }),
       );
+
       const got = await tx((t) => t.tickets.get(A));
-      for (const k of Object.keys(full)) expect(k in (got ?? {})).toBe(false);
+      for (const k of Object.keys(full)) {
+        expect(k in (got ?? {})).toBe(false);
+      }
     });
 
     it('a transition() patch clears an engine field the next ticket lacks', async () => {
       await tx((t) =>
         t.tickets.insert(makeTicket(1, { status: 'in_progress', ...full })),
       );
+
       const cur = await tx((t) => t.tickets.get(A));
       const next = { ...(cur as NonNullable<typeof cur>) };
       delete next.assignee_run_id;

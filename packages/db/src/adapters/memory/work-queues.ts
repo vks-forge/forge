@@ -39,12 +39,16 @@ export function memoryWakeRequests(state: MemoryState): WakeRequestRepository {
           x.reason === w.reason &&
           x.idempotency_key === w.idempotency_key,
       );
+
       if (existing) {
         existing.coalesced_count += 1;
+
         return { inserted: false, request: structuredClone(existing) };
       }
+
       const stored = WakeRequest.parse({ ...w, coalesced_count: 0, status: 'pending' });
       insertUnique(state.wakes, stored.id, stored, 'wake request');
+
       return { inserted: true, request: structuredClone(stored) };
     },
     async listDue(now) {
@@ -57,9 +61,13 @@ export function memoryWakeRequests(state: MemoryState): WakeRequestRepository {
     },
     async markConsumed(id, at) {
       const w = state.wakes.get(id);
-      if (w?.status !== 'pending') return false;
+      if (w?.status !== 'pending') {
+        return false;
+      }
+
       w.status = 'consumed';
       w.consumed_at = at;
+
       return true;
     },
     async countSince(ticketId, since, kinds) {
@@ -80,14 +88,17 @@ export function memoryGateResults(state: MemoryState): GateResultRepository {
         ...NewGateResult.parse(result),
         id: state.gateSeq + 1,
       });
+
       state.gateSeq = stored.id;
       state.gates.push(stored);
+
       return structuredClone(stored);
     },
     async listByTicket(ticketId) {
       const runIds = new Set(
         [...state.runs.values()].filter((r) => r.ticket_id === ticketId).map((r) => r.id),
       );
+
       return state.gates
         .filter((g) => runIds.has(g.run_id))
         .map((g) => structuredClone(g));
@@ -99,13 +110,17 @@ export function memoryProjects(state: MemoryState): ProjectRepository {
   return {
     async get(id) {
       const p = state.projects.get(id);
+
       return p ? structuredClone(p) : null;
     },
     async upsert(project) {
       const p = Project.parse(project);
-      for (const other of state.projects.values())
-        if (other.slug === p.slug && other.id !== p.id)
+      for (const other of state.projects.values()) {
+        if (other.slug === p.slug && other.id !== p.id) {
           throw new InvalidInputError(`Duplicate project slug: ${p.slug}`);
+        }
+      }
+
       // Map.set on an existing key keeps its position, like the SQLite upsert keeps its rowid.
       state.projects.set(p.id, p);
     },

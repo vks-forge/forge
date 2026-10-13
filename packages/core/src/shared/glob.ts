@@ -56,6 +56,7 @@ function globToRegex(glob: string): RegExp {
       out += escapeRegex(ch);
     }
   }
+
   return new RegExp(`^${out}$`);
 }
 

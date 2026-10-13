@@ -40,6 +40,7 @@ function mac(
   body: unknown,
 ): string {
   const outputHash = sha256Hex(canonicalJson(body));
+
   return hmacHex(key, canonicalJson([prev, seq, tool, inputHash, outputHash]));
 }
 
@@ -109,6 +110,7 @@ export function makeDecisionReceipt(
     ts: input.ts,
     prev_hash: link(prev),
   };
+
   return {
     ...row,
     hash: mac(
@@ -141,6 +143,7 @@ export function makeEffectReceipt(
     ts: input.ts,
     prev_hash: link(prev),
   };
+
   const h = mac(
     runSecret,
     row.prev_hash,
@@ -149,6 +152,7 @@ export function makeEffectReceipt(
     decision.args_hash,
     effectBody(row),
   );
+
   return { ...row, hash: h };
 }
 
@@ -167,27 +171,53 @@ export function verifyChain(
   let lastSeq: number | null = null;
   for (const [index, raw] of rows.entries()) {
     const parsed = Receipt.safeParse(raw);
-    if (!parsed.success) return err({ index, reason: 'bad_schema' });
+    if (!parsed.success) {
+      return err({ index, reason: 'bad_schema' });
+    }
+
     const r = parsed.data;
-    if (r.prev_hash !== prev) return err({ index, reason: 'prev_hash' });
+    if (r.prev_hash !== prev) {
+      return err({ index, reason: 'prev_hash' });
+    }
+
     let expected: string;
     if (r.kind === 'decision') {
-      if (decisions.has(r.id)) return err({ index, reason: 'duplicate_decision' });
-      if (lastSeq !== null && r.seq !== lastSeq + 1) return err({ index, reason: 'seq' });
+      if (decisions.has(r.id)) {
+        return err({ index, reason: 'duplicate_decision' });
+      }
+
+      if (lastSeq !== null && r.seq !== lastSeq + 1) {
+        return err({ index, reason: 'seq' });
+      }
+
       lastSeq = r.seq;
       decisions.set(r.id, r);
       expected = mac(runSecret, r.prev_hash, r.seq, r.tool, r.args_hash, decisionBody(r));
     } else {
       const d = decisions.get(r.decision_id);
-      if (!d) return err({ index, reason: 'orphan_effect' });
+      if (!d) {
+        return err({ index, reason: 'orphan_effect' });
+      }
+
       // One effect per decision, and only for a call that was allowed to run.
-      if (closed.has(d.id)) return err({ index, reason: 'duplicate_effect' });
-      if (d.decision !== 'allow') return err({ index, reason: 'effect_not_allowed' });
+      if (closed.has(d.id)) {
+        return err({ index, reason: 'duplicate_effect' });
+      }
+
+      if (d.decision !== 'allow') {
+        return err({ index, reason: 'effect_not_allowed' });
+      }
+
       closed.add(d.id);
       expected = mac(runSecret, r.prev_hash, d.seq, d.tool, d.args_hash, effectBody(r));
     }
-    if (!constantTimeEqual(expected, r.hash)) return err({ index, reason: 'hash' });
+
+    if (!constantTimeEqual(expected, r.hash)) {
+      return err({ index, reason: 'hash' });
+    }
+
     prev = r.hash;
   }
+
   return ok(rows.length);
 }

@@ -23,6 +23,7 @@ const server = createServer((req, res) => {
   res.setHeader('content-type', 'text/plain');
   res.end('pinned');
 });
+
 let port = 0;
 
 beforeAll(async () => {
@@ -30,6 +31,7 @@ beforeAll(async () => {
   await once(server, 'listening');
   port = (server.address() as AddressInfo).port;
 });
+
 afterAll(() => {
   server.close();
 });
@@ -42,8 +44,12 @@ describe('nodeTransport', () => {
       family: 4,
       signal: new AbortController().signal,
     });
+
     const chunks: Uint8Array[] = [];
-    for await (const c of res.body) chunks.push(c);
+    for await (const c of res.body) {
+      chunks.push(c);
+    }
+
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('text/plain');
     expect(Buffer.concat(chunks).toString()).toBe('pinned');

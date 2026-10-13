@@ -53,21 +53,28 @@ export function createFakeDriver(): {
         filesTouched: [],
       })),
     };
+
     runs.set(runId, fake);
     const ts = new Date(0).toISOString();
     log.push({ type: 'text', seq: fake.seq++, ts, text: 'working' });
-    if (hang) hang = false;
-    else
+    if (hang) {
+      hang = false;
+    } else {
       queueMicrotask(() => {
         log.close();
         finish('success');
       });
+    }
+
     return fake;
   }
 
   const get = (h: RunHandle): Fake => {
     const f = runs.get(h.runId);
-    if (!f) throw new InvalidInputError(`unknown run ${h.runId}`);
+    if (!f) {
+      throw new InvalidInputError(`unknown run ${h.runId}`);
+    }
+
     return f;
   };
 
@@ -84,17 +91,22 @@ export function createFakeDriver(): {
     preflight: async () => ({ ok: true, issues: [] }),
     async start(req: RunRequest) {
       const f = begin(req.runId);
+
       return { runId: req.runId, session: f.session };
     },
     async resume(handle) {
       const prior = get(handle);
       const f = begin(handle.runId);
       f.session = prior.session;
+
       return { runId: handle.runId, session: f.session };
     },
     async steer(handle, message, mode) {
       const f = get(handle);
-      if (mode !== 'follow_up') throw new InvalidInputError(`mode ${mode} not declared`);
+      if (mode !== 'follow_up') {
+        throw new InvalidInputError(`mode ${mode} not declared`);
+      }
+
       f.log.push({
         type: 'inbox_delivered',
         seq: f.seq++,
@@ -102,6 +114,7 @@ export function createFakeDriver(): {
         inbox_seq: 0,
         mode,
       });
+
       void message;
     },
     async cancel(handle) {
@@ -112,5 +125,6 @@ export function createFakeDriver(): {
     events: (handle) => get(handle).log.iterate(),
     result: (handle) => get(handle).result,
   };
+
   return { driver, hangNext: () => (hang = true) };
 }

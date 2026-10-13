@@ -25,7 +25,9 @@ function viewOf(chain: readonly Receipt[]): ChainView {
   const done = new Set(
     chain.flatMap((r) => (r.kind === 'effect' ? [r.decision_id] : [])),
   );
+
   const open = (d: DecisionReceipt): boolean => !done.has(d.id);
+
   return {
     last: chain.at(-1) ?? null,
     lastSeq: decisions.reduce((max, d) => Math.max(max, d.seq), 0),
@@ -48,23 +50,30 @@ export function createMemoryReceiptLog(): ReceiptLog {
     const effects = new Set(
       chain.flatMap((r) => (r.kind === 'effect' ? [r.decision_id] : [])),
     );
+
     const own = new Set(chain.flatMap((r) => (r.kind === 'decision' ? [r.id] : [])));
     for (const r of added) {
       if (r.kind === 'decision') {
-        if (r.run_id !== runId)
+        if (r.run_id !== runId) {
           throw new InvalidInputError(
             `receipt ${r.id} belongs to run ${r.run_id}, not ${runId}`,
           );
-        if (ids.has(r.id) || seqs.has(r.seq))
+        }
+
+        if (ids.has(r.id) || seqs.has(r.seq)) {
           throw new InvalidInputError(`duplicate decision ${r.id} (seq ${r.seq})`);
+        }
+
         ids.add(r.id);
         own.add(r.id);
         seqs.add(r.seq);
       } else {
-        if (!own.has(r.decision_id) || effects.has(r.decision_id))
+        if (!own.has(r.decision_id) || effects.has(r.decision_id)) {
           throw new InvalidInputError(
             `effect receipt for ${r.decision_id} has no open decision in run ${runId}`,
           );
+        }
+
         effects.add(r.decision_id);
       }
     }
@@ -78,14 +87,21 @@ export function createMemoryReceiptLog(): ReceiptLog {
         const added = build(viewOf(chain)).map((r) => Receipt.parse(r));
         check(runId, chain, added);
         chains.set(runId, [...chain, ...added]);
-        for (const r of added) if (r.kind === 'decision') decisionIds.add(r.id);
+        for (const r of added) {
+          if (r.kind === 'decision') {
+            decisionIds.add(r.id);
+          }
+        }
+
         return added;
       });
+
       // A failed append must not wedge the queue for later callers.
       tails.set(
         runId,
         next.catch(() => undefined),
       );
+
       return next;
     },
     list: async (runId) => [...(chains.get(runId) ?? [])],

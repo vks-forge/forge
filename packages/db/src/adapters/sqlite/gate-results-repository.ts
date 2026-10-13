@@ -38,8 +38,12 @@ export function createGateResultRepository(driver: SqlDriver): GateResultReposit
           g.ended_at ?? null,
         ],
       );
+
       const row = driver.get('SELECT * FROM gate_results WHERE id = last_insert_rowid()');
-      if (!row) throw new UnknownForgeError('gate result vanished after insert');
+      if (!row) {
+        throw new UnknownForgeError('gate result vanished after insert');
+      }
+
       return toGate(row);
     },
 

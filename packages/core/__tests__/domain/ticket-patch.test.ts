@@ -19,8 +19,10 @@ import { makeTicket, T0 } from '#tests/helpers/fixtures.js';
 describe('toTicketPatch', () => {
   it('drops id, project, created_at and status_version', () => {
     const patch = toTicketPatch(makeTicket({ status_version: 4 }));
-    for (const k of ['id', 'project', 'created_at', 'status_version'])
+    for (const k of ['id', 'project', 'created_at', 'status_version']) {
       expect(k in patch).toBe(false);
+    }
+
     expect(patch.title).toBe('Add doctor check');
   });
 
@@ -29,7 +31,11 @@ describe('toTicketPatch', () => {
       type: 'unblocked',
       at: T0,
     });
-    if (!r.ok) throw new Error('expected ok');
+
+    if (!r.ok) {
+      throw new Error('expected ok');
+    }
+
     const patch = toTicketPatch(r.value);
     expect('blocked_reason' in patch && patch.blocked_reason === undefined).toBe(true);
     expect('tier_actual' in patch).toBe(true);
@@ -62,6 +68,7 @@ describe('toTicketPatch', () => {
     const patch = toTicketPatch(
       makeTicket({ branch: 'feat/SF-1-x', assignee_run_id: 'r1' }),
     );
+
     expect(patch).toMatchObject({ branch: 'feat/SF-1-x', assignee_run_id: 'r1' });
   });
 });

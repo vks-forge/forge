@@ -26,15 +26,18 @@ const sameEdge = (a: TicketRelation, b: TicketRelation): boolean =>
 export function memoryTickets(state: MemoryState): TicketRepository {
   const view = (t: Ticket): Ticket => {
     const { parent, blocked_by } = deriveTicketRelations(t.id, state.relations);
+
     return structuredClone({
       ...t,
       ...(parent === undefined ? {} : { parent }),
       blocked_by,
     });
   };
+
   return {
     async get(id) {
       const t = state.tickets.get(id);
+
       return t ? view(t) : null;
     },
     async listByStatus(status) {
@@ -52,19 +55,28 @@ export function memoryTickets(state: MemoryState): TicketRepository {
           kind: 'depends_on' as const,
         })),
       ].map((e) => TicketRelation.parse({ ...e, created_at: t.created_at }));
+
       const { parent: _parent, ...stored } = t;
       void _parent;
       insertUnique(state.tickets, t.id, { ...stored, blocked_by: [] }, 'ticket');
-      for (const e of edges)
-        if (!state.relations.some((r) => sameEdge(r, e))) state.relations.push(e);
+      for (const e of edges) {
+        if (!state.relations.some((r) => sameEdge(r, e))) {
+          state.relations.push(e);
+        }
+      }
     },
     async updateTicketCas(id, expectedVersion, patch) {
       const current = state.tickets.get(id);
-      if (!current || current.status_version !== expectedVersion) return false;
+      if (!current || current.status_version !== expectedVersion) {
+        return false;
+      }
+
       const next = withoutUndefined(
         Ticket.parse({ ...current, ...parseTicketPatch(expectedVersion, patch) }),
       );
+
       state.tickets.set(id, next);
+
       return true;
     },
   };
@@ -74,16 +86,25 @@ export function memoryTicketRelations(state: MemoryState): TicketRelationReposit
   return {
     async add(relation) {
       const r = TicketRelation.parse(relation);
-      if (state.relations.some((e) => sameEdge(e, r))) return false;
+      if (state.relations.some((e) => sameEdge(e, r))) {
+        return false;
+      }
+
       state.relations.push(r);
+
       return true;
     },
     async remove(fromId, toId, kind) {
       const i = state.relations.findIndex((e) =>
         sameEdge(e, { from_id: fromId, to_id: toId, kind }),
       );
-      if (i < 0) return false;
+
+      if (i < 0) {
+        return false;
+      }
+
       state.relations.splice(i, 1);
+
       return true;
     },
     async listFor(ticketId) {

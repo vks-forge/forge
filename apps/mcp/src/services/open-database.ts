@@ -26,7 +26,10 @@ export function openExistingStorage(path: string): StorageAdapter {
   } catch {
     isFile = false;
   }
-  if (!isFile) throw new InvalidInputError(`database not found: ${path}`);
+
+  if (!isFile) {
+    throw new InvalidInputError(`database not found: ${path}`);
+  }
 
   const driver = openSqliteDriver(path);
   try {
@@ -42,11 +45,13 @@ export function openExistingStorage(path: string): StorageAdapter {
         'database has no schema_migrations table; the Forge server must migrate it first',
       );
     }
+
     if (applied === null || applied < latest) {
       throw new InvalidInputError(
         `database schema is behind (migration ${applied ?? 0} of ${latest}); start the Forge server to migrate it`,
       );
     }
+
     return createStorageOnDriver(driver);
   } catch (error) {
     driver.close();

@@ -38,11 +38,29 @@ export class GitHostError extends ForgeError {
 
 /** Maps a GitHub REST status to a reason; `rateLimited` marks a 403 that is a quota, not a permission. */
 export function reasonForStatus(status: number, rateLimited: boolean): GitHostReason {
-  if (status === 401) return 'auth';
-  if (status === 429 || (status === 403 && rateLimited)) return 'rate_limit';
-  if (status === 403) return 'auth';
-  if (status === 404) return 'not_found';
-  if (status === 405 || status === 409) return 'merge_refused';
-  if (status === 422) return 'invalid';
+  if (status === 401) {
+    return 'auth';
+  }
+
+  if (status === 429 || (status === 403 && rateLimited)) {
+    return 'rate_limit';
+  }
+
+  if (status === 403) {
+    return 'auth';
+  }
+
+  if (status === 404) {
+    return 'not_found';
+  }
+
+  if (status === 405 || status === 409) {
+    return 'merge_refused';
+  }
+
+  if (status === 422) {
+    return 'invalid';
+  }
+
   return 'unavailable';
 }

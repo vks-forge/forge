@@ -30,6 +30,7 @@ export function assertStrongKey(key: string | Uint8Array): void {
 /** HMAC-SHA256 of `data` under `key`, lowercase hex. Throws on a key under 32 bytes. */
 export function hmacHex(key: string | Uint8Array, data: string): string {
   assertStrongKey(key);
+
   return createHmac('sha256', key).update(data, 'utf8').digest('hex');
 }
 
@@ -47,5 +48,6 @@ export function hashToken(token: string): string {
 export function constantTimeEqual(a: string, b: string): boolean {
   const da = createHash('sha256').update(a, 'utf8').digest();
   const db = createHash('sha256').update(b, 'utf8').digest();
+
   return timingSafeEqual(da, db);
 }

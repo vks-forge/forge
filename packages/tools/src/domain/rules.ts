@@ -50,9 +50,15 @@ function matches(
   mode: MatchMode,
   ignoreCase: boolean,
 ): boolean {
-  if (mode === 'shell') return commandMatch(pattern, text, ignoreCase);
+  if (mode === 'shell') {
+    return commandMatch(pattern, text, ignoreCase);
+  }
+
   // Both sides are case-folded: the Windows filesystem ignores case (see shared/path.ts).
-  if (mode === 'path') return globMatch(pattern.toLowerCase(), text.toLowerCase());
+  if (mode === 'path') {
+    return globMatch(pattern.toLowerCase(), text.toLowerCase());
+  }
+
   return toolMatch(pattern, text);
 }
 
@@ -66,11 +72,16 @@ function pick(
 ): { rule: CallRule; index: number } | null {
   let best: { rule: CallRule; index: number; len: number } | null = null;
   for (const [index, rule] of rules.entries()) {
-    if (rule.action !== action || !matches(rule.resource, resource, mode, ignoreCase))
+    if (rule.action !== action || !matches(rule.resource, resource, mode, ignoreCase)) {
       continue;
+    }
+
     const len = mode === 'shell' ? literalPrefixLength(rule.resource) : 0;
-    if (best === null || len >= best.len) best = { rule, index, len };
+    if (best === null || len >= best.len) {
+      best = { rule, index, len };
+    }
   }
+
   return best;
 }
 
@@ -95,8 +106,10 @@ function evaluate(
     mode,
     ignoreCase,
   );
-  if (denyHit)
+
+  if (denyHit) {
     return { effect: 'deny', reason: 'managed_deny', rule: idOf('managed', denyHit) };
+  }
 
   let out: RuleOutcome | null = null;
   for (const [i, layer] of grant.ruleLayers.entries()) {
@@ -109,6 +122,7 @@ function evaluate(
       out = worse(out, { effect: 'ask', reason: 'no_matching_rule', rule: null });
     }
   }
+
   return out ?? { effect: 'ask', reason: 'no_matching_rule', rule: null };
 }
 
@@ -128,9 +142,12 @@ export function evaluateToolRules(
   if (
     isPath &&
     (typeof resource !== 'string' || resource.trim() === '' || hasControl(resource))
-  )
+  ) {
     return INVALID;
+  }
+
   const res = isPath ? normalizePath(resource, cwd) : resource;
+
   return evaluate(grant, action, res, isPath ? 'path' : 'plain', false);
 }
 
@@ -157,13 +174,19 @@ function evaluateArgv(
         wildcardHitsFloor(p) ? FLOOR_GLOB : evaluateToolRules(grant, 'read', p, cwd),
       );
     }
-    for (const p of argvWrites(cmd, rest))
+
+    for (const p of argvWrites(cmd, rest)) {
       out = worse(out, evaluateToolRules(grant, 'write', p, cwd));
+    }
+
     for (const nested of nestedScripts(cmd, rest)) {
       const inner = evaluateNested(grant, nested, cwd, depth + 1);
-      if (inner !== null) out = worse(out, inner);
+      if (inner !== null) {
+        out = worse(out, inner);
+      }
     }
   }
+
   return out;
 }
 
@@ -176,18 +199,25 @@ function evaluateNested(
 ): RuleOutcome | null {
   const tokens =
     nested.dialect === null ? null : tokenizeShell(nested.text, nested.dialect);
+
   if (tokens === null || !tokens.ok) {
     const hit = looseFloorHit(nested.text);
+
     return hit === null ? null : { effect: 'deny', reason: 'managed_deny', rule: hit };
   }
+
   if (depth > MAX_NESTING) {
     return { effect: 'deny', reason: 'managed_deny', rule: 'floor:argv:nesting' };
   }
+
   let out: RuleOutcome | null = null;
   for (const seg of tokens.value) {
     const r = evaluateSegment(grant, seg, nested.dialect as ShellDialect, cwd, depth);
-    if (r.effect === 'deny' && r.reason === 'managed_deny') out = worse(out, r);
+    if (r.effect === 'deny' && r.reason === 'managed_deny') {
+      out = worse(out, r);
+    }
   }
+
   return out;
 }
 
@@ -200,22 +230,36 @@ function evaluateSegment(
 ): RuleOutcome {
   const ic = dialect === 'powershell';
   const floor = floorViolation(seg, cwd);
-  if (floor !== null) return { effect: 'deny', reason: 'managed_deny', rule: floor };
+  if (floor !== null) {
+    return { effect: 'deny', reason: 'managed_deny', rule: floor };
+  }
+
   let out = evaluate(grant, 'shell', seg.text, 'shell', ic);
   if (seg.baseText !== seg.text) {
     // A path-qualified or `.exe` spelling must not dodge a deny or ask; it can never gain an allow.
     const alt = evaluate(grant, 'shell', seg.baseText, 'shell', ic);
-    if (alt.rule !== null && alt.effect !== 'allow') out = worse(out, alt);
+    if (alt.rule !== null && alt.effect !== 'allow') {
+      out = worse(out, alt);
+    }
   }
+
   for (const rd of seg.redirects) {
-    if (NULL_DEVICES.has(rd.target.toLowerCase())) continue;
+    if (NULL_DEVICES.has(rd.target.toLowerCase())) {
+      continue;
+    }
+
     out = worse(out, evaluateToolRules(grant, rd.mode, rd.target, cwd));
   }
+
   const argv = evaluateArgv(grant, seg, cwd, depth);
-  if (argv !== null) out = worse(out, argv);
+  if (argv !== null) {
+    out = worse(out, argv);
+  }
+
   if (seg.flags.length > 0) {
     out = worse(out, { effect: 'ask', reason: 'risky_shell_construct', rule: null });
   }
+
   return out;
 }
 
@@ -227,6 +271,9 @@ export function evaluateShell(
   cwd?: string,
 ): RuleOutcome {
   let out: RuleOutcome | null = null;
-  for (const seg of segments) out = worse(out, evaluateSegment(grant, seg, dialect, cwd));
+  for (const seg of segments) {
+    out = worse(out, evaluateSegment(grant, seg, dialect, cwd));
+  }
+
   return out ?? { effect: 'deny', reason: 'untokenizable', rule: null };
 }

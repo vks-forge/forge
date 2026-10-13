@@ -44,6 +44,7 @@ describe('loadCatalogue', () => {
       signature: signCatalogue(ENTRIES, KEY),
       entries: reordered,
     });
+
     expect(loadCatalogue(text, KEY).status).toBe('verified');
   });
 
@@ -109,9 +110,11 @@ describe('loadCatalogue key policy', () => {
       status: 'quarantined',
       reason: 'bad_key',
     });
+
     expect(loadCatalogue(text, DEV_CATALOGUE_KEY, { allowDevKey: false }).status).toBe(
       'quarantined',
     );
+
     expect(loadCatalogue(text, DEV_CATALOGUE_KEY, { allowDevKey: true }).status).toBe(
       'verified',
     );
@@ -130,6 +133,7 @@ describe('loadCatalogue never throws', () => {
   const doc = (entries: string): string => `entries: ${entries}\nsignature: abc\n`;
   const level = (name: string, prev: string): string =>
     `${name}: &${name} [${Array.from({ length: 10 }, () => `*${prev}`).join(', ')}]\n`;
+
   const bomb =
     'a: &a [x, x, x, x, x, x, x, x, x, x]\n' +
     level('b', 'a') +
@@ -156,14 +160,20 @@ describe('schemaMatches', () => {
   const def = state.status === 'verified' ? state.tools.get('read') : undefined;
 
   it('accepts the catalogue hash and rejects a changed or missing one', () => {
-    if (!def) throw new Error('fixture');
+    if (!def) {
+      throw new Error('fixture');
+    }
+
     expect(schemaMatches(def, liveHashes())).toBe(true);
     expect(schemaMatches(def, { read: `sha256:${'0'.repeat(64)}` })).toBe(false);
     expect(schemaMatches(def, {})).toBe(false);
   });
 
   it('does not read inherited object properties', () => {
-    if (!def) throw new Error('fixture');
+    if (!def) {
+      throw new Error('fixture');
+    }
+
     expect(schemaMatches({ ...def, id: 'toString' }, {})).toBe(false);
   });
 });

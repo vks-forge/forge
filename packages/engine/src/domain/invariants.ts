@@ -25,6 +25,7 @@ export function findViolations(input: InvariantInput): Violation[] {
     if (t.status === 'in_progress') {
       const run =
         t.assignee_run_id === undefined ? undefined : input.runs.get(t.assignee_run_id);
+
       const live = run !== undefined && isRunActive(run);
       if (
         !live &&
@@ -42,6 +43,7 @@ export function findViolations(input: InvariantInput): Violation[] {
         input.pendingInteractionTickets.has(t.id) ||
         input.wakeTickets.has(t.id) ||
         (t.blocked_reason !== undefined && t.blocked_reason !== '');
+
       if (!explained) {
         out.push({
           ticketId: t.id,
@@ -51,5 +53,6 @@ export function findViolations(input: InvariantInput): Violation[] {
       }
     }
   }
+
   return out;
 }

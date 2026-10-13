@@ -161,6 +161,7 @@ describe('ordinary paths inside the worktree still work', () => {
 describe('admit() applies the floors through every input field', () => {
   const field = (action: string): string =>
     action === 'grep' || action === 'glob' ? 'path' : 'file_path';
+
   const tool = (action: string): string => action;
 
   it.each(
@@ -231,6 +232,7 @@ describe('a path tool without a usable string resource is never admitted', () =>
       fc.array(fc.string(), { maxLength: 2 }),
       fc.object({ maxDepth: 1 }),
     );
+
     const shape = fc.record(
       {
         file_path: value,
@@ -241,17 +243,23 @@ describe('a path tool without a usable string resource is never admitted', () =>
       },
       { requiredKeys: [] },
     );
+
     for (const lane of LANES) {
       const ctx = makeCtx(lane);
       fc.assert(
         fc.property(fc.constantFrom(...tools), shape, (name, input) => {
           const d = admit(ctx, call(name, input));
-          if (d.decision !== 'allow') return true;
+          if (d.decision !== 'allow') {
+            return true;
+          }
+
           const present = resourceKeys.filter(
             (k) => input[k] !== undefined && input[k] !== null,
           );
+
           const strings = present.filter((k) => typeof input[k] === 'string');
           const usable = strings.some((k) => (input[k] as string).trim() !== '');
+
           return strings.length === present.length && usable;
         }),
         { numRuns: 400 },

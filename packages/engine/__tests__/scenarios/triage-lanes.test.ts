@@ -47,6 +47,7 @@ describe('non-Express lanes are parked in M0', () => {
       expect(report.parked).toEqual([
         { ticketId: id, reason: expect.stringContaining('lane not enabled in M0') },
       ]);
+
       const t = await rig.ticket(id);
       expect(t).toMatchObject({ status: 'waiting_human', lane });
       expect(t.blocked_reason).toContain('lane not enabled in M0');
@@ -133,9 +134,11 @@ describe('invalid step output', () => {
     expect(first.rejectedSteps).toEqual([
       { step: 'triage', ticketId: id, reason: expect.stringContaining('invalid_output') },
     ]);
+
     expect(
       rig.logs.some((l) => l.level === 'warn' && l.message.includes('triage rejected')),
     ).toBe(true);
+
     expect(await rig.ticket(id)).toEqual(before);
 
     await rig.tick();
@@ -153,6 +156,7 @@ describe('invalid step output', () => {
       'triage',
       fail({ kind: 'rate_limit', message: '429', retryNotBefore: reset }),
     );
+
     await rig.request('Fix it');
 
     const first = await rig.tick();
@@ -178,6 +182,7 @@ describe('invalid step output', () => {
     expect(report.rejectedSteps).toEqual([
       expect.objectContaining({ step: 'dispatch_prompt' }),
     ]);
+
     expect((await rig.ticket(id)).status).toBe('planned');
     expect(rig.driver.starts).toEqual([]);
     expect(await rig.storage.transaction((tx) => tx.runs.get('run-1'))).toBeNull();

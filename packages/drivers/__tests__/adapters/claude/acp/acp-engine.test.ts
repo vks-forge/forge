@@ -37,8 +37,10 @@ describe('ACP engine: process and environment (rule 1)', () => {
     expect(env['HOME_MARKER']).toBe('kept');
     expect(env['FORGE_TICKET']).toBe('FG-1');
     expect(env['FORGE_RUN_ID']).toBe('run-1');
-    for (const k of ['CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'FORGE_HOOK_CONFIG'])
+    for (const k of ['CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'FORGE_HOOK_CONFIG']) {
       expect(env).not.toHaveProperty(k);
+    }
+
     expect(env).not.toHaveProperty('CLAUDE_CODE_EXECUTABLE');
   });
 });
@@ -108,14 +110,17 @@ describe('ACP engine: session options and mode (rules 3 and 4)', () => {
         },
       },
     });
+
     const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
     expect(settings.hooks.PreToolUse[0].hooks[0]).toMatchObject({
       onFailure: 'block',
       type: 'command',
     });
+
     const hook = JSON.parse(
       readFileSync(join(rig.runsRoot, 'run-1', 'hook.json'), 'utf8'),
     );
+
     expect(hook).toMatchObject({
       run_id: 'run-1',
       token: 'bearer-token',

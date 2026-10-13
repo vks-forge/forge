@@ -43,6 +43,7 @@ describe('probe 7: Claude DirectorLLM on the real CLI', () => {
         spawn: (cmd, args, opts) => {
           const child = nodeSpawn(cmd, args, opts);
           child.stdout.on('data', (d: Buffer) => appendFileSync(rawPath, d));
+
           return child;
         },
         clock: systemClock,
@@ -50,6 +51,7 @@ describe('probe 7: Claude DirectorLLM on the real CLI', () => {
         cwd: freshTempCwd(),
         timeoutMs: 120_000,
       });
+
       const Answer = z.object({ answer: z.literal('ok') });
       const result = await llm.step(
         'dispatch_prompt',
@@ -57,6 +59,7 @@ describe('probe 7: Claude DirectorLLM on the real CLI', () => {
         Answer,
         { model: PROBE_MODEL, budgetUsd: 0.05 },
       );
+
       writeFileSync(join(out, 'result.json'), JSON.stringify(result, null, 2));
       expect(result).toEqual({ ok: true, value: { answer: 'ok' } });
     },
