@@ -45,6 +45,14 @@ function wakeDelta(c: Candidate, answered: Interaction | null): Record<string, u
     };
   }
 
+  if (c.wake?.kind === 'continuation') {
+    return {
+      kind: 'rework',
+      previous_run: c.wake.idempotency_key,
+      gate_findings: c.wake.reason.replace(/^gate_failed: /, ''),
+    };
+  }
+
   return {
     kind: 'retry',
     reason: c.wake?.reason ?? 'retry',

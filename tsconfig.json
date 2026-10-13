@@ -13,6 +13,8 @@
     { "path": "./packages/drivers/tsconfig.test.json" },
     { "path": "./packages/engine" },
     { "path": "./packages/engine/tsconfig.test.json" },
+    { "path": "./packages/gates" },
+    { "path": "./packages/gates/tsconfig.test.json" },
     { "path": "./packages/git" },
     { "path": "./packages/git/tsconfig.test.json" },
     { "path": "./packages/hooks" },

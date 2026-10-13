@@ -1,42 +1,60 @@
 # @forge/gates
 
-The verification plane: independent checks (G1 to G6, blast radius) that decide whether a Worker's ticket may move forward. Not implemented yet; this package has only a `package.json`.
+The verification plane: independent gates that decide whether a Worker's ticket may move forward. G1 (claims, receipts, test integrity, project checks) is implemented; G2 to G6 and blast radius are not.
 
 ## Why it exists
 
-Agents overclaim. A Worker's own summary ("I ran the tests, I read every file") is untrusted, and a single LLM reviewer catches only a minority of human-flagged issues. The Director therefore needs checks that run outside the Worker's process and read only artifacts the Worker cannot forge: the git diff, HMAC-signed tool receipts, frozen tests and a compiled rule set. Without them a ticket could reach Review on a false claim, a deleted test or a weakened assertion. Gates are the independent half of the governing rule: Workers self-report, separate processes verify (d-0001). Design: `docs/design/verification-plane.md`.
+Agents overclaim. A Worker's own summary ("I ran the tests, I edited X") is untrusted, and the Worker can also make a suite green by weakening it. The Director therefore needs checks that run outside the Worker's process and read only evidence the Worker cannot forge: the git diff, HMAC-chained tool receipts written by the hook, and the project's own commands re-run by the server. Without them a ticket reaches Review on a false claim, a deleted test or a loosened assertion. Gates are the independent half of the governing rule: Workers self-report, separate processes verify (d-0001). Design: `docs/design/verification-plane.md` §2.
 
 ## What it does
 
-Intended role, from the design (none of it exists yet):
+Public API (`src/index.ts`):
 
-- G1 compares the Worker's typed claims (`ran_tests`, `edited <path>`, `added_test`, `read <path>`) with tool receipts and `git diff --name-status`, runs lint and types, and applies a deterministic test-diff gate (removed tests, `.skip` / `.only`, weakened matchers, edits to frozen tests). It also checks red-before-green order for major work (d-0015).
-- G2 compiled ADR rules, SAST/SCA and a migration check; G3 frozen hidden intent tests; G4 adversarial critic and mutation testing; G5 execution arbiter; G6 residual judge. Blast radius (BR) maps a diff to a ledger tier.
-- Lane selects the chain: Express runs G1 and G3, Standard G1 to G4, Full all. First failure returns the ticket to InProgress with the report attached.
-- Under `profile: generic` (d-0034), TS-bound checks report `skipped` with a reason, never `pass`.
-- Verdicts are stored in `gate_results` (table already created in `@forge/db`).
+- `createG1Gate(deps: G1Deps): Gate` returns a core `Gate` named `G1`.
+- `runShellCommand(req)` is the default command runner (`G1Deps.runCommand` seam).
+- Types: `G1Deps`, `ToolCallRef`, `CommandRequest`, `CommandResult`, `RunCommand`.
 
-Public API: none yet.
+`G1Deps`: `receipts: ReceiptLog`, `worktrees: Pick<WorktreeManager,'diff'>`, `listToolCalls(runId)`, `runSecret(runId): HmacKey | null`, `env`, and optional `runCommand`, `commandTimeoutMs` (default 10 min), `ignoreToolCall`, `now`.
+
+G1 runs five checks and folds them into one `GateVerdict` (`failed` if any finding, else `error` if a check could not run, else `passed`; `report` is markdown, one section per check):
+
+1. **chain**: `verifyChain` over the run's receipts under the run secret; every tool-call run event must have a decision receipt whose `id` equals the event's `call_id` (hook `tool_use_id` equals ACP `toolCallId`, d-0057). No secret, or a key too weak to verify with, is `error`, never `passed`.
+2. **claims**: each `finish` claim needs evidence, else a finding quoting it.
+   - `edited P`: allowed `edit`/`write` decision with a `mutation_committed` effect on P, and P is in the diff.
+   - `read P`: allowed `read` decision with a `read_completed` effect on P.
+   - `ran_tests`: allowed `shell` decision (effect `mutation_committed`, or `uncertain` for a run that failed) whose recorded resource contains `commands.test`. Match rule: split the resource on `;` (the policy's segment joiner), lower-case and collapse whitespace on both sides, substring match. No configured test command means the claim is unsupported.
+   - `added_test N`: N appears on an added line of a test file in the diff.
+   - Paths are folded (slashes, case, `./`, worktree prefix) before comparison.
+3. **test-diff**: deleted test files, test files renamed to non-test paths, added `.skip`/`.only`/`.todo`/`xit(`/`xdescribe(`/`fit(`, more removed assertion lines (`expect(`, `assert`) than added, and `expect(X).strong` re-added as `expect(X).toBeDefined/toBeTruthy/...`.
+4. **gate-config**: any change to `vitest.config.*`, `jest.config.*`, `eslint.config.*`, `.eslintrc*`, `tsconfig*.json`, `.prettierrc*`, or to a `package.json` script (or its `pre`/`post` hook) named by a project command.
+5. **project-checks**: `commands.lint`, `typecheck`, `test` in the worktree, each with a timeout, env minus `FORGE_*`, last 4 KB of output in the report. Every defined command runs even after a failure. Under `profile: generic` `typecheck` is reported `skipped` with its reason (d-0034).
 
 ## Why this approach
 
-- Gates run as separate processes over unforgeable evidence, because Worker self-reports are untrusted. LLM gates (G4, G6) are bug-finders that feed deterministic gates, never final approvers.
-- Each gate is cheaper than the next and the chain stops at the first failure.
-- Dependencies: none yet. The design proposes adopting dependency-cruiser, ast-grep, Semgrep CE, StrykerJS, Inspect AI and promptfoo and building G1 and BR; these are proposals, not pinned.
-- Decisions: d-0001 (independent gates), d-0006 (lanes), d-0015 (TDD order), d-0034 (profiles).
+- Evidence over assertion: claims are matched to HMAC-chained receipts and git's own diff; nothing the Worker writes is trusted.
+- Every side effect is injected (receipt log, secret, spawner, clock, env), so the gate is tested with in-memory fakes and real receipts built by `@forge/tools`.
+- Project commands are repo-owner config strings from `.forge/project.yaml`, often with pipes or `&&`, so they run through the platform shell (`shell: true`). They are never Worker input. On timeout the whole tree is killed (`taskkill /T /F` on Windows, process group elsewhere).
+- Heuristics are deterministic and simple on purpose; a cleverer gate that sometimes guesses is worse than one that explains each finding.
+- Rejected: pushing logic into the engine (it must stay IO-free, d-0058). Decisions: d-0001, d-0015, d-0033, d-0034, d-0052.
 
 ## Requirements
 
-- No TypeScript exists yet, so there is no `tsconfig.json` and the root `tsconfig.json` has no reference to this package. The first source file must add `tsconfig.json` and `tsconfig.test.json` (copy `packages/tools`) and add both to the root `references`; the root `vitest.config.ts` coverage include and threshold need an entry too.
-- Node 24.20 and pnpm. Nothing else is required today: no source, no tests, no env vars.
-- Intended inputs: `tool_decisions` / `tool_effects` receipts and the run secret held by the dispatcher (see `@forge/tools`), and the project's `commands` in `project.yaml`.
-- Build and test follow the root scripts (`pnpm build`, `pnpm test`) once source exists.
+- Node 24; layer rule: imports `@forge/core` and `@forge/tools` only (d-0052).
+- `G1Deps.runSecret` must return the per-run receipt secret the server holds in memory (d-0054).
+- `ProjectConfig.commands` from `.forge/project.yaml`.
+- Tests: `npx vitest run packages/gates`. `command-runner.test.ts` spawns real `node` processes.
+- Coverage floor 80% lines (root `vitest.config.ts`).
 
 ## Extending
 
-Follow the standard package skeleton: `src/index.ts`, `src/schemas/`, `src/types/`, `src/domain/` (pure gate logic), `src/adapters/` (one folder per external tool), `__tests__/` mirroring `src/`, headers on every file. One interface for a gate, many implementations, with a contract test run against each.
+A new gate is a new `create<Gx>Gate(deps): Gate` in `src/domain/` over injected ports; reuse `CheckOutcome` and `renderReport`. A new G1 check is a function returning `CheckOutcome`, added to the list in `domain/g1-gate.ts`. A different process runner implements `RunCommand`.
 
 ## Limits
 
-- Not implemented yet: no source, no gates, no exported API, no tests.
-- `none yet` for dependencies, env vars and configuration.
+- Heuristics: the removed-assertion count is per file and ignores moves between files; matcher weakening only sees `expect(X).matcher` on the same subject text; `assert` counts any line containing the word. A cleverly rewritten weakening passes.
+- `package.json` scripts are matched by key on changed lines, not by parsing the `scripts` object, so a same-named key elsewhere also trips it. Only scripts invoked as `npm|pnpm|yarn|bun [run] <name>` are known; a direct `vitest run` command has no script to guard.
+- Truncating the tail of the chain is not detectable from the chain alone (the run record's final hash covers that, not G1).
+- Receipt resources are lower-cased and the shell resource is cut at 200 characters by policy, so a test command longer than that cannot match.
+- Forge's own MCP tools are expected to carry hook receipts; if a harness does not hook them, pass `ignoreToolCall`.
+- Path comparison is case-insensitive (Windows); two files differing only by case are not told apart.
+- G2 to G6 and blast radius: none yet. Red-before-green order (d-0015) is not checked.

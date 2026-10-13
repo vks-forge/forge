@@ -26,6 +26,8 @@ export interface TicketFields {
   worktree?: string | undefined;
   assignee_run_id?: string | undefined;
   blocked_reason?: string | undefined;
+  pr_number?: number | undefined;
+  pr_url?: string | undefined;
 }
 
 /** What to do to one ticket: events through `transition()` in order, then plain fields. */

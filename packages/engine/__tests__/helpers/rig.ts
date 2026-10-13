@@ -18,10 +18,12 @@ import { createMemoryStorage } from '@forge/db';
 import type { StorageAdapter } from '@forge/core';
 import { createEngine } from '#/tick/engine.js';
 import type { Engine, EngineDeps, Logger, TickReport } from '#/types/engine.types.js';
+import type { ProjectRuntime } from '#/types/verify.types.js';
 import {
   createFakeClock,
   createFakeMemory,
   createFakeReceipts,
+  createFakeReports,
   createFakeWorktrees,
   createIds,
 } from '#tests/helpers/fakes.js';
@@ -64,6 +66,9 @@ export interface Rig {
   readonly worktrees: ReturnType<typeof createFakeWorktrees>;
   readonly memory: ReturnType<typeof createFakeMemory>;
   readonly receipts: ReturnType<typeof createFakeReceipts>;
+  readonly reports: ReturnType<typeof createFakeReports>;
+  /** What `deps.project` resolves for every slug; null (the default) leaves tickets in Verifying. */
+  readonly runtime: { current: ProjectRuntime | null };
   readonly clock: ReturnType<typeof createFakeClock>;
   readonly deps: EngineDeps;
   readonly engine: Engine;
@@ -107,6 +112,8 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
   const worktrees = createFakeWorktrees();
   const memory = createFakeMemory();
   const receipts = createFakeReceipts();
+  const reports = createFakeReports();
+  const runtime: { current: ProjectRuntime | null } = { current: null };
   const clock = createFakeClock();
   const ids = createIds();
   const logs: { level: string; message: string }[] = [];
@@ -119,6 +126,8 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
     worktrees,
     memory,
     receipts,
+    reports,
+    project: () => runtime.current,
     clock,
     config: makeConfig(opts.engine ? { engine: opts.engine } : {}),
     ids,
@@ -143,6 +152,8 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
     worktrees,
     memory,
     receipts,
+    reports,
+    runtime,
     clock,
     deps,
     engine,

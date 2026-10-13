@@ -4,7 +4,8 @@
  * Why: the Director's guarantee is that no ticket is silently lost and no run is started
  *   twice. That rests on a single place where the sequence is decided. Each tick runs
  *   reconcile (restart, stalls, finished runs, expired questions), refresh (triage new
- *   tickets, deliver steering replies), then dispatch (start what is ready), and ends with
+ *   tickets, deliver steering replies), verify (publish, gate and merge finished work),
+ *   then dispatch (start what is ready), and ends with
  *   the invariant sweep. Ticks are single-flight, and the engine owns no timers: the app
  *   calls `tick()` on its clock and whenever the engine asks through `onTickRequested`
  *   (an intake event, a run event, a settled run), so the same code runs under a real
@@ -29,6 +30,7 @@ import { deliverReplies } from '#/tick/steering.js';
 import { beginTick, endTick, requestTick } from '#/tick/tick-requests.js';
 import { moveTicket } from '#/tick/ticket-moves.js';
 import { triageInbox } from '#/tick/triage.js';
+import { verifyReady } from '#/tick/verify.js';
 import { checkInvariants } from '#/tick/violations.js';
 import type { EngineCtx, EngineState } from '#/types/engine-state.types.js';
 import type { Engine, EngineDeps, TickReport } from '#/types/engine.types.js';
@@ -42,6 +44,7 @@ function emptyReport(nowIso: string, firstTick: boolean): TickReport {
     triaged: [],
     dispatched: [],
     steered: [],
+    verified: [],
     parked: [],
     violations: [],
     rejectedSteps: [],
@@ -85,6 +88,7 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
   await phase(ctx, 'expire interactions', expireInteractions);
   await phase(ctx, 'deliver replies', deliverReplies);
   await phase(ctx, 'triage', triageInbox);
+  await phase(ctx, 'verify', verifyReady);
   await phase(ctx, 'dispatch', dispatchReady);
   await phase(ctx, 'invariants', checkInvariants);
 

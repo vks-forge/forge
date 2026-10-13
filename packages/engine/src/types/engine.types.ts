@@ -21,6 +21,7 @@ import type {
   ForgeConfig,
   IntakeEvent,
   MemorySource,
+  ReportStore,
   RunStatus,
   StepName,
   StorageAdapter,
@@ -28,6 +29,7 @@ import type {
   WorktreeManager,
 } from '@forge/core';
 import type { ReceiptLog } from '@forge/tools';
+import type { ProjectRuntime, VerifiedTicket } from '#/types/verify.types.js';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export type Logger = (
@@ -52,6 +54,10 @@ export interface EngineDeps {
   readonly worktrees: WorktreeManager;
   readonly memory: MemorySource;
   readonly receipts: ReceiptLog;
+  /** Where gate reports are saved; the returned reference goes on the `gate_results` row. */
+  readonly reports: ReportStore;
+  /** The git host, gates and config for a project slug; null when the project has none (its tickets are left in Verifying). */
+  readonly project: (slug: string) => ProjectRuntime | null;
   readonly clock: Clock;
   readonly config: ForgeConfig;
   readonly ids: IdSource;
@@ -115,6 +121,7 @@ export interface TickReport {
     kind: 'new' | 'retry' | 'resume';
   }[];
   readonly steered: { ticketId: string; runId: string; mode: string }[];
+  readonly verified: VerifiedTicket[];
   readonly parked: { ticketId: string; reason: string }[];
   readonly violations: Violation[];
   readonly rejectedSteps: RejectedStep[];

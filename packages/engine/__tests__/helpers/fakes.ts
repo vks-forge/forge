@@ -8,11 +8,18 @@
  *   behaviour under test and not as plumbing.
  *
  * Exports: FakeWorktrees, createFakeWorktrees(), createFakeMemory(), createFakeReceipts(),
+ *   FakeReports, createFakeReports(),
  *   FakeClock, createFakeClock(), createIds().
  * Depends on: @forge/core, @forge/tools (types). No IO.
  */
 
-import type { Clock, MemorySource, TicketId, WorktreeManager } from '@forge/core';
+import type {
+  Clock,
+  MemorySource,
+  ReportStore,
+  TicketId,
+  WorktreeManager,
+} from '@forge/core';
 import type { Receipt, ReceiptLog } from '@forge/tools';
 import type { IdSource } from '#/types/engine.types.js';
 
@@ -128,5 +135,22 @@ export function createIds(): IdSource {
     wakeId: () => `wake-${++n.wake}`,
     interactionId: () => `int-${++n.interaction}`,
     token: () => `token-${++n.token}-${'x'.repeat(40)}`,
+  };
+}
+
+export interface FakeReports extends ReportStore {
+  readonly saved: { runId: string; name: string; text: string }[];
+}
+
+export function createFakeReports(): FakeReports {
+  const saved: FakeReports['saved'] = [];
+
+  return {
+    saved,
+    async put(runId, name, text) {
+      saved.push({ runId, name, text });
+
+      return `mem://${runId}/${name}`;
+    },
   };
 }

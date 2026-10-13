@@ -53,7 +53,9 @@ async function classify(
     ? await tx.runs.get(ticket.assignee_run_id)
     : null;
 
-  if (assigned?.status === 'success') {
+  // A continuation wake is the rework request after a failed gate: the run it follows
+  // did report done, which is exactly why the Worker is being sent back.
+  if (assigned?.status === 'success' && w.kind !== 'continuation') {
     return drop('its run already reported done');
   }
 
@@ -62,7 +64,7 @@ async function classify(
   }
 
   if (
-    w.kind === 'retry' &&
+    (w.kind === 'retry' || w.kind === 'continuation') &&
     (ticket.status === 'planned' || ticket.status === 'in_progress')
   ) {
     return { ticket, kind: 'retry', wake: w };

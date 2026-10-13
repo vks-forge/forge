@@ -46,6 +46,7 @@ export type * from '#/types/ports/driver.types.js';
 export type * from '#/types/ports/gate.types.js';
 export type * from '#/types/ports/git-host.types.js';
 export type * from '#/types/ports/memory-source.types.js';
+export type * from '#/types/ports/report-store.types.js';
 export type * from '#/types/ports/secret-store.types.js';
 export type * from '#/types/ports/storage.types.js';
 export type * from '#/types/ports/worktree.types.js';

@@ -300,7 +300,18 @@ importers:
         specifier: 26.6.5
         version: 26.6.5
 
-  packages/gates: {}
+  packages/gates:
+    dependencies:
+      '@forge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@forge/tools':
+        specifier: workspace:*
+        version: link:../tools
+    devDependencies:
+      '@types/node':
+        specifier: 26.6.5
+        version: 26.6.5
 
   packages/git:
     dependencies:

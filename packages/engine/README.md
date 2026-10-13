@@ -21,7 +21,7 @@ git worktrees, project memory and the receipt chain, all through ports.
 Public API from `src/index.ts`:
 
 - `createEngine(deps)` returns an `Engine`:
-  - `tick()`: reconcile, refresh, dispatch, then the invariant sweep; single-flight (a call during
+  - `tick()`: reconcile, refresh, verify, dispatch, then the invariant sweep; single-flight (a call during
     a tick returns that tick's `TickReport`). The engine has no timers; the app calls `tick()` every
     `engine.tick_interval_ms` (30 s) and whenever `deps.onTickRequested` fires.
   - `requestTick()`: coalesced "tick soon" request; also made by intake, every run event and every
@@ -36,8 +36,22 @@ Public API from `src/index.ts`:
   tokens revoked, retry wake queued, d-0054); settle finished runs; cancel runs silent for
   `stall_ms` and settle them as `stall`; expire overdue questions (ticket to `blocked`); deliver
   steering replies (`steer_reply` step, then `run_inbox`, then `driver.steer`); triage `inbox`
-  tickets (pre-check, `triage` step, lane rule); dispatch ready tickets (worktree, `dispatch_prompt`
+  tickets (pre-check, `triage` step, lane rule); verify finished work (below); dispatch ready tickets (worktree, `dispatch_prompt`
   step, run row and token hash, `driver.start`, ticket `in_progress`).
+- Verify phase (`tick/verify*.ts`, up to `max_concurrent_by_state.verifying` tickets per tick), for a
+  `verifying` ticket whose current run succeeded and whose project `deps.project(slug)` resolves:
+  `commitAll` (Forge author), `GitHost.push`, `openPr` once (the number is stored on the ticket by CAS
+  before any gate runs), then every gate of the project's `ProjectRuntime` with a `GateContext`
+  (claims come from the run's `finish` run event). Each report goes through `deps.reports.put`, each
+  verdict is a `gate_results` row. All `passed`/`skipped`: `gate_passed` with `tier_actual` (C when
+  the diff touches the project's `tier_c_globs`, else the predicted tier), tier A then `prStatus`,
+  `merge(squash)`, `merged` (which makes the ticket `done`), worktree removed and branch deleted
+  (failures logged only); tier B/C stop in `review` / `needs_signoff`. Any `failed`: `gate_failed`
+  (rework run with `retry_of`, the findings carried by a `continuation` wake into the
+  `dispatch_prompt` input as `wake.gate_findings`), and at the rework cap the ticket parks naming the
+  gate. A gate that cannot run or a git host fault is classified by `ForgeError` family: transient
+  ones retry after the failure-policy backoff (counted by the hourly re-wake cap), the rest park.
+  `TickReport.verified` lists each outcome.
 - Pure rules, also exported: `decideLane`, `decideFailure`, `findViolations`, `nextTicketNumber`,
   `requestWake`.
 - Run settle records status, usage, cost, error family, the files git says changed, the receipt
@@ -64,6 +78,11 @@ Public API from `src/index.ts`:
 - Director steps (`triage`, `dispatch_prompt`, `steer_reply`) use the model matrix and
   `step_budget_usd`; off-schema output is retried once with `previous_error`, then rejected (logged,
   held off one tick interval, no state written).
+- One merge door (code.md rule 6): `tick/verify-merge.ts` is the only caller of `GitHost.merge`, and
+  only for a ticket in `verifying` with `tier_actual = A` (set only by `gate_passed`) and an open PR.
+  Verify is resumable from stored facts (PR number, `gate_results`, `tier_actual`, `prStatus`).
+  Parking from `verifying` has no legal event, so it goes through `gate_failed` (+ `parked`): the
+  state machine stays the only door.
 - Alternatives rejected: engine in `apps/server` (breaks "apps compose only"); timers inside the
   engine (the app owns the clock, so tests move a fake one).
 
@@ -71,7 +90,8 @@ Public API from `src/index.ts`:
 
 - Node 24, pnpm. Runtime deps: `@forge/core`, `@forge/tools`, `zod`.
 - `EngineDeps` (see `src/types/engine.types.ts`): storage, driver, llm, worktrees, memory, receipts,
-  clock, `config` (a parsed `ForgeConfig`, from `.forge/config/forge.yaml`), `ids`, `owner`
+  `reports` (a `ReportStore`), `project(slug)` (a `ProjectRuntime`: config, `GitHost`, gates; null = the
+  project's tickets stay in Verifying), clock, `config` (a parsed `ForgeConfig`, from `.forge/config/forge.yaml`), `ids`, `owner`
   (this server's name), `baseRef`, `catalogueHash`, optional `mcpIdentity`, `onTickRequested`, `log`.
 - No env, files or processes are touched here. Tests: `pnpm test` (scenarios in
   `__tests__/scenarios`, pure rules in `__tests__/domain`, the status-write property in
@@ -95,7 +115,11 @@ Public API from `src/index.ts`:
 - Ticket numbers come from listing every ticket id of the project (no counter); fine at M0 scale.
 - Failure attempts count failed runs of the same family for the ticket, with no decay.
 - `driver_version` on run rows is the constant `unversioned` until the driver exposes it cheaply.
-- Not in E1: `apps/server` (HTTP, SSE, clock), the G1 claim matcher, GitHost push/PR/merge, in-run
+- Parking a verify fault burns one automatic rework (`gate_failed` increments `rework_count`), and a
+  human release restarts the Worker (`unparked` goes to `planned`); a dedicated Verifying-to-WaitingHuman
+  event in `core` would fix both. Verify retry backoff is a process-local hold (a restart retries at
+  once, the re-wake cap still counts). A PR opened but not stored (a crash in between) is not found
+  again. Gate findings reach the rework prompt through the wake's `reason` text (4,000 chars max).
+- Not in the engine: `apps/server` (HTTP, SSE, clock), in-run
   escalation signals, the `clarify`, `plan`, `rework_brief` and `epic_summary` steps, `command`
-  intake, `delegated`/`monitor`/`continuation` wakes (consumed and dropped), worktree removal on
-  Done (only on Cancelled).
+  intake, `delegated`/`monitor` wakes (consumed and dropped; `continuation` is the gate-failed rework).
