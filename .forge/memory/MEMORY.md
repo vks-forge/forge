@@ -37,6 +37,8 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0062 — GitHost port: local bare host + GitHub App host (DPAPI SecretStore for the App key); merge one door
+- d-0061 — apps/server HTTP on node:http (no framework), SSE hand-written, 127.0.0.1 only
 - d-0060 — M0 models: Director steps opus, Workers sonnet (all lanes); matrix in `.forge/config` yaml
 - d-0059 — Always a worktree per Worker run (`.worktrees/<id>`), main checkout never a Worker cwd (supersedes d-0011)
 - d-0058 — `@forge/engine`: tick/dispatch/settle/DirectorLLM steps over ports, inner ring beside tools (imports core+tools only); apps/server composes (amends rule 1)
