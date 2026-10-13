@@ -20,9 +20,9 @@ per-run token; the harness's own web tools stay denied so web access exists only
 
 Public API (`src/index.ts`): `createForgeMcpServer(deps)` (verifies the run token and
 that the run is `running`, returns an unconnected `McpServer`), `serveStdio(server)`,
-`createRunTokenAuthority(store)`, `createMemoryTokenStore()`, `hashToken()`,
+`verifyRunToken(storage, runId, token)`, `hashToken()`,
 `toolSchemaHash()`, `computeToolSchemaHashes()`, `DEV_CATALOGUE_KEY`, `FORGE_TOOLS`,
-`Claim`, and the port types (`RunTokenStore`, `RunTokenAuthority`, `ForgeMcpDeps`).
+`Claim`, and the dependency type `ForgeMcpDeps`.
 
 | Tool             | Risk      | What it stores or does                                                                   |
 | ---------------- | --------- | ---------------------------------------------------------------------------------------- |
@@ -55,8 +55,10 @@ process. The process that hosts it is `apps/mcp` (`forge-mcp`).
 - Signed catalogue (`.forge/tools/catalog.yaml`, d-0038): each tool's `schema_hash` is
   taken from the schema the server advertises, so a silently widened tool is
   quarantined. A test fails on drift.
-- Token hashes live behind a `RunTokenStore` port because this package may not open
-  databases (code.md rule 1) and `runs` has no token column.
+- Token hashes live in `StorageAdapter` (`tx.runTokens.getHash(runId)`, a core port), so this
+  package needs no database of its own (code.md rule 1) and no private token port. The check
+  is a constant-time compare of `sha256(token)`; a missing, revoked or unreadable hash is a
+  refusal. Only the hash is stored: the receipt HMAC secret is not known to this process.
 
 ## Requirements
 
@@ -82,11 +84,10 @@ process. The process that hosts it is `apps/mcp` (`forge-mcp`).
 
 ## Limits
 
-- `@forge/db` must add a `run_tokens(run_id, token_sha256)` table (migration) and the
-  driver must insert `hashToken(token)` before launch; `apps/mcp` fails closed
-  without it.
-- Run-event `seq` is allocated as max+1 inside a transaction; it can collide with a
-  driver that numbers events itself (the append then fails with a tool error).
+- The driver must register `hashToken(token)` with `tx.runTokens.put(...)` before launching
+  `forge-mcp`; with no (or a revoked) registration the process refuses to start.
+- Run-event `seq` is allocated by storage (`runEvents.append` takes the event without `seq`),
+  so tool events and driver events share one gap-free sequence.
 - `report_blocked` is stored as a `question` interaction because core's interaction
   kinds are closed; a `blocked` kind in core would remove the tag.
 - No blocking wait for answers, no per-project fetch allow-list source yet (env only),

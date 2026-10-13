@@ -3,12 +3,12 @@
  *
  * Why: some actions are never what a Worker should do unattended whatever a ticket says:
  *   wiping the filesystem, pushing to a remote (the dispatcher merges, d-0012), publishing
- *   a package, reading credential files, writing outside the worktree, or editing the
- *   policy files that define these very limits. They are expressed as managed deny rules
- *   so they sit in the one layer that is evaluated last and can only tighten, and they
- *   hold inside containers too (tool-system.md §5.0, §13).
+ *   a package, reading credential files, writing outside the worktree, reading Forge's own
+ *   data directory, or editing the policy files that define these very limits. They are
+ *   expressed as managed deny rules so they sit in the one layer that is evaluated last
+ *   and can only tighten, and they hold inside containers too (tool-system.md §5.0, §13).
  *
- * Exports: FLOOR_RULES, PROTECTED_PATHS, CREDENTIAL_PATHS.
+ * Exports: FLOOR_RULES, PROTECTED_PATHS, CREDENTIAL_PATHS, FORGE_DATA_PATHS.
  * Depends on: schemas/grant. No IO.
  */
 
@@ -37,6 +37,12 @@ export const PROTECTED_PATHS: readonly string[] = [
   '.codex/**',
   'opencode.json',
 ];
+
+/**
+ * Forge's own runtime state: the database, secrets and per-run dirs (hook config, tokens).
+ * A Worker that can read these could forge receipts or speak as another run.
+ */
+export const FORGE_DATA_PATHS: readonly string[] = ['.forge/data/**'];
 
 const SHELL_DENY: readonly string[] = [
   'git push*',
@@ -67,7 +73,9 @@ const rule = (action: string, resource: string): CallRule => ({
 /** Matched on the normalised segment text, so quoting tricks do not hide a floor. */
 export const FLOOR_RULES: readonly CallRule[] = [
   ...SHELL_DENY.map((r) => rule('shell', r)),
-  ...['read', 'edit', 'write'].flatMap((a) => CREDENTIAL_PATHS.map((p) => rule(a, p))),
+  ...['read', 'edit', 'write'].flatMap((a) =>
+    [...CREDENTIAL_PATHS, ...FORGE_DATA_PATHS].map((p) => rule(a, p)),
+  ),
   ...['edit', 'write'].flatMap((a) =>
     ['.forge/tools/**', '..', '../**', '/**', '?:/**'].map((p) => rule(a, p)),
   ),

@@ -33,4 +33,5 @@ export type * from '#/types/lane-triage.types.js';
 export type * from '#/types/ports/driver.types.js';
 export type * from '#/types/ports/storage.types.js';
 export type * from '#/types/result.types.js';
+export type * from '#/types/run-event.types.js';
 export type * from '#/types/ticket-events.types.js';

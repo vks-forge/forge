@@ -27,9 +27,8 @@ export const finishTool = defineTool({
       const events = await tx.runEvents.listByRun(ctx.run.id);
       if (events.some((e) => e.type === 'finish'))
         throw new PolicyDeniedError('this run has already called finish');
-      await appendRunEvent(tx, ctx, (seq, ts) => ({
+      await appendRunEvent(tx, ctx, (ts) => ({
         type: 'finish',
-        seq,
         ts,
         summary,
         structured: { claims },

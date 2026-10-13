@@ -4,7 +4,8 @@
  * Why: every tool test needs the same realistic setup (a ticket, a running run with a
  *   registered token, a connected client) and should go through the real MCP protocol
  *   rather than call handlers directly, so the schemas, the run-active check and the
- *   error mapping are exercised exactly as a harness would see them.
+ *   error mapping are exercised exactly as a harness would see them. The run's token is
+ *   registered through the same `runTokens` repository production uses (hash only).
  *
  * Exports: RUN_ID, TOKEN, TICKET_ID, T0, seedStorage(), connect(), textOf().
  * Depends on: @forge/core, @forge/db, @modelcontextprotocol/sdk, domain/run-tokens, domain/server.
@@ -16,7 +17,7 @@ import type { Run, StorageAdapter, Ticket } from '@forge/core';
 import { createMemoryStorage } from '@forge/db';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { createMemoryTokenStore, createRunTokenAuthority } from '#/domain/run-tokens.js';
+import { hashToken } from '#/domain/run-tokens.js';
 import { createForgeMcpServer } from '#/domain/server.js';
 
 export const RUN_ID = 'run-1';
@@ -57,7 +58,7 @@ export function run(over: Partial<Run> = {}): Run {
   };
 }
 
-/** Storage holding SF-1 (child of SF-9, blocked by SF-2), SF-2, SF-9, SF-5 and a running run. */
+/** Storage holding SF-1 (child of SF-9, blocked by SF-2), SF-2, SF-9, SF-5, a running run and its token hash. */
 export async function seedStorage(): Promise<StorageAdapter> {
   const storage = createMemoryStorage();
   await storage.transaction(async (tx) => {
@@ -68,6 +69,7 @@ export async function seedStorage(): Promise<StorageAdapter> {
     await tx.tickets.insert(ticket(9));
     await tx.tickets.insert(ticket(5));
     await tx.runs.insert(run());
+    await tx.runTokens.put(RUN_ID, hashToken(TOKEN), T0);
   });
   return storage;
 }
@@ -77,14 +79,10 @@ export async function connect(
   storage?: StorageAdapter,
 ): Promise<{ client: Client; storage: StorageAdapter; close(): Promise<void> }> {
   const store = storage ?? (await seedStorage());
-  const tokenStore = createMemoryTokenStore();
-  await tokenStore.register(RUN_ID, TOKEN);
-  const tokens = createRunTokenAuthority(tokenStore);
   const server = await createForgeMcpServer({
     storage: store,
     runId: RUN_ID,
     runToken: TOKEN,
-    tokens,
     now: () => new Date(T0),
     ...over,
   });

@@ -21,6 +21,7 @@ import {
   RunEvent,
   RunRequest,
   RunResult,
+  Sha256Hex,
 } from '#/schemas/run.js';
 
 const ts = '2026-10-13T00:00:00.000Z';
@@ -38,6 +39,18 @@ describe('run schemas', () => {
     ];
     for (const e of events) expect(RunEvent.safeParse(e).success).toBe(true);
     expect(RunEvent.safeParse({ type: 'weird', seq: 1, ts }).success).toBe(false);
+  });
+
+  it('accepts only lowercase 64-hex SHA-256 digests (run tokens are stored as hashes)', () => {
+    expect(Sha256Hex.safeParse('a'.repeat(64)).success).toBe(true);
+    for (const bad of [
+      '',
+      'a'.repeat(63),
+      'A'.repeat(64),
+      'g'.repeat(64),
+      'a'.repeat(65),
+    ])
+      expect(Sha256Hex.safeParse(bad).success).toBe(false);
   });
 
   it('has the documented error families', () => {

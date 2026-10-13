@@ -113,6 +113,45 @@ describe('add_comment', () => {
   });
 });
 
+describe('run event numbering', () => {
+  it('shares one seq space with the driver: a driver-written event never collides with a tool event', async () => {
+    const { client, storage } = await setup();
+    await storage.transaction((tx) =>
+      tx.runEvents.append(RUN_ID, {
+        type: 'usage',
+        ts: '2026-10-13T00:00:00.000Z',
+        usage: { in: 1, out: 1, cachedIn: 0, cacheWrite: 0 },
+      }),
+    );
+    const res = await client.callTool({
+      name: 'add_comment',
+      arguments: { ticket: 'SF-1', text: 'after the driver event' },
+    });
+    await storage.transaction((tx) =>
+      tx.runEvents.append(RUN_ID, {
+        type: 'text',
+        ts: '2026-10-13T00:00:00.000Z',
+        text: 'driver again',
+      }),
+    );
+    const events = await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID));
+    expect(res.isError).toBeFalsy();
+    expect(textOf(res)).toContain('seq 1');
+    expect(events.map((e) => e.seq)).toEqual([0, 1, 2]);
+  });
+
+  it('numbers concurrent tool calls without gaps or collisions', async () => {
+    const { client, storage } = await setup();
+    await Promise.all(
+      ['a', 'b', 'c', 'd'].map((text) =>
+        client.callTool({ name: 'add_comment', arguments: { ticket: 'SF-1', text } }),
+      ),
+    );
+    const events = await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID));
+    expect(events.map((e) => e.seq)).toEqual([0, 1, 2, 3]);
+  });
+});
+
 describe('ask_director', () => {
   it('stores a pending question interaction and returns its id', async () => {
     const { client, storage } = await setup();

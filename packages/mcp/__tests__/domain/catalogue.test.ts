@@ -56,6 +56,12 @@ describe('committed catalogue', () => {
     );
   });
 
+  it('maps the shell tool to both Claude Code shell names (d-0048)', () => {
+    if (state.status !== 'verified') throw new Error('not verified');
+    const native = state.tools.get('shell')?.support['claude-code']?.native;
+    expect(native).toEqual(['Bash', 'PowerShell']);
+  });
+
   it('pins the schema hash the server really exposes (fix: node scripts/sign-catalogue.mjs)', async () => {
     if (state.status !== 'verified') throw new Error('not verified');
     const live = await computeToolSchemaHashes();

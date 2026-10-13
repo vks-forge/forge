@@ -10,30 +10,40 @@
  *   see the real error. Migrations run on open so a new database is usable immediately
  *   (director-core.md §2-§3, d-0023).
  *
- * Exports: createSqliteStorage().
- * Depends on: adapters/sqlite/*, migrations/run-migrations, shared/mutex, @forge/core.
+ * Exports: createSqliteStorage(), createStorageOnDriver(), openSqlite().
+ * Depends on: adapters/sqlite/*, migrations/run-migrations, shared/mutex, types/*, @forge/core.
  */
 
 import type { StorageAdapter, StorageTx } from '@forge/core';
 import { createIntakeEventRepository } from '#/adapters/sqlite/intake-events-repository.js';
 import { createInteractionRepository } from '#/adapters/sqlite/interactions-repository.js';
+import { createSqliteReceiptLog } from '#/adapters/sqlite/receipt-log.js';
+import { createRunTokenRepository } from '#/adapters/sqlite/run-tokens-repository.js';
 import { createRunEventRepository } from '#/adapters/sqlite/run-events-repository.js';
 import { createRunRepository } from '#/adapters/sqlite/runs-repository.js';
 import { openSqliteDriver } from '#/adapters/sqlite/better-sqlite-driver.js';
 import { createTicketRepository } from '#/adapters/sqlite/tickets-repository.js';
 import { runMigrations } from '#/migrations/run-migrations.js';
 import { createMutex } from '#/shared/mutex.js';
+import type { Mutex } from '#/types/mutex.types.js';
+import type { SqliteBackend } from '#/types/sqlite-backend.types.js';
 import type { SqlDriver, SqliteStorageOptions } from '#/types/storage-driver.types.js';
 
-/** Wrap an already-open, already-migrated driver as a StorageAdapter. */
-export function createStorageOnDriver(driver: SqlDriver): StorageAdapter {
-  const mutex = createMutex();
+/**
+ * Wrap an already-open, already-migrated driver as a StorageAdapter. Pass the `mutex`
+ * to share the writer queue with other users of the same connection (the receipt log).
+ */
+export function createStorageOnDriver(
+  driver: SqlDriver,
+  mutex: Mutex = createMutex(),
+): StorageAdapter {
   const tx: StorageTx = {
     tickets: createTicketRepository(driver),
     runs: createRunRepository(driver),
     runEvents: createRunEventRepository(driver),
     intakeEvents: createIntakeEventRepository(driver),
     interactions: createInteractionRepository(driver),
+    runTokens: createRunTokenRepository(driver),
   };
   return {
     transaction: (fn) =>
@@ -53,11 +63,7 @@ export function createStorageOnDriver(driver: SqlDriver): StorageAdapter {
   };
 }
 
-/** Open (or create) a SQLite database at `path`, apply migrations and return the adapter. */
-export function createSqliteStorage(
-  path: string,
-  opts: SqliteStorageOptions = {},
-): StorageAdapter {
+function openMigrated(path: string, opts: SqliteStorageOptions): SqlDriver {
   const driver = openSqliteDriver(path, opts);
   try {
     runMigrations(driver);
@@ -65,5 +71,26 @@ export function createSqliteStorage(
     driver.close();
     throw error;
   }
-  return createStorageOnDriver(driver);
+  return driver;
+}
+
+/** Open (or create) a SQLite database at `path`, apply migrations and return the adapter. */
+export function createSqliteStorage(
+  path: string,
+  opts: SqliteStorageOptions = {},
+): StorageAdapter {
+  return createStorageOnDriver(openMigrated(path, opts));
+}
+
+/**
+ * Open (or create) a SQLite database and return storage and the tool receipt log on one
+ * connection and one writer queue. Closing `storage` closes the connection.
+ */
+export function openSqlite(path: string, opts: SqliteStorageOptions = {}): SqliteBackend {
+  const driver = openMigrated(path, opts);
+  const mutex = createMutex();
+  return {
+    storage: createStorageOnDriver(driver, mutex),
+    receipts: createSqliteReceiptLog(driver, mutex),
+  };
 }

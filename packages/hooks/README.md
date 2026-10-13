@@ -19,7 +19,7 @@ exit 0 allow | exit 2 deny/ask/any failure (reason on stderr)    admit() + HMAC 
 - `runHook(io)` / `main()`: the client. `bin/hook.js` loads `dist/client/hook-main.js`; if that fails it exits 2.
 - `createHookHandler({ db, receipts, admit, credentials, admitContext, clock })` -> `handle(runId, token, request)`. Checks token (constant time), runs `admit()`, appends decision / effect receipts (`seq` from the chain tail), never throws.
 - `renderHookSettings()`, `renderAcpMeta()`: per-run settings file contents and the ACP `_meta`.
-- Schemas: `HookPayload`, `HookRequest`, `HookResponse`, `HookConfig`. `createMemoryReceiptLog()`.
+- Schemas: `HookPayload`, `HookRequest`, `HookResponse`, `HookConfig`. Receipts go through the `ReceiptLog` port from `@forge/tools`; `@forge/db` provides `openSqlite(path).receipts` and `createMemoryReceiptLog()`.
 
 | Event                | allow | deny / ask | any failure |
 | -------------------- | ----- | ---------- | ----------- |
@@ -34,8 +34,9 @@ Fail-closed matrix (PreToolUse, SessionStart): server down, timeout, non-2xx, ma
 - Plain exit 2 plus a stderr line, no `hookSpecificOutput` JSON: probe 2 measured exit 2 blocking and the stderr text reaching the model; the JSON form was not tested (d-0048).
 - `onFailure: "block"` and an explicit `timeout` on every hook, exec form `node "<abs>"` (d-0033). Harness timeout is hook timeout + 2s so our reason is reported first.
 - Matcher `.*`: every tool, incl. Edit/Write/Read, goes through `admit()` and gets a receipt; PreToolUse is the single chokepoint (d-0033). The CLI on Windows says PowerShell, ACP says Bash (d-0048); narrow via `renderHookSettings({ matcher })`.
-- Run secret stays server-side; the hook file holds only a token (verification-plane.md §2).
+- Run secret stays server-side; the hook file holds only a token (verification-plane.md §2). The secret comes from the `credentials()` callback, i.e. Forge server memory, and is never written to the database: `@forge/db` stores only a SHA-256 of the token, so a Worker that can read the DB file can neither forge receipts nor impersonate a run (a test greps the SQLite file and WAL for the secret).
 - `seq` comes from the chain tail inside one atomic append, not from the client, so concurrent posts cannot fork the chain.
+- Tool names resolve through the signed catalogue, where `native` may list several names: `Bash` (ACP) and `PowerShell` (Windows CLI) both become `shell`, and `admit()` picks the tokenizer dialect from the native name that was actually called. A name the catalogue does not list stays raw and is denied as `unknown_tool`.
 - Only `node:http`/`fetch`/`node:crypto` and zod; the client imports no other Forge package so it starts fast.
 - Rejected: SDK callback hooks and `canUseTool` (do not cross ACP JSON-RPC, d-0049).
 
@@ -48,11 +49,11 @@ Fail-closed matrix (PreToolUse, SessionStart): server down, timeout, non-2xx, ma
 
 ## Extending
 
-A durable backend implements `ReceiptLog` (`append` must be atomic and serialised per run) and passes the same handler tests as `createMemoryReceiptLog()`. A new event adds a payload schema, a `HookRequest` branch, a handler case and a row in the table above.
+A durable backend implements `ReceiptLog` in `@forge/db` (`append` must be atomic and serialised per run) and passes `describeReceiptLogContract`. Hook tests use the db package as a devDependency fake: `createMemoryReceiptLog()` by default, `openSqlite(path)` in `hook-handler-sqlite.test.ts`. A new event adds a payload schema, a `HookRequest` branch, a handler case and a row in the table above.
 
 ## Limits
 
 - The catalogue must know every native tool the Worker uses, or `.*` makes `admit()` deny it as `unknown_tool`.
-- No SQLite `ReceiptLog` yet (db needs tool_decisions/tool_effects repo); no run-token issuance or HTTP route (the app owns both).
+- No run-token issuance, secret generation or HTTP route here: the app registers `sha256(token)` through `tx.runTokens.put(...)` before launch, keeps the HMAC secret in memory (a restart of the Forge server loses it, so receipts of runs in flight can no longer be extended or verified until a new secret scheme exists), and serves `credentials()`.
 - PostToolUse with no open decision writes nothing (`effect_unmatched`).
 - The `ask` verdict is treated as a block; there is no approval round trip.

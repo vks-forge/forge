@@ -227,6 +227,9 @@ importers:
       '@forge/core':
         specifier: workspace:*
         version: link:../core
+      '@forge/tools':
+        specifier: workspace:*
+        version: link:../tools
       better-sqlite3:
         specifier: 13.0.3
         version: 13.0.3

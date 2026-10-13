@@ -8,9 +8,11 @@
  *   servers (which the operator did not name in advance) fall under one `project_mcp`
  *   action instead of silently matching nothing (tool-system.md §4, §8).
  *
- * Exports: SHELL_TOOL_ID, FACTORY_SERVER, isProjectMcp(), toolAction().
- * Depends on: No IO.
+ * Exports: SHELL_TOOL_ID, FACTORY_SERVER, isProjectMcp(), toolAction(), nativeNames().
+ * Depends on: schemas/tool-definition (type only). No IO.
  */
+
+import type { HarnessSupport } from '#/schemas/tool-definition.js';
 
 /** Canonical id of the harness shell tool (Bash on POSIX, PowerShell on Windows; d-0048). */
 export const SHELL_TOOL_ID = 'shell';
@@ -31,4 +33,11 @@ export function toolAction(toolId: string): string {
   const m = MCP.exec(toolId);
   if (!m) return toolId;
   return m[1] === FACTORY_SERVER ? (m[2] as string) : 'project_mcp';
+}
+
+/** Every harness-native name a support entry declares (`native` is one name or a list). */
+export function nativeNames(support: HarnessSupport | undefined): readonly string[] {
+  const native = support?.native;
+  if (native === undefined) return [];
+  return typeof native === 'string' ? [native] : native;
 }

@@ -20,4 +20,6 @@ export interface MemoryState {
   /** JSON of `[source, dedupe_key]` per stored intake event. */
   intake: Set<string>;
   interactions: Map<string, Interaction>;
+  /** Run id to token digest; `revoked` tokens are kept so a re-issue can be told apart. */
+  tokens: Map<string, { sha256: string; revoked: boolean }>;
 }

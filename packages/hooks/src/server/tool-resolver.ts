@@ -3,16 +3,17 @@
  *
  * Why: the harness says `PowerShell` or `Bash`; policy, rules and receipts speak the
  *   catalogue id (`shell`). Resolving through the run's own signed catalogue, using the
- *   `support[harness].native` field, means one shell rule covers both names (d-0048:
+ *   `support[harness].native` field (one name or a list), means one shell rule covers both names (d-0048:
  *   Windows CLI reports PowerShell, ACP reports Bash) and a tool the catalogue does not
  *   know stays under its raw name so `admit()` denies it as `unknown_tool` instead of
  *   being silently renamed into something allowed. The declared risk class also decides
  *   whether a finished call counts as a completed read or a committed mutation.
  *
  * Exports: resolveToolId(), toolDefinition(), effectStateFor().
- * Depends on: @forge/tools (AdmitContext, ToolDefinition, EffectState). No IO.
+ * Depends on: @forge/tools (nativeNames, AdmitContext, ToolDefinition, EffectState). No IO.
  */
 
+import { nativeNames } from '@forge/tools';
 import type { AdmitContext, EffectState, ToolDefinition } from '@forge/tools';
 
 /** Catalogue id for `native` under `ctx`; MCP names are already ids; unknown names pass through. */
@@ -20,7 +21,7 @@ export function resolveToolId(ctx: AdmitContext, native: string): string {
   if (native.startsWith('mcp__')) return native;
   if (ctx.catalogue.status === 'verified') {
     for (const def of ctx.catalogue.tools.values()) {
-      if (def.support[ctx.harness]?.native === native) return def.id;
+      if (nativeNames(def.support[ctx.harness]).includes(native)) return def.id;
     }
   }
   return native;

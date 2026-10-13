@@ -6,12 +6,12 @@
  *   against it fast with no files, and any behaviour the engine accidentally relies on
  *   from SQLite surfaces as a contract failure. It mirrors sqlite's observable behaviour
  *   (duplicate keys throw, CAS on status_version, intake dedupe on (source, dedupe_key),
- *   events ordered by seq, rollback on a throw) and parses rows with the core schemas on
- *   the way in, so bad data fails here exactly as it would in production. Nothing
- *   persists, so it is not a production backend.
+ *   events numbered and ordered by seq, token hashes only, rollback on a throw) and
+ *   parses rows with the core schemas on the way in, so bad data fails here exactly as it
+ *   would in production. Nothing persists, so it is not a production backend.
  *
  * Exports: createMemoryStorage().
- * Depends on: @forge/core, shared/mutex, shared/patches. No IO.
+ * Depends on: @forge/core, shared/mutex, shared/patches, shared/run-token. No IO.
  */
 
 import {
@@ -25,6 +25,7 @@ import {
 import type { StorageAdapter, StorageTx } from '@forge/core';
 import type { MemoryState } from '#/types/memory-state.types.js';
 import { createMutex } from '#/shared/mutex.js';
+import { parseTokenRecord } from '#/shared/run-token.js';
 import {
   parseInteractionPatch,
   parseRunPatch,
@@ -37,6 +38,7 @@ const emptyState = (): MemoryState => ({
   events: new Map(),
   intake: new Set(),
   interactions: new Map(),
+  tokens: new Map(),
 });
 
 function insertUnique<T>(map: Map<string, T>, id: string, value: T, what: string): void {
@@ -95,12 +97,12 @@ function buildTx(state: MemoryState): StorageTx {
 
     runEvents: {
       async append(runId, event) {
-        const e = RunEvent.parse(event);
         const log = state.events.get(runId) ?? new Map<number, RunEvent>();
-        if (log.has(e.seq))
-          throw new UnknownForgeError(`Duplicate seq ${e.seq} for ${runId}`);
+        // Storage is the single seq allocator; any seq the caller sent is overwritten.
+        const e = RunEvent.parse({ ...event, seq: Math.max(-1, ...log.keys()) + 1 });
         log.set(e.seq, e);
         state.events.set(runId, log);
+        return structuredClone(e);
       },
       async listByRun(runId, afterSeq) {
         const log = state.events.get(runId);
@@ -109,6 +111,21 @@ function buildTx(state: MemoryState): StorageTx {
           .filter((e) => e.seq > (afterSeq ?? -1))
           .sort((a, b) => a.seq - b.seq)
           .map((e) => structuredClone(e));
+      },
+    },
+
+    runTokens: {
+      async put(runId, tokenSha256) {
+        const t = parseTokenRecord(runId, tokenSha256);
+        state.tokens.set(t.runId, { sha256: t.tokenSha256, revoked: false });
+      },
+      async getHash(runId) {
+        const t = state.tokens.get(runId);
+        return t && !t.revoked ? t.sha256 : null;
+      },
+      async revoke(runId) {
+        const t = state.tokens.get(runId);
+        if (t) t.revoked = true;
       },
     },
 

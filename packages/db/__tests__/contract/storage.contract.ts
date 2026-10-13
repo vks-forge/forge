@@ -6,9 +6,11 @@
  *   properties engine correctness rests on: a stale writer must lose the CAS race (or
  *   two Director ticks could double-dispatch a ticket), a throw rolls back every write
  *   in the transaction (or a ticket could move without its run row), concurrent
- *   transactions serialize, intake duplicates are dropped per source, run events read
- *   back in seq order and refuse a repeated seq, and only pending interactions are
- *   listed (director-core.md §3, §7, §8).
+ *   transactions serialize, intake duplicates are dropped per source, run events are
+ *   numbered by storage alone (two writers on one run, the driver and the MCP server,
+ *   can never collide or leave a gap), run tokens exist only as revocable hashes (a
+ *   leaked database file must not yield a usable credential), and only pending
+ *   interactions are listed (director-core.md §3, §7, §8).
  *
  * Exports: describeStorageContract().
  * Depends on: vitest, @forge/core, helpers/fixtures. IO only through the adapter under test.
@@ -129,7 +131,7 @@ export function describeStorageContract(
           db.transaction(async (tx) => {
             await tx.tickets.insert(makeTicket(1));
             await tx.runs.insert(makeRun('r1'));
-            await tx.runEvents.append('r1', makeTextEvent(0));
+            await tx.runEvents.append('r1', makeTextEvent());
             await tx.intakeEvents.insertIfNew(makeIntake('k'));
             throw boom;
           }),
@@ -208,36 +210,70 @@ export function describeStorageContract(
     });
 
     describe('run events', () => {
-      it('lists in seq order regardless of append order', async () => {
-        await db.transaction(async (tx) => {
-          await tx.runEvents.append('r1', makeTextEvent(2));
-          await tx.runEvents.append('r1', makeTextEvent(0));
-          await tx.runEvents.append('r1', makeTextEvent(1));
-          await tx.runEvents.append('r2', makeTextEvent(0, 'other'));
-        });
+      it('allocates seq from 0, contiguous per run, and returns the stored event', async () => {
+        const out = await db.transaction(async (tx) => ({
+          a0: await tx.runEvents.append('r1', makeTextEvent('a')),
+          a1: await tx.runEvents.append('r1', makeTextEvent('b')),
+          b0: await tx.runEvents.append('r2', makeTextEvent('other')),
+        }));
         const all = await db.transaction((tx) => tx.runEvents.listByRun('r1'));
-        expect(all.map((e) => e.seq)).toEqual([0, 1, 2]);
+        expect(out.a0).toMatchObject({ seq: 0, text: 'a' });
+        expect(out.a1.seq).toBe(1);
+        expect(out.b0.seq).toBe(0);
+        expect(all).toEqual([out.a0, out.a1]);
+      });
+
+      it('continues after the highest stored seq across transactions', async () => {
+        await db.transaction((tx) => tx.runEvents.append('r1', makeTextEvent()));
+        const next = await db.transaction((tx) =>
+          tx.runEvents.append('r1', makeTextEvent()),
+        );
+        expect(next.seq).toBe(1);
+      });
+
+      it('gives two concurrent writers distinct, gap-free seqs', async () => {
+        const writer = (tag: string) =>
+          Promise.all(
+            Array.from({ length: 5 }, (_, i) =>
+              db.transaction((tx) =>
+                tx.runEvents.append('r1', makeTextEvent(`${tag}${i}`)),
+              ),
+            ),
+          );
+        await Promise.all([writer('driver-'), writer('mcp-')]);
+        const all = await db.transaction((tx) => tx.runEvents.listByRun('r1'));
+        expect(all.map((e) => e.seq)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        expect(new Set(all.map((e) => (e as { text: string }).text)).size).toBe(10);
+      });
+
+      it('ignores a seq smuggled in by the caller; storage owns numbering', async () => {
+        const smuggled = { ...makeTextEvent('x'), seq: 99 } as never;
+        const stored = await db.transaction((tx) => tx.runEvents.append('r1', smuggled));
+        expect(stored.seq).toBe(0);
       });
 
       it('returns only events after afterSeq', async () => {
         await db.transaction(async (tx) => {
-          for (const s of [0, 1, 2, 3]) await tx.runEvents.append('r1', makeTextEvent(s));
+          for (let i = 0; i < 4; i++) await tx.runEvents.append('r1', makeTextEvent());
         });
         const tail = await db.transaction((tx) => tx.runEvents.listByRun('r1', 1));
         expect(tail.map((e) => e.seq)).toEqual([2, 3]);
       });
 
-      it('is append-only: a repeated seq is rejected', async () => {
-        await db.transaction((tx) => tx.runEvents.append('r1', makeTextEvent(0)));
+      it('rejects an invalid event without consuming a seq', async () => {
+        const bad = { type: 'text', ts: 'not-a-date', text: 'x' } as never;
         await expect(
-          db.transaction((tx) => tx.runEvents.append('r1', makeTextEvent(0, 'dup'))),
+          db.transaction((tx) => tx.runEvents.append('r1', bad)),
         ).rejects.toThrow();
+        const ok = await db.transaction((tx) =>
+          tx.runEvents.append('r1', makeTextEvent()),
+        );
+        expect(ok.seq).toBe(0);
       });
 
       it('preserves structured payloads', async () => {
         const ev = {
           type: 'tool_call' as const,
-          seq: 0,
           ts: '2026-10-13T00:00:00.000Z',
           call_id: 'c1',
           name: 'bash',
@@ -245,7 +281,65 @@ export function describeStorageContract(
         };
         await db.transaction((tx) => tx.runEvents.append('r1', ev));
         const [got] = await db.transaction((tx) => tx.runEvents.listByRun('r1'));
-        expect(got).toEqual(ev);
+        expect(got).toEqual({ ...ev, seq: 0 });
+      });
+    });
+
+    describe('run tokens', () => {
+      const HASH = 'a'.repeat(64);
+      const T1 = '2026-10-13T00:00:00.000Z';
+
+      it('stores and returns the hash; null when absent', async () => {
+        await db.transaction((tx) => tx.runTokens.put('r1', HASH, T1));
+        const got = await db.transaction(async (tx) => ({
+          r1: await tx.runTokens.getHash('r1'),
+          r2: await tx.runTokens.getHash('r2'),
+        }));
+        expect(got).toEqual({ r1: HASH, r2: null });
+      });
+
+      it('returns null after revoke, leaves other runs alone, and tolerates unknown runs', async () => {
+        await db.transaction(async (tx) => {
+          await tx.runTokens.put('r1', HASH, T1);
+          await tx.runTokens.put('r2', 'b'.repeat(64), T1);
+        });
+        await db.transaction(async (tx) => {
+          await tx.runTokens.revoke('r1', T1);
+          await tx.runTokens.revoke('ghost', T1);
+        });
+        const got = await db.transaction(async (tx) => ({
+          r1: await tx.runTokens.getHash('r1'),
+          r2: await tx.runTokens.getHash('r2'),
+        }));
+        expect(got).toEqual({ r1: null, r2: 'b'.repeat(64) });
+      });
+
+      it('re-issuing replaces the hash and clears the revocation', async () => {
+        await db.transaction(async (tx) => {
+          await tx.runTokens.put('r1', HASH, T1);
+          await tx.runTokens.revoke('r1', T1);
+          await tx.runTokens.put('r1', 'c'.repeat(64), T1);
+        });
+        const got = await db.transaction((tx) => tx.runTokens.getHash('r1'));
+        expect(got).toBe('c'.repeat(64));
+      });
+
+      it('refuses anything that is not a sha256 hex digest (never store a raw token)', async () => {
+        await expect(
+          db.transaction((tx) => tx.runTokens.put('r1', 'raw-token-value', T1)),
+        ).rejects.toThrow();
+        const got = await db.transaction((tx) => tx.runTokens.getHash('r1'));
+        expect(got).toBeNull();
+      });
+
+      it('rolls back with the transaction', async () => {
+        await expect(
+          db.transaction(async (tx) => {
+            await tx.runTokens.put('r1', HASH, T1);
+            throw new Error('boom');
+          }),
+        ).rejects.toThrow('boom');
+        expect(await db.transaction((tx) => tx.runTokens.getHash('r1'))).toBeNull();
       });
     });
 

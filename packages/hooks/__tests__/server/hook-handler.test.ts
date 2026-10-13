@@ -46,12 +46,19 @@ describe('hook handler', () => {
     const chain = await env.receipts.list(RUN_ID);
     expect(a.decision).toBe('allow');
     expect(b.reason).toBe('effect_recorded');
-    expect(c.decision).toBe('allow'); // stub policy; Bash passes through under its raw name
+    expect(c.decision).toBe('allow');
     expect(chain.map((r) => r.kind)).toEqual(['decision', 'effect', 'decision']);
     expect(a.receipt_hash).toBe(chain[0]?.hash);
     expect(verifyChain(chain, SECRET).ok).toBe(true);
     expect(env.admitted[0]).toMatchObject({ tool: 'shell', native: 'PowerShell' });
-    expect(env.admitted[1]).toMatchObject({ tool: 'Bash' });
+    // The catalogue lists both names for the shell tool (d-0048), so ACP's `Bash`
+    // resolves to the same id as the Windows CLI's `PowerShell`.
+    expect(env.admitted[1]).toMatchObject({ tool: 'shell', native: 'Bash' });
+  });
+
+  it('keeps a native name the catalogue does not list under its raw name', async () => {
+    await env.handler.handle(RUN_ID, TOKEN, req(pre('Mystery', 'x', 'tu9')));
+    expect(env.admitted[0]).toMatchObject({ tool: 'Mystery', native: 'Mystery' });
   });
 
   it('detects a tampered row', async () => {

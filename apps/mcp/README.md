@@ -15,10 +15,9 @@ does not match the run.
 
 - `src/main.ts`: entry; calls `start(process.env, io)` with real exit, stderr and
   stdio. No logic.
-- `src/services/start.ts`: `parseEnv()`, `depsFromEnv()` (opens SQLite through
-  `@forge/db`, builds the token authority), `start()` (serve, or print to stderr and
-  exit 1 on any startup failure).
-- `src/services/sqlite-token-store.ts`: reads `run_tokens.token_sha256` for a run.
+- `src/services/start.ts`: `parseEnv()`, `depsFromEnv()` (opens and migrates SQLite through
+  `createSqliteStorage` from `@forge/db`; the run-token hash is read by `@forge/mcp` through
+  that storage), `start()` (serve, or print to stderr and exit 1 on any startup failure).
 - Bin: `forge-mcp` -> `dist/main.js`.
 
 ## Why this approach
@@ -35,8 +34,9 @@ environment access (code.md rule 1). Process effects are injected (`StartIo`) so
   `FORGE_SEARXNG_URL`, `FORGE_SEARXNG_ALLOW_HOSTS`, `FORGE_FETCH_ALLOW_HOSTS`,
   `FORGE_DOCS_DIRS` (optional; docs dirs use the OS path delimiter, hosts are
   comma-separated).
-- A migrated Forge SQLite DB with the run row and a `run_tokens` table (see
-  `packages/mcp/README.md`, Limits).
+- A Forge SQLite DB with the run row and the run's token hash registered by the driver
+  (`tx.runTokens.put(runId, sha256(token), now)`). Opening applies any pending migrations,
+  so `run_tokens` exists even on a fresh file; with no registration the process exits 1.
 - Tests: `pnpm test` at the root.
 
 ## Extending
@@ -48,5 +48,5 @@ matching field in `ForgeMcpDeps` in `@forge/mcp`. Keep `main.ts` thin.
 
 - Opens one SQLite connection for the process lifetime and never closes it
   explicitly; the process is per run.
-- Does not create or migrate the database, and does not register tokens (the driver
-  does).
+- Migrates the database on open (idempotent, forward-only) but never registers tokens; the
+  driver does. A revoked or missing token exits 1.

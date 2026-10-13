@@ -244,6 +244,11 @@ describe('path rules', () => {
     ['read', 'apps/web/.env'],
     ['write', 'certs/server.pem'],
     ['read', 'home/.ssh/id_rsa'],
+    ['read', '.forge/data/forge.db'],
+    ['read', '.forge/data/secrets/catalogue.key'],
+    ['edit', '.forge/data/runs/r1/hook.json'],
+    ['write', '.forge/data/forge.db-wal'],
+    ['read', '/work/repo/.forge/data/forge.db'],
     ['edit', '../outside.txt'],
     ['edit', 'src/../../outside.txt'],
     ['edit', '/etc/passwd'],
@@ -253,6 +258,11 @@ describe('path rules', () => {
       effect: 'deny',
       reason: 'managed_deny',
     });
+  });
+
+  it('keeps Forge memory readable while Forge data is not', () => {
+    expect(ev(std, 'read', '.forge/memory/MEMORY.md').effect).not.toBe('deny');
+    expect(ev(effectiveGrant('full'), 'read', '.forge/data/x').effect).toBe('deny');
   });
 
   it('lets an example env file through', () => {

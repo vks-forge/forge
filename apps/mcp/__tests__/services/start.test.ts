@@ -4,52 +4,52 @@
  * Why: the driver relies on a non-zero exit to learn the MCP server refused to start,
  *   and a Worker must never reach tools through a server whose token did not match its
  *   run. These tests run the real startup path against a temporary SQLite database with
- *   the process effects stubbed.
+ *   the process effects stubbed, with the run's token registered the way the driver does
+ *   it (hash only, through storage). A missing, revoked or wrong token must all fail
+ *   closed, and opening the database must create the token table itself so a fresh
+ *   install cannot start unauthenticated.
  *
- * Pins: start(), parseEnv(), depsFromEnv(), createSqliteTokenStore().
+ * Pins: start(), parseEnv(), depsFromEnv().
  * Depends on: services/start, @forge/db, @forge/mcp, node:fs.
  */
 
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createStorageOnDriver, openSqliteDriver, runMigrations } from '@forge/db';
-import type { SqlDriver } from '@forge/db';
+import { createSqliteStorage } from '@forge/db';
+import type { StorageAdapter } from '@forge/core';
 import { hashToken } from '@forge/mcp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { depsFromEnv, parseEnv, start } from '#/services/start.js';
 
 const RUN_ID = 'run-1';
 const TOKEN = 'secret-token';
+const T0 = '2026-10-13T00:00:00.000Z';
 let dir: string;
 let dbPath: string;
-let driver: SqlDriver;
+let seed: StorageAdapter;
 
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'forge-mcp-'));
   dbPath = join(dir, 'db.sqlite');
-  driver = openSqliteDriver(dbPath);
-  runMigrations(driver);
-  await createStorageOnDriver(driver).transaction((tx) =>
-    tx.runs.insert({
+  seed = createSqliteStorage(dbPath);
+  await seed.transaction(async (tx) => {
+    await tx.runs.insert({
       id: RUN_ID,
       ticket_id: 'SF-1',
       harness: 'fake',
       driver_version: '0',
       cwd: '/tmp',
       lane: 'express',
-      started_at: '2026-10-13T00:00:00.000Z',
+      started_at: T0,
       status: 'running',
-    }),
-  );
-  driver.exec(
-    'CREATE TABLE run_tokens (run_id TEXT PRIMARY KEY, token_sha256 TEXT NOT NULL)',
-  );
-  driver.run('INSERT INTO run_tokens VALUES (?, ?)', [RUN_ID, hashToken(TOKEN)]);
+    });
+    await tx.runTokens.put(RUN_ID, hashToken(TOKEN), T0);
+  });
 });
 
-afterEach(() => {
-  driver.close();
+afterEach(async () => {
+  await seed.close();
   try {
     rmSync(dir, { recursive: true, force: true });
   } catch {
@@ -71,7 +71,7 @@ const env = (over: Record<string, string> = {}) => ({
 });
 
 describe('start', () => {
-  it('serves the server when the token matches the running run', async () => {
+  it('serves the server when the registered token matches the running run', async () => {
     const x = io();
     await start(env(), x);
     expect(x.serve).toHaveBeenCalledTimes(1);
@@ -86,12 +86,39 @@ describe('start', () => {
     expect(String(x.stderr.mock.calls[0]?.[0])).toMatch(/token/i);
   });
 
-  it('exits 1 when no token table exists (fail closed)', async () => {
-    driver.exec('DROP TABLE run_tokens');
+  it('exits 1 when the token was revoked', async () => {
+    await seed.transaction((tx) => tx.runTokens.revoke(RUN_ID, T0));
     const x = io();
     await start(env(), x);
     expect(x.exit).toHaveBeenCalledWith(1);
     expect(x.serve).not.toHaveBeenCalled();
+  });
+
+  it('exits 1 when no token was ever registered for the run', async () => {
+    await seed.transaction((tx) =>
+      tx.runs.insert({
+        id: 'run-2',
+        ticket_id: 'SF-1',
+        harness: 'fake',
+        driver_version: '0',
+        cwd: '/tmp',
+        lane: 'express',
+        started_at: T0,
+        status: 'running',
+      }),
+    );
+    const x = io();
+    await start(env({ FORGE_RUN_ID: 'run-2' }), x);
+    expect(x.exit).toHaveBeenCalledWith(1);
+    expect(x.serve).not.toHaveBeenCalled();
+  });
+
+  it('creates the schema on a fresh database and still refuses (no run, no token)', async () => {
+    const x = io();
+    await start(env({ FORGE_DB_PATH: join(dir, 'fresh.sqlite') }), x);
+    expect(x.exit).toHaveBeenCalledWith(1);
+    expect(x.serve).not.toHaveBeenCalled();
+    expect(String(x.stderr.mock.calls[0]?.[0])).toMatch(/token/i);
   });
 
   it('exits 1 on a missing environment without serving', async () => {

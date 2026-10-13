@@ -1,19 +1,20 @@
 /**
- * Types for the server-side hook handler and its receipt log port.
+ * Types for the server-side hook handler's injected dependencies.
  *
  * Why: the handler is where an untrusted harness event becomes a signed receipt, so
  *   everything it depends on is injected: who the run's token and secret belong to, how a
  *   run's grant and lane become an `AdmitContext`, the clock, and where receipts are
  *   stored. Keeping policy (`admit`) and secrets out of the handler's own code means the
  *   Director owns them, tests can stub them, and the storage backend can change without
- *   touching the chain logic. The receipt log is a port because `@forge/db` has no
- *   repository for `tool_decisions` / `tool_effects` yet; the port is shaped so one
- *   transaction reads the chain tail and appends the next receipts, which is what keeps
- *   `seq` and `prev_hash` correct under concurrent hook posts.
+ *   touching the chain logic. Receipts go through the `ReceiptLog` port from
+ *   `@forge/tools`: one atomic step reads the chain tail and appends the next receipts,
+ *   which is what keeps `seq` and `prev_hash` correct under concurrent hook posts. The
+ *   run's HMAC secret only ever arrives through `credentials()` and is never persisted,
+ *   so a Worker that can read the database file cannot forge a receipt.
  *
- * Exports: FailClosedCode, RunCredentials, ChainView, ReceiptLog, HookHandlerDeps, HookHandler.
+ * Exports: FailClosedCode, RunCredentials, HookHandlerDeps, HookHandler.
  * Depends on: @forge/core (Run, StorageAdapter), @forge/tools (AdmitContext, AdmitCall,
- *   Decision, Receipt, DecisionReceipt, HmacKey), schemas/hook-wire. Types only.
+ *   Decision, HmacKey, ReceiptLog), schemas/hook-wire. Types only.
  */
 
 import type { Run, StorageAdapter } from '@forge/core';
@@ -21,9 +22,8 @@ import type {
   AdmitCall,
   AdmitContext,
   Decision,
-  DecisionReceipt,
   HmacKey,
-  Receipt,
+  ReceiptLog,
 } from '@forge/tools';
 import type { HookResponse } from '#/schemas/hook-wire.js';
 
@@ -37,38 +37,16 @@ export interface RunCredentials {
   readonly secret: HmacKey;
 }
 
-/** Read access to a run's chain, valid only inside `ReceiptLog.append`. */
-export interface ChainView {
-  /** Last receipt of either kind, or null for an empty chain. */
-  readonly last: Receipt | null;
-  /** `seq` of the last decision, 0 for an empty chain. */
-  readonly lastSeq: number;
-  /** Decision with this id that has no effect receipt yet. */
-  openDecision(id: string): DecisionReceipt | null;
-  /** Most recent decision for `tool` that has no effect receipt yet. */
-  latestOpenDecision(tool: string): DecisionReceipt | null;
-}
-
-/**
- * Append-only per-run receipt store. `append` must serialise per run and be atomic: it
- * calls `build` with the current chain view and stores everything `build` returns, or
- * nothing if `build` throws.
- */
-export interface ReceiptLog {
-  append(
-    runId: string,
-    build: (view: ChainView) => readonly Receipt[],
-  ): Promise<readonly Receipt[]>;
-  list(runId: string): Promise<readonly Receipt[]>;
-}
-
 export interface HookHandlerDeps {
   /** Source of run rows (existence, lane, harness). */
   readonly db: StorageAdapter;
   readonly receipts: ReceiptLog;
   /** The single admission function from `@forge/tools`. */
   readonly admit: (ctx: AdmitContext, call: AdmitCall) => Decision;
-  /** Token + HMAC secret for a run; null when the run has none (not started, revoked). */
+  /**
+   * Token + HMAC secret for a run; null when the run has none (not started, revoked). The
+   * secret is held in server memory only; never read it back from the database.
+   */
   readonly credentials: (runId: string) => Promise<RunCredentials | null>;
   /** Builds the run's effective grant and catalogue view; the handler never builds grants. */
   readonly admitContext: (run: Run) => Promise<AdmitContext>;

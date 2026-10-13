@@ -13,7 +13,7 @@
  *
  * Exports: Usage, UsageReport, SessionRef, Isolation, PermissionPolicy, ToolExposure,
  *   RunBudget, RunRequest, RunHandle, RunResultStatus, RunResult, InteractionKind,
- *   RunEvent, RunStatus, Run, SteerMode, DriverCapabilities, ErrorFamily (re-export).
+ *   RunEvent, RunStatus, Run, SteerMode, DriverCapabilities, Sha256Hex, ErrorFamily (re-export).
  * Depends on: schemas/ticket, schemas/errors, zod. No IO.
  */
 
@@ -22,6 +22,10 @@ import { ErrorFamily } from '#/schemas/errors.js';
 import { Lane } from './ticket.js';
 
 export { ErrorFamily };
+
+/** Lowercase hex SHA-256 digest; the only form in which a run token is ever stored. */
+export const Sha256Hex = z.string().regex(/^[0-9a-f]{64}$/);
+export type Sha256Hex = z.infer<typeof Sha256Hex>;
 
 const Timestamp = z.iso.datetime();
 

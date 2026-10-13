@@ -8,16 +8,15 @@
  *
  * Exports: parseEnv(), depsFromEnv(), start().
  * Depends on: @forge/core, @forge/db, @forge/mcp, node:path, schemas/env,
- *   services/sqlite-token-store, types/start.types. IO: opens SQLite, stdio via StartIo.
+ *   types/start.types. IO: opens SQLite, stdio via StartIo.
  */
 
 import { delimiter } from 'node:path';
 import { InvalidInputError } from '@forge/core';
-import { createStorageOnDriver, openSqliteDriver } from '@forge/db';
-import { createForgeMcpServer, createRunTokenAuthority } from '@forge/mcp';
+import { createSqliteStorage } from '@forge/db';
+import { createForgeMcpServer } from '@forge/mcp';
 import type { ForgeMcpDeps } from '@forge/mcp';
 import { ForgeEnv } from '#/schemas/env.js';
-import { createSqliteTokenStore } from '#/services/sqlite-token-store.js';
 import type { Env, StartIo } from '#/types/start.types.js';
 
 const list = (s: string | undefined, sep: string): string[] =>
@@ -36,16 +35,15 @@ export function parseEnv(env: Env): ForgeEnv {
   return parsed.data;
 }
 
-/** Opens the SQLite database and assembles the server's dependencies. */
+/** Opens (and migrates) the SQLite database and assembles the server's dependencies. */
 export function depsFromEnv(env: Env): ForgeMcpDeps {
   const e = parseEnv(env);
-  // The driver already migrated the database; this process must not alter its schema.
-  const driver = openSqliteDriver(e.FORGE_DB_PATH);
+  // Opening applies pending migrations, so `run_tokens` exists even on a fresh file; a
+  // missing registration then fails closed in the token check instead of at the SQL layer.
   return {
-    storage: createStorageOnDriver(driver),
+    storage: createSqliteStorage(e.FORGE_DB_PATH),
     runId: e.FORGE_RUN_ID,
     runToken: e.FORGE_RUN_TOKEN,
-    tokens: createRunTokenAuthority(createSqliteTokenStore(driver)),
     ...(e.FORGE_SEARXNG_URL
       ? {
           searxng: {

@@ -15,7 +15,7 @@ import { createHash } from 'node:crypto';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createForgeMcpServer, SERVER_NAME } from '#/domain/server.js';
-import { createMemoryTokenStore, createRunTokenAuthority } from '#/domain/run-tokens.js';
+import { hashToken } from '#/domain/run-tokens.js';
 
 function canonical(value: unknown): string {
   const sort = (v: unknown): unknown => {
@@ -42,13 +42,11 @@ export function toolSchemaHash(tool: { name: string; inputSchema: unknown }): st
 
 /** Map of `mcp__forge__<tool>` to schema hash, from a throwaway in-memory server. */
 export async function computeToolSchemaHashes(): Promise<Record<string, string>> {
-  const store = createMemoryTokenStore();
-  await store.register('probe', 'probe');
-  const tokens = createRunTokenAuthority(store);
   const storage = {
     transaction: async <T>(fn: (tx: never) => Promise<T>) =>
       fn({
         runs: { get: async () => ({ id: 'probe', status: 'running' }) },
+        runTokens: { getHash: async () => hashToken('probe') },
       } as never),
     close: async () => undefined,
   };
@@ -56,7 +54,6 @@ export async function computeToolSchemaHashes(): Promise<Record<string, string>>
     storage: storage as never,
     runId: 'probe',
     runToken: 'probe',
-    tokens,
   });
   const [a, b] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'schema-hash', version: '0.0.0' });

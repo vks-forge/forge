@@ -9,13 +9,15 @@
  *   stdio process in the middle of a Worker's turn.
  *
  * Exports: createForgeMcpServer(), SERVER_NAME.
- * Depends on: @modelcontextprotocol/sdk, @forge/core, domain/run-log, domain/tools/all-tools. IO: storage via deps.
+ * Depends on: @modelcontextprotocol/sdk, @forge/core, domain/run-log, domain/run-tokens,
+ *   domain/tools/all-tools. IO: storage via deps.
  */
 
 import { randomUUID } from 'node:crypto';
 import { AuthError, ForgeError, PolicyDeniedError } from '@forge/core';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { loadActiveRun } from '#/domain/run-log.js';
+import { verifyRunToken } from '#/domain/run-tokens.js';
 import { FORGE_TOOLS } from '#/domain/tools/all-tools.js';
 import type { ForgeMcpDeps, ToolContext } from '#/types/deps.types.js';
 import type { ForgeToolSpec } from '#/types/tool-spec.types.js';
@@ -31,7 +33,7 @@ function errorText(err: unknown): string {
 
 /** Verifies the run token and that the run is active, then returns an unconnected server. */
 export async function createForgeMcpServer(deps: ForgeMcpDeps): Promise<McpServer> {
-  if (!(await deps.tokens.verify(deps.runId, deps.runToken)))
+  if (!(await verifyRunToken(deps.storage, deps.runId, deps.runToken)))
     throw new AuthError('run token does not match the run');
   try {
     await loadActiveRun(deps.storage, deps.runId);

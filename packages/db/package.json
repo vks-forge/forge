@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@forge/core": "workspace:*",
+    "@forge/tools": "workspace:*",
     "better-sqlite3": "13.0.3"
   },
   "devDependencies": {

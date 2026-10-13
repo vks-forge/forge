@@ -7,16 +7,16 @@
  *   `Bash` on ACP). Building them once keeps every test on the same shapes.
  *
  * Exports: SECRET, TOKEN, RUN_ID, pre(), post(), failure(), sessionStart(), makeEnv().
- * Depends on: @forge/db, @forge/tools, src/index. No IO.
+ * Depends on: @forge/db, @forge/tools, src/index. IO only when `sqlitePath` is given.
  */
 
-import { createMemoryStorage } from '@forge/db';
+import { createMemoryReceiptLog, createMemoryStorage, openSqlite } from '@forge/db';
 import { ToolDefinition, effectiveGrant } from '@forge/tools';
 import type { AdmitCall, AdmitContext, Decision } from '@forge/tools';
-import { createHookHandler, createMemoryReceiptLog } from '#/index.js';
+import { createHookHandler } from '#/index.js';
 
 export const SECRET = 'run-secret';
-export const TOKEN = 'run-token';
+export const TOKEN = 'bearer-7f3a91c2';
 export const RUN_ID = 'run-1';
 
 export const sessionStart = () => ({
@@ -44,7 +44,7 @@ export const failure = (tool = 'PowerShell', id?: string) => ({
   ...(id ? { tool_use_id: id } : {}),
 });
 
-const def = (id: string, risk: string, native: string) =>
+const def = (id: string, risk: string, native: string | string[]) =>
   ToolDefinition.parse({
     id,
     kind: 'harness-native',
@@ -62,7 +62,7 @@ const ctx = (): AdmitContext => ({
     status: 'verified',
     hash: 'h',
     tools: new Map([
-      ['shell', def('shell', 'exec', 'PowerShell')],
+      ['shell', def('shell', 'exec', ['Bash', 'PowerShell'])],
       ['read', def('read', 'read', 'Read')],
     ]),
   },
@@ -71,9 +71,11 @@ const ctx = (): AdmitContext => ({
 });
 
 /** Stub policy: denies any call whose command contains "deny"; records what it saw. */
-export function makeEnv(over: { throwOnAdmit?: boolean } = {}) {
-  const db = createMemoryStorage();
-  const receipts = createMemoryReceiptLog();
+export function makeEnv(over: { throwOnAdmit?: boolean; sqlitePath?: string } = {}) {
+  // Memory by default; `sqlitePath` runs the same handler over the durable SQLite backend.
+  const sqlite = over.sqlitePath ? openSqlite(over.sqlitePath) : null;
+  const db = sqlite?.storage ?? createMemoryStorage();
+  const receipts = sqlite?.receipts ?? createMemoryReceiptLog();
   const admitted: AdmitCall[] = [];
   const liveness: string[] = [];
   let tick = 0;
@@ -114,5 +116,5 @@ export function makeEnv(over: { throwOnAdmit?: boolean } = {}) {
       status: 'running',
     }),
   );
-  return { handler, receipts, admitted, liveness, ready };
+  return { handler, receipts, admitted, liveness, ready, close: () => db.close() };
 }

@@ -7,14 +7,17 @@
  *   `status_version`, so a Director tick and an API call racing on one ticket cannot
  *   both win and double-dispatch it. Intake inserts report duplicates so redeliveries
  *   are dropped, run events are append-only so the UI and replay have a trustworthy
- *   history, and pending interactions are listable so no parked ticket is lost. Behind a
- *   port, the backend (SQLite WAL by default) can change without touching the engine
- *   (director-core.md §2-§3, §7-§8, d-0023).
+ *   history whose `seq` is allocated by storage alone, run tokens are kept as hashes only
+ *   so reading the database never yields a usable credential, and pending interactions are
+ *   listable so no parked ticket is lost. Behind a port, the backend (SQLite WAL by
+ *   default) can change without touching the engine (director-core.md §2-§3, §7-§8,
+ *   d-0023).
  *
  * Exports: TicketPatch, TicketRepository, RunRepository, RunEventRepository,
- *   IntakeEventRepository, InteractionRepository, StorageTx, StorageAdapter.
+ *   RunTokenRepository, IntakeEventRepository, InteractionRepository, StorageTx,
+ *   StorageAdapter.
  * Depends on: schemas/ids, schemas/intake, schemas/interaction, schemas/run,
- *   schemas/ticket. No IO (interfaces only).
+ *   schemas/ticket, types/run-event.types. No IO (interfaces only).
  */
 
 import type { TicketId } from '#/schemas/ids.js';
@@ -22,6 +25,7 @@ import type { IntakeEvent } from '#/schemas/intake.js';
 import type { Interaction } from '#/schemas/interaction.js';
 import type { Run, RunEvent } from '#/schemas/run.js';
 import type { Ticket, TicketStatus } from '#/schemas/ticket.js';
+import type { NewRunEvent } from '#/types/run-event.types.js';
 
 /** Fields a CAS update may change; identity and creation time are immutable. */
 export type TicketPatch = Partial<Omit<Ticket, 'id' | 'project' | 'created_at'>>;
@@ -50,9 +54,25 @@ export interface RunRepository {
 
 /** Append-only store of normalized run events. */
 export interface RunEventRepository {
-  // Append-only; seq is supplied by the run's event stream.
-  append(runId: string, event: RunEvent): Promise<void>;
+  // Append-only. Storage is the one `seq` allocator: the event arrives without a seq and
+  // is stored at max(seq)+1 for the run (0 for the first) inside the caller's transaction,
+  // so concurrent writers (driver, MCP server) can never collide or leave gaps.
+  append(runId: string, event: NewRunEvent): Promise<RunEvent>;
   listByRun(runId: string, afterSeq?: number): Promise<RunEvent[]>;
+}
+
+/**
+ * Per-run bearer tokens, stored as SHA-256 hashes only. The per-run HMAC secret that
+ * signs tool receipts is NOT stored here or anywhere on disk: a Worker that can read the
+ * database file must not be able to forge receipts.
+ */
+export interface RunTokenRepository {
+  // Registers (or re-issues, clearing any revocation) the hash for `runId`.
+  put(runId: string, tokenSha256: string, issuedAt: string): Promise<void>;
+  // The stored hash, or null when none was issued or it was revoked.
+  getHash(runId: string): Promise<string | null>;
+  // Revokes the run's token; unknown runs are a no-op.
+  revoke(runId: string, at: string): Promise<void>;
 }
 
 /** Idempotent store of raw intake events (director-core.md §7). */
@@ -76,6 +96,7 @@ export interface StorageTx {
   readonly runEvents: RunEventRepository;
   readonly intakeEvents: IntakeEventRepository;
   readonly interactions: InteractionRepository;
+  readonly runTokens: RunTokenRepository;
 }
 
 /** Single-writer storage backend; every mutation happens inside `transaction` (director-core.md §2-§3). */

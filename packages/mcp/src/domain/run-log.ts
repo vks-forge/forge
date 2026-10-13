@@ -2,7 +2,7 @@
  * Run-scoped helpers: load the active run, append run events, raise interactions.
  *
  * Why: every state-writing tool must (a) act only for a run that is still `running`,
- *   (b) append to the run's event log with a fresh sequence number, and (c) for
+ *   (b) append to the run's event log (storage allocates the sequence number), and (c) for
  *   questions, store an `interactions` row the Director's tick can find. Doing it in one
  *   place keeps the log gap-free and means no tool can write for a run the Director has
  *   already settled.
@@ -12,7 +12,7 @@
  */
 
 import { PolicyDeniedError } from '@forge/core';
-import type { RunEvent, StorageAdapter, StorageTx } from '@forge/core';
+import type { NewRunEvent, RunEvent, StorageAdapter, StorageTx } from '@forge/core';
 import type { ToolContext } from '#/types/deps.types.js';
 
 /** Matches the Director's default wait before a parked ticket becomes Blocked (director-core.md §8). */
@@ -27,17 +27,17 @@ export async function loadActiveRun(storage: StorageAdapter, runId: string) {
   return run;
 }
 
-/** Appends one event to the run log inside `tx`, at the next free sequence number. */
-export async function appendRunEvent(
+/**
+ * Appends one event to the run log inside `tx` and returns it as stored. `seq` is not
+ * chosen here: storage numbers the event, so this server and the driver can write to the
+ * same run without colliding.
+ */
+export function appendRunEvent(
   tx: StorageTx,
   ctx: ToolContext,
-  build: (seq: number, ts: string) => RunEvent,
+  build: (ts: string) => NewRunEvent,
 ): Promise<RunEvent> {
-  const existing = await tx.runEvents.listByRun(ctx.run.id);
-  const seq = existing.reduce((max, e) => Math.max(max, e.seq), -1) + 1;
-  const event = build(seq, ctx.now().toISOString());
-  await tx.runEvents.append(ctx.run.id, event);
-  return event;
+  return tx.runEvents.append(ctx.run.id, build(ctx.now().toISOString()));
 }
 
 /**
@@ -63,9 +63,8 @@ export async function raiseInteraction(
       asked_at: asked.toISOString(),
       timeout_at: new Date(asked.getTime() + timeout).toISOString(),
     });
-    await appendRunEvent(tx, ctx, (seq, ts) => ({
+    await appendRunEvent(tx, ctx, (ts) => ({
       type: 'ask',
-      seq,
       ts,
       interaction_id: id,
       kind: 'question',

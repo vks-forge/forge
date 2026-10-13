@@ -4,9 +4,11 @@
  * Why: the engine, the Claude hook and the Factory MCP server need one stable surface for
  *   tool policy: load a signed catalogue, build a run's grant, ask `admit()`, write
  *   chained receipts. Exposing only that surface keeps the single admission door the sole
- *   way to decide a call and lets internals change freely.
+ *   way to decide a call and lets internals change freely. The receipt-log port lives here
+ *   (not in an adapter) so every writer and reader of the chain shares one definition.
  *
- * Exports: everything exported by domain/, schemas/, shared/errors, adapters/ and types/.
+ * Exports: everything exported by domain/, schemas/, shared/errors, adapters/ and types/
+ *   (including the ReceiptLog port).
  * Depends on: every module under src/. No IO.
  */
 
@@ -33,6 +35,7 @@ export type * from '#/types/admit.types.js';
 export type * from '#/types/budgets.types.js';
 export type * from '#/types/catalogue.types.js';
 export type * from '#/types/grants.types.js';
+export type * from '#/types/ports/receipt-log.types.js';
 export type * from '#/types/receipts.types.js';
 export type * from '#/types/rules.types.js';
 export type * from '#/types/tokenizer.types.js';

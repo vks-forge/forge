@@ -30,6 +30,7 @@ const EXPECTED_TABLES = [
   'tool_effects',
   'skills_registry',
   'skill_usage',
+  'run_tokens',
   'schema_migrations',
 ];
 
@@ -58,7 +59,7 @@ describe('runMigrations', () => {
     runMigrations(driver, MIGRATIONS.slice(0, 1));
     const applied = runMigrations(driver);
     driver.close();
-    expect(applied).toEqual([2, 3]);
+    expect(applied).toEqual([2, 3, 4]);
   });
 
   describe('0003 receipt chain columns', () => {
@@ -102,6 +103,55 @@ describe('runMigrations', () => {
       );
       driver.close();
       expect(row).toEqual([{ run_id: '', chain_seq: 0 }]);
+    });
+  });
+
+  describe('0004 run tokens and receipt chain position', () => {
+    const columns = (driver: ReturnType<typeof openSqliteDriver>, table: string) =>
+      driver.all<{ name: string }>(`PRAGMA table_info(${table})`).map((r) => r.name);
+
+    it('creates run_tokens with the hash-only columns', () => {
+      const driver = openSqliteDriver(':memory:');
+      runMigrations(driver);
+      const cols = columns(driver, 'run_tokens');
+      driver.close();
+      expect(cols).toEqual(['run_id', 'token_sha256', 'issued_at', 'revoked_at']);
+    });
+
+    it('gives decisions a chain position and makes positions unique per run', () => {
+      const driver = openSqliteDriver(':memory:');
+      runMigrations(driver);
+      expect(columns(driver, 'tool_decisions')).toContain('chain_seq');
+      const insert = (id: string, chain: number) =>
+        driver.run(
+          `INSERT INTO tool_decisions (id, run_id, seq, tool, args_hash, decision, layer, ts, hash, chain_seq)
+           VALUES (?, 'r1', ?, 't', 'a', 'allow', 'rule', 'ts', 'h', ?)`,
+          [id, chain, chain],
+        );
+      insert('d1', 1);
+      expect(() =>
+        driver.run(
+          `INSERT INTO tool_decisions (id, run_id, seq, tool, args_hash, decision, layer, ts, hash, chain_seq)
+           VALUES ('d2', 'r1', 2, 't', 'a', 'allow', 'rule', 'ts', 'h', 1)`,
+        ),
+      ).toThrow();
+      driver.close();
+    });
+
+    it('upgrades a 0001-0003 database in place, keeping legacy decisions at position 0', () => {
+      const driver = openSqliteDriver(':memory:');
+      runMigrations(driver, MIGRATIONS.slice(0, 3));
+      driver.run(
+        `INSERT INTO tool_decisions (id, run_id, seq, tool, args_hash, decision, layer, ts, hash)
+         VALUES ('old1', 'r1', 1, 't', 'a', 'allow', 'rule', 'ts', 'h'),
+                ('old2', 'r1', 2, 't', 'a', 'allow', 'rule', 'ts', 'h')`,
+      );
+      expect(runMigrations(driver)).toEqual([4]);
+      const rows = driver.all<{ chain_seq: number }>(
+        'SELECT chain_seq FROM tool_decisions',
+      );
+      driver.close();
+      expect(rows).toEqual([{ chain_seq: 0 }, { chain_seq: 0 }]);
     });
   });
 

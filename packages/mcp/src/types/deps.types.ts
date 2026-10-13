@@ -3,21 +3,17 @@
  *
  * Why: the server is started per run by a driver, but it must also run in-process in
  *   tests with no network, no real DNS and no database file. Everything it touches
- *   outside the process (storage, the run-token store, DNS, the HTTP socket, SearXNG)
+ *   outside the process (storage, which also holds the run-token hash, DNS, the HTTP socket,
+ *   SearXNG)
  *   is a named port here, so the SSRF guard and the auth check can be tested with
  *   stubs and the production wiring stays a single place (adapters/env-config.ts).
  *
- * Exports: RunTokenAuthority, DnsResolver, HttpRequest, HttpResponse, HttpTransport,
+ * Exports: DnsResolver, HttpRequest, HttpResponse, HttpTransport,
  *   SearxngConfig, ForgeMcpDeps, ToolContext.
  * Depends on: @forge/core (types only). No IO.
  */
 
 import type { Run, StorageAdapter } from '@forge/core';
-
-/** Checks a run's bearer token. Implementations must compare in constant time. */
-export interface RunTokenAuthority {
-  verify(runId: string, token: string): Promise<boolean>;
-}
 
 /** Resolves a host name to every address it points at (A and AAAA). */
 export type DnsResolver = (host: string) => Promise<string[]>;
@@ -48,8 +44,8 @@ export interface SearxngConfig {
 export interface ForgeMcpDeps {
   storage: StorageAdapter;
   runId: string;
+  /** Verified against the hash in `storage.runTokens`; never stored. */
   runToken: string;
-  tokens: RunTokenAuthority;
   searxng?: SearxngConfig;
   /** Absolute directories `docs_lookup` may read markdown from. */
   docsDirs?: readonly string[];

@@ -9,7 +9,8 @@
  *   off these fields, so a malformed entry is rejected at load instead of silently
  *   widening a run (tool-system.md §4).
  *
- * Exports: ToolKind, Risk, Exposure, Enforcement, HarnessSupport, ToolDefinition, TOOL_ID_PATTERN.
+ * Exports: ToolKind, Risk, Exposure, Enforcement, NativeName, HarnessSupport, ToolDefinition,
+ *   TOOL_ID_PATTERN.
  * Depends on: zod. No IO.
  */
 
@@ -53,8 +54,15 @@ export const Enforcement = z.enum([
 ]);
 export type Enforcement = z.infer<typeof Enforcement>;
 
+/**
+ * One harness-native tool name, or several when a harness reports a single capability
+ * under different names (Claude Code says `PowerShell` on Windows, `Bash` over ACP).
+ */
+export const NativeName = z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]);
+export type NativeName = z.infer<typeof NativeName>;
+
 export const HarnessSupport = z.object({
-  native: z.string().min(1).optional(),
+  native: NativeName.optional(),
   mechanism: z.string().min(1),
   enforced: Enforcement,
 });

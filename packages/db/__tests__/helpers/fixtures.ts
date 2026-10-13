@@ -10,7 +10,7 @@
  */
 
 import { makeTicketId } from '@forge/core';
-import type { IntakeEvent, Interaction, Run, RunEvent, Ticket } from '@forge/core';
+import type { IntakeEvent, Interaction, NewRunEvent, Run, Ticket } from '@forge/core';
 
 export const T0 = '2026-10-13T00:00:00.000Z';
 
@@ -47,8 +47,9 @@ export function makeRun(id = 'run-1', overrides: Partial<Run> = {}): Run {
   };
 }
 
-export function makeTextEvent(seq: number, text = `t${seq}`): RunEvent {
-  return { type: 'text', seq, ts: T0, text };
+/** A `text` event as a writer submits it: no `seq`, storage numbers it. */
+export function makeTextEvent(text = 't'): NewRunEvent {
+  return { type: 'text', ts: T0, text };
 }
 
 export function makeInteraction(

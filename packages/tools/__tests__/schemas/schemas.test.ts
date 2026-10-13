@@ -15,6 +15,7 @@ import { BudgetLimits } from '#/schemas/budget.js';
 import { Grant } from '#/schemas/grant.js';
 import { DecisionReceipt, EffectReceipt } from '#/schemas/receipt.js';
 import { ToolDefinition } from '#/schemas/tool-definition.js';
+import { nativeNames } from '#/domain/tool-id.js';
 import { ENTRIES } from '#tests/helpers/fixtures.js';
 
 describe('ToolDefinition', () => {
@@ -37,6 +38,35 @@ describe('ToolDefinition', () => {
     ['unknown enforcement', { support: { x: { mechanism: 'm', enforced: 'magic' } } }],
   ])('rejects %s', (_n, over) => {
     expect(ToolDefinition.safeParse({ ...ENTRIES[0], ...over }).success).toBe(false);
+  });
+});
+
+describe('HarnessSupport.native', () => {
+  const withNative = (native: unknown) => ({
+    ...ENTRIES[0],
+    support: { 'claude-code': { native, mechanism: 'allow-flag', enforced: 'harness' } },
+  });
+
+  it('accepts one name or a list of names', () => {
+    expect(ToolDefinition.safeParse(withNative('Bash')).success).toBe(true);
+    expect(ToolDefinition.safeParse(withNative(['Bash', 'PowerShell'])).success).toBe(
+      true,
+    );
+  });
+
+  it.each([[[]], [['']], [''], [[1]]])('rejects %j', (native) => {
+    expect(ToolDefinition.safeParse(withNative(native)).success).toBe(false);
+  });
+
+  it('nativeNames normalises to a list; absent means none', () => {
+    const base = { mechanism: 'm', enforced: 'harness' } as const;
+    expect(nativeNames({ ...base, native: 'Bash' })).toEqual(['Bash']);
+    expect(nativeNames({ ...base, native: ['Bash', 'PowerShell'] })).toEqual([
+      'Bash',
+      'PowerShell',
+    ]);
+    expect(nativeNames(base)).toEqual([]);
+    expect(nativeNames(undefined)).toEqual([]);
   });
 });
 

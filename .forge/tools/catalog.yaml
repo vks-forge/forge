@@ -46,16 +46,16 @@ entries:
     schema_hash: sha256:ce627f8c77c2dba956c21aceda293153babfb8e24a4601ef6d608eb7c2645e2e
     support:
       claude-code: { native: Write, mechanism: allow-flag, enforced: harness }
-  # Canonical shell id (d-0048). The Windows dev host maps it to PowerShell; POSIX hosts use Bash.
+  # Canonical shell id (d-0048). The Windows CLI reports PowerShell, ACP and POSIX hosts report Bash; both map here.
   - id: shell
     kind: harness-native
     version: "1"
     risk: exec
     exposure: direct
     resources: [ cwd ]
-    schema_hash: sha256:549476e9dda0fe8d4fac6a8348e24ca7d55a89ac7c199b7824ed850de13e347b
+    schema_hash: sha256:9ff099d2f64672924cd67a3ef37cf131780e827f848165ca5e13bb574c7fe059
     support:
-      claude-code: { native: PowerShell, mechanism: allow-flag, enforced: harness }
+      claude-code: { native: [ Bash, PowerShell ], mechanism: allow-flag, enforced: harness }
   # Subagent spawning: can reach every native tool, so it is hidden unless a grant opens it.
   - id: task
     kind: harness-native
@@ -141,4 +141,4 @@ entries:
     support:
       "*": { mechanism: mcp, enforced: server }
     denies_native: [ claude-code:WebFetch ]
-signature: "c93273af00f911526ebb7edf28009db10caf1615d9c71634ceba1ff20afe52d1"
+signature: "ddb4ae25e6d74913b0872274cc7ce9bfbf2b33b240c4910adbd0f0e2b4d08bdf"

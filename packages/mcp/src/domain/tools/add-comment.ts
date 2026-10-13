@@ -27,9 +27,8 @@ export const addCommentTool = defineTool({
         `comments are limited to this run's ticket (${ctx.run.ticket_id})`,
       );
     const event = await ctx.deps.storage.transaction((tx) =>
-      appendRunEvent(tx, ctx, (seq, ts) => ({
+      appendRunEvent(tx, ctx, (ts) => ({
         type: 'text',
-        seq,
         ts,
         text: `[comment on ${ticket}] ${text}`,
       })),
