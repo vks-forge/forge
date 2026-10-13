@@ -98,6 +98,16 @@ export function createGitHubAppGitHost(o: GitHubAppGitHostOptions): GitHost {
       return { number: pr.number, url: pr.html_url };
     },
 
+    async findPr(branch) {
+      assertSafeRefArg('branch', branch);
+      const head = encodeURIComponent(`${o.owner}:${branch}`);
+      const { json } = await api('GET', `/pulls?head=${head}&state=open`);
+      const list = parse(z.array(PullResponse), json, 'pull request list');
+      const pr = list[0];
+
+      return pr ? { number: pr.number, url: pr.html_url } : null;
+    },
+
     async prStatus(n) {
       const { json } = await api('GET', `/pulls/${n}`);
       const pr = parse(PullResponse, json, 'pull request');

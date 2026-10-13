@@ -15,6 +15,8 @@ export interface PrStore {
   /** Allocates the next number and stores the record built from it; `make` sees the existing records and may throw to refuse. */
   create(make: (n: number, existing: readonly PrRecord[]) => PrRecord): Promise<PrRecord>;
   get(n: number): Promise<PrRecord>;
+  /** Every stored record, in no particular order. */
+  all(): Promise<readonly PrRecord[]>;
   save(record: PrRecord): Promise<void>;
   /** Runs `fn` while holding the store lock, so a read-modify-write on a PR cannot interleave. */
   locked<T>(fn: () => Promise<T>): Promise<T>;

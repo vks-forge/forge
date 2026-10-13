@@ -20,9 +20,11 @@ import type {
   GateVerdict,
   GitHost,
   PrState,
+  PullRequest,
 } from '@forge/core';
 
-type Call = 'push' | 'openPr' | 'prStatus' | 'merge' | 'closePr' | 'deleteBranch';
+type Call =
+  'push' | 'openPr' | 'findPr' | 'prStatus' | 'merge' | 'closePr' | 'deleteBranch';
 
 export interface FakeGitHost extends GitHost {
   /** Every call in order, as `name:arg`. */
@@ -32,12 +34,16 @@ export interface FakeGitHost extends GitHost {
   /** Throws `error` on the next `times` calls of `call`. */
   failNext(call: Call, error: Error, times?: number): void;
   count(call: Call): number;
+  /** The next `openPr` registers the PR on the host, then throws `error`: a crash before the caller stored the number. */
+  crashAfterOpen(error: Error): void;
 }
 
 export function createFakeGitHost(): FakeGitHost {
   const calls: string[] = [];
   const failures = new Map<Call, { error: Error; times: number }>();
   let nextPr = 41;
+  const open = new Map<string, PullRequest>();
+  let crashAfterOpen: Error | null = null;
   const enter = (call: Call, arg: string): void => {
     calls.push(`${call}:${arg}`);
     const f = failures.get(call);
@@ -56,11 +62,27 @@ export function createFakeGitHost(): FakeGitHost {
     async push(_path, branch) {
       enter('push', branch);
     },
+    crashAfterOpen: (error) => {
+      crashAfterOpen = error;
+    },
+    async findPr(branch) {
+      enter('findPr', branch);
+      const pr = open.get(branch);
+
+      return pr && host.prState === 'open' ? pr : null;
+    },
     async openPr(input) {
       enter('openPr', input.branch);
       nextPr++;
+      const pr = { number: nextPr, url: `https://git.test/pr/${nextPr}` };
+      open.set(input.branch, pr);
+      if (crashAfterOpen) {
+        const error = crashAfterOpen;
+        crashAfterOpen = null;
+        throw error;
+      }
 
-      return { number: nextPr, url: `https://git.test/pr/${nextPr}` };
+      return pr;
     },
     async prStatus(n) {
       enter('prStatus', String(n));

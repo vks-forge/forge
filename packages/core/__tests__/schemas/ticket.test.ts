@@ -89,6 +89,14 @@ describe('Ticket batch C fields', () => {
     expect(Ticket.safeParse({ ...base, pr_number: 0 }).success).toBe(false);
   });
 
+  it('accepts parked_from verifying and rejects any other value', () => {
+    expect(Ticket.parse({ ...base, parked_from: 'verifying' })).toMatchObject({
+      parked_from: 'verifying',
+    });
+
+    expect(Ticket.safeParse({ ...base, parked_from: 'planned' }).success).toBe(false);
+  });
+
   it('rejects a malformed epic id and a non-integer intake id', () => {
     expect(Ticket.safeParse({ ...base, epic_id: 'nope' }).success).toBe(false);
     expect(Ticket.safeParse({ ...base, created_by_intake: 1.5 }).success).toBe(false);

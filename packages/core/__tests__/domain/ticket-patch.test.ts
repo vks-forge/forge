@@ -58,6 +58,7 @@ describe('toTicketPatch', () => {
       'created_by_intake',
       'pr_number',
       'pr_url',
+      'parked_from',
     ]) {
       expect(k in patch, k).toBe(true);
       expect((patch as Record<string, unknown>)[k], k).toBeUndefined();

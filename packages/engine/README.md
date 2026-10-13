@@ -40,7 +40,7 @@ Public API from `src/index.ts`:
   step, run row and token hash, `driver.start`, ticket `in_progress`).
 - Verify phase (`tick/verify*.ts`, up to `max_concurrent_by_state.verifying` tickets per tick), for a
   `verifying` ticket whose current run succeeded and whose project `deps.project(slug)` resolves:
-  `commitAll` (Forge author), `GitHost.push`, `openPr` once (the number is stored on the ticket by CAS
+  `commitAll` (Forge author), `GitHost.push`, `openPr` once (after `findPr` finds no open PR for the branch; the number is stored on the ticket by CAS
   before any gate runs), then every gate of the project's `ProjectRuntime` with a `GateContext`
   (claims come from the run's `finish` run event). Each report goes through `deps.reports.put`, each
   verdict is a `gate_results` row. All `passed`/`skipped`: `gate_passed` with `tier_actual` (C when
@@ -81,8 +81,12 @@ Public API from `src/index.ts`:
 - One merge door (code.md rule 6): `tick/verify-merge.ts` is the only caller of `GitHost.merge`, and
   only for a ticket in `verifying` with `tier_actual = A` (set only by `gate_passed`) and an open PR.
   Verify is resumable from stored facts (PR number, `gate_results`, `tier_actual`, `prStatus`).
-  Parking from `verifying` has no legal event, so it goes through `gate_failed` (+ `parked`): the
-  state machine stays the only door.
+  A verify fault no retry fixes (auth, merge conflict, retry cap, no gates) is a `parked` event from
+  `verifying`: `rework_count` is untouched and `parked_from = verifying` makes a human `unparked`
+  return the ticket to `verifying`, so publish, gates and merge re-run on the same run with no new
+  Worker. Gate findings still go through `gate_failed` (rework, or park at the cap, which releases
+  to `planned`). A ticket with no stored PR number asks the host (`findPr`) before `openPr`, so a
+  crash between opening and storing the PR adopts it instead of opening a duplicate.
 - Alternatives rejected: engine in `apps/server` (breaks "apps compose only"); timers inside the
   engine (the app owns the clock, so tests move a fake one).
 
@@ -115,11 +119,8 @@ Public API from `src/index.ts`:
 - Ticket numbers come from listing every ticket id of the project (no counter); fine at M0 scale.
 - Failure attempts count failed runs of the same family for the ticket, with no decay.
 - `driver_version` on run rows is the constant `unversioned` until the driver exposes it cheaply.
-- Parking a verify fault burns one automatic rework (`gate_failed` increments `rework_count`), and a
-  human release restarts the Worker (`unparked` goes to `planned`); a dedicated Verifying-to-WaitingHuman
-  event in `core` would fix both. Verify retry backoff is a process-local hold (a restart retries at
-  once, the re-wake cap still counts). A PR opened but not stored (a crash in between) is not found
-  again. Gate findings reach the rework prompt through the wake's `reason` text (4,000 chars max).
+- Verify retry backoff is a process-local hold (a restart retries at
+  once, the re-wake cap still counts). Gate findings reach the rework prompt through the wake's `reason` text (4,000 chars max).
 - Not in the engine: `apps/server` (HTTP, SSE, clock), in-run
   escalation signals, the `clarify`, `plan`, `rework_brief` and `epic_summary` steps, `command`
   intake, `delegated`/`monitor` wakes (consumed and dropped; `continuation` is the gate-failed rework).

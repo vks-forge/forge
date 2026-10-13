@@ -47,6 +47,7 @@ describe('verify: success path', () => {
     expect(t.pr_url).toBe('https://git.test/pr/42');
     expect(host.calls).toEqual([
       'push:fix/FG-1-scripted-triage-title',
+      'findPr:fix/FG-1-scripted-triage-title',
       'openPr:fix/FG-1-scripted-triage-title',
       'prStatus:42',
       'merge:42',

@@ -74,20 +74,36 @@ function decide(t: Ticket, e: TicketEvent): Result<TicketDelta, TransitionError>
         ? ok({ status: 'in_progress' })
         : err(illegal(t, e));
     case 'parked': {
-      // A hold with no Worker question behind it (lane not enabled, retry caps). The reason
-      // is the only thing the human sees, so a blank one is refused.
+      // A hold with no Worker question behind it (lane not enabled, retry caps, a verify
+      // fault no retry fixes). The reason is the only thing the human sees, so a blank one
+      // is refused.
       const reason = e.reason.trim();
-      if ((from !== 'planned' && from !== 'in_progress') || reason === '') {
+      if (
+        (from !== 'planned' && from !== 'in_progress' && from !== 'verifying') ||
+        reason === ''
+      ) {
         return err(illegal(t, e));
       }
 
-      return ok({ status: 'waiting_human', blocked_reason: reason });
+      // From Verifying the work is finished and rework_count is not a failed gate, so it
+      // stays; `parked_from` remembers where to resume.
+      return ok({
+        status: 'waiting_human',
+        blocked_reason: reason,
+        ...(from === 'verifying' ? { parked_from: 'verifying' as const } : {}),
+      });
     }
 
     case 'unparked':
+      if (from !== 'waiting_human') {
+        return err(illegal(t, e));
+      }
+
       // Not `answered`: that resumes a Worker run (in_progress); a parked ticket may never
-      // have run, so release goes back to planned and dispatch starts from there.
-      return from === 'waiting_human' ? ok({ status: 'planned' }) : err(illegal(t, e));
+      // have run, so release goes back to planned and dispatch starts from there. A ticket
+      // parked from Verifying already has a finished run, so it resumes verifying (publish,
+      // gates, merge) with no new Worker; its tier_actual, if any, still matches that run.
+      return ok({ status: t.parked_from === 'verifying' ? 'verifying' : 'planned' });
     case 'verifying':
       // Every verify cycle needs its own gate_passed: drop the previous cycle's tier.
       return from === 'in_progress'
@@ -181,12 +197,13 @@ export function transition(
     return decided;
   }
 
-  // blocked_reason only lives while the ticket is parked. The clear is explicit
-  // (present-but-undefined) so a storage patch built from the result NULLs the column
-  // instead of leaving the old value behind. The delta may re-set it afterwards.
+  // blocked_reason and parked_from only live while the ticket is parked. The clear is
+  // explicit (present-but-undefined) so a storage patch built from the result NULLs the
+  // column instead of leaving the old value behind. The delta may re-set them afterwards.
   return ok({
     ...ticket,
     blocked_reason: undefined,
+    parked_from: undefined,
     ...decided.value,
     status_version: ticket.status_version + 1,
     updated_at: event.at,

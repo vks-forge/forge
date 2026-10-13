@@ -35,6 +35,7 @@ export function toTicketPatch(next: Ticket): TicketPatch {
   return {
     ...rest,
     blocked_reason: rest.blocked_reason,
+    parked_from: rest.parked_from,
     tier_actual: rest.tier_actual,
     assignee_run_id: rest.assignee_run_id,
     branch: rest.branch,

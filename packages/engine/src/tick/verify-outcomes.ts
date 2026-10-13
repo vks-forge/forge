@@ -7,8 +7,9 @@
  *   refused a push, a gate could not run) is not the Worker's fault: transient families
  *   wait and retry under the same backoff and hourly re-wake cap as run failures, and the
  *   ones a retry cannot fix (auth, a merge conflict, a denied action) go straight to a
- *   human with the reason. Verifying has no legal move to WaitingHuman, so parking goes
- *   through `gate_failed` (and `parked`), still the one door `transition()`.
+ *   human with the reason. That park is not a gate finding, so it is a `parked` event from
+ *   Verifying: it neither spends a rework nor, on release, restarts the Worker; the human's
+ *   release returns the ticket to Verifying to publish, gate and merge again.
  *
  * Exports: recordVerified(), reworkOrPark(), parkVerifying(), handleVerifyFailure().
  * Depends on: @forge/core (MAX_AUTO_REWORKS), domain/{failure-policy,gate-rows,results},
@@ -48,7 +49,7 @@ export function recordVerified(
   });
 }
 
-/** Moves a Verifying ticket to WaitingHuman with `reason`, whatever its rework count. */
+/** Parks a Verifying ticket in WaitingHuman with `reason`; its rework count is untouched and a release returns it to Verifying. */
 export async function parkVerifying(
   ctx: EngineCtx,
   t: VerifyTarget,
@@ -61,16 +62,9 @@ export async function parkVerifying(
       return null;
     }
 
-    // At the cap gate_failed itself lands in WaitingHuman; below it, it reopens the
-    // ticket and `parked` closes it again with our reason.
-    const atCap = cur.rework_count >= MAX_AUTO_REWORKS;
-
-    return {
-      events: atCap
-        ? [{ type: 'gate_failed' }]
-        : [{ type: 'gate_failed' }, { type: 'parked', reason }],
-      fields: { blocked_reason: reason },
-    };
+    // Not a gate finding: `parked` leaves rework_count alone and remembers Verifying, so
+    // a release resumes publish, gates and merge on this run instead of dispatching a Worker.
+    return { events: [{ type: 'parked', reason }] };
   });
 
   if (!moved.ok) {

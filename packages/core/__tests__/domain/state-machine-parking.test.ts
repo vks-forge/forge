@@ -7,8 +7,13 @@
  *   the ticket may never have run), and a blank reason is refused since the reason is the
  *   only thing the human sees.
  *
- * Pins: parked from planned / in_progress sets a trimmed blocked_reason; blank reason and
- *   other statuses are rejected; unparked returns to planned and clears the reason.
+ *   A ticket parked from Verifying (auth failure, merge conflict, retry cap) has a finished
+ *   run, so it must keep rework_count (no gate failed) and resume verifying on release
+ *   instead of dispatching a Worker that redoes done work.
+ *
+ * Pins: parked from planned / in_progress / verifying sets a trimmed blocked_reason; blank
+ *   reason and other statuses are rejected; unparked returns to planned, or to verifying
+ *   when parked from verifying, and clears the reason and the marker.
  * Depends on: src/domain/state-machine, helpers/fixtures, vitest.
  */
 
@@ -45,7 +50,7 @@ describe('parked / unparked: an honest hold for a human', () => {
     }
   });
 
-  it.each(['inbox', 'blocked', 'verifying', 'review'] as const)(
+  it.each(['inbox', 'blocked', 'review', 'needs_signoff'] as const)(
     'rejects parking from %s',
     (status) => {
       const r = transition(makeTicket({ status }), {
@@ -72,5 +77,64 @@ describe('parked / unparked: an honest hold for a human', () => {
     expect(
       transition(makeTicket({ status: 'in_progress' }), { type: 'unparked', at: T1 }).ok,
     ).toBe(false);
+  });
+
+  describe('parked from verifying', () => {
+    const verifying = () =>
+      makeTicket({ status: 'verifying', rework_count: 1, tier_actual: 'A' });
+
+    it('holds in waiting_human, keeps rework_count and remembers where it came from', () => {
+      const t = apply(verifying(), { type: 'parked', at: T1, reason: 'auth failed' });
+
+      expect(t.status).toBe('waiting_human');
+      expect(t.blocked_reason).toBe('auth failed');
+      expect(t.parked_from).toBe('verifying');
+      expect(t.rework_count).toBe(1);
+    });
+
+    it('is not remembered when parked from planned or in_progress', () => {
+      const t = apply(makeTicket({ status: 'planned' }), {
+        type: 'parked',
+        at: T1,
+        reason: 'x',
+      });
+
+      expect(t.parked_from).toBeUndefined();
+    });
+
+    it('is released back to verifying with the marker, reason and rework_count settled', () => {
+      const parked = apply(verifying(), { type: 'parked', at: T1, reason: 'x' });
+      const u = apply(parked, { type: 'unparked', at: T1 });
+
+      expect(u.status).toBe('verifying');
+      expect(u.blocked_reason).toBeUndefined();
+      expect('parked_from' in u).toBe(true);
+      expect(u.parked_from).toBeUndefined();
+      expect(u.rework_count).toBe(1);
+      expect(u.tier_actual).toBe('A');
+    });
+
+    it('does not resume verifying after a block or answer detour clears the marker', () => {
+      const parked = apply(verifying(), { type: 'parked', at: T1, reason: 'x' });
+      const back = apply(
+        parked,
+        { type: 'blocked', at: T1, reason: 'dep' },
+        { type: 'unblocked', at: T1 },
+      );
+
+      expect(back.status).toBe('planned');
+      expect(back.parked_from).toBeUndefined();
+    });
+
+    it('still needs its own merge precondition after release', () => {
+      const parked = apply(
+        makeTicket({ status: 'verifying' }),
+        { type: 'parked', at: T1, reason: 'x' },
+        { type: 'unparked', at: T1 },
+      );
+
+      const r = transition(parked, { type: 'merged', at: T1 });
+      expect(r.ok).toBe(false);
+    });
   });
 });

@@ -5,7 +5,8 @@
  *   up, and must not care whether the host is a bare repo on disk or GitHub. This pins the
  *   shared behaviour: a pushed branch can be opened as a PR with its head sha, merging
  *   moves the base branch to the returned sha, a PR that is closed or already merged
- *   cannot be merged again (a `policy_denied` answer, never retried), a second open PR
+ *   cannot be merged again (a `policy_denied` answer, never retried), `findPr` finds only an
+ *   open PR for a branch (so a caller that crashed after `openPr` adopts it), a second open PR
  *   for one branch is refused, an unknown PR is an `invalid_input` error, and deleting a
  *   branch is idempotent. A new host passes this before it gets tests of its own.
  *
@@ -61,6 +62,29 @@ export function describeGitHostContract(
       expect(pr.number).toBeGreaterThan(0);
       expect(pr.url.length).toBeGreaterThan(0);
       expect(status).toEqual({ state: 'open', mergeable: true, headSha: head });
+    });
+
+    it('findPr returns the open PR for a branch, and null when there is none', async () => {
+      await h.seedBranch('feat/a');
+      await h.seedBranch('feat/b');
+      expect(await h.host.findPr('feat/a')).toBeNull();
+
+      const pr = await open('feat/a');
+
+      expect(await h.host.findPr('feat/a')).toEqual({ number: pr.number, url: pr.url });
+      expect(await h.host.findPr('feat/b')).toBeNull();
+    });
+
+    it('findPr ignores closed and merged PRs', async () => {
+      await h.seedBranch('feat/a');
+      await h.seedBranch('feat/b');
+      const closed = await open('feat/a');
+      const merged = await open('feat/b');
+      await h.host.closePr(closed.number);
+      await h.host.merge(merged.number, 'squash');
+
+      expect(await h.host.findPr('feat/a')).toBeNull();
+      expect(await h.host.findPr('feat/b')).toBeNull();
     });
 
     it('numbers PRs per repository, each distinct', async () => {

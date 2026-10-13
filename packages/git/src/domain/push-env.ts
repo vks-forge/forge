@@ -7,6 +7,8 @@
  *   `GIT_CONFIG_VALUE_n` environment variables, so the Authorization header is handed to
  *   the one child process through its environment and exists nowhere else. The header is
  *   scoped to https://github.com/ so it is not sent to any other host a redirect names.
+ *   A second entry empties `credential.helper`: on Windows, Git Credential Manager would
+ *   otherwise open a login dialog for the push this token already authenticates.
  *
  * Exports: buildPushEnv(), redactSecrets().
  * Depends on: none. No IO.
@@ -17,9 +19,13 @@ export function buildPushEnv(token: string): Record<string, string> {
   const basic = Buffer.from(`x-access-token:${token}`).toString('base64');
 
   return {
-    GIT_CONFIG_COUNT: '1',
+    GIT_CONFIG_COUNT: '2',
     GIT_CONFIG_KEY_0: 'http.https://github.com/.extraheader',
     GIT_CONFIG_VALUE_0: `AUTHORIZATION: basic ${basic}`,
+    // An empty value resets the helper list, so Git Credential Manager (or any helper
+    // the machine configures) is never consulted and cannot pop a login prompt.
+    GIT_CONFIG_KEY_1: 'credential.helper',
+    GIT_CONFIG_VALUE_1: '',
     GIT_TERMINAL_PROMPT: '0',
   };
 }

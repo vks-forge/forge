@@ -5,7 +5,7 @@
  *   and the ticket PR link. If a migration dropped or renamed one, a database upgraded in
  *   place would break at the first query while a fresh install still worked. Each
  *   migration's shape is pinned so upgrades and fresh installs stay identical
- *   (director-core.md §3).
+ *   (director-core.md ï¿½3).
  *
  * Pins: 0003 receipt chain columns, 0004 run tokens and chain position, 0005 ports
  *   batch C tables, 0006 ticket PR link.
@@ -108,13 +108,27 @@ describe('runMigrations', () => {
                 ('old2', 'r1', 2, 't', 'a', 'allow', 'rule', 'ts', 'h')`,
       );
 
-      expect(runMigrations(driver)).toEqual([4, 5, 6]);
+      expect(runMigrations(driver)).toEqual([4, 5, 6, 7]);
       const rows = driver.all<{ chain_seq: number }>(
         'SELECT chain_seq FROM tool_decisions',
       );
 
       driver.close();
       expect(rows).toEqual([{ chain_seq: 0 }, { chain_seq: 0 }]);
+    });
+  });
+
+  describe('0007 ticket parked_from', () => {
+    it('adds a nullable parked_from to tickets', () => {
+      const driver = openSqliteDriver(':memory:');
+      runMigrations(driver);
+      const col = driver
+        .all<{ name: string; notnull: number }>('PRAGMA table_info(tickets)')
+        .find((c) => c.name === 'parked_from');
+
+      driver.close();
+      expect(col).toBeDefined();
+      expect(col?.notnull).toBe(0);
     });
   });
 
@@ -207,7 +221,7 @@ describe('runMigrations', () => {
          VALUES ('old', 'SF-1', 'h', '1', '/w', 'express', '2026-10-13T00:00:00.000Z', 'running')`,
       );
 
-      expect(runMigrations(driver)).toEqual([5, 6]);
+      expect(runMigrations(driver)).toEqual([5, 6, 7]);
       const edges = driver.all<{ from_id: string; to_id: string; kind: string }>(
         'SELECT from_id, to_id, kind FROM ticket_relations ORDER BY rowid',
       );

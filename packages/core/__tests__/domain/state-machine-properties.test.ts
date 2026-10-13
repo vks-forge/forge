@@ -124,4 +124,37 @@ describe('transition: properties', () => {
       }),
     );
   });
+
+  it('parking from verifying never touches rework_count and a release resumes only there', () => {
+    fc.assert(
+      fc.property(fc.array(eventArb, { maxLength: 80 }), (events) => {
+        let t = makeTicket();
+        for (const e of events) {
+          const r = transition(t, e);
+          if (!r.ok) {
+            continue;
+          }
+
+          if (e.type === 'parked' && t.status === 'verifying') {
+            expect(r.value.rework_count).toBe(t.rework_count);
+            expect(r.value.parked_from).toBe('verifying');
+          }
+
+          if (e.type === 'unparked') {
+            expect(r.value.status).toBe(
+              t.parked_from === 'verifying' ? 'verifying' : 'planned',
+            );
+
+            expect(r.value.parked_from).toBeUndefined();
+          }
+
+          if (r.value.status !== 'waiting_human') {
+            expect(r.value.parked_from).toBeUndefined();
+          }
+
+          t = r.value;
+        }
+      }),
+    );
+  });
 });

@@ -128,6 +128,17 @@ export function createLocalBareGitHost(opts: LocalBareGitHostOptions): GitHost {
       return { number: rec.number, url: urlOf(rec.number) };
     },
 
+    async findPr(branch) {
+      await checkBranch('branch', branch);
+      const open = (await store.all()).filter(
+        (r) => r.state === 'open' && r.branch === branch,
+      );
+
+      const rec = open.sort((a, b) => b.number - a.number)[0];
+
+      return rec ? { number: rec.number, url: urlOf(rec.number) } : null;
+    },
+
     async prStatus(n) {
       return toStatus(await store.get(n));
     },

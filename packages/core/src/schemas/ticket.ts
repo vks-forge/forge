@@ -75,7 +75,7 @@ const Timestamp = z.iso.datetime();
  * `parent` and `blocked_by` are derived on read from `ticket_relations`, the single
  * source of truth for relations (see TicketRelation); they are not columns and not
  * patchable. The engine-owned nullable fields (`assignee_run_id`, `branch`, `worktree`,
- * `checkout_run_id`, `epic_id`, `created_by_intake`, `pr_number`, `pr_url`) are absent until the engine sets
+ * `checkout_run_id`, `epic_id`, `created_by_intake`, `pr_number`, `pr_url`, `parked_from`) are absent until the engine sets
  * them and can be cleared with an explicit `undefined` in a patch.
  */
 export const Ticket = z.object({
@@ -91,6 +91,8 @@ export const Ticket = z.object({
   status_version: z.number().int().nonnegative(),
   rework_count: z.number().int().nonnegative(),
   blocked_reason: z.string().optional(),
+  // Set while parked from Verifying; a release then returns there instead of to Planned.
+  parked_from: z.literal('verifying').optional(),
   assignee_run_id: z.string().min(1).optional(),
   branch: z.string().min(1).optional(),
   worktree: z.string().min(1).optional(),

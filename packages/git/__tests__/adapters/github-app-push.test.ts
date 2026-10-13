@@ -89,8 +89,11 @@ describe('github app push', () => {
 
     expect(Buffer.from(basic, 'base64').toString()).toBe(`x-access-token:${TOKEN}`);
     expect(call?.env).toMatchObject({
-      GIT_CONFIG_COUNT: '1',
+      GIT_CONFIG_COUNT: '2',
       GIT_CONFIG_KEY_0: 'http.https://github.com/.extraheader',
+      // Empty value resets the helper list: Git Credential Manager is never consulted.
+      GIT_CONFIG_KEY_1: 'credential.helper',
+      GIT_CONFIG_VALUE_1: '',
       GIT_TERMINAL_PROMPT: '0',
     });
   });

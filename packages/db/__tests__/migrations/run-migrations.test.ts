@@ -5,7 +5,7 @@
  *   restart could fail or double-apply, and if an edited migration were accepted,
  *   installs would silently diverge in schema. Pinning checksum rejection, ordering and
  *   rollback of a failing migration protects every existing database from a bad schema
- *   change (director-core.md §3).
+ *   change (director-core.md ï¿½3).
  *
  * Pins: runMigrations() applies once, is idempotent, applies only newer migrations, and
  *   rejects edited or out-of-order migrations. The per-migration table shapes, the
@@ -61,7 +61,7 @@ describe('runMigrations', () => {
     runMigrations(driver, MIGRATIONS.slice(0, 1));
     const applied = runMigrations(driver);
     driver.close();
-    expect(applied).toEqual([2, 3, 4, 5, 6]);
+    expect(applied).toEqual([2, 3, 4, 5, 6, 7]);
   });
 
   it('rejects a migration edited after it was applied', () => {

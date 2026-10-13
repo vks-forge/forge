@@ -41,6 +41,12 @@ export interface GitHost {
   /** Pushes `branch` from the worktree to the remote under the same name. */
   push(worktreePath: string, branch: string): Promise<void>;
   openPr(input: OpenPrInput): Promise<PullRequest>;
+  /**
+   * The open PR whose head is `branch`, or null. Lets a caller that crashed after
+   * `openPr` returned (before it stored the number) adopt the PR instead of opening a
+   * second one.
+   */
+  findPr(branch: string): Promise<PullRequest | null>;
   prStatus(n: number): Promise<PrStatus>;
   /**
    * Merges an open PR and returns the resulting commit sha. Only the engine's merge step

@@ -44,6 +44,8 @@ Public API from `src/index.ts`:
 
 GitHost adapters (the port is in `@forge/core`):
 
+- `findPr(branch)` on both hosts returns the open PR whose head is `branch`, or null (closed and merged PRs are
+  ignored); the local host scans its PR records, the GitHub host calls `GET /pulls?head=<owner>:<branch>&state=open`.
 - `createLocalBareGitHost({ remotePath, baseBranch, now, gitBinary?, author? })`: `push` runs
   `git push <remotePath> <branch>:<branch>` from the worktree. A PR is a JSON record
   `<remotePath>/forge-prs/<n>.json` (sequential numbers, atomic temp-and-rename writes, one open PR per
@@ -80,9 +82,9 @@ Node and git on Windows. Any git failure becomes a `CrashError` with the stderr 
   process, and signing prompts must not hang a run. Author comes from `-c` and env both.
 - `-z` output everywhere, so file names with spaces or newlines are safe.
 - Always a worktree, never a feature branch in the main checkout (d-0059, superseding d-0011).
-- The GitHub push token goes only through the child process environment: `GIT_CONFIG_COUNT=1`,
+- The GitHub push token goes only through the child process environment: `GIT_CONFIG_COUNT=2`,
   `GIT_CONFIG_KEY_0=http.https://github.com/.extraheader`,
-  `GIT_CONFIG_VALUE_0=AUTHORIZATION: basic <base64(x-access-token:token)>`, plus `GIT_TERMINAL_PROMPT=0`. It is
+  `GIT_CONFIG_VALUE_0=AUTHORIZATION: basic <base64(x-access-token:token)>`, plus `GIT_CONFIG_KEY_1=credential.helper` with an empty `GIT_CONFIG_VALUE_1` (resets the helper list so Git Credential Manager is never consulted) and `GIT_TERMINAL_PROMPT=0`. It is
   never in argv, the remote URL, a git config file or logs, and the header is scoped to github.com. This replaces
   the `GIT_ASKPASS` idea in the E2 brief: the same guarantee with no helper script or file on disk.
 - Local merges use `merge-tree` / `commit-tree` / `update-ref` in the bare repo instead of a temporary clone:
@@ -122,9 +124,7 @@ Node and git on Windows. Any git failure becomes a `CrashError` with the stderr 
 - No fetch or submodule handling; the worktree manager never pushes (only a GitHost does).
 - The local host has no review, comments or branch protection; `mergeable` is only `merge-tree` conflict
   detection. Its PR numbering is serialised in-process, so run one server per remote path.
-- The GitHub host reports `rate_limit` and leaves `Retry-After` handling to the engine. A global git
-  `credential.helper` (for example Git Credential Manager) is not disabled for the push, so a rejected token may
-  make it prompt; `GIT_TERMINAL_PROMPT=0` only stops terminal prompts.
+- The GitHub host reports `rate_limit` and leaves `Retry-After` handling to the engine.
 - `push` is never forced: a branch whose remote history diverged fails instead of being overwritten.
 - `create` assumes the base ref is a local ref or sha; it does not fetch.
 - Locked worktrees are not unlocked; a `remove` that cannot delete the directory raises.

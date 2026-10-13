@@ -207,6 +207,7 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
       created_by_intake: 4,
       pr_number: 7,
       pr_url: 'https://github.com/o/r/pull/7',
+      parked_from: 'verifying' as const,
     };
 
     it('round-trips through insert and get', async () => {
@@ -228,6 +229,7 @@ export function describeTicketRelationsContract(getDb: () => StorageAdapter): vo
           created_by_intake: undefined,
           pr_number: undefined,
           pr_url: undefined,
+          parked_from: undefined,
         }),
       );
 

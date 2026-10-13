@@ -11,13 +11,13 @@
  *   it saw so a test can prove nothing but the right credential was sent.
  *
  * Exports: startFakeGitHub(), FakeGitHub.
- * Depends on: node:http, node:crypto.
+ * Depends on: node:http, helpers/app-jwt-check.
  */
 
-import { createVerify } from 'node:crypto';
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { appJwtValid } from '#tests/helpers/app-jwt-check.js';
 
 interface FakePr {
   number: number;
@@ -97,29 +97,8 @@ export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub>
   let shaCounter = 0;
   const repoPrefix = `/repos/${o.owner}/${o.repo}`;
 
-  const jwtValid = (jwt: string): boolean => {
-    const [h, p, s] = jwt.split('.');
-    if (!h || !p || !s) {
-      return false;
-    }
-
-    const verify = createVerify('RSA-SHA256').update(`${h}.${p}`);
-    if (!verify.verify(o.publicKeyPem, Buffer.from(s, 'base64url'))) {
-      return false;
-    }
-
-    const claims = JSON.parse(Buffer.from(p, 'base64url').toString('utf8')) as {
-      iss: string;
-      iat: number;
-      exp: number;
-    };
-
-    const nowSec = o.now() / 1000;
-
-    return (
-      claims.iss === o.appId && claims.exp > nowSec && claims.exp - claims.iat <= 600
-    );
-  };
+  const jwtValid = (jwt: string): boolean =>
+    appJwtValid(jwt, o.publicKeyPem, o.appId, o.now());
 
   const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const method = req.method ?? 'GET';
@@ -172,6 +151,29 @@ export async function startFakeGitHub(o: FakeGitHubOptions): Promise<FakeGitHub>
     }
 
     const sub = path.slice(repoPrefix.length);
+
+    if (method === 'GET' && sub === '/pulls') {
+      const q = new URLSearchParams((req.url ?? '').split('?')[1] ?? '');
+      const head = q.get('head') ?? '';
+      const state = q.get('state') ?? 'open';
+      // GitHub filters on `<owner>:<branch>`; a bare branch name matches nothing.
+      const branch = head.startsWith(`${o.owner}:`)
+        ? head.slice(o.owner.length + 1)
+        : null;
+
+      const found = [...prs.values()].filter(
+        (p) =>
+          p.branch === branch &&
+          (state === 'all' ||
+            (state === 'open' ? p.state === 'open' : p.state === state)),
+      );
+
+      return send(
+        res,
+        200,
+        found.map((p) => view(p.number)),
+      );
+    }
 
     if (method === 'POST' && sub === '/pulls') {
       const b = (await readBody(req)) as { head: string; base: string };

@@ -53,18 +53,29 @@ export function createPrStore(remotePath: string): PrStore {
     return PrRecord.parse(JSON.parse(text));
   };
 
+  const readAll = async (): Promise<PrRecord[]> => {
+    let names: string[];
+    try {
+      names = (await readdir(dir)).filter((f) => /^\d+\.json$/.test(f));
+    } catch (cause) {
+      if ((cause as NodeJS.ErrnoException).code === 'ENOENT') {
+        return [];
+      }
+
+      throw cause;
+    }
+
+    return Promise.all(names.map((f) => read(Number.parseInt(f, 10))));
+  };
+
   return {
     locked,
     get: read,
+    all: readAll,
     save: (record) => write(record),
     create: (make) =>
       locked(async () => {
-        await mkdir(dir, { recursive: true });
-        const names = (await readdir(dir)).filter((f) => /^\d+\.json$/.test(f));
-        const existing = await Promise.all(
-          names.map((f) => read(Number.parseInt(f, 10))),
-        );
-
+        const existing = await readAll();
         const next = Math.max(0, ...existing.map((r) => r.number)) + 1;
         const record = make(next, existing);
         await write(record);
