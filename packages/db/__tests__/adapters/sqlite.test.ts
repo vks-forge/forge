@@ -96,6 +96,7 @@ describe('sqlite receipt log specifics', () => {
       reason: 'rule_allow',
       layer: 'rule',
       rule_id: 'lane:standard#4',
+      resource: 'src/a.ts',
       finding_ids_json: '["f-1","f-2"]',
       enforced_by: 'hook',
       prev_hash: null,

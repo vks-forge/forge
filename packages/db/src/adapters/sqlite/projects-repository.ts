@@ -1,0 +1,67 @@
+/**
+ * SQLite ProjectRepository for the `projects` table.
+ *
+ * Why: the Director works on several repos and must know, from a ticket's project, where
+ *   the repo lives, where its memory lives, which harness to default to and which paths
+ *   are tier C. The registry is small and edited rarely, so it is plain upsert-by-id; the
+ *   upsert is `ON CONFLICT (id) DO UPDATE` rather than replace, so the row keeps its place
+ *   in the list, and the slug stays unique (two projects with one slug would make slug
+ *   lookups ambiguous, and the violation surfaces as `invalid_input`). Rows are re-parsed
+ *   with the core `Project` schema on read (director-core.md §3).
+ *
+ * Exports: createProjectRepository().
+ * Depends on: @forge/core, shared/db-errors, shared/json, types/storage-driver.types.
+ */
+
+import { Project } from '@forge/core';
+import type { ProjectRepository } from '@forge/core';
+import { parseStored } from '#/shared/db-errors.js';
+import { dropNulls, fromJson, toJson } from '#/shared/json.js';
+import type { SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
+
+function toProject(row: SqlRow): Project {
+  const { harness_defaults_json, tier_c_globs_json, ...rest } = dropNulls(row);
+  return parseStored(
+    Project,
+    {
+      ...rest,
+      harness_defaults: fromJson(harness_defaults_json),
+      tier_c_globs: fromJson(tier_c_globs_json),
+    },
+    'project',
+  );
+}
+
+export function createProjectRepository(driver: SqlDriver): ProjectRepository {
+  return {
+    async get(id) {
+      const row = driver.get('SELECT * FROM projects WHERE id = ?', [id]);
+      return row ? toProject(row) : null;
+    },
+
+    async upsert(project) {
+      const p = Project.parse(project);
+      driver.run(
+        `INSERT INTO projects (id, slug, prefix, repo_origin, memory_repo, harness_defaults_json, tier_c_globs_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (id) DO UPDATE SET slug = excluded.slug, prefix = excluded.prefix,
+           repo_origin = excluded.repo_origin, memory_repo = excluded.memory_repo,
+           harness_defaults_json = excluded.harness_defaults_json,
+           tier_c_globs_json = excluded.tier_c_globs_json`,
+        [
+          p.id,
+          p.slug,
+          p.prefix,
+          p.repo_origin ?? null,
+          p.memory_repo ?? null,
+          toJson(p.harness_defaults),
+          toJson(p.tier_c_globs),
+        ],
+      );
+    },
+
+    async list() {
+      return driver.all('SELECT * FROM projects ORDER BY rowid').map(toProject);
+    },
+  };
+}

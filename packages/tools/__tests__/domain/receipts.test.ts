@@ -243,3 +243,39 @@ describe('receipt chain', () => {
     );
   });
 });
+
+describe('receipt resource', () => {
+  const make = (resource?: string | null): DecisionReceipt =>
+    makeDecisionReceipt(
+      {
+        id: 'd-1',
+        run_id: 'run-1',
+        seq: 1,
+        decision: admit(makeCtx('standard'), call('read', { path: 'a.ts' })),
+        args_hash: sha256Hex('a'),
+        ts: TS,
+        ...(resource === undefined ? {} : { resource }),
+      },
+      null,
+      SECRET,
+    );
+
+  it('carries the resource the writer supplies and defaults to null', () => {
+    expect(make('src/a.ts').resource).toBe('src/a.ts');
+    expect(make().resource).toBeNull();
+    expect(make(null).resource).toBeNull();
+  });
+
+  it('is covered by the MAC: editing or adding a resource breaks the chain at that row', () => {
+    const named = make('src/a.ts');
+    expect(verifyChain([named], SECRET)).toEqual({ ok: true, value: 1 });
+    expect(verifyChain([{ ...named, resource: 'src/b.ts' }], SECRET)).toMatchObject({
+      ok: false,
+      error: { index: 0, reason: 'hash' },
+    });
+    expect(verifyChain([{ ...make(), resource: 'src/a.ts' }], SECRET)).toMatchObject({
+      ok: false,
+      error: { index: 0, reason: 'hash' },
+    });
+  });
+});

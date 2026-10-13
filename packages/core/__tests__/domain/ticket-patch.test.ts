@@ -11,6 +11,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { makeTicketId } from '#/domain/ids.js';
 import { transition } from '#/domain/state-machine.js';
 import { toTicketPatch } from '#/domain/ticket-patch.js';
 import { makeTicket, T0 } from '#tests/helpers/fixtures.js';
@@ -32,5 +33,33 @@ describe('toTicketPatch', () => {
     const patch = toTicketPatch(r.value);
     expect('blocked_reason' in patch && patch.blocked_reason === undefined).toBe(true);
     expect('tier_actual' in patch).toBe(true);
+  });
+
+  it('leaves relations to the relation repository: parent and blocked_by are not patched', () => {
+    const patch = toTicketPatch(makeTicket({ blocked_by: [makeTicketId('SF', 2)] }));
+    expect('parent' in patch).toBe(false);
+    expect('blocked_by' in patch).toBe(false);
+  });
+
+  it('clears every nullable engine field that the ticket lacks', () => {
+    const patch = toTicketPatch(makeTicket());
+    for (const k of [
+      'assignee_run_id',
+      'branch',
+      'worktree',
+      'checkout_run_id',
+      'epic_id',
+      'created_by_intake',
+    ]) {
+      expect(k in patch, k).toBe(true);
+      expect((patch as Record<string, unknown>)[k], k).toBeUndefined();
+    }
+  });
+
+  it('carries the engine fields a transitioned ticket has', () => {
+    const patch = toTicketPatch(
+      makeTicket({ branch: 'feat/SF-1-x', assignee_run_id: 'r1' }),
+    );
+    expect(patch).toMatchObject({ branch: 'feat/SF-1-x', assignee_run_id: 'r1' });
   });
 });

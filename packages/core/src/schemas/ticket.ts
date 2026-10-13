@@ -69,7 +69,15 @@ export type TicketRelationKind = z.infer<typeof TicketRelationKind>;
 
 const Timestamp = z.iso.datetime();
 
-/** The `tickets` row (director-core.md §3), snake_case for storage. */
+/**
+ * The `tickets` row (director-core.md §3), snake_case for storage.
+ *
+ * `parent` and `blocked_by` are derived on read from `ticket_relations`, the single
+ * source of truth for relations (see TicketRelation); they are not columns and not
+ * patchable. The engine-owned nullable fields (`assignee_run_id`, `branch`, `worktree`,
+ * `checkout_run_id`, `epic_id`, `created_by_intake`) are absent until the engine sets
+ * them and can be cleared with an explicit `undefined` in a patch.
+ */
 export const Ticket = z.object({
   id: TicketId,
   project: z.string().min(1),
@@ -83,6 +91,12 @@ export const Ticket = z.object({
   status_version: z.number().int().nonnegative(),
   rework_count: z.number().int().nonnegative(),
   blocked_reason: z.string().optional(),
+  assignee_run_id: z.string().min(1).optional(),
+  branch: z.string().min(1).optional(),
+  worktree: z.string().min(1).optional(),
+  checkout_run_id: z.string().min(1).optional(),
+  epic_id: TicketId.optional(),
+  created_by_intake: z.number().int().positive().optional(),
   created_at: Timestamp,
   updated_at: Timestamp,
   parent: TicketId.optional(),

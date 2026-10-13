@@ -9,7 +9,7 @@
  *   mid-ticket. `default_harness` is an opaque id because core must not know which
  *   harnesses exist; drivers are chosen by config (d-0034, d-0027).
  *
- * Exports: Profile, ProjectCommands, ProjectConfig.
+ * Exports: Profile, ProjectCommands, ProjectConfig, Project.
  * Depends on: schemas/ids, zod. No IO.
  */
 
@@ -38,3 +38,20 @@ export const ProjectConfig = z.object({
   remote: z.string().min(1).optional(),
 });
 export type ProjectConfig = z.infer<typeof ProjectConfig>;
+
+/**
+ * The `projects` table row (director-core.md §3): the registry the Director keeps of the
+ * repos it works on. Distinct from `ProjectConfig`, which is the per-repo file; this is
+ * the database's record of a project, with its origin, memory repo and the harness and
+ * tier-C overrides the Director applies.
+ */
+export const Project = z.object({
+  id: z.string().min(1),
+  slug: z.string().regex(/^[a-z][a-z0-9-]*$/),
+  prefix: ProjectPrefix,
+  repo_origin: z.string().min(1).optional(),
+  memory_repo: z.string().min(1).optional(),
+  harness_defaults: z.record(z.string(), z.unknown()),
+  tier_c_globs: z.array(z.string()),
+});
+export type Project = z.infer<typeof Project>;

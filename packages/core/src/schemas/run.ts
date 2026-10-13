@@ -13,7 +13,8 @@
  *
  * Exports: Usage, UsageReport, SessionRef, Isolation, PermissionPolicy, ToolExposure,
  *   RunBudget, RunRequest, RunHandle, RunResultStatus, RunResult, InteractionKind,
- *   RunEvent, RunStatus, Run, SteerMode, DriverCapabilities, Sha256Hex, ErrorFamily (re-export).
+ *   PermissionDecision, RunEvent, RunStatus, Run, SteerMode, DriverCapabilities, Sha256Hex,
+ *   ErrorFamily (re-export).
  * Depends on: schemas/ticket, schemas/errors, zod. No IO.
  */
 
@@ -77,14 +78,30 @@ export const RunBudget = z.object({
 });
 export type RunBudget = z.infer<typeof RunBudget>;
 
-/** Everything a driver needs to start a run. No AbortSignal (not serializable); cancel through `WorkerDriver.cancel`. */
+/**
+ * Everything a driver needs to start a run. No AbortSignal (not serializable); cancel
+ * through `WorkerDriver.cancel`.
+ *
+ * `runId`, `projectId`, `lane`, `promptHash` and `mcpIdentity` let the driver label its
+ * events and receipts without asking the app; `mcpIdentity` is the server name the run's
+ * Forge MCP server is registered under (its tools are `mcp__<identity>__<tool>`).
+ * `permissionPolicy` and `tools` are optional on purpose: the app derives both from
+ * `visibleTools()` over the run's `AdmitContext`, so a request must not carry a second,
+ * possibly different, policy source. A driver that is handed them treats them as that
+ * derivation, never as an override.
+ */
 export const RunRequest = z.object({
+  runId: z.string().min(1),
+  projectId: z.string().min(1),
+  lane: Lane,
+  promptHash: Sha256Hex,
+  mcpIdentity: z.string().min(1),
   ticketId: z.string().min(1),
   cwd: z.string().min(1),
   prompt: z.string(),
   model: z.string().min(1),
-  permissionPolicy: PermissionPolicy,
-  tools: ToolExposure,
+  permissionPolicy: PermissionPolicy.optional(),
+  tools: ToolExposure.optional(),
   budget: RunBudget,
   resume: SessionRef.optional(),
   env: z.record(z.string(), z.string()),
@@ -107,27 +124,55 @@ export const RunResultStatus = z.enum([
   'timeout',
   'error',
   'cancelled',
+  'paused',
 ]);
 export type RunResultStatus = z.infer<typeof RunResultStatus>;
 
-/** Normalized final result of a run, including the error family for failures. */
-export const RunResult = z.object({
-  status: RunResultStatus,
-  session: SessionRef.nullable(),
-  usage: UsageReport,
-  costUsd: z.number().nonnegative().nullable(),
-  filesTouched: z.array(z.string()),
-  structured: z.unknown().optional(),
-  errorFamily: ErrorFamily.optional(),
-  retryNotBefore: Timestamp.optional(),
-});
+/**
+ * Normalized final result of a run, including the error family for failures. `paused`
+ * means the run stopped on purpose to wait for a human: it names `pauseReason` and the
+ * `interactionId` to answer, and the Director resumes it as a new run (execution-plane.md §7).
+ */
+export const RunResult = z
+  .object({
+    status: RunResultStatus,
+    session: SessionRef.nullable(),
+    usage: UsageReport,
+    costUsd: z.number().nonnegative().nullable(),
+    filesTouched: z.array(z.string()),
+    structured: z.unknown().optional(),
+    errorFamily: ErrorFamily.optional(),
+    retryNotBefore: Timestamp.optional(),
+    pauseReason: z.literal('interaction').optional(),
+    interactionId: z.string().min(1).optional(),
+  })
+  .refine(
+    (r) =>
+      r.status === 'paused'
+        ? r.pauseReason !== undefined && r.interactionId !== undefined
+        : r.pauseReason === undefined && r.interactionId === undefined,
+    { message: 'pauseReason and interactionId belong to status paused, and only to it' },
+  );
 export type RunResult = z.infer<typeof RunResult>;
+
+/** How a message is delivered to a live run (director-core.md §8). */
+export const SteerMode = z.enum(['steer', 'follow_up', 'interrupt']);
+export type SteerMode = z.infer<typeof SteerMode>;
 
 const eventBase = { seq: z.number().int().nonnegative(), ts: Timestamp };
 
-/** Kinds of blocking interaction (director-core.md §3). */
-export const InteractionKind = z.enum(['question', 'plan_confirm', 'permission']);
+/** Kinds of blocking interaction (director-core.md §3); `blocked` is a Worker's `report_blocked`. */
+export const InteractionKind = z.enum([
+  'question',
+  'plan_confirm',
+  'permission',
+  'blocked',
+]);
 export type InteractionKind = z.infer<typeof InteractionKind>;
+
+/** The verdict a `permission` event records for one tool call (same words as `admit()`). */
+export const PermissionDecision = z.enum(['allow', 'deny', 'ask']);
+export type PermissionDecision = z.infer<typeof PermissionDecision>;
 
 /** Normalized event stream item; discriminated on `type`. */
 export const RunEvent = z.discriminatedUnion('type', [
@@ -166,12 +211,39 @@ export const RunEvent = z.discriminatedUnion('type', [
     message: z.string(),
   }),
   z.object({ type: z.literal('usage'), ...eventBase, usage: UsageReport }),
+  z.object({
+    type: z.literal('permission'),
+    ...eventBase,
+    interaction_id: z.string().min(1).optional(),
+    call_id: z.string().min(1),
+    tool: z.string().min(1),
+    decision: PermissionDecision,
+  }),
+  z.object({
+    type: z.literal('inbox_delivered'),
+    ...eventBase,
+    inbox_seq: z.number().int().nonnegative(),
+    mode: SteerMode,
+  }),
+  z.object({ type: z.literal('session'), ...eventBase, session_ref: SessionRef }),
+  z.object({
+    type: z.literal('hook_liveness'),
+    ...eventBase,
+    fingerprint: z.string().min(1),
+  }),
 ]);
 export type RunEvent = z.infer<typeof RunEvent>;
 
-/** Persisted run status: `running` or a terminal result. */
+/**
+ * Persisted run status. `starting` (row created, harness not yet confirmed) and
+ * `running` are the active states; `settling` and `settled` are the reconcile
+ * hand-off after the harness stopped; the rest are terminal results.
+ */
 export const RunStatus = z.enum([
+  'starting',
   'running',
+  'settling',
+  'settled',
   'success',
   'refused',
   'max_turns',
@@ -181,7 +253,12 @@ export const RunStatus = z.enum([
 ]);
 export type RunStatus = z.infer<typeof RunStatus>;
 
-/** The persisted `runs` row (snake_case). */
+/**
+ * The persisted `runs` row (snake_case). `owner` is the Forge server instance that
+ * started the run (d-0054: a restart makes every other owner's `running` run a crash).
+ * A resumed run is a new row whose `retry_of` names the run it continues; a row with
+ * `ended_at` is never reopened.
+ */
 export const Run = z.object({
   id: z.string().min(1),
   ticket_id: z.string().min(1),
@@ -196,13 +273,16 @@ export const Run = z.object({
   usage: UsageReport.optional(),
   cost_usd: z.number().nonnegative().optional(),
   error_family: ErrorFamily.optional(),
-  retry_of: z.string().optional(),
+  retry_of: z.string().min(1).optional(),
+  owner: z.string().min(1),
+  pid: z.number().int().positive().optional(),
+  last_event_at: Timestamp.optional(),
+  final_chain_hash: Sha256Hex.optional(),
+  catalogue_hash: Sha256Hex.optional(),
+  prompt_hash: Sha256Hex.optional(),
+  hook_registered_at: Timestamp.optional(),
 });
 export type Run = z.infer<typeof Run>;
-
-/** How a message is delivered to a live run (director-core.md §8). */
-export const SteerMode = z.enum(['steer', 'follow_up', 'interrupt']);
-export type SteerMode = z.infer<typeof SteerMode>;
 
 /** Capabilities a driver declares up front, so the Director routes by what a harness can actually do instead of guessing from its name. */
 export const DriverCapabilities = z.object({

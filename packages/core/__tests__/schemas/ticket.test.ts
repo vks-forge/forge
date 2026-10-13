@@ -63,3 +63,24 @@ describe('ticket schemas', () => {
     expect(Ticket.safeParse({ ...base, status_version: -1 }).success).toBe(false);
   });
 });
+
+describe('Ticket batch C fields', () => {
+  it('parses the nullable engine fields when present and when absent', () => {
+    expect(Ticket.safeParse(base).success).toBe(true);
+    const full = {
+      ...base,
+      assignee_run_id: 'run-1',
+      branch: 'feat/SF-1-add-doctor-check',
+      worktree: '.forge/data/worktrees/SF-1',
+      checkout_run_id: 'run-1',
+      epic_id: 'SF-9',
+      created_by_intake: 12,
+    };
+    expect(Ticket.parse(full)).toMatchObject(full);
+  });
+
+  it('rejects a malformed epic id and a non-integer intake id', () => {
+    expect(Ticket.safeParse({ ...base, epic_id: 'nope' }).success).toBe(false);
+    expect(Ticket.safeParse({ ...base, created_by_intake: 1.5 }).success).toBe(false);
+  });
+});

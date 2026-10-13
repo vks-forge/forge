@@ -81,7 +81,7 @@ describe('runMigrations', () => {
     runMigrations(driver, MIGRATIONS.slice(0, 1));
     const applied = runMigrations(driver);
     driver.close();
-    expect(applied).toEqual([2, 3, 4]);
+    expect(applied).toEqual([2, 3, 4, 5]);
   });
 
   describe('0003 receipt chain columns', () => {
@@ -168,12 +168,98 @@ describe('runMigrations', () => {
          VALUES ('old1', 'r1', 1, 't', 'a', 'allow', 'rule', 'ts', 'h'),
                 ('old2', 'r1', 2, 't', 'a', 'allow', 'rule', 'ts', 'h')`,
       );
-      expect(runMigrations(driver)).toEqual([4]);
+      expect(runMigrations(driver)).toEqual([4, 5]);
       const rows = driver.all<{ chain_seq: number }>(
         'SELECT chain_seq FROM tool_decisions',
       );
       driver.close();
       expect(rows).toEqual([{ chain_seq: 0 }, { chain_seq: 0 }]);
+    });
+  });
+
+  describe('0005 ports batch C', () => {
+    const columns = (driver: ReturnType<typeof openSqliteDriver>, table: string) =>
+      driver.all<{ name: string }>(`PRAGMA table_info(${table})`).map((r) => r.name);
+
+    it('adds the run lifecycle, wake request and receipt resource columns', () => {
+      const driver = openSqliteDriver(':memory:');
+      runMigrations(driver);
+      expect(columns(driver, 'runs')).toEqual(
+        expect.arrayContaining([
+          'owner',
+          'pid',
+          'last_event_at',
+          'catalogue_hash',
+          'prompt_hash',
+          'hook_registered_at',
+        ]),
+      );
+      expect(columns(driver, 'wake_requests')).toEqual(
+        expect.arrayContaining(['created_at', 'consumed_at']),
+      );
+      expect(columns(driver, 'tool_decisions')).toContain('resource');
+      driver.close();
+    });
+
+    it('drops the parent_id and blocked_by_json copies: ticket_relations is the only home', () => {
+      const driver = openSqliteDriver(':memory:');
+      runMigrations(driver);
+      const cols = columns(driver, 'tickets');
+      driver.close();
+      expect(cols).not.toContain('parent_id');
+      expect(cols).not.toContain('blocked_by_json');
+    });
+
+    it('indexes the stall scan, the wake re-wake count and the gate lookup', () => {
+      const driver = openSqliteDriver(':memory:');
+      runMigrations(driver);
+      const names = (table: string) =>
+        driver.all<{ name: string }>(`PRAGMA index_list(${table})`).map((r) => r.name);
+      const found = [
+        ...names('runs'),
+        ...names('wake_requests'),
+        ...names('interactions'),
+      ];
+      driver.close();
+      expect(found).toEqual(
+        expect.arrayContaining([
+          'idx_runs_status',
+          'idx_wake_requests_ticket_created',
+          'idx_interactions_ticket',
+        ]),
+      );
+    });
+
+    it('upgrades a 0001-0004 database: legacy parent and blockers become relation rows, old runs get a legacy owner', () => {
+      const driver = openSqliteDriver(':memory:');
+      runMigrations(driver, MIGRATIONS.slice(0, 4));
+      const ticket = (id: string, parent: string | null, blockers: string) =>
+        driver.run(
+          `INSERT INTO tickets (id, project, parent_id, title, body, type, lane, tier_predicted,
+             status, status_version, blocked_by_json, created_at, updated_at)
+           VALUES (?, 'SF', ?, 't', 'b', 'feat', 'express', 'A', 'inbox', 0, ?, '2026-10-13T00:00:00.000Z', '2026-10-13T00:00:00.000Z')`,
+          [id, parent, blockers],
+        );
+      ticket('SF-1', 'SF-9', '["SF-2","SF-3"]');
+      ticket('SF-2', null, '[]');
+      driver.run(
+        `INSERT INTO runs (id, ticket_id, harness, driver_version, cwd, lane, started_at, status)
+         VALUES ('old', 'SF-1', 'h', '1', '/w', 'express', '2026-10-13T00:00:00.000Z', 'running')`,
+      );
+      expect(runMigrations(driver)).toEqual([5]);
+      const edges = driver.all<{ from_id: string; to_id: string; kind: string }>(
+        'SELECT from_id, to_id, kind FROM ticket_relations ORDER BY rowid',
+      );
+      const run = driver.get<{ owner: string }>(
+        "SELECT owner FROM runs WHERE id = 'old'",
+      );
+      driver.close();
+      expect(edges).toEqual([
+        { from_id: 'SF-1', to_id: 'SF-9', kind: 'spawned_from' },
+        { from_id: 'SF-1', to_id: 'SF-2', kind: 'depends_on' },
+        { from_id: 'SF-1', to_id: 'SF-3', kind: 'depends_on' },
+      ]);
+      expect(run?.owner).toBe('pre-0005');
     });
   });
 
@@ -345,7 +431,7 @@ describe('checkSchemaCurrent', () => {
     runMigrations(driver);
     const current = checkSchemaCurrent(driver);
     driver.close();
-    expect(behind).toMatchObject({ status: 'behind', pending: [3, 4] });
+    expect(behind).toMatchObject({ status: 'behind', pending: [3, 4, 5] });
     expect(current).toMatchObject({ status: 'current', pending: [], unknown: [] });
   });
 

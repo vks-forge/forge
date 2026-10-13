@@ -99,6 +99,7 @@ describe('receipt rows mirror the db tables', () => {
         'decision',
         'layer',
         'rule_id',
+        'resource',
         'finding_ids',
         'approver',
         'approval_ref',

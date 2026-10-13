@@ -25,6 +25,8 @@ export interface DecisionReceiptInput {
   readonly args_hash: string;
   readonly approver?: 'auto' | 'user' | 'guardian' | null;
   readonly approval_ref?: string | null;
+  /** What the call touched, from `callResource()`; omit or `null` when none could be named. */
+  readonly resource?: string | null;
   readonly ts: string;
 }
 

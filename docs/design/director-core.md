@@ -38,15 +38,17 @@ decides on, an append-only event log for everything that happened.
 
 ```
 projects            id, slug, repo_origin, memory_repo, harness_defaults, tier_c_globs
-tickets             id (public `<PROJECT>-<n>`, the primary key, d-0055), project, epic_id, parent_id, title, body, status, status_version,
+tickets             id (public `<PROJECT>-<n>`, the primary key, d-0055), project, epic_id, title, body, status, status_version,
                     lane, tier_predicted, tier_actual, assignee_run_id, branch, worktree,
                     checkout_run_id, blocked_reason, created_by_intake
-ticket_relations    from, to, kind (blocks | depends_on | related | supersedes | spawned_from)
+ticket_relations    from, to, kind (blocks | depends_on | related | supersedes | spawned_from)   ← the source of truth for parent and blockers
 intake_events       id, source, kind, dedupe_key UNIQUE, actor, payload, received_at, ticket_id
 wake_requests       id, ticket, reason, kind (retry | response_wake | delegated | monitor | continuation),
                     idempotency_key UNIQUE, coalesced_count, status, not_before
 runs                id, ticket, harness, driver_version, session_ref, cwd, lane, started_at,
-                    ended_at, status, usage_json, cost_usd, error_family, retry_of
+                    ended_at, status (starting | running | settling | settled | terminal result), usage_json, cost_usd,
+                    error_family, retry_of, owner, pid, last_event_at, final_chain_hash, catalogue_hash, prompt_hash,
+                    hook_registered_at
 run_events          run, seq, ts, kind, payload           ← append-only, replayable
 run_inbox           run, seq, mode (steer | follow_up | interrupt), author, text, delivered_at
 interactions        id, ticket, run, kind (question | plan_confirm | permission), payload,
@@ -64,6 +66,18 @@ Rules:
   of truth.
 - Harness owns the transcript. We store `session_ref` and resume through it
   (see `execution-plane.md` §7).
+- **Relations have one source of truth: `ticket_relations`.** `Ticket.parent` and
+  `Ticket.blocked_by` are not columns; the storage repository derives them on every read
+  (parent = the first `spawned_from` edge out of the ticket; blocked_by = its `depends_on`
+  targets plus the sources of `blocks` edges into it). A ticket patch cannot carry them,
+  `tickets.insert` records a seeded parent or blocker as edges, and every later change goes
+  through `ticketRelations.add/remove`. Two copies would disagree, and a ticket could start
+  while a blocker is still open.
+- **Resume creates a new `runs` row.** A resumed (or retried) run is a new row whose
+  `retry_of` names the run it continues; a run with `ended_at` is never reopened (storage
+  refuses to clear `ended_at` or to move an ended run back to `starting` / `running`). The
+  first attempt's end time, status and `final_chain_hash` stay as evidence. "Is this run
+  active?" is one rule everywhere (`isRunActive`: `starting` or `running`, no `ended_at`).
 - Wake requests are idempotent on `(ticket, reason, key)`. A duplicate
   increments `coalesced_count` instead of inserting.
 - **Automated re-wake cap:** at most 3 recovery wakes per ticket per hour, and

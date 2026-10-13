@@ -49,6 +49,7 @@ export function appendDecision(
         args_hash: 'a'.repeat(64),
         approver: 'auto',
         approval_ref: 'appr-1',
+        resource: 'src/a.ts',
         ts: T0,
       },
       view.last,

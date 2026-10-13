@@ -5,12 +5,23 @@
  *   them from the core types and schemas means tests cannot pass with rows production
  *   would reject, and a schema change breaks the fixtures in one place.
  *
- * Exports: T0, makeTicket(), makeRun(), makeTextEvent(), makeInteraction(), makeIntake().
+ * Exports: T0, makeTicket(), makeRun(), makeTextEvent(), makeInteraction(), makeIntake(),
+ *   makeWake(), makeInboxMessage(), makeGate(), makeProject().
  * Depends on: @forge/core. No IO.
  */
 
 import { makeTicketId } from '@forge/core';
-import type { IntakeEvent, Interaction, NewRunEvent, Run, Ticket } from '@forge/core';
+import type {
+  IntakeEvent,
+  Interaction,
+  NewGateResult,
+  NewRunEvent,
+  NewRunInboxMessage,
+  NewWakeRequest,
+  Project,
+  Run,
+  Ticket,
+} from '@forge/core';
 
 export const T0 = '2026-10-13T00:00:00.000Z';
 
@@ -43,6 +54,7 @@ export function makeRun(id = 'run-1', overrides: Partial<Run> = {}): Run {
     lane: 'express',
     started_at: T0,
     status: 'running',
+    owner: 'server-1',
     ...overrides,
   };
 }
@@ -80,6 +92,52 @@ export function makeIntake(
     project: 'SF',
     payload: { text: 'hello' },
     received_at: T0,
+    ...overrides,
+  };
+}
+
+export function makeWake(
+  key = 'k1',
+  overrides: Partial<NewWakeRequest> = {},
+): NewWakeRequest {
+  return {
+    id: `w-${key}`,
+    ticket_id: 'SF-1',
+    reason: 'gate_failed',
+    kind: 'retry',
+    idempotency_key: key,
+    created_at: T0,
+    ...overrides,
+  };
+}
+
+export function makeInboxMessage(
+  runId = 'r1',
+  overrides: Partial<NewRunInboxMessage> = {},
+): NewRunInboxMessage {
+  return {
+    run_id: runId,
+    mode: 'steer',
+    author: 'user',
+    text: 'please stop',
+    ...overrides,
+  };
+}
+
+export function makeGate(
+  runId = 'r1',
+  overrides: Partial<NewGateResult> = {},
+): NewGateResult {
+  return { run_id: runId, gate: 'G1', status: 'passed', started_at: T0, ...overrides };
+}
+
+export function makeProject(id = 'p1', overrides: Partial<Project> = {}): Project {
+  return {
+    id,
+    slug: `project-${id}`,
+    prefix: 'SF',
+    harness_defaults: { default: 'claude' },
+    tier_c_globs: ['**/*.sql'],
     ...overrides,
   };
 }

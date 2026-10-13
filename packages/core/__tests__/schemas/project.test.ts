@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { ProjectConfig } from '#/schemas/project.js';
+import { Project, ProjectConfig } from '#/schemas/project.js';
 
 describe('ProjectConfig', () => {
   const ok = {
@@ -38,5 +38,27 @@ describe('ProjectConfig', () => {
     expect(ProjectConfig.safeParse({ ...ok, profile: 'py' }).success).toBe(false);
     expect(ProjectConfig.safeParse({ ...ok, prefix: 'sf' }).success).toBe(false);
     expect(ProjectConfig.safeParse({ ...ok, slug: 'Bad Slug' }).success).toBe(false);
+  });
+});
+
+describe('Project record (projects table)', () => {
+  const project = {
+    id: 'p1',
+    slug: 'software-factory',
+    prefix: 'SF',
+    harness_defaults: { default: 'claude' },
+    tier_c_globs: ['**/*.sql'],
+  };
+
+  it('parses with optional repo_origin and memory_repo', () => {
+    expect(Project.safeParse(project).success).toBe(true);
+    expect(
+      Project.safeParse({ ...project, repo_origin: 'git@x', memory_repo: 'm' }).success,
+    ).toBe(true);
+  });
+
+  it('rejects a bad slug or prefix', () => {
+    expect(Project.safeParse({ ...project, slug: 'Bad Slug' }).success).toBe(false);
+    expect(Project.safeParse({ ...project, prefix: 'sf' }).success).toBe(false);
   });
 });

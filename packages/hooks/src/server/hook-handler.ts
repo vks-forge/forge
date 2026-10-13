@@ -12,18 +12,29 @@
  *   guessing tokens leaves a trace but can neither get an `allow` nor bloat the signed
  *   chain. An effect receipt is written only for an open decision whose verdict was
  *   `allow`, matched by the harness's own `tool_use_id`: a forged Post cannot launder a
- *   denied or asked call into a recorded effect (d-0033, tool-system.md §10,
- *   verification-plane.md §2).
+ *   denied or asked call into a recorded effect. Each decision receipt names the
+ *   `resource` the call touched, computed by the same `callResource()` resolver `admit()`
+ *   uses, so a gate matching a Worker's claim sees the string policy judged. A run that
+ *   is no longer active (`isRunActive`: ended, settling, settled) gets no receipts at all,
+ *   so a late or replayed post cannot extend a finished run's chain (d-0033,
+ *   tool-system.md §10, verification-plane.md §2).
  *
  * Exports: createHookHandler().
- * Depends on: @forge/tools (makeDecisionReceipt, makeEffectReceipt, constantTimeEqual),
+ * Depends on: @forge/core (isRunActive), @forge/tools (makeDecisionReceipt,
+ *   makeEffectReceipt, callResource, constantTimeEqual),
  *   schemas/hook-wire, server/tool-resolver, server/audit-gate, shared/args-hash,
  *   types/hook-handler.
  */
 
 import { randomUUID } from 'node:crypto';
-import { constantTimeEqual, makeDecisionReceipt, makeEffectReceipt } from '@forge/tools';
+import { isRunActive } from '@forge/core';
 import type { Run } from '@forge/core';
+import {
+  callResource,
+  constantTimeEqual,
+  makeDecisionReceipt,
+  makeEffectReceipt,
+} from '@forge/tools';
 import type { Receipt } from '@forge/tools';
 import { HookRequest } from '#/schemas/hook-wire.js';
 import type { HookResponse } from '#/schemas/hook-wire.js';
@@ -60,13 +71,14 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
     const ctx = await deps.admitContext(run);
     const { tool_name: native, tool_input: input, tool_use_id: useId } = req.payload;
     const toolId = resolveToolId(ctx, native);
-    const decision = deps.admit(ctx, {
+    const call = {
       phase: 'call',
       tool: toolId,
       via: 'direct',
       native,
       input,
-    });
+    } as const;
+    const decision = deps.admit(ctx, call);
     const def = toolDefinition(ctx, toolId);
     const [receipt] = await deps.receipts.append(run.id, (view) => [
       makeDecisionReceipt(
@@ -78,6 +90,7 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
           version: def?.version ?? null,
           schema_hash: def?.schema_hash ?? null,
           args_hash: argsHash(input),
+          resource: callResource(ctx, call),
           approver: 'auto',
           ts: now(),
         },
@@ -159,6 +172,8 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
           await audit(run.id, 'bad_token').catch(() => undefined);
           return failed('bad_token');
         }
+        // After the token, so only the run's own Worker learns that the run is over.
+        if (!isRunActive(run)) return failed('inactive_run');
         const parsed = HookRequest.safeParse(request);
         if (!parsed.success) return failed('bad_request');
         const req = parsed.data;

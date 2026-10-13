@@ -19,7 +19,7 @@ per-run token; the harness's own web tools stay denied so web access exists only
 ## What it does
 
 Public API (`src/index.ts`): `createForgeMcpServer(deps)` (verifies the run token and
-that the run is `running`, returns an unconnected `McpServer`), `serveStdio(server)`,
+that the run is active (`isRunActive` from `@forge/core`: `starting` or `running`, no `ended_at`), returns an unconnected `McpServer`), `serveStdio(server)`,
 `withDefaultNetwork(deps)` (fills in the production DNS resolver, address-pinned transport and `fetch`; only the composition root calls it),
 `verifyRunToken(storage, runId, token)`, `hashToken()` (re-exported from `@forge/tools`, as is the constant-time compare),
 `toolSchemaHash()`, `computeToolSchemaHashes()`, `DEV_CATALOGUE_KEY`, `FORGE_TOOLS`,
@@ -30,7 +30,7 @@ that the run is `running`, returns an unconnected `McpServer`), `serveStdio(serv
 | `get_ticket`     | read      | Own ticket (with relations and own runs), or its parent or a blocker alone (no relations). Others are refused.                                  |
 | `add_comment`    | write-cwd | `text` run event on the run (own ticket only).                                                                                                  |
 | `ask_director`   | write-cwd | Pending `interactions` row (kind `question`) plus an `ask` event; Worker must stop. Refused while the run already has a pending interaction.    |
-| `report_blocked` | write-cwd | Same, tagged `payload.subtype = "blocked"`; the Director escalates the lane on it.                                                              |
+| `report_blocked` | write-cwd | Same, with interaction kind `blocked` (and the `ask` event kind `blocked`); the Director escalates the lane on it.                              |
 | `finish`         | write-cwd | One `finish` event: summary plus `claims` (`ran_tests`, `edited`, `added_test`, `read`).                                                        |
 | `web_search`     | network   | Nothing. SearXNG JSON search (1 MB capped stream), base URL must be loopback or allow-listed; result wrapped in the untrusted-content envelope. |
 | `docs_lookup`    | read      | Nothing. Markdown under configured docs dirs by path or glob (at most 8 wildcards, runs collapsed, walk capped), size-capped, no network.       |
@@ -91,7 +91,6 @@ process. The process that hosts it is `apps/mcp` (`forge-mcp`).
   `forge-mcp`; with no (or a revoked) registration the process refuses to start.
 - Run-event `seq` is allocated by storage (`runEvents.append` takes the event without `seq`),
   so tool events and driver events share one gap-free sequence.
-- `report_blocked` is stored as a `question` interaction because core's interaction
-  kinds are closed; a `blocked` kind in core would remove the tag.
+- `report_blocked` is stored with the `blocked` interaction kind (it used to be a `question` tagged `payload.subtype`).
 - No blocking wait for answers, no per-project fetch allow-list source yet (env only),
   no query logging beyond the harness's own tool receipts.

@@ -30,6 +30,11 @@ describe('Interaction', () => {
     expect(Interaction.safeParse(base).success).toBe(true);
   });
 
+  it('accepts the blocked kind (report_blocked) next to question, plan_confirm and permission', () => {
+    for (const kind of ['question', 'plan_confirm', 'permission', 'blocked'])
+      expect(Interaction.safeParse({ ...base, kind }).success).toBe(true);
+  });
+
   it('rejects unknown kinds and statuses', () => {
     expect(Interaction.safeParse({ ...base, kind: 'chat' }).success).toBe(false);
     expect(Interaction.safeParse({ ...base, status: 'maybe' }).success).toBe(false);

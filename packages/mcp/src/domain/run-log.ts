@@ -1,7 +1,7 @@
 /**
  * Run-scoped helpers: load the active run, append run events, raise interactions.
  *
- * Why: every state-writing tool must (a) act only for a run that is still `running`,
+ * Why: every state-writing tool must (a) act only for a run that is still active (`isRunActive`, the same rule the hook uses),
  *   (b) append to the run's event log (storage allocates the sequence number), and (c) for
  *   questions, store an `interactions` row the Director's tick can find. Doing it in one
  *   place keeps the log gap-free and means no tool can write for a run the Director has
@@ -11,8 +11,14 @@
  * Depends on: @forge/core, types/deps.types. IO: storage transactions.
  */
 
-import { PolicyDeniedError } from '@forge/core';
-import type { NewRunEvent, RunEvent, StorageAdapter, StorageTx } from '@forge/core';
+import { PolicyDeniedError, isRunActive } from '@forge/core';
+import type {
+  InteractionKind,
+  NewRunEvent,
+  RunEvent,
+  StorageAdapter,
+  StorageTx,
+} from '@forge/core';
 import type { ToolContext } from '#/types/deps.types.js';
 
 /** Matches the Director's default wait before a parked ticket becomes Blocked (director-core.md §8). */
@@ -22,7 +28,7 @@ export const DEFAULT_INTERACTION_TIMEOUT_MS = 4 * 60 * 60 * 1000;
 export async function loadActiveRun(storage: StorageAdapter, runId: string) {
   const run = await storage.transaction((tx) => tx.runs.get(runId));
   if (!run) throw new PolicyDeniedError(`run ${runId} does not exist`);
-  if (run.status !== 'running' || run.ended_at !== undefined)
+  if (!isRunActive(run))
     throw new PolicyDeniedError(`run ${runId} is not running (status: ${run.status})`);
   return run;
 }
@@ -41,11 +47,12 @@ export function appendRunEvent(
 }
 
 /**
- * Stores a pending `question` interaction plus the matching `ask` event atomically and
+ * Stores a pending `question` or `blocked` interaction plus the matching `ask` event atomically and
  * returns the interaction id. The ticket status stays the Director's to change.
  */
 export async function raiseInteraction(
   ctx: ToolContext,
+  kind: Extract<InteractionKind, 'question' | 'blocked'>,
   payload: Record<string, unknown>,
   prompt: string,
 ): Promise<string> {
@@ -66,7 +73,7 @@ export async function raiseInteraction(
       id,
       ticket_id: ctx.run.ticket_id,
       run_id: ctx.run.id,
-      kind: 'question',
+      kind,
       payload,
       status: 'pending',
       asked_at: asked.toISOString(),
@@ -76,7 +83,7 @@ export async function raiseInteraction(
       type: 'ask',
       ts,
       interaction_id: id,
-      kind: 'question',
+      kind,
       prompt,
     }));
   });

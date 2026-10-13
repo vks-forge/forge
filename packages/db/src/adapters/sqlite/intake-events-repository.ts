@@ -6,16 +6,28 @@
  *   duplicate spend. The database therefore enforces dedupe: UNIQUE(source, dedupe_key)
  *   with `ON CONFLICT DO NOTHING`, where zero changed rows means the duplicate was
  *   dropped. A read-then-insert would let two writers both see "not seen" and both
- *   insert (director-core.md §7).
+ *   insert. The caller always gets the stored copy back, with its id and the ticket it was
+ *   already mapped to, so a redelivery finds the ticket instead of creating another
+ *   (director-core.md §7).
  *
  * Exports: createIntakeEventRepository().
- * Depends on: @forge/core, shared/json, types/storage-driver.types.
+ * Depends on: @forge/core, shared/db-errors, shared/json, types/storage-driver.types.
  */
 
-import { IntakeEvent } from '@forge/core';
+import { IntakeEvent, StoredIntakeEvent, UnknownForgeError } from '@forge/core';
 import type { IntakeEventRepository } from '@forge/core';
-import { toJson } from '#/shared/json.js';
-import type { SqlDriver } from '#/types/storage-driver.types.js';
+import { parseStored } from '#/shared/db-errors.js';
+import { dropNulls, fromJson, toJson } from '#/shared/json.js';
+import type { SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
+
+function toStored(row: SqlRow): StoredIntakeEvent {
+  const { actor_json, payload_json, ...rest } = dropNulls(row);
+  return parseStored(
+    StoredIntakeEvent,
+    { ...rest, actor: fromJson(actor_json), payload: fromJson(payload_json) },
+    'intake event',
+  );
+}
 
 export function createIntakeEventRepository(driver: SqlDriver): IntakeEventRepository {
   return {
@@ -34,6 +46,19 @@ export function createIntakeEventRepository(driver: SqlDriver): IntakeEventRepos
           toJson(e.payload),
           e.received_at,
         ],
+      );
+      const row = driver.get(
+        'SELECT * FROM intake_events WHERE source = ? AND dedupe_key = ?',
+        [e.source, e.dedupe_key],
+      );
+      if (!row) throw new UnknownForgeError('intake event vanished after insert');
+      return { inserted: res.changes === 1, event: toStored(row) };
+    },
+
+    async markTicket(id, ticketId) {
+      const res = driver.run(
+        'UPDATE intake_events SET ticket_id = ? WHERE id = ? AND ticket_id IS NULL',
+        [ticketId, id],
       );
       return res.changes === 1;
     },

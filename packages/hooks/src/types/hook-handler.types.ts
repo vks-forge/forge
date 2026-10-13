@@ -29,7 +29,12 @@ import type { HookResponse } from '#/schemas/hook-wire.js';
 
 /** Why the handler refused; each maps to a `fail_closed_*` ReasonCode. */
 export type FailClosedCode =
-  'unknown_run' | 'no_credentials' | 'bad_token' | 'bad_request' | 'internal';
+  | 'unknown_run'
+  | 'no_credentials'
+  | 'bad_token'
+  | 'inactive_run'
+  | 'bad_request'
+  | 'internal';
 
 /** What the Director holds for a run: the bearer token the hook sends and the HMAC secret. */
 export interface RunCredentials {

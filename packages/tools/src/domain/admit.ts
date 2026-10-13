@@ -15,15 +15,21 @@
  *
  * Exports: admit(), visibleTools().
  * Depends on: domain/catalogue, domain/grants, domain/lane-defaults, domain/rules, domain/budgets, domain/tokenizer,
- *   domain/tool-id, schemas/decision, types/admit. No IO.
+ *   domain/call-resource, domain/tool-id, schemas/decision, types/admit. No IO.
  */
 
 import { checkBudget } from '#/domain/budgets.js';
+import {
+  PATH_TOOLS,
+  pathResources,
+  resourceOf,
+  shellDialect,
+} from '#/domain/call-resource.js';
 import { schemaMatches } from '#/domain/catalogue.js';
 import { checkToolGranted } from '#/domain/grants.js';
 import { LANE_UNATTENDED } from '#/domain/lane-defaults.js';
 import { evaluateShell, evaluateToolRules } from '#/domain/rules.js';
-import { SHELL_TOOL_ID, isProjectMcp, toolAction } from '#/domain/tool-id.js';
+import { SHELL_TOOL_ID, toolAction } from '#/domain/tool-id.js';
 import { tokenizeShell } from '#/domain/tokenizer.js';
 import type { Decision, DecisionLayer, ReasonCode } from '#/schemas/decision.js';
 import type { Effect } from '#/schemas/grant.js';
@@ -37,10 +43,6 @@ import type {
 } from '#/types/admit.types.js';
 
 const SEVERITY: Record<Effect, number> = { allow: 0, ask: 1, deny: 2 };
-const RESOURCE_KEYS = ['url', 'query', 'name'];
-/** Fields a harness uses to name the file or directory of a path tool. */
-const PATH_KEYS = ['file_path', 'path', 'notebook_path'] as const;
-const PATH_TOOLS = new Set(['read', 'edit', 'write', 'grep', 'glob']);
 
 function finish(
   call: AdmitCall,
@@ -70,49 +72,6 @@ const deny = (
   rule,
   findings: [],
 });
-
-/**
- * The resources a path tool touches, or `null` when the input does not name one safely.
- * Every present path field must be a string (a number or object in `path` is a bypass
- * attempt, not a path), and at least one must be non-empty. For `grep` the pattern stands
- * in for a missing path (it is judged as a path too, conservatively); for `glob` the
- * pattern is judged both alone and joined to `path`, so `../..` inside a pattern cannot
- * climb out.
- */
-function pathResources(action: string, input: AdmitCall['input']): string[] | null {
-  const given: string[] = [];
-  for (const k of [...PATH_KEYS, 'pattern']) {
-    const v = input?.[k];
-    if (v === undefined || v === null) continue;
-    if (typeof v !== 'string') return null;
-    if (k !== 'pattern') given.push(v);
-  }
-  const pattern = input?.['pattern'];
-  const hasPattern =
-    typeof pattern === 'string' && (action === 'grep' || action === 'glob');
-  if (hasPattern) {
-    if (pattern.trim() === '') return null;
-    if (action === 'grep' && given.length === 0) given.push(pattern);
-    if (action === 'glob') {
-      const base = given.length > 0 ? given : ['.'];
-      given.push(
-        ...base.map((b) =>
-          /^([a-zA-Z]:|[\\/~])/.test(pattern) ? pattern : `${b}/${pattern}`,
-        ),
-      );
-    }
-  }
-  return given.length === 0 || given.some((g) => g.trim() === '') ? null : given;
-}
-
-function resourceOf(def: ToolDefinition, call: AdmitCall): string {
-  if (isProjectMcp(def.id)) return def.id;
-  for (const k of RESOURCE_KEYS) {
-    const v = call.input?.[k];
-    if (typeof v === 'string') return v;
-  }
-  return '';
-}
 
 /** Raises `cur` to `next` only if `next` is stricter; findings accumulate. */
 function raise(cur: Draft, next: Draft): Draft {
@@ -157,7 +116,7 @@ function callRules(ctx: AdmitContext, def: ToolDefinition, call: AdmitCall): Dra
   }
   const command = call.input?.['command'];
   if (typeof command !== 'string') return deny('untokenizable', 'rule');
-  const dialect = /^(powershell|pwsh)$/i.test(call.native ?? '') ? 'powershell' : 'bash';
+  const dialect = shellDialect(call.native);
   const tokens = tokenizeShell(command, dialect);
   if (!tokens.ok) return deny(tokens.error, 'rule');
   return outcomeDraft(evaluateShell(ctx.grant, tokens.value, dialect, ctx.cwd));

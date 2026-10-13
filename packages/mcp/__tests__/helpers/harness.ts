@@ -54,6 +54,7 @@ export function run(over: Partial<Run> = {}): Run {
     lane: 'standard',
     started_at: T0,
     status: 'running',
+    owner: 'server-1',
     ...over,
   };
 }

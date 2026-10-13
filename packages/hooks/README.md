@@ -17,7 +17,7 @@ exit 0 allow | exit 2 deny/ask/any failure (reason on stderr)    admit() + HMAC 
 ```
 
 - `runHook(io)` / `main()`: the client. `bin/hook.js` loads `dist/client/hook-main.js`; if that fails it exits 2.
-- `createHookHandler({ db, receipts, admit, credentials, admitContext, clock, audit? })` -> `handle(runId, token, request)`. Checks token (`constantTimeEqual` from `@forge/tools`), runs `admit()`, appends decision / effect receipts (`seq` from the chain tail), never throws.
+- `createHookHandler({ db, receipts, admit, credentials, admitContext, clock, audit? })` -> `handle(runId, token, request)`. Checks token (`constantTimeEqual` from `@forge/tools`), refuses a run that is no longer active (`isRunActive` from `@forge/core`: ended, settling or settled runs answer `fail_closed_inactive_run` and get no receipts; a `starting` run is served so its hook can register liveness), runs `admit()`, appends decision / effect receipts (each decision records its `resource` via `callResource()` from `@forge/tools`, the same resolver `admit()` uses; `seq` from the chain tail), never throws.
 - `renderHookSettings()`, `renderAcpMeta()`: per-run settings file contents and the ACP `_meta`.
 - Schemas: `HookPayload`, `HookRequest`, `HookResponse`, `HookConfig`. Receipts go through the `ReceiptLog` port from `@forge/tools`; `@forge/db` provides `openSqlite(path).receipts` and `createMemoryReceiptLog()`.
 
@@ -29,7 +29,7 @@ exit 0 allow | exit 2 deny/ask/any failure (reason on stderr)    admit() + HMAC 
 
 **PreToolUse is the only hard gate.** Claude Code treats SessionStart as non-blocking (exit 2 only shows stderr), so SessionStart exit codes are advisory; a run that never registers liveness is killed by the engine (d-0033), and its first tool call is still judged at PreToolUse.
 
-Fail-closed matrix (PreToolUse; SessionStart advisory): server down, timeout, non-2xx, malformed answer, missing or invalid config, bad stdin, unbuilt dist all exit 2. Server side: unknown run, no credentials, bad token, bad request, internal error answer `deny` with `fail_closed_<code>`; a bad token or internal error on a real run is reported to the optional `audit(runId, entry)` dep (in-memory default, at most one entry per run per 10 s with a count of suppressed ones) and is never appended to the signed chain, so a Worker cannot bloat it.
+Fail-closed matrix (PreToolUse; SessionStart advisory): server down, timeout, non-2xx, malformed answer, missing or invalid config, bad stdin, unbuilt dist all exit 2. Server side: unknown run, no credentials, bad token, inactive run, bad request, internal error answer `deny` with `fail_closed_<code>`; a bad token or internal error on a real run is reported to the optional `audit(runId, entry)` dep (in-memory default, at most one entry per run per 10 s with a count of suppressed ones) and is never appended to the signed chain, so a Worker cannot bloat it.
 
 ## Why this approach
 

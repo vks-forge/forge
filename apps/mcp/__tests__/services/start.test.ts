@@ -43,6 +43,7 @@ beforeEach(async () => {
       lane: 'express',
       started_at: T0,
       status: 'running',
+      owner: 'server-1',
     });
     await tx.runTokens.put(RUN_ID, hashToken(TOKEN), T0);
   });
@@ -105,6 +106,7 @@ describe('start', () => {
         lane: 'express',
         started_at: T0,
         status: 'running',
+        owner: 'server-1',
       }),
     );
     const x = io();

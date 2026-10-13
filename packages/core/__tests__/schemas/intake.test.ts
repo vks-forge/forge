@@ -12,7 +12,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { IntakeEvent, intakeIdempotencyKey } from '#/schemas/intake.js';
+import {
+  IntakeEvent,
+  StoredIntakeEvent,
+  intakeIdempotencyKey,
+} from '#/schemas/intake.js';
 
 const ev = {
   source: 'chat',
@@ -41,5 +45,28 @@ describe('IntakeEvent', () => {
   it('builds a stable idempotency key from source + dedupe_key', () => {
     const parsed = IntakeEvent.parse(ev);
     expect(intakeIdempotencyKey(parsed)).toBe('chat:msg-1');
+  });
+});
+
+const ts = '2026-10-13T00:00:00.000Z';
+
+describe('StoredIntakeEvent', () => {
+  const stored = {
+    id: 7,
+    source: 'chat',
+    kind: 'new_request',
+    dedupe_key: 'k',
+    actor: { type: 'user', id: 'u' },
+    project: 'SF',
+    payload: { a: 1 },
+    received_at: ts,
+  };
+
+  it('is an intake event plus the stored id and the optional mapped ticket', () => {
+    expect(StoredIntakeEvent.safeParse(stored).success).toBe(true);
+    expect(StoredIntakeEvent.safeParse({ ...stored, ticket_id: 'SF-3' }).success).toBe(
+      true,
+    );
+    expect(StoredIntakeEvent.safeParse({ ...stored, id: 0 }).success).toBe(false);
   });
 });

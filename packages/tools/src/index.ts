@@ -15,6 +15,7 @@
 export * from '#/adapters/catalogue-file.js';
 export * from '#/domain/admit.js';
 export * from '#/domain/budgets.js';
+export * from '#/domain/call-resource.js';
 export * from '#/domain/catalogue.js';
 export * from '#/domain/floors.js';
 export * from '#/domain/grants.js';

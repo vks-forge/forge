@@ -35,6 +35,7 @@ environment access (code.md rule 1). Process effects are injected (`StartIo`) so
   comma-separated).
 - An existing Forge SQLite DB, already migrated to the current schema by the Forge server, with the run row and the run's token hash registered by the driver
   (`tx.runTokens.put(runId, sha256(token), now)`). A missing file, a missing `schema_migrations` table or a schema behind the registry exits 1; the process never creates or migrates the file. With no token registration it exits 1.
+- A run row that is active (`starting` or `running`, no `ended_at`); anything else exits 1.
 - Tests: `pnpm test` at the root.
 
 ## Extending

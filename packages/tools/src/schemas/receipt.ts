@@ -28,7 +28,11 @@ export type EffectState = z.infer<typeof EffectState>;
 const Hex64 = z.string().regex(/^[0-9a-f]{64}$/);
 const Ts = z.iso.datetime();
 
-/** `tool_decisions` row. `reason` is not yet a db column (see README db follow-ups). */
+/**
+ * `tool_decisions` row. `resource` is what the call touched, named by `callResource()`
+ * (normalised path, first 200 chars of the shell text, host, or MCP tool id; `null` when
+ * none could be named) and is covered by the MAC.
+ */
 export const DecisionReceipt = z.object({
   kind: z.literal('decision'),
   id: z.string().min(1),
@@ -42,6 +46,7 @@ export const DecisionReceipt = z.object({
   layer: z.string().min(1),
   reason: z.string().min(1),
   rule_id: z.string().nullable(),
+  resource: z.string().nullable(),
   finding_ids: z.array(z.string()),
   approver: z.enum(['auto', 'user', 'guardian']).nullable(),
   approval_ref: z.string().nullable(),

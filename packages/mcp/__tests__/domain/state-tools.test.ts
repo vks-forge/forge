@@ -80,7 +80,7 @@ describe('get_ticket', () => {
   it('reports a missing ticket as a tool error', async () => {
     const { client, storage } = await setup();
     await storage.transaction(async (tx) => {
-      await tx.tickets.updateTicketCas(TICKET_ID, 1, { blocked_by: [] });
+      await tx.tickets.updateTicketCas(TICKET_ID, 1, { rework_count: 0 });
     });
     const res = await client.callTool({ name: 'get_ticket', arguments: { id: 'SF-77' } });
     expect(res.isError).toBe(true);
@@ -250,12 +250,13 @@ describe('report_blocked', () => {
     const id = JSON.parse(textOf(res)).interaction_id as string;
     const row = await storage.transaction((tx) => tx.interactions.get(id));
     expect(row).toMatchObject({
-      kind: 'question',
+      kind: 'blocked',
       status: 'pending',
-      payload: { subtype: 'blocked', reason: 'needs the prod key' },
+      payload: { reason: 'needs the prod key', source: 'report_blocked' },
     });
+    expect(row?.payload).not.toHaveProperty('subtype');
     const events = await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID));
-    expect(events[0]).toMatchObject({ type: 'ask' });
+    expect(events[0]).toMatchObject({ type: 'ask', kind: 'blocked' });
     expect((events[0] as { prompt: string }).prompt).toMatch(/^BLOCKED/);
   });
 });

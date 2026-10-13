@@ -9,7 +9,7 @@
  *   `dropNulls` exists because SQL returns NULL where the schemas expect an absent
  *   optional field.
  *
- * Exports: toJson(), fromJson(), dropNulls().
+ * Exports: toJson(), fromJson(), dropNulls(), normaliseJson().
  * Depends on: @forge/core (UnknownForgeError). No IO.
  */
 
@@ -28,6 +28,11 @@ export function fromJson(text: unknown): unknown {
   } catch (error) {
     throw new UnknownForgeError('stored JSON column is not valid JSON', { cause: error });
   }
+}
+
+/** The value as a JSON column would return it (`undefined` becomes `null`, non-JSON parts are dropped), for the in-memory adapter to match SQLite. */
+export function normaliseJson(value: unknown): unknown {
+  return JSON.parse(toJson(value)) as unknown;
 }
 
 /** Remove null-valued keys so optional zod fields (absent, not null) parse. */

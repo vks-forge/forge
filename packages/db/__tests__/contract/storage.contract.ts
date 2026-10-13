@@ -12,6 +12,11 @@
  *   leaked database file must not yield a usable credential), and only pending
  *   interactions are listed (director-core.md §3, §7, §8).
  *
+ * The newer repositories live in their own files and are registered from here, so every
+ *   backend runs them: ticket relations and the ticket fields derived from them, the run
+ *   lifecycle, interaction answer/expire CAS, intake ids and ticket mapping, wake requests,
+ *   the run inbox, gate results and projects (ports batch C).
+ *
  * Also pinned: optional columns can be cleared (a patch from `transition()` leaves no stale
  *   `blocked_reason` / `tier_actual`), the CAS owns `status_version`, a transaction
  *   callback that re-enters the adapter fails fast instead of deadlocking, backend
@@ -19,7 +24,8 @@
  *   `issue`.
  *
  * Exports: describeStorageContract().
- * Depends on: vitest, @forge/core, helpers/fixtures. IO only through the adapter under test.
+ * Depends on: vitest, @forge/core, helpers/fixtures, the sibling *.contract files. IO only
+ *   through the adapter under test.
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -38,6 +44,12 @@ import {
   makeTextEvent,
   makeTicket,
 } from '#tests/helpers/fixtures.js';
+import { describeInteractionCasContract } from './interaction-cas.contract.js';
+import { describeIntakeEventsContract } from './intake-events.contract.js';
+import { describeRunLifecycleContract } from './run-lifecycle.contract.js';
+import { describeTicketRelationsContract } from './ticket-relations.contract.js';
+import { describeWakeRequestsContract } from './wake-requests.contract.js';
+import { describeWorkQueuesContract } from './work-queues.contract.js';
 
 /** Register the shared contract; `makeAdapter` must return a fresh, empty adapter each call. */
 export function describeStorageContract(
@@ -52,6 +64,13 @@ export function describeStorageContract(
     afterEach(async () => {
       await db.close();
     });
+
+    describeTicketRelationsContract(() => db);
+    describeRunLifecycleContract(() => db);
+    describeInteractionCasContract(() => db);
+    describeIntakeEventsContract(() => db);
+    describeWakeRequestsContract(() => db);
+    describeWorkQueuesContract(() => db);
 
     describe('tickets', () => {
       it('inserts and reads back a ticket, null when absent', async () => {
@@ -129,17 +148,17 @@ export function describeStorageContract(
       });
 
       it('CAS clears an optional column when the patch carries it as undefined', async () => {
-        const t = makeTicket(1, { parent: makeTicket(2).id, tier_actual: 'B' });
+        const t = makeTicket(1, { blocked_reason: 'dep', tier_actual: 'B' });
         await db.transaction((tx) => tx.tickets.insert(t));
         await db.transaction((tx) =>
           tx.tickets.updateTicketCas(t.id, 0, {
-            parent: undefined,
+            blocked_reason: undefined,
             tier_actual: undefined,
           }),
         );
         const got = await db.transaction((tx) => tx.tickets.get(t.id));
         expect(got).not.toBeNull();
-        expect('parent' in (got ?? {})).toBe(false);
+        expect('blocked_reason' in (got ?? {})).toBe(false);
         expect('tier_actual' in (got ?? {})).toBe(false);
       });
 
@@ -236,7 +255,7 @@ export function describeStorageContract(
           ticket: await tx.tickets.get(makeTicket(1).id),
           run: await tx.runs.get('r1'),
           events: await tx.runEvents.listByRun('r1'),
-          intake: await tx.intakeEvents.insertIfNew(makeIntake('k')),
+          intake: (await tx.intakeEvents.insertIfNew(makeIntake('k'))).inserted,
         }));
         expect(after).toEqual({ ticket: null, run: null, events: [], intake: true });
       });
@@ -280,27 +299,6 @@ export function describeStorageContract(
       });
     });
 
-    describe('intake events', () => {
-      it('stores a new event once and drops the duplicate', async () => {
-        const first = await db.transaction((tx) =>
-          tx.intakeEvents.insertIfNew(makeIntake('k1')),
-        );
-        const again = await db.transaction((tx) =>
-          tx.intakeEvents.insertIfNew(makeIntake('k1')),
-        );
-        expect(first).toBe(true);
-        expect(again).toBe(false);
-      });
-
-      it('scopes the dedupe key to its source', async () => {
-        await db.transaction((tx) => tx.intakeEvents.insertIfNew(makeIntake('k1')));
-        const other = await db.transaction((tx) =>
-          tx.intakeEvents.insertIfNew(makeIntake('k1', { source: 'webhook' })),
-        );
-        expect(other).toBe(true);
-      });
-    });
-
     describe('runs', () => {
       it('round-trips a run, lists by ticket and applies updates', async () => {
         await db.transaction(async (tx) => {
@@ -329,13 +327,11 @@ export function describeStorageContract(
     describe('optional run columns', () => {
       it('update clears an optional column given as undefined', async () => {
         await db.transaction(async (tx) => {
-          await tx.runs.insert(
-            makeRun('r1', { ended_at: '2026-10-13T01:00:00.000Z', cost_usd: 1 }),
-          );
-          await tx.runs.update('r1', { ended_at: undefined });
+          await tx.runs.insert(makeRun('r1', { error_family: 'crash', cost_usd: 1 }));
+          await tx.runs.update('r1', { error_family: undefined });
         });
         const got = await db.transaction((tx) => tx.runs.get('r1'));
-        expect('ended_at' in (got ?? {})).toBe(false);
+        expect('error_family' in (got ?? {})).toBe(false);
         expect(got?.cost_usd).toBe(1);
       });
 

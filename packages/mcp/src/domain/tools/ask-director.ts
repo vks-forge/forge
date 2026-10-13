@@ -4,9 +4,9 @@
  * Why: a Worker must never sit stalled waiting on a human. Both tools write a pending
  *   `interactions` row plus an `ask` run event and return at once with the instruction
  *   to stop; the Director parks the ticket and resumes the run when answered
- *   (director-core.md §8). `report_blocked` is stored as a question tagged
- *   `subtype: blocked` because the interaction kinds are closed (question, plan_confirm,
- *   permission); the Director reads the tag to escalate the lane.
+ *   (director-core.md §8). `ask_director` stores a `question` interaction and
+ *   `report_blocked` a `blocked` one, a kind of its own, so the Director escalates the lane
+ *   from the kind and not from a tag buried in the payload.
  *
  * Exports: askDirectorTool, reportBlockedTool.
  * Depends on: domain/run-log, shared/define-tool, schemas/tool-inputs. IO: storage write.
@@ -28,6 +28,7 @@ export const askDirectorTool = defineTool({
   async handler(ctx, { question }) {
     const id = await raiseInteraction(
       ctx,
+      'question',
       { question, source: 'ask_director' },
       question,
     );
@@ -44,7 +45,8 @@ export const reportBlockedTool = defineTool({
   async handler(ctx, { reason }) {
     const id = await raiseInteraction(
       ctx,
-      { subtype: 'blocked', reason, source: 'report_blocked' },
+      'blocked',
+      { reason, source: 'report_blocked' },
       `BLOCKED: ${reason}`,
     );
     return JSON.stringify({ interaction_id: id, status: 'pending', instruction: STOP });

@@ -12,7 +12,12 @@
  *   built from `transition()` cannot leave a stale `blocked_reason` or `tier_actual`
  *   behind in one backend and not the other.
  *
- * Exports: parseTicketPatch(), parseRunPatch(), parseInteractionPatch(), buildSetClause().
+ * Also holds the one never-reopen rule for runs: a run with `ended_at` may not be moved back
+ *   to `starting` / `running` or have its end time cleared, in either backend (a resume is a
+ *   new run row).
+ *
+ * Exports: parseTicketPatch(), parseRunPatch(), parseInteractionPatch(), assertNotReopened(),
+ *   buildSetClause().
  * Depends on: @forge/core, types/storage-driver.types. No IO.
  */
 
@@ -20,7 +25,14 @@ import { Interaction, InvalidInputError, Run, Ticket } from '@forge/core';
 import type { TicketPatch } from '@forge/core';
 import type { ColumnCodec, SqlValue } from '#/types/storage-driver.types.js';
 
-const TicketPatchSchema = Ticket.omit({ id: true, project: true, created_at: true })
+// `parent` and `blocked_by` are derived from ticket_relations, so a patch cannot carry them.
+const TicketPatchSchema = Ticket.omit({
+  id: true,
+  project: true,
+  created_at: true,
+  parent: true,
+  blocked_by: true,
+})
   .partial()
   .strict();
 const RunPatchSchema = Run.omit({ id: true }).partial().strict();
@@ -41,6 +53,25 @@ export function parseTicketPatch(
 
 export function parseRunPatch(patch: Partial<Omit<Run, 'id'>>): Partial<Omit<Run, 'id'>> {
   return RunPatchSchema.parse(patch) as Partial<Omit<Run, 'id'>>;
+}
+
+/**
+ * Throws InvalidInputError when `patch` would reopen run `id`, which already has an end
+ * time (`hasEnded`): clearing `ended_at` or setting an active status. Late evidence
+ * (`final_chain_hash`) and the reconcile hand-off (`settling`, `settled`) are fine.
+ */
+export function assertNotReopened(
+  id: string,
+  hasEnded: boolean,
+  patch: Partial<Omit<Run, 'id'>>,
+): void {
+  if (!hasEnded) return;
+  const clearsEnd = 'ended_at' in patch && patch.ended_at === undefined;
+  const reactivates = patch.status === 'starting' || patch.status === 'running';
+  if (clearsEnd || reactivates)
+    throw new InvalidInputError(
+      `run ${id} has ended and is never reopened; resume it as a new run with retry_of`,
+    );
 }
 
 export function parseInteractionPatch(

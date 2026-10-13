@@ -10,7 +10,8 @@
  *   `payload` is untrusted user or external text and is never forwarded to a Worker
  *   verbatim (director-core.md §7, d-0002).
  *
- * Exports: IntakeSource, IntakeKind, IntakeActor, IntakeEvent, intakeIdempotencyKey().
+ * Exports: IntakeSource, IntakeKind, IntakeActor, IntakeEvent, StoredIntakeEvent,
+ *   intakeIdempotencyKey().
  * Depends on: zod. No IO.
  */
 
@@ -48,6 +49,17 @@ export const IntakeEvent = z.object({
   received_at: z.iso.datetime(),
 });
 export type IntakeEvent = z.infer<typeof IntakeEvent>;
+
+/**
+ * An intake event as stored: the database id (what `tickets.created_by_intake` points at)
+ * and the ticket the Director mapped it to, once it has. A redelivery returns the first
+ * stored copy, so the id identifies the event, not the delivery.
+ */
+export const StoredIntakeEvent = IntakeEvent.extend({
+  id: z.number().int().positive(),
+  ticket_id: z.string().min(1).optional(),
+});
+export type StoredIntakeEvent = z.infer<typeof StoredIntakeEvent>;
 
 /** Stable per-source idempotency key, since `dedupe_key` is only unique within a source. */
 export function intakeIdempotencyKey(

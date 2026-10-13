@@ -6,7 +6,7 @@
  *   `hook_event_name` and `tool_name` on stdin, `PowerShell` on the Windows CLI and
  *   `Bash` on ACP). Building them once keeps every test on the same shapes.
  *
- * Exports: SECRET, TOKEN, RUN_ID, pre(), post(), failure(), sessionStart(), makeEnv().
+ * Exports: SECRET, TOKEN, RUN_ID, pre(), preWith(), post(), failure(), sessionStart(), makeEnv().
  * Depends on: @forge/db, @forge/tools, src/index. IO only when `sqlitePath` is given.
  */
 
@@ -28,6 +28,13 @@ export const pre = (tool = 'PowerShell', command = 'echo hi', id?: string) => ({
   hook_event_name: 'PreToolUse',
   tool_name: tool,
   tool_input: { command },
+  ...(id ? { tool_use_id: id } : {}),
+});
+/** A PreToolUse payload with an arbitrary `tool_input` (path tools, network tools). */
+export const preWith = (tool: string, input: Record<string, unknown>, id?: string) => ({
+  hook_event_name: 'PreToolUse',
+  tool_name: tool,
+  tool_input: input,
   ...(id ? { tool_use_id: id } : {}),
 });
 export const post = (tool = 'PowerShell', id?: string) => ({
@@ -123,7 +130,8 @@ export function makeEnv(
       lane: 'standard',
       started_at: '2026-10-13T00:00:00.000Z',
       status: 'running',
+      owner: 'server-1',
     }),
   );
-  return { handler, receipts, admitted, liveness, ready, close: () => db.close() };
+  return { handler, receipts, admitted, liveness, ready, db, close: () => db.close() };
 }

@@ -18,15 +18,20 @@
  */
 
 import type { StorageAdapter, StorageTx } from '@forge/core';
+import { createGateResultRepository } from '#/adapters/sqlite/gate-results-repository.js';
 import { createIntakeEventRepository } from '#/adapters/sqlite/intake-events-repository.js';
 import { createInteractionRepository } from '#/adapters/sqlite/interactions-repository.js';
 import { runImmediate } from '#/adapters/sqlite/immediate-tx.js';
+import { createProjectRepository } from '#/adapters/sqlite/projects-repository.js';
 import { createSqliteReceiptLog } from '#/adapters/sqlite/receipt-log.js';
+import { createRunInboxRepository } from '#/adapters/sqlite/run-inbox-repository.js';
 import { createRunTokenRepository } from '#/adapters/sqlite/run-tokens-repository.js';
 import { createRunEventRepository } from '#/adapters/sqlite/run-events-repository.js';
 import { createRunRepository } from '#/adapters/sqlite/runs-repository.js';
 import { openSqliteDriver } from '#/adapters/sqlite/better-sqlite-driver.js';
+import { createTicketRelationRepository } from '#/adapters/sqlite/ticket-relations-repository.js';
 import { createTicketRepository } from '#/adapters/sqlite/tickets-repository.js';
+import { createWakeRequestRepository } from '#/adapters/sqlite/wake-requests-repository.js';
 import { runMigrations } from '#/migrations/run-migrations.js';
 import { mapDbError } from '#/shared/db-errors.js';
 import { createMutex } from '#/shared/mutex.js';
@@ -49,6 +54,11 @@ export function createStorageOnDriver(
     intakeEvents: createIntakeEventRepository(driver),
     interactions: createInteractionRepository(driver),
     runTokens: createRunTokenRepository(driver),
+    runInbox: createRunInboxRepository(driver),
+    wakeRequests: createWakeRequestRepository(driver),
+    gateResults: createGateResultRepository(driver),
+    projects: createProjectRepository(driver),
+    ticketRelations: createTicketRelationRepository(driver),
   };
   return {
     transaction: (fn) => mutex.run(() => runImmediate(driver, () => fn(tx))),

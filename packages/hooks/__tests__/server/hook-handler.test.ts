@@ -19,6 +19,7 @@ import {
   makeEnv,
   post,
   pre,
+  preWith,
   sessionStart,
 } from '#tests/helpers/fixtures.js';
 
@@ -193,5 +194,89 @@ describe('audit of refused requests', () => {
     await e.handler.handle(RUN_ID, 'nope', req(pre()));
     expect(seen).toHaveLength(2);
     expect(seen[1]).toMatchObject({ runId: RUN_ID, code: 'bad_token', suppressed: 4 });
+  });
+});
+
+describe('receipt resource (same resolver admit() uses)', () => {
+  const decisions = async () =>
+    (await env.receipts.list(RUN_ID)).flatMap((r) => (r.kind === 'decision' ? [r] : []));
+
+  it('records the normalised shell text for the shell tool', async () => {
+    await env.handler.handle(RUN_ID, TOKEN, req(pre('PowerShell', 'pnpm   test', 'u1')));
+    expect((await decisions())[0]?.resource).toBe('pnpm test');
+  });
+
+  it('records the normalised path for a path tool', async () => {
+    await env.handler.handle(
+      RUN_ID,
+      TOKEN,
+      req(preWith('Read', { file_path: 'SRC/./a/../A.ts' }, 'u1')),
+    );
+    expect((await decisions())[0]?.resource).toBe('src/a.ts');
+  });
+
+  it('is null when the call names nothing resolvable, and the chain still verifies', async () => {
+    await env.handler.handle(RUN_ID, TOKEN, req(preWith('Read', {}, 'u1')));
+    await env.handler.handle(RUN_ID, TOKEN, req(pre('Mystery', 'x', 'u2')));
+    const rows = await decisions();
+    expect(rows.map((r) => r.resource)).toEqual([null, null]);
+    expect(verifyChain(await env.receipts.list(RUN_ID), SECRET).ok).toBe(true);
+  });
+
+  it('is covered by the MAC: a doctored resource breaks the chain', async () => {
+    await env.handler.handle(RUN_ID, TOKEN, req(pre('PowerShell', 'pnpm test', 'u1')));
+    const chain = [...(await env.receipts.list(RUN_ID))];
+    chain[0] = { ...chain[0]!, resource: 'rm -rf /' } as never;
+    expect(verifyChain(chain, SECRET)).toMatchObject({
+      ok: false,
+      error: { reason: 'hash' },
+    });
+  });
+});
+
+describe('inactive runs get no receipts (one liveness rule)', () => {
+  const setRun = (patch: Record<string, unknown>) =>
+    env.db.transaction((tx) => tx.runs.update(RUN_ID, patch as never));
+
+  it.each([
+    ['success', { status: 'success', ended_at: '2026-10-13T01:00:00.000Z' }],
+    ['settling', { status: 'settling' }],
+    ['running but ended', { ended_at: '2026-10-13T01:00:00.000Z' }],
+  ])(
+    'refuses a PreToolUse for a run that is %s and writes nothing',
+    async (_n, patch) => {
+      await setRun(patch);
+      const r = await env.handler.handle(
+        RUN_ID,
+        TOKEN,
+        req(pre('PowerShell', 'echo hi', 'u1')),
+      );
+      expect(r).toMatchObject({ decision: 'deny', reason: 'fail_closed_inactive_run' });
+      expect(await env.receipts.list(RUN_ID)).toHaveLength(0);
+      expect(env.admitted).toHaveLength(0);
+    },
+  );
+
+  it('refuses SessionStart and PostToolUse for an ended run too', async () => {
+    await env.handler.handle(RUN_ID, TOKEN, req(pre('PowerShell', 'echo hi', 'u1')));
+    await setRun({ status: 'cancelled', ended_at: '2026-10-13T01:00:00.000Z' });
+    const start = await env.handler.handle(RUN_ID, TOKEN, req(sessionStart()));
+    const after = await env.handler.handle(RUN_ID, TOKEN, req(post('PowerShell', 'u1')));
+    expect(start.reason).toBe('fail_closed_inactive_run');
+    expect(after.reason).toBe('fail_closed_inactive_run');
+    expect(env.liveness).toEqual([]);
+    expect(await env.receipts.list(RUN_ID)).toHaveLength(1);
+  });
+
+  it('serves a run that is still starting (its hook registers liveness before it runs)', async () => {
+    await setRun({ status: 'starting' });
+    const r = await env.handler.handle(RUN_ID, TOKEN, req(sessionStart()));
+    expect(r).toMatchObject({ decision: 'allow', reason: 'liveness_registered' });
+  });
+
+  it('checks the token first: a wrong token on an ended run is still bad_token', async () => {
+    await setRun({ status: 'success', ended_at: '2026-10-13T01:00:00.000Z' });
+    const r = await env.handler.handle(RUN_ID, 'nope', req(pre()));
+    expect(r.reason).toBe('fail_closed_bad_token');
   });
 });

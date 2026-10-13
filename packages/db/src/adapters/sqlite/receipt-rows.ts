@@ -6,7 +6,8 @@
  *   one that silently defaults makes a forged field invisible. Mapping each receipt
  *   field to its column, and back through the tools receipt schema, in one place keeps
  *   writes and reads symmetric: `finding_ids` is JSON text, `rule_id` is the matched
- *   rule, `parent_call_id` has no receipt field yet and stays NULL, and `chain_seq` is
+ *   rule, `resource` is what the call touched (NULL when none could be named),
+ *   `parent_call_id` has no receipt field yet and stays NULL, and `chain_seq` is
  *   the position in the run's chain across both tables (tool-system.md §10).
  *
  * Exports: insertReceipt(), decisionFromRow(), effectFromRow(), DECISION_COLUMNS,
@@ -21,7 +22,7 @@ import { fromJson, toJson } from '#/shared/json.js';
 import type { SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
 
 export const DECISION_COLUMNS =
-  'id, run_id, seq, tool, version, schema_hash, args_hash, decision, layer, reason, rule_id, finding_ids_json, approver, approval_ref, enforced_by, ts, prev_hash, hash, chain_seq';
+  'id, run_id, seq, tool, version, schema_hash, args_hash, decision, layer, reason, rule_id, resource, finding_ids_json, approver, approval_ref, enforced_by, ts, prev_hash, hash, chain_seq';
 
 export const EFFECT_COLUMNS =
   'decision_id, run_id, chain_seq, state, result_hash, result_ref, duration_ms, cost_usd, checkpoint_ref, ts, prev_hash, hash';
@@ -43,6 +44,7 @@ export function decisionFromRow(row: SqlRow): DecisionReceipt {
       layer: row['layer'],
       reason: row['reason'],
       rule_id: row['rule_id'],
+      resource: row['resource'],
       finding_ids: fromJson(row['finding_ids_json']) ?? [],
       approver: row['approver'],
       approval_ref: row['approval_ref'],
@@ -85,7 +87,7 @@ export function insertReceipt(
 ): void {
   if (r.kind === 'decision') {
     driver.run(
-      `INSERT INTO tool_decisions (${DECISION_COLUMNS}) VALUES (${placeholders(19)})`,
+      `INSERT INTO tool_decisions (${DECISION_COLUMNS}) VALUES (${placeholders(20)})`,
       [
         r.id,
         runId,
@@ -98,6 +100,7 @@ export function insertReceipt(
         r.layer,
         r.reason,
         r.rule_id,
+        r.resource,
         toJson(r.finding_ids),
         r.approver,
         r.approval_ref,

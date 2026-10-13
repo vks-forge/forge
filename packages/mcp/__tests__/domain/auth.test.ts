@@ -63,6 +63,23 @@ describe('startup token check', () => {
     await expect(start(storage, TOKEN, 'run-404')).rejects.toBeInstanceOf(AuthError);
   });
 
+  it('serves a run that is still starting (the harness boots the MCP server before the run is running)', async () => {
+    const storage = await seedStorage();
+    await storage.transaction((tx) => tx.runs.update(RUN_ID, { status: 'starting' }));
+    const server = await start(storage);
+    await server.close();
+  });
+
+  it.each([
+    ['settling', { status: 'settling' }],
+    ['settled', { status: 'settled' }],
+    ['running with an end time', { ended_at: '2026-10-13T01:00:00.000Z' }],
+  ] as const)('refuses to start for a run that is %s', async (_name, patch) => {
+    const storage = await seedStorage();
+    await storage.transaction((tx) => tx.runs.update(RUN_ID, patch));
+    await expect(start(storage)).rejects.toBeInstanceOf(AuthError);
+  });
+
   it('refuses to start for a run that is not running', async () => {
     const storage = await seedStorage();
     await storage.transaction((tx) => tx.runs.update(RUN_ID, { status: 'cancelled' }));
@@ -80,6 +97,7 @@ function runRow(id: string) {
     lane: 'standard' as const,
     started_at: T0,
     status: 'running' as const,
+    owner: 'server-1',
   };
 }
 
