@@ -5,7 +5,7 @@
  *   (b) append to the run's event log (storage allocates the sequence number), and (c) for
  *   questions, store an `interactions` row the Director's tick can find. Doing it in one
  *   place keeps the log gap-free and means no tool can write for a run the Director has
- *   already settled.
+ *   already settled. A run may hold only one pending interaction at a time.
  *
  * Exports: loadActiveRun(), appendRunEvent(), raiseInteraction(), DEFAULT_INTERACTION_TIMEOUT_MS.
  * Depends on: @forge/core, types/deps.types. IO: storage transactions.
@@ -53,6 +53,15 @@ export async function raiseInteraction(
   const asked = ctx.now();
   const timeout = ctx.deps.interactionTimeoutMs ?? DEFAULT_INTERACTION_TIMEOUT_MS;
   await ctx.deps.storage.transaction(async (tx) => {
+    // One open question per run: a Worker that loops on ask_director would otherwise flood
+    // the Director and the human with parked interactions.
+    const open = (await tx.interactions.listPending()).some(
+      (i) => i.run_id === ctx.run.id,
+    );
+    if (open)
+      throw new PolicyDeniedError(
+        'this run already has a pending question or blocker; stop working and wait for the answer',
+      );
     await tx.interactions.insert({
       id,
       ticket_id: ctx.run.ticket_id,

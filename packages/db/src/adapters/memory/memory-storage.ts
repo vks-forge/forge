@@ -11,12 +11,15 @@
  *   would in production. Nothing persists, so it is not a production backend.
  *
  * Exports: createMemoryStorage().
- * Depends on: @forge/core, shared/mutex, shared/patches, shared/run-token. No IO.
+ * Depends on: @forge/core, shared/db-errors, shared/mutex, shared/patches, shared/run-event,
+ *   shared/run-token. No IO.
  */
 
 import {
   IntakeEvent,
   Interaction,
+  InvalidInputError,
+  PolicyDeniedError,
   Run,
   RunEvent,
   Ticket,
@@ -24,7 +27,9 @@ import {
 } from '@forge/core';
 import type { StorageAdapter, StorageTx } from '@forge/core';
 import type { MemoryState } from '#/types/memory-state.types.js';
+import { mapDbError } from '#/shared/db-errors.js';
 import { createMutex } from '#/shared/mutex.js';
+import { normaliseRunEvent } from '#/shared/run-event.js';
 import { parseTokenRecord } from '#/shared/run-token.js';
 import {
   parseInteractionPatch,
@@ -42,8 +47,14 @@ const emptyState = (): MemoryState => ({
 });
 
 function insertUnique<T>(map: Map<string, T>, id: string, value: T, what: string): void {
-  if (map.has(id)) throw new UnknownForgeError(`Duplicate ${what}: ${id}`);
+  if (map.has(id)) throw new InvalidInputError(`Duplicate ${what}: ${id}`);
   map.set(id, value);
+}
+
+// zod keeps present-but-undefined keys; SQLite has no such thing (a cleared column is
+// NULL, which reads back as an absent key), so drop them to read back identically.
+function withoutUndefined<T extends object>(row: T): T {
+  return Object.fromEntries(Object.entries(row).filter(([, v]) => v !== undefined)) as T;
 }
 
 function buildTx(state: MemoryState): StorageTx {
@@ -65,10 +76,9 @@ function buildTx(state: MemoryState): StorageTx {
       async updateTicketCas(id, expectedVersion, patch) {
         const current = state.tickets.get(id);
         if (!current || current.status_version !== expectedVersion) return false;
-        const next = Ticket.parse({
-          ...current,
-          ...parseTicketPatch(expectedVersion, patch),
-        });
+        const next = withoutUndefined(
+          Ticket.parse({ ...current, ...parseTicketPatch(expectedVersion, patch) }),
+        );
         state.tickets.set(id, next);
         return true;
       },
@@ -91,7 +101,10 @@ function buildTx(state: MemoryState): StorageTx {
       async update(id, patch) {
         const current = state.runs.get(id);
         if (!current) throw new UnknownForgeError(`Run not found: ${id}`);
-        state.runs.set(id, Run.parse({ ...current, ...parseRunPatch(patch) }));
+        state.runs.set(
+          id,
+          withoutUndefined(Run.parse({ ...current, ...parseRunPatch(patch) })),
+        );
       },
     },
 
@@ -99,7 +112,10 @@ function buildTx(state: MemoryState): StorageTx {
       async append(runId, event) {
         const log = state.events.get(runId) ?? new Map<number, RunEvent>();
         // Storage is the single seq allocator; any seq the caller sent is overwritten.
-        const e = RunEvent.parse({ ...event, seq: Math.max(-1, ...log.keys()) + 1 });
+        const e = RunEvent.parse({
+          ...normaliseRunEvent(event),
+          seq: Math.max(-1, ...log.keys()) + 1,
+        });
         log.set(e.seq, e);
         state.events.set(runId, log);
         return structuredClone(e);
@@ -115,9 +131,20 @@ function buildTx(state: MemoryState): StorageTx {
     },
 
     runTokens: {
-      async put(runId, tokenSha256) {
+      async issue(runId, tokenSha256) {
+        const t = parseTokenRecord(runId, tokenSha256);
+        if (state.tokens.get(t.runId)?.revoked === true)
+          throw new PolicyDeniedError(
+            `run ${runId} token was revoked; use reissue to re-arm`,
+          );
+        state.tokens.set(t.runId, { sha256: t.tokenSha256, revoked: false });
+      },
+      async reissue(runId, tokenSha256) {
         const t = parseTokenRecord(runId, tokenSha256);
         state.tokens.set(t.runId, { sha256: t.tokenSha256, revoked: false });
+      },
+      put(runId, tokenSha256, issuedAt) {
+        return this.issue(runId, tokenSha256, issuedAt);
       },
       async getHash(runId) {
         const t = state.tokens.get(runId);
@@ -159,7 +186,9 @@ function buildTx(state: MemoryState): StorageTx {
         if (!current) throw new UnknownForgeError(`Interaction not found: ${id}`);
         state.interactions.set(
           id,
-          Interaction.parse({ ...current, ...parseInteractionPatch(patch) }),
+          withoutUndefined(
+            Interaction.parse({ ...current, ...parseInteractionPatch(patch) }),
+          ),
         );
       },
     },
@@ -180,7 +209,7 @@ export function createMemoryStorage(): StorageAdapter {
         } catch (error) {
           // Repositories read through `state`, so assigning the snapshot restores them.
           Object.assign(state, snapshot);
-          throw error;
+          throw mapDbError(error);
         }
       }),
     close: () => mutex.run(async () => undefined),

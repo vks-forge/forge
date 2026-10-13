@@ -5,9 +5,10 @@ statement: Measured facts about Claude Code 2.1.296 on this host (probes 2026-10
 source: { type: probe, ref: packages/drivers/__tests__/probes/RESULTS.md (pnpm probes, 9/9, run by orchestrator 2026-10-13) }
 author: director
 origin: measured
-status: active
+status: superseded
 valid_from: 2026-10-13
-superseded_by: null
+valid_to: 2026-10-13
+superseded_by: d-0053
 supersedes: null
 tags: [execution-plane, drivers, claude, acp, hooks, probes]
 pinned: true

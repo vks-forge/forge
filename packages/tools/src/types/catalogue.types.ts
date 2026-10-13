@@ -6,13 +6,18 @@
  *   with no tool map means a forgotten signature check is a type error rather than a
  *   silent allow (tool-system.md §4, §14).
  *
- * Exports: CatalogueState, QuarantineReason.
+ * Exports: CatalogueState, QuarantineReason, LoadOptions.
  * Depends on: schemas/tool-definition. No IO.
  */
 
 import type { ToolDefinition } from '#/schemas/tool-definition.js';
 
-export type QuarantineReason = 'malformed' | 'bad_signature';
+export interface LoadOptions {
+  /** Accept the public dev key. Tests and local development only. */
+  readonly allowDevKey?: boolean;
+}
+
+export type QuarantineReason = 'malformed' | 'bad_signature' | 'bad_key';
 
 /** Result of loading a catalogue: usable tools, or quarantined with nothing usable. */
 export type CatalogueState =

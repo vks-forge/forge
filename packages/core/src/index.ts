@@ -16,6 +16,7 @@ export * from '#/domain/branch.js';
 export * from '#/domain/ids.js';
 export * from '#/domain/lane-triage.js';
 export * from '#/domain/state-machine.js';
+export * from '#/domain/ticket-patch.js';
 export * from '#/schemas/errors.js';
 export * from '#/schemas/ids.js';
 export * from '#/schemas/intake.js';

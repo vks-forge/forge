@@ -14,8 +14,9 @@ import { createMemoryReceiptLog, createMemoryStorage, openSqlite } from '@forge/
 import { ToolDefinition, effectiveGrant } from '@forge/tools';
 import type { AdmitCall, AdmitContext, Decision } from '@forge/tools';
 import { createHookHandler } from '#/index.js';
+import type { HookAudit } from '#/index.js';
 
-export const SECRET = 'run-secret';
+export const SECRET = 'run-secret-0123456789abcdef-0123456789';
 export const TOKEN = 'bearer-7f3a91c2';
 export const RUN_ID = 'run-1';
 
@@ -71,7 +72,14 @@ const ctx = (): AdmitContext => ({
 });
 
 /** Stub policy: denies any call whose command contains "deny"; records what it saw. */
-export function makeEnv(over: { throwOnAdmit?: boolean; sqlitePath?: string } = {}) {
+export function makeEnv(
+  over: {
+    throwOnAdmit?: boolean;
+    sqlitePath?: string;
+    audit?: HookAudit;
+    clock?: () => Date;
+  } = {},
+) {
   // Memory by default; `sqlitePath` runs the same handler over the durable SQLite backend.
   const sqlite = over.sqlitePath ? openSqlite(over.sqlitePath) : null;
   const db = sqlite?.storage ?? createMemoryStorage();
@@ -84,7 +92,8 @@ export function makeEnv(over: { throwOnAdmit?: boolean; sqlitePath?: string } = 
     receipts,
     credentials: async (id) => (id === RUN_ID ? { token: TOKEN, secret: SECRET } : null),
     admitContext: async () => ctx(),
-    clock: () => new Date(Date.UTC(2026, 9, 13, 0, 0, tick++)),
+    clock: over.clock ?? (() => new Date(Date.UTC(2026, 9, 13, 0, 0, tick++))),
+    ...(over.audit ? { audit: over.audit } : {}),
     onLiveness: async (id) => {
       liveness.push(id);
     },

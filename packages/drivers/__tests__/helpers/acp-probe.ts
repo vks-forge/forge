@@ -3,7 +3,7 @@
  *
  * Why: The Claude driver will talk to the harness through its ACP server, and a wrong assumption about initialize, auth reporting or permission requests would only surface mid-run. This client records those messages exactly as the server sends them so the probe asserts on real traffic, not on documentation (d-0035).
  *
- * Pins: n/a (helper, no assertions).
+ * Exports: AcpHarness, claudeOptionsMeta(), withAcp(), TurnOutcome, promptTurn().
  * Depends on: @agentclientprotocol/sdk, helpers/probe-env, node:child_process, node:module,
  *   node:stream. IO: spawns the ACP server (which spawns the bundled claude binary).
  */

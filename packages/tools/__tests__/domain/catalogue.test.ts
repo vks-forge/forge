@@ -12,8 +12,20 @@
 
 import { describe, expect, it } from 'vitest';
 import { stringify } from 'yaml';
-import { loadCatalogue, schemaMatches, signCatalogue } from '#/domain/catalogue.js';
-import { ENTRIES, KEY, liveHashes, signedYaml } from '#tests/helpers/fixtures.js';
+import {
+  DEV_CATALOGUE_KEY,
+  devKeyAllowed,
+  loadCatalogue,
+  schemaMatches,
+  signCatalogue,
+} from '#/domain/catalogue.js';
+import {
+  ENTRIES,
+  KEY,
+  OTHER_KEY,
+  liveHashes,
+  signedYaml,
+} from '#tests/helpers/fixtures.js';
 
 describe('loadCatalogue', () => {
   it('loads a correctly signed catalogue and exposes its tools and hash', () => {
@@ -36,7 +48,7 @@ describe('loadCatalogue', () => {
   });
 
   it('quarantines on the wrong key', () => {
-    expect(loadCatalogue(signedYaml(), 'other-key')).toEqual({
+    expect(loadCatalogue(signedYaml(), OTHER_KEY)).toEqual({
       status: 'quarantined',
       reason: 'bad_signature',
     });
@@ -76,6 +88,62 @@ describe('loadCatalogue', () => {
   it('quarantines duplicate tool ids even when signed', () => {
     const dup = [ENTRIES[0], ENTRIES[0]];
     const text = stringify({ entries: dup, signature: signCatalogue(dup, KEY) });
+    expect(loadCatalogue(text, KEY)).toEqual({
+      status: 'quarantined',
+      reason: 'malformed',
+    });
+  });
+});
+
+describe('loadCatalogue key policy', () => {
+  it.each(['', 'short', 'k'.repeat(31)])('quarantines the weak key %j', (weak) => {
+    expect(loadCatalogue(signedYaml(), weak)).toEqual({
+      status: 'quarantined',
+      reason: 'bad_key',
+    });
+  });
+
+  it('refuses the public dev key unless explicitly allowed', () => {
+    const text = signedYaml(ENTRIES, DEV_CATALOGUE_KEY);
+    expect(loadCatalogue(text, DEV_CATALOGUE_KEY)).toEqual({
+      status: 'quarantined',
+      reason: 'bad_key',
+    });
+    expect(loadCatalogue(text, DEV_CATALOGUE_KEY, { allowDevKey: false }).status).toBe(
+      'quarantined',
+    );
+    expect(loadCatalogue(text, DEV_CATALOGUE_KEY, { allowDevKey: true }).status).toBe(
+      'verified',
+    );
+  });
+
+  it('allows the dev key only under test or an explicit env opt-in', () => {
+    expect(devKeyAllowed({ NODE_ENV: 'test' })).toBe(true);
+    expect(devKeyAllowed({ FORGE_ALLOW_DEV_CATALOGUE_KEY: '1' })).toBe(true);
+    expect(devKeyAllowed({ NODE_ENV: 'production' })).toBe(false);
+    expect(devKeyAllowed({ FORGE_ALLOW_DEV_CATALOGUE_KEY: 'true' })).toBe(false);
+    expect(devKeyAllowed({})).toBe(false);
+  });
+});
+
+describe('loadCatalogue never throws', () => {
+  const doc = (entries: string): string => `entries: ${entries}\nsignature: abc\n`;
+  const level = (name: string, prev: string): string =>
+    `${name}: &${name} [${Array.from({ length: 10 }, () => `*${prev}`).join(', ')}]\n`;
+  const bomb =
+    'a: &a [x, x, x, x, x, x, x, x, x, x]\n' +
+    level('b', 'a') +
+    level('c', 'b') +
+    level('d', 'c') +
+    doc('[*d, *d, *d, *d, *d, *d, *d, *d, *d, *d]');
+
+  it.each([
+    ['a non-finite number', doc('[.inf]')],
+    ['a not-a-number', doc('[{id: !!float .nan}]')],
+    ['nesting beyond the depth cap', doc(`${'['.repeat(200)}${']'.repeat(200)}`)],
+    ['an alias bomb', bomb],
+  ])('quarantines %s as malformed', (_n, text) => {
+    expect(() => loadCatalogue(text, KEY)).not.toThrow();
     expect(loadCatalogue(text, KEY)).toEqual({
       status: 'quarantined',
       reason: 'malformed',

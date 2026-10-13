@@ -6,12 +6,13 @@
  *   compare a live `tools/list` to the signed catalogue. This surface is exactly that;
  *   the tools themselves stay internal behind the server.
  *
- * Exports: createForgeMcpServer, SERVER_NAME, FORGE_TOOLS, serveStdio, hashToken,
+ * Exports: createForgeMcpServer, SERVER_NAME, FORGE_TOOLS, serveStdio, withDefaultNetwork, hashToken,
  *   verifyRunToken, toolSchemaHash, computeToolSchemaHashes, DEV_CATALOGUE_KEY, Claim,
  *   and the dependency types.
  * Depends on: every module under src/. No IO on import.
  */
 
+export * from '#/adapters/default-network.js';
 export * from '#/adapters/stdio.js';
 export * from '#/domain/catalogue-key.js';
 export * from '#/domain/run-tokens.js';

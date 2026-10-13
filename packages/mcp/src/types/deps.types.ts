@@ -4,9 +4,10 @@
  * Why: the server is started per run by a driver, but it must also run in-process in
  *   tests with no network, no real DNS and no database file. Everything it touches
  *   outside the process (storage, which also holds the run-token hash, DNS, the HTTP socket,
- *   SearXNG)
- *   is a named port here, so the SSRF guard and the auth check can be tested with
- *   stubs and the production wiring stays a single place (adapters/env-config.ts).
+ *   SearXNG) is a named port here, so the SSRF guard and the auth check can be tested with
+ *   stubs. The domain never picks a real network implementation: `apps/mcp` supplies
+ *   them (via `withDefaultNetwork` in adapters/default-network.ts), and a tool whose port
+ *   is missing refuses to run instead of silently using the ambient network.
  *
  * Exports: DnsResolver, HttpRequest, HttpResponse, HttpTransport,
  *   SearxngConfig, ForgeMcpDeps, ToolContext.
@@ -15,8 +16,8 @@
 
 import type { Run, StorageAdapter } from '@forge/core';
 
-/** Resolves a host name to every address it points at (A and AAAA). */
-export type DnsResolver = (host: string) => Promise<string[]>;
+/** Resolves a host name to every address it points at (A and AAAA); `signal` is the call's time box. */
+export type DnsResolver = (host: string, signal?: AbortSignal) => Promise<string[]>;
 
 /** One already-validated hop: connect to `address`, not to whatever `url.hostname` resolves to later. */
 export interface HttpRequest {
@@ -50,7 +51,7 @@ export interface ForgeMcpDeps {
   /** Absolute directories `docs_lookup` may read markdown from. */
   docsDirs?: readonly string[];
   docsMaxBytes?: number;
-  /** When non-empty, `web_fetch` only reaches these exact hosts. */
+  /** When non-empty, `web_fetch` only reaches these exact hosts (and may use ports 8080/8443). */
   fetchAllowHosts?: readonly string[];
   resolve?: DnsResolver;
   transport?: HttpTransport;

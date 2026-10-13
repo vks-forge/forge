@@ -20,20 +20,21 @@ per-run token; the harness's own web tools stay denied so web access exists only
 
 Public API (`src/index.ts`): `createForgeMcpServer(deps)` (verifies the run token and
 that the run is `running`, returns an unconnected `McpServer`), `serveStdio(server)`,
-`verifyRunToken(storage, runId, token)`, `hashToken()`,
+`withDefaultNetwork(deps)` (fills in the production DNS resolver, address-pinned transport and `fetch`; only the composition root calls it),
+`verifyRunToken(storage, runId, token)`, `hashToken()` (re-exported from `@forge/tools`, as is the constant-time compare),
 `toolSchemaHash()`, `computeToolSchemaHashes()`, `DEV_CATALOGUE_KEY`, `FORGE_TOOLS`,
 `Claim`, and the dependency type `ForgeMcpDeps`.
 
-| Tool             | Risk      | What it stores or does                                                                   |
-| ---------------- | --------- | ---------------------------------------------------------------------------------------- |
-| `get_ticket`     | read      | Own ticket, parent, blockers, own runs. Other tickets are refused.                       |
-| `add_comment`    | write-cwd | `text` run event on the run (own ticket only).                                           |
-| `ask_director`   | write-cwd | Pending `interactions` row (kind `question`) plus an `ask` event; Worker must stop.      |
-| `report_blocked` | write-cwd | Same, tagged `payload.subtype = "blocked"`; the Director escalates the lane on it.       |
-| `finish`         | write-cwd | One `finish` event: summary plus `claims` (`ran_tests`, `edited`, `added_test`, `read`). |
-| `web_search`     | network   | Nothing. SearXNG JSON search, base URL must be loopback or allow-listed.                 |
-| `docs_lookup`    | read      | Nothing. Markdown under configured docs dirs by path or glob, size-capped, no network.   |
-| `web_fetch`      | network   | Nothing. SSRF-guarded GET to text, 2 MB, 10 s, wrapped in an untrusted-content envelope. |
+| Tool             | Risk      | What it stores or does                                                                                                                          |
+| ---------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_ticket`     | read      | Own ticket (with relations and own runs), or its parent or a blocker alone (no relations). Others are refused.                                  |
+| `add_comment`    | write-cwd | `text` run event on the run (own ticket only).                                                                                                  |
+| `ask_director`   | write-cwd | Pending `interactions` row (kind `question`) plus an `ask` event; Worker must stop. Refused while the run already has a pending interaction.    |
+| `report_blocked` | write-cwd | Same, tagged `payload.subtype = "blocked"`; the Director escalates the lane on it.                                                              |
+| `finish`         | write-cwd | One `finish` event: summary plus `claims` (`ran_tests`, `edited`, `added_test`, `read`).                                                        |
+| `web_search`     | network   | Nothing. SearXNG JSON search (1 MB capped stream), base URL must be loopback or allow-listed; result wrapped in the untrusted-content envelope. |
+| `docs_lookup`    | read      | Nothing. Markdown under configured docs dirs by path or glob (at most 8 wildcards, runs collapsed, walk capped), size-capped, no network.       |
+| `web_fetch`      | network   | Nothing. SSRF-guarded GET to text, 2 MB, 10 s, wrapped in an untrusted-content envelope.                                                        |
 
 "write-cwd" is the closest declared risk class for state writes; they touch Forge
 state, not the working directory (resource `forge-state`). Every call re-checks that
@@ -49,15 +50,16 @@ process. The process that hosts it is `apps/mcp` (`forge-mcp`).
   a mis-set env var cannot send queries to a third party. Rejected: hosted search APIs
   (keys, cost, data leaving the box); the harness's built-in WebSearch (denied, and
   returns nothing here).
-- SSRF guard: resolve DNS first, refuse if any answer is private, dial the vetted IP
-  (defeats rebinding), re-validate every redirect (max 5). Rejected: validating the
+- SSRF guard: resolve DNS first (inside the call's time box), refuse if any answer is private, dial the vetted IP
+  (defeats rebinding), re-validate every redirect (max 5), refuse an https to http redirect, and reach only ports 80/443
+  (8080/8443 when the host is in `FORGE_FETCH_ALLOW_HOSTS`). Rejected: validating the
   hostname string only, and letting the HTTP client resolve again.
 - Signed catalogue (`.forge/tools/catalog.yaml`, d-0038): each tool's `schema_hash` is
   taken from the schema the server advertises, so a silently widened tool is
   quarantined. A test fails on drift.
 - Token hashes live in `StorageAdapter` (`tx.runTokens.getHash(runId)`, a core port), so this
   package needs no database of its own (code.md rule 1) and no private token port. The check
-  is a constant-time compare of `sha256(token)`; a missing, revoked or unreadable hash is a
+  is a constant-time compare (`@forge/tools` `constantTimeEqual`) of `sha256(token)`; a missing, revoked or unreadable hash is a
   refusal. Only the hash is stored: the receipt HMAC secret is not known to this process.
 
 ## Requirements
@@ -70,7 +72,7 @@ process. The process that hosts it is `apps/mcp` (`forge-mcp`).
 - SearXNG at `http://localhost:8888` for `web_search` (docker container
   `searxng-openclaw`).
 - Catalogue: `pnpm build && node scripts/sign-catalogue.mjs` refreshes hashes and
-  signs; without `FORGE_CATALOGUE_KEY` it uses the public INSECURE dev key and warns.
+  signs; see the script for key handling (`FORGE_CATALOGUE_KEY`, or `--dev` for the public INSECURE dev key).
 - Tests: `pnpm test` at the root (coverage floor 80% lines).
 
 ## Extending
@@ -84,6 +86,7 @@ process. The process that hosts it is `apps/mcp` (`forge-mcp`).
 
 ## Limits
 
+- The domain never selects real network code: `web_fetch` and `web_search` refuse to run unless `resolve`/`transport`/`searchFetch` are in the deps, which `apps/mcp` fills via `withDefaultNetwork`. Tests inject stubs.
 - The driver must register `hashToken(token)` with `tx.runTokens.put(...)` before launching
   `forge-mcp`; with no (or a revoked) registration the process refuses to start.
 - Run-event `seq` is allocated by storage (`runEvents.append` takes the event without `seq`),

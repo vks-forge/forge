@@ -18,6 +18,7 @@ import { Decision } from '#/schemas/decision.js';
 import {
   ENTRIES,
   KEY,
+  OTHER_KEY,
   call,
   grant,
   makeCtx,
@@ -31,7 +32,7 @@ const verdict = (d: Decision) => [d.decision, d.reason];
 
 describe('fail closed', () => {
   it('denies everything when the catalogue is quarantined', () => {
-    const quarantined = loadCatalogue(signedYaml(), 'wrong-key');
+    const quarantined = loadCatalogue(signedYaml(), OTHER_KEY);
     const ctx = makeCtx('full', { catalogue: quarantined });
     expect(verdict(admit(ctx, call('read', { path: 'a' })))).toEqual([
       'deny',
@@ -218,5 +219,45 @@ describe('list and call agree', () => {
 
   it('is signed with the production loader (fixture sanity)', () => {
     expect(loadCatalogue(signedYaml(), KEY).status).toBe('verified');
+  });
+});
+
+describe('lane comes from the grant alone', () => {
+  const ask = sh('echo hi', 'Bash');
+
+  it('is unattended on Express whatever the context claims', () => {
+    const ctx = { ...makeCtx('express'), lane: 'standard' as const };
+    expect(admit(ctx, ask).decision).toBe('deny');
+  });
+
+  it('a context lane that disagrees with the grant lane is refused', () => {
+    const ctx = { ...makeCtx('standard'), lane: 'express' as const };
+    const d = admit(ctx, call('read', { path: 'src/a.ts' }));
+    expect(d.decision).toBe('deny');
+  });
+
+  it('`unattended: false` cannot make Express wait for a human', () => {
+    const ctx = makeCtx('express', { unattended: false });
+    expect(admit(ctx, ask)).toMatchObject({ decision: 'deny', reason: 'unattended' });
+  });
+
+  it('`unattended: true` can only tighten Standard', () => {
+    expect(admit(makeCtx('standard'), ask).decision).toBe('ask');
+    expect(admit(makeCtx('standard', { unattended: true }), ask).decision).toBe('deny');
+  });
+
+  it('enforces the Full-lane network enforcement floor from the grant lane', () => {
+    const entries = withEntry('mcp__forge__web_fetch', {
+      support: { '*': { mechanism: 'mcp', enforced: 'hook' } },
+    });
+    const ctx = {
+      ...makeCtx('full', {}, {}, entries),
+      lane: 'standard' as const,
+    };
+    expect(
+      admit(ctx, call('mcp__forge__web_fetch', { url: 'https://docs.x.com' })),
+    ).toMatchObject({
+      decision: 'deny',
+    });
   });
 });

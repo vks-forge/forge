@@ -6,17 +6,21 @@
  *   tick can recover. This adapter makes each transaction atomic and serial:
  *   transactions span awaits, so they queue through an in-process mutex, and they take
  *   `BEGIN IMMEDIATE` so another process (the API, a CLI) waits on busy_timeout instead
- *   of interleaving. A throw rolls everything back and is rethrown unchanged, so callers
- *   see the real error. Migrations run on open so a new database is usable immediately
+ *   of interleaving. A throw rolls everything back and is rethrown, so callers see the
+ *   real error; backend failures are classified into ForgeError families (a busy database
+ *   is `stall`, a constraint violation `invalid_input`). A transaction started from inside
+ *   another one would wait for itself forever, so it is rejected at once. Migrations run on open so a new database is usable immediately
  *   (director-core.md §2-§3, d-0023).
  *
  * Exports: createSqliteStorage(), createStorageOnDriver(), openSqlite().
- * Depends on: adapters/sqlite/*, migrations/run-migrations, shared/mutex, types/*, @forge/core.
+ * Depends on: adapters/sqlite/*, migrations/run-migrations, shared/db-errors, shared/mutex,
+ *   types/*, @forge/core.
  */
 
 import type { StorageAdapter, StorageTx } from '@forge/core';
 import { createIntakeEventRepository } from '#/adapters/sqlite/intake-events-repository.js';
 import { createInteractionRepository } from '#/adapters/sqlite/interactions-repository.js';
+import { runImmediate } from '#/adapters/sqlite/immediate-tx.js';
 import { createSqliteReceiptLog } from '#/adapters/sqlite/receipt-log.js';
 import { createRunTokenRepository } from '#/adapters/sqlite/run-tokens-repository.js';
 import { createRunEventRepository } from '#/adapters/sqlite/run-events-repository.js';
@@ -24,6 +28,7 @@ import { createRunRepository } from '#/adapters/sqlite/runs-repository.js';
 import { openSqliteDriver } from '#/adapters/sqlite/better-sqlite-driver.js';
 import { createTicketRepository } from '#/adapters/sqlite/tickets-repository.js';
 import { runMigrations } from '#/migrations/run-migrations.js';
+import { mapDbError } from '#/shared/db-errors.js';
 import { createMutex } from '#/shared/mutex.js';
 import type { Mutex } from '#/types/mutex.types.js';
 import type { SqliteBackend } from '#/types/sqlite-backend.types.js';
@@ -46,18 +51,7 @@ export function createStorageOnDriver(
     runTokens: createRunTokenRepository(driver),
   };
   return {
-    transaction: (fn) =>
-      mutex.run(async () => {
-        driver.exec('BEGIN IMMEDIATE');
-        try {
-          const result = await fn(tx);
-          driver.exec('COMMIT');
-          return result;
-        } catch (error) {
-          driver.exec('ROLLBACK');
-          throw error;
-        }
-      }),
+    transaction: (fn) => mutex.run(() => runImmediate(driver, () => fn(tx))),
     // Queue behind in-flight transactions so close never cuts one off.
     close: () => mutex.run(async () => driver.close()),
   };
@@ -69,7 +63,7 @@ function openMigrated(path: string, opts: SqliteStorageOptions): SqlDriver {
     runMigrations(driver);
   } catch (error) {
     driver.close();
-    throw error;
+    throw mapDbError(error);
   }
   return driver;
 }

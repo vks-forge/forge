@@ -28,7 +28,6 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0037 — M0 exit = one dogfood ticket on the Claude driver; other drivers M0.5 wave
 - d-0038 — Tool system M0: tokenizer shell parsing, signatures verified from main checkout HEAD
 - d-0020 — Dogfood target = the factory repo itself
-- d-0021 — git + private GitHub remote, bot token dispatcher-only, PR always, `<type>/<id>-<slug>` branches, `<PROJECT>-n` ids
 - d-0031 — Harness auth is the harness's own; per-agent credential mode in Settings; Workers exclude `user`/`project` setting sources (supersedes d-0022)
 - d-0032 — `DirectorLLM` adapter, default logged-in harness with hygiene flags; subscription-turn counter (supersedes d-0024)
 - d-0025 — Always LLM triage before validation; process correctness over call count
@@ -39,11 +38,14 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0056 — Claude hook client + settings renderers move to `drivers/claude/hooks`; `@forge/hooks` keeps neutral receipt ingress
+- d-0055 — One ticket id `<PROJECT>-<n>` is the primary key, no UUID; rest of d-0021 carries over (supersedes d-0021)
+- d-0054 — M0: server restart kills in-flight runs (run secret memory-only); reconcile marks unowned `running` as crash
+- d-0053 — ACP runs the SDK-bundled CLI (2.1.293), pinned; probes re-run on adapter/SDK bumps; carries d-0048 facts (supersedes d-0048)
 - d-0052 — Layering: core + tools are inner rings; adapters import core+tools only, never each other; standalone processes compose in `apps/<name>/src/main.ts` (amends rule 1)
 - d-0051 — READMEs are living docs: every reader-visible change updates the README in the same commit; stale README = review block (amends d-0050)
 - d-0050 — Package/app README contract: 7 sections (what, why exists, what it does, why this approach, requirements, extending, limits), ≤150 lines, updated with the change
 - d-0049 — ACP-first stays: `session/set_mode default` after every new/load, our `request_permission` handler decides every tool call; follow-up probes for strictMcpConfig + user hooks (amends d-0035)
-- d-0048 — Measured Claude harness facts (setting-sources "", budget subtype, PowerShell tool, hooks fail-closed only with onFailure, ACP auth notification, ACP settingSources leak) (author=director, measured)
 - d-0047 — Storage: raw portable SQL on a `SqlDriver` seam, no ORM; more adapters via `adapters/<name>/` + contract test (supersedes d-0023)
 - d-0046 — Bootstrap commits go straight to `main`, no PR, until the bot dispatches its first ticket; per-commit go still required
 - d-0045 — All hand-written types/interfaces in `src/types/` as `<name>.types.ts` (ports in `types/ports/`); only `z.infer` aliases may sit in `schemas/`; lint-enforced
@@ -52,6 +54,8 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 
 ## Superseded
 
+- d-0048 — Measured Claude harness facts → superseded by d-0053 (version attribution corrected, 2026-10-13)
+- d-0021 — git/PR/branches/ids incl. internal UUID → superseded by d-0055 (no UUID, 2026-10-13)
 - d-0023 — StorageAdapter with Drizzle → superseded by d-0047 (raw SQL, 2026-10-13)
 - d-0039 — worktrees/data/memory paths → superseded by d-0044 (`.forge/` rename, 2026-10-13)
 - d-0004 — Docker container per Worker by default → superseded by d-0005 (2026-10-12)

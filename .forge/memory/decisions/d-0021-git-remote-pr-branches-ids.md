@@ -5,9 +5,10 @@ statement: The factory repo is initialised with git and a private GitHub remote 
 source: { type: chat, ref: 2026-10-12 grill session, Q2 "B, i will give you the repo url", Q12, Q13 }
 author: user
 origin: owner
-status: active
+status: superseded
 valid_from: 2026-10-12
-superseded_by: null
+valid_to: 2026-10-13
+superseded_by: d-0055
 supersedes: null
 tags: [git, branches, tickets, ledger]
 pinned: true

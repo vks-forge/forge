@@ -11,7 +11,8 @@
  *
  * Exports: openSqlite, createSqliteStorage, createStorageOnDriver, createSqliteReceiptLog,
  *   openSqliteDriver, createMutex, createMemoryStorage, createMemoryReceiptLog,
- *   runMigrations, MIGRATIONS, and the SqlDriver / Migration / SqliteBackend types.
+ *   runMigrations, checkSchemaCurrent, MIGRATIONS, and the SqlDriver / Migration /
+ *   SchemaReport / SqliteBackend types.
  * Depends on: adapters/sqlite, adapters/memory, migrations, shared/mutex. No IO on import.
  */
 
@@ -26,6 +27,7 @@ export {
 } from '#/adapters/sqlite/sqlite-storage.js';
 export { MIGRATIONS } from '#/migrations/registry.js';
 export { runMigrations } from '#/migrations/run-migrations.js';
+export { checkSchemaCurrent } from '#/migrations/schema-status.js';
 export { createMutex } from '#/shared/mutex.js';
 export type * from '#/types/migrations.types.js';
 export type * from '#/types/mutex.types.js';

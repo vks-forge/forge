@@ -3,7 +3,8 @@
  *
  * Why: The live probes drive the real harness on the user's subscription. If they ran in plain `pnpm test` they would spend money and make CI nondeterministic; if they inherited the parent session's env the child `claude` refuses to start; if they wrote into the repo tree they would pollute it. This helper gates them on FORGE_PROBES=1, sanitises the child env and confines artefacts to the gitignored .forge/data/probes/ (m0-brief.md Slice 2).
  *
- * Pins: n/a (helper, no assertions).
+ * Exports: PROBES_ENABLED, SKIP_REASON, PROBE_MODEL, REPO_ROOT, childEnv(), freshProbeDir(),
+ *   freshTempCwd(), slashPath(), RunResult, runClaude(), parseJsonLines().
  * Depends on: node:child_process, node:fs, node:os, node:path. IO: spawns `claude`, writes
  *   under .forge/data/probes/ and the OS temp dir.
  */

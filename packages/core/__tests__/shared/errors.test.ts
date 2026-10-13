@@ -16,6 +16,7 @@ import {
   AuthError,
   BudgetError,
   CrashError,
+  InvalidInputError,
   ForgeError,
   PolicyDeniedError,
   RateLimitError,
@@ -34,6 +35,7 @@ describe('ForgeError', () => {
     [new CrashError('x'), 'crash'],
     [new PolicyDeniedError('x'), 'policy_denied'],
     [new UnknownForgeError('x'), 'unknown'],
+    [new InvalidInputError('x'), 'invalid_input'],
   ])('%o carries its family', (e, family) => {
     expect(e).toBeInstanceOf(ForgeError);
     expect(e).toBeInstanceOf(Error);

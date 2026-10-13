@@ -10,6 +10,10 @@
  *   every remaining field, so no column can change unnoticed (tool-system.md §10,
  *   verification-plane.md §2).
  *
+ *   An effect is only meaningful for a call that was allowed, and once: a second effect or
+ *   an effect on a denied decision is how a forged "it ran" would be slipped into a chain,
+ *   so the verifier rejects both.
+ *
  * Exports: makeDecisionReceipt(), makeEffectReceipt(), verifyChain().
  * Depends on: @forge/core (Result), schemas/receipt, shared/canonical-json, shared/hmac, types/receipts. No IO.
  */
@@ -19,7 +23,7 @@ import type { Result } from '@forge/core';
 import { Receipt } from '#/schemas/receipt.js';
 import type { DecisionReceipt, EffectReceipt } from '#/schemas/receipt.js';
 import { canonicalJson } from '#/shared/canonical-json.js';
-import { hmacHex, safeEqualHex, sha256Hex } from '#/shared/hmac.js';
+import { hmacHex, constantTimeEqual, sha256Hex } from '#/shared/hmac.js';
 import type {
   ChainFailure,
   DecisionReceiptInput,
@@ -156,6 +160,7 @@ export function verifyChain(
   runSecret: HmacKey,
 ): Result<number, ChainFailure> {
   const decisions = new Map<string, DecisionReceipt>();
+  const closed = new Set<string>();
   let prev: string | null = null;
   let lastSeq: number | null = null;
   for (const [index, raw] of rows.entries()) {
@@ -173,9 +178,13 @@ export function verifyChain(
     } else {
       const d = decisions.get(r.decision_id);
       if (!d) return err({ index, reason: 'orphan_effect' });
+      // One effect per decision, and only for a call that was allowed to run.
+      if (closed.has(d.id)) return err({ index, reason: 'duplicate_effect' });
+      if (d.decision !== 'allow') return err({ index, reason: 'effect_not_allowed' });
+      closed.add(d.id);
       expected = mac(runSecret, r.prev_hash, d.seq, d.tool, d.args_hash, effectBody(r));
     }
-    if (!safeEqualHex(expected, r.hash)) return err({ index, reason: 'hash' });
+    if (!constantTimeEqual(expected, r.hash)) return err({ index, reason: 'hash' });
     prev = r.hash;
   }
   return ok(rows.length);

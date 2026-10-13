@@ -8,7 +8,7 @@ Not every interaction needs the control room. A user or script should be able to
 
 ## What it does
 
-Intended commands, from `docs/design/m0-brief.md` (none exist yet): `factory new`, `factory doctor`, `factory run`, `factory answer`. `doctor` is the planned readiness check (for example harness preflight and host setup warnings such as Windows long paths being disabled).
+Intended commands, from `docs/design/m0-brief.md` (none exist yet): `forge new`, `forge doctor`, `forge run`, `forge answer`. `doctor` is the planned readiness check (for example harness preflight and host setup warnings such as Windows long paths being disabled).
 
 Public API: none; it is an app.
 
@@ -20,6 +20,7 @@ Public API: none; it is an app.
 
 ## Requirements
 
+- No TypeScript exists yet, so there is no `tsconfig.json` and the root `tsconfig.json` has no reference to this app. The first source file must add `tsconfig.json` and `tsconfig.test.json` (copy `apps/mcp`) and add both to the root `references`; the root `vitest.config.ts` coverage include and threshold need an entry too.
 - Node 24.20 and pnpm. Nothing is required today: no source, no tests, no env vars.
 - Intended: a running `@forge/server` on `127.0.0.1`.
 - Build and test follow the root scripts once source exists.

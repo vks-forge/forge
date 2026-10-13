@@ -5,23 +5,29 @@
  *   tools are denied so every egress goes through Forge. SearXNG is self-hosted and
  *   keyless; the tool refuses any base URL that is not loopback or explicitly
  *   allow-listed, so a mis-set `FORGE_SEARXNG_URL` cannot leak queries to a third party.
- *   Results are cut to title, url and a short snippet, and non-http links are dropped
- *   (tool-system.md §9).
+ *   Results are cut to title, url and a short snippet, non-http links are dropped, and
+ *   the answer is wrapped in the untrusted-content envelope like `web_fetch` output:
+ *   titles and snippets are written by strangers and the Worker must read them as data.
+ *   The body is read through a byte-capped stream so a rogue endpoint cannot exhaust
+ *   memory (tool-system.md §9).
  *
  * Exports: webSearchTool, validateSearxngBase().
- * Depends on: @forge/core, node:net, shared/ip-guard, shared/define-tool, schemas/tool-inputs. IO: HTTP to SearXNG.
+ * Depends on: @forge/core, node:net, shared/ip-guard, shared/define-tool, shared/envelope,
+ *   shared/capped-reader, schemas/tool-inputs. IO: HTTP to SearXNG via the injected `searchFetch`.
  */
 
 import { InvalidInputError, PolicyDeniedError } from '@forge/core';
 import { isIP } from 'node:net';
 import { z } from 'zod';
 import { WebSearchInput } from '#/schemas/tool-inputs.js';
+import { readCapped } from '#/shared/capped-reader.js';
 import { defineTool } from '#/shared/define-tool.js';
+import { wrapUntrusted } from '#/shared/envelope.js';
 import { isLoopbackAddress } from '#/shared/ip-guard.js';
 import type { SearxngConfig } from '#/types/deps.types.js';
 
 const TIMEOUT_MS = 10_000;
-const MAX_BODY_CHARS = 1_000_000;
+const MAX_BODY_BYTES = 1_000_000;
 const SNIPPET_CHARS = 300;
 
 const SearxResponse = z.object({
@@ -69,7 +75,8 @@ export const webSearchTool = defineTool({
     url.searchParams.set('q', query);
     url.searchParams.set('format', 'json');
     if (engines && engines.length > 0) url.searchParams.set('engines', engines.join(','));
-    const doFetch = ctx.deps.searchFetch ?? fetch;
+    const doFetch = ctx.deps.searchFetch;
+    if (!doFetch) throw new InvalidInputError('web_search is not configured (no fetch)');
     const res = await doFetch(url, {
       redirect: 'error',
       signal: AbortSignal.timeout(ctx.deps.fetchTimeoutMs ?? TIMEOUT_MS),
@@ -80,9 +87,13 @@ export const webSearchTool = defineTool({
       );
     });
     if (!res.ok) throw new InvalidInputError(`SearXNG returned HTTP ${res.status}`);
-    const raw = await res.text();
-    if (raw.length > MAX_BODY_CHARS)
-      throw new InvalidInputError('SearXNG response too large');
+    const source = res.body as
+      (AsyncIterable<Uint8Array> & { cancel(): Promise<void> }) | null;
+    const { bytes, truncated } = source
+      ? await readCapped(source, MAX_BODY_BYTES, () => source.cancel())
+      : { bytes: new Uint8Array(), truncated: false };
+    if (truncated) throw new InvalidInputError('SearXNG response too large');
+    const raw = new TextDecoder().decode(bytes);
     let parsed: z.infer<typeof SearxResponse>;
     try {
       parsed = SearxResponse.parse(JSON.parse(raw));
@@ -97,6 +108,6 @@ export const webSearchTool = defineTool({
         url: r.url,
         snippet: r.content.slice(0, SNIPPET_CHARS),
       }));
-    return JSON.stringify({ query, results });
+    return wrapUntrusted(JSON.stringify({ query, results }), ctx.newId(), base.href);
   },
 });

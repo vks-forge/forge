@@ -14,12 +14,13 @@
 
 import { readFile } from 'node:fs/promises';
 import { loadCatalogue } from '#/domain/catalogue.js';
-import type { CatalogueState } from '#/types/catalogue.types.js';
+import type { CatalogueState, LoadOptions } from '#/types/catalogue.types.js';
 
 /** Reads `path` and verifies it with `key`; a missing or unreadable file is `quarantined`. */
 export async function readCatalogueFile(
   path: string,
   key: string | Uint8Array,
+  opts: LoadOptions = {},
 ): Promise<CatalogueState> {
   let text: string;
   try {
@@ -27,5 +28,5 @@ export async function readCatalogueFile(
   } catch {
     return { status: 'quarantined', reason: 'malformed' };
   }
-  return loadCatalogue(text, key);
+  return loadCatalogue(text, key, opts);
 }

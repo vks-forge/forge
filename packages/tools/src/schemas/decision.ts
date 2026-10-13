@@ -34,6 +34,7 @@ export const ReasonCode = z.enum([
   'exposure',
   'not_reachable',
   'untokenizable',
+  'invalid_resource',
   'dynamic_execution',
   'risky_shell_construct',
   'inspector_error',

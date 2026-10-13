@@ -79,7 +79,7 @@ describe('hook handler', () => {
     await env.handler.handle(RUN_ID, TOKEN, req(pre('PowerShell', 'x', 'u1')));
     await env.handler.handle(RUN_ID, TOKEN, req(failure('PowerShell', 'u1')));
     await env.handler.handle(RUN_ID, TOKEN, req(pre('Read', 'x', 'u2')));
-    await env.handler.handle(RUN_ID, TOKEN, req(failure('Read')));
+    await env.handler.handle(RUN_ID, TOKEN, req(failure('Read', 'u2')));
     const states = (await env.receipts.list(RUN_ID)).flatMap((r) =>
       r.kind === 'effect' ? [r.state] : [],
     );
@@ -87,7 +87,7 @@ describe('hook handler', () => {
   });
 
   it('allows an unmatched PostToolUse without writing', async () => {
-    const r = await env.handler.handle(RUN_ID, TOKEN, req(post()));
+    const r = await env.handler.handle(RUN_ID, TOKEN, req(post('PowerShell', 'ghost')));
     expect(r).toMatchObject({
       decision: 'allow',
       reason: 'effect_unmatched',
@@ -102,12 +102,10 @@ describe('hook handler', () => {
     expect(env.liveness).toEqual([RUN_ID]);
   });
 
-  it('denies a bad token and leaves one audit receipt', async () => {
+  it('denies a bad token without touching the signed chain', async () => {
     const r = await env.handler.handle(RUN_ID, 'nope', req(pre()));
     expect(r.reason).toBe('fail_closed_bad_token');
-    const chain = await env.receipts.list(RUN_ID);
-    expect(chain).toHaveLength(1);
-    expect(verifyChain(chain, SECRET).ok).toBe(true);
+    expect(await env.receipts.list(RUN_ID)).toHaveLength(0);
   });
 
   it('denies an unknown run and writes nothing', async () => {
@@ -125,12 +123,12 @@ describe('hook handler', () => {
     expect(r.reason).toBe('fail_closed_bad_request');
   });
 
-  it('denies and audits when the policy throws', async () => {
+  it('denies when the policy throws, without a chain write', async () => {
     const bad = makeEnv({ throwOnAdmit: true });
     await bad.ready;
     const r = await bad.handler.handle(RUN_ID, TOKEN, req(pre()));
     expect(r.reason).toBe('fail_closed_internal');
-    expect(await bad.receipts.list(RUN_ID)).toHaveLength(1);
+    expect(await bad.receipts.list(RUN_ID)).toHaveLength(0);
   });
 
   it('keeps seq strictly increasing under 20 concurrent posts', async () => {
@@ -143,5 +141,57 @@ describe('hook handler', () => {
     const seqs = chain.flatMap((r) => (r.kind === 'decision' ? [r.seq] : []));
     expect(seqs).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
     expect(verifyChain(chain, SECRET).ok).toBe(true);
+  });
+
+  it('ignores a PostToolUse with no tool_use_id even if a decision is open', async () => {
+    await env.handler.handle(RUN_ID, TOKEN, req(pre('PowerShell', 'echo hi', 'tu1')));
+    const r = await env.handler.handle(RUN_ID, TOKEN, req(post('PowerShell')));
+    expect(r).toMatchObject({ decision: 'allow', receipt_hash: '' });
+    expect(r.reason).not.toBe('effect_recorded');
+    expect(await env.receipts.list(RUN_ID)).toHaveLength(1);
+  });
+
+  it.each([
+    ['PostToolUse', post],
+    ['PostToolUseFailure', failure],
+  ] as const)('writes no effect for a denied decision (%s)', async (_n, make) => {
+    const denied = await env.handler.handle(
+      RUN_ID,
+      TOKEN,
+      req(pre('PowerShell', 'deny me', 'tu-d')),
+    );
+    expect(denied.decision).toBe('deny');
+    const r = await env.handler.handle(RUN_ID, TOKEN, req(make('PowerShell', 'tu-d')));
+    expect(r).toMatchObject({ decision: 'allow', receipt_hash: '' });
+    expect(r.reason).not.toBe('effect_recorded');
+    const chain = await env.receipts.list(RUN_ID);
+    expect(chain.map((x) => x.kind)).toEqual(['decision']);
+  });
+});
+
+describe('audit of refused requests', () => {
+  it('1000 bad-token posts leave the signed chain unchanged', async () => {
+    await env.handler.handle(RUN_ID, TOKEN, req(pre('PowerShell', 'echo hi', 'tu1')));
+    const before = (await env.receipts.list(RUN_ID)).length;
+    for (let i = 0; i < 1000; i++) await env.handler.handle(RUN_ID, 'nope', req(pre()));
+    expect(await env.receipts.list(RUN_ID)).toHaveLength(before);
+  });
+
+  it('rate-limits audit entries per run and counts the suppressed ones', async () => {
+    const seen: { runId: string; code: string; suppressed: number }[] = [];
+    let ms = Date.UTC(2026, 9, 13);
+    const e = makeEnv({
+      clock: () => new Date(ms),
+      audit: (runId, entry) => {
+        seen.push({ runId, code: entry.code, suppressed: entry.suppressed });
+      },
+    });
+    await e.ready;
+    for (let i = 0; i < 5; i++) await e.handler.handle(RUN_ID, 'nope', req(pre()));
+    expect(seen).toHaveLength(1);
+    ms += 10_000;
+    await e.handler.handle(RUN_ID, 'nope', req(pre()));
+    expect(seen).toHaveLength(2);
+    expect(seen[1]).toMatchObject({ runId: RUN_ID, code: 'bad_token', suppressed: 4 });
   });
 });

@@ -5,7 +5,9 @@
  * Why: Every Worker run must exclude the user's and project's Claude settings (their hooks and CLAUDE.md would leak into the run) yet still bill the user's subscription. If excluding those sources broke OAuth, the only fallback would be API keys, which changes the product's cost model. This pins that the isolated call authenticates and reports cost (d-0031).
  *
  * Pins: exit 0, parseable JSON, "pong" in `result`, cost/usage fields present, `--bare`
- *   documented as API-key-only.
+ *   documented as API-key-only; a budget too small for one turn ends with
+ *   `subtype: error_max_budget_usd`, exit 0 and no `result` (so exit code alone cannot
+ *   signal failure and the driver must treat that shape as a typed budget error).
  * Depends on: helpers/probe-env, the installed `claude` CLI. IO: spawns claude (billable,
  *   capped at $0.05).
  */
@@ -86,5 +88,38 @@ describe('probe 1: subscription auth with settings isolation (d-0031)', () => {
       expect(res.stdout).toMatch(/OAuth and\s+keychain are never read/);
     },
     30_000,
+  );
+
+  probe(
+    `an exhausted budget returns error_max_budget_usd with exit 0 and no result ${SKIP_REASON}`,
+    async () => {
+      const cwd = freshTempCwd();
+
+      const res = await runClaude(
+        [
+          '-p',
+          'reply with the single word pong',
+          '--model',
+          PROBE_MODEL,
+          '--output-format',
+          'json',
+          '--setting-sources',
+          '',
+          '--no-session-persistence',
+          '--max-turns',
+          '1',
+          '--max-budget-usd',
+          '0.0001',
+        ],
+        { cwd },
+      );
+
+      expect(res.code).toBe(0);
+      const json = JSON.parse(res.stdout) as Record<string, unknown>;
+      expect(json['subtype']).toBe('error_max_budget_usd');
+      expect(json['is_error']).toBe(true);
+      expect(json).not.toHaveProperty('result');
+    },
+    150_000,
   );
 });

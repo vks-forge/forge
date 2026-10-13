@@ -1,8 +1,27 @@
 # Slice 2 preflight probe results
 
-Run with `pnpm probes` (sets `FORGE_PROBES=1`). Host: Windows 11, Node 24.20, Claude Code 2.1.296 on a
-Max subscription, `@agentclientprotocol/claude-agent-acp@0.89.1`, `@agentclientprotocol/sdk@1.8.0`.
-All 11 probe tests pass. Every child run strips `CLAUDECODE` and `CLAUDE_CODE_ENTRYPOINT` from its env.
+Run with `pnpm probes` (sets `FORGE_PROBES=1`). Host: Windows 11, Node 24.20, subscription auth,
+`@agentclientprotocol/claude-agent-acp@0.89.1`, `@agentclientprotocol/sdk@1.8.0`.
+All 11 probe tests passed in the recorded run. Every child run strips `CLAUDECODE` and
+`CLAUDE_CODE_ENTRYPOINT` from its env.
+
+**Which Claude Code binary each probe measured (d-0053).**
+
+| Probes            | Engine                                                                                                               | Claude Code version |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| 1-2 (`claude -p`) | host `claude` on PATH                                                                                                | 2.1.296             |
+| 3-5 (ACP)         | binary bundled with the SDK the adapter loads, `node_modules/.pnpm/@anthropic-ai+claude-agent-sdk-win32-x64@0.3.293` | 2.1.293             |
+
+The ACP adapter resolves its own bundled binary and Forge does not set `CLAUDE_CODE_EXECUTABLE`, so the
+host version never affects probes 3-5.
+
+**Re-probe trigger (d-0053):** re-run `pnpm probes` and update this file on a host Claude Code upgrade
+**or** an adapter / SDK version bump. Changes since the recorded run, not yet run live: the budget-exhaustion
+probe (probe 1, last test) was added, and probe 5 now plants its `defaultMode` in the session cwd's
+`.claude/settings.json` (a source the adapter's SettingsManager reads itself) so the leak assertion is
+unconditional, without touching the user's config dir or credentials. The next live run must confirm both,
+including that the adapter does not filter an `acceptEdits` default from the project source (the SDK applies a
+trust filter to escalating default modes).
 
 ## Cross-cutting surprise: the default model blows the probe budget
 
@@ -35,6 +54,9 @@ Command (cwd = empty temp dir outside the repo):
   CLAUDE.md discovery; "Anthropic auth is strictly ANTHROPIC_API_KEY or apiKeyHelper via --settings (OAuth and
   keychain are never read)". Confirms d-0031: `--bare` is API-key mode only. Not used. The test pins that
   help text.
+- Budget exhaustion (probe added after the recorded run, not yet run live): `--max-budget-usd 0.0001 --model haiku`
+  must give `subtype: error_max_budget_usd`, exit 0, `is_error: true` and no `result`, matching the observation in
+  the cross-cutting section above.
 - New flags seen in `--help` that bear on the design: `--safe-mode`, `--restricted`, `--permission-prompts
 host|none`, `--include-hook-events`, `--system-prompt-snapshot`. Not evaluated.
 
@@ -74,9 +96,9 @@ Server started with `node <pkg>/dist/index.js` over stdio, NDJSON via the SDK's 
 Agent", version "0.89.1"}`, `agentCapabilities.loadSession: true`, `agentCapabilities.auth: {logout: {}}`,
   `authMethods: []` (no terminal auth advertised for a client without that capability).
   **Auth info is not in the `initialize` response.** It arrives as a separate extension notification
-  `_auth/status_update` with `{authStatus: {kind: "account", label: "Claude Max", account: {plan, email,
-organization}}}`; received three times per run. `kind: "account"` confirms subscription auth. The test
-  asserts `kind === "account"` only; email and organization are not recorded.
+  `_auth/status_update` with `{authStatus: {kind: "account", label, account: {...}}}`; received three times
+  per run. `kind: "account"` confirms subscription auth. The test asserts `kind === "account"` only; no
+  account identifiers are recorded.
 - `session/new` with `_meta.claudeCode.options = {settingSources: [], strictMcpConfig: true,
 allowDangerouslySkipPermissions: false, maxTurns, maxBudgetUsd: 0.05, model: "haiku"}`: accepted.
   `allowDangerouslySkipPermissions: false` is honoured: the session's `availableModes` are
@@ -113,8 +135,7 @@ allowDangerouslySkipPermissions: false, maxTurns, maxBudgetUsd: 0.05, model: "ha
 
 Prompt "list the names of every MCP tool available to you, one per line, or say NONE", cwd = empty temp dir
 outside the repo, `session/set_mode default` after `session/new`, haiku, `maxTurns: 2`.
-Servers defined on this host (names only): user `~/.claude.json`: MiniMax, tradingview, caveman, pencil, rea;
-repo `.mcp.json`: graft.
+The host had several user-level MCP servers and one repo-level server configured (names omitted).
 
 - Strict (`strictMcpConfig: true, mcpServers: {}, settingSources: []`): agent said `NONE`, added that every
   tool is a built-in harness tool; no `mcp__` string in agent text or any `session/update`. Asserted.
@@ -123,7 +144,7 @@ repo `.mcp.json`: graft.
 - **Why the control proves nothing:** the strict run and the control are indistinguishable here, so this probe
   does not show that `strictMcpConfig` is what hides the servers. Likely causes: the listed user servers did
   not connect on this host at probe time (several are known to fail to start), and/or MCP tools are deferred
-  behind tool search so the model does not see names. The project `graft` server was not exercised (cwd is
+  behind tool search so the model does not see names. The repo-level server was not exercised (cwd is
   outside the repo by design). To make the check discriminating, add a positive control that starts a known-good
   stdio MCP server with `strictMcpConfig: false` and shows its tool name appears. Not done.
 - Net: `strictMcpConfig: true` leaks no MCP tool in this setup (observed); that it is the cause is unproven.
@@ -136,15 +157,17 @@ repo `.mcp.json`: graft.
   content, zero `session/request_permission` requests (the hook denied before the permission step), the
   agent reported the command did not run. **Per-run hooks via `_meta` settings work on ACP.** Tool name in the
   hook payload is `Bash` on ACP (not `PowerShell`, which is the CLI's).
-- (b) User hook events defined in `~/.claude/settings.json` (names only): SessionStart, UserPromptSubmit,
+- (b) User hook events defined in the host's user `settings.json` (names only): SessionStart, UserPromptSubmit,
   PreToolUse, PostToolUse, PostToolUseFailure, Stop, StopFailure, SubagentStart, SubagentStop, TeammateIdle,
   PermissionRequest, PreCompact, PostCompact, SessionEnd. Whether they fire under ACP is **not observable
   without modifying user settings**: their effects are side effects outside the protocol traffic. The
   orchestrator should treat all 14 events as potentially live for a Worker (SessionStart, UserPromptSubmit,
   PreToolUse, PermissionRequest are the ones that could alter or block Worker behaviour).
-- `defaultMode` leak reproduced (d-0048 item 6): the user's `permissions.defaultMode` is `acceptEdits` and
+- `defaultMode` leak reproduced (d-0048 item 6): the host user's `permissions.defaultMode` was `acceptEdits` and
   the new session's `modes.currentModeId` before our `set_mode` was `acceptEdits` even with
-  `settingSources: []` and `strictMcpConfig: true`. `set_mode default` remains required.
+  `settingSources: []` and `strictMcpConfig: true`. `set_mode default` remains required. The probe now asserts this unconditionally by running the session in a
+  fresh cwd whose `.claude/settings.json` sets `acceptEdits`, then checking that `set_mode default` is accepted
+  and no mode update contradicts it.
 
 ## Differences from the design docs
 

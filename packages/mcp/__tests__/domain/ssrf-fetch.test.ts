@@ -104,7 +104,7 @@ describe('guardedFetchText: redirects', () => {
       res(302, '', { location: 'http://127.0.0.1:8888/' }),
     );
     await expect(
-      guardedFetchText('https://example.com/', opts(transport)),
+      guardedFetchText('http://example.com/', opts(transport)),
     ).rejects.toThrow(/private|blocked/i);
     expect(transport).toHaveBeenCalledTimes(1);
   });
@@ -185,5 +185,63 @@ describe('guardedFetchText: bounds and content', () => {
     await expect(
       guardedFetchText('https://example.com/', { ...opts(transport), timeoutMs: 20 }),
     ).rejects.toThrow(/timed out/i);
+  });
+});
+
+describe('guardedFetchText: ports, downgrade and DNS time-box', () => {
+  it.each([
+    'https://example.com:22/',
+    'http://example.com:6379/',
+    'https://example.com:8443/',
+    'http://example.com:8080/',
+  ])('refuses non-web port without an allow-list: %s', async (url) => {
+    const transport = vi.fn<HttpTransport>();
+    await expect(guardedFetchText(url, opts(transport))).rejects.toThrow(/port/i);
+    expect(transport).not.toHaveBeenCalled();
+  });
+
+  it('allows 8080/8443 only for an allow-listed host', async () => {
+    const transport = vi.fn<HttpTransport>(async () => res(200, 'ok'));
+    const out = await guardedFetchText('https://example.com:8443/', {
+      ...opts(transport),
+      allowHosts: ['example.com'],
+    });
+    expect(out.text).toBe('ok');
+    await expect(
+      guardedFetchText('https://example.com:9000/', {
+        ...opts(transport),
+        allowHosts: ['example.com'],
+      }),
+    ).rejects.toThrow(/port/i);
+  });
+
+  it('allows default and explicit 80/443', async () => {
+    const transport = vi.fn<HttpTransport>(async () => res(200, 'ok'));
+    await guardedFetchText('http://example.com:80/', opts(transport));
+    await guardedFetchText('https://example.com:443/', opts(transport));
+    expect(transport).toHaveBeenCalledTimes(2);
+  });
+
+  it('refuses an https to http redirect downgrade', async () => {
+    const transport = vi.fn<HttpTransport>(async () =>
+      res(302, '', { location: 'http://example.com/plain' }),
+    );
+    await expect(
+      guardedFetchText('https://example.com/', opts(transport)),
+    ).rejects.toThrow(/downgrade/i);
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it('times out a DNS lookup that never answers', async () => {
+    const transport = vi.fn<HttpTransport>();
+    const started = Date.now();
+    await expect(
+      guardedFetchText('https://example.com/', {
+        ...opts(transport, () => new Promise<string[]>(() => undefined)),
+        timeoutMs: 50,
+      }),
+    ).rejects.toThrow(/timed out/i);
+    expect(Date.now() - started).toBeLessThan(2_000);
+    expect(transport).not.toHaveBeenCalled();
   });
 });

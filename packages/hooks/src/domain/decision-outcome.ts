@@ -4,10 +4,11 @@
  * Why: the harness only understands exit codes: 2 blocks the tool call and shows stderr
  *   to the Worker, 0 lets it run. Everything the server may say, and everything that can
  *   go wrong on the way to hearing it, must collapse to one of those two so that no
- *   failure of ours ever reads as permission. Before a tool runs (PreToolUse) and at run
- *   registration (SessionStart) every non-`allow` answer and every error blocks; after
- *   the fact (PostToolUse*) nothing can be undone, so the hook only reports and the next
- *   PreToolUse fails closed if the server is really gone (d-0033, probe 2).
+ *   failure of ours ever reads as permission. PreToolUse is the only hard gate: Claude Code
+ *   treats SessionStart as non-blocking (exit 2 only shows stderr), so a SessionStart that
+ *   exits 2 does not stop the session; the engine's liveness check and the next PreToolUse
+ *   do. After the fact (PostToolUse*) nothing can be undone, so the hook only reports
+ *   (d-0033, probe 2).
  *
  * Exports: isBlockingEvent(), fromResponse(), failClosed().
  * Depends on: schemas/hook-payload, schemas/hook-wire, types/hook-client. No IO.

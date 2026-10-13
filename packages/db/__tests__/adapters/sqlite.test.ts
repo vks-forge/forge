@@ -12,6 +12,8 @@
  *   column mapping and chain persistence across reopen, WAL journal mode, reopen durability,
  *   idempotent re-migration on reopen, connection pragmas, a second connection waiting
  *   on busy_timeout.
+ * Also pins backend failures mapped to typed ForgeErrors (busy -> stall, corrupt row ->
+ *   unknown with cause) and receipts.append re-entered from a storage transaction.
  * Depends on: contract/storage.contract, src/index, better-sqlite3.
  */
 
@@ -20,6 +22,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
 import { afterAll, describe, expect, it } from 'vitest';
+import {
+  ForgeError,
+  InvalidInputError,
+  StallError,
+  UnknownForgeError,
+} from '@forge/core';
 import { verifyChain } from '@forge/tools';
 import { createSqliteStorage, openSqlite, openSqliteDriver } from '#/index.js';
 import { describeReceiptLogContract } from '#tests/contract/receipt-log.contract.js';
@@ -165,10 +173,80 @@ describe('sqlite file specifics', () => {
     expect(got?.title).toBe('Ticket 1');
   });
 
-  it('applies busy_timeout and foreign_keys pragmas to the connection', () => {
-    const driver = openSqliteDriver(':memory:', { busyTimeoutMs: 1234 });
+  it('applies busy_timeout, foreign_keys and synchronous=FULL pragmas to the connection', () => {
+    const driver = openSqliteDriver(nextPath(), { busyTimeoutMs: 1234 });
     const busy = driver.get<{ timeout: number }>('PRAGMA busy_timeout');
+    const fk = driver.get<{ foreign_keys: number }>('PRAGMA foreign_keys');
+    const sync = driver.get<{ synchronous: number }>('PRAGMA synchronous');
     driver.close();
     expect(busy?.timeout).toBe(1234);
+    expect(fk?.foreign_keys).toBe(1);
+    // 2 = FULL: every commit is fsynced, so a power loss cannot drop acknowledged commits.
+    expect(sync?.synchronous).toBe(2);
+  });
+
+  it('maps SQLITE_BUSY to a StallError with the driver error as cause', async () => {
+    const path = nextPath();
+    const holder = openSqliteDriver(path);
+    holder.exec('CREATE TABLE IF NOT EXISTS probe (x)');
+    const db = createSqliteStorage(path, { busyTimeoutMs: 20 });
+    holder.exec('BEGIN IMMEDIATE');
+    const failure = await db
+      .transaction((tx) => tx.tickets.insert(makeTicket(1)))
+      .catch((e: unknown) => e);
+    holder.exec('ROLLBACK');
+    holder.close();
+    expect(failure).toBeInstanceOf(StallError);
+    expect((failure as ForgeError).errorFamily).toBe('stall');
+    expect((failure as ForgeError).cause).toBeDefined();
+    // the adapter recovers once the lock is gone
+    await db.transaction((tx) => tx.tickets.insert(makeTicket(1)));
+    await db.close();
+  });
+
+  it('wraps a row that fails schema validation on read as UnknownForgeError with the ZodError as cause', async () => {
+    const path = nextPath();
+    const db = createSqliteStorage(path);
+    await db.transaction((tx) => tx.tickets.insert(makeTicket(1)));
+    const raw = new Database(path);
+    raw.prepare("UPDATE tickets SET lane = 'bogus'").run();
+    raw.close();
+    const failure = await db
+      .transaction((tx) => tx.tickets.get(makeTicket(1).id))
+      .catch((e: unknown) => e);
+    await db.close();
+    expect(failure).toBeInstanceOf(UnknownForgeError);
+    expect((failure as ForgeError).cause).toMatchObject({ name: 'ZodError' });
+  });
+
+  it('maps a constraint violation from raw SQL to InvalidInputError', async () => {
+    const { storage, receipts } = openSqlite(':memory:');
+    await appendDecision(receipts, 'r1', 'c1');
+    // same decision id twice is rejected by the receipt log's own check; the table's
+    // PRIMARY KEY is the backstop, so reach it through the shared driver path.
+    const failure = await storage
+      .transaction(async (tx) => {
+        await tx.runs.insert(makeRun('r1'));
+        await tx.runs.insert(makeRun('r1'));
+      })
+      .catch((e: unknown) => e);
+    await storage.close();
+    expect(failure).toBeInstanceOf(InvalidInputError);
+  });
+
+  it('fails fast when receipts.append is called from inside a storage transaction', async () => {
+    const { storage, receipts } = openSqlite(':memory:');
+    const outcome = await Promise.race([
+      storage
+        .transaction(async () => {
+          await appendDecision(receipts, 'r1', 'c1');
+        })
+        .catch((e: unknown) => e),
+      new Promise((r) => setTimeout(() => r('deadlock'), 1000)),
+    ]);
+    const chain = await receipts.list('r1');
+    await storage.close();
+    expect(outcome).toBeInstanceOf(InvalidInputError);
+    expect(chain).toEqual([]);
   });
 });

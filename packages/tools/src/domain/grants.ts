@@ -12,11 +12,12 @@
  *
  * Exports: effectiveGrant(), checkToolGranted(), assertNotBannedAlwaysAllow(), assertValidRules(),
  *   parseGrant().
- * Depends on: @forge/core (Lane), domain/lane-defaults, domain/floors, domain/tool-id,
+ * Depends on: @forge/core (Lane), domain/command-classes, domain/lane-defaults, domain/floors, domain/tool-id,
  *   schemas/grant, shared/errors, shared/pattern. No IO.
  */
 
 import type { Lane } from '@forge/core';
+import { ALWAYS_ASK_COMMANDS } from '#/domain/command-classes.js';
 import { FLOOR_RULES } from '#/domain/floors.js';
 import { LANE_DEFAULTS } from '#/domain/lane-defaults.js';
 import { isProjectMcp } from '#/domain/tool-id.js';
@@ -25,41 +26,6 @@ import type { CallRule } from '#/schemas/grant.js';
 import { BannedAlwaysAllowError, InvalidGrantError } from '#/shared/errors.js';
 import { toolMatch } from '#/shared/pattern.js';
 import type { EffectiveGrant, GrantVerdict, RuleLayer } from '#/types/grants.types.js';
-
-const INTERPRETERS = [
-  'bash',
-  'sh',
-  'zsh',
-  'dash',
-  'ksh',
-  'fish',
-  'python',
-  'python3',
-  'py',
-  'node',
-  'deno',
-  'bun',
-  'perl',
-  'ruby',
-  'php',
-  'lua',
-  'powershell',
-  'pwsh',
-  'cmd',
-  'eval',
-  'source',
-  '.',
-  'iex',
-  'invoke-expression',
-  'env',
-  'sudo',
-  'doas',
-  'xargs',
-  'npx',
-  'pnpm dlx',
-  'pnpm exec',
-  'start-process',
-];
 
 /** Collapses an allow resource to its command words, e.g. `Bash -c *` to `bash -c`. */
 function core(resource: string): string {
@@ -82,7 +48,7 @@ export function assertNotBannedAlwaysAllow(rule: CallRule): void {
     c === '' ||
     /[*?]/.test(first) ||
     c === 'git' ||
-    INTERPRETERS.some((p) => c === p || c.startsWith(`${p} `));
+    ALWAYS_ASK_COMMANDS.some((p) => c === p || c.startsWith(`${p} `));
   if (banned) throw new BannedAlwaysAllowError(`${rule.action} ${rule.resource}`);
 }
 

@@ -27,6 +27,7 @@ Public API: none yet.
 
 ## Requirements
 
+- No TypeScript exists yet, so there is no `tsconfig.json` and the root `tsconfig.json` has no reference to this package. The first source file must add `tsconfig.json` and `tsconfig.test.json` (copy `packages/tools`) and add both to the root `references`; the root `vitest.config.ts` coverage include and threshold need an entry too.
 - Node 24.20 and pnpm. Nothing is required today: no source, no tests, no env vars.
 - Intended files: `.forge/memory/` (the factory repo today; per-project `.forge/memory/<slug>/` as its own git repo is planned, with the project slug `forge` per x-0010). Runtime index directories under it are gitignored.
 - Build and test follow the root scripts once source exists.

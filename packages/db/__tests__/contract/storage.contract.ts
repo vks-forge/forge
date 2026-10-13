@@ -12,12 +12,25 @@
  *   leaked database file must not yield a usable credential), and only pending
  *   interactions are listed (director-core.md §3, §7, §8).
  *
+ * Also pinned: optional columns can be cleared (a patch from `transition()` leaves no stale
+ *   `blocked_reason` / `tier_actual`), the CAS owns `status_version`, a transaction
+ *   callback that re-enters the adapter fails fast instead of deadlocking, backend
+ *   failures surface as typed ForgeErrors, and a revoked run token cannot be re-armed by
+ *   `issue`.
+ *
  * Exports: describeStorageContract().
  * Depends on: vitest, @forge/core, helpers/fixtures. IO only through the adapter under test.
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { StorageAdapter } from '@forge/core';
+import {
+  ForgeError,
+  InvalidInputError,
+  PolicyDeniedError,
+  toTicketPatch,
+  transition,
+} from '@forge/core';
+import type { StorageAdapter, TicketEvent } from '@forge/core';
 import {
   makeInteraction,
   makeIntake,
@@ -62,9 +75,20 @@ export function describeStorageContract(
 
       it('rejects a duplicate id', async () => {
         await db.transaction((tx) => tx.tickets.insert(makeTicket(1)));
-        await expect(
-          db.transaction((tx) => tx.tickets.insert(makeTicket(1))),
-        ).rejects.toThrow();
+        const failure = await db
+          .transaction((tx) => tx.tickets.insert(makeTicket(1)))
+          .catch((e: unknown) => e);
+        expect(failure).toBeInstanceOf(InvalidInputError);
+      });
+
+      it('never leaks a raw ZodError: an invalid ticket is an InvalidInputError with the cause', async () => {
+        const bad = makeTicket(1, { lane: 'nope' as never });
+        const failure = await db
+          .transaction((tx) => tx.tickets.insert(bad))
+          .catch((e: unknown) => e);
+        expect(failure).toBeInstanceOf(InvalidInputError);
+        expect((failure as ForgeError).cause).toBeDefined();
+        expect((failure as ForgeError).errorFamily).toBe('invalid_input');
       });
 
       it('CAS succeeds on the current version, applies the patch and bumps the version', async () => {
@@ -82,14 +106,86 @@ export function describeStorageContract(
         });
       });
 
-      it('CAS honours an explicit status_version in the patch', async () => {
+      it('CAS refuses a caller-supplied status_version and leaves the row untouched', async () => {
         const t = makeTicket(1);
         await db.transaction((tx) => tx.tickets.insert(t));
+        const patch = { status: 'planned', status_version: 5 } as never;
+        const failure = await db
+          .transaction((tx) => tx.tickets.updateTicketCas(t.id, 0, patch))
+          .catch((e: unknown) => e);
+        const got = await db.transaction((tx) => tx.tickets.get(t.id));
+        expect(failure).toBeInstanceOf(InvalidInputError);
+        expect(got).toMatchObject({ status: 'inbox', status_version: 0 });
+      });
+
+      it('CAS always sets status_version to expected + 1', async () => {
+        const t = makeTicket(1, { status_version: 7 });
+        await db.transaction((tx) => tx.tickets.insert(t));
         await db.transaction((tx) =>
-          tx.tickets.updateTicketCas(t.id, 0, { status: 'planned', status_version: 5 }),
+          tx.tickets.updateTicketCas(t.id, 7, { rework_count: 2 }),
         );
         const got = await db.transaction((tx) => tx.tickets.get(t.id));
-        expect(got?.status_version).toBe(5);
+        expect(got?.status_version).toBe(8);
+      });
+
+      it('CAS clears an optional column when the patch carries it as undefined', async () => {
+        const t = makeTicket(1, { parent: makeTicket(2).id, tier_actual: 'B' });
+        await db.transaction((tx) => tx.tickets.insert(t));
+        await db.transaction((tx) =>
+          tx.tickets.updateTicketCas(t.id, 0, {
+            parent: undefined,
+            tier_actual: undefined,
+          }),
+        );
+        const got = await db.transaction((tx) => tx.tickets.get(t.id));
+        expect(got).not.toBeNull();
+        expect('parent' in (got ?? {})).toBe(false);
+        expect('tier_actual' in (got ?? {})).toBe(false);
+      });
+
+      it('blocked then unblocked via transition() leaves no blocked_reason in the stored row', async () => {
+        const start = makeTicket(1, { status: 'in_progress' });
+        await db.transaction((tx) => tx.tickets.insert(start));
+        const at = '2026-10-13T01:00:00.000Z';
+        let cur = start;
+        for (const e of [
+          { type: 'blocked', at, reason: 'waiting on dep' },
+          { type: 'unblocked', at },
+        ] as TicketEvent[]) {
+          const r = transition(cur, e);
+          if (!r.ok) throw new Error('unexpected transition error');
+          const next = r.value;
+          const ok = await db.transaction((tx) =>
+            tx.tickets.updateTicketCas(cur.id, cur.status_version, toTicketPatch(next)),
+          );
+          expect(ok).toBe(true);
+          cur = next;
+          const stored = await db.transaction((tx) => tx.tickets.get(cur.id));
+          expect(stored).toEqual(cur);
+          expect('blocked_reason' in (stored ?? {})).toBe(e.type === 'blocked');
+        }
+      });
+
+      it('a stale tier_actual is cleared when the gate fails (no merge on an old pass)', async () => {
+        const at = '2026-10-13T01:00:00.000Z';
+        let cur = makeTicket(1, { status: 'in_progress' });
+        await db.transaction((tx) => tx.tickets.insert(cur));
+        for (const e of [
+          { type: 'verifying', at },
+          { type: 'gate_passed', at, tier_actual: 'A' },
+          { type: 'gate_failed', at },
+        ] as TicketEvent[]) {
+          const r = transition(cur, e);
+          if (!r.ok) throw new Error('unexpected transition error');
+          const next = r.value;
+          await db.transaction((tx) =>
+            tx.tickets.updateTicketCas(cur.id, cur.status_version, toTicketPatch(next)),
+          );
+          cur = next;
+        }
+        const stored = await db.transaction((tx) => tx.tickets.get(cur.id));
+        expect(stored?.status).toBe('in_progress');
+        expect('tier_actual' in (stored ?? {})).toBe(false);
       });
 
       it('CAS fails on a stale version and leaves the row untouched', async () => {
@@ -143,6 +239,27 @@ export function describeStorageContract(
           intake: await tx.intakeEvents.insertIfNew(makeIntake('k')),
         }));
         expect(after).toEqual({ ticket: null, run: null, events: [], intake: true });
+      });
+
+      it('fails fast, not deadlocks, when the callback re-enters transaction()', async () => {
+        const outcome = await Promise.race([
+          db
+            .transaction(async (tx) => {
+              await tx.tickets.insert(makeTicket(1));
+              await Promise.resolve();
+              await db.transaction((inner) => inner.tickets.insert(makeTicket(2)));
+            })
+            .catch((e: unknown) => e),
+          new Promise((r) => setTimeout(() => r('deadlock'), 1000)),
+        ]);
+        expect(outcome).toBeInstanceOf(InvalidInputError);
+        expect(String((outcome as Error).message)).toMatch(/re-entr|nested/i);
+        // the outer transaction rolled back and the adapter is still usable
+        const after = await db.transaction(async (tx) => ({
+          one: await tx.tickets.get(makeTicket(1).id),
+          two: await tx.tickets.get(makeTicket(2).id),
+        }));
+        expect(after).toEqual({ one: null, two: null });
       });
 
       it('serializes concurrent transactions (single writer)', async () => {
@@ -209,7 +326,54 @@ export function describeStorageContract(
       });
     });
 
+    describe('optional run columns', () => {
+      it('update clears an optional column given as undefined', async () => {
+        await db.transaction(async (tx) => {
+          await tx.runs.insert(
+            makeRun('r1', { ended_at: '2026-10-13T01:00:00.000Z', cost_usd: 1 }),
+          );
+          await tx.runs.update('r1', { ended_at: undefined });
+        });
+        const got = await db.transaction((tx) => tx.runs.get('r1'));
+        expect('ended_at' in (got ?? {})).toBe(false);
+        expect(got?.cost_usd).toBe(1);
+      });
+
+      it('update refuses to clear a required column', async () => {
+        await db.transaction((tx) => tx.runs.insert(makeRun('r1')));
+        const failure = await db
+          .transaction((tx) => tx.runs.update('r1', { harness: undefined } as never))
+          .catch((e: unknown) => e);
+        expect(failure).toBeInstanceOf(InvalidInputError);
+      });
+    });
+
     describe('run events', () => {
+      it('round-trips a tool_call / tool_result whose unknown payload is undefined', async () => {
+        const call = {
+          type: 'tool_call' as const,
+          ts: '2026-10-13T00:00:00.000Z',
+          call_id: 'c1',
+          name: 'noop',
+          input: undefined,
+        };
+        const result = {
+          type: 'tool_result' as const,
+          ts: '2026-10-13T00:00:01.000Z',
+          call_id: 'c1',
+          output: undefined,
+          is_error: false,
+        };
+        const stored = await db.transaction(async (tx) => [
+          await tx.runEvents.append('r1', call),
+          await tx.runEvents.append('r1', result),
+        ]);
+        const listed = await db.transaction((tx) => tx.runEvents.listByRun('r1'));
+        expect(listed).toStrictEqual(stored);
+        expect(listed[0]).toMatchObject({ input: null });
+        expect(listed[1]).toMatchObject({ output: null });
+      });
+
       it('allocates seq from 0, contiguous per run, and returns the stored event', async () => {
         const out = await db.transaction(async (tx) => ({
           a0: await tx.runEvents.append('r1', makeTextEvent('a')),
@@ -314,14 +478,43 @@ export function describeStorageContract(
         expect(got).toEqual({ r1: null, r2: 'b'.repeat(64) });
       });
 
-      it('re-issuing replaces the hash and clears the revocation', async () => {
+      it('reissue replaces the hash and clears the revocation (explicit re-arm)', async () => {
         await db.transaction(async (tx) => {
-          await tx.runTokens.put('r1', HASH, T1);
+          await tx.runTokens.issue('r1', HASH, T1);
           await tx.runTokens.revoke('r1', T1);
-          await tx.runTokens.put('r1', 'c'.repeat(64), T1);
+          await tx.runTokens.reissue('r1', 'c'.repeat(64), T1);
         });
         const got = await db.transaction((tx) => tx.runTokens.getHash('r1'));
         expect(got).toBe('c'.repeat(64));
+      });
+
+      it.each(['issue', 'put'] as const)(
+        '%s on a revoked run is refused and the token stays dead',
+        async (method) => {
+          await db.transaction(async (tx) => {
+            await tx.runTokens.issue('r1', HASH, T1);
+            await tx.runTokens.revoke('r1', T1);
+          });
+          const failure = await db
+            .transaction((tx) => tx.runTokens[method]('r1', 'c'.repeat(64), T1))
+            .catch((e: unknown) => e);
+          const got = await db.transaction((tx) => tx.runTokens.getHash('r1'));
+          expect(failure).toBeInstanceOf(PolicyDeniedError);
+          expect(got).toBeNull();
+        },
+      );
+
+      it('issue on a live token replaces it; reissue works for a never-issued run', async () => {
+        await db.transaction(async (tx) => {
+          await tx.runTokens.issue('r1', HASH, T1);
+          await tx.runTokens.issue('r1', 'c'.repeat(64), T1);
+          await tx.runTokens.reissue('r2', 'd'.repeat(64), T1);
+        });
+        const got = await db.transaction(async (tx) => ({
+          r1: await tx.runTokens.getHash('r1'),
+          r2: await tx.runTokens.getHash('r2'),
+        }));
+        expect(got).toEqual({ r1: 'c'.repeat(64), r2: 'd'.repeat(64) });
       });
 
       it('refuses anything that is not a sha256 hex digest (never store a raw token)', async () => {

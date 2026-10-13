@@ -7,23 +7,29 @@
  *   run's own grant, and appends an HMAC'd receipt chained to the previous one. `seq` is
  *   derived from the chain tail, never from the client, so twenty concurrent posts still
  *   produce one gap-free chain. Every failure (unknown run, wrong token, bad request,
- *   thrown error) answers `deny` with `fail_closed_<code>` and writes nothing, except an
- *   audit receipt when the run is real, so a Worker guessing tokens leaves a trace but
- *   cannot get an `allow` (d-0033, tool-system.md §10, verification-plane.md §2).
+ *   thrown error) answers `deny` with `fail_closed_<code>` and writes nothing to the
+ *   chain; a refusal on a real run goes to a rate-limited audit side channel, so a Worker
+ *   guessing tokens leaves a trace but can neither get an `allow` nor bloat the signed
+ *   chain. An effect receipt is written only for an open decision whose verdict was
+ *   `allow`, matched by the harness's own `tool_use_id`: a forged Post cannot launder a
+ *   denied or asked call into a recorded effect (d-0033, tool-system.md §10,
+ *   verification-plane.md §2).
  *
  * Exports: createHookHandler().
- * Depends on: @forge/tools (makeDecisionReceipt, makeEffectReceipt), schemas/hook-wire,
- *   server/tool-resolver, shared/hash, types/hook-handler.
+ * Depends on: @forge/tools (makeDecisionReceipt, makeEffectReceipt, constantTimeEqual),
+ *   schemas/hook-wire, server/tool-resolver, server/audit-gate, shared/args-hash,
+ *   types/hook-handler.
  */
 
 import { randomUUID } from 'node:crypto';
-import { makeDecisionReceipt, makeEffectReceipt } from '@forge/tools';
+import { constantTimeEqual, makeDecisionReceipt, makeEffectReceipt } from '@forge/tools';
 import type { Run } from '@forge/core';
-import type { Decision, Receipt } from '@forge/tools';
+import type { Receipt } from '@forge/tools';
 import { HookRequest } from '#/schemas/hook-wire.js';
 import type { HookResponse } from '#/schemas/hook-wire.js';
 import { effectStateFor, resolveToolId, toolDefinition } from '#/server/tool-resolver.js';
-import { argsHash, tokensEqual } from '#/shared/hash.js';
+import { createAuditGate, createMemoryAudit } from '#/server/audit-gate.js';
+import { argsHash } from '#/shared/args-hash.js';
 import type {
   FailClosedCode,
   HookHandler,
@@ -44,40 +50,7 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
   const newId = deps.newId ?? randomUUID;
   const now = (): string => deps.clock().toISOString();
 
-  /**
-   * Audit receipt for a refused request on a real run, so guessing tokens leaves a trace.
-   */
-  async function audit(
-    run: Run,
-    creds: RunCredentials,
-    code: FailClosedCode,
-  ): Promise<void> {
-    const decision: Decision = {
-      decision: 'deny',
-      reason: `fail_closed_${code}`,
-      enforced_by: 'forge_admit',
-      enforcement: 'hook',
-      layer: 'hook',
-      matched_rule: null,
-      finding_ids: [],
-      tool: 'forge_hook',
-    };
-    await deps.receipts.append(run.id, (view) => [
-      makeDecisionReceipt(
-        {
-          id: newId(),
-          run_id: run.id,
-          seq: view.lastSeq + 1,
-          decision,
-          args_hash: argsHash(null),
-          approver: 'auto',
-          ts: now(),
-        },
-        view.last,
-        creds.secret,
-      ),
-    ]);
-  }
+  const audit = createAuditGate(deps.audit ?? createMemoryAudit().sink, deps.clock);
 
   async function preToolUse(
     run: Run,
@@ -125,18 +98,17 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
     req: Extract<HookRequest, { event: 'PostToolUse' | 'PostToolUseFailure' }>,
   ): Promise<HookResponse> {
     const ctx = await deps.admitContext(run);
-    const { tool_name: native, tool_use_id: useId } = req.payload;
-    const toolId = resolveToolId(ctx, native);
+    const { tool_use_id: useId } = req.payload;
     const isFailure = req.event === 'PostToolUseFailure';
     const result = isFailure
       ? (req.payload as { error?: unknown }).error
       : (req.payload as { tool_response?: unknown }).tool_response;
 
     const written = await deps.receipts.append(run.id, (view) => {
-      const decision =
-        (useId ? view.openDecision(useId) : null) ?? view.latestOpenDecision(toolId);
-      // A call that was never admitted (or already closed) has nothing to attach to.
-      if (!decision) return [];
+      // Only the harness's own id links an effect to a decision; no id, no effect.
+      const decision = useId ? view.openDecision(useId) : null;
+      // Never admitted, already closed, or refused: nothing to attach an effect to.
+      if (!decision || decision.decision !== 'allow') return [];
       return [
         makeEffectReceipt(
           decision,
@@ -153,7 +125,11 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
     const receipt = written[0];
     return {
       decision: 'allow',
-      reason: receipt ? 'effect_recorded' : 'effect_unmatched',
+      reason: receipt
+        ? 'effect_recorded'
+        : useId
+          ? 'effect_unmatched'
+          : 'effect_no_tool_use_id',
       receipt_hash: receipt?.hash ?? '',
     };
   }
@@ -179,8 +155,8 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
         if (!run) return failed('unknown_run');
         creds = await deps.credentials(runId);
         if (!creds) return failed('no_credentials');
-        if (!tokensEqual(token, creds.token)) {
-          await audit(run, creds, 'bad_token').catch(() => undefined);
+        if (!constantTimeEqual(token, creds.token)) {
+          await audit(run.id, 'bad_token').catch(() => undefined);
           return failed('bad_token');
         }
         const parsed = HookRequest.safeParse(request);
@@ -190,7 +166,7 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
         if (req.event === 'PreToolUse') return await preToolUse(run, creds, req);
         return await postToolUse(run, creds, req);
       } catch {
-        if (run && creds) await audit(run, creds, 'internal').catch(() => undefined);
+        if (run && creds) await audit(run.id, 'internal').catch(() => undefined);
         return failed('internal');
       }
     },

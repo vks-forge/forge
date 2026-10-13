@@ -8,12 +8,12 @@
  *   and the drift test, and a driver can reuse `toolSchemaHash` on a live `tools/list`.
  *
  * Exports: toolSchemaHash(), computeToolSchemaHashes().
- * Depends on: node:crypto, @modelcontextprotocol/sdk, domain/server. IO: none (in-memory transport).
+ * Depends on: @forge/tools (sha256Hex), @modelcontextprotocol/sdk, domain/server. IO: none (in-memory transport).
  */
 
-import { createHash } from 'node:crypto';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { sha256Hex } from '@forge/tools';
 import { createForgeMcpServer, SERVER_NAME } from '#/domain/server.js';
 import { hashToken } from '#/domain/run-tokens.js';
 
@@ -34,10 +34,7 @@ function canonical(value: unknown): string {
 
 /** `sha256:<hex>` over the tool's name and advertised input JSON schema. */
 export function toolSchemaHash(tool: { name: string; inputSchema: unknown }): string {
-  const digest = createHash('sha256')
-    .update(canonical({ name: tool.name, inputSchema: tool.inputSchema }))
-    .digest('hex');
-  return `sha256:${digest}`;
+  return `sha256:${sha256Hex(canonical({ name: tool.name, inputSchema: tool.inputSchema }))}`;
 }
 
 /** Map of `mcp__forge__<tool>` to schema hash, from a throwaway in-memory server. */

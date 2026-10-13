@@ -18,7 +18,8 @@ packages/core  pure: types, ports, schemas, state machine. No IO, no imports
 
 A dependency from `core` to anything else, from `tools` to anything but
 `core`, or between two adapter packages, is a build error (eslint
-`no-restricted-imports` + dependency-cruiser). A process that runs on its own
+`no-restricted-imports` for static imports + `forge/no-dynamic-cross-package`
+for `import()` / `require`). A process that runs on its own
 (MCP stdio server, CLI) gets its entry in `apps/<name>/src/main.ts`, which
 composes adapters; the adapter package exports factories that take ports.
 `__tests__/` may import a sibling adapter (e.g. `createMemoryStorage`) as a

@@ -21,11 +21,11 @@
   },
   "dependencies": {
     "@forge/core": "workspace:*",
+    "@forge/tools": "workspace:*",
     "@modelcontextprotocol/sdk": "1.32.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@forge/tools": "workspace:*",
     "@types/node": "26.6.5",
     "@forge/db": "workspace:*"
   }

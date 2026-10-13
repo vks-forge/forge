@@ -68,6 +68,15 @@ describe('get_ticket', () => {
     expect(textOf(no)).toMatch(/not related/i);
   });
 
+  it('emits no relations for a related ticket (no second-degree reads)', async () => {
+    const { client } = await setup();
+    const res = await client.callTool({ name: 'get_ticket', arguments: { id: 'SF-9' } });
+    const body = JSON.parse(textOf(res));
+    expect(body.ticket.id).toBe('SF-9');
+    expect(body.relations).toEqual({ parent: null, blocked_by: [] });
+    expect(body.runs).toEqual([]);
+  });
+
   it('reports a missing ticket as a tool error', async () => {
     const { client, storage } = await setup();
     await storage.transaction(async (tx) => {
@@ -192,6 +201,41 @@ describe('ask_director', () => {
     expect(Date.parse(row?.timeout_at ?? '')).toBeGreaterThan(
       Date.parse(row?.asked_at ?? ''),
     );
+  });
+});
+
+describe('one pending interaction per run', () => {
+  const args = (n: string) =>
+    n === 'ask_director' ? { question: 'q' } : { reason: 'r' };
+
+  it.each([
+    ['ask_director', 'report_blocked'],
+    ['report_blocked', 'ask_director'],
+    ['ask_director', 'ask_director'],
+  ] as const)('%s then %s is refused', async (first, second) => {
+    const { client, storage } = await setup();
+    const a = await client.callTool({ name: first, arguments: args(first) });
+    expect(a.isError).toBeFalsy();
+    const again = await client.callTool({ name: second, arguments: args(second) });
+    expect(again.isError).toBe(true);
+    expect(textOf(again)).toMatch(/pending/i);
+    const events = await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID));
+    expect(events).toHaveLength(1);
+  });
+
+  it('is allowed again once the earlier interaction is settled', async () => {
+    const { client, storage } = await setup();
+    const first = await client.callTool({
+      name: 'ask_director',
+      arguments: { question: 'q' },
+    });
+    const id = JSON.parse(textOf(first)).interaction_id as string;
+    await storage.transaction((tx) => tx.interactions.update(id, { status: 'answered' }));
+    const next = await client.callTool({
+      name: 'ask_director',
+      arguments: { question: 'q2' },
+    });
+    expect(next.isError).toBeFalsy();
   });
 });
 

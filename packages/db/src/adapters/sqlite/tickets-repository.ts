@@ -14,6 +14,7 @@
 
 import { Ticket } from '@forge/core';
 import type { TicketId, TicketPatch, TicketRepository, TicketStatus } from '@forge/core';
+import { parseStored } from '#/shared/db-errors.js';
 import { dropNulls, fromJson, toJson } from '#/shared/json.js';
 import { buildSetClause, parseTicketPatch } from '#/shared/patches.js';
 import type { ColumnCodec, SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
@@ -24,23 +25,27 @@ const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
   type: { column: 'type' },
   lane: { column: 'lane' },
   tier_predicted: { column: 'tier_predicted' },
-  tier_actual: { column: 'tier_actual' },
+  tier_actual: { column: 'tier_actual', clearable: true },
   status: { column: 'status' },
   status_version: { column: 'status_version' },
   rework_count: { column: 'rework_count' },
-  blocked_reason: { column: 'blocked_reason' },
+  blocked_reason: { column: 'blocked_reason', clearable: true },
   updated_at: { column: 'updated_at' },
-  parent: { column: 'parent_id' },
+  parent: { column: 'parent_id', clearable: true },
   blocked_by: { column: 'blocked_by_json', encode: toJson },
 };
 
 function toTicket(row: SqlRow): Ticket {
   const { parent_id, blocked_by_json, ...rest } = dropNulls(row);
-  return Ticket.parse({
-    ...rest,
-    ...(parent_id === undefined ? {} : { parent: parent_id }),
-    blocked_by: fromJson(blocked_by_json) ?? [],
-  });
+  return parseStored(
+    Ticket,
+    {
+      ...rest,
+      ...(parent_id === undefined ? {} : { parent: parent_id }),
+      blocked_by: fromJson(blocked_by_json) ?? [],
+    },
+    'ticket',
+  );
 }
 
 export function createTicketRepository(driver: SqlDriver): TicketRepository {

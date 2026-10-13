@@ -4,7 +4,8 @@
  * Why: a Worker needs the ticket's requirements and its neighbours (parent, blockers)
  *   but must not browse the whole backlog; unrelated tickets may hold other projects'
  *   plans or secrets. Access is limited to the run's own ticket, its parent and its
- *   blockers, and the answer is plain JSON the model can quote.
+ *   blockers, and only the own ticket carries relations and runs, so a chain of
+ *   lookups cannot walk the dependency graph. The answer is plain JSON the model can quote.
  *
  * Exports: getTicketTool.
  * Depends on: @forge/core, shared/define-tool, schemas/tool-inputs. IO: storage read.
@@ -36,9 +37,14 @@ export const getTicketTool = defineTool({
         throw new PolicyDeniedError(`ticket ${id} is not related to this run`);
       const ticket = id === own.id ? own : await tx.tickets.get(id as Ticket['id']);
       if (!ticket) throw new UnknownForgeError(`ticket ${id} not found`);
-      const parent = ticket.parent ? await tx.tickets.get(ticket.parent) : null;
-      const blockers = await Promise.all(ticket.blocked_by.map((b) => tx.tickets.get(b)));
-      const runs = id === own.id ? await tx.runs.listByTicket(own.id) : [];
+      // Relations only for the run's own ticket: a related ticket's neighbours would be
+      // second-degree reads into tickets this run has no business with.
+      const isOwn = id === own.id;
+      const parent = isOwn && ticket.parent ? await tx.tickets.get(ticket.parent) : null;
+      const blockers = isOwn
+        ? await Promise.all(ticket.blocked_by.map((b) => tx.tickets.get(b)))
+        : [];
+      const runs = isOwn ? await tx.runs.listByTicket(own.id) : [];
       return JSON.stringify({
         ticket: {
           id: ticket.id,

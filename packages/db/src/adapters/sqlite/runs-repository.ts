@@ -14,6 +14,7 @@
 
 import { Run, UnknownForgeError } from '@forge/core';
 import type { RunRepository } from '@forge/core';
+import { parseStored } from '#/shared/db-errors.js';
 import { dropNulls, fromJson, toJson } from '#/shared/json.js';
 import { buildSetClause, parseRunPatch } from '#/shared/patches.js';
 import type { ColumnCodec, SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
@@ -22,24 +23,28 @@ const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
   ticket_id: { column: 'ticket_id' },
   harness: { column: 'harness' },
   driver_version: { column: 'driver_version' },
-  session_ref: { column: 'session_ref' },
+  session_ref: { column: 'session_ref', clearable: true },
   cwd: { column: 'cwd' },
   lane: { column: 'lane' },
   started_at: { column: 'started_at' },
-  ended_at: { column: 'ended_at' },
+  ended_at: { column: 'ended_at', clearable: true },
   status: { column: 'status' },
-  usage: { column: 'usage_json', encode: toJson },
-  cost_usd: { column: 'cost_usd' },
-  error_family: { column: 'error_family' },
-  retry_of: { column: 'retry_of' },
+  usage: { column: 'usage_json', encode: toJson, clearable: true },
+  cost_usd: { column: 'cost_usd', clearable: true },
+  error_family: { column: 'error_family', clearable: true },
+  retry_of: { column: 'retry_of', clearable: true },
 };
 
 function toRun(row: SqlRow): Run {
   const { usage_json, ...rest } = dropNulls(row);
-  return Run.parse({
-    ...rest,
-    ...(usage_json === undefined ? {} : { usage: fromJson(usage_json) }),
-  });
+  return parseStored(
+    Run,
+    {
+      ...rest,
+      ...(usage_json === undefined ? {} : { usage: fromJson(usage_json) }),
+    },
+    'run',
+  );
 }
 
 export function createRunRepository(driver: SqlDriver): RunRepository {

@@ -7,11 +7,11 @@
  *   follow (tool-system.md §9).
  *
  * Exports: webFetchTool, MAX_FETCH_BYTES, FETCH_TIMEOUT_MS.
- * Depends on: domain/ssrf-fetch, adapters/node-transport, adapters/system-dns, shared/envelope, shared/define-tool. IO: network via the guard.
+ * Depends on: @forge/core, domain/ssrf-fetch, shared/envelope, shared/define-tool. IO: network via the
+ *   injected resolver and transport (deps); with none supplied the tool refuses to run.
  */
 
-import { nodeTransport } from '#/adapters/node-transport.js';
-import { systemResolve } from '#/adapters/system-dns.js';
+import { InvalidInputError } from '@forge/core';
 import { guardedFetchText } from '#/domain/ssrf-fetch.js';
 import { WebFetchInput } from '#/schemas/tool-inputs.js';
 import { defineTool } from '#/shared/define-tool.js';
@@ -27,9 +27,12 @@ export const webFetchTool = defineTool({
   risk: 'network',
   inputSchema: WebFetchInput,
   async handler(ctx, { url }) {
+    const { resolve, transport } = ctx.deps;
+    if (!resolve || !transport)
+      throw new InvalidInputError('web_fetch is not configured (no network ports)');
     const out = await guardedFetchText(url, {
-      resolve: ctx.deps.resolve ?? systemResolve,
-      transport: ctx.deps.transport ?? nodeTransport,
+      resolve,
+      transport,
       allowHosts: ctx.deps.fetchAllowHosts ?? [],
       timeoutMs: ctx.deps.fetchTimeoutMs ?? FETCH_TIMEOUT_MS,
       maxBytes: MAX_FETCH_BYTES,

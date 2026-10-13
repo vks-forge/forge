@@ -45,8 +45,11 @@ two-thirds of cases. Agent summaries are untrusted.
 
 **Receipts.** Harness hooks (Claude PreToolUse/PostToolUse; OpenCode plugin;
 Pi extension; Codex via app-server events) write one row per tool call to
-`tool_receipts` with `hmac = HMAC(run_secret, seq || tool || input_hash ||
-output_hash)`. The run secret is held by the dispatcher, never by the harness
+`tool_decisions` / `tool_effects` (tool-system.md §10). Each row's `hash` is
+`HMAC-SHA256(run_secret, canonicalJson([prev_hash, seq, tool, args_hash, output_hash]))`, where `output_hash` is
+the SHA-256 of the canonical JSON of every other column of the row, and `prev_hash` is the previous receipt's
+`hash` (null for the first), so an edit, deletion or reorder breaks the chain (`packages/tools/src/domain/receipts.ts`;
+an effect row reuses its decision's `seq`, `tool` and `args_hash`). The run secret is held by the dispatcher, never by the harness
 process, so a Worker cannot forge receipts. Pattern: Tool Receipts / NabaOS.
 
 **Claim matcher.** The Worker's final `finish(summary)` is parsed by one LLM

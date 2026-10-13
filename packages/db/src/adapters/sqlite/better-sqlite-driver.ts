@@ -6,7 +6,10 @@
  *   on this Windows box (d-0023). better-sqlite3 ships a prebuilt win32-x64 binary, so
  *   it installs without a compiler. Pragmas are set once per connection with
  *   busy_timeout first, so a second connection waits for the writer's lock instead of
- *   failing immediately, even during the switch to WAL itself.
+ *   failing immediately, even during the switch to WAL itself. `synchronous=FULL` fsyncs
+ *   every commit: under WAL, NORMAL can lose the most recent acknowledged commits on an OS
+ *   crash or power loss, and a Director that already dispatched on a lost commit would
+ *   re-dispatch the ticket.
  *
  * Exports: openSqliteDriver().
  * Depends on: better-sqlite3, types/storage-driver.types. IO: opens the database file.
@@ -26,7 +29,8 @@ export function openSqliteDriver(
   const busy = Math.trunc(opts.busyTimeoutMs ?? DEFAULT_BUSY_TIMEOUT_MS);
   db.pragma(`busy_timeout = ${busy}`);
   db.pragma('journal_mode = WAL');
-  db.pragma('synchronous = NORMAL');
+  // FULL: fsync every commit. NORMAL under WAL can lose the last commits on power loss.
+  db.pragma('synchronous = FULL');
   db.pragma('foreign_keys = ON');
 
   const cache = new Map<string, Database.Statement>();

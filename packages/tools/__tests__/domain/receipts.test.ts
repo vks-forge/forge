@@ -22,7 +22,7 @@ import type { DecisionReceipt, Receipt } from '#/schemas/receipt.js';
 import { sha256Hex } from '#/shared/hmac.js';
 import { call, makeCtx } from '#tests/helpers/fixtures.js';
 
-const SECRET = 'run-secret';
+const SECRET = 'run-secret-0123456789abcdef-0123456789';
 const TS = '2026-10-13T00:00:00.000Z';
 
 function buildChain(secret: string, calls = 3): Receipt[] {
@@ -92,7 +92,9 @@ describe('receipt chain', () => {
   });
 
   it('is rejected under the wrong run secret', () => {
-    expect(verifyChain(buildChain(SECRET), 'other')).toMatchObject({
+    expect(
+      verifyChain(buildChain(SECRET), 'other-run-secret-0123456789abcdef-0123'),
+    ).toMatchObject({
       ok: false,
       error: { index: 0, reason: 'hash' },
     });
@@ -115,7 +117,7 @@ describe('receipt chain', () => {
 
   it('detects a forged row that is correctly linked but signed with another key', () => {
     const rows = buildChain(SECRET);
-    const forged = buildChain('attacker', 1)[0] as Receipt;
+    const forged = buildChain('attacker-secret-0123456789abcdef-012345', 1)[0] as Receipt;
     expect(
       verifyChain([...rows, { ...forged, prev_hash: rows.at(-1)?.hash ?? null }], SECRET)
         .ok,
@@ -171,6 +173,47 @@ describe('receipt chain', () => {
       ok: false,
       error: { reason: 'bad_schema' },
     });
+  });
+
+  it('rejects a second effect for the same decision', () => {
+    const rows = buildChain(SECRET, 1);
+    const d = rows[0] as DecisionReceipt;
+    const second = makeEffectReceipt(
+      d,
+      { state: 'mutation_committed', ts: TS },
+      rows[1] as Receipt,
+      SECRET,
+    );
+    expect(verifyChain([...rows, second], SECRET)).toMatchObject({
+      ok: false,
+      error: { index: 2, reason: 'duplicate_effect' },
+    });
+  });
+
+  it.each([
+    ['deny', call('read', { path: '.env' })],
+    ['ask', call('shell', { command: 'echo hi' }, { native: 'PowerShell' })],
+  ])('rejects an effect for a decision whose verdict was %s', (_v, c) => {
+    const decision = admit(makeCtx('standard'), c);
+    expect(decision.decision).not.toBe('allow');
+    const d = makeDecisionReceipt(
+      {
+        id: 'd-1',
+        run_id: 'run-1',
+        seq: 1,
+        decision,
+        args_hash: sha256Hex('a'),
+        ts: TS,
+      },
+      null,
+      SECRET,
+    );
+    const e = makeEffectReceipt(d, { state: 'mutation_committed', ts: TS }, d, SECRET);
+    expect(verifyChain([d, e], SECRET)).toMatchObject({
+      ok: false,
+      error: { index: 1, reason: 'effect_not_allowed' },
+    });
+    expect(verifyChain([d], SECRET)).toEqual({ ok: true, value: 1 });
   });
 
   it('breaks when any single field of any row is tampered with', () => {

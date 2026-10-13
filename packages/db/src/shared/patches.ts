@@ -5,9 +5,12 @@
  *   come from many callers. Validating them against the core schemas, strictly so
  *   unknown fields are rejected, before touching a row means a typo cannot silently
  *   write nothing or corrupt a column. The CAS version rule lives here once so sqlite
- *   and memory cannot drift: a patch that does not set `status_version` bumps it by one,
- *   since otherwise a successful update would not invalidate other readers' versions and
- *   stale writers would keep winning (director-core.md §3).
+ *   and memory cannot drift: the CAS always moves `status_version` to expected + 1 and a
+ *   patch that tries to set it is refused, since a caller-chosen version could rewind or
+ *   skip the counter and let a stale writer win (director-core.md §3). A key present with
+ *   value `undefined` means "clear this optional column" in both adapters, so a patch
+ *   built from `transition()` cannot leave a stale `blocked_reason` or `tier_actual`
+ *   behind in one backend and not the other.
  *
  * Exports: parseTicketPatch(), parseRunPatch(), parseInteractionPatch(), buildSetClause().
  * Depends on: @forge/core, types/storage-driver.types. No IO.
@@ -23,13 +26,17 @@ const TicketPatchSchema = Ticket.omit({ id: true, project: true, created_at: tru
 const RunPatchSchema = Run.omit({ id: true }).partial().strict();
 const InteractionPatchSchema = Interaction.omit({ id: true }).partial().strict();
 
-/** Validate a ticket patch and default `status_version` to expectedVersion + 1. */
+/** Validate a ticket patch and set `status_version` to expectedVersion + 1; a patch that carries `status_version` is refused. */
 export function parseTicketPatch(
   expectedVersion: number,
   patch: TicketPatch,
 ): Partial<Ticket> {
+  if ('status_version' in patch)
+    throw new InvalidInputError(
+      'status_version cannot be set by a patch; updateTicketCas sets it to expectedVersion + 1',
+    );
   const parsed = TicketPatchSchema.parse(patch) as Partial<Ticket>;
-  return { ...parsed, status_version: parsed.status_version ?? expectedVersion + 1 };
+  return { ...parsed, status_version: expectedVersion + 1 };
 }
 
 export function parseRunPatch(patch: Partial<Omit<Run, 'id'>>): Partial<Omit<Run, 'id'>> {
@@ -42,7 +49,11 @@ export function parseInteractionPatch(
   return InteractionPatchSchema.parse(patch) as Partial<Omit<Interaction, 'id'>>;
 }
 
-/** Build `col = ?, ...` and its params from a parsed patch; unknown fields are a bug. */
+/**
+ * Build `col = ?, ...` and its params from a parsed patch; unknown fields are a bug.
+ * A present-but-undefined field binds NULL when its column is `clearable`, and is an
+ * InvalidInputError for a required column.
+ */
 export function buildSetClause(
   codecs: Readonly<Record<string, ColumnCodec>>,
   patch: object,
@@ -50,9 +61,14 @@ export function buildSetClause(
   const sets: string[] = [];
   const params: SqlValue[] = [];
   for (const [field, value] of Object.entries(patch)) {
-    if (value === undefined) continue;
     const codec = codecs[field];
     if (!codec) throw new InvalidInputError(`No column mapped for field '${field}'`);
+    if (value === undefined) {
+      if (codec.clearable !== true)
+        throw new InvalidInputError(`Field '${field}' is required and cannot be cleared`);
+      sets.push(`${codec.column} = NULL`);
+      continue;
+    }
     sets.push(`${codec.column} = ?`);
     params.push(codec.encode ? codec.encode(value) : (value as SqlValue));
   }

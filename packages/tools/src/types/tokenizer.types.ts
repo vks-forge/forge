@@ -7,7 +7,7 @@
  *   wrappers, interpreter eval, redirect targets). Naming those once keeps the tokenizer
  *   and the rule evaluator agreeing on what "needs a human" means (tool-system.md §5.2).
  *
- * Exports: ShellDialect, ShellFlag, ShellRedirect, ShellSegment, TokenizeFailure.
+ * Exports: ShellDialect, ShellFlag, ShellRedirect, ShellSegment, TokenizeFailure, NestedScript.
  * Depends on: No IO (types only).
  */
 
@@ -40,3 +40,10 @@ export interface ShellSegment {
 
 /** Why a command could not be turned into segments. Both deny. */
 export type TokenizeFailure = 'untokenizable' | 'dynamic_execution';
+
+/** A command string an interpreter will run; `dialect` is `null` for non-shell code. */
+export interface NestedScript {
+  readonly text: string;
+  /** `null` when the text is not shell (python, node ...): scan loosely, do not tokenise. */
+  readonly dialect: ShellDialect | null;
+}

@@ -11,12 +11,15 @@
  *   (director-core.md §3).
  *
  * Exports: createRunEventRepository().
- * Depends on: @forge/core, shared/json, types/storage-driver.types.
+ * Depends on: @forge/core, shared/db-errors, shared/json, shared/run-event,
+ *   types/storage-driver.types.
  */
 
 import { RunEvent } from '@forge/core';
 import type { RunEventRepository } from '@forge/core';
+import { parseStored } from '#/shared/db-errors.js';
 import { fromJson, toJson } from '#/shared/json.js';
+import { normaliseRunEvent } from '#/shared/run-event.js';
 import type { SqlDriver } from '#/types/storage-driver.types.js';
 
 export function createRunEventRepository(driver: SqlDriver): RunEventRepository {
@@ -29,7 +32,7 @@ export function createRunEventRepository(driver: SqlDriver): RunEventRepository 
         'SELECT COALESCE(MAX(seq), -1) + 1 AS next FROM run_events WHERE run_id = ?',
         [runId],
       );
-      const e = RunEvent.parse({ ...event, seq: head?.next ?? 0 });
+      const e = RunEvent.parse({ ...normaliseRunEvent(event), seq: head?.next ?? 0 });
       driver.run(
         'INSERT INTO run_events (run_id, seq, ts, kind, payload_json) VALUES (?, ?, ?, ?, ?)',
         [runId, e.seq, e.ts, e.type, toJson(e)],
@@ -43,7 +46,7 @@ export function createRunEventRepository(driver: SqlDriver): RunEventRepository 
           'SELECT payload_json FROM run_events WHERE run_id = ? AND seq > ? ORDER BY seq',
           [runId, afterSeq ?? -1],
         )
-        .map((r) => RunEvent.parse(fromJson(r.payload_json)));
+        .map((r) => parseStored(RunEvent, fromJson(r.payload_json), 'run event'));
     },
   };
 }

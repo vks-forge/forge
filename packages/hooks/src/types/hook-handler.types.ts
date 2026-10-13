@@ -12,7 +12,7 @@
  *   run's HMAC secret only ever arrives through `credentials()` and is never persisted,
  *   so a Worker that can read the database file cannot forge a receipt.
  *
- * Exports: FailClosedCode, RunCredentials, HookHandlerDeps, HookHandler.
+ * Exports: FailClosedCode, RunCredentials, AuditEntry, HookAudit, HookHandlerDeps, HookHandler.
  * Depends on: @forge/core (Run, StorageAdapter), @forge/tools (AdmitContext, AdmitCall,
  *   Decision, HmacKey, ReceiptLog), schemas/hook-wire. Types only.
  */
@@ -37,6 +37,17 @@ export interface RunCredentials {
   readonly secret: HmacKey;
 }
 
+/** One refused request on a real run. Never written to the signed receipt chain. */
+export interface AuditEntry {
+  readonly ts: string;
+  readonly code: 'bad_token' | 'internal';
+  /** Refusals dropped by the per-run rate cap since the previous entry. */
+  readonly suppressed: number;
+}
+
+/** Side-channel sink for refusals; must not throw into the request path (errors are ignored). */
+export type HookAudit = (runId: string, entry: AuditEntry) => void | Promise<void>;
+
 export interface HookHandlerDeps {
   /** Source of run rows (existence, lane, harness). */
   readonly db: StorageAdapter;
@@ -51,6 +62,8 @@ export interface HookHandlerDeps {
   /** Builds the run's effective grant and catalogue view; the handler never builds grants. */
   readonly admitContext: (run: Run) => Promise<AdmitContext>;
   readonly clock: () => Date;
+  /** Where refusals on a real run are reported; defaults to an in-memory buffer. */
+  readonly audit?: HookAudit;
   /** Receipt id source; defaults to `crypto.randomUUID`. */
   readonly newId?: () => string;
   /** Called on a valid SessionStart so the engine can register run liveness (d-0033). */

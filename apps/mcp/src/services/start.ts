@@ -7,16 +7,16 @@
  *   place that reads environment variables and opens the database (code.md rule 1).
  *
  * Exports: parseEnv(), depsFromEnv(), start().
- * Depends on: @forge/core, @forge/db, @forge/mcp, node:path, schemas/env,
- *   types/start.types. IO: opens SQLite, stdio via StartIo.
+ * Depends on: @forge/core, @forge/mcp, node:path, schemas/env, services/open-database,
+ *   types/start.types. IO: opens SQLite (existing, never migrated), stdio via StartIo.
  */
 
 import { delimiter } from 'node:path';
 import { InvalidInputError } from '@forge/core';
-import { createSqliteStorage } from '@forge/db';
-import { createForgeMcpServer } from '@forge/mcp';
+import { createForgeMcpServer, withDefaultNetwork } from '@forge/mcp';
 import type { ForgeMcpDeps } from '@forge/mcp';
 import { ForgeEnv } from '#/schemas/env.js';
+import { openExistingStorage } from '#/services/open-database.js';
 import type { Env, StartIo } from '#/types/start.types.js';
 
 const list = (s: string | undefined, sep: string): string[] =>
@@ -35,13 +35,14 @@ export function parseEnv(env: Env): ForgeEnv {
   return parsed.data;
 }
 
-/** Opens (and migrates) the SQLite database and assembles the server's dependencies. */
+/**
+ * Opens the existing SQLite database (never creating or migrating it), wires the real
+ * network ports, and assembles the server's dependencies.
+ */
 export function depsFromEnv(env: Env): ForgeMcpDeps {
   const e = parseEnv(env);
-  // Opening applies pending migrations, so `run_tokens` exists even on a fresh file; a
-  // missing registration then fails closed in the token check instead of at the SQL layer.
-  return {
-    storage: createSqliteStorage(e.FORGE_DB_PATH),
+  return withDefaultNetwork({
+    storage: openExistingStorage(e.FORGE_DB_PATH),
     runId: e.FORGE_RUN_ID,
     runToken: e.FORGE_RUN_TOKEN,
     ...(e.FORGE_SEARXNG_URL
@@ -54,7 +55,7 @@ export function depsFromEnv(env: Env): ForgeMcpDeps {
       : {}),
     docsDirs: list(e.FORGE_DOCS_DIRS, delimiter),
     fetchAllowHosts: list(e.FORGE_FETCH_ALLOW_HOSTS, ','),
-  };
+  });
 }
 
 /** Starts the server from `env`; on any startup failure writes to stderr and exits 1. */

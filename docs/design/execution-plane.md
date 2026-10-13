@@ -63,10 +63,17 @@ One thin contract, modelled on Paperclip's `execute(ctx) → result`, implemente
 once per harness. The Director never calls a harness directly.
 
 ```ts
+// Source of truth: packages/core/src/types/ports/driver.types.ts and schemas/run.ts.
 interface WorkerDriver {
-  id: "claude-code" | "codex" | "opencode" | "pi" | "acp";
-  preflight(): Promise<Preflight>;              // binary present, auth works, version pinned
+  readonly id: string;                           // "claude-code" | "codex" | "opencode" | "pi" | "acp" ...
+  capabilities(): DriverCapabilities;            // declared, never inferred from the id (code.md rule 3)
+  preflight(): Promise<Preflight>;               // { ok, issues[], version? }: binary present, auth works, version pinned
   start(req: RunRequest): Promise<RunHandle>;
+  resume(handle: RunHandle): Promise<RunHandle>;
+  steer(handle: RunHandle, message: string, mode: SteerMode): Promise<void>; // "steer" | "follow_up" | "interrupt"
+  cancel(handle: RunHandle): Promise<void>;
+  events(handle: RunHandle): AsyncIterable<RunEvent>;
+  result(handle: RunHandle): Promise<RunResult>;
 }
 
 interface RunRequest {
@@ -74,33 +81,40 @@ interface RunRequest {
   cwd: string;                                   // worktree or branch checkout
   prompt: string;                                // Director-rendered, memory slice fenced as data
   model: string;
-  permissionPolicy: PermissionPolicy;            // see §6
-  tools: ToolExposure;                           // MCP servers + allow/deny lists
+  permissionPolicy: PermissionPolicy;            // { allow, deny, onUnlisted: "ask" | "deny" }, see §6
+  tools: ToolExposure;                           // { mcpServers, allow, deny }
   budget: { maxTurns: number; maxUsd: number; stallMs: number; turnMs: number };
   resume?: SessionRef;                           // only if the resume matrix matches (§7)
-  env: Record<string, string>;                   // per-run token, FACTORY_* vars; no prod creds
+  env: Record<string, string>;                   // per-run token, FORGE_* vars; no prod creds
   isolation: "host" | "wsl2" | "harness-sandbox" | "container";
-  signal: AbortSignal;
+  // No AbortSignal: it is not serializable. Cancel through WorkerDriver.cancel(handle).
 }
 
+// Serializable, so a run can be re-attached after a restart (but see d-0054).
 interface RunHandle {
-  events: AsyncIterable<RunEvent>;               // normalized: text | tool_call | tool_result | permission_request | usage | result | error
-  answerPermission(id: string, decision: "allow" | "deny", reason?: string): void;
-  steer(message: string): void;                 // Director live-chat injection
-  cancel(): void;
+  runId: string;
+  session?: SessionRef;
 }
+
+// Normalized, discriminated on `type`: tool_call | tool_result | text | ask | finish | error | usage.
+// `ask` carries { interaction_id, kind: "question" | "plan_confirm" | "permission", prompt }; the
+// answer is delivered by the Director through the interactions table, not a handle method.
 
 interface RunResult {
   status: "success" | "refused" | "max_turns" | "timeout" | "error" | "cancelled";
   session: SessionRef | null;                    // null if the harness said it would 400 on resume
-  usage: { in: number; out: number; cachedIn: number; cacheWrite: number; byModel: Record<string, Usage> };
+  usage: { in: number; out: number; cachedIn: number; cacheWrite: number; byModel?: Record<string, Usage> };
   costUsd: number | null;                        // null when the harness gives tokens only
   filesTouched: string[];                        // from git diff, not from the agent's claim
   structured?: unknown;                          // when a JSON schema was requested
-  errorFamily?: "auth" | "rate_limit" | "process" | "harness" | "policy";
-  retryNotBefore?: string;
+  errorFamily?: ErrorFamily;                     // "auth" | "rate_limit" | "budget" | "stall" | "refusal" | "crash" | "policy_denied" | "unknown" | "invalid_input"
+  retryNotBefore?: string;                       // ISO datetime
 }
 ```
+
+The earlier five-value family (`auth | rate_limit | process | harness | policy`) is
+replaced by the core enum: `process` is now `crash`, `policy` is `policy_denied` or
+`refusal`, and `budget` and `stall` are first-class.
 
 `filesTouched` and the diff come from `git` in the worktree after the run, not
 from the harness output. The agent's own claim is checked against it at G1.
@@ -313,11 +327,15 @@ stateDiagram-v2
   harness that printed its result event but did not exit is killed by a
   terminal-result watchdog.
 - **Retry**: by `errorFamily`. `rate_limit` honours `retryNotBefore` with
-  exponential backoff; `process` retries once; `policy` (refusal) does not
-  retry and goes to the Director. A failure fingerprint (ticket + error family
+  exponential backoff; `crash` retries once; `refusal` and `policy_denied` do not
+  retry and go to the Director. A failure fingerprint (ticket + error family
   + first stack line) caps identical retries at 3, then escalates to the user.
 - **Refusals**: Claude returns a policy refusal as exit 0 with a normal-looking
   result; detect it from the result text, not the exit code.
+- **Restart (M0, d-0054)**: a server restart kills every in-flight run. The per-run
+  HMAC secret lives only in server memory, so a run cannot outlive the process; on
+  start, reconcile marks `running` runs this instance does not own as `crash`, revokes
+  their tokens and re-queues the ticket. A restart-survivable secret is deferred.
 - **Settlement**: diff from git, `outcomes/` record, per-run token revoked,
   worktree kept until the ticket is Done or Cancelled, then removed.
 

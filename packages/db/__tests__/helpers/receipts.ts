@@ -16,7 +16,8 @@ import { makeDecisionReceipt, makeEffectReceipt } from '@forge/tools';
 import type { ReceiptLog } from '@forge/tools';
 import { T0 } from '#tests/helpers/fixtures.js';
 
-export const RECEIPT_SECRET = 'run-secret-for-tests';
+// @forge/tools refuses HMAC keys under 32 bytes.
+export const RECEIPT_SECRET = 'run-secret-for-tests-0123456789abcdef';
 
 const DECISION: Decision = {
   decision: 'allow',

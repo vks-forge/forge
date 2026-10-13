@@ -49,9 +49,9 @@ describe('Express defaults (unattended: ask becomes deny)', () => {
     expect(d.layer).toBe('approval');
   });
 
-  it('keeps the ask when an interactive human is explicitly available', () => {
+  it('stays unattended even if the context claims a human is available', () => {
     const d = admit(makeCtx('express', { unattended: false }), sh('echo hello'));
-    expect(verdict(d)).toEqual(['ask', 'no_matching_rule']);
+    expect(verdict(d)).toEqual(['deny', 'unattended']);
   });
 
   it('denies a shell chain whose second command is a push', () => {

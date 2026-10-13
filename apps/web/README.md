@@ -25,6 +25,7 @@ Public API: none; it is an app.
 
 ## Requirements
 
+- No TypeScript exists yet, so there is no `tsconfig.json` and the root `tsconfig.json` has no reference to this app. The first source file must add `tsconfig.json` and `tsconfig.test.json` (copy `apps/mcp`) and add both to the root `references`; the root `vitest.config.ts` coverage include and threshold need an entry too.
 - Node 24.20 and pnpm. Nothing is required today: no source, no tests, no env vars.
 - Intended: a running `@forge/server` on `127.0.0.1` as its only backend.
 - Build and test follow the root scripts once source exists.

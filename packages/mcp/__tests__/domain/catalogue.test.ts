@@ -31,16 +31,19 @@ const FORGE_TOOLS = [
 ].map((t) => `mcp__forge__${t}`);
 
 describe('committed catalogue', () => {
-  const state = loadCatalogue(readFileSync(FILE, 'utf8'), DEV_CATALOGUE_KEY);
+  const state = loadCatalogue(readFileSync(FILE, 'utf8'), DEV_CATALOGUE_KEY, {
+    allowDevKey: true,
+  });
 
   it('verifies with the dev key', () => {
     expect(state.status).toBe('verified');
   });
 
   it('rejects a different key', () => {
-    expect(loadCatalogue(readFileSync(FILE, 'utf8'), 'other-key').status).toBe(
-      'quarantined',
-    );
+    expect(
+      loadCatalogue(readFileSync(FILE, 'utf8'), 'another-catalogue-key-0123456789abcdef')
+        .status,
+    ).toBe('quarantined');
   });
 
   it('lists the eight forge tools and the native tools', () => {

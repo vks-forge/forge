@@ -27,7 +27,6 @@ export const Tier = z.enum(['A', 'B', 'C']);
 export type Tier = z.infer<typeof Tier>;
 
 /** Conventional-commit style type, also the branch prefix (d-0021). */
-/** The `tickets` row (director-core.md §3), snake_case for storage. */
 export const TicketType = z.enum([
   'feat',
   'fix',
@@ -70,6 +69,7 @@ export type TicketRelationKind = z.infer<typeof TicketRelationKind>;
 
 const Timestamp = z.iso.datetime();
 
+/** The `tickets` row (director-core.md §3), snake_case for storage. */
 export const Ticket = z.object({
   id: TicketId,
   project: z.string().min(1),

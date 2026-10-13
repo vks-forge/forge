@@ -42,7 +42,14 @@ export interface EffectReceiptInput {
 export interface ChainFailure {
   readonly index: number;
   readonly reason:
-    'bad_schema' | 'prev_hash' | 'hash' | 'seq' | 'orphan_effect' | 'duplicate_decision';
+    | 'bad_schema'
+    | 'prev_hash'
+    | 'hash'
+    | 'seq'
+    | 'orphan_effect'
+    | 'duplicate_decision'
+    | 'duplicate_effect'
+    | 'effect_not_allowed';
 }
 
 /** Run secret: a string or raw bytes. */

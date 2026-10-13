@@ -27,15 +27,21 @@ import type { Run, RunEvent } from '#/schemas/run.js';
 import type { Ticket, TicketStatus } from '#/schemas/ticket.js';
 import type { NewRunEvent } from '#/types/run-event.types.js';
 
-/** Fields a CAS update may change; identity and creation time are immutable. */
-export type TicketPatch = Partial<Omit<Ticket, 'id' | 'project' | 'created_at'>>;
+/** Fields a CAS update may change; identity and creation time are immutable and `status_version` belongs to storage. */
+export type TicketPatch = Partial<
+  Omit<Ticket, 'id' | 'project' | 'created_at' | 'status_version'>
+>;
 
 /** Ticket persistence with compare-and-swap updates (director-core.md §3). */
 export interface TicketRepository {
   get(id: TicketId): Promise<Ticket | null>;
   listByStatus(status: TicketStatus): Promise<Ticket[]>;
   insert(ticket: Ticket): Promise<void>;
-  // Applies `patch` only if the stored status_version equals expectedVersion.
+  // Applies `patch` only if the stored status_version equals expectedVersion, and sets
+  // status_version to expectedVersion + 1. A patch carrying `status_version` is refused
+  // (InvalidInputError): the version is storage's, not the caller's. A key present with
+  // value `undefined` clears an optional column (`blocked_reason`, `tier_actual`,
+  // `parent`), so a patch built from `transition()` output leaves no stale value.
   // false = stale writer lost (director-core.md §3).
   updateTicketCas(
     id: TicketId,
@@ -67,7 +73,13 @@ export interface RunEventRepository {
  * database file must not be able to forge receipts.
  */
 export interface RunTokenRepository {
-  // Registers (or re-issues, clearing any revocation) the hash for `runId`.
+  // Registers the hash for `runId`. Replaces a live (unrevoked) hash, but throws
+  // PolicyDeniedError when the run's token was revoked: a revoked token must never be
+  // re-armed by accident (a late or replayed issue). Non-digests throw InvalidInputError.
+  issue(runId: string, tokenSha256: string, issuedAt: string): Promise<void>;
+  // The deliberate re-arm for a resumed run: replaces the hash and clears any revocation.
+  reissue(runId: string, tokenSha256: string, issuedAt: string): Promise<void>;
+  // Deprecated alias of `issue` (same refusal of revoked runs); new code calls `issue`.
   put(runId: string, tokenSha256: string, issuedAt: string): Promise<void>;
   // The stored hash, or null when none was issued or it was revoked.
   getHash(runId: string): Promise<string | null>;

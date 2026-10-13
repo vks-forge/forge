@@ -16,6 +16,7 @@
 
 import { DecisionReceipt, EffectReceipt } from '@forge/tools';
 import type { Receipt } from '@forge/tools';
+import { parseStored } from '#/shared/db-errors.js';
 import { fromJson, toJson } from '#/shared/json.js';
 import type { SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
 
@@ -27,44 +28,52 @@ export const EFFECT_COLUMNS =
 
 /** Rebuilds (and re-validates) a decision receipt from a `tool_decisions` row. */
 export function decisionFromRow(row: SqlRow): DecisionReceipt {
-  return DecisionReceipt.parse({
-    kind: 'decision',
-    id: row['id'],
-    run_id: row['run_id'],
-    seq: row['seq'],
-    tool: row['tool'],
-    version: row['version'],
-    schema_hash: row['schema_hash'],
-    args_hash: row['args_hash'],
-    decision: row['decision'],
-    layer: row['layer'],
-    reason: row['reason'],
-    rule_id: row['rule_id'],
-    finding_ids: fromJson(row['finding_ids_json']) ?? [],
-    approver: row['approver'],
-    approval_ref: row['approval_ref'],
-    enforced_by: row['enforced_by'],
-    ts: row['ts'],
-    prev_hash: row['prev_hash'],
-    hash: row['hash'],
-  });
+  return parseStored(
+    DecisionReceipt,
+    {
+      kind: 'decision',
+      id: row['id'],
+      run_id: row['run_id'],
+      seq: row['seq'],
+      tool: row['tool'],
+      version: row['version'],
+      schema_hash: row['schema_hash'],
+      args_hash: row['args_hash'],
+      decision: row['decision'],
+      layer: row['layer'],
+      reason: row['reason'],
+      rule_id: row['rule_id'],
+      finding_ids: fromJson(row['finding_ids_json']) ?? [],
+      approver: row['approver'],
+      approval_ref: row['approval_ref'],
+      enforced_by: row['enforced_by'],
+      ts: row['ts'],
+      prev_hash: row['prev_hash'],
+      hash: row['hash'],
+    },
+    'decision receipt',
+  );
 }
 
 /** Rebuilds (and re-validates) an effect receipt from a `tool_effects` row. */
 export function effectFromRow(row: SqlRow): EffectReceipt {
-  return EffectReceipt.parse({
-    kind: 'effect',
-    decision_id: row['decision_id'],
-    state: row['state'],
-    result_hash: row['result_hash'],
-    result_ref: row['result_ref'],
-    duration_ms: row['duration_ms'],
-    cost_usd: row['cost_usd'],
-    checkpoint_ref: row['checkpoint_ref'],
-    ts: row['ts'],
-    prev_hash: row['prev_hash'],
-    hash: row['hash'],
-  });
+  return parseStored(
+    EffectReceipt,
+    {
+      kind: 'effect',
+      decision_id: row['decision_id'],
+      state: row['state'],
+      result_hash: row['result_hash'],
+      result_ref: row['result_ref'],
+      duration_ms: row['duration_ms'],
+      cost_usd: row['cost_usd'],
+      checkpoint_ref: row['checkpoint_ref'],
+      ts: row['ts'],
+      prev_hash: row['prev_hash'],
+      hash: row['hash'],
+    },
+    'effect receipt',
+  );
 }
 
 /** Inserts one receipt at chain position `chainSeq` for `runId`; throws on any constraint. */

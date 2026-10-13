@@ -21,6 +21,7 @@
 import { InvalidInputError } from '@forge/core';
 import { Receipt } from '@forge/tools';
 import type { ChainView, DecisionReceipt, ReceiptLog } from '@forge/tools';
+import { runImmediate } from '#/adapters/sqlite/immediate-tx.js';
 import {
   DECISION_COLUMNS,
   EFFECT_COLUMNS,
@@ -113,9 +114,8 @@ function assertBelongs(driver: SqlDriver, runId: string, r: Receipt): void {
 export function createSqliteReceiptLog(driver: SqlDriver, mutex: Mutex): ReceiptLog {
   return {
     append: (runId, build) =>
-      mutex.run(async () => {
-        driver.exec('BEGIN IMMEDIATE');
-        try {
+      mutex.run(() =>
+        runImmediate(driver, async () => {
           const { head, last } = chainHead(driver, runId);
           const built = build(viewOf(driver, runId, last)).map((r) => Receipt.parse(r));
           let position = head;
@@ -123,13 +123,9 @@ export function createSqliteReceiptLog(driver: SqlDriver, mutex: Mutex): Receipt
             assertBelongs(driver, runId, r);
             insertReceipt(driver, runId, ++position, r);
           }
-          driver.exec('COMMIT');
           return built;
-        } catch (error) {
-          driver.exec('ROLLBACK');
-          throw error;
-        }
-      }),
+        }),
+      ),
 
     // Queued on the mutex so a read never sees another transaction's uncommitted rows.
     list: (runId) =>

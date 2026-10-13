@@ -140,6 +140,55 @@ describe('transition: errors never throw', () => {
   });
 });
 
+describe('fresh gate pass per verify cycle', () => {
+  it('rejects merged after a failed gate and a re-verify (stale tier_actual)', () => {
+    const t = apply(
+      makeTicket({ status: 'in_progress' }),
+      ev.verifying,
+      ev.passA,
+      ev.gate_failed,
+      ev.verifying,
+    );
+    expect(t.tier_actual).toBeUndefined();
+    const r = transition(t, ev.merged);
+    expect(r.ok).toBe(false);
+  });
+
+  it('clears tier_actual on gate_failed, verifying and rework', () => {
+    const verifyingA = makeTicket({ status: 'verifying', tier_actual: 'A' });
+    expect(apply(verifyingA, ev.gate_failed).tier_actual).toBeUndefined();
+    const inProgress = makeTicket({ status: 'in_progress', tier_actual: 'B' });
+    expect(apply(inProgress, ev.verifying).tier_actual).toBeUndefined();
+    const review = makeTicket({ status: 'review', tier_actual: 'B' });
+    expect(apply(review, { type: 'rework', at: T1 }).tier_actual).toBeUndefined();
+  });
+});
+
+describe('explicit clears (storage patches must not leave stale columns)', () => {
+  it('emits blocked_reason and tier_actual as present-but-undefined when cleared', () => {
+    const blocked = makeTicket({ status: 'blocked', blocked_reason: 'dep' });
+    const u = apply(blocked, { type: 'unblocked', at: T1 });
+    expect('blocked_reason' in u).toBe(true);
+    expect(u.blocked_reason).toBeUndefined();
+    const f = apply(
+      makeTicket({ status: 'verifying', tier_actual: 'A' }),
+      ev.gate_failed,
+    );
+    expect('tier_actual' in f).toBe(true);
+    expect('blocked_reason' in f).toBe(true);
+  });
+});
+
+describe('tier C signer', () => {
+  it.each(['', '   ', String.fromCharCode(32, 9, 10, 32)])(
+    'rejects a blank signer %j',
+    (signer) => {
+      const sign = makeTicket({ status: 'needs_signoff', tier_actual: 'C' });
+      expect(transition(sign, { type: 'done', at: T1, signer }).ok).toBe(false);
+    },
+  );
+});
+
 describe('rework cap', () => {
   it('allows two automatic reworks then hands to a human', () => {
     let t = makeTicket({ status: 'verifying' });
@@ -205,6 +254,25 @@ describe('transition: properties', () => {
           for (const e of events) expect(transition(t, e).ok).toBe(false);
         },
       ),
+    );
+  });
+
+  it('merged / done imply a gate_passed since the last verifying', () => {
+    fc.assert(
+      fc.property(fc.array(eventArb, { maxLength: 80 }), (events) => {
+        let t = makeTicket();
+        let passedThisCycle = false;
+        for (const e of events) {
+          const r = transition(t, e);
+          if (!r.ok) continue;
+          if (e.type === 'verifying') passedThisCycle = false;
+          if (e.type === 'gate_passed') passedThisCycle = true;
+          if (r.value.status === 'done' && (e.type === 'merged' || e.type === 'done')) {
+            expect(passedThisCycle).toBe(true);
+          }
+          t = r.value;
+        }
+      }),
     );
   });
 

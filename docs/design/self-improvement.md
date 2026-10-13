@@ -53,7 +53,7 @@ Collected mechanically per run and joined on `(component, version)`:
 | Lane escalation during run | `run_events` | medium |
 | `ask_director` question whose answer was in the skill or memory | `interactions` + match | medium (skill failed to communicate) |
 | Cost / turns above lane median for the same skill | `runs.usage_json` | weak, efficiency only |
-| Skill loaded but never referenced in transcript receipts | `tool_receipts` | weak; candidate for trimming |
+| Skill loaded but never referenced in transcript receipts | `tool_decisions` | weak; candidate for trimming |
 
 Attribution rule: a signal counts against a skill only if the skill was in
 the run's rendered HOME **and** the failing file or tool call overlaps the

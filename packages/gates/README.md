@@ -27,6 +27,7 @@ Public API: none yet.
 
 ## Requirements
 
+- No TypeScript exists yet, so there is no `tsconfig.json` and the root `tsconfig.json` has no reference to this package. The first source file must add `tsconfig.json` and `tsconfig.test.json` (copy `packages/tools`) and add both to the root `references`; the root `vitest.config.ts` coverage include and threshold need an entry too.
 - Node 24.20 and pnpm. Nothing else is required today: no source, no tests, no env vars.
 - Intended inputs: `tool_decisions` / `tool_effects` receipts and the run secret held by the dispatcher (see `@forge/tools`), and the project's `commands` in `project.yaml`.
 - Build and test follow the root scripts (`pnpm build`, `pnpm test`) once source exists.

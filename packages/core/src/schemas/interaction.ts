@@ -17,7 +17,6 @@ import { z } from 'zod';
 import { InteractionKind } from './run.js';
 
 /** Lifecycle of an interaction. */
-/** The `interactions` row of director-core.md §3. */
 export const InteractionStatus = z.enum([
   'pending',
   'answered',
@@ -26,7 +25,7 @@ export const InteractionStatus = z.enum([
 ]);
 export type InteractionStatus = z.infer<typeof InteractionStatus>;
 
-// director-core.md §3 `interactions` row.
+/** The `interactions` row of director-core.md §3. */
 export const Interaction = z.object({
   id: z.string().min(1),
   ticket_id: z.string().min(1),

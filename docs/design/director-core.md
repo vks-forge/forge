@@ -38,7 +38,7 @@ decides on, an append-only event log for everything that happened.
 
 ```
 projects            id, slug, repo_origin, memory_repo, harness_defaults, tier_c_globs
-tickets             id, project, epic_id, parent_id, title, body, status, status_version,
+tickets             id (public `<PROJECT>-<n>`, the primary key, d-0055), project, epic_id, parent_id, title, body, status, status_version,
                     lane, tier_predicted, tier_actual, assignee_run_id, branch, worktree,
                     checkout_run_id, blocked_reason, created_by_intake
 ticket_relations    from, to, kind (blocks | depends_on | related | supersedes | spawned_from)
@@ -52,7 +52,8 @@ run_inbox           run, seq, mode (steer | follow_up | interrupt), author, text
 interactions        id, ticket, run, kind (question | plan_confirm | permission), payload,
                     status, asked_at, answered_at, timeout_at, answer
 gate_results        run, gate (G1..G6 | BR), status, report_ref, started_at, ended_at
-tool_receipts       run, seq, tool, input_hash, output_hash, hmac, ts     ← written by hooks, read by G1
+tool_decisions      per-call decision receipt, HMAC-chained   ← written by hooks, read by G1
+tool_effects        per-call effect receipt linked by decision_id, HMAC-chained (columns in tool-system.md §10)
 ```
 
 Rules:
@@ -83,11 +84,12 @@ stateDiagram-v2
   Planned --> InProgress: dispatch (worktree/branch created)
   InProgress --> Blocked: blocker found / depends_on not Done
   Blocked --> Planned: blockers_resolved wake
-  InProgress --> WaitingHuman: interaction (question / permission)
-  WaitingHuman --> InProgress: answer (response_wake)
-  WaitingHuman --> Blocked: timeout
+  InProgress --> WaitingHuman: asked (question / permission)
+  WaitingHuman --> InProgress: answered (response_wake)
+  WaitingHuman --> Blocked: blocked (timeout)
   InProgress --> Verifying: run settled with PR
-  Verifying --> InProgress: gate fail (rework, retry_of set)
+  Verifying --> InProgress: gate_failed (rework, retry_of set)
+  Verifying --> WaitingHuman: gate_failed at rework cap
   Verifying --> Review: tier B
   Verifying --> NeedsSignoff: tier C
   Verifying --> Done: tier A merged
@@ -95,10 +97,23 @@ stateDiagram-v2
   NeedsSignoff --> Done: named signer + merge
   Review --> InProgress: changes requested
   NeedsSignoff --> InProgress: changes requested
-  InProgress --> Cancelled: user cancel
+  Inbox --> Cancelled: cancelled
   Planned --> Cancelled
+  InProgress --> Cancelled
   Blocked --> Cancelled
+  WaitingHuman --> Cancelled
+  Verifying --> Cancelled
+  Review --> Cancelled
+  NeedsSignoff --> Cancelled
 ```
+
+As implemented (`packages/core/src/domain/state-machine.ts`): `cancelled` is accepted
+from every non-terminal status (inbox, planned, in_progress, blocked, waiting_human,
+verifying, review, needs_signoff); `done` and `cancelled` are terminal and reject all
+events. `asked` and `answered` are the events behind the WaitingHuman edges. A
+`gate_failed` beyond `MAX_AUTO_REWORKS` (2) parks the ticket in WaitingHuman with a
+`blocked_reason` instead of looping. Tier A stays in Verifying after `gate_passed` until
+the `merged` event.
 
 Transitions are pure functions `(ticket, event) → ticket'` with no LLM inside.
 The LLM is called by *steps* that produce events.

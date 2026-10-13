@@ -69,7 +69,6 @@ export const ToolExposure = z.object({
 export type ToolExposure = z.infer<typeof ToolExposure>;
 
 /** Hard limits for a run: turns, spend, stall and per-turn time. */
-/** The persisted `runs` row (snake_case). */
 export const RunBudget = z.object({
   maxTurns: z.number().int().positive(),
   maxUsd: z.number().positive(),
@@ -101,7 +100,6 @@ export const RunHandle = z.object({
 export type RunHandle = z.infer<typeof RunHandle>;
 
 /** Terminal outcome of a run as reported by the driver. */
-/** Normalized final result of a run, including the error family for failures. */
 export const RunResultStatus = z.enum([
   'success',
   'refused',
@@ -112,6 +110,7 @@ export const RunResultStatus = z.enum([
 ]);
 export type RunResultStatus = z.infer<typeof RunResultStatus>;
 
+/** Normalized final result of a run, including the error family for failures. */
 export const RunResult = z.object({
   status: RunResultStatus,
   session: SessionRef.nullable(),
@@ -182,6 +181,7 @@ export const RunStatus = z.enum([
 ]);
 export type RunStatus = z.infer<typeof RunStatus>;
 
+/** The persisted `runs` row (snake_case). */
 export const Run = z.object({
   id: z.string().min(1),
   ticket_id: z.string().min(1),

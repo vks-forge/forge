@@ -10,8 +10,10 @@
  *   optional field.
  *
  * Exports: toJson(), fromJson(), dropNulls().
- * Depends on: nothing. No IO.
+ * Depends on: @forge/core (UnknownForgeError). No IO.
  */
+
+import { UnknownForgeError } from '@forge/core';
 
 /** Encode any JSON-able value; `undefined` becomes the string `null`. */
 export function toJson(value: unknown): string {
@@ -20,7 +22,12 @@ export function toJson(value: unknown): string {
 
 /** Decode a JSON TEXT column; a null column stays null. */
 export function fromJson(text: unknown): unknown {
-  return typeof text === 'string' ? (JSON.parse(text) as unknown) : null;
+  if (typeof text !== 'string') return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch (error) {
+    throw new UnknownForgeError('stored JSON column is not valid JSON', { cause: error });
+  }
 }
 
 /** Remove null-valued keys so optional zod fields (absent, not null) parse. */

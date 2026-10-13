@@ -15,6 +15,7 @@ export * from '#/domain/decision-outcome.js';
 export * from '#/schemas/hook-config.js';
 export * from '#/schemas/hook-payload.js';
 export * from '#/schemas/hook-wire.js';
+export * from '#/server/audit-gate.js';
 export * from '#/server/hook-handler.js';
 export * from '#/server/settings-file.js';
 export type * from '#/types/hook-client.types.js';

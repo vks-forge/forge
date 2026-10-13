@@ -4,7 +4,7 @@ The Forge server process: wires config, adapters and the Director engine, and ex
 
 ## Why it exists
 
-Forge is an autonomous development org: the Director engine turns intake into tickets and dispatches them to Workers running in harnesses like Claude Code. Something has to be the running process that holds the engine tick, opens storage, starts drivers, hosts the Factory MCP server and receipt hooks Workers talk to, and serves the control room and CLI. Without it the packages are libraries with nothing running tickets. This app is composition only: it wires `@forge/core`, `@forge/db`, `@forge/drivers`, `@forge/tools` and the rest, and holds no business logic.
+Forge is an autonomous development org: the Director engine turns intake into tickets and dispatches them to Workers running in harnesses like Claude Code. Something has to be the running process that holds the engine tick, opens storage, starts drivers, hosts the receipt-hook ingress Workers talk to, and serves the control room and CLI. Without it the packages are libraries with nothing running tickets. This app is composition only: it wires `@forge/core`, `@forge/db`, `@forge/drivers`, `@forge/tools` and the rest, and holds no business logic.
 
 ## What it does
 
@@ -12,7 +12,7 @@ Intended role, from `docs/design/m0-brief.md` and `control-room-and-platform.md`
 
 - Engine tick: reconcile, refresh, dispatch, with wake requests and an invariant check.
 - Minimal HTTP: `POST /intake`, `GET /tickets/:id`, `POST /interactions/:id/answer`, and SSE `/runs/:id/events` replaying from `Last-Event-ID` using the `run_events` sequence number.
-- Hosts the Factory MCP server and the hook runtime that Workers use, with a per-run token.
+- Hosts the receipt-hook ingress that Workers use, with a per-run token. The Forge MCP server is not hosted here: it is a separate stdio process composed in `apps/mcp` (d-0052).
 - Binds `127.0.0.1` only, with no auth, and refuses other binds (`docs/design/m0-brief.md`; the decision record d-0030 that set it is superseded, so confirm before relying on it).
 - Entry point will be `src/main.ts`, the only place with side effects.
 
@@ -28,6 +28,7 @@ Public API: none; it is an app.
 
 ## Requirements
 
+- No TypeScript exists yet, so there is no `tsconfig.json` and the root `tsconfig.json` has no reference to this app. The first source file must add `tsconfig.json` and `tsconfig.test.json` (copy `apps/mcp`) and add both to the root `references`; the root `vitest.config.ts` coverage include and threshold need an entry too.
 - Node 24.20 and pnpm. Nothing is required today: no source, no tests, no env vars.
 - Intended: a logged-in `claude` CLI, a private GitHub remote and the GitHub App key kept under gitignored `.forge/data/secrets/` (never committed), the tool catalogue under `.forge/tools/`, and project config under `.forge/`.
 - Build and test follow the root scripts once source exists.

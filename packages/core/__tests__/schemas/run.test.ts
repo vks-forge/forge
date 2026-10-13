@@ -63,6 +63,7 @@ describe('run schemas', () => {
         'crash',
         'policy_denied',
         'unknown',
+        'invalid_input',
       ]),
     );
   });

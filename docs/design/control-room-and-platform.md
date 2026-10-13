@@ -7,21 +7,22 @@ activity as of that date; items marked unverified were not confirmed.
 
 ## 1. Stack
 
-TypeScript pnpm monorepo. One Node process hosts the engine, drivers, Factory
-MCP server and HTTP/SSE API; a React UI; SQLite (WAL) for state; Bifrost as the
+TypeScript pnpm monorepo. One Node process hosts the engine, drivers and HTTP/SSE API
+(the Forge MCP server is a separate stdio process in `apps/mcp`, d-0052); a React UI; SQLite (WAL) for state; Bifrost as the
 LLM gateway; Phoenix for traces. Everything runs on one Windows 11 machine
 without Docker.
 
 ```
 apps/
-  server/        engine tick, drivers, Factory MCP server, SSE, merge policy
+  server/        engine tick, drivers, SSE, merge policy
+  mcp/           standalone stdio process: Forge MCP server wired to SQLite (d-0052)
   web/           React control room (assistant-ui for threads)
 packages/
   core/          ticket state machine, schemas, lane rules (pure, no I/O)
   drivers/       claude-code | codex | opencode | pi | acp  (WorkerDriver impls + renderers)
   gates/         G1–G6 runners, blast radius, canaries
   memory/        memory repo reader/writer, index, janitor
-  db/            SQLite schema + migrations (Drizzle)
+  db/            SQLite schema + migrations, raw portable SQL on a SqlDriver seam, no ORM (d-0047)
 .forge/        skills/ agents/ rules/ intent-tests/ memory/<project>/
 ```
 
@@ -135,7 +136,7 @@ record: approver, policy version, merge SHA, tier_actual  → outcomes/ + ledger
 Thin layer of our own, modelled on Claude Code's worktree behaviour and
 worktrunk's hooks:
 
-- One worktree per ticket at `<repo>\.worktrees\<ticket-id>` (d-0039; the
+- One worktree per ticket at `<repo>\.worktrees\<ticket-id>` (d-0039, carried over by d-0044; the
   earlier `D:\wt\<ticket-id>` is superseded), created and removed behind one
   process-level mutex; `core.longpaths=true` set per repo, setup check warns
   when the host has `LongPathsEnabled=0`.

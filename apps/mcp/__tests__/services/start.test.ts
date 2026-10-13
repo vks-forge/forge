@@ -13,10 +13,10 @@
  * Depends on: services/start, @forge/db, @forge/mcp, node:fs.
  */
 
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createSqliteStorage } from '@forge/db';
+import { createSqliteStorage, openSqliteDriver } from '@forge/db';
 import type { StorageAdapter } from '@forge/core';
 import { hashToken } from '@forge/mcp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -113,12 +113,42 @@ describe('start', () => {
     expect(x.serve).not.toHaveBeenCalled();
   });
 
-  it('creates the schema on a fresh database and still refuses (no run, no token)', async () => {
+  it('refuses a missing database file without creating it', async () => {
     const x = io();
-    await start(env({ FORGE_DB_PATH: join(dir, 'fresh.sqlite') }), x);
+    const missing = join(dir, 'fresh.sqlite');
+    await start(env({ FORGE_DB_PATH: missing }), x);
     expect(x.exit).toHaveBeenCalledWith(1);
     expect(x.serve).not.toHaveBeenCalled();
-    expect(String(x.stderr.mock.calls[0]?.[0])).toMatch(/token/i);
+    expect(String(x.stderr.mock.calls[0]?.[0])).toMatch(/not found|does not exist/i);
+    expect(existsSync(missing)).toBe(false);
+  });
+
+  it('refuses an existing database that has no schema and does not migrate it', async () => {
+    const bare = join(dir, 'bare.sqlite');
+    openSqliteDriver(bare).close();
+    const x = io();
+    await start(env({ FORGE_DB_PATH: bare }), x);
+    expect(x.exit).toHaveBeenCalledWith(1);
+    expect(x.serve).not.toHaveBeenCalled();
+    expect(String(x.stderr.mock.calls[0]?.[0])).toMatch(/schema|migrat/i);
+    const d = openSqliteDriver(bare);
+    expect(
+      d.all("SELECT name FROM sqlite_master WHERE name = 'schema_migrations'"),
+    ).toHaveLength(0);
+    d.close();
+  });
+
+  it('refuses a database whose schema is behind the registry', async () => {
+    const d = openSqliteDriver(dbPath);
+    d.run(
+      'DELETE FROM schema_migrations WHERE id = (SELECT MAX(id) FROM schema_migrations)',
+    );
+    d.close();
+    const x = io();
+    await start(env(), x);
+    expect(x.exit).toHaveBeenCalledWith(1);
+    expect(x.serve).not.toHaveBeenCalled();
+    expect(String(x.stderr.mock.calls[0]?.[0])).toMatch(/behind|migrat/i);
   });
 
   it('exits 1 on a missing environment without serving', async () => {
@@ -146,5 +176,12 @@ describe('env parsing', () => {
     });
     expect(d.fetchAllowHosts).toEqual(['docs.example.org']);
     expect(depsFromEnv(env()).searxng).toBeUndefined();
+  });
+
+  it('wires the production network ports here, not in the library domain', () => {
+    const d = depsFromEnv(env());
+    expect(typeof d.resolve).toBe('function');
+    expect(typeof d.transport).toBe('function');
+    expect(typeof d.searchFetch).toBe('function');
   });
 });

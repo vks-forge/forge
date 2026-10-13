@@ -68,16 +68,24 @@ function decide(t: Ticket, e: TicketEvent): Result<TicketDelta, TransitionError>
         ? ok({ status: 'in_progress' })
         : err(illegal(t, e));
     case 'verifying':
-      return from === 'in_progress' ? ok({ status: 'verifying' }) : err(illegal(t, e));
+      // Every verify cycle needs its own gate_passed: drop the previous cycle's tier.
+      return from === 'in_progress'
+        ? ok({ status: 'verifying', tier_actual: undefined })
+        : err(illegal(t, e));
     case 'gate_failed':
       if (from !== 'verifying') return err(illegal(t, e));
       if (t.rework_count >= MAX_AUTO_REWORKS) {
         return ok({
           status: 'waiting_human',
           blocked_reason: `automatic rework cap (${MAX_AUTO_REWORKS}) reached; needs you`,
+          tier_actual: undefined,
         });
       }
-      return ok({ status: 'in_progress', rework_count: t.rework_count + 1 });
+      return ok({
+        status: 'in_progress',
+        rework_count: t.rework_count + 1,
+        tier_actual: undefined,
+      });
     case 'gate_passed': {
       if (from !== 'verifying') return err(illegal(t, e));
       // Tier A stays in Verifying until the merge event; B/C wait on a human.
@@ -92,13 +100,16 @@ function decide(t: Ticket, e: TicketEvent): Result<TicketDelta, TransitionError>
       return ok({ status: 'done' });
     case 'done':
       if (from !== 'review' && from !== 'needs_signoff') return err(illegal(t, e));
-      if (from === 'needs_signoff' && (e.signer === undefined || e.signer === '')) {
+      if (
+        from === 'needs_signoff' &&
+        (e.signer === undefined || e.signer.trim() === '')
+      ) {
         return err(precondition(e, 'tier C needs a named signer'));
       }
       return ok({ status: 'done' });
     case 'rework':
       if (from !== 'review' && from !== 'needs_signoff') return err(illegal(t, e));
-      return ok({ status: 'in_progress' });
+      return ok({ status: 'in_progress', tier_actual: undefined });
     case 'cancelled':
       return ok({ status: 'cancelled' });
   }
@@ -125,11 +136,12 @@ export function transition(
   const decided = decide(ticket, event);
   if (!decided.ok) return decided;
 
-  // blocked_reason only lives while the ticket is parked; drop the stale one otherwise.
-  const { blocked_reason: _stale, ...rest } = ticket;
-  void _stale;
+  // blocked_reason only lives while the ticket is parked. The clear is explicit
+  // (present-but-undefined) so a storage patch built from the result NULLs the column
+  // instead of leaving the old value behind. The delta may re-set it afterwards.
   return ok({
-    ...rest,
+    ...ticket,
+    blocked_reason: undefined,
     ...decided.value,
     status_version: ticket.status_version + 1,
     updated_at: event.at,

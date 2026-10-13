@@ -21,7 +21,7 @@ const probe = it.skipIf(!PROBES_ENABLED);
 
 describe('probe 3: ACP adapter (d-0035)', () => {
   probe(
-    `initialize reports auth info and a plain reply needs no permission ${SKIP_REASON}`,
+    `auth status arrives as _auth/status_update and a plain reply needs no permission ${SKIP_REASON}`,
     async () => {
       await withAcp(async (h) => {
         expect(h.init.protocolVersion).toBe(1);

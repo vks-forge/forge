@@ -3,7 +3,7 @@
  *
  * Why: The Factory trusts hooks as the chokepoint for every Worker tool call, so we must know exactly when a hook blocks and when a broken one silently lets the call through. Each scenario gets its own directory so one run's log can never satisfy another run's assertion (d-0033).
  *
- * Pins: n/a (helper, no assertions).
+ * Exports: HookScenario, makeHookScenario().
  * Depends on: helpers/probe-env, node:fs, node:path. IO: writes files under
  *   .forge/data/probes/2/<scenario>/.
  */

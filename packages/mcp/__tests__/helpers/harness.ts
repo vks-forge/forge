@@ -84,6 +84,12 @@ export async function connect(
     runId: RUN_ID,
     runToken: TOKEN,
     now: () => new Date(T0),
+    // No real network in tests: a public-looking answer and a transport that must not be reached.
+    resolve: async () => ['93.184.216.34'],
+    transport: async () => {
+      throw new Error('unexpected network access in test');
+    },
+    searchFetch: fetch,
     ...over,
   });
   const [a, b] = InMemoryTransport.createLinkedPair();

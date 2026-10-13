@@ -6,8 +6,8 @@
  *   thrown failure is a ForgeError carrying its errorFamily, so a driver crash, a rate
  *   limit and a policy denial are handled differently by construction, and an
  *   unclassified failure lands in `unknown`, which policy treats as fail-closed.
- *   InvalidInputError marks caller bugs in pure constructors so they are not mistaken
- *   for harness faults and retried (execution-plane.md §8).
+ *   InvalidInputError (family `invalid_input`) marks caller bugs, in pure constructors
+ *   and at the storage boundary, so they are not mistaken for harness faults and retried (execution-plane.md §8).
  *
  * Exports: ForgeError, AuthError, RateLimitError, BudgetError,
  *   StallError, RefusalError, CrashError, PolicyDeniedError, UnknownForgeError,
@@ -78,5 +78,9 @@ export class UnknownForgeError extends ForgeError {
   }
 }
 
-/** Bad caller input to a pure constructor (e.g. makeTicketId); not a runtime/harness fault. */
-export class InvalidInputError extends UnknownForgeError {}
+/** Bad caller input (a pure constructor, a rejected patch, a constraint violation); a caller bug, not a runtime/harness fault, so it is never retried as-is. */
+export class InvalidInputError extends ForgeError {
+  constructor(message: string, options?: ForgeErrorOptions) {
+    super('invalid_input', message, options);
+  }
+}

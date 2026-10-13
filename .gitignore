@@ -21,5 +21,13 @@ coverage/
 *.tmp
 *.log
 
-# stray temp file written at repo root by a tool (name has a non-ASCII colon)
-/C*UsersvikasAppData*
+# secrets and local-only settings
+.env*
+!.env.example
+*.pem
+*.key
+.claude/settings.local.json
+
+# stray temp files written at repo root by a tool (name starts with a drive letter and a
+# non-ASCII colon, e.g. "C<colon>Users...AppData...")
+/[A-Z]*Users*AppData*

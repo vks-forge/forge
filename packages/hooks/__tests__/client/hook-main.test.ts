@@ -139,6 +139,23 @@ describe('runHook', () => {
     expect(asked).toBe('/b.json');
   });
 
+  it('--config argv wins over FORGE_HOOK_CONFIG when both are present', async () => {
+    server = await startServer(answer('allow'));
+    const cfg = { run_id: 'r', server_url: server.url, token: 't', timeout_ms: 1000 };
+    const asked: string[] = [];
+    const base = {
+      env: { FORGE_HOOK_CONFIG: '/from-env.json' },
+      readFile: async (p: string) => {
+        asked.push(p);
+        return JSON.stringify(cfg);
+      },
+    };
+    await runHook(io(pre(), cfg, { ...base, argv: ['--config', '/from-argv.json'] }));
+    await runHook(io(pre(), cfg, { ...base, argv: ['--config=/eq.json'] }));
+    await runHook(io(pre(), cfg, { ...base, argv: [] }));
+    expect(asked).toEqual(['/from-argv.json', '/eq.json', '/from-env.json']);
+  });
+
   it('bad stdin exits 2; unknown event exits 2', async () => {
     expect((await runHook(io('{{', {}))).exitCode).toBe(2);
     expect((await runHook(io({ hook_event_name: 'Stop' }, {}))).exitCode).toBe(2);

@@ -8,17 +8,20 @@
  *   verifies the catalogue, the live schema hash, harness enforcement, the capability
  *   grant, call-time rules, inspectors and budgets, in that order, and can only ever
  *   tighten as it goes. Any error inside it becomes `deny`; an `ask` that nobody can
- *   answer (Express, unattended) becomes `deny` too, so no gate waits on nobody
+ *   answer (Express, unattended) becomes `deny` too, so no gate waits on nobody. A path
+ *   tool whose input names no usable string path is refused, never treated as "the cwd".
+ *   The lane is read from the grant only, so a context cannot claim a looser lane
  *   (tool-system.md §5, §5.5, §12).
  *
  * Exports: admit(), visibleTools().
- * Depends on: domain/catalogue, domain/grants, domain/rules, domain/budgets, domain/tokenizer,
+ * Depends on: domain/catalogue, domain/grants, domain/lane-defaults, domain/rules, domain/budgets, domain/tokenizer,
  *   domain/tool-id, schemas/decision, types/admit. No IO.
  */
 
 import { checkBudget } from '#/domain/budgets.js';
 import { schemaMatches } from '#/domain/catalogue.js';
 import { checkToolGranted } from '#/domain/grants.js';
+import { LANE_UNATTENDED } from '#/domain/lane-defaults.js';
 import { evaluateShell, evaluateToolRules } from '#/domain/rules.js';
 import { SHELL_TOOL_ID, isProjectMcp, toolAction } from '#/domain/tool-id.js';
 import { tokenizeShell } from '#/domain/tokenizer.js';
@@ -34,7 +37,10 @@ import type {
 } from '#/types/admit.types.js';
 
 const SEVERITY: Record<Effect, number> = { allow: 0, ask: 1, deny: 2 };
-const RESOURCE_KEYS = ['path', 'file_path', 'url', 'query', 'pattern', 'name'];
+const RESOURCE_KEYS = ['url', 'query', 'name'];
+/** Fields a harness uses to name the file or directory of a path tool. */
+const PATH_KEYS = ['file_path', 'path', 'notebook_path'] as const;
+const PATH_TOOLS = new Set(['read', 'edit', 'write', 'grep', 'glob']);
 
 function finish(
   call: AdmitCall,
@@ -64,6 +70,40 @@ const deny = (
   rule,
   findings: [],
 });
+
+/**
+ * The resources a path tool touches, or `null` when the input does not name one safely.
+ * Every present path field must be a string (a number or object in `path` is a bypass
+ * attempt, not a path), and at least one must be non-empty. For `grep` the pattern stands
+ * in for a missing path (it is judged as a path too, conservatively); for `glob` the
+ * pattern is judged both alone and joined to `path`, so `../..` inside a pattern cannot
+ * climb out.
+ */
+function pathResources(action: string, input: AdmitCall['input']): string[] | null {
+  const given: string[] = [];
+  for (const k of [...PATH_KEYS, 'pattern']) {
+    const v = input?.[k];
+    if (v === undefined || v === null) continue;
+    if (typeof v !== 'string') return null;
+    if (k !== 'pattern') given.push(v);
+  }
+  const pattern = input?.['pattern'];
+  const hasPattern =
+    typeof pattern === 'string' && (action === 'grep' || action === 'glob');
+  if (hasPattern) {
+    if (pattern.trim() === '') return null;
+    if (action === 'grep' && given.length === 0) given.push(pattern);
+    if (action === 'glob') {
+      const base = given.length > 0 ? given : ['.'];
+      given.push(
+        ...base.map((b) =>
+          /^([a-zA-Z]:|[\\/~])/.test(pattern) ? pattern : `${b}/${pattern}`,
+        ),
+      );
+    }
+  }
+  return given.length === 0 || given.some((g) => g.trim() === '') ? null : given;
+}
 
 function resourceOf(def: ToolDefinition, call: AdmitCall): string {
   if (isProjectMcp(def.id)) return def.id;
@@ -100,13 +140,20 @@ function checkReach(
 
 function callRules(ctx: AdmitContext, def: ToolDefinition, call: AdmitCall): Draft {
   if (def.id !== SHELL_TOOL_ID) {
-    const o = evaluateToolRules(
-      ctx.grant,
-      toolAction(def.id),
-      resourceOf(def, call),
-      ctx.cwd,
+    const action = toolAction(def.id);
+    if (PATH_TOOLS.has(action)) {
+      const resources = pathResources(action, call.input);
+      if (resources === null) return deny('invalid_resource', 'rule');
+      let worst: Draft | null = null;
+      for (const r of resources) {
+        const d = outcomeDraft(evaluateToolRules(ctx.grant, action, r, ctx.cwd));
+        worst = worst === null ? d : raise(worst, d);
+      }
+      return worst ?? deny('invalid_resource', 'rule');
+    }
+    return outcomeDraft(
+      evaluateToolRules(ctx.grant, action, resourceOf(def, call), ctx.cwd),
     );
-    return outcomeDraft(o);
   }
   const command = call.input?.['command'];
   if (typeof command !== 'string') return deny('untokenizable', 'rule');
@@ -138,6 +185,8 @@ function decide(
     draft: d,
     enforcement: e,
   });
+  // The grant is the single source of the lane; a context that disagrees is a wiring bug.
+  if (ctx.lane !== ctx.grant.lane) return no(deny('inspector_error', 'floor'));
   if (ctx.catalogue.status !== 'verified') return no(deny('quarantined', 'floor'));
   const def = ctx.catalogue.tools.get(call.tool);
   if (!def) return no(deny('unknown_tool', 'capability'));
@@ -153,7 +202,7 @@ function decide(
   if (!schemaMatches(def, ctx.liveSchemaHashes))
     return no(deny('schema_changed', 'floor'), enf);
   if (
-    ctx.lane === 'full' &&
+    ctx.grant.lane === 'full' &&
     (def.risk === 'network' || def.risk === 'credential') &&
     enf !== 'os' &&
     enf !== 'server'
@@ -229,7 +278,8 @@ export function admit(ctx: AdmitContext, call: AdmitCall): Decision {
   let enforcement: Decision['enforcement'] = null;
   try {
     ({ draft, enforcement } = decide(ctx, call));
-    const unattended = ctx.unattended ?? ctx.lane === 'express';
+    // Nobody to answer an `ask` on an unattended lane; `ctx.unattended` can only tighten.
+    const unattended = LANE_UNATTENDED[ctx.grant.lane] || ctx.unattended === true;
     if (draft.decision === 'ask' && unattended) {
       draft = { ...draft, decision: 'deny', reason: 'unattended', layer: 'approval' };
     }

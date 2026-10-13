@@ -6,12 +6,18 @@
  *   is pure, so the dispatcher can ask "may this call proceed?" with the counters it
  *   already keeps. Hard caps deny; soft (rolling-window) caps force an approval; counters
  *   or estimates that are not sane numbers deny, because an unmeasurable spend is not a
- *   free one (tool-system.md §11).
+ *   free one. Limits and usage are parsed with their zod schemas inside the check, so a
+ *   hand-built or corrupt object denies instead of throwing or reading as free spending
+ *   (tool-system.md §11).
  *
  * Exports: checkBudget(), recordUsage(), EMPTY_USAGE.
  * Depends on: schemas/budget, types/budgets. No IO.
  */
 
+import {
+  BudgetLimits as BudgetLimitsSchema,
+  BudgetUsage as BudgetUsageSchema,
+} from '#/schemas/budget.js';
 import type {
   BudgetCaps,
   BudgetCounter,
@@ -21,6 +27,10 @@ import type {
 import type { BudgetVerdict } from '#/types/budgets.types.js';
 
 export const EMPTY_USAGE: BudgetUsage = { run: { calls: 0, usd: 0 }, per_tool: {} };
+
+/** Own property only: a tool named `constructor` must not read `Object.prototype`. */
+const own = <T>(record: Readonly<Record<string, T>>, key: string): T | undefined =>
+  Object.hasOwn(record, key) ? record[key] : undefined;
 
 const sane = (n: unknown): n is number =>
   typeof n === 'number' && Number.isFinite(n) && n >= 0;
@@ -44,23 +54,22 @@ function over(
  * hard breach wins (tool before run), then the first soft breach, else `ok`.
  */
 export function checkBudget(
-  limits: BudgetLimits,
-  usage: BudgetUsage,
+  rawLimits: BudgetLimits,
+  rawUsage: BudgetUsage,
   tool: string,
   estimatedUsd = 0,
 ): BudgetVerdict {
-  const toolCounter = usage.per_tool[tool] ?? { calls: 0, usd: 0 };
-  const run = usage.run;
-  if (
-    !sane(estimatedUsd) ||
-    !sane(run?.calls) ||
-    !sane(run?.usd) ||
-    !sane(toolCounter.calls) ||
-    !sane(toolCounter.usd)
-  ) {
+  // The caller's counters come from storage and config; parse them like any boundary input.
+  const parsedLimits = BudgetLimitsSchema.safeParse(rawLimits);
+  const parsedUsage = BudgetUsageSchema.safeParse(rawUsage);
+  if (!parsedLimits.success || !parsedUsage.success || !sane(estimatedUsd)) {
     return { verdict: 'deny', scope: 'run', kind: 'invalid' };
   }
-  const toolCaps = limits.per_tool[tool];
+  const limits = parsedLimits.data;
+  const usage = parsedUsage.data;
+  const toolCounter = own(usage.per_tool, tool) ?? { calls: 0, usd: 0 };
+  const run = usage.run;
+  const toolCaps = own(limits.per_tool, tool);
   for (const hard of [true, false]) {
     const t = over(toolCaps, toolCounter, estimatedUsd, hard);
     if (t) return { verdict: hard ? 'deny' : 'ask', scope: 'tool', kind: t };
@@ -72,7 +81,7 @@ export function checkBudget(
 
 /** Returns usage after one more call of `tool` costing `usd`; does not mutate its input. */
 export function recordUsage(usage: BudgetUsage, tool: string, usd: number): BudgetUsage {
-  const t = usage.per_tool[tool] ?? { calls: 0, usd: 0 };
+  const t = own(usage.per_tool, tool) ?? { calls: 0, usd: 0 };
   return {
     run: { calls: usage.run.calls + 1, usd: usage.run.usd + usd },
     per_tool: { ...usage.per_tool, [tool]: { calls: t.calls + 1, usd: t.usd + usd } },

@@ -15,29 +15,34 @@
 
 import { Interaction, UnknownForgeError } from '@forge/core';
 import type { InteractionRepository } from '@forge/core';
+import { parseStored } from '#/shared/db-errors.js';
 import { dropNulls, fromJson, toJson } from '#/shared/json.js';
 import { buildSetClause, parseInteractionPatch } from '#/shared/patches.js';
 import type { ColumnCodec, SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
 
 const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
   ticket_id: { column: 'ticket_id' },
-  run_id: { column: 'run_id' },
+  run_id: { column: 'run_id', clearable: true },
   kind: { column: 'kind' },
   payload: { column: 'payload_json', encode: toJson },
   status: { column: 'status' },
   asked_at: { column: 'asked_at' },
-  answered_at: { column: 'answered_at' },
+  answered_at: { column: 'answered_at', clearable: true },
   timeout_at: { column: 'timeout_at' },
-  answer: { column: 'answer_json', encode: toJson },
+  answer: { column: 'answer_json', encode: toJson, clearable: true },
 };
 
 function toInteraction(row: SqlRow): Interaction {
   const { payload_json, answer_json, ...rest } = dropNulls(row);
-  return Interaction.parse({
-    ...rest,
-    payload: fromJson(payload_json),
-    ...(answer_json === undefined ? {} : { answer: fromJson(answer_json) }),
-  });
+  return parseStored(
+    Interaction,
+    {
+      ...rest,
+      payload: fromJson(payload_json),
+      ...(answer_json === undefined ? {} : { answer: fromJson(answer_json) }),
+    },
+    'interaction',
+  );
 }
 
 export function createInteractionRepository(driver: SqlDriver): InteractionRepository {

@@ -10,14 +10,26 @@
  *   nothing overrides it. A call no lane rule mentions is an `ask`, never an allow
  *   (tool-system.md §5.2).
  *
+ *   Path matching is case-insensitive on both sides (Windows filesystem), the path is
+ *   normalised on its absolute form before it is made relative to the cwd, and an empty path
+ *   is a denial, not "the cwd". Shell segments are also judged for the files their argv
+ *   reads or writes (`cat .env`, `git diff --output=f`) and for the commands nested in
+ *   `bash -c`, `cmd /c`, `powershell -Command` and `eval`: a floor hit anywhere inside is a
+ *   deny, not just an ask.
+ *
  * Exports: evaluateToolRules(), evaluateShell(), normalizePath() (re-exported).
- * Depends on: @forge/core (globMatch), schemas/grant, shared/pattern, types/grants, types/rules,
- *   types/tokenizer. No IO.
+ * Depends on: @forge/core (globMatch), domain/argv-paths, domain/command-candidates,
+ *   domain/floor-argv, domain/nested-scripts, domain/tokenizer, schemas/grant, shared/path,
+ *   shared/pattern, types/grants, types/rules, types/tokenizer. No IO.
  */
 
 import { globMatch } from '@forge/core';
 import type { CallRule, Effect } from '#/schemas/grant.js';
+import { argvReads, argvWrites, wildcardHitsFloor } from '#/domain/argv-paths.js';
+import { commandCandidates, commandName } from '#/domain/command-candidates.js';
 import { floorViolation } from '#/domain/floor-argv.js';
+import { looseFloorHit, nestedScripts } from '#/domain/nested-scripts.js';
+import { tokenizeShell } from '#/domain/tokenizer.js';
 import { normalizePath } from '#/shared/path.js';
 import { commandMatch, literalPrefixLength, toolMatch } from '#/shared/pattern.js';
 import type { EffectiveGrant } from '#/types/grants.types.js';
@@ -28,6 +40,7 @@ export { normalizePath };
 
 const PATH_ACTIONS = new Set(['read', 'edit', 'write', 'grep', 'glob']);
 const SEVERITY: Record<Effect, number> = { allow: 0, ask: 1, deny: 2 };
+const MAX_NESTING = 4;
 const NULL_DEVICES = new Set(['/dev/null', '$null', 'nul']);
 const REASON = { allow: 'rule_allow', ask: 'rule_ask', deny: 'rule_deny' } as const;
 
@@ -38,7 +51,8 @@ function matches(
   ignoreCase: boolean,
 ): boolean {
   if (mode === 'shell') return commandMatch(pattern, text, ignoreCase);
-  if (mode === 'path') return globMatch(pattern, text);
+  // Both sides are case-folded: the Windows filesystem ignores case (see shared/path.ts).
+  if (mode === 'path') return globMatch(pattern.toLowerCase(), text.toLowerCase());
   return toolMatch(pattern, text);
 }
 
@@ -98,6 +112,11 @@ function evaluate(
   return out ?? { effect: 'ask', reason: 'no_matching_rule', rule: null };
 }
 
+const INVALID: RuleOutcome = { effect: 'deny', reason: 'invalid_resource', rule: null };
+
+/** Control characters and NUL are never part of a path a tool should open. */
+const hasControl = (s: string): boolean => /[\u0000-\u001f\u007f]/.test(s);
+
 /** Evaluates a non-shell tool call (`edit` on a path, `web_fetch` on a URL, ...). */
 export function evaluateToolRules(
   grant: EffectiveGrant,
@@ -106,8 +125,70 @@ export function evaluateToolRules(
   cwd?: string,
 ): RuleOutcome {
   const isPath = PATH_ACTIONS.has(action);
+  if (
+    isPath &&
+    (typeof resource !== 'string' || resource.trim() === '' || hasControl(resource))
+  )
+    return INVALID;
   const res = isPath ? normalizePath(resource, cwd) : resource;
   return evaluate(grant, action, res, isPath ? 'path' : 'plain', false);
+}
+
+const FLOOR_GLOB: RuleOutcome = {
+  effect: 'deny',
+  reason: 'managed_deny',
+  rule: 'floor:argv:wildcard-path',
+};
+
+/** Judges the files an argv reads or writes, and what it runs through eval or a wrapper. */
+function evaluateArgv(
+  grant: EffectiveGrant,
+  seg: ShellSegment,
+  cwd: string | undefined,
+  depth: number,
+): RuleOutcome | null {
+  let out: RuleOutcome | null = null;
+  for (const argv of commandCandidates(seg.argv)) {
+    const cmd = commandName(argv[0]);
+    const rest = argv.slice(1);
+    for (const p of argvReads(cmd, rest)) {
+      out = worse(
+        out,
+        wildcardHitsFloor(p) ? FLOOR_GLOB : evaluateToolRules(grant, 'read', p, cwd),
+      );
+    }
+    for (const p of argvWrites(cmd, rest))
+      out = worse(out, evaluateToolRules(grant, 'write', p, cwd));
+    for (const nested of nestedScripts(cmd, rest)) {
+      const inner = evaluateNested(grant, nested, cwd, depth + 1);
+      if (inner !== null) out = worse(out, inner);
+    }
+  }
+  return out;
+}
+
+/** Only a managed deny from inside a nested script is returned; the eval flag already asks. */
+function evaluateNested(
+  grant: EffectiveGrant,
+  nested: { text: string; dialect: ShellDialect | null },
+  cwd: string | undefined,
+  depth: number,
+): RuleOutcome | null {
+  const tokens =
+    nested.dialect === null ? null : tokenizeShell(nested.text, nested.dialect);
+  if (tokens === null || !tokens.ok) {
+    const hit = looseFloorHit(nested.text);
+    return hit === null ? null : { effect: 'deny', reason: 'managed_deny', rule: hit };
+  }
+  if (depth > MAX_NESTING) {
+    return { effect: 'deny', reason: 'managed_deny', rule: 'floor:argv:nesting' };
+  }
+  let out: RuleOutcome | null = null;
+  for (const seg of tokens.value) {
+    const r = evaluateSegment(grant, seg, nested.dialect as ShellDialect, cwd, depth);
+    if (r.effect === 'deny' && r.reason === 'managed_deny') out = worse(out, r);
+  }
+  return out;
 }
 
 function evaluateSegment(
@@ -115,6 +196,7 @@ function evaluateSegment(
   seg: ShellSegment,
   dialect: ShellDialect,
   cwd?: string,
+  depth = 0,
 ): RuleOutcome {
   const ic = dialect === 'powershell';
   const floor = floorViolation(seg, cwd);
@@ -129,6 +211,8 @@ function evaluateSegment(
     if (NULL_DEVICES.has(rd.target.toLowerCase())) continue;
     out = worse(out, evaluateToolRules(grant, rd.mode, rd.target, cwd));
   }
+  const argv = evaluateArgv(grant, seg, cwd, depth);
+  if (argv !== null) out = worse(out, argv);
   if (seg.flags.length > 0) {
     out = worse(out, { effect: 'ask', reason: 'risky_shell_construct', rule: null });
   }

@@ -6,7 +6,7 @@
  * tests exercise the same signature check and narrowing as a real run, and a schema or
  * lane-default change breaks the fixtures in one place.
  *
- * Exports: KEY, HARNESS, ENTRIES, makeCtx(), signedYaml(), liveHashes(), call(), grant(), withEntry().
+ * Exports: KEY, OTHER_KEY, HARNESS, ENTRIES, makeCtx(), signedYaml(), liveHashes(), call(), grant(), withEntry().
  * Depends on: yaml, @forge/core, domain/catalogue, domain/grants, shared/hmac. No IO.
  */
 
@@ -19,7 +19,8 @@ import { Grant } from '#/schemas/grant.js';
 import { sha256Hex } from '#/shared/hmac.js';
 import type { AdmitCall, AdmitContext } from '#/types/admit.types.js';
 
-export const KEY = 'test-catalogue-key';
+export const KEY = 'test-catalogue-key-0123456789abcdef';
+export const OTHER_KEY = 'other-catalogue-key-0123456789abcdef';
 export const HARNESS = 'claude-code';
 
 const hash = (id: string): string => `sha256:${sha256Hex(id)}`;

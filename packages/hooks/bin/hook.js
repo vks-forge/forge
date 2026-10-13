@@ -5,8 +5,11 @@
  * Why: the harness runs this file as a plain child process, so it cannot use the
  *   TypeScript sources or the `development` import condition. It loads the compiled
  *   client from `dist/` (run `pnpm build` before a live run). If the build is missing
- *   or broken the harness would see node's own exit code 1, which Claude Code treats
- *   as a non-blocking error, so the load is wrapped to exit 2 instead (fail closed).
+ *   or broken node would exit 1, which Claude Code treats as a non-blocking error, so
+ *   the load is wrapped to exit 2 instead (fail closed; effective on PreToolUse, the
+ *   only hard gate). On Windows the Worker's OS user can rewrite this file and
+ *   `hook.json`, so the hook is attribution, not isolation: the driver cross-checks tool
+ *   ids against receipts (d-0056).
  *
  * Exports: none (script).
  * Depends on: ../dist/client/hook-main.js.

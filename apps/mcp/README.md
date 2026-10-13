@@ -1,6 +1,6 @@
 # @forge/mcp-server
 
-The `forge-mcp` process: reads env, opens SQLite, and serves `@forge/mcp` over stdio for one run.
+The `forge-mcp` process: reads env, opens the existing SQLite database, and serves `@forge/mcp` over stdio for one run.
 
 ## Why it exists
 
@@ -15,8 +15,7 @@ does not match the run.
 
 - `src/main.ts`: entry; calls `start(process.env, io)` with real exit, stderr and
   stdio. No logic.
-- `src/services/start.ts`: `parseEnv()`, `depsFromEnv()` (opens and migrates SQLite through
-  `createSqliteStorage` from `@forge/db`; the run-token hash is read by `@forge/mcp` through
+- `src/services/start.ts`: `parseEnv()`, `depsFromEnv()` (opens the database through `services/open-database.ts`, adds the real network ports with `withDefaultNetwork`; the run-token hash is read by `@forge/mcp` through
   that storage), `start()` (serve, or print to stderr and exit 1 on any startup failure).
 - Bin: `forge-mcp` -> `dist/main.js`.
 
@@ -34,9 +33,8 @@ environment access (code.md rule 1). Process effects are injected (`StartIo`) so
   `FORGE_SEARXNG_URL`, `FORGE_SEARXNG_ALLOW_HOSTS`, `FORGE_FETCH_ALLOW_HOSTS`,
   `FORGE_DOCS_DIRS` (optional; docs dirs use the OS path delimiter, hosts are
   comma-separated).
-- A Forge SQLite DB with the run row and the run's token hash registered by the driver
-  (`tx.runTokens.put(runId, sha256(token), now)`). Opening applies any pending migrations,
-  so `run_tokens` exists even on a fresh file; with no registration the process exits 1.
+- An existing Forge SQLite DB, already migrated to the current schema by the Forge server, with the run row and the run's token hash registered by the driver
+  (`tx.runTokens.put(runId, sha256(token), now)`). A missing file, a missing `schema_migrations` table or a schema behind the registry exits 1; the process never creates or migrates the file. With no token registration it exits 1.
 - Tests: `pnpm test` at the root.
 
 ## Extending
@@ -48,5 +46,4 @@ matching field in `ForgeMcpDeps` in `@forge/mcp`. Keep `main.ts` thin.
 
 - Opens one SQLite connection for the process lifetime and never closes it
   explicitly; the process is per run.
-- Migrates the database on open (idempotent, forward-only) but never registers tokens; the
-  driver does. A revoked or missing token exits 1.
+- Never migrates and never registers tokens: the server owns migrations, the driver registers tokens. A revoked or missing token exits 1.

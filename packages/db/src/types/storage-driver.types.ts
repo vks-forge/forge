@@ -46,4 +46,6 @@ export interface SqliteStorageOptions {
 export interface ColumnCodec {
   readonly column: string;
   readonly encode?: (value: unknown) => SqlValue;
+  /** True for optional fields: a patch value of `undefined` sets the column to NULL. */
+  readonly clearable?: true;
 }

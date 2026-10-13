@@ -280,6 +280,9 @@ importers:
       '@forge/core':
         specifier: workspace:*
         version: link:../core
+      '@forge/tools':
+        specifier: workspace:*
+        version: link:../tools
       '@modelcontextprotocol/sdk':
         specifier: 1.32.1
         version: 1.32.1(zod@4.6.7)
@@ -290,9 +293,6 @@ importers:
       '@forge/db':
         specifier: workspace:*
         version: link:../db
-      '@forge/tools':
-        specifier: workspace:*
-        version: link:../tools
       '@types/node':
         specifier: 26.6.5
         version: 26.6.5
