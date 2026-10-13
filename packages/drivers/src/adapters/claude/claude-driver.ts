@@ -1,0 +1,140 @@
+/**
+ * `createClaudeDriver(deps)`: the Claude Code `WorkerDriver`.
+ *
+ * Why: the Director starts, steers, resumes and cancels Workers through one port and must
+ *   not know which Claude engine runs them. This factory is the composition point: it
+ *   validates the request at the boundary, asks the app to prepare the run (directory,
+ *   token, MCP server), renders the hook files the harness needs, records the git base to
+ *   diff against, picks the engine from config (ACP by default, `claude -p` as fallback;
+ *   never by branching on a harness name elsewhere) and hands the run to a supervisor that
+ *   owns events, timers, the receipt cross-check and the final result. A run's handle is
+ *   serialisable; the live state is kept in this process only, because a Forge restart
+ *   kills in-flight runs (d-0054).
+ *
+ * Exports: createClaudeDriver(), CONTINUE_PROMPT.
+ * Depends on: @forge/core (RunRequest, InvalidInputError, port types), run-supervisor,
+ *   run-files, settings-sources, git-cli, acp-engine, cli-engine, domain/child-env,
+ *   schemas/claude-config. IO: through the injected ports and the run files.
+ */
+
+import { homedir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { InvalidInputError, RunRequest } from '@forge/core';
+import type { RunHandle, WorkerDriver } from '@forge/core';
+import { createAcpEngine } from '#/adapters/claude/acp/acp-engine.js';
+import { createCliEngine } from '#/adapters/claude/cli/cli-engine.js';
+import { createGitCli } from '#/adapters/claude/git-cli.js';
+import { writeRunFiles } from '#/adapters/claude/run-files.js';
+import { superviseRun } from '#/adapters/claude/run-supervisor.js';
+import {
+  existingSettingsSources,
+  settingsSourcePaths,
+} from '#/adapters/claude/settings-sources.js';
+import { buildChildEnv } from '#/domain/child-env.js';
+import { parseClaudeConfig } from '#/schemas/claude-config.js';
+import type { SupervisedRun } from '#/types/claude/supervisor.types.js';
+import type { ClaudeDriverDeps } from '#/types/claude/driver-deps.types.js';
+import type { ClaudeEngine, EngineDeps } from '#/types/claude/engine.types.js';
+
+/** Prompt sent when `resume(handle)` continues a session without a new instruction. */
+export const CONTINUE_PROMPT = 'Continue from where you stopped.';
+
+const ENGINES: Record<'acp' | 'cli', (deps: EngineDeps) => ClaudeEngine> = {
+  acp: createAcpEngine,
+  cli: createCliEngine,
+};
+
+export function createClaudeDriver(deps: ClaudeDriverDeps): WorkerDriver {
+  const config = parseClaudeConfig(deps.config);
+  const platform = deps.platform ?? process.platform;
+  const baseEnv = deps.baseEnv ?? process.env;
+  const log = deps.log ?? (() => undefined);
+  const git = deps.git ?? createGitCli();
+  const hookJsPath =
+    deps.hookJsPath ?? fileURLToPath(new URL('../../../bin/hook.js', import.meta.url));
+  const factory = deps.engineFactories?.[config.engine] ?? ENGINES[config.engine];
+  const engine = factory({
+    config,
+    clock: deps.clock,
+    spawn: deps.spawn,
+    platform,
+    signalGroup: deps.signalGroup,
+    log,
+    baseEnv,
+    acpEntry: deps.acpEntry,
+  });
+  const capabilities = engine.capabilities();
+  const runs = new Map<string, SupervisedRun>();
+
+  const get = (handle: RunHandle): SupervisedRun => {
+    const run = runs.get(handle.runId);
+    if (!run) throw new InvalidInputError(`unknown run ${handle.runId}`);
+    return run;
+  };
+
+  async function begin(
+    req: RunRequest,
+    resumeSession: string | undefined,
+    prompt: string,
+  ): Promise<RunHandle> {
+    const prepared = await deps.prepareRun(req);
+    const files = await writeRunFiles(req.runId, prepared, hookJsPath);
+    const checked = settingsSourcePaths(req.cwd, deps.homeDir ?? homedir(), platform);
+    log('info', 'settings sources the harness reads regardless of settingSources', {
+      checked,
+      existing: await existingSettingsSources(checked),
+    });
+    let base: string | null = null;
+    try {
+      base = await git.head(req.cwd);
+    } catch (e) {
+      log('warn', 'git head failed; files touched will be empty', { error: String(e) });
+    }
+    const env = buildChildEnv(baseEnv, req.env, prepared.env);
+    const run = superviseRun({
+      req,
+      config,
+      clock: deps.clock,
+      receipts: deps.receipts,
+      git,
+      log,
+      base,
+      startSession: resumeSession ?? null,
+      launch: (sink) =>
+        engine.launch({ req, prepared, files, env, prompt, resumeSession }, sink),
+    });
+    runs.set(req.runId, run);
+    return { runId: req.runId, ...(resumeSession ? { session: resumeSession } : {}) };
+  }
+
+  return {
+    id: 'claude-code',
+    capabilities: () => capabilities,
+    preflight: () => engine.preflight(),
+    async start(req) {
+      const parsed = RunRequest.safeParse(req);
+      if (!parsed.success)
+        throw new InvalidInputError(`invalid run request: ${parsed.error.message}`, {
+          cause: parsed.error,
+        });
+      const live = runs.get(parsed.data.runId);
+      if (live && !live.isSettled())
+        throw new InvalidInputError(`run ${parsed.data.runId} is already active`);
+      return begin(parsed.data, parsed.data.resume, parsed.data.prompt);
+    },
+    async resume(handle) {
+      const prior = get(handle);
+      if (!prior.isSettled())
+        throw new InvalidInputError(`run ${handle.runId} is still active`);
+      const session = handle.session ?? prior.session();
+      if (!session)
+        throw new InvalidInputError(`run ${handle.runId} has no session to resume`);
+      return begin(prior.req, session, CONTINUE_PROMPT);
+    },
+    steer: (handle, message, mode, inboxSeq) =>
+      get(handle).steer(message, mode, inboxSeq),
+    cancel: (handle) => get(handle).cancel(),
+    events: (handle) => get(handle).events.iterate(),
+    result: (handle) => get(handle).result,
+  };
+}

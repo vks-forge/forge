@@ -17,6 +17,11 @@
       "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./hook-wire": {
+      "development": "./src/schemas/hook-wire.ts",
+      "types": "./dist/schemas/hook-wire.d.ts",
+      "default": "./dist/schemas/hook-wire.js"
     }
   },
   "dependencies": {

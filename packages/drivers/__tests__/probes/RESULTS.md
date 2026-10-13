@@ -169,6 +169,20 @@ The host had several user-level MCP servers and one repo-level server configured
   fresh cwd whose `.claude/settings.json` sets `acceptEdits`, then checking that `set_mode default` is accepted
   and no mode update contradicts it.
 
+## Probe 6: Claude driver on the real ACP adapter - NOT YET RUN
+
+Added with the Claude driver (`probe6-claude-driver.test.ts`, gated `FORGE_PROBES=1`, haiku, $0.05 per run, needs
+`pnpm build` for the hook). No result is recorded here yet. The next live run must record:
+
+- A plain run (`reply with the single word pong`) ends `success` with a session ref on the subscription.
+- A write the hook server denies creates no file (the hook blocks before any permission request).
+- PreToolUse reaches the hook server under ACP, and whether the hook's `tool_use_id` equals the ACP `toolCallId`.
+  If it does not, the driver's (tool name, args hash) fallback join in `receipts.decisionFor` is what keeps runs alive.
+- Still open from probe 5: that PreToolUse also fires for `mcp__forge__*` tools under ACP (re-run probe 4 with the
+  forge MCP server as a positive control), the tool `name` the adapter reports for MCP tools, whether project
+  `permissions.allow` is applied adapter-side before `session/request_permission`, and whether the real adapter's
+  budget and turn-cap errors carry the wording the classifier matches (`error_max_budget_usd`, `error_max_turns`).
+
 ## Differences from the design docs
 
 - `--setting-sources` takes `""` (empty) to load nothing; there is no `none` keyword.

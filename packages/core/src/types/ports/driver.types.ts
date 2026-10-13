@@ -37,7 +37,13 @@ export interface WorkerDriver {
   preflight(): Promise<Preflight>;
   start(req: RunRequest): Promise<RunHandle>;
   resume(handle: RunHandle): Promise<RunHandle>;
-  steer(handle: RunHandle, message: string, mode: SteerMode): Promise<void>;
+  /** `inboxSeq` is the `run_inbox` row being delivered; the driver echoes it in the `inbox_delivered` event. */
+  steer(
+    handle: RunHandle,
+    message: string,
+    mode: SteerMode,
+    inboxSeq?: number,
+  ): Promise<void>;
   cancel(handle: RunHandle): Promise<void>;
   events(handle: RunHandle): AsyncIterable<RunEvent>;
   result(handle: RunHandle): Promise<RunResult>;

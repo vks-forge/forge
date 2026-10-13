@@ -7,5 +7,15 @@
     "types": ["node"]
   },
   "include": ["__tests__"],
-  "references": [{ "path": "./tsconfig.json" }, { "path": "../core" }]
+  "references": [
+    {
+      "path": "./tsconfig.json"
+    },
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../tools"
+    }
+  ]
 }

@@ -22,9 +22,14 @@
   "dependencies": {
     "@agentclientprotocol/claude-agent-acp": "0.89.1",
     "@agentclientprotocol/sdk": "1.8.0",
-    "@forge/core": "workspace:*"
+    "@forge/core": "workspace:*",
+    "@forge/tools": "workspace:*",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/node": "26.6.5"
+  },
+  "bin": {
+    "forge-hook": "./bin/hook.js"
   }
 }

@@ -10,6 +10,7 @@ Workers are LLM sessions inside third-party harnesses, and what they can touch (
 
 Public API (`src/index.ts`):
 
+- Hook wire schemas (`schemas/hook-wire.ts`, also the subpath `@forge/tools/hook-wire`, which imports zod only so the hook process starts fast): `HookPayload`, `HookRequest`, `HookResponse`, `HookVerdict`, `HOOK_EVENTS`. A harness driver's hook client and the receipt ingress in `@forge/hooks` share them (d-0056).
 - Catalogue: `loadCatalogue(yaml, key, { allowDevKey? })` and `readCatalogueFile(path, key, opts)` return `verified` or `quarantined` (nothing usable, never a throw; reasons `malformed`, `bad_signature`, `bad_key`); `signCatalogue(entries, key)`; `schemaMatches` checks a live schema hash. A key under 32 bytes, or the public `DEV_CATALOGUE_KEY`, is `bad_key` unless `allowDevKey: true`. `devKeyAllowed(env)` is the one pure test production callers use for that flag: true when `NODE_ENV === 'test'` or `FORGE_ALLOW_DEV_CATALOGUE_KEY=1` (this package still reads no env itself; the caller passes `process.env`).
 - Crypto helpers (`shared/hmac.ts`, used by hooks and mcp too, do not copy them): `sha256Hex`, `hashToken` (what is stored for a bearer token), `constantTimeEqual` (digest both sides, then `timingSafeEqual`), `hmacHex` (throws on a key under `MIN_KEY_BYTES` = 32).
 - Grants: `effectiveGrant(lane, projectGrant?, ticketGrant?, managed?)`, `checkToolGranted()`, `parseGrant()`, `LANE_DEFAULTS`, `FLOOR_RULES`. The result is the intersection of lane, project, ticket and managed rules; deny always wins.

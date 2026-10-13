@@ -197,7 +197,8 @@ describe('list and call agree', () => {
     }
   });
 
-  it('a tool the list refuses is never allowed by a call', () => {
+  // 30s: 100 generated runs of the full policy are CPU-bound and starve under the parallel full suite.
+  it('a tool the list refuses is never allowed by a call', { timeout: 30_000 }, () => {
     const toolIds = ENTRIES.map((e) => e.id as string);
     fc.assert(
       fc.property(

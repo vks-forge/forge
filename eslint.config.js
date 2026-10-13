@@ -340,12 +340,6 @@ export default tseslint.config(
     },
   },
   {
-    // Plain-node entry points the harness executes before any build: they load compiled
-    // output from `../dist`, so only the header is required of them.
-    files: ['packages/*/bin/*.{js,mjs,cjs}'],
-    rules: { 'forge/no-parent-imports': 'off' },
-  },
-  {
     files: [`packages/core/**/*.${EXT}`],
     rules: { 'no-restricted-imports': ['error', forgeImports([])] },
   },

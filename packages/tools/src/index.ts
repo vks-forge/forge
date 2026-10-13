@@ -28,6 +28,7 @@ export * from '#/schemas/budget.js';
 export * from '#/schemas/catalogue.js';
 export * from '#/schemas/decision.js';
 export * from '#/schemas/grant.js';
+export * from '#/schemas/hook-wire.js';
 export * from '#/schemas/receipt.js';
 export * from '#/schemas/tool-definition.js';
 export * from '#/shared/canonical-json.js';

@@ -20,10 +20,9 @@
  *   tool-system.md §10, verification-plane.md §2).
  *
  * Exports: createHookHandler().
- * Depends on: @forge/core (isRunActive), @forge/tools (makeDecisionReceipt,
- *   makeEffectReceipt, callResource, constantTimeEqual),
- *   schemas/hook-wire, server/tool-resolver, server/audit-gate, shared/args-hash,
- *   types/hook-handler.
+ * Depends on: @forge/core (isRunActive), @forge/tools (HookRequest and HookResponse wire
+ *   schemas, makeDecisionReceipt, makeEffectReceipt, callResource, constantTimeEqual),
+ *   server/tool-resolver, server/audit-gate, shared/args-hash, types/hook-handler.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -32,12 +31,11 @@ import type { Run } from '@forge/core';
 import {
   callResource,
   constantTimeEqual,
+  HookRequest,
   makeDecisionReceipt,
   makeEffectReceipt,
 } from '@forge/tools';
-import type { Receipt } from '@forge/tools';
-import { HookRequest } from '#/schemas/hook-wire.js';
-import type { HookResponse } from '#/schemas/hook-wire.js';
+import type { HookResponse, Receipt } from '@forge/tools';
 import { effectStateFor, resolveToolId, toolDefinition } from '#/server/tool-resolver.js';
 import { createAuditGate, createMemoryAudit } from '#/server/audit-gate.js';
 import { argsHash } from '#/shared/args-hash.js';

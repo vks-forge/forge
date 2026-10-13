@@ -13,8 +13,8 @@
  *   so a Worker that can read the database file cannot forge a receipt.
  *
  * Exports: FailClosedCode, RunCredentials, AuditEntry, HookAudit, HookHandlerDeps, HookHandler.
- * Depends on: @forge/core (Run, StorageAdapter), @forge/tools (AdmitContext, AdmitCall,
- *   Decision, HmacKey, ReceiptLog), schemas/hook-wire. Types only.
+ * Depends on: @forge/core (Run, StorageAdapter), @forge/tools (HookResponse, AdmitContext,
+ *   AdmitCall, Decision, HmacKey, ReceiptLog). Types only.
  */
 
 import type { Run, StorageAdapter } from '@forge/core';
@@ -23,9 +23,9 @@ import type {
   AdmitContext,
   Decision,
   HmacKey,
+  HookResponse,
   ReceiptLog,
 } from '@forge/tools';
-import type { HookResponse } from '#/schemas/hook-wire.js';
 
 /** Why the handler refused; each maps to a `fail_closed_*` ReasonCode. */
 export type FailClosedCode =
