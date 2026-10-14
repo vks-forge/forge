@@ -99,6 +99,8 @@ describe('wrapSecret', () => {
     const lying: SecretStore = {
       put: async () => undefined,
       get: async () => Uint8Array.from([1]),
+      delete: async () => undefined,
+      list: async () => [],
     };
 
     await expect(

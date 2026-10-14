@@ -17,15 +17,21 @@ and the CLI ignorant of how a secret is protected (d-0062).
 Public API from `src/index.ts`:
 
 - `createDpapiSecretStore({ dir, powershell?, platform? })` returns a `SecretStore` that keeps
-  `<dir>/<name>.dpapi` blobs encrypted with Windows DPAPI in `CurrentUser` scope. `put` encrypts and
-  writes atomically (temp file, then rename); `get` returns the decrypted bytes or `null` for a
-  missing secret. A corrupt or foreign blob raises a `CrashError`. Off Windows the constructor throws
+  `<dir>/<name>.dpapi` blobs encrypted with Windows DPAPI in `CurrentUser` scope; a namespaced name
+  `a/b/c` is the file `<dir>/a/b/c.dpapi` (parent folders are created, and every resolved path is checked
+  to stay inside `<dir>`). `put` encrypts and writes atomically (temp file, then rename); `get` returns the
+  decrypted bytes or `null` for a missing secret; `delete` removes the file (a missing secret is not an
+  error) and prunes folders it leaves empty; `list(prefix)` walks the directory and returns sorted names. A corrupt or foreign blob raises a `CrashError`. Off Windows the constructor throws
   `PolicyDeniedError` instead of falling back to plaintext. `powershell` and `platform` exist so tests
   can prove the failure paths.
 - `createMemorySecretStore()` returns a `SecretStore` backed by a `Map`, with defensive copies in and out.
 
-Names must match the core `SecretName` schema (`^[a-z0-9][a-z0-9-]*$`). Anything else, including `../x`,
-`a/b`, `A.pem` or a drive letter, throws `InvalidInputError` before a path is built.
+Names are namespaced paths matching the core `SecretName` schema: segments `[a-z0-9][a-z0-9._-]*` joined by
+`/` (`github/<connection>/key`, `harness/<id>/api-key`, `harness/<id>/oauth-token`, `run/<runId>/secret`;
+a flat `github-app-key` is one segment). `..`, absolute paths, backslashes, empty segments, uppercase,
+Windows device names (`nul`, `com1`), trailing dots and the adapter suffixes `.dpapi` / `.tmp` throw
+`InvalidInputError` before a path is built. `list` prefixes follow `SecretNamePrefix` (whole segments plus an
+optional partial last one). Both adapters call the shared `assertSecretName` / `assertSecretPrefix` from core.
 
 ## Why this approach
 
@@ -46,7 +52,8 @@ Names must match the core `SecretName` schema (`^[a-z0-9][a-z0-9-]*$`). Anything
 
 - Runtime: Node 24 or newer. The DPAPI adapter needs Windows with Windows PowerShell 5.1 (`powershell.exe`,
   present on every supported Windows) and the .NET `System.Security` assembly (part of the framework).
-- No environment variables. Files: `<dataHome>/secrets/<name>.dpapi` (the Forge data home, outside every repository),
+- No environment variables. Files: `<dataHome>/secrets/<name>.dpapi`, nested for namespaced names
+  (`a/b/c` → `<dataHome>/secrets/a/b/c.dpapi`; the Forge data home, outside every repository),
   written by `forge secret wrap`.
 - Tests: `pnpm test`, or `npx vitest run packages/secrets`. The DPAPI cases run only on Windows and use a
   temp directory with a real round trip; they take a few seconds because each call starts PowerShell.
@@ -54,7 +61,7 @@ Names must match the core `SecretName` schema (`^[a-z0-9][a-z0-9-]*$`). Anything
 ## Extending
 
 A new platform store (macOS Keychain, Linux Secret Service) goes in `src/adapters/<name>/`, takes its
-options as arguments, validates names with `assertSecretName`, and must pass `describeSecretStoreContract`
+options as arguments, validates names with core's `assertSecretName` and prefixes with `assertSecretPrefix`, and must pass `describeSecretStoreContract`
 from `__tests__/contract/secret-store.contract.ts`. Add a `*.test.ts` that calls it, gated on the platform.
 
 ## Limits
@@ -64,4 +71,5 @@ from `__tests__/contract/secret-store.contract.ts`. Add a `*.test.ts` that calls
   against code running as you.
 - Each operation starts a PowerShell process (about 100 to 400 ms); the server reads the key at token-mint
   time, not per request.
-- No delete or list operation; the port has only `get` and `put`.
+- `list` and `delete` on DPAPI do no decryption, so a foreign or corrupt blob is listed like any other.
+- Deleting a secret removes the file only; it is not a secure wipe of the disk blocks.

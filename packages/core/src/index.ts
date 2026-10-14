@@ -17,6 +17,7 @@ export * from '#/domain/data-home.js';
 export * from '#/domain/ids.js';
 export * from '#/domain/lane-triage.js';
 export * from '#/domain/run-active.js';
+export * from '#/domain/secret-name.js';
 export * from '#/domain/state-machine.js';
 export * from '#/domain/ticket-patch.js';
 export * from '#/schemas/bootstrap-home.js';

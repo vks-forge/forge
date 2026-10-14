@@ -1,7 +1,8 @@
 /**
  * Pins: the memory and DPAPI secret stores satisfy the SecretStore contract (DPAPI on a
  * real Windows account only), and the DPAPI store's own guarantees: the blob on disk never
- * contains the plaintext, a copy of the store directory still decrypts for the same user,
+ * contains the plaintext, namespaced names nest and prune, a copy of the store directory
+ * still decrypts for the same user,
  * a tampered blob fails loudly, no temp files remain, the constructor refuses other
  * platforms, and a missing PowerShell is a typed crash.
  *
@@ -65,6 +66,33 @@ describe.runIf(onWindows)('dpapi secret store (real DPAPI)', { timeout: 60_000 }
     expect(files).toEqual(['github-app-key.dpapi']);
     expect(blob.includes(Buffer.from(secret))).toBe(false);
     expect(blob.toString('latin1')).not.toContain('TOP-SECRET');
+  });
+
+  it('maps a namespaced name to a nested file and prunes emptied folders on delete', async () => {
+    const dir = await tempDir();
+    const store = createDpapiSecretStore({ dir });
+    await store.put('github/acme/key', Buffer.from('v'));
+    await store.put('github/other/key', Buffer.from('w'));
+
+    expect(await readdir(join(dir, 'github', 'acme'))).toEqual(['key.dpapi']);
+
+    await store.delete('github/acme/key');
+
+    expect(await readdir(join(dir, 'github'))).toEqual(['other']);
+
+    await store.delete('github/other/key');
+
+    expect(await readdir(dir)).toEqual([]);
+  });
+
+  it('ignores stray files that are not valid secrets when listing', async () => {
+    const dir = await tempDir();
+    const store = createDpapiSecretStore({ dir });
+    await store.put('ok', Buffer.from('v'));
+    await writeFile(join(dir, 'Not Valid.dpapi'), 'x');
+    await writeFile(join(dir, 'notes.txt'), 'x');
+
+    expect(await store.list('')).toEqual(['ok']);
   });
 
   it('a second store instance on the same directory reads what the first wrote', async () => {

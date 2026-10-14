@@ -6,7 +6,8 @@
  *   names, so a path-like name must never validate.
  *
  * Pins: the four claim kinds parse, unknown kinds / extra keys / NUL paths are rejected;
- *   SecretName accepts lowercase slugs and rejects separators, dots, uppercase and empties.
+ *   SecretName accepts lowercase slugs and `/`-joined paths and rejects dot segments, absolute
+ *   paths, backslashes, uppercase, empties, Windows device names and adapter suffixes.
  * Depends on: src/schemas/claims, src/schemas/secret-name, vitest.
  */
 
@@ -34,13 +35,40 @@ describe('Claim', () => {
 });
 
 describe('SecretName', () => {
-  it('accepts lowercase slugs', () => {
-    expect(SecretName.safeParse('github-app-key').success).toBe(true);
-    expect(SecretName.safeParse('k1').success).toBe(true);
+  it('accepts flat lowercase slugs and namespaced paths', () => {
+    for (const ok of [
+      'github-app-key',
+      'k1',
+      'github/acme/key',
+      'harness/claude-1/api-key',
+      'run/run_01.x/secret',
+    ]) {
+      expect(SecretName.safeParse(ok).success, ok).toBe(true);
+    }
   });
 
-  it('rejects anything that could address a path', () => {
-    for (const bad of ['', '../x', 'a/b', 'a\b', 'A', '-a', 'a.b', 'C:x']) {
+  it('rejects anything that could address a path or collide on disk', () => {
+    for (const bad of [
+      '',
+      '../x',
+      'a/../b',
+      '..',
+      '/abs',
+      'a/',
+      'a//b',
+      String.raw`a\b`,
+      'A',
+      'a/B',
+      '-a',
+      '.a',
+      'a.',
+      'C:x',
+      'nul',
+      'a/com1.txt',
+      'k.dpapi',
+      'a.tmp/b',
+      'x'.repeat(129),
+    ]) {
       expect(SecretName.safeParse(bad).success, bad).toBe(false);
     }
   });
