@@ -35,6 +35,11 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0104 — No company Home: Home is project-scoped (first project), sidebar project switcher with unsaved-changes alert; Forge settings in a separate area; direction A Instrument, more distinct and calmer
+- d-0103 — Web stack = Paperclip's (Vite, React 19, Router, TanStack Query, Tailwind 4, Radix, assistant-ui, motion), latest versions; fully spring-animated, 60 fps, no jank (major)
+- d-0102 — UI: approved screen map → clickable prototype in real apps/web on mock data, swapped to real APIs; hallmark + Nielsen per screen
+- d-0101 — Measured: ACP adapter runs installed `claude` via `CLAUDE_CODE_EXECUTABLE` env (not `_meta`); B6 keeps bundled adapter, sets the env (author=director, measured)
+- d-0100 — Run HMAC secret stored encrypted for the run's life so G1 verifies across resume; build plan B0–B14 approved, autonomous
 - d-0099 — Published npm package `vks-forge`; command `forge`; internal `@forge/*` stay private, bundled; amends d-0091
 - d-0098 — Data folder `%LOCALAPPDATA%\Forge` (worktrees too), daily snapshots keep 7 + export/restore, notify-then-update, backup before migrate, rollback; amends d-0085, d-0059 (product grill)
 - d-0097 — Layered Worker limits (global 2 / per-project 1 / per-harness), priority + round-robin queue, quota waits with reset time (product grill)
