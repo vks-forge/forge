@@ -37,6 +37,21 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0079 — Notify via control room inbox + Windows desktop notification; notifier port for more channels later (x-0011 Q14)
+- d-0078 — Each agent declares its skills and memory slice (tags, rejected); Director sees all memory (x-0011 Q13)
+- d-0077 — Director builds each ticket's pipeline freely (no safety floor), default pipeline exists, built pipeline + reasons recorded; amends d-0001, d-0006, d-0069 (x-0011 Q12)
+- d-0076 — Parallel reviewers and parallel writers both allowed; Director decides the flow within pipeline limits (x-0011 Q11)
+- d-0075 — Pipeline/agent changes: validate → dry run → replay past tickets → canary with auto rollback (x-0011 Q10)
+- d-0074 — Script gates: user commands as pipeline nodes (exit 0 = pass), G1-style safe env; scripts not plugins (x-0011 Q9)
+- d-0073 — Critic must be a different model family than the Worker (warning until a 2nd harness exists, then refused) (x-0011 Q8)
+- d-0072 — Budgets per agent only (usd, minutes, turns); cap hit pauses ticket; loops still max-bounded (x-0011 Q7)
+- d-0071 — Reviewers advisory (findings as notes); critical/high holds auto-merge for the user; deterministic gates still block (x-0011 Q6)
+- d-0070 — Nodes hand off typed artifacts; each agent declares inputs/output/write_scope; reviewers never see the Worker narrative (x-0011 Q5)
+- d-0069 — Pipeline choice = lane default + routing rules (paths, type, labels), project override, only ever stricter (x-0011 Q4)
+- d-0068 — Pipelines/agents protected: files now (signed, tier C, Workers locked out, run records version); later UI approve, end state DB + UI-only edits, admin-only with ACL; read via a source port (x-0011 Q3)
+- d-0067 — Measured: Claude Code defers MCP schemas behind ToolSearch; Workers run with `ENABLE_TOOL_SEARCH=false`; finish may be re-called (author=director, measured)
+- d-0066 — Pipelines are graphs (nodes + outcome edges, branches, loops); validated at load (x-0011 Q2)
+- d-0065 — Agent roles are `.forge/agents/<name>.md`: YAML frontmatter settings + prose instructions (x-0011 Q1)
 - d-0064 — Measured: ACP announces a tool call before its input streams; receipt cross-check waits for the tool result for empty-input announces (author=director, measured)
 - d-0063 — Readable layout: Prettier + ESLint auto-fix `curly: all` and blank-line padding (`@stylistic`); repo reformatted once, lint keeps it
 - d-0062 — GitHost port: local bare host + GitHub App host (DPAPI SecretStore for the App key); merge one door
@@ -95,7 +110,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 
 ## Pending proposals (need user approve / reject)
 
-- none
+- x-0011 — Agents (`.forge/agents/*.yaml`) and per-lane pipelines (`.forge/pipelines/*.yaml`) as config; engine = generic stage runner; fixed invariants (being grilled 2026-10-14)
 
 ## Outcomes
 
