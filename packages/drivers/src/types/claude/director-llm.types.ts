@@ -25,6 +25,8 @@ export interface ClaudeDirectorLLMDeps {
   readonly claudeBinary?: string;
   /** Host env the child inherits (login, PATH); default empty, so the app passes `process.env`. */
   readonly baseEnv?: EnvLike;
+  /** Extra host variable names the child may inherit beyond the allowlist; default none. */
+  readonly envPassthrough?: readonly string[];
   readonly platform?: NodeJS.Platform;
   /**
    * Directory the child starts in. A step reads no files, but `claude` still looks for project

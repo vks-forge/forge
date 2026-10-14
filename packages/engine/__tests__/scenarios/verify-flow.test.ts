@@ -64,7 +64,7 @@ describe('verify: success path', () => {
     ]);
 
     expect(rig.reports.saved).toEqual([
-      { runId: 'run-1', name: 'G1.txt', text: 'report: passed' },
+      { runId: 'run-1', name: 'G1-head-sha-1.txt', text: 'report: passed' },
     ]);
 
     expect(gate.contexts[0]).toMatchObject({

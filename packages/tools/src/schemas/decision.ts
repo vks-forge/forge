@@ -47,6 +47,7 @@ export const ReasonCode = z.enum([
   'fail_closed_bad_token',
   'fail_closed_bad_request',
   'fail_closed_inactive_run',
+  'fail_closed_no_liveness',
   'fail_closed_internal',
 ]);
 export type ReasonCode = z.infer<typeof ReasonCode>;

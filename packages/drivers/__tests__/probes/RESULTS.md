@@ -2,7 +2,7 @@
 
 Run with `pnpm probes` (sets `FORGE_PROBES=1`). Host: Windows 11, Node 24.20, subscription auth,
 `@agentclientprotocol/claude-agent-acp@0.89.1`, `@agentclientprotocol/sdk@1.8.0`.
-All 16 probe tests passed in the 2026-10-13 runs (probes 1-7; after the two assertion updates noted under probes 1 and 5). Every child run strips `CLAUDECODE` and
+All 16 probe tests passed in the 2026-10-13 runs (probes 1-7; probe 8 lives in `apps/server` and is recorded below; after the two assertion updates noted under probes 1 and 5). Every child run strips `CLAUDECODE` and
 `CLAUDE_CODE_ENTRYPOINT` from its env.
 
 **Which Claude Code binary each probe measured (d-0053).**
@@ -193,6 +193,35 @@ run 2026-10-13 on host 2.1.296:
   value as a JSON string. The adapter returned `{ ok: true, value: { answer: 'ok' } }`.
 - Cost field is `total_cost_usd` (0.0126 USD for one trivial step on haiku); a schema step takes 2 turns.
 
+## Probe 8: Express ticket end to end on the real Claude harness (server) - PASS on the second run
+
+`apps/server/__tests__/probes/probe8-express-e2e.test.ts` (gated `FORGE_PROBES=1`), 2026-10-13, host Claude Code
+2.1.296, ACP adapter 0.89.1 (bundled CLI 2.1.293). Director steps on opus (d-0060 matrix), Worker on sonnet, local-bare host.
+
+- Run 1: FAIL after 98 s. The ticket parked in `waiting_human` (`policy_denied: not retried automatically`). Cause: the
+  receipt cross-check killed a healthy Worker, not a policy decision. The ACP adapter announces a tool call as the model
+  starts writing it (`tool_call` with `rawInput: {}`); the PreToolUse hook only runs once the whole input has streamed.
+  The Worker wrote two `Edit` calls back to back; the second was announced at 17:35:07.9 and its hook had not posted
+  3 s later, so the supervisor cancelled the run (`tool call ... (Edit) has no server-side decision receipt`). The hook
+  never got to post for it. Fix: a call announced with an empty input is cross-checked when its result arrives, or when
+  the turn ends normally without one (`run-supervisor.ts`); calls announced with their input keep the immediate check.
+- Run 2: PASS in 205 s (ticket `done`, `success`, cost 0.088 USD for the Worker). G1 `passed` (chain of 20 receipts, 11 tool
+  calls all receipted, 6 claims supported, test diff clean, `npm test` and lint pass); `add` is in the bare repo's `main`;
+  `hook_liveness` registered; `verifyChain` ok.
+- Measured: the hook latency from the ACP `tool_call` announcement to the stored decision is 2-4 s for reads and 2.3 s+ for
+  an edit on this box (it includes the model finishing the input), so a fixed 3 s grace from the announcement is not safe.
+- Measured: `PreToolUse` fires for `mcp__forge__finish` under ACP and gets a decision receipt (closes the open item of
+  probe 6). The run recorded two `finish` decisions (the first effect `uncertain`, the second `mutation_committed`). Explained
+  (2026-10-14, from the stored events): the model's first `finish` call omitted `summary`, the MCP server rejected it
+  (`Input validation error ... expected string, received undefined at summary`, `PostToolUseFailure` so the effect is
+  `uncertain`), and the model called `finish` again correctly. The hook records one decision per call; this is a Worker
+  retry, not a double PreToolUse. G1 accepted the chain.
+- Measured: the Worker first tried a compound `cd <worktree> ; ls ; cat ...` shell command (denied `approval/unattended`,
+  correct) and the harness `ToolSearch` tool (denied `capability/unknown_tool`); it then used Read/Glob/Edit and `npm test`.
+  Denied calls are fed back to the model as hook errors and the run continues; they do not park the ticket.
+- Not available: the driver keeps no raw ACP/harness log; the probe's artefacts are the normalised events, receipts, gate
+  results and the server log (`.forge/data/probes/8/`).
+
 ## Differences from the design docs
 
 - `--setting-sources` takes `""` (empty) to load nothing; there is no `none` keyword.
@@ -203,3 +232,9 @@ run 2026-10-13 on host 2.1.296:
 - On Windows the CLI's shell tool is `PowerShell`; hook matchers must not assume `Bash`.
 - Per-run hooks via `_meta.claudeCode.options.settings` work on ACP; the hook payload `tool_name` is `Bash`.
 - `strictMcpConfig` effect is unproven (control showed no MCP tools either); user hooks on ACP are unobservable.
+
+## Notes after the E2b review (2026-10-14)
+
+- Probe 9 (GitHub App, `packages/git/__tests__/probes/`) now needs `FORGE_PROBE_GITHUB=1` as well as `FORGE_PROBES=1` and the `FORGE_GH_*` variables, so `pnpm probes` never pushes to a real repository because the App variables happen to be set.
+- Harness children run with an allowlisted environment (`HARNESS_ENV_ALLOWLIST`); subscription login needs only the profile directory and `CLAUDE_CONFIG_DIR` when set. Probe 8 is the live check that the allowlist does not break the login.
+- The catalogue now records the reviewed harness build (`harness_version: 2.1.293`) per native tool; a different build leaves the native pins out until re-probed and re-signed.

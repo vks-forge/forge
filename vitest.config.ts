@@ -5,9 +5,14 @@
  *   same resolution as the build, so a green run means the whole workspace is green. It
  *   also enforces per-package line-coverage floors (70% for core and db, the state
  *   machine and storage the Director's correctness rests on; 80% for tools, mcp, hooks,
- *   drivers, engine, git, memory, secrets and apps/mcp and apps/cli, the policy and adapter code) so they cannot quietly lose test
- *   coverage. Live harness probes in packages/drivers/__tests__/probes skip themselves
+ *   drivers, engine, git, memory, secrets and apps/mcp, apps/cli and apps/server, the policy and adapter code) so they cannot quietly lose test
+ *   coverage. Live probes (any `__tests__/probes` folder: harness, GitHub App) skip themselves
  *   unless FORGE_PROBES=1, so they never count toward or against these floors.
+ *   Test files that spawn git, node children, PowerShell or a whole server run in a
+ *   separate `heavy` project, two at a time: on Windows every spawn costs hundreds of
+ *   milliseconds, and a dozen such files running at once starved each other into hook and
+ *   test timeouts and `EBUSY` on temp directories. Everything else runs in the `unit`
+ *   project at full parallelism. Coverage is configured once here and covers both.
  *
  * Exports: default export (vitest config).
  * Depends on: vitest. No IO.
@@ -15,11 +20,54 @@
 
 import { defineConfig } from 'vitest/config';
 
+/** Files whose tests spawn processes (git, node, powershell, a server): run few at a time. */
+const HEAVY = [
+  'packages/git/__tests__/**/*.test.ts',
+  'packages/secrets/__tests__/adapters/secret-stores.contract.test.ts',
+  'packages/gates/__tests__/adapters/command-runner.test.ts',
+  'packages/drivers/__tests__/adapters/**/*.test.ts',
+  'apps/server/__tests__/e2e/**/*.test.ts',
+  'apps/server/__tests__/services/run-server.test.ts',
+  'apps/server/__tests__/services/composition-parts.test.ts',
+];
+
+const INCLUDE = ['packages/*/__tests__/**/*.test.ts', 'apps/*/__tests__/**/*.test.ts'];
+const EXCLUDE = ['**/node_modules/**', '**/dist/**'];
+
 export default defineConfig({
   resolve: { conditions: ['development'] },
   test: {
-    include: ['packages/*/__tests__/**/*.test.ts', 'apps/*/__tests__/**/*.test.ts'],
-    exclude: ['**/node_modules/**', '**/dist/**'],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          include: INCLUDE,
+          exclude: [...EXCLUDE, ...HEAVY],
+          // Vitest runs projects with different worker limits one group after the other, so
+          // the fast files finish before the heavy ones start and never compete with them.
+          sequence: { groupOrder: 1 },
+          testTimeout: 20_000,
+          hookTimeout: 30_000,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'heavy',
+          include: HEAVY,
+          exclude: EXCLUDE,
+          // Two files at a time: enough to overlap waiting on children, few enough that
+          // they do not starve one another of process spawns.
+          maxWorkers: 2,
+          sequence: { groupOrder: 2 },
+          // Building a fixture repo is a dozen git processes and an e2e ticket runs real
+          // `npm test` three times; the defaults (5 s test, 10 s hook) are for unit tests.
+          testTimeout: 120_000,
+          hookTimeout: 120_000,
+        },
+      },
+    ],
     coverage: {
       provider: 'v8',
       include: [
@@ -36,6 +84,7 @@ export default defineConfig({
         'packages/secrets/src/**/*.ts',
         'apps/mcp/src/**/*.ts',
         'apps/cli/src/**/*.ts',
+        'apps/server/src/**/*.ts',
       ],
       exclude: ['**/__tests__/**', '**/index.ts', 'apps/*/src/main.ts'],
       thresholds: {
@@ -52,6 +101,7 @@ export default defineConfig({
         'packages/secrets/src/**': { lines: 80 },
         'apps/mcp/src/**': { lines: 80 },
         'apps/cli/src/**': { lines: 80 },
+        'apps/server/src/**': { lines: 80 },
       },
     },
   },

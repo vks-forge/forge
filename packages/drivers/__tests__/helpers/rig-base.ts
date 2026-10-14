@@ -23,6 +23,7 @@ import { createFakeReceipts } from '#tests/helpers/fake-receipts.js';
 import type { FakeReceipts } from '#tests/helpers/fake-receipts.js';
 import type { ContractHarness } from '#tests/contract/worker-driver.contract.js';
 import { makePrepareRun, tempDir } from '#tests/helpers/run-request.js';
+import { SECRET_ENV } from '#tests/helpers/secret-env.js';
 
 export const fakeGit = (files: string[] = ['src/a.ts']): GitPort => ({
   head: async () => 'base-sha',
@@ -71,7 +72,8 @@ export function baseDeps(
       CLAUDECODE: '1',
       CLAUDE_CODE_ENTRYPOINT: 'cli',
       FORGE_HOOK_CONFIG: '/stale/hook.json',
-      HOME_MARKER: 'kept',
+      CLAUDE_CONFIG_DIR: '/kept',
+      ...SECRET_ENV,
     },
     platform,
     signalGroup: (pid, signal) => groupSignals.push({ pid, signal }),

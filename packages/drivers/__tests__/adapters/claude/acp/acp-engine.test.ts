@@ -34,7 +34,9 @@ describe('ACP engine: process and environment (rule 1)', () => {
     const rig = makeAcpRig();
     await rig.driver.result(await rig.driver.start(rig.request()));
     const env = rig.spawns[0]?.options.env ?? {};
-    expect(env['HOME_MARKER']).toBe('kept');
+    expect(env['CLAUDE_CONFIG_DIR']).toBe('/kept');
+    expect(env).not.toHaveProperty('ANTHROPIC_API_KEY');
+    expect(env).not.toHaveProperty('FORGE_CATALOGUE_KEY');
     expect(env['FORGE_TICKET']).toBe('FG-1');
     expect(env['FORGE_RUN_ID']).toBe('run-1');
     for (const k of ['CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'FORGE_HOOK_CONFIG']) {
@@ -177,6 +179,7 @@ describe('ACP engine: preflight (d-0053)', () => {
       ok: true,
       issues: [],
       version: 'acp 0.89.1; claude-code 2.1.293',
+      harnessVersion: '2.1.293',
     });
   });
 

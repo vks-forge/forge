@@ -24,6 +24,7 @@ import type { ScriptedResponse } from '#tests/contract/director-llm.contract.js'
 import { createFakeClock } from '#tests/helpers/fake-clock.js';
 import type { FakeClock } from '#tests/helpers/fake-clock.js';
 import { tempDir } from '#tests/helpers/run-request.js';
+import { SECRET_ENV } from '#tests/helpers/secret-env.js';
 
 const FAKE_CLAUDE = join(import.meta.dirname, 'fake-claude.mjs');
 
@@ -91,7 +92,8 @@ export function makeDirectorRig(over: Partial<ClaudeDirectorLLMDeps> = {}): Dire
       PATH: process.env['PATH'],
       CLAUDECODE: '1',
       CLAUDE_CODE_ENTRYPOINT: 'cli',
-      HOME_MARKER: 'kept',
+      CLAUDE_CONFIG_DIR: '/kept',
+      ...SECRET_ENV,
     },
     // 'linux' so the kill path is the process-group one; the rig signals the single real pid.
     platform: 'linux',

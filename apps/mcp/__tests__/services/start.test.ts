@@ -19,6 +19,7 @@ import { join } from 'node:path';
 import { createSqliteStorage, openSqliteDriver } from '@forge/db';
 import type { StorageAdapter } from '@forge/core';
 import { hashToken } from '@forge/mcp';
+import type { ForgeMcpDeps } from '@forge/mcp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { depsFromEnv, parseEnv, start } from '#/services/start.js';
 
@@ -28,6 +29,14 @@ const T0 = '2026-10-13T00:00:00.000Z';
 let dir: string;
 let dbPath: string;
 let seed: StorageAdapter;
+/** Databases `start()` opened; closed after each test so the temp directory can go. */
+const opened: StorageAdapter[] = [];
+const track = (e: Record<string, string | undefined>): ForgeMcpDeps => {
+  const deps = depsFromEnv(e);
+  opened.push(deps.storage);
+
+  return deps;
+};
 
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'forge-mcp-'));
@@ -51,13 +60,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await Promise.all(opened.splice(0).map((s) => s.close()));
   await seed.close();
-  try {
-    rmSync(dir, { recursive: true, force: true });
-  } catch {
-    // start() opens its own connection that stays open for the process lifetime; on Windows
-    // that holds the file, and the OS temp cleaner removes it later.
-  }
+  rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 });
 
 const io = () => ({
@@ -76,14 +81,14 @@ const env = (over: Record<string, string> = {}) => ({
 describe('start', () => {
   it('serves the server when the registered token matches the running run', async () => {
     const x = io();
-    await start(env(), x);
+    await start(env(), x, track);
     expect(x.serve).toHaveBeenCalledTimes(1);
     expect(x.exit).not.toHaveBeenCalled();
   });
 
   it('exits 1 without serving when the token does not match', async () => {
     const x = io();
-    await start(env({ FORGE_RUN_TOKEN: 'nope' }), x);
+    await start(env({ FORGE_RUN_TOKEN: 'nope' }), x, track);
     expect(x.exit).toHaveBeenCalledWith(1);
     expect(x.serve).not.toHaveBeenCalled();
     expect(String(x.stderr.mock.calls[0]?.[0])).toMatch(/token/i);
@@ -92,7 +97,7 @@ describe('start', () => {
   it('exits 1 when the token was revoked', async () => {
     await seed.transaction((tx) => tx.runTokens.revoke(RUN_ID, T0));
     const x = io();
-    await start(env(), x);
+    await start(env(), x, track);
     expect(x.exit).toHaveBeenCalledWith(1);
     expect(x.serve).not.toHaveBeenCalled();
   });
@@ -113,7 +118,7 @@ describe('start', () => {
     );
 
     const x = io();
-    await start(env({ FORGE_RUN_ID: 'run-2' }), x);
+    await start(env({ FORGE_RUN_ID: 'run-2' }), x, track);
     expect(x.exit).toHaveBeenCalledWith(1);
     expect(x.serve).not.toHaveBeenCalled();
   });
@@ -121,7 +126,7 @@ describe('start', () => {
   it('refuses a missing database file without creating it', async () => {
     const x = io();
     const missing = join(dir, 'fresh.sqlite');
-    await start(env({ FORGE_DB_PATH: missing }), x);
+    await start(env({ FORGE_DB_PATH: missing }), x, track);
     expect(x.exit).toHaveBeenCalledWith(1);
     expect(x.serve).not.toHaveBeenCalled();
     expect(String(x.stderr.mock.calls[0]?.[0])).toMatch(/not found|does not exist/i);
@@ -132,7 +137,7 @@ describe('start', () => {
     const bare = join(dir, 'bare.sqlite');
     openSqliteDriver(bare).close();
     const x = io();
-    await start(env({ FORGE_DB_PATH: bare }), x);
+    await start(env({ FORGE_DB_PATH: bare }), x, track);
     expect(x.exit).toHaveBeenCalledWith(1);
     expect(x.serve).not.toHaveBeenCalled();
     expect(String(x.stderr.mock.calls[0]?.[0])).toMatch(/schema|migrat/i);
@@ -152,7 +157,7 @@ describe('start', () => {
 
     d.close();
     const x = io();
-    await start(env(), x);
+    await start(env(), x, track);
     expect(x.exit).toHaveBeenCalledWith(1);
     expect(x.serve).not.toHaveBeenCalled();
     expect(String(x.stderr.mock.calls[0]?.[0])).toMatch(/behind|migrat/i);
@@ -160,7 +165,7 @@ describe('start', () => {
 
   it('exits 1 on a missing environment without serving', async () => {
     const x = io();
-    await start({}, x);
+    await start({}, x, track);
     expect(x.exit).toHaveBeenCalledWith(1);
     expect(String(x.stderr.mock.calls[0]?.[0])).toMatch(/FORGE_RUN_ID/);
     expect(x.serve).not.toHaveBeenCalled();
@@ -170,7 +175,7 @@ describe('start', () => {
 describe('env parsing', () => {
   it('splits host lists and sets searxng only when given', () => {
     expect(parseEnv(env()).FORGE_RUN_ID).toBe(RUN_ID);
-    const d = depsFromEnv(
+    const d = track(
       env({
         FORGE_SEARXNG_URL: 'http://localhost:8888',
         FORGE_SEARXNG_ALLOW_HOSTS: 'a.lan, b.lan',
@@ -184,11 +189,11 @@ describe('env parsing', () => {
     });
 
     expect(d.fetchAllowHosts).toEqual(['docs.example.org']);
-    expect(depsFromEnv(env()).searxng).toBeUndefined();
+    expect(track(env()).searxng).toBeUndefined();
   });
 
   it('wires the production network ports here, not in the library domain', () => {
-    const d = depsFromEnv(env());
+    const d = track(env());
     expect(typeof d.resolve).toBe('function');
     expect(typeof d.transport).toBe('function');
     expect(typeof d.searchFetch).toBe('function');

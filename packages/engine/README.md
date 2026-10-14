@@ -43,7 +43,7 @@ Public API from `src/index.ts`:
   `commitAll` (Forge author), `GitHost.push`, `openPr` once (after `findPr` finds no open PR for the branch; the number is stored on the ticket by CAS
   before any gate runs), then the project's gates as a background job (below) on exactly the pushed
   commit (`worktrees.head`, stored as `gate_results.head_sha`), with a `GateContext` (claims come from the run's `finish` run event). Each report goes through
-  `deps.reports.put`, each verdict is a `gate_results` row. All `passed`/`skipped`: the PR head must equal
+  `deps.reports.put` (named `<gate>-<head sha>.txt`, so a re-gate of a new head never replaces an earlier report), each verdict is a `gate_results` row. All `passed`/`skipped`: the PR head must equal
   the judged sha, else nothing merges and the new head is gated again (at most 3 re-gates per run, then
   a park); then `gate_passed` with `tier_actual` (C when the diff touches the project's `tier_c_globs`,
   else the predicted tier; the diff tier must still equal it at merge), tier A then `merge(squash, judgedSha)`
@@ -68,6 +68,7 @@ Public API from `src/index.ts`:
   note after a failed gate.
 - Pure rules, also exported: `decideLane`, `decideFailure`, `findViolations`, `nextTicketNumber`,
   `requestWake`.
+- Process-edge helpers the app plugs in, kept here so `apps/server` holds no port implementation: `createIdSource()` (the `IdSource`: random `run-`/`wake-`/`int-` ids and 256-bit base64url run tokens from the OS random source), `createOwnerId()`, and `createJsonLogger(write, min?, now?)` (one JSON line per log call, never throws, redacts fields whose names look like credentials).
 - Run settle records status, usage, cost, error family, the files git says changed, the receipt
   chain's last hash and revokes the token; the worktree is kept for the PR step.
 
@@ -111,7 +112,7 @@ Public API from `src/index.ts`:
   `reports` (a `ReportStore`), `project(slug)` (a `ProjectRuntime`: config, `GitHost`, gates; null = the
   project's tickets stay in Verifying), clock, `config` (a parsed `ForgeConfig`, from `.forge/config/forge.yaml`), `ids`, `owner`
   (this server's name), `baseRef`, `catalogueHash`, optional `mcpIdentity`, `onTickRequested`, `log`.
-- No env, files or processes are touched here. Tests: `pnpm test` (scenarios in
+- No env, files or processes are touched here (the id source reads only OS entropy). Tests: `pnpm test` (scenarios in
   `__tests__/scenarios`, pure rules in `__tests__/domain`, the status-write property in
   `__tests__/property`); coverage floor 80% lines.
 

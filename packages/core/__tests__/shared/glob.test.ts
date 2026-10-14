@@ -15,6 +15,14 @@
 import { describe, expect, it } from 'vitest';
 import { globMatch } from '#/shared/glob.js';
 
+describe('globMatch case', () => {
+  it('is case-sensitive by default and case-insensitive on request', () => {
+    expect(globMatch('.github/**', '.GitHub/workflows/ci.yml')).toBe(false);
+    expect(globMatch('.github/**', '.GitHub/workflows/ci.yml', true)).toBe(true);
+    expect(globMatch('*.sql', 'DB/X.SQL', true)).toBe(true);
+  });
+});
+
 describe('globMatch grammar', () => {
   it('matches a slash-less pattern at any depth (gitignore semantics)', () => {
     expect(globMatch('*.sql', 'x.sql')).toBe(true);

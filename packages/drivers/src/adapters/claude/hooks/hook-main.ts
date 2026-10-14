@@ -7,10 +7,12 @@
  *   receipt), then maps the answer to an exit code. It fails closed: a dead server, a
  *   missing token file, a garbled answer or a timeout all exit 2, because Claude Code's
  *   own default on hook failure is to let the tool run (d-0033, probe 2). The one
- *   exception is PostToolUse*, which cannot undo anything and only logs. The run secret
+ *   exception is PostToolUse*, which cannot undo anything and only logs. A tool output over 1 MiB is
+ *   replaced by a prefix plus the hash of the whole before posting, so a big file read
+ *   cannot exceed the server's body limit and turn into a blocked tool. The run secret
  *   is never here; the hook holds only a bearer token.
  *
- * Exports: runHook(), readStream(), main().
+ * Exports: boundOutput(), runHook(), readStream(), main().
  * Depends on: @forge/tools/hook-wire (wire schemas only, so the process starts fast),
  *   hooks/decision-outcome, hooks/hook-config-file, schemas/claude-hook-config,
  *   types/claude/hook-client. IO: stdin, stderr, one HTTP call.
@@ -19,7 +21,14 @@
 import { readFile } from 'node:fs/promises';
 import { loadHookConfig } from '#/adapters/claude/hooks/hook-config-file.js';
 import { failClosed, fromResponse } from '#/adapters/claude/hooks/decision-outcome.js';
-import { HookPayload, HookResponse } from '@forge/tools/hook-wire';
+import { createHash } from 'node:crypto';
+import {
+  HookPayload,
+  HookResponse,
+  MAX_TOOL_OUTPUT_BYTES,
+  TRUNCATED_PREFIX_BYTES,
+} from '@forge/tools/hook-wire';
+import type { TruncatedOutput } from '@forge/tools/hook-wire';
 import type { HookConfig } from '#/schemas/claude-hook-config.js';
 import type {
   HookIo,
@@ -43,6 +52,44 @@ function peekEvent(stdin: string): string | undefined {
   }
 
   return undefined;
+}
+
+/**
+ * Replaces an oversized tool output with a bounded prefix plus the hash of the whole, so
+ * the request stays small (a file read can be tens of MiB) and the server's effect receipt
+ * still binds the full output.
+ */
+export function boundOutput(value: unknown): unknown {
+  if (value === undefined) {
+    return value;
+  }
+
+  const json = JSON.stringify(value) ?? 'null';
+  const bytes = Buffer.byteLength(json, 'utf8');
+  if (bytes <= MAX_TOOL_OUTPUT_BYTES) {
+    return value;
+  }
+
+  const truncated: TruncatedOutput = {
+    truncated: true,
+    bytes,
+    sha256: createHash('sha256').update(json, 'utf8').digest('hex'),
+    prefix: json.slice(0, TRUNCATED_PREFIX_BYTES),
+  };
+
+  return truncated;
+}
+
+/** The payload with its output fields bounded; every other field is passed on untouched. */
+function boundPayload(payload: HookPayload): HookPayload {
+  const out: Record<string, unknown> = { ...payload };
+  for (const field of ['tool_response', 'error']) {
+    if (field in out) {
+      out[field] = boundOutput(out[field]);
+    }
+  }
+
+  return out as HookPayload;
 }
 
 function endpoint(cfg: HookConfig): string {
@@ -112,7 +159,11 @@ export async function runHook(io: HookIo): Promise<HookResult> {
     const event = payload.data.hook_event_name;
     const cfg = await loadHookConfig(io);
     try {
-      const res = await post(io, cfg, { event, payload: payload.data, seq: io.now() });
+      const res = await post(io, cfg, {
+        event,
+        payload: boundPayload(payload.data),
+        seq: io.now(),
+      });
 
       return fromResponse(event, res);
     } catch (error) {

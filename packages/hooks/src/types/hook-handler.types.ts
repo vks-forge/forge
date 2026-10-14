@@ -33,6 +33,7 @@ export type FailClosedCode =
   | 'no_credentials'
   | 'bad_token'
   | 'inactive_run'
+  | 'no_liveness'
   | 'bad_request'
   | 'internal';
 
@@ -71,6 +72,12 @@ export interface HookHandlerDeps {
   readonly audit?: HookAudit;
   /** Receipt id source; defaults to `crypto.randomUUID`. */
   readonly newId?: () => string;
+  /**
+   * Deny a run's tool calls until its hook has registered (`hook_registered_at`, d-0033).
+   * A harness that never ran our SessionStart hook may not be running the PreToolUse hook
+   * either; with this on, an unregistered run gets `fail_closed_no_liveness`. Default off.
+   */
+  readonly requireLiveness?: boolean;
   /** Called on a valid SessionStart so the engine can register run liveness (d-0033). */
   readonly onLiveness?: (
     runId: string,

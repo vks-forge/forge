@@ -1,6 +1,6 @@
 # @forge/hooks
 
-The harness-neutral receipt ingress of Forge: the server handler that answers a Worker's hook posts, decides each tool call with `admit()` and appends the signed receipt. The harness-side hook script lives in the driver that owns the harness (Claude: `@forge/drivers`, d-0056).
+The harness-neutral receipt ingress of Forge: the server handler that answers a Worker's hook posts, decides each tool call with `admit()` and appends the signed receipt, plus the in-memory registry of each run's token and HMAC secret and the liveness recorder. The harness-side hook script lives in the driver that owns the harness (Claude: `@forge/drivers`, d-0056).
 
 ## Why it exists
 
@@ -16,7 +16,8 @@ harness --stdin JSON--> hook script (driver) --POST {event,payload,seq}, Bearer 
 exit 0 allow | exit 2 deny/ask/any failure (reason on stderr)         admit() + HMAC receipt chain
 ```
 
-- `createHookHandler({ db, receipts, admit, credentials, admitContext, clock, audit? })` -> `handle(runId, token, request)`. Checks token (`constantTimeEqual` from `@forge/tools`), refuses a run that is no longer active (`isRunActive` from `@forge/core`: ended, settling or settled runs answer `fail_closed_inactive_run` and get no receipts; a `starting` run is served so its hook can register liveness), runs `admit()`, appends decision / effect receipts (each decision records its `resource` via `callResource()` from `@forge/tools`, the same resolver `admit()` uses; `seq` from the chain tail), never throws.
+- `createRunSecretRegistry(newSecret?, max?)` (`RunSecretRegistry`): the memory-only per-run bearer token and HMAC secret (d-0054), capped at `MAX_RUN_SECRETS` (5000, oldest out first). A run id is registered once (a resume is a new run, d-0055): a second `register` throws instead of issuing a second secret the chain was not signed with. `createLivenessRecorder({ storage, now, onRegistered })` is the handler's `onLiveness`: only the first `SessionStart` of a run writes the `hook_liveness` event and `hook_registered_at` (resume, compact and clear do not move it).
+- `createHookHandler({ db, receipts, admit, credentials, admitContext, clock, audit?, requireLiveness?, onLiveness? })` -> `handle(runId, token, request)`. Checks token (`constantTimeEqual` from `@forge/tools`), refuses a run that is no longer active (`isRunActive` from `@forge/core`: ended, settling or settled runs answer `fail_closed_inactive_run` and get no receipts; a `starting` run is served so its hook can register liveness), with `requireLiveness` a `PreToolUse` from a run whose `hook_registered_at` is unset is denied `fail_closed_no_liveness` with no receipt (d-0033), runs `admit()`, appends decision / effect receipts (each decision records its `resource` via `callResource()` from `@forge/tools`, the same resolver `admit()` uses; `seq` from the chain tail), never throws. An effect's `result_hash` is the canonical-JSON SHA-256 of the output, or, when the hook sent a `TruncatedOutput` stub for an output over 1 MiB, the hash of the whole output the stub carries (`resultHash()`).
 - Wire schemas `HookPayload`, `HookRequest`, `HookResponse` are defined in `@forge/tools` (`schemas/hook-wire.ts`, also importable as `@forge/tools/hook-wire`) so the hook client and this handler share them without depending on each other. The client (`bin/hook.js`, `runHook`, `HookConfig`) and the `--settings` / ACP `_meta` renderers are in `@forge/drivers` (`adapters/claude/hooks/`). Receipts go through the `ReceiptLog` port from `@forge/tools`; `@forge/db` provides `openSqlite(path).receipts` and `createMemoryReceiptLog()`.
 
 | Event                | allow | deny / ask   | any failure  |
@@ -25,7 +26,7 @@ exit 0 allow | exit 2 deny/ask/any failure (reason on stderr)         admit() + 
 | PreToolUse           | 0     | 2 + stderr   | 2            |
 | PostToolUse(Failure) | 0     | 0 (logged)   | 0 (logged)   |
 
-**PreToolUse is the only hard gate.** Claude Code treats SessionStart as non-blocking (exit 2 only shows stderr), so SessionStart exit codes are advisory; a run that never registers liveness is killed by the engine (d-0033), and its first tool call is still judged at PreToolUse.
+**PreToolUse is the only hard gate.** Claude Code treats SessionStart as non-blocking (exit 2 only shows stderr), so SessionStart exit codes are advisory; with `requireLiveness` (the server turns it on) a run whose hook never registered cannot make a tool call at all (d-0033).
 
 Fail-closed matrix (PreToolUse; SessionStart advisory): server down, timeout, non-2xx, malformed answer, missing or invalid config, bad stdin, unbuilt dist all exit 2. Server side: unknown run, no credentials, bad token, inactive run, bad request, internal error answer `deny` with `fail_closed_<code>`; a bad token or internal error on a real run is reported to the optional `audit(runId, entry)` dep (in-memory default, at most one entry per run per 10 s with a count of suppressed ones) and is never appended to the signed chain, so a Worker cannot bloat it.
 

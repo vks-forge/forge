@@ -246,7 +246,7 @@ export function createCliEngine(deps: EngineDeps): ClaudeEngine {
               `missing binary: ${deps.config.claudeBinary} did not report a version`,
             ],
           }
-        : { ok: true, issues: [], version };
+        : { ok: true, issues: [], version, harnessVersion: version };
     },
     launch: (launch, sink) => launchCli(deps, launch, sink),
   };

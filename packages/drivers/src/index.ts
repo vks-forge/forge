@@ -8,15 +8,18 @@
  *   Forge's side (execution-plane.md section 4). The app composes a driver from this
  *   surface and the ports it owns (run preparation, receipts, clock, spawn).
  *
- * Exports: createClaudeDriver, createClaudeDirectorLLM, systemClock, nodeSpawn, parseClaudeConfig, ClaudeDriverConfig,
+ * Exports: createClaudeDriver, createClaudeDirectorLLM, systemClock, nodeSpawn, createReceiptLookup, resolveClaudeBinary, parseClaudeConfig, ClaudeDriverConfig,
  *   pinned versions and the driver dependency types.
  * Depends on: adapters/claude, schemas, types. No IO on import.
  */
 
 export * from '#/adapters/claude/claude-driver.js';
 export * from '#/adapters/claude/director-llm.js';
+export * from '#/adapters/claude/receipt-lookup.js';
 export * from '#/adapters/claude/system.js';
+export { resolveClaudeBinary } from '#/domain/claude-binary.js';
 export * from '#/schemas/claude-config.js';
+export type * from '#/types/claude/claude-binary.types.js';
 export type * from '#/types/claude/director-llm.types.js';
 export type * from '#/types/claude/driver-deps.types.js';
 export type * from '#/types/claude/engine.types.js';

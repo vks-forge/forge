@@ -7,7 +7,7 @@
  * signature that verifies against the App's public key. Live GitHub is covered by a probe;
  * here git is replaced by a recording runner.
  *
- * Pins: push argv holds no token, env holds the scoped extraheader and no prompt, runner
+ * Pins: gitAuthEnv matches the push env, push argv holds no token, env holds the scoped extraheader and no prompt, runner
  * errors are scrubbed, JWT claims and signature, redactSecrets covers the base64 form.
  * Depends on: src/index, src/adapters/github-app/app-jwt, src/domain/push-env, node:crypto.
  */
@@ -68,6 +68,14 @@ function pushRig(run: GitRunner['run'], gitBase?: string) {
 }
 
 describe('github app push', () => {
+  it('gitAuthEnv hands out the same env-only auth push uses, scoped to the git base', async () => {
+    const { host } = pushRig(async () => '', 'https://ghe.corp.example');
+
+    expect(await host.gitAuthEnv()).toEqual(
+      buildPushEnv(TOKEN, 'https://ghe.corp.example'),
+    );
+  });
+
   it('pushes branch:branch to the repo URL with the token only in the environment', async () => {
     const { host, calls } = pushRig(async () => '');
 

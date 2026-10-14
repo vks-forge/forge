@@ -81,7 +81,13 @@ export async function runGates(
       };
     }
 
-    const ref = await deps.reports.put(t.run.id, `${gate.name}.txt`, verdict.report);
+    // The head sha in the name keeps a re-run on a new head from replacing the earlier report.
+    const ref = await deps.reports.put(
+      t.run.id,
+      `${gate.name}-${headSha}.txt`,
+      verdict.report,
+    );
+
     const row = await deps.storage.transaction((tx) =>
       tx.gateResults.insert({
         run_id: t.run.id,

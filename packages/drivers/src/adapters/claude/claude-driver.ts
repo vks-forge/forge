@@ -30,7 +30,7 @@ import {
   existingSettingsSources,
   settingsSourcePaths,
 } from '#/adapters/claude/settings-sources.js';
-import { buildChildEnv } from '#/domain/child-env.js';
+import { allowlistEnv, buildChildEnv } from '#/domain/child-env.js';
 import { parseClaudeConfig } from '#/schemas/claude-config.js';
 import type { SupervisedRun } from '#/types/claude/supervisor.types.js';
 import type { ClaudeDriverDeps } from '#/types/claude/driver-deps.types.js';
@@ -47,7 +47,7 @@ const ENGINES: Record<'acp' | 'cli', (deps: EngineDeps) => ClaudeEngine> = {
 export function createClaudeDriver(deps: ClaudeDriverDeps): WorkerDriver {
   const config = parseClaudeConfig(deps.config);
   const platform = deps.platform ?? process.platform;
-  const baseEnv = deps.baseEnv ?? process.env;
+  const baseEnv = allowlistEnv(deps.baseEnv ?? process.env, config.envPassthrough);
   const log = deps.log ?? (() => undefined);
   const git = deps.git ?? createGitCli();
   const hookJsPath =

@@ -11,10 +11,11 @@
  */
 
 import { execFile } from 'node:child_process';
-import { mkdtemp, mkdir, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, realpath, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import { removeTree, trackTemp } from '#tests/helpers/temp.js';
 
 const run = promisify(execFile);
 const IDENTITY = {
@@ -51,7 +52,7 @@ export interface LocalRemote {
 }
 
 export async function makeLocalRemote(): Promise<LocalRemote> {
-  const root = await realpath(await mkdtemp(join(tmpdir(), 'forge host ')));
+  const root = trackTemp(await realpath(await mkdtemp(join(tmpdir(), 'forge host '))));
   const remotePath = join(root, 'remote.git');
   const work = join(root, 'work');
   await mkdir(remotePath);
@@ -102,6 +103,6 @@ export async function makeLocalRemote(): Promise<LocalRemote> {
         return null;
       }
     },
-    cleanup: () => rm(root, { recursive: true, force: true }),
+    cleanup: () => removeTree(root),
   };
 }

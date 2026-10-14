@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "types": ["node"]
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../../packages/core" },
+    { "path": "../../packages/db" },
+    { "path": "../../packages/drivers" },
+    { "path": "../../packages/engine" },
+    { "path": "../../packages/gates" },
+    { "path": "../../packages/git" },
+    { "path": "../../packages/hooks" },
+    { "path": "../../packages/mcp" },
+    { "path": "../../packages/memory" },
+    { "path": "../../packages/secrets" },
+    { "path": "../../packages/tools" }
+  ]
+}

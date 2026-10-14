@@ -28,6 +28,12 @@ export interface Preflight {
   // Human-readable problems, e.g. "missing binary"; empty when ok.
   readonly issues: readonly string[];
   readonly version?: string;
+  /**
+   * Build of the harness itself (not an adapter around it) that runs Workers, as `x.y.z`.
+   * The server compares it with the catalogue's reviewed version before it trusts the
+   * harness's native tool schemas (d-0053).
+   */
+  readonly harnessVersion?: string;
 }
 
 /** The contract every harness driver implements, so the Director starts, steers, resumes and kills a run the same way on any harness. `events()` and `result()` make a serialisable {@link RunHandle} usable after a restart. */

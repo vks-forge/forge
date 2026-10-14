@@ -6,17 +6,16 @@
  *   thing each pins, and keeps them honest by parsing through the real core schema.
  *
  * Exports: makeRequest(), makePrepareRun(), tempDir().
- * Depends on: @forge/core (RunRequest), node:fs, node:os, node:path. IO: creates temp dirs.
+ * Depends on: @forge/core (RunRequest), helpers/temp, node:path. IO: creates temp dirs, removed after the test file.
  */
 
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { RunRequest } from '@forge/core';
 import type { PreparedRun } from '#/types/claude/driver-deps.types.js';
+import { makeTempDir } from '#tests/helpers/temp.js';
 
 export function tempDir(prefix = 'forge-driver-'): string {
-  return mkdtempSync(join(tmpdir(), prefix));
+  return makeTempDir(prefix);
 }
 
 export function makeRequest(over: Partial<RunRequest> = {}): RunRequest {

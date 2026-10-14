@@ -19,6 +19,7 @@ import { z } from 'zod';
 import { createClaudeDirectorLLM } from '#/adapters/claude/director-llm.js';
 import { nodeSpawn } from '#/adapters/claude/system.js';
 import { makeDirectorRig, resultDoc } from '#tests/helpers/director-llm-rig.js';
+import { SECRET_NAMES } from '#tests/helpers/secret-env.js';
 import { waitFor } from '#tests/helpers/wait-for.js';
 
 const Answer = z.object({ answer: z.string().min(1) });
@@ -84,7 +85,18 @@ describe('Claude DirectorLLM: command line and process', { timeout: 30_000 }, ()
     const call = rig.lastCall();
     expect(call.env).not.toHaveProperty('CLAUDECODE');
     expect(call.env).not.toHaveProperty('CLAUDE_CODE_ENTRYPOINT');
+    expect(call.env['CLAUDE_CONFIG_DIR']).toBe('/kept');
     expect(call.cwd.toLowerCase()).toBe(process.cwd().toLowerCase());
+  });
+
+  it('never hands the server secrets to the Director child', async () => {
+    const rig = makeDirectorRig();
+    rig.script({ kind: 'valid', value: { answer: 'ok' } });
+    await step(rig);
+    const env = rig.lastCall().env;
+    for (const k of SECRET_NAMES) {
+      expect(env).not.toHaveProperty(k);
+    }
   });
 
   it('honours the per-call model and budget', async () => {

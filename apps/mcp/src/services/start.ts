@@ -60,10 +60,17 @@ export function depsFromEnv(env: Env): ForgeMcpDeps {
   });
 }
 
-/** Starts the server from `env`; on any startup failure writes to stderr and exits 1. */
-export async function start(env: Env, io: StartIo): Promise<void> {
+/**
+ * Starts the server from `env`; on any startup failure writes to stderr and exits 1.
+ * `makeDeps` is the seam a test uses to keep hold of the database it opened and close it.
+ */
+export async function start(
+  env: Env,
+  io: StartIo,
+  makeDeps: (env: Env) => ForgeMcpDeps = depsFromEnv,
+): Promise<void> {
   try {
-    await io.serve(await createForgeMcpServer(depsFromEnv(env)));
+    await io.serve(await createForgeMcpServer(makeDeps(env)));
   } catch (err) {
     io.stderr(`forge-mcp: ${err instanceof Error ? err.message : 'startup failed'}\n`);
     io.exit(1);

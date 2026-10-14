@@ -20,7 +20,9 @@ export function computeTierActual(
   tierCGlobs: readonly string[],
   changedPaths: readonly string[],
 ): Tier {
-  const touchesC = changedPaths.some((p) => tierCGlobs.some((g) => globMatch(g, p)));
+  const touchesC = changedPaths.some((p) =>
+    tierCGlobs.some((g) => globMatch(g, p, true)),
+  );
 
   return touchesC ? 'C' : predicted;
 }

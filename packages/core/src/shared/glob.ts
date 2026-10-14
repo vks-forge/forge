@@ -34,7 +34,7 @@ function normalise(glob: string): string {
     .replace(/(?:\*\*\/)+/g, '**/');
 }
 
-function globToRegex(glob: string): RegExp {
+function globToRegex(glob: string, ignoreCase: boolean): RegExp {
   const g = normalise(glob);
   // gitignore: a pattern with no slash matches the name at any depth.
   let out = g.includes('/') ? '' : '(?:.*/)?';
@@ -57,10 +57,15 @@ function globToRegex(glob: string): RegExp {
     }
   }
 
-  return new RegExp(`^${out}$`);
+  return new RegExp(`^${out}$`, ignoreCase ? 'i' : '');
 }
 
-/** True when `path` matches `glob`; backslashes are normalised so Windows-style input matches. */
-export function globMatch(glob: string, path: string): boolean {
-  return globToRegex(glob).test(path.replaceAll('\\', '/'));
+/**
+ * True when `path` matches `glob`; backslashes are normalised so Windows-style input
+ * matches. Matching is case-sensitive unless `ignoreCase` is set. Tier-C checks set it:
+ * Windows and macOS file systems are case-insensitive, so `.GitHub/workflows/ci.yml` is
+ * the same file as `.github/...` and must not slip past a tier-C glob.
+ */
+export function globMatch(glob: string, path: string, ignoreCase = false): boolean {
+  return globToRegex(glob, ignoreCase).test(path.replaceAll('\\', '/'));
 }

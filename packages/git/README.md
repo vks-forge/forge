@@ -71,6 +71,8 @@ GitHost adapters (the port is in `@forge/core`):
   `PUT /pulls/{n}/merge` (with `sha: expectedHeadSha`; GitHub's 409 "Head branch was modified" becomes
   `HeadMovedError`, a 405/409 saying a branch "was modified" becomes the retryable `merge_busy`, any other 405/409 stays
   a `merge_refused` park), close (`PATCH state=closed`), `DELETE /git/refs/heads/{branch}` (already gone is fine).
+  `gitAuthEnv()` (extra method, type `GitHubAppGitHost`) returns the same token-bearing child env that `push` uses, so a caller can run
+  `git fetch` or `git ls-remote` against the repo (the live probe does); treat the values as secret and never log them.
   `push` runs `git push https://github.com/<owner>/<repo>.git <branch>:<branch>` with the token only in the child
   environment (see "Why this approach").
 - `GitHostError` (extends `ForgeError`) carries `reason` and, for REST failures, `status`. 401 and a plain 403 are
@@ -116,7 +118,8 @@ Node and git on Windows. Any git failure becomes a `CrashError` with the stderr 
 - Tests: `pnpm test`, or `npx vitest run packages/git`. They create throwaway repos in the OS
   temp dir (names with a space) and need `git` to run. The GitHub host tests use a fake REST server on
   127.0.0.1 that verifies the JWT signature, and test push through a recording git runner. Live GitHub is
-  covered later by a probe.
+  covered by probe 9 (`__tests__/probes/`, `pnpm probes` with `FORGE_PROBE_GITHUB=1` plus `FORGE_GH_APP_ID`, `FORGE_GH_INSTALLATION_ID`,
+  `FORGE_GH_OWNER`, `FORGE_GH_REPO` set and the key stored as `github-app-key` in `.forge/data/secrets`).
 
 ## Extending
 

@@ -42,6 +42,12 @@ export const ClaudeDriverConfig = z.object({
   claudeBinary: z.string().min(1).default('claude'),
   /** Declare live `steer` for the ACP engine (the pinned adapter advertises `_session/steering`). */
   acpSteering: z.boolean().default(true),
+  /**
+   * Host variables handed to the harness on top of the built-in allowlist. Default none:
+   * subscription login needs only the profile directory. Name `ANTHROPIC_API_KEY` here only
+   * in api_key credential mode (d-0031).
+   */
+  envPassthrough: z.array(z.string().min(1)).default([]),
   pinnedAdapterVersion: z.string().min(1).default(PINNED_ADAPTER_VERSION),
   pinnedCliVersion: z.string().min(1).default(PINNED_BUNDLED_CLI_VERSION),
 });

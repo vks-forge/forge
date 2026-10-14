@@ -12,13 +12,14 @@ Public API (`src/index.ts`):
 
 - `createG1Gate(deps: G1Deps): Gate` returns a core `Gate` named `G1`. It pairs the pure `buildG1Gate` (domain, `runCommand` required) with the real spawner; the domain never imports an adapter.
 - `runShellCommand(req)` is the default command runner (`G1Deps.runCommand` seam).
+- `createFileReportStore(dataDir)` is the core `ReportStore` on disk: `<dataDir>/runs/<runId>/gates/<name>.md`, written under a temp name and linked into place (atomic), never overwriting (a taken name gets `-2`, `-3`, ...), run id and name checked against a strict pattern. The engine names a report `<gate>-<head sha>`. `createStorageToolCallLister(storage)` is G1's `listToolCalls` over the stored `tool_call` run events.
 - Types: `G1Deps`, `ToolCallRef`, `CommandRequest`, `CommandResult`, `RunCommand`.
 
 `G1Deps`: `receipts: ReceiptLog`, `worktrees: Pick<WorktreeManager,'diff'>`, `listToolCalls(runId)`, `runSecret(runId): HmacKey | null`, `env`, and optional `passEnv` (extra env names for project commands), `runCommand`, `commandTimeoutMs` (default 10 min), `ignoreToolCall`, `now`.
 
 G1 runs five checks and folds them into one `GateVerdict` (`failed` if any finding, else `error` if a check could not run, else `passed`; `report` is markdown, one section per check):
 
-1. **chain**: `verifyChain` over the run's receipts under the run secret; every tool-call run event must have a decision receipt whose `id` equals the event's `call_id` (hook `tool_use_id` equals ACP `toolCallId`, d-0057). No secret, or a key too weak to verify with, is `error`, never `passed`.
+1. **chain**: `verifyChain` over the run's receipts under the run secret; every tool-call run event must have a decision receipt whose `id` equals the event's `call_id` (hook `tool_use_id` equals ACP `toolCallId`, d-0057). A key too weak to verify with is `error`, never `passed`. No secret at all (the server restarted, d-0054, or the registry evicted it) is `failed` with the finding "Receipt chain unverifiable after restart (the run secret is gone); re-running the ticket.": an `error` would park the ticket and unparking would hit the same missing secret for ever, while a failed gate sends it to rework, which starts a fresh run with a fresh secret.
 2. **claims**: each `finish` claim needs evidence, else a finding quoting it.
    - `edited P`: allowed `edit`/`write` decision with a `mutation_committed` effect on P, and P is in the diff.
    - `read P`: allowed `read` decision with a `read_completed` effect on P.

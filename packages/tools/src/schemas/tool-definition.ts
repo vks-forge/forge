@@ -65,6 +65,12 @@ export const HarnessSupport = z.object({
   native: NativeName.optional(),
   mechanism: z.string().min(1),
   enforced: Enforcement,
+  /**
+   * Harness build (`x.y.z`) whose native tool schemas were reviewed for this entry. Native
+   * tools have no live schema source, so the pin is trusted only while the running harness
+   * reports exactly this version (d-0053); absent means never reviewed.
+   */
+  harness_version: z.string().min(1).optional(),
 });
 export type HarnessSupport = z.infer<typeof HarnessSupport>;
 

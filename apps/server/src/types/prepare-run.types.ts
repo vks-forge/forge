@@ -1,0 +1,26 @@
+/**
+ * Options of the run preparation port.
+ *
+ * Why: preparing a run needs paths (run directory, database, MCP entry), the in-memory
+ *   credential registry and the server's own URL. Naming them as one bag keeps the
+ *   function small and lets a test point it at a temp directory and a fake port.
+ *
+ * Exports: PrepareRunOptions.
+ * Depends on: @forge/hooks (RunSecretRegistry). Types only.
+ */
+
+import type { RunSecretRegistry } from '@forge/hooks';
+
+export interface PrepareRunOptions {
+  /** `.forge/data/runs`; each run gets a subdirectory. */
+  readonly runsDir: string;
+  /** Absolute path of the SQLite file the per-run MCP process opens. */
+  readonly dbPath: string;
+  /** Absolute path of `apps/mcp/dist/main.js`. */
+  readonly mcpEntry: string;
+  /** Node executable that runs the MCP entry. */
+  readonly nodePath: string;
+  readonly registry: RunSecretRegistry;
+  /** Base URL of this server, e.g. `http://127.0.0.1:4310`; read per run because the port may be dynamic. */
+  readonly hookBaseUrl: () => string;
+}

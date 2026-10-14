@@ -6,7 +6,7 @@
  *   evidence; if a missing run secret read as success the gate would pass blind.
  *
  * Pins: valid chain passes, wrong secret and edited row fail, tool call without a
- *   decision fails, null secret is `error` (never passed).
+ *   decision fails, null secret is `failed` with the restart finding (never passed, never a parking `error`).
  * Depends on: domain/chain-check, helpers/fixtures.
  */
 
@@ -53,10 +53,12 @@ describe('checkChain', () => {
     expect(out.findings[0]?.message).toContain('ghost');
   });
 
-  it('reports error, not passed, when the run secret is unavailable', () => {
+  it('fails, not errors, when the run secret is gone, so the ticket is re-run (M6)', () => {
     const out = checkChain(chain(calls), [], null);
 
-    expect(out.status).toBe('error');
-    expect(out.details).toContain('secret unavailable');
+    expect(out.status).toBe('failed');
+    expect(out.findings[0]?.message).toBe(
+      'Receipt chain unverifiable after restart (the run secret is gone); re-running the ticket.',
+    );
   });
 });

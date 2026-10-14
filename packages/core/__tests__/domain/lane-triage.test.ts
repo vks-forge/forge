@@ -60,6 +60,12 @@ describe('preCheckLane', () => {
     expect(r.reasons.join()).toMatch(/tier-C/);
   });
 
+  it('matches tier-C globs ignoring case, as case-insensitive file systems do', () => {
+    const r = preCheckLane({ ...base, touchedPaths: ['Packages/DB/Migrations/1.sql'] });
+
+    expect(r.lane).toBe('full');
+  });
+
   it('goes at least standard above 3 files', () => {
     const paths = (n: number) => Array.from({ length: n }, (_, i) => `src/f${i}.ts`);
     expect(preCheckLane({ ...base, touchedPaths: paths(3) }).lane).toBe('express');

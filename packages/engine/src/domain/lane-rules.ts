@@ -22,7 +22,10 @@ export function decideLane(input: LaneInput): LaneDecision {
   const { pre, llm, hint, threshold, tierCGlobs } = input;
   const clean = pre.reasons.length === 0;
   const reasons: string[] = [...pre.reasons];
-  const tierC = llm.predicted_files.some((p) => tierCGlobs.some((g) => globMatch(g, p)));
+  const tierC = llm.predicted_files.some((p) =>
+    tierCGlobs.some((g) => globMatch(g, p, true)),
+  );
+
   const tier: Tier = tierC ? 'C' : llm.tier_predicted;
 
   if (hint === 'full') {

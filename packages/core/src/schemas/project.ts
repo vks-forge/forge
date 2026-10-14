@@ -3,7 +3,7 @@
  *
  * Why: the factory must work on repos in any language without code changes, so what
  *   varies per repo (which commands run tests and lint, whether TypeScript-specific
- *   gates apply, which harness Workers use, where the remote is) lives in
+ *   gates apply, which harness Workers use, where the remote is, which paths need a human) lives in
  *   `.forge/project.yaml`. Validating it at load, not when a gate first runs it, turns a
  *   typo into an immediate readable startup error instead of a Worker or gate failing
  *   mid-ticket. `default_harness` is an opaque id because core must not know which
@@ -61,6 +61,15 @@ export const ProjectConfig = z.object({
   default_harness: z.string().min(1),
   remote: z.string().min(1).optional(),
   git_host: GitHostConfig.optional(),
+  /**
+   * Paths whose change makes a ticket Tier C (a human must sign off) even when triage
+   * predicted tier A: Forge's own policy, config and memory, harness settings and CI.
+   * Matched with `globMatch` ignoring case (see shared/glob.ts); the default is the safe
+   * set, and listing your own replaces it, so keep these three in any list you write.
+   */
+  tier_c_globs: z
+    .array(z.string().min(1))
+    .default(['.forge/**', '.claude/**', '.github/**']),
 });
 export type ProjectConfig = z.infer<typeof ProjectConfig>;
 

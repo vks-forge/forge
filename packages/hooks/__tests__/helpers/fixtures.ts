@@ -85,6 +85,7 @@ export function makeEnv(
     sqlitePath?: string;
     audit?: HookAudit;
     clock?: () => Date;
+    requireLiveness?: boolean;
   } = {},
 ) {
   // Memory by default; `sqlitePath` runs the same handler over the durable SQLite backend.
@@ -101,6 +102,7 @@ export function makeEnv(
     admitContext: async () => ctx(),
     clock: over.clock ?? (() => new Date(Date.UTC(2026, 9, 13, 0, 0, tick++))),
     ...(over.audit ? { audit: over.audit } : {}),
+    ...(over.requireLiveness ? { requireLiveness: true } : {}),
     onLiveness: async (id) => {
       liveness.push(id);
     },

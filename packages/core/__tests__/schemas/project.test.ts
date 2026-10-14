@@ -13,6 +13,26 @@
 import { describe, expect, it } from 'vitest';
 import { Project, ProjectConfig } from '#/schemas/project.js';
 
+describe('ProjectConfig tier_c_globs', () => {
+  const ok = { slug: 'sf', prefix: 'SF', profile: 'ts', default_harness: 'claude-code' };
+
+  it('defaults to Forge policy, harness settings and CI paths', () => {
+    expect(ProjectConfig.parse(ok).tier_c_globs).toEqual([
+      '.forge/**',
+      '.claude/**',
+      '.github/**',
+    ]);
+  });
+
+  it('takes a project list as given and rejects an empty glob', () => {
+    expect(ProjectConfig.parse({ ...ok, tier_c_globs: ['db/**'] }).tier_c_globs).toEqual([
+      'db/**',
+    ]);
+
+    expect(ProjectConfig.safeParse({ ...ok, tier_c_globs: [''] }).success).toBe(false);
+  });
+});
+
 describe('ProjectConfig git_host', () => {
   const ok = {
     slug: 'sf',

@@ -3,11 +3,11 @@
  *
  * Why: this is the slice exit criterion. A Worker that claims it edited a file it never
  *   touched must fail G1 with the claim quoted, an honest run must pass, and a missing
- *   run secret must surface as `error` so the engine never merges on unverified
- *   evidence.
+ *   run secret must fail the gate so the engine never merges on unverified evidence
+ *   and the rework starts a fresh run instead of parking on the same missing secret.
  *
  * Pins: planted false claim fails, honest run passes with a readable report, missing
- *   secret is error, ignored tool calls, failing command fails, diff read against base.
+ *   secret fails with a restart finding, ignored tool calls, failing command fails, diff read against base.
  * Depends on: domain/g1-gate, helpers/fixtures.
  */
 
@@ -154,11 +154,18 @@ describe('createG1Gate', () => {
     expect(verdict.status).toBe('passed');
   });
 
-  it('is error when the run secret is gone and nothing else failed', async () => {
+  it('fails with a restart finding when the run secret is gone, so rework re-runs the ticket', async () => {
     const verdict = await createG1Gate(deps({ runSecret: () => null })).run(ctx());
 
-    expect(verdict.status).toBe('error');
-    expect(verdict.report).toContain('## chain: error');
+    expect(verdict.status).toBe('failed');
+    expect(verdict.findings).toEqual([
+      expect.objectContaining({
+        check: 'chain',
+        message: expect.stringContaining('unverifiable after restart'),
+      }),
+    ]);
+
+    expect(verdict.report).toContain('## chain: failed');
   });
 
   it('fails when a project command fails', async () => {

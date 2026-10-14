@@ -22,7 +22,7 @@ import { err } from '@forge/core';
 import type { DirectorLLM, StepError, StepName, StepOptions } from '@forge/core';
 import type { ZodType } from 'zod';
 import { killTree } from '#/adapters/claude/process-tree.js';
-import { buildChildEnv } from '#/domain/child-env.js';
+import { allowlistEnv, buildChildEnv } from '#/domain/child-env.js';
 import { buildDirectorArgs, jsonSchemaArg } from '#/domain/director-step-args.js';
 import { buildStepPrompt } from '#/domain/director-step-prompts.js';
 import { interpretOutput, parseCliOutput } from '#/domain/director-step-result.js';
@@ -47,7 +47,7 @@ async function runChild(
   try {
     child = deps.spawn(deps.claudeBinary ?? 'claude', args, {
       ...(deps.cwd ? { cwd: deps.cwd } : {}),
-      env: buildChildEnv(deps.baseEnv ?? {}, {}, {}),
+      env: buildChildEnv(allowlistEnv(deps.baseEnv ?? {}, deps.envPassthrough), {}, {}),
       detached: platform !== 'win32',
     });
   } catch (e) {

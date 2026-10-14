@@ -40,7 +40,7 @@ export function preCheckLane(input: PreCheckInput): PreCheckResult {
   };
 
   const paths = input.touchedPaths ?? [];
-  const hits = paths.filter((p) => input.tierCGlobs.some((g) => globMatch(g, p)));
+  const hits = paths.filter((p) => input.tierCGlobs.some((g) => globMatch(g, p, true)));
   if (hits.length > 0) {
     raise('full', `tier-C path touched: ${hits.join(', ')}`);
   }

@@ -11,6 +11,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { line, makeCliRig, STREAM } from '#tests/helpers/claude-rigs.js';
+import { SECRET_NAMES } from '#tests/helpers/secret-env.js';
 import { run } from '#tests/helpers/cli-run.js';
 
 // Real node child processes: allow for a slow, loaded machine.
@@ -44,6 +45,16 @@ describe('CLI engine: command line and process', { timeout: 30_000 }, () => {
     for (const k of ['CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'FORGE_HOOK_CONFIG']) {
       expect(env).not.toHaveProperty(k);
     }
+  });
+
+  it('never hands the server secrets to the Worker child (H1)', async () => {
+    const { rig } = await run([STREAM.result()]);
+    const env = rig.lastCall().env;
+    for (const k of SECRET_NAMES) {
+      expect(env).not.toHaveProperty(k);
+    }
+
+    expect(env['CLAUDE_CONFIG_DIR']).toBe('/kept');
   });
 
   it('runs in the worktree and resumes with --resume <session>', async () => {
@@ -97,6 +108,7 @@ describe('CLI engine: command line and process', { timeout: 30_000 }, () => {
       ok: true,
       issues: [],
       version: '2.1.296',
+      harnessVersion: '2.1.296',
     });
   });
 });

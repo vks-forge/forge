@@ -13,13 +13,34 @@
  *   rejected so it can never be mistaken for `allow` (tool-system.md §10, d-0033, d-0056).
  *   The module imports zod only, so the hook process can load it without the policy ring.
  *
- * Exports: HOOK_EVENTS, HookEventName, SessionStartPayload, PreToolUsePayload,
+ * Exports: MAX_TOOL_OUTPUT_BYTES, TRUNCATED_PREFIX_BYTES, TruncatedOutput, HOOK_EVENTS, HookEventName, SessionStartPayload, PreToolUsePayload,
  *   PostToolUsePayload, PostToolUseFailurePayload, HookPayload, HookRequest, HookVerdict,
  *   HookResponse.
  * Depends on: zod. No IO.
  */
 
 import { z } from 'zod';
+
+/** Largest tool output (serialized) the hook posts whole; beyond it the hook sends a `TruncatedOutput`. */
+export const MAX_TOOL_OUTPUT_BYTES = 1024 * 1024;
+/** How much of an oversized output the hook keeps as a readable prefix. */
+export const TRUNCATED_PREFIX_BYTES = 16 * 1024;
+
+/**
+ * What the hook posts in place of a tool output larger than `MAX_TOOL_OUTPUT_BYTES`: a
+ * bounded prefix, the full serialized size and the SHA-256 of the full serialization,
+ * computed in the hook. The server records that hash as the effect's `result_hash`, so the
+ * receipt still binds the whole output while the request stays small.
+ */
+export const TruncatedOutput = z
+  .object({
+    truncated: z.literal(true),
+    bytes: z.number().int().nonnegative(),
+    sha256: z.string().regex(/^[0-9a-f]{64}$/),
+    prefix: z.string(),
+  })
+  .strict();
+export type TruncatedOutput = z.infer<typeof TruncatedOutput>;
 
 export const HOOK_EVENTS = [
   'SessionStart',

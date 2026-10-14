@@ -19,6 +19,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createGitWorktreeManager } from '#/index.js';
 import { describeWorktreeContract } from '#tests/contract/worktree.contract.js';
 import type { WorktreeHarness } from '#tests/contract/worktree.contract.js';
+import { removeTree, trackTemp } from '#tests/helpers/temp.js';
 
 const run = promisify(execFile);
 const git = async (cwd: string, ...args: string[]): Promise<string> =>
@@ -29,7 +30,7 @@ const tid = (n: number): TicketId => TicketId.parse(`FRG-${n}`);
 
 async function makeRepo(): Promise<string> {
   const dir = await realpath(await mkdtemp(join(tmpdir(), 'forge git ')));
-  roots.push(dir);
+  roots.push(trackTemp(dir));
   await git(dir, 'init', '-b', 'main');
   await git(dir, 'config', 'user.name', 'Tester');
   await git(dir, 'config', 'user.email', 'tester@example.com');
@@ -43,14 +44,9 @@ async function makeRepo(): Promise<string> {
 }
 
 afterEach(async () => {
-  // Retries: antivirus or a lingering git child holds handles on Windows under load (EBUSY).
-  await Promise.all(
-    roots
-      .splice(0)
-      .map((r) =>
-        rm(r, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }),
-      ),
-  );
+  // Tolerant removal: antivirus or a lingering git child holds handles on Windows under
+  // load (EBUSY); a directory that cannot go yet is retried at the end of the file.
+  await Promise.all(roots.splice(0).map(removeTree));
 });
 
 describeWorktreeContract('git cli', async (): Promise<WorktreeHarness> => {

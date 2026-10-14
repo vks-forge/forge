@@ -5,6 +5,8 @@
     { "path": "./apps/cli/tsconfig.test.json" },
     { "path": "./apps/mcp" },
     { "path": "./apps/mcp/tsconfig.test.json" },
+    { "path": "./apps/server" },
+    { "path": "./apps/server/tsconfig.test.json" },
     { "path": "./packages/core" },
     { "path": "./packages/core/tsconfig.test.json" },
     { "path": "./packages/db" },

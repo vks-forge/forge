@@ -2,5 +2,31 @@
   "name": "@forge/server",
   "private": true,
   "version": "0.0.0",
-  "type": "module"
+  "type": "module",
+  "imports": {
+    "#/*": {
+      "development": "./src/*",
+      "default": "./dist/*"
+    },
+    "#tests/*": "./__tests__/*"
+  },
+  "dependencies": {
+    "@forge/core": "workspace:*",
+    "@forge/db": "workspace:*",
+    "@forge/drivers": "workspace:*",
+    "@forge/engine": "workspace:*",
+    "@forge/gates": "workspace:*",
+    "@forge/git": "workspace:*",
+    "@forge/hooks": "workspace:*",
+    "@forge/mcp": "workspace:*",
+    "@forge/memory": "workspace:*",
+    "@forge/secrets": "workspace:*",
+    "@forge/tools": "workspace:*",
+    "yaml": "2.9.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@types/node": "26.6.5"
+  }
 }

@@ -27,7 +27,7 @@ const build = !args.includes('--no-build');
 const vitestArgs = [
   vitestEntry,
   'run',
-  'packages/drivers/__tests__/probes',
+  '__tests__/probes',
   ...args.filter((a) => a !== '--dry' && a !== '--no-build'),
 ];
 

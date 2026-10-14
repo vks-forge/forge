@@ -7,45 +7,45 @@ entries:
     risk: read
     exposure: direct
     resources: [ cwd ]
-    schema_hash: sha256:6d4d88eb3b96ed7268141d89111b17a0e68a5964777f247ec9d64168ec54245d
+    schema_hash: sha256:99251ab38957acb4477dc29dac17ca99e188a9938a5ad9e3238626b66531a2fe
     support:
-      claude-code: { native: Read, mechanism: allow-flag, enforced: harness }
+      claude-code: { native: Read, mechanism: allow-flag, enforced: harness, harness_version: "2.1.293" }
   - id: glob
     kind: harness-native
     version: "1"
     risk: read
     exposure: direct
     resources: [ cwd ]
-    schema_hash: sha256:550a1d8fef9b16dad64434c15c6cdcbacc725579637e0fee7e4772063db6f0c3
+    schema_hash: sha256:67968c71008ca582df2366f748d7e86cdeff3b94b989f53b78b4c69d6717e5a5
     support:
-      claude-code: { native: Glob, mechanism: allow-flag, enforced: harness }
+      claude-code: { native: Glob, mechanism: allow-flag, enforced: harness, harness_version: "2.1.293" }
   - id: grep
     kind: harness-native
     version: "1"
     risk: read
     exposure: direct
     resources: [ cwd ]
-    schema_hash: sha256:f0498fbc452ee8b6f6c2bc28d0f5ff20f15194278b392443c1ffc55a80dc707e
+    schema_hash: sha256:8804502afa488711699cc51fd1b5ef8acb260aa48a9f013cb2c5555c2be95b6c
     support:
-      claude-code: { native: Grep, mechanism: allow-flag, enforced: harness }
+      claude-code: { native: Grep, mechanism: allow-flag, enforced: harness, harness_version: "2.1.293" }
   - id: edit
     kind: harness-native
     version: "1"
     risk: write-cwd
     exposure: direct
     resources: [ cwd ]
-    schema_hash: sha256:a56a2652d7f5b5a397df1621f0a5d48fdf7ae6787eedfe316c661f702eb4d6ee
+    schema_hash: sha256:a1a1ec935bf5498c17863011cd1c05869855c7d75ac52b90edab731300fbc182
     support:
-      claude-code: { native: Edit, mechanism: allow-flag, enforced: harness }
+      claude-code: { native: Edit, mechanism: allow-flag, enforced: harness, harness_version: "2.1.293" }
   - id: write
     kind: harness-native
     version: "1"
     risk: write-cwd
     exposure: direct
     resources: [ cwd ]
-    schema_hash: sha256:ce627f8c77c2dba956c21aceda293153babfb8e24a4601ef6d608eb7c2645e2e
+    schema_hash: sha256:0a175bdaae2532deb3135494f6dd0ac8a25c9016dfb0e1ab191bccf552714ec2
     support:
-      claude-code: { native: Write, mechanism: allow-flag, enforced: harness }
+      claude-code: { native: Write, mechanism: allow-flag, enforced: harness, harness_version: "2.1.293" }
   # Canonical shell id (d-0048). The Windows CLI reports PowerShell, ACP and POSIX hosts report Bash; both map here.
   - id: shell
     kind: harness-native
@@ -53,9 +53,9 @@ entries:
     risk: exec
     exposure: direct
     resources: [ cwd ]
-    schema_hash: sha256:9ff099d2f64672924cd67a3ef37cf131780e827f848165ca5e13bb574c7fe059
+    schema_hash: sha256:57510a0a2baa6ea790fd23f89d6e39c31e53dcb47ae74abcec5c0f07818220d5
     support:
-      claude-code: { native: [ Bash, PowerShell ], mechanism: allow-flag, enforced: harness }
+      claude-code: { native: [ Bash, PowerShell ], mechanism: allow-flag, enforced: harness, harness_version: "2.1.293" }
   # Subagent spawning: can reach every native tool, so it is hidden unless a grant opens it.
   - id: task
     kind: harness-native
@@ -64,9 +64,9 @@ entries:
     exposure: hidden
     reaches_tools: [ read, glob, grep, edit, write, shell ]
     resources: [ cwd ]
-    schema_hash: sha256:3d02193eab64aacb790cc899be47011e20cb5e253be69988da689c988ee5ee3c
+    schema_hash: sha256:7ff18d932eb004e4a949cfb3aed5d9916287af79c93747d8ae032473fd44f7e7
     support:
-      claude-code: { native: Task, mechanism: allow-flag, enforced: harness }
+      claude-code: { native: Task, mechanism: allow-flag, enforced: harness, harness_version: "2.1.293" }
   - id: mcp__forge__get_ticket
     kind: factory-core
     version: "1"
@@ -141,4 +141,4 @@ entries:
     support:
       "*": { mechanism: mcp, enforced: server }
     denies_native: [ claude-code:WebFetch ]
-signature: "ddb4ae25e6d74913b0872274cc7ce9bfbf2b33b240c4910adbd0f0e2b4d08bdf"
+signature: "64ca58326e417de06c07fee48f439c7cbde1d7b6fb4b8d589b041aee32b83507"

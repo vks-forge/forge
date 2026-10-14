@@ -92,6 +92,7 @@ export function createAcpEngine(deps: EngineDeps): ClaudeEngine {
         ok: issues.length === 0,
         issues,
         version: `acp ${adapter ?? 'unknown'}; claude-code ${cli ?? 'unknown'}`,
+        ...(cli === null ? {} : { harnessVersion: cli }),
       };
     },
     launch(launch, sink) {

@@ -37,6 +37,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0064 — Measured: ACP announces a tool call before its input streams; receipt cross-check waits for the tool result for empty-input announces (author=director, measured)
 - d-0063 — Readable layout: Prettier + ESLint auto-fix `curly: all` and blank-line padding (`@stylistic`); repo reformatted once, lint keeps it
 - d-0062 — GitHost port: local bare host + GitHub App host (DPAPI SecretStore for the App key); merge one door
 - d-0061 — apps/server HTTP on node:http (no framework), SSE hand-written, 127.0.0.1 only

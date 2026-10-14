@@ -7,7 +7,7 @@
  *   This check re-verifies the HMAC chain under the run secret, and requires that every
  *   tool call the harness reported has a decision receipt carrying the same id (the
  *   harness's tool-use id is the receipt id, d-0057). With no secret it cannot verify
- *   anything, so it reports `error`, never `passed`.
+ *   anything, so it fails the gate, never passes it: the rework starts a fresh run.
  *
  * Exports: checkChain().
  * Depends on: @forge/tools (verifyChain), types/check.types, types/g1-deps.types. No IO.
@@ -30,10 +30,19 @@ export function checkChain(
   secret: HmacKey | null,
 ): CheckOutcome {
   if (secret === null) {
+    // `failed`, not `error`: the secret lives only in server memory (d-0054), so after a
+    // restart it is gone for good. An `error` would park the ticket, and unparking it
+    // would hit the same missing secret forever; a failed gate sends the ticket to
+    // rework, which starts a fresh run with a fresh secret.
     const message =
-      'Run secret unavailable: the receipt chain cannot be verified, so this check did not run.';
+      'Receipt chain unverifiable after restart (the run secret is gone); re-running the ticket.';
 
-    return { name: 'chain', status: 'error', findings: [], details: message };
+    return {
+      name: 'chain',
+      status: 'failed',
+      findings: [finding(message)],
+      details: `- ${message}`,
+    };
   }
 
   const findings: GateFinding[] = [];

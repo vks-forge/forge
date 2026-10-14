@@ -12,14 +12,14 @@
  *   `HeadMovedError`, a base that moved a moment ago into a retryable `merge_busy`. Failures
  *   are typed `GitHostError`s the engine branches on (d-0062).
  *
- * Exports: createGitHubAppGitHost().
+ * Exports: createGitHubAppGitHost() (a GitHost plus gitAuthEnv() for fetches and ls-remote).
  * Depends on: zod, @forge/core, adapters/git-cli/run-git, adapters/github-app/{rest-client,
  *   installation-token}, domain/{push-env,ref-check}, schemas/github-responses, shared/host-errors.
  *   IO: HTTPS to the GitHub API, `git push` to github.com.
  */
 
 import { HeadMovedError } from '@forge/core';
-import type { GitHost, PrState } from '@forge/core';
+import type { PrState } from '@forge/core';
 import { z } from 'zod';
 import { createGitRunner } from '#/adapters/git-cli/run-git.js';
 import { createTokenSource } from '#/adapters/github-app/installation-token.js';
@@ -28,7 +28,10 @@ import { buildPushEnv, redactSecrets } from '#/domain/push-env.js';
 import { assertSafeRefArg } from '#/domain/ref-check.js';
 import { MergeResponse, PullResponse } from '#/schemas/github-responses.js';
 import { GitHostError, refineMergeRefusal } from '#/shared/host-errors.js';
-import type { GitHubAppGitHostOptions } from '#/types/git-host.types.js';
+import type {
+  GitHubAppGitHost,
+  GitHubAppGitHostOptions,
+} from '#/types/git-host.types.js';
 
 const parse = <T>(schema: z.ZodType<T>, json: unknown, what: string): T => {
   const r = schema.safeParse(json);
@@ -40,7 +43,7 @@ const parse = <T>(schema: z.ZodType<T>, json: unknown, what: string): T => {
 };
 
 /** Creates a GitHost that acts as a GitHub App installation on `owner/repo`. */
-export function createGitHubAppGitHost(o: GitHubAppGitHostOptions): GitHost {
+export function createGitHubAppGitHost(o: GitHubAppGitHostOptions): GitHubAppGitHost {
   const rest = createRestClient(o.apiBase ?? 'https://api.github.com', o.fetch ?? fetch);
   const git = o.git ?? createGitRunner('git');
   const now = o.now ?? Date.now;
@@ -87,6 +90,10 @@ export function createGitHubAppGitHost(o: GitHubAppGitHostOptions): GitHost {
   };
 
   return {
+    async gitAuthEnv() {
+      return buildPushEnv(await tokens.token(), gitBase);
+    },
+
     async push(worktreePath, branch) {
       assertSafeRefArg('branch', branch);
       const token = await tokens.token();

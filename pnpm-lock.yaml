@@ -226,7 +226,54 @@ importers:
         specifier: 26.6.5
         version: 26.6.5
 
-  apps/server: {}
+  apps/server:
+    dependencies:
+      '@forge/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@forge/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@forge/drivers':
+        specifier: workspace:*
+        version: link:../../packages/drivers
+      '@forge/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@forge/gates':
+        specifier: workspace:*
+        version: link:../../packages/gates
+      '@forge/git':
+        specifier: workspace:*
+        version: link:../../packages/git
+      '@forge/hooks':
+        specifier: workspace:*
+        version: link:../../packages/hooks
+      '@forge/mcp':
+        specifier: workspace:*
+        version: link:../../packages/mcp
+      '@forge/memory':
+        specifier: workspace:*
+        version: link:../../packages/memory
+      '@forge/secrets':
+        specifier: workspace:*
+        version: link:../../packages/secrets
+      '@forge/tools':
+        specifier: workspace:*
+        version: link:../../packages/tools
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: 1.32.1
+        version: 1.32.1(zod@4.6.7)
+      '@types/node':
+        specifier: 26.6.5
+        version: 26.6.5
 
   apps/web: {}
 
@@ -322,6 +369,9 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
+      '@forge/secrets':
+        specifier: workspace:*
+        version: link:../secrets
       '@types/node':
         specifier: 26.6.5
         version: 26.6.5

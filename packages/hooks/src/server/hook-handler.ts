@@ -17,7 +17,9 @@
  *   uses, so a gate matching a Worker's claim sees the string policy judged. A run that
  *   is no longer active (`isRunActive`: ended, settling, settled) gets no receipts at all,
  *   so a late or replayed post cannot extend a finished run's chain (d-0033,
- *   tool-system.md §10, verification-plane.md §2).
+ *   tool-system.md §10, verification-plane.md §2). When liveness is required, a tool call
+ *   from a run whose SessionStart never registered is denied: a harness that skipped one
+ *   hook cannot be assumed to run the other (d-0033).
  *
  * Exports: createHookHandler().
  * Depends on: @forge/core (isRunActive), @forge/tools (HookRequest and HookResponse wire
@@ -38,7 +40,7 @@ import {
 import type { HookResponse, Receipt } from '@forge/tools';
 import { effectStateFor, resolveToolId, toolDefinition } from '#/server/tool-resolver.js';
 import { createAuditGate, createMemoryAudit } from '#/server/audit-gate.js';
-import { argsHash } from '#/shared/args-hash.js';
+import { argsHash, resultHash } from '#/shared/args-hash.js';
 import type {
   FailClosedCode,
   HookHandler,
@@ -66,6 +68,11 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
     creds: RunCredentials,
     req: Extract<HookRequest, { event: 'PreToolUse' }>,
   ): Promise<HookResponse> {
+    // d-0033: a Worker whose liveness hook never registered is not known to be observed.
+    if (deps.requireLiveness && !run.hook_registered_at) {
+      return failed('no_liveness');
+    }
+
     const ctx = await deps.admitContext(run);
     const { tool_name: native, tool_input: input, tool_use_id: useId } = req.payload;
     const toolId = resolveToolId(ctx, native);
@@ -130,7 +137,7 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
           decision,
           {
             state: effectStateFor(toolDefinition(ctx, decision.tool), isFailure),
-            result_hash: argsHash(result),
+            result_hash: resultHash(result),
             ts: now(),
           },
           view.last,
