@@ -48,7 +48,14 @@ export interface PatchDraft {
 
 /** The evidence the claim matcher compares claims against. */
 export interface ClaimEvidence {
+  /** The gated run's own receipts: the only evidence for read, ran_tests and added_test. */
   readonly receipts: readonly Receipt[];
+  /**
+   * Receipts of the ticket's earlier runs. They support `edited` claims only: the edit is
+   * in the branch diff already, but tests or reads from before a rework prove nothing
+   * about the reworked code.
+   */
+  readonly earlierReceipts?: readonly Receipt[];
   readonly diff: WorktreeDiff;
   readonly patch: readonly PatchFile[];
   readonly testCommand: string | undefined;

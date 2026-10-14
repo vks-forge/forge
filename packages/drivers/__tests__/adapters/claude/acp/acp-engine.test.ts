@@ -108,6 +108,7 @@ describe('ACP engine: session options and mode (rules 3 and 4)', () => {
             maxBudgetUsd: 0.05,
             model: 'haiku',
             settings: settingsPath,
+            env: { ENABLE_TOOL_SEARCH: 'false' },
           },
         },
       },

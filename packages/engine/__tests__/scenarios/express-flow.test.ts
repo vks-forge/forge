@@ -62,17 +62,17 @@ describe('Express flow', () => {
       harness: 'scripted',
       cwd: '/repo/.worktrees/FG-1',
       lane: 'express',
-      prompt_hash: sha256Hex('Do the ticket.'),
       catalogue_hash: 'c'.repeat(64),
     });
 
     const start = rig.driver.starts[0]!;
+    expect(start.prompt.startsWith('Do the ticket.')).toBe(true);
+    expect(run?.prompt_hash).toBe(sha256Hex(start.prompt));
+    expect(start.promptHash).toBe(sha256Hex(start.prompt));
     expect(start).toMatchObject({
       runId: 'run-1',
       model: 'sonnet',
       cwd: '/repo/.worktrees/FG-1',
-      prompt: 'Do the ticket.',
-      promptHash: sha256Hex('Do the ticket.'),
       ticketId: 'FG-1',
       projectId: 'forge',
       budget: { maxTurns: 40, maxUsd: 5, stallMs: 300_000, turnMs: 600_000 },

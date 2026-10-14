@@ -4,7 +4,8 @@
  * Why: the Express lane is judged by G1 alone (G3 comes later). G1 must be given evidence
  *   the Worker cannot forge: the receipt chain and the run's HMAC secret (which exists only
  *   in this process's memory, d-0054), the git diff of the real worktree, and the list of
- *   tool calls the harness reported, read from the stored run events. A missing secret
+ *   tool calls the harness reported, read from the stored run events, and the ticket's
+ *   earlier runs, whose receipts back a rework run's claims. A missing secret
  *   must never read as `passed`, so a restart cannot turn into a free merge.
  *
  * Exports: createGates().
@@ -12,7 +13,11 @@
  */
 
 import type { Gate } from '@forge/core';
-import { createG1Gate, createStorageToolCallLister } from '@forge/gates';
+import {
+  createG1Gate,
+  createStorageEarlierRuns,
+  createStorageToolCallLister,
+} from '@forge/gates';
 import type { GateDeps } from '#/types/server.types.js';
 
 export function createGates(deps: GateDeps): Gate[] {
@@ -21,6 +26,7 @@ export function createGates(deps: GateDeps): Gate[] {
       receipts: deps.receipts,
       worktrees: deps.worktrees,
       listToolCalls: createStorageToolCallLister(deps.storage),
+      earlierRunIds: createStorageEarlierRuns(deps.storage),
       runSecret: (runId) => deps.registry.secret(runId),
       env: deps.env,
     }),

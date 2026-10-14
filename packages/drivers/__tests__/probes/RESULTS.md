@@ -222,6 +222,45 @@ run 2026-10-13 on host 2.1.296:
 - Not available: the driver keeps no raw ACP/harness log; the probe's artefacts are the normalised events, receipts, gate
   results and the server log (`.forge/data/probes/8/`).
 
+## Probe 8 follow-up: MCP tool deferral, the one-shot finish, rework claims (2026-10-14)
+
+Probe 8 passed twice on 2026-10-13 and then parked on 2026-10-14 (HEAD 52a41f9): `gate G1 failed after 2 automatic
+reworks; G1 claims: finish carried no claims for 2 changed files`. Root causes, from the stored events of the three runs:
+
+1. **Claude Code defers MCP tool schemas behind `ToolSearch`.** The Worker saw `mcp__forge__finish` by name only and called
+   `ToolSearch` to load its schema; the catalogue has no `ToolSearch`, so `admit()` denied it (`capability/unknown_tool`) in
+   all three runs. Run 1 then called `finish` with a placeholder summary and no claims; the corrected retry was refused
+   (`this run has already called finish`). Run 3 never managed to call `finish` at all.
+2. **`finish` was one-shot.** The first (empty) call locked the run's claims.
+3. **Rework runs could not satisfy `edited` claims.** The worktree already held run 1's edits (committed by the Director), so
+   runs 2 and 3 made none; G1 matched claims against the current run's receipts only, so an honest `edited` claim had no
+   evidence ("no allowed edit or write receipt with a committed effect for that path").
+4. A compound `cd <worktree> ; ls -a ; cat ...` was denied `approval/unattended`: `cd` and `cat` have no allow rule.
+   The Worker's cwd is already the worktree.
+
+**Decision on ToolSearch: deferral is disabled, `ToolSearch` is not admitted.** The bundled Claude Code 2.1.293
+(`node_modules/.pnpm/@anthropic-ai+claude-agent-sdk-win32-x64@0.3.293/.../claude.exe`, bundled JS) reads
+`process.env.ENABLE_TOOL_SEARCH` in its mode function `SDe()`: values `false`, `0`, `no`, `off` (parsed by `ms()`) or
+`auto:100` return mode `"standard"` (no deferral, no ToolSearch tool); unset or `true` gives `"tst"`; `auto`/`auto:N` gives
+`"tst-auto"`. The same string is in the SDK's list of recognised env names (`claude-agent-sdk/sdk.mjs`, `ENABLE_TOOL_SEARCH`).
+The ACP adapter spreads `_meta.claudeCode.options.env` over `process.env` when it builds the query env
+(`claude-agent-acp/dist/acp-agent.js`, `const env = { ...process.env, ...userProvidedOptions?.env, ...}` near line 7303),
+and Claude Code applies the settings-file `env` block after the process env. The driver therefore sets
+`ENABLE_TOOL_SEARCH=false` in both the session `_meta` `env` and the per-run `settings.json` `env` (`WORKER_HARNESS_ENV`,
+`packages/drivers/src/domain/worker-env.ts`), so a user-level setting cannot re-enable deferral. No catalogue change, so no
+re-sign: the pinned `schema_hash` is over the advertised input schema only, and `finish`'s did not change.
+
+Fixes: `finish` accepts later calls (each its own event; G1 reads the last one, verified in `readClaims`); the Worker
+contract states cwd, one command per call, the exact test command and the claim rules and is appended to the prompt
+verbatim; G1 counts receipts of the ticket's earlier runs as claim evidence (own chain still verified alone); policy lifts
+the `ask` for a `cd` to exactly the run's own cwd (`builtin:cd-cwd`), nothing else.
+
+Re-run after the fixes (HEAD 52a41f9 plus the working-tree changes, `pnpm build` first), three in a row, all PASS: 122 s,
+139 s, 112 s. Each ran one Worker run (no rework), `done`, G1 `passed`, **0 denied decisions** (no `ToolSearch`, no compound
+shell line), the Worker called `mcp__forge__finish` once with `edited` claims for both files, `added_test` and `ran_tests`.
+Worker cost 0.24, 0.10 and 0.10 USD. The rework path (claims backed by an earlier run's receipts) is covered by unit tests,
+not exercised live, because no run needed a rework.
+
 ## Differences from the design docs
 
 - `--setting-sources` takes `""` (empty) to load nothing; there is no `none` keyword.

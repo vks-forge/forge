@@ -18,7 +18,7 @@
  *   deny, not just an ask.
  *
  * Exports: evaluateToolRules(), evaluateShell(), normalizePath() (re-exported).
- * Depends on: @forge/core (globMatch), domain/argv-paths, domain/command-candidates,
+ * Depends on: @forge/core (globMatch), domain/argv-paths, domain/cd-cwd, domain/command-candidates,
  *   domain/floor-argv, domain/nested-scripts, domain/tokenizer, schemas/grant, shared/path,
  *   shared/pattern, types/grants, types/rules, types/tokenizer. No IO.
  */
@@ -27,6 +27,7 @@ import { globMatch } from '@forge/core';
 import type { CallRule, Effect } from '#/schemas/grant.js';
 import { argvReads, argvWrites, wildcardHitsFloor } from '#/domain/argv-paths.js';
 import { commandCandidates, commandName } from '#/domain/command-candidates.js';
+import { isCdToCwd } from '#/domain/cd-cwd.js';
 import { floorViolation } from '#/domain/floor-argv.js';
 import { looseFloorHit, nestedScripts } from '#/domain/nested-scripts.js';
 import { tokenizeShell } from '#/domain/tokenizer.js';
@@ -254,6 +255,15 @@ function evaluateSegment(
   const argv = evaluateArgv(grant, seg, cwd, depth);
   if (argv !== null) {
     out = worse(out, argv);
+  }
+
+  // `cd` into the directory the run is already in moves nothing; only the silent `ask` is lifted.
+  if (
+    out.effect === 'ask' &&
+    out.reason === 'no_matching_rule' &&
+    isCdToCwd(seg, dialect, cwd)
+  ) {
+    return { effect: 'allow', reason: 'rule_allow', rule: 'builtin:cd-cwd' };
   }
 
   if (seg.flags.length > 0) {

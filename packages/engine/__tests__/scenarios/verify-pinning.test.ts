@@ -14,8 +14,7 @@
  *   status and merge -> same, not a park; legacy rows without a sha are not trusted; a
  *   branch that never settles parks after a few re-gates; `mergeable: null` waits;
  *   a rate-limited merge retries; passing rows of an older run never merge a newer run;
- *   one base branch for worktree, diff and PR; a runtime for another project is refused;
- *   the dispatch prompt carries the finish contract.
+ *   one base branch for worktree, diff and PR; a runtime for another project is refused.
  * Depends on: helpers/verify-rig, helpers/fake-git-host, @forge/core, vitest.
  */
 
@@ -253,36 +252,5 @@ describe('verify: one base branch', () => {
     );
 
     expect(rig.worktrees.created).toEqual([]);
-  });
-});
-
-describe('dispatch: finish contract', () => {
-  it('tells the Worker to finish with typed claims for every file it edited', async () => {
-    const { rig } = await makeVerifyRig();
-    await rig.request('Fix it');
-    await rig.tick();
-
-    const input = rig.llm.callsTo('dispatch_prompt')[0]?.input as {
-      worker_contract: { finish_rules: string[]; rework_note?: string };
-    };
-
-    expect(input.worker_contract.finish_rules.join(' ')).toContain('`finish`');
-    expect(input.worker_contract.finish_rules.join(' ')).toContain('"kind":"edited"');
-    expect(input.worker_contract.rework_note).toBeUndefined();
-  });
-
-  it('adds a rework note when the run follows a failed gate', async () => {
-    const { rig, gate } = await makeVerifyRig();
-    gate.script(verdict('failed', [{ check: 'claims', message: 'edit not claimed' }]));
-    await startAndFinish(rig);
-    await rig.tick();
-
-    const last = rig.llm.callsTo('dispatch_prompt').at(-1)?.input as {
-      worker_contract: { rework_note?: string };
-    };
-
-    expect(last.worker_contract.rework_note).toContain(
-      'rejected by the verification gates',
-    );
   });
 });

@@ -34,6 +34,10 @@ describe('renderHookSettings', () => {
     }
   });
 
+  it('forces tool-schema deferral off so the Worker sees the finish schema (probe 8)', () => {
+    expect(s.env).toEqual({ ENABLE_TOOL_SEARCH: 'false' });
+  });
+
   it('quotes forward-slash paths and matches every tool by default', () => {
     expect(s.hooks.PreToolUse?.[0]?.hooks[0]?.command).toBe(
       'node "C:/Program Files/forge/bin/hook.js" --config "D:/x/.forge/data/runs/r1/hook.json"',

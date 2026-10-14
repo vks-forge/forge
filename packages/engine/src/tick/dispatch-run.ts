@@ -4,7 +4,9 @@
  * Why: dispatch is the moment the Director commits spend and risk, so its order matters.
  *   The worktree comes first (d-0059: a Worker never runs in the main checkout), then the
  *   `dispatch_prompt` step renders the brief from the ticket, project memory and what
- *   changed since the last run, plus the finish contract (typed claims for every edit). The run row and the per-run token (stored only as a hash)
+ *   changed since the last run, plus the Worker contract (shell rules, typed claims for
+ *   every edit), which is also appended to the returned prompt verbatim so a paraphrase
+ *   cannot drop it. The run row and the per-run token (stored only as a hash)
  *   are written together before the harness starts, so a crash after start leaves a run the
  *   restart rule can find and revoke (d-0054). The ticket moves to `in_progress` only once
  *   the harness accepted the run; a start that throws settles the run as a failure and the
@@ -20,9 +22,9 @@ import { DispatchPromptOutput, branchName } from '@forge/core';
 import type { Interaction, Run, RunRequest, Ticket } from '@forge/core';
 import { sha256Hex } from '@forge/tools';
 import { familyOf, failureResult } from '#/domain/results.js';
-import { workerContract } from '#/domain/worker-contract.js';
+import { renderWorkerContract, workerContract } from '#/domain/worker-contract.js';
 import { hold, rejectStep, runStep } from '#/steps/run-step.js';
-import { baseRefFor } from '#/tick/project-runtime.js';
+import { baseRefFor, runtimeFor } from '#/tick/project-runtime.js';
 import { startPump } from '#/tick/pump.js';
 import { settleRun } from '#/tick/settle.js';
 import { moveTicket } from '#/tick/ticket-moves.js';
@@ -111,6 +113,11 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
   );
 
   const slice = await deps.memory.slice(project.slug);
+  const contract = workerContract({
+    rework: c.kind === 'retry' && c.wake?.kind === 'continuation',
+    testCommand: runtimeFor(deps, project.slug)?.config.commands.test,
+  });
+
   const drafted = await runStep(
     ctx,
     'dispatch_prompt',
@@ -126,9 +133,7 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
       worktree: { path: wt.path, branch },
       wake: wakeDelta(c, answered),
       // The Worker must finish with typed claims for every edit (G1 fails a finish without).
-      worker_contract: workerContract(
-        c.kind === 'retry' && c.wake?.kind === 'continuation',
-      ),
+      worker_contract: contract,
     },
     DispatchPromptOutput,
   );
@@ -140,7 +145,8 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
     return false;
   }
 
-  const prompt = drafted.value.prompt;
+  // The rules are facts about the environment: appended verbatim, whatever the step wrote.
+  const prompt = [drafted.value.prompt, renderWorkerContract(contract)].join('\n\n');
   const promptHash = sha256Hex(prompt);
 
   const runId = deps.ids.runId();

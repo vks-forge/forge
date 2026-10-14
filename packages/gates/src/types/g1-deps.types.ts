@@ -11,7 +11,7 @@
  * Depends on: @forge/core (WorktreeManager), @forge/tools (ReceiptLog, HmacKey). Types only.
  */
 
-import type { WorktreeManager } from '@forge/core';
+import type { Run, WorktreeManager } from '@forge/core';
 import type { HmacKey, ReceiptLog } from '@forge/tools';
 
 /** A tool call the harness reported for a run; `callId` is the harness's tool-use id. */
@@ -42,6 +42,13 @@ export interface G1Deps {
   readonly worktrees: Pick<WorktreeManager, 'diff'>;
   /** The run's tool-call events, in order. */
   readonly listToolCalls: (runId: string) => Promise<readonly ToolCallRef[]>;
+  /**
+   * Ids of the ticket's earlier runs (rework and resume chain, oldest first). Their receipts
+   * count as evidence for `edited` claims only (a rework run that only fixes its claims has
+   * made no edit of its own); ran_tests, read and added_test need the run's own evidence,
+   * and the receipt chain that is verified stays the run's own.
+   */
+  readonly earlierRunIds?: (run: Run) => Promise<readonly string[]>;
   /** The run's receipt secret, or null when the server no longer holds it. */
   readonly runSecret: (runId: string) => HmacKey | null;
   /** Parent environment; only an allowlist of it reaches project commands (shared/env). */

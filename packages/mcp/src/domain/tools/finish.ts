@@ -11,7 +11,6 @@
  * Depends on: @forge/core, domain/run-log, shared/define-tool, schemas/tool-inputs. IO: storage write.
  */
 
-import { PolicyDeniedError } from '@forge/core';
 import { appendRunEvent } from '#/domain/run-log.js';
 import { FinishInput } from '#/schemas/tool-inputs.js';
 import { defineTool } from '#/shared/define-tool.js';
@@ -19,16 +18,11 @@ import { defineTool } from '#/shared/define-tool.js';
 export const finishTool = defineTool({
   name: 'finish',
   description:
-    'Declare the work finished. Give a short summary and list what you did as claims: {kind:"ran_tests"}, {kind:"edited",path}, {kind:"added_test",name}, {kind:"read",path}. Claims are checked against tool records.',
+    'Declare the work finished. Give a short summary and list what you did as claims: {kind:"ran_tests"}, {kind:"edited",path} for every file you changed, {kind:"added_test",name}, {kind:"read",path}. Claims are checked against tool records. Calling finish again replaces your earlier call until the run ends.',
   risk: 'write-cwd',
   inputSchema: FinishInput,
   async handler(ctx, { summary, claims }) {
     await ctx.deps.storage.transaction(async (tx) => {
-      const events = await tx.runEvents.listByRun(ctx.run.id);
-      if (events.some((e) => e.type === 'finish')) {
-        throw new PolicyDeniedError('this run has already called finish');
-      }
-
       await appendRunEvent(tx, ctx, (ts) => ({
         type: 'finish',
         ts,

@@ -26,6 +26,8 @@ export interface HookMatcherGroup {
 }
 
 export interface HookSettings {
+  /** Forced Worker env (tool-schema deferral off); Claude Code applies it after the process env. */
+  readonly env: Readonly<Record<string, string>>;
   readonly hooks: Partial<Record<HookEventName, readonly HookMatcherGroup[]>>;
 }
 

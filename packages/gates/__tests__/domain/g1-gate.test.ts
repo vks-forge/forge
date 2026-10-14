@@ -6,7 +6,7 @@
  *   run secret must fail the gate so the engine never merges on unverified evidence
  *   and the rework starts a fresh run instead of parking on the same missing secret.
  *
- * Pins: planted false claim fails, honest run passes with a readable report, missing
+ * Pins: earlier runs support only edited claims (not ran_tests or read), planted false claim fails, honest run passes with a readable report, missing
  *   secret fails with a restart finding, ignored tool calls, failing command fails, diff read against base.
  * Depends on: domain/g1-gate, helpers/fixtures.
  */
@@ -90,6 +90,76 @@ describe('createG1Gate', () => {
     expect(verdict.findings).toHaveLength(1);
     expect(verdict.findings[0]?.claim).toEqual(claim);
     expect(verdict.report).toContain('src/never-touched.ts');
+  });
+
+  it('counts edit receipts of earlier runs of the ticket as evidence for a rework run', async () => {
+    const earlier = chain([{ id: 'p1', tool: 'edit', resource: 'src/a.ts' }]);
+    const own = chain([{ id: 'c2', tool: 'shell', resource: 'pnpm test' }]);
+    const rework = deps({
+      receipts: {
+        append: () => Promise.reject(new Error('read-only fake')),
+        list: (id) => Promise.resolve(id === 'run-0' ? earlier : own),
+      },
+      listToolCalls: () => Promise.resolve([{ callId: 'c2', name: 'Bash' }]),
+    });
+
+    const alone = await createG1Gate(rework).run(ctx());
+    const chained = await createG1Gate({
+      ...rework,
+      earlierRunIds: () => Promise.resolve(['run-0']),
+    }).run(ctx());
+
+    expect(alone.status).toBe('failed');
+    expect(alone.report).toContain('no allowed edit or write receipt');
+    expect(chained.status).toBe('passed');
+  });
+
+  it('does not let an earlier run satisfy ran_tests or read for a rework run', async () => {
+    const earlier = chain([
+      { id: 'p1', tool: 'edit', resource: 'src/a.ts' },
+      { id: 'p2', tool: 'shell', resource: 'pnpm test' },
+      { id: 'p3', tool: 'read', resource: 'src/a.ts', state: 'read_completed' },
+    ]);
+
+    const verdict = await createG1Gate({
+      ...deps({
+        receipts: {
+          append: () => Promise.reject(new Error('read-only fake')),
+          list: (id) => Promise.resolve(id === 'run-0' ? earlier : []),
+        },
+        listToolCalls: () => Promise.resolve([]),
+      }),
+      earlierRunIds: () => Promise.resolve(['run-0']),
+    }).run(
+      ctx([
+        { kind: 'edited', path: 'src/a.ts' },
+        { kind: 'ran_tests' },
+        { kind: 'read', path: 'src/a.ts' },
+      ]),
+    );
+
+    expect(verdict.status).toBe('failed');
+    expect(verdict.findings.map((f) => f.claim?.kind).sort()).toEqual([
+      'ran_tests',
+      'read',
+    ]);
+  });
+
+  it('still fails a claim that no run of the ticket has a receipt for', async () => {
+    const earlier = chain([{ id: 'p1', tool: 'edit', resource: 'src/other.ts' }]);
+    const own = chain([{ id: 'c2', tool: 'shell', resource: 'pnpm test' }]);
+    const verdict = await createG1Gate({
+      ...deps({
+        receipts: {
+          append: () => Promise.reject(new Error('read-only fake')),
+          list: (id) => Promise.resolve(id === 'run-0' ? earlier : own),
+        },
+        listToolCalls: () => Promise.resolve([{ callId: 'c2', name: 'Bash' }]),
+      }),
+      earlierRunIds: () => Promise.resolve(['run-0']),
+    }).run(ctx());
+
+    expect(verdict.status).toBe('failed');
   });
 
   it('fails a non-empty diff whose finish carried no claims', async () => {

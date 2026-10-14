@@ -7,7 +7,7 @@
  *   G1 can check the Worker's claims. These tests run through the real MCP protocol
  *   against storage so a changed row shape shows up as a failure.
  *
- * Pins: ask_director, one pending interaction per run, report_blocked, finish.
+ * Pins: ask_director, one pending interaction per run, report_blocked, finish (last call wins until settle).
  * Depends on: helpers/harness, helpers/auto-close, domain/server.
  */
 
@@ -174,16 +174,56 @@ describe('finish', () => {
     expect(await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID))).toEqual([]);
   });
 
-  it('defaults claims to empty and refuses a second finish', async () => {
-    const { client } = await setup();
-    const first = await client.callTool({ name: 'finish', arguments: { summary: 's' } });
-    expect(first.isError).toBeFalsy();
-    const second = await client.callTool({
+  it('defaults claims to empty when none are given', async () => {
+    const { client, storage } = await setup();
+    const res = await client.callTool({ name: 'finish', arguments: { summary: 's' } });
+
+    expect(res.isError).toBeFalsy();
+    const events = await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID));
+    expect(events[0]).toMatchObject({ type: 'finish', structured: { claims: [] } });
+  });
+
+  it('accepts a later finish that supersedes the earlier one, each its own event', async () => {
+    const { client, storage } = await setup();
+    const first = await client.callTool({
       name: 'finish',
-      arguments: { summary: 's2' },
+      arguments: { summary: 'placeholder' },
     });
 
-    expect(second.isError).toBe(true);
-    expect(textOf(second)).toMatch(/already/i);
+    const claims = [{ kind: 'edited', path: 'src/a.ts' }];
+    const second = await client.callTool({
+      name: 'finish',
+      arguments: { summary: 'real', claims },
+    });
+
+    expect(first.isError).toBeFalsy();
+    expect(second.isError).toBeFalsy();
+    const finishes = (
+      await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID))
+    ).filter((e) => e.type === 'finish');
+
+    expect(finishes).toHaveLength(2);
+    expect(finishes.at(-1)).toMatchObject({ summary: 'real', structured: { claims } });
+  });
+
+  it('refuses finish once the run has settled', async () => {
+    const { client, storage } = await setup();
+    await client.callTool({ name: 'finish', arguments: { summary: 's' } });
+    await storage.transaction((tx) =>
+      tx.runs.update(RUN_ID, { status: 'success', ended_at: '2026-10-13T01:00:00.000Z' }),
+    );
+
+    const late = await client.callTool({
+      name: 'finish',
+      arguments: { summary: 'late', claims: [{ kind: 'ran_tests' }] },
+    });
+
+    expect(late.isError).toBe(true);
+    expect(textOf(late)).toMatch(/not running/i);
+    const finishes = (
+      await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID))
+    ).filter((e) => e.type === 'finish');
+
+    expect(finishes).toHaveLength(1);
   });
 });

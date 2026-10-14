@@ -8,9 +8,11 @@
  *   the claim quoted, so the rework prompt says exactly which statement was false
  *   (verification-plane.md §2).
  *
- * Match rules:
+ * Match rules (receipts are the gated run's own unless noted):
  *   edited P     allowed `edit`/`write` decision on P with a `mutation_committed` effect,
- *                and P is in the diff (paths folded: slashes, case, worktree prefix).
+ *                in this run or, for a rework, an earlier run of the ticket (that edit is
+ *                in the branch already), and P is in the diff (paths folded: slashes,
+ *                case, worktree prefix).
  *   read P       allowed `read` decision on P with a `read_completed` effect.
  *   ran_tests    allowed `shell` decision with a completed effect (`mutation_committed`,
  *                or `uncertain` for a failed run, which still ran; the report says so)
@@ -98,6 +100,7 @@ function testRuns(calls: readonly Allowed[], testCommand: string): Allowed[] {
 function judge(
   claim: Claim,
   calls: readonly Allowed[],
+  editCalls: readonly Allowed[],
   ev: ClaimEvidence,
 ): string | null {
   switch (claim.kind) {
@@ -109,7 +112,7 @@ function judge(
 
       if (
         !touchedPath(
-          calls,
+          editCalls,
           EDIT_TOOLS,
           new Set(['mutation_committed']),
           claim.path,
@@ -197,9 +200,11 @@ function coverage(claims: readonly Claim[], ev: ClaimEvidence): GateFinding[] {
 /** Every claim must be supported and the diff covered; each failure is a finding. */
 export function checkClaims(claims: readonly Claim[], ev: ClaimEvidence): CheckOutcome {
   const calls = allowedCalls(ev.receipts);
+  // Earlier runs' receipts feed `edited` only; every other kind needs this run's own.
+  const editCalls = [...allowedCalls(ev.earlierReceipts ?? []), ...calls];
   const findings: GateFinding[] = [];
   for (const claim of claims) {
-    const why = judge(claim, calls, ev);
+    const why = judge(claim, calls, editCalls, ev);
     if (why !== null) {
       findings.push(unsupported(claim, why));
     }

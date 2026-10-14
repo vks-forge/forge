@@ -36,6 +36,7 @@ export async function makeVerifyRig(
       prefix: 'FG',
       profile: 'ts',
       default_harness: 'scripted',
+      commands: { test: 'pnpm test' },
     }),
     gitHost: host,
     gates: [gate],

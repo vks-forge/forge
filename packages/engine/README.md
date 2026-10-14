@@ -63,8 +63,8 @@ Public API from `src/index.ts`:
 - One base branch per project (`tick/project-runtime.ts`): `git_host.base_branch` drives the worktree base, the
   diff base and the PR target; the engine's `baseRef` only serves projects without a host. A runtime
   whose `config.slug` is another project is refused (logged as a tick error, nothing published).
-- The `dispatch_prompt` input carries `worker_contract` (`domain/worker-contract.ts`): the Worker must end
-  with `finish` and a typed claim for every file it edited (G1 fails a finish without), plus a rework
+- The `dispatch_prompt` input carries `worker_contract` (`domain/worker-contract.ts`), and the same rules are appended to the returned prompt verbatim under `## Rules of this run` so a paraphrase cannot drop them: the cwd is already the worktree (never `cd`), one shell command per call (compound lines are denied unattended), the project's exact test command, and the Worker must end
+  with `finish` and a typed claim for every file it edited (G1 fails a finish without; a later `finish` replaces an earlier one), plus a rework
   note after a failed gate.
 - Pure rules, also exported: `decideLane`, `decideFailure`, `findViolations`, `nextTicketNumber`,
   `requestWake`.

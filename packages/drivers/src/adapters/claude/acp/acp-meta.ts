@@ -11,12 +11,13 @@
  *   settings the driver rendered (probe 5a).
  *
  * Exports: sessionMeta(), toAcpMcpServers().
- * Depends on: @agentclientprotocol/sdk (types), @forge/core (RunRequest),
+ * Depends on: @agentclientprotocol/sdk (types), @forge/core (RunRequest), domain/worker-env,
  *   types/claude/driver-deps, types/claude/engine. No IO.
  */
 
 import type { McpServer } from '@agentclientprotocol/sdk';
 import type { RunRequest } from '@forge/core';
+import { WORKER_HARNESS_ENV } from '#/domain/worker-env.js';
 import type { McpServerSpec } from '#/types/claude/driver-deps.types.js';
 import type { RunFiles } from '#/types/claude/engine.types.js';
 
@@ -32,6 +33,7 @@ export function sessionMeta(req: RunRequest, files: RunFiles): Record<string, un
         maxBudgetUsd: req.budget.maxUsd,
         model: req.model,
         settings: files.settingsPath,
+        env: { ...WORKER_HARNESS_ENV },
       },
     },
   };

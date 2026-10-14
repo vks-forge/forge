@@ -11,11 +11,12 @@
  *   space in the path is mangled by the shell the harness uses to run the command.
  *
  * Exports: renderHookSettings(), renderAcpMeta(), DEFAULT_TOOL_MATCHER, HARNESS_TIMEOUT_MARGIN_S.
- * Depends on: @forge/tools/hook-wire, types/claude/settings-file. No IO.
+ * Depends on: @forge/tools/hook-wire, domain/worker-env, types/claude/settings-file. No IO.
  */
 
 import { HOOK_EVENTS } from '@forge/tools/hook-wire';
 import type { HookEventName } from '@forge/tools/hook-wire';
+import { WORKER_HARNESS_ENV } from '#/domain/worker-env.js';
 import type {
   AcpMeta,
   HookCommand,
@@ -56,7 +57,7 @@ export function renderHookSettings(opts: HookSettingsOptions): HookSettings {
     ];
   }
 
-  return { hooks };
+  return { env: { ...WORKER_HARNESS_ENV }, hooks };
 }
 
 /** `_meta` for ACP `session/new` / `session/load`: points the adapter at the settings file (probe 5a). */

@@ -10,8 +10,11 @@
  *   spawn failure) makes the verdict `error`, never `passed`, so the engine retries or
  *   escalates instead of merging on missing evidence (verification-plane.md §2).
  *
+ *   Earlier runs of the ticket count only for `edited` claims; tests run or files read
+ *   before a rework say nothing about the reworked code, and the chain check is own-run only.
+ *
  * Exports: buildG1Gate().
- * Depends on: @forge/core (Gate), domain/*, types/g1-deps. No IO; every side effect is an injected dep.
+ * Depends on: @forge/core (Gate), @forge/tools (Receipt type), domain/*, types/g1-deps. No IO; every side effect is an injected dep.
  */
 
 import type { Gate, GateContext, GateFinding, GateVerdict } from '@forge/core';
@@ -22,6 +25,7 @@ import { parsePatch } from '#/domain/patch.js';
 import { DEFAULT_COMMAND_TIMEOUT_MS, runProjectChecks } from '#/domain/project-checks.js';
 import { renderReport } from '#/domain/report.js';
 import { checkTestDiff } from '#/domain/test-diff.js';
+import type { Receipt } from '@forge/tools';
 import type { CheckOutcome } from '#/types/check.types.js';
 import type { G1CoreDeps } from '#/types/g1-deps.types.js';
 
@@ -31,6 +35,14 @@ function combine(outcomes: readonly CheckOutcome[]): GateVerdict['status'] {
   }
 
   return outcomes.some((o) => o.status === 'error') ? 'error' : 'passed';
+}
+
+/** Receipts of the ticket's earlier runs; they back a rework run's `edited` claims only. */
+async function earlierReceipts(deps: G1CoreDeps, ctx: GateContext): Promise<Receipt[]> {
+  const ids = deps.earlierRunIds ? await deps.earlierRunIds(ctx.run) : [];
+  const lists = await Promise.all(ids.map((id) => deps.receipts.list(id)));
+
+  return lists.flat();
 }
 
 /** Builds the G1 gate over injected evidence sources and a required command runner. */
@@ -43,10 +55,11 @@ export function buildG1Gate(deps: G1CoreDeps): Gate {
     name: 'G1',
     async run(ctx: GateContext): Promise<GateVerdict> {
       const runId = ctx.run.id;
-      const [receipts, calls, diff] = await Promise.all([
+      const [receipts, calls, diff, earlier] = await Promise.all([
         deps.receipts.list(runId),
         deps.listToolCalls(runId),
         deps.worktrees.diff(ctx.worktreePath, ctx.baseSha),
+        earlierReceipts(deps, ctx),
       ]);
 
       const patch = parsePatch(diff.patch);
@@ -55,6 +68,7 @@ export function buildG1Gate(deps: G1CoreDeps): Gate {
         checkChain(receipts, toolCalls, deps.runSecret(runId)),
         checkClaims(ctx.claims, {
           receipts,
+          earlierReceipts: earlier,
           diff,
           patch,
           testCommand: ctx.project.commands.test,
