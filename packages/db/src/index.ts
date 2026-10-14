@@ -10,12 +10,15 @@
  *   transaction (d-0023).
  *
  * Exports: openSqlite, createSqliteStorage, createStorageOnDriver, createSqliteReceiptLog,
+ *   createSqliteConfigSource, createMemoryConfigSource,
  *   openSqliteDriver, createMutex, createMemoryStorage, createMemoryReceiptLog,
  *   runMigrations, checkSchemaCurrent, MIGRATIONS, and the SqlDriver / Migration /
  *   SchemaReport / SqliteBackend types.
  * Depends on: adapters/sqlite, adapters/memory, migrations, shared/mutex. No IO on import.
  */
 
+export { createMemoryConfigSource } from '#/adapters/memory/config-source.js';
+export { createSqliteConfigSource } from '#/adapters/sqlite/config-source.js';
 export { createMemoryReceiptLog } from '#/adapters/memory/receipt-log.js';
 export { createMemoryStorage } from '#/adapters/memory/memory-storage.js';
 export { openSqliteDriver } from '#/adapters/sqlite/better-sqlite-driver.js';

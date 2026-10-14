@@ -18,6 +18,7 @@
  */
 
 import type { StorageAdapter, StorageTx } from '@forge/core';
+import { createSqliteConfigSource } from '#/adapters/sqlite/config-source.js';
 import { createGateResultRepository } from '#/adapters/sqlite/gate-results-repository.js';
 import { createIntakeEventRepository } from '#/adapters/sqlite/intake-events-repository.js';
 import { createInteractionRepository } from '#/adapters/sqlite/interactions-repository.js';
@@ -99,5 +100,6 @@ export function openSqlite(path: string, opts: SqliteStorageOptions = {}): Sqlit
   return {
     storage: createStorageOnDriver(driver, mutex),
     receipts: createSqliteReceiptLog(driver, mutex),
+    config: createSqliteConfigSource(driver, mutex),
   };
 }

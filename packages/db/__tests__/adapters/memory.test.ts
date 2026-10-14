@@ -5,11 +5,18 @@
  *   those tests would pass against behaviour production never has. Running the shared
  *   contract against it keeps the two interchangeable.
  *
- * Pins: contract behaviour of createMemoryStorage() and createMemoryReceiptLog().
- * Depends on: contract/storage.contract, contract/receipt-log.contract, src/index.
+ * Pins: contract behaviour of createMemoryStorage(), createMemoryReceiptLog() and
+ *   createMemoryConfigSource().
+ * Depends on: contract/storage.contract, contract/receipt-log.contract,
+ *   contract/config-source.contract, src/index.
  */
 
-import { createMemoryReceiptLog, createMemoryStorage } from '#/index.js';
+import {
+  createMemoryConfigSource,
+  createMemoryReceiptLog,
+  createMemoryStorage,
+} from '#/index.js';
+import { describeConfigSourceContract } from '#tests/contract/config-source.contract.js';
 import { describeReceiptLogContract } from '#tests/contract/receipt-log.contract.js';
 import { describeStorageContract } from '#tests/contract/storage.contract.js';
 
@@ -17,4 +24,9 @@ describeStorageContract('memory', () => createMemoryStorage());
 describeReceiptLogContract('memory', () => ({
   log: createMemoryReceiptLog(),
   close: async () => undefined,
+}));
+
+describeConfigSourceContract('memory', () => ({
+  source: createMemoryConfigSource(),
+  close: () => undefined,
 }));

@@ -9,7 +9,7 @@
  * Exports: MIGRATIONS.
  * Depends on: migrations/0001-state-tables, migrations/0002-verification-tables,
  *   migrations/0003-receipt-chain, migrations/0004-run-tokens, migrations/0005-ports-batch-c, migrations/0006-ticket-pr,
- *   migrations/0007-ticket-parked-from, migrations/0008-gate-head-sha. No IO.
+ *   migrations/0007-ticket-parked-from, migrations/0008-gate-head-sha, migrations/0009-config-versions. No IO.
  */
 
 import { MIGRATION_0001 } from '#/migrations/0001-state-tables.js';
@@ -20,6 +20,7 @@ import { MIGRATION_0005 } from '#/migrations/0005-ports-batch-c.js';
 import { MIGRATION_0006 } from '#/migrations/0006-ticket-pr.js';
 import { MIGRATION_0007 } from '#/migrations/0007-ticket-parked-from.js';
 import { MIGRATION_0008 } from '#/migrations/0008-gate-head-sha.js';
+import { MIGRATION_0009 } from '#/migrations/0009-config-versions.js';
 import type { Migration } from '#/types/migrations.types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -31,4 +32,5 @@ export const MIGRATIONS: readonly Migration[] = [
   MIGRATION_0006,
   MIGRATION_0007,
   MIGRATION_0008,
+  MIGRATION_0009,
 ];

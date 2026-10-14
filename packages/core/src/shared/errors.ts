@@ -11,7 +11,7 @@
  *
  * Exports: ForgeError, AuthError, RateLimitError, BudgetError,
  *   StallError, RefusalError, CrashError, PolicyDeniedError, UnknownForgeError,
- *   InvalidInputError, HeadMovedError.
+ *   InvalidInputError, HeadMovedError, ConfigVersionConflictError.
  * Depends on: schemas/errors, types/errors. No IO.
  */
 
@@ -92,5 +92,25 @@ export class InvalidInputError extends ForgeError {
 export class HeadMovedError extends ForgeError {
   constructor(message: string, options?: ForgeErrorOptions) {
     super('invalid_input', message, options);
+  }
+}
+
+/**
+ * A settings save lost the race: the scope's current version is not the one the editor
+ * started from. The UI reloads and shows the newer version rather than overwriting it.
+ */
+export class ConfigVersionConflictError extends ForgeError {
+  readonly expected: number;
+  readonly actual: number;
+
+  constructor(expected: number, actual: number, options?: ForgeErrorOptions) {
+    super(
+      'invalid_input',
+      `config is at version ${actual}, not ${expected}; reload before saving`,
+      options,
+    );
+
+    this.expected = expected;
+    this.actual = actual;
   }
 }

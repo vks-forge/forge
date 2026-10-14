@@ -98,6 +98,7 @@ account (container isolation later, d-0005); the rework path has not run live.
 
 Newest first. One line per milestone.
 
+- 2026-10-14 — B3a: versioned config in the database (ConfigSource port, sqlite + memory).
 - 2026-10-14 — B2: secret store gains delete, list and namespaced names.
 - 2026-10-14 — B1: data home (%LOCALAPPDATA%\Forge) for DB, secrets, runs, worktrees.
 - 2026-10-14 — B0: CI on Windows, macOS, Linux.
