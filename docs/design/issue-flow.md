@@ -4,7 +4,7 @@ Proposal for d-0113 / d-0114, built from two studies on 2026-10-14: our own
 earlier system **councilor** (councilor-harness/councilor, commit 9deec86) and
 public prior art (CodeRabbit Issue Enrichment + Issue Planner, Devin, GitHub
 Copilot agent, OpenHands resolver, Agentless, Issue2Test, Linear Triage
-Intelligence, GitHub Agentic Workflows). Status: **draft for approval**.
+Intelligence, GitHub Agentic Workflows). Status: **approved 2026-10-14 (d-0115)**.
 
 ## 1. What we take from where
 

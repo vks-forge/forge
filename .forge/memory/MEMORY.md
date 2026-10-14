@@ -35,6 +35,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0115 — Issue flow approved (docs/design/issue-flow.md): triage → deep analysis → verified findings → typed verdict (floor only stricter) → policy layer acts; auto-ready needs all 9 checks
 - d-0114 — Issue analysis: new/updated issues auto; backlog newest-first within daily budget; Analyse now; cheap triage pass then deep analysis only where warranted
 - d-0113 — Issues page (PRs later): analyst agent researches every open issue (code, blast radius, relations) → report + verdict; auto-card if solvable without user, else approval
 - d-0112 — Card policing: opt-in issues + allow-list, Director dedupe/merge, 20/h cap, 7/14-day nudges never auto-close, card budget cap, audit log, sensitive paths need approval
