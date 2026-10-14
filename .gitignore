@@ -31,3 +31,6 @@ coverage/
 # stray temp files written at repo root by a tool (name starts with a drive letter and a
 # non-ASCII colon, e.g. "C<colon>Users...AppData...")
 /[A-Z]*Users*AppData*
+
+# agent worktrees (isolated builder runs)
+.claude/worktrees/

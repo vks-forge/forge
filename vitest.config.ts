@@ -12,7 +12,8 @@
  *   separate `heavy` project, two at a time: on Windows every spawn costs hundreds of
  *   milliseconds, and a dozen such files running at once starved each other into hook and
  *   test timeouts and `EBUSY` on temp directories. Everything else runs in the `unit`
- *   project at full parallelism. Coverage is configured once here and covers both.
+ *   project at full parallelism. Coverage is configured once here and covers both. Off
+ *   Windows the DPAPI adapter is left out of coverage because its real-API tests only run there.
  *
  * Exports: default export (vitest config).
  * Depends on: vitest. No IO.
@@ -86,7 +87,16 @@ export default defineConfig({
         'apps/cli/src/**/*.ts',
         'apps/server/src/**/*.ts',
       ],
-      exclude: ['**/__tests__/**', '**/index.ts', 'apps/*/src/main.ts'],
+      exclude: [
+        '**/__tests__/**',
+        '**/index.ts',
+        'apps/*/src/main.ts',
+        // DPAPI is Windows-only and its real-API tests skip elsewhere (see the secrets
+        // contract test), so off Windows its lines would count as uncovered against the floor.
+        ...(process.platform === 'win32'
+          ? []
+          : ['packages/secrets/src/adapters/dpapi/**']),
+      ],
       thresholds: {
         'packages/core/src/**': { lines: 70 },
         'packages/db/src/**': { lines: 70 },

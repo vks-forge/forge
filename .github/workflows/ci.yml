@@ -1,0 +1,53 @@
+# CI: the same four gates the repo requires locally (code.md rule 8), on every OS Forge ships for.
+# Live probes never run here: they skip themselves unless FORGE_PROBES=1, which is not set.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    name: gates (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    steps:
+      # Before checkout: Windows runners default to autocrlf=true, which would turn LF files
+      # into CRLF and fail `prettier --check` and byte-exact test fixtures.
+      - name: Keep line endings as committed
+        run: git config --global core.autocrlf false
+
+      # Tests build fixture repos and commit in them without setting an identity.
+      - name: Configure git identity
+        run: |
+          git config --global user.name ci
+          git config --global user.email ci@example.invalid
+
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm test
