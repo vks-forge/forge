@@ -8,8 +8,7 @@
  * Depends on: helpers/http-server, helpers/hook-fixtures, src/adapters/claude/hooks/hook-main.
  */
 
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -17,6 +16,7 @@ import { main, readStream, runHook } from '#/adapters/claude/hooks/hook-main.js'
 import type { HookIo } from '#/types/claude/hook-client.types.js';
 import { failure, post, pre, sessionStart } from '#tests/helpers/hook-fixtures.js';
 import { startServer } from '#tests/helpers/http-server.js';
+import { makeTempDir } from '#tests/helpers/temp.js';
 import type { Reply, TestServer } from '#tests/helpers/http-server.js';
 
 const answer = (
@@ -208,7 +208,7 @@ describe('main and readStream', () => {
 
   it('runs end to end against a server and returns the exit code', async () => {
     server = await startServer(answer('deny', 'nope'));
-    const dir = mkdtempSync(join(tmpdir(), 'forge-main-'));
+    const dir = makeTempDir('forge-main-');
     const cfg = join(dir, 'hook.json');
     writeFileSync(
       cfg,
@@ -223,7 +223,6 @@ describe('main and readStream', () => {
     const { proc, out } = fake(JSON.stringify(pre()), { FORGE_HOOK_CONFIG: cfg });
     expect(await main(proc)).toBe(2);
     expect(out.stderr).toContain('denied: nope');
-    rmSync(dir, { recursive: true, force: true });
   });
 
   it('fails closed when stdin never ends', async () => {

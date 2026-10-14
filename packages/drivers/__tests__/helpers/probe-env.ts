@@ -10,10 +10,10 @@
  */
 
 import { spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { makeTempDir } from '#tests/helpers/temp.js';
 
 /** True only when the operator asked for the live probes (`pnpm probes`). */
 export const PROBES_ENABLED = process.env['FORGE_PROBES'] === '1';
@@ -50,7 +50,7 @@ export function freshProbeDir(...segments: string[]): string {
 
 /** A new empty working directory outside the repo, so no project settings are discovered. */
 export function freshTempCwd(): string {
-  return mkdtempSync(join(tmpdir(), 'forge-probe-'));
+  return makeTempDir('forge-probe-');
 }
 
 /** Forward-slash form of a path, safe to embed in a hook `command` string on Windows. */

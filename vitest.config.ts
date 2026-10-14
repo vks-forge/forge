@@ -38,6 +38,8 @@ const EXCLUDE = ['**/node_modules/**', '**/dist/**'];
 export default defineConfig({
   resolve: { conditions: ['development'] },
   test: {
+    // Safety net: removes `forge*` temp folders created during this run (see the script).
+    globalSetup: ['./scripts/vitest-temp-teardown.mjs'],
     projects: [
       {
         extends: true,
