@@ -4,28 +4,35 @@
  * Why: the server composes many adapters that each need a path, a limit or a key. Reading
  *   the environment and the yaml files once, validating them, and passing one resolved
  *   object down means no adapter reads the environment itself and tests can build the
- *   whole server from a literal without touching `process.env`.
+ *   whole server from a literal without touching `process.env`. Config paths (the checkout)
+ *   and data paths (the data home) are kept apart so nothing can write data into a repository.
  *
  * Exports: Layout, ServerSettings, HttpTuning.
- * Depends on: @forge/core (ForgeConfig, ProjectConfig). Types only.
+ * Depends on: @forge/core (DataHomeLayout, ForgeConfig, ProjectConfig). Types only.
  */
 
-import type { ForgeConfig, ProjectConfig } from '@forge/core';
+import type { DataHomeLayout, ForgeConfig, ProjectConfig } from '@forge/core';
 
-/** Absolute paths of everything the server reads or writes. */
+/**
+ * Absolute paths of everything the server reads or writes. Config paths come from the
+ * checkout (until config moves into the database); data paths come from the data home.
+ */
 export interface Layout {
-  readonly root: string;
-  readonly forgeDir: string;
-  readonly dataDir: string;
-  readonly dbPath: string;
-  readonly runsDir: string;
-  readonly secretsDir: string;
-  readonly memoryDir: string;
+  /** Folder the yaml config is read from: `FORGE_ROOT` or the cwd. Never holds data. */
+  readonly configRoot: string;
+  /** The project checkout that source-control commands run in; the same folder as `configRoot` for now. */
+  readonly repoRoot: string;
   readonly cataloguePath: string;
   readonly forgeConfigPath: string;
   readonly projectConfigPath: string;
+  /** Project memory records; still read from the checkout until memory moves into the data home. */
+  readonly memoryDir: string;
+  /** Everything Forge owns on the machine: database, secrets, runs, worktrees, backups, logs. */
+  readonly data: DataHomeLayout;
   /** `apps/mcp/dist/main.js`, the per-run MCP server entry. */
   readonly mcpEntry: string;
+  /** Absolute `bin/hook.js` of `@forge/drivers`, the process the harness runs on each tool event. */
+  readonly hookJsPath: string;
 }
 
 /** Timers of the HTTP layer; short values let tests run in milliseconds. */

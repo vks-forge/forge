@@ -4,7 +4,7 @@
  * Why: the GitHub App private key must be usable by the server yet never sit as plaintext
  *   in the repo or `.forge/` config (d-0062). DPAPI with CurrentUser scope binds the
  *   encrypted blob to the Windows account that wrote it: the file under
- *   `.forge/data/secrets/<name>.dpapi` is useless if copied elsewhere, and no master
+ *   `<dataHome>/secrets/<name>.dpapi` is useless if copied elsewhere, and no master
  *   password has to be stored. Writes are atomic (temp file then rename) so a crash never
  *   leaves a half-written blob that would decrypt to garbage or fail forever. On other
  *   platforms the constructor throws instead of silently storing plaintext.

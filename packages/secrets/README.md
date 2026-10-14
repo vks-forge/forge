@@ -46,8 +46,8 @@ Names must match the core `SecretName` schema (`^[a-z0-9][a-z0-9-]*$`). Anything
 
 - Runtime: Node 24 or newer. The DPAPI adapter needs Windows with Windows PowerShell 5.1 (`powershell.exe`,
   present on every supported Windows) and the .NET `System.Security` assembly (part of the framework).
-- No environment variables. Files: `.forge/data/secrets/<name>.dpapi` (git-ignored with the rest of
-  `.forge/data/`), written by `forge secret wrap`.
+- No environment variables. Files: `<dataHome>/secrets/<name>.dpapi` (the Forge data home, outside every repository),
+  written by `forge secret wrap`.
 - Tests: `pnpm test`, or `npx vitest run packages/secrets`. The DPAPI cases run only on Windows and use a
   temp directory with a real round trip; they take a few seconds because each call starts PowerShell.
 

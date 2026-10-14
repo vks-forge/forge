@@ -12,9 +12,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { floorViolation } from '#/domain/floor-argv.js';
-import { effectiveGrant } from '#/domain/grants.js';
 import { evaluateShell } from '#/domain/rules.js';
 import { tokenizeShell } from '#/domain/tokenizer.js';
+import { testGrant } from '#tests/helpers/fixtures.js';
 
 const CWD = '/work/repo';
 const WT = 'C:/work/repo/.worktrees/t1';
@@ -29,7 +29,7 @@ function segments(cmd: string, dialect: 'bash' | 'powershell') {
 }
 
 const verdict = (cmd: string, dialect: 'bash' | 'powershell' = 'bash') =>
-  evaluateShell(effectiveGrant('full'), segments(cmd, dialect), dialect, CWD);
+  evaluateShell(testGrant('full'), segments(cmd, dialect), dialect, CWD);
 
 describe('argv floors deny', () => {
   it.each([
@@ -107,7 +107,7 @@ describe('argv floors leave safe commands alone', () => {
 });
 
 const denied = (cmd: string, dialect: 'bash' | 'powershell' = 'bash', cwd = CWD) =>
-  evaluateShell(effectiveGrant('full'), segments(cmd, dialect), dialect, cwd);
+  evaluateShell(testGrant('full'), segments(cmd, dialect), dialect, cwd);
 
 describe('git output options are writes through the write floors', () => {
   it.each([
@@ -115,7 +115,7 @@ describe('git output options are writes through the write floors', () => {
     'git diff --output .env',
     'git show -o .env HEAD',
     'git format-patch -o .forge/tools x',
-    'git diff --output=../../.forge/data/forge.db',
+    'git diff --output=/forge-home/forge.db',
     'git log --output=/etc/x',
     'git -C . diff --outp=.env',
   ])('%s is a managed deny', (cmd) => {
@@ -228,22 +228,21 @@ describe('catastrophic recursive delete includes the cwd and its ancestors', () 
 
 describe('directory and file readers are checked against the read floors', () => {
   it.each([
-    ['ls .forge/data', 'bash'],
-    ['ls -la ../../.forge/data', 'bash'],
+    ['ls /forge-home/runs', 'bash'],
+    ['ls -la /forge-home', 'bash'],
     ['cat .env', 'bash'],
     ['cat src/a.ts .env', 'bash'],
     ['head -n 5 C:/Users/x/.claude.json', 'bash'],
-    ['tail -f C:/work/repo/.forge/data/forge.db', 'bash'],
+    ['tail -f /forge-home/forge.db', 'bash'],
     ['less ~/.ssh/id_rsa', 'bash'],
     ['more .ENV', 'powershell'],
     ['type .env', 'powershell'],
     ['Get-Content .env', 'powershell'],
-    ['Get-Content -Path ..\\..\\.forge\\data\\forge.db', 'powershell'],
-    ['Get-ChildItem C:\\work\\repo\\.forge\\data', 'powershell'],
-    ['dir ..\\..\\.forge\\data', 'powershell'],
+    ['Get-Content -Path /forge-home/forge.db', 'powershell'],
+    ['Get-ChildItem /forge-home/secrets', 'powershell'],
+    ['dir /forge-home', 'powershell'],
     ['cat .e*', 'bash'],
     ['cat id_*', 'bash'],
-    ['cat .forge/d*', 'bash'],
     ['ls /etc', 'bash'],
   ] as const)('%s', (cmd, dialect) => {
     expect(denied(cmd, dialect, WT)).toMatchObject({

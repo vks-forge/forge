@@ -7,7 +7,8 @@
  *   `test` and `lint` scripts need no install, a source file and a test file, a bare
  *   repository standing in for the remote with `main` pushed, and the server's own config
  *   (`forge.yaml`, `project.yaml`, the signed tool catalogue) copied in, so
- *   `loadSettings()` is exercised exactly as in production. Everything lives under the OS
+ *   `loadSettings()` is exercised exactly as in production. Forge's data home is a sibling temp
+ *   directory, never inside the repository. Everything lives under the OS
  *   temp directory (or a directory the caller names) and is removed by `dispose()`.
  *
  * Exports: FixtureRepo, createFixtureRepo(), git().
@@ -28,6 +29,8 @@ export interface FixtureRepo {
   readonly root: string;
   /** The bare repository that plays the remote. */
   readonly remote: string;
+  /** A throwaway Forge data home (pass it as FORGE_HOME); database, runs and worktrees go here. */
+  readonly dataHome: string;
   dispose(): void;
 }
 
@@ -65,8 +68,10 @@ export function createFixtureRepo(dir?: string): FixtureRepo {
   // else is removed with its remote when the test file ends, even if dispose() was missed.
   const root = dir ?? trackTemp(mkdtempSync(join(tmpdir(), 'forge-fixture-')));
   const remote = `${root}-remote.git`;
+  const dataHome = `${root}-home`;
   if (!dir) {
     trackTemp(remote);
+    trackTemp(dataHome);
   }
 
   mkdirSync(join(root, 'src'), { recursive: true });
@@ -87,7 +92,7 @@ export function createFixtureRepo(dir?: string): FixtureRepo {
   writeFileSync(join(root, 'src', 'math.js'), SOURCE);
   writeFileSync(join(root, 'test', 'math.test.js'), TEST);
   writeFileSync(join(root, 'scripts', 'lint.mjs'), LINT);
-  writeFileSync(join(root, '.gitignore'), '.worktrees/\n.forge/data/\nnode_modules/\n');
+  writeFileSync(join(root, '.gitignore'), 'node_modules/\n');
 
   cpSync(
     join(REPO_ROOT, '.forge', 'config', 'forge.yaml'),
@@ -131,8 +136,9 @@ export function createFixtureRepo(dir?: string): FixtureRepo {
   return {
     root,
     remote,
+    dataHome,
     dispose() {
-      for (const path of [root, remote]) {
+      for (const path of [root, remote, dataHome]) {
         try {
           rmSync(path, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
         } catch (error) {

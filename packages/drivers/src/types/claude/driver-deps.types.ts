@@ -34,7 +34,7 @@ export interface McpServerSpec {
 
 /** What the app prepared for one run before the driver starts anything. */
 export interface PreparedRun {
-  /** `.forge/data/runs/<id>/`, created by the app; the driver writes its settings files here. */
+  /** `<dataHome>/runs/<id>/`, created by the app; the driver writes its settings files here. */
   readonly runDir: string;
   readonly mcpServers: readonly McpServerSpec[];
   /** Extra env for the harness process (FORGE_* variables, never credentials). */

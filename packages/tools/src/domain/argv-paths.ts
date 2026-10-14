@@ -2,7 +2,7 @@
  * Argv paths — files a command reads or writes that no redirect shows.
  *
  * Why: the path floors guard the `read`, `edit` and `write` tools, but a Worker can reach
- *   the same files through the shell: `cat .env`, `ls ../../.forge/data`, `Get-Content
+ *   the same files through the shell: `cat .env`, `ls /abs/forge-home/runs`, `Get-Content
  *   forge.db`, or `git diff --output=.env`, which writes a file by itself. This module lifts
  *   those paths out of an argv so the rule engine can judge them as `read` and `write`
  *   calls and the same floors apply. A glob such as `cat .e*` is expanded by the shell
@@ -109,7 +109,6 @@ const PROTECTED_NAMES = [
   '.claude.json',
   '.codex',
   '.forge',
-  '.forge/data',
 ];
 
 function globRegex(segment: string): RegExp {

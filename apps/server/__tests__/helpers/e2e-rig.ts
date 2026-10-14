@@ -66,7 +66,13 @@ export async function startE2eRig(behaviours: readonly Behaviour[]): Promise<E2e
   try {
     const loaded = await loadSettings(
       // The real environment: G1 resolves `npm` through PATH, which a literal env would lack.
-      { ...process.env, FORGE_ROOT: fixture.root, FORGE_PORT: '0', NODE_ENV: 'test' },
+      {
+        ...process.env,
+        FORGE_ROOT: fixture.root,
+        FORGE_HOME: fixture.dataHome,
+        FORGE_PORT: '0',
+        NODE_ENV: 'test',
+      },
       fixture.root,
     );
 

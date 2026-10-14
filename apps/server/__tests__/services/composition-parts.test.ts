@@ -23,11 +23,12 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { AuthError, PolicyDeniedError, ProjectConfig } from '@forge/core';
+import { AuthError, PolicyDeniedError, ProjectConfig, dataHomeLayout } from '@forge/core';
 import type { Run } from '@forge/core';
 import { createMemorySecretStore } from '@forge/secrets';
 import { DEV_CATALOGUE_KEY } from '@forge/tools';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { resolveEntrypoints } from '#/config/entrypoints.js';
 import { resolveLayout } from '#/config/paths.js';
 import { createClaudePorts } from '#/services/claude-ports.js';
 import { createProjectGitHost } from '#/services/git-host.js';
@@ -107,9 +108,16 @@ describe('loadToolPolicy', () => {
     fixture.dispose();
   });
 
+  const layoutOf = () =>
+    resolveLayout(
+      fixture.root,
+      dataHomeLayout(fixture.dataHome, process.platform),
+      resolveEntrypoints(import.meta.url),
+    );
+
   const settings = (over: Partial<ServerSettings> = {}): ServerSettings =>
     ({
-      layout: resolveLayout(fixture.root),
+      layout: layoutOf(),
       catalogueKey: DEV_CATALOGUE_KEY,
       allowDevCatalogueKey: true,
       ...over,
@@ -136,7 +144,7 @@ describe('loadToolPolicy', () => {
 
   it('refuses a missing catalogue file', async () => {
     const layout = {
-      ...resolveLayout(fixture.root),
+      ...layoutOf(),
       cataloguePath: join(dir, 'nope.yaml'),
     };
 
@@ -147,11 +155,11 @@ describe('loadToolPolicy', () => {
 
   it('refuses a catalogue edited after signing', async () => {
     const edited = join(dir, 'catalog.yaml');
-    cpSync(resolveLayout(fixture.root).cataloguePath, edited);
+    cpSync(layoutOf().cataloguePath, edited);
     const text = readFileSync(edited, 'utf8');
     writeFileSync(edited, text.replace('risk: read', 'risk: exec'));
 
-    const layout = { ...resolveLayout(fixture.root), cataloguePath: edited };
+    const layout = { ...layoutOf(), cataloguePath: edited };
 
     await expect(loadToolPolicy(settings({ layout }), REVIEWED)).rejects.toBeInstanceOf(
       PolicyDeniedError,
@@ -166,6 +174,7 @@ describe('createClaudePorts', () => {
       env: {},
       harnessEnvPassthrough: [],
       claudeBinary: process.execPath,
+      layout: { hookJsPath: '/forge/bin/hook.js' },
       ...over,
     }) as unknown as ServerSettings;
 

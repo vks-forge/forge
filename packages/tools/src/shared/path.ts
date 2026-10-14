@@ -8,7 +8,7 @@
  *   data streams dropped, dot segments resolved), or a spelling slips past a deny. Dots are
  *   resolved on the full absolute path first and only then made relative to the cwd, so a
  *   relative path that climbs out of a worktree is seen as the absolute outside path it is
- *   (and the `.forge/data` of the main checkout is matched wherever the cwd sits). Lexical
+ *   (so the data-home floor sees a climb into Forge's folder). Lexical
  *   only; symlinks, junctions and 8.3 short names are not resolved (tool-system.md §5.3).
  *
  * Exports: normalizePath(), absolutePath(), isInside().
@@ -136,7 +136,7 @@ export function isInside(path: string, cwd: string): boolean {
 /**
  * Normalises a path to lowercase forward slashes with dot segments resolved on the absolute
  * path, then relative to `cwd` when it lies inside it. A path outside `cwd` stays absolute
- * (so the outside-the-worktree floors and the `**\/.forge/data` floor can see it). Symlinks
+ * (so the outside-the-worktree floors can see it). Symlinks
  * and junctions are not resolved (M1 path inspector).
  */
 export function normalizePath(path: string, cwd?: string): string {

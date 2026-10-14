@@ -17,8 +17,13 @@ export interface GitAuthor {
 
 /** Options for `createGitWorktreeManager`. */
 export interface GitWorktreeManagerOptions {
-  /** The main checkout; worktrees are created under `<repoRoot>/.worktrees`. */
+  /** The project's checkout; every git command runs here (or in a worktree). */
   readonly repoRoot: string;
+  /**
+   * Folder holding one directory per ticket, outside the checkout (the data home's
+   * `worktrees/<projectSlug>`), so the user's own folder never shows Forge worktrees (d-0098).
+   */
+  readonly worktreeRoot: string;
   /** Git executable; defaults to `git` on PATH. */
   readonly gitBinary?: string;
   /** Commit author and committer; defaults to Forge <forge@localhost>. */

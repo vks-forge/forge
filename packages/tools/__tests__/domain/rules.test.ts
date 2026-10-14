@@ -10,10 +10,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { effectiveGrant } from '#/domain/grants.js';
 import { evaluateToolRules } from '#/domain/rules.js';
 import type { CallRule } from '#/schemas/grant.js';
-import { grant } from '#tests/helpers/fixtures.js';
+import { grant, testGrant } from '#tests/helpers/fixtures.js';
 import { CWD, sh, rule } from '#tests/helpers/rule-eval.js';
 
 describe('shell rules by lane', () => {
@@ -121,7 +120,7 @@ describe('last-match wins and longest-prefix for shell', () => {
 
   it('paths: the last matching rule wins', () => {
     const base = [rule('edit', 'src/**', 'deny'), rule('edit', 'src/a/**', 'allow')];
-    const eff = (rules: CallRule[]) => effectiveGrant('standard', grant({ rules }));
+    const eff = (rules: CallRule[]) => testGrant('standard', grant({ rules }));
     expect(evaluateToolRules(eff(base), 'edit', 'src/a/x.ts', CWD).effect).toBe('allow');
     expect(
       evaluateToolRules(eff([...base].reverse()), 'edit', 'src/a/x.ts', CWD).effect,

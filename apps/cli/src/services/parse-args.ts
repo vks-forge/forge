@@ -17,7 +17,8 @@ export const USAGE = `Usage:
   forge secret wrap <name> <file>   encrypt <file> with Windows DPAPI as secret <name>
   forge --help
 
-Secrets are stored under .forge/data/secrets/<name>.dpapi. The original file is never
+Secrets are stored in the Forge data home, under secrets/<name>.dpapi
+(%LOCALAPPDATA%\\Forge by default). The original file is never
 modified or deleted; the command prints how to remove it once you have checked the result.
 `;
 

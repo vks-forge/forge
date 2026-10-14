@@ -12,7 +12,7 @@
 import type { RunSecretRegistry } from '@forge/hooks';
 
 export interface PrepareRunOptions {
-  /** `.forge/data/runs`; each run gets a subdirectory. */
+  /** `<dataHome>/runs`; each run gets a subdirectory. */
   readonly runsDir: string;
   /** Absolute path of the SQLite file the per-run MCP process opens. */
   readonly dbPath: string;

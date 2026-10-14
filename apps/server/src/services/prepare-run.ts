@@ -4,7 +4,7 @@
  * Why: the driver starts a harness but owns neither the run's token nor its place on disk.
  *   This is the app's half of starting a run (d-0033, d-0054). The engine already issued the
  *   token and stored only its hash; here the same token is registered with a fresh HMAC
- *   secret in memory, a run directory is created under `.forge/data/runs/<id>/` (outside
+ *   secret in memory, a run directory is created under `<dataHome>/runs/<id>/` (outside
  *   the worktree, so the Worker cannot edit what the hook reads), and the per-run MCP
  *   server is described so the harness can launch `apps/mcp` with exactly this run's id,
  *   token and database path. The hook is told the server's base URL, which is only known

@@ -15,11 +15,11 @@
  *   is a denial, not "the cwd". Shell segments are also judged for the files their argv
  *   reads or writes (`cat .env`, `git diff --output=f`) and for the commands nested in
  *   `bash -c`, `cmd /c`, `powershell -Command` and `eval`: a floor hit anywhere inside is a
- *   deny, not just an ask.
+ *   deny, not just an ask. Every path, from a tool or an argv, also passes the data-home floor.
  *
  * Exports: evaluateToolRules(), evaluateShell(), normalizePath() (re-exported).
  * Depends on: @forge/core (globMatch), domain/argv-paths, domain/cd-cwd, domain/command-candidates,
- *   domain/floor-argv, domain/nested-scripts, domain/tokenizer, schemas/grant, shared/path,
+ *   domain/data-home-floor, domain/floor-argv, domain/nested-scripts, domain/tokenizer, schemas/grant, shared/path,
  *   shared/pattern, types/grants, types/rules, types/tokenizer. No IO.
  */
 
@@ -28,6 +28,7 @@ import type { CallRule, Effect } from '#/schemas/grant.js';
 import { argvReads, argvWrites, wildcardHitsFloor } from '#/domain/argv-paths.js';
 import { commandCandidates, commandName } from '#/domain/command-candidates.js';
 import { isCdToCwd } from '#/domain/cd-cwd.js';
+import { dataHomeGuard, dataHomeOutcome } from '#/domain/data-home-floor.js';
 import { floorViolation } from '#/domain/floor-argv.js';
 import { looseFloorHit, nestedScripts } from '#/domain/nested-scripts.js';
 import { tokenizeShell } from '#/domain/tokenizer.js';
@@ -147,6 +148,13 @@ export function evaluateToolRules(
     return INVALID;
   }
 
+  if (isPath) {
+    const home = dataHomeOutcome(grant.dataHome, resource, cwd);
+    if (home !== null) {
+      return home;
+    }
+  }
+
   const res = isPath ? normalizePath(resource, cwd) : resource;
 
   return evaluate(grant, action, res, isPath ? 'path' : 'plain', false);
@@ -230,7 +238,7 @@ function evaluateSegment(
   depth = 0,
 ): RuleOutcome {
   const ic = dialect === 'powershell';
-  const floor = floorViolation(seg, cwd);
+  const floor = dataHomeGuard(grant.dataHome) ?? floorViolation(seg, cwd);
   if (floor !== null) {
     return { effect: 'deny', reason: 'managed_deny', rule: floor };
   }

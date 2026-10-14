@@ -37,7 +37,13 @@ function io(env: Record<string, string>) {
   const handlers = new Map<string, (signal: string) => void>();
   const exit = vi.fn();
   const process: ProcessIo = {
-    env: { NODE_ENV: 'test', FORGE_ROOT: fixture.root, FORGE_PORT: '0', ...env },
+    env: {
+      NODE_ENV: 'test',
+      FORGE_ROOT: fixture.root,
+      FORGE_HOME: fixture.dataHome,
+      FORGE_PORT: '0',
+      ...env,
+    },
     cwd: fixture.root,
     stderr: (text) => void stderr.push(text),
     exit,

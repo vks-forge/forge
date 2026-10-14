@@ -3,11 +3,12 @@
  * every path-reading and path-writing tool in every lane, and no malformed input shape
  * ever turns a path tool into an allow.
  *
- * Why: the floors protect Forge's database and run secrets, credential files and the
+ * Why: the floors protect Forge's data home (database, secrets, other runs' worktrees), credential files and the
  * harness's own user config. A Worker controls the spelling (relative, absolute, `..`,
  * UNC, `\\?\`, upper case, either slash) and the tool (`read`, `grep`, `glob`, `edit`,
  * `write`) and the field it puts the path in. One missed combination is a read of
- * `forge.db` or `.claude.json`. This table is the regression net: add a spelling here
+ * `forge.db` or `.claude.json`. The data home is an absolute path passed in as data; a run's
+ * own worktree sits inside it and must stay usable. This table is the regression net: add a spelling here
  * before adding a fix. The property test covers the other side: a call with no usable
  * string resource must never be admitted.
  *
@@ -27,30 +28,34 @@ const LANES: readonly Lane[] = ['express', 'standard', 'full'];
 const ALL_ACTIONS = ['read', 'grep', 'glob', 'edit', 'write'] as const;
 const READ_ACTIONS = ['read', 'grep', 'glob'] as const;
 
-/** A Worker cwd under the main checkout, as the engine creates it. */
-const WIN_CWD = 'C:/work/repo/.worktrees/t1';
-const POSIX_CWD = '/work/repo/.worktrees/t1';
+/** A Worker cwd inside the data home, as the engine creates it (d-0098). */
+const WIN_HOME = 'C:/Users/dev/AppData/Local/Forge';
+const POSIX_HOME = '/home/dev/.local/share/forge';
+const WIN_CWD = `${WIN_HOME}/worktrees/repo/FRG-1`;
+const POSIX_CWD = `${POSIX_HOME}/worktrees/repo/FRG-1`;
+const homeOf = (cwd: string): string => (cwd.startsWith('/') ? POSIX_HOME : WIN_HOME);
 
-const FORGE_DATA = [
-  'C:/work/repo/.forge/data/forge.db',
-  'C:\\work\\repo\\.forge\\data\\forge.db',
-  '../../.forge/data/forge.db',
-  '..\\..\\.forge\\data\\forge.db',
-  '..\\..\\.forge\\data',
-  'C:/WORK/REPO/.FORGE/DATA/forge.db',
-  '\\\\?\\C:\\work\\repo\\.forge\\data\\forge.db',
-  '//?/C:/work/repo/.forge/data/x',
-  '\\\\.\\C:\\work\\repo\\.forge\\data\\x',
-  '.forge/data',
-  '.forge/data/',
-  '.FORGE/data/x',
-  './.forge/./data/../data/x',
-  'sub/.forge/data/x',
-  'C:/work/repo/.worktrees/t1/.forge/data/x',
-  'C:/work/repo/.worktrees/t1/.Forge/Data',
-  '.forge/data.',
-  '.forge/data /x',
-  '.forge/data::$DATA',
+/** Spellings of paths in the data home that are not the run's own worktree. */
+const forgeData = (h: string): string[] => [
+  `${h}/forge.db`,
+  h,
+  `${h}/`,
+  `${h}/secrets/catalogue.key`,
+  `${h}/runs/r1/hook.json`,
+  `${h.toUpperCase()}/FORGE.DB`,
+  `${h}/./runs/../forge.db`,
+  `${h}/forge.db.`,
+  '../../../forge.db',
+  '../../..',
+  '../FRG-2/src/a.ts',
+  '../../repo/FRG-2',
+  `${h}/worktrees/repo/FRG-2`,
+  `${h}/worktrees/repo`,
+  `${h}/worktrees/repo/FRG-1/../FRG-2/x`,
+  h.replaceAll('/', '\\') + '\\forge.db',
+  '\\\\?\\' + h.replaceAll('/', '\\') + '\\forge.db',
+  `//?/${h}/forge.db`,
+  `${h}/forge.db::$DATA`,
 ];
 
 const CREDENTIALS = [
@@ -102,13 +107,16 @@ const HARNESS_CONFIG = [
   'C:/Users/x/.codex/auth.json',
 ];
 
+const grantFor = (lane: Lane, dataHome: string) =>
+  effectiveGrant(lane, undefined, undefined, [], { dataHome });
+
 const outcome = (
   lane: Lane,
   action: string,
   path: string,
   cwd: string,
 ): { effect: string; reason: string } =>
-  evaluateToolRules(effectiveGrant(lane), action, path, cwd);
+  evaluateToolRules(grantFor(lane, homeOf(cwd)), action, path, cwd);
 
 describe.each([
   ['windows cwd', WIN_CWD],
@@ -120,7 +128,7 @@ describe.each([
     !posix || (!/[A-Za-z]:|\\|\/\/[?.]\//.test(p) && !p.includes('::'));
 
   describe.each([
-    ['forge data', FORGE_DATA, ALL_ACTIONS],
+    ['forge data home', forgeData(homeOf(cwd)), ALL_ACTIONS],
     ['credentials', CREDENTIALS, ALL_ACTIONS],
     ['outside the worktree', OUTSIDE, ALL_ACTIONS],
     ['harness user config', HARNESS_CONFIG, READ_ACTIONS],
@@ -151,12 +159,16 @@ describe('ordinary paths inside the worktree still work', () => {
     ['read', '.env.example'],
     ['grep', 'src'],
     ['glob', 'src/**/*.ts'],
-    ['read', 'C:/work/repo/.worktrees/t1/src/A.ts'],
+    ['read', `${WIN_CWD}/src/A.ts`],
+    ['edit', `${WIN_CWD.toUpperCase()}/SRC/A.TS`],
     ['edit', 'docs/x.md'],
   ])('%s %s is allowed', (action, p) => {
     expect(outcome('standard', action, p, WIN_CWD).effect).toBe('allow');
   });
 });
+
+const winCtx = (lane: Lane) =>
+  makeCtx(lane, { cwd: WIN_CWD, grant: grantFor(lane, WIN_HOME) });
 
 describe('admit() applies the floors through every input field', () => {
   const field = (action: string): string =>
@@ -167,31 +179,34 @@ describe('admit() applies the floors through every input field', () => {
   it.each(
     LANES.flatMap((l) =>
       ALL_ACTIONS.flatMap((a) =>
-        [...FORGE_DATA.slice(0, 6), ...CREDENTIALS.slice(0, 4)].map(
+        [...forgeData(WIN_HOME).slice(0, 6), ...CREDENTIALS.slice(0, 4)].map(
           (p) => [l, a, p] as const,
         ),
       ),
     ),
   )('%s %s %j is denied', (lane, action, p) => {
-    const ctx = makeCtx(lane, { cwd: WIN_CWD });
+    const ctx = winCtx(lane);
     const d = admit(ctx, call(tool(action), { [field(action)]: p }));
     expect(d.decision).toBe('deny');
   });
 
   it('judges both path and pattern of a glob', () => {
-    const ctx = makeCtx('express', { cwd: WIN_CWD });
-    const d = admit(ctx, call('glob', { path: '.', pattern: '../../.forge/data/*' }));
+    const ctx = winCtx('express');
+    const d = admit(ctx, call('glob', { path: '.', pattern: '../../../*' }));
     expect(d.decision).toBe('deny');
   });
 
   it('judges the pattern of a grep with no path', () => {
-    const ctx = makeCtx('express', { cwd: WIN_CWD });
-    expect(admit(ctx, call('grep', { pattern: '.forge/data' })).decision).toBe('deny');
+    const ctx = winCtx('express');
+    expect(admit(ctx, call('grep', { pattern: `${WIN_HOME}/forge.db` })).decision).toBe(
+      'deny',
+    );
+
     expect(admit(ctx, call('grep', { pattern: '.env' })).decision).toBe('deny');
   });
 
   it('judges every path field when several are present', () => {
-    const ctx = makeCtx('express', { cwd: WIN_CWD });
+    const ctx = winCtx('express');
     const d = admit(ctx, call('read', { file_path: 'src/a.ts', path: '.env' }));
     expect(d.decision).toBe('deny');
   });

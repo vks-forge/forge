@@ -7,10 +7,10 @@
  *   Forge-authored commit for the PR. This adapter does it with the plain `git` binary:
  *   args arrays only, no shell, repo hooks disabled for commits made in a Worker-controlled
  *   tree, and `create` safe to call again after a crash. Paths it returns are absolute with
- *   forward slashes (`C:/repo/.worktrees/FRG-1`), which Node and git both accept on Windows.
+ *   forward slashes (`C:/data/worktrees/proj/FRG-1`), which Node and git both accept on Windows.
  *
  * Exports: createGitWorktreeManager().
- * Depends on: node:fs, node:os, node:path, @forge/core, adapters/git-cli/{run-git,exclude},
+ * Depends on: node:fs, node:os, node:path, @forge/core, adapters/git-cli/run-git,
  *   domain/{name-status,porcelain,ref-check}. IO: runs git, stats paths.
  */
 
@@ -19,7 +19,6 @@ import { devNull } from 'node:os';
 import { resolve } from 'node:path';
 import { CrashError, InvalidInputError } from '@forge/core';
 import type { Worktree, WorktreeDiffFile, WorktreeManager } from '@forge/core';
-import { ensureWorktreesExcluded } from '#/adapters/git-cli/exclude.js';
 import { createGitRunner } from '#/adapters/git-cli/run-git.js';
 import { parseNameStatus } from '#/domain/name-status.js';
 import { normalizePath, parseWorktreeList, samePath } from '#/domain/porcelain.js';
@@ -44,6 +43,7 @@ export function createGitWorktreeManager(
   const git = createGitRunner(opts.gitBinary ?? 'git');
   const author = opts.author ?? DEFAULT_AUTHOR;
   const repoRoot = normalizePath(resolve(opts.repoRoot));
+  const worktreeRoot = resolve(opts.worktreeRoot);
 
   const list = async () =>
     parseWorktreeList(await git.run(repoRoot, ['worktree', 'list', '--porcelain']));
@@ -60,8 +60,7 @@ export function createGitWorktreeManager(
         throw new InvalidInputError(`invalid branch name: ${branch}`);
       }
 
-      await ensureWorktreesExcluded(git, repoRoot);
-      const path = normalizePath(resolve(repoRoot, '.worktrees', ticketId));
+      const path = normalizePath(resolve(worktreeRoot, ticketId));
       const trees = await list();
 
       const here = trees.find((t) => samePath(t.path, path));

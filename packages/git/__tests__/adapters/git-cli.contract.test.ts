@@ -28,6 +28,20 @@ const git = async (cwd: string, ...args: string[]): Promise<string> =>
 const roots: string[] = [];
 const tid = (n: number): TicketId => TicketId.parse(`FRG-${n}`);
 
+/** A manager whose worktrees live in their own temp folder, as in the data home. */
+async function makeManager(
+  repoRoot: string,
+  extra: { author?: { name: string; email: string } } = {},
+) {
+  const worktreeRoot = trackTemp(await mkdtemp(join(tmpdir(), 'forge wt ')));
+  roots.push(worktreeRoot);
+
+  return {
+    worktreeRoot,
+    manager: createGitWorktreeManager({ repoRoot, worktreeRoot, ...extra }),
+  };
+}
+
 async function makeRepo(): Promise<string> {
   const dir = await realpath(await mkdtemp(join(tmpdir(), 'forge git ')));
   roots.push(trackTemp(dir));
@@ -51,10 +65,12 @@ afterEach(async () => {
 
 describeWorktreeContract('git cli', async (): Promise<WorktreeHarness> => {
   const repoRoot = await makeRepo();
+  const { manager, worktreeRoot } = await makeManager(repoRoot);
 
   return {
-    manager: createGitWorktreeManager({ repoRoot }),
+    manager,
     repoRoot,
+    worktreeRoot,
     exists: async (p) => existsSync(p),
     branchExists: async (b) => (await git(repoRoot, 'branch', '--list', b)).length > 0,
     write: async (wt, rel, content) => {
@@ -71,22 +87,23 @@ describeWorktreeContract('git cli', async (): Promise<WorktreeHarness> => {
 
 // 30s: real git spawns several processes per call and is slow on Windows under suite load.
 describe('git cli worktree manager specifics', { timeout: 30_000 }, () => {
-  it('keeps .worktrees out of the main checkout status via info/exclude', async () => {
+  it('keeps worktrees outside the checkout, so its status stays clean with no ignore rule', async () => {
     const repoRoot = await makeRepo();
-    const manager = createGitWorktreeManager({ repoRoot });
+    const { manager, worktreeRoot } = await makeManager(repoRoot);
 
     await manager.create(tid(1), 'feat/a', 'main');
     await manager.create(tid(2), 'feat/b', 'main');
 
     expect(await git(repoRoot, 'status', '--porcelain')).toBe('');
+    expect(existsSync(join(worktreeRoot, 'FRG-1'))).toBe(true);
+    expect(existsSync(join(repoRoot, '.worktrees'))).toBe(false);
   }, 30_000); // real git is slow on Windows
 
   it('commits with a custom author and never runs repo hooks', async () => {
     const repoRoot = await makeRepo();
     await mkdir(join(repoRoot, '.git', 'hooks'), { recursive: true });
     await writeFile(join(repoRoot, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\nexit 1\n');
-    const manager = createGitWorktreeManager({
-      repoRoot,
+    const { manager } = await makeManager(repoRoot, {
       author: { name: 'Bot', email: 'bot@example.com' },
     });
 
@@ -103,7 +120,7 @@ describe('git cli worktree manager specifics', { timeout: 30_000 }, () => {
 
   it('maps a git failure to a typed crash error', async () => {
     const repoRoot = await makeRepo();
-    const manager = createGitWorktreeManager({ repoRoot });
+    const { manager } = await makeManager(repoRoot);
 
     await expect(manager.head(join(repoRoot, 'does-not-exist'))).rejects.toMatchObject({
       errorFamily: 'crash',
@@ -112,7 +129,7 @@ describe('git cli worktree manager specifics', { timeout: 30_000 }, () => {
 
   it('fails with a typed error when the base ref does not exist', async () => {
     const repoRoot = await makeRepo();
-    const manager = createGitWorktreeManager({ repoRoot });
+    const { manager } = await makeManager(repoRoot);
 
     await expect(manager.create(tid(1), 'feat/a', 'nope')).rejects.toMatchObject({
       errorFamily: 'crash',
@@ -121,7 +138,7 @@ describe('git cli worktree manager specifics', { timeout: 30_000 }, () => {
 
   it('shows hunks of a -diff attributed file and unquoted non-ASCII names in the patch', async () => {
     const repoRoot = await makeRepo();
-    const manager = createGitWorktreeManager({ repoRoot });
+    const { manager } = await makeManager(repoRoot);
     const wt = await manager.create(tid(1), 'feat/a', 'main');
     await writeFile(join(wt.path, '.gitattributes'), '*.test.ts -diff\n');
     await writeFile(join(wt.path, 'a.test.ts'), "it.skip('x', () => {})\n");

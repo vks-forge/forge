@@ -5,7 +5,7 @@
  *   learns its server and token only from `hook.json`, Claude Code learns where the hook
  *   lives from a `--settings` file (or the ACP `_meta` path to the same file), and the CLI
  *   engine learns its MCP servers from `--mcp-config`. All of them go under the run
- *   directory the app created (`.forge/data/runs/<id>/`), never into the worktree: a file
+ *   directory the app created (`<dataHome>/runs/<id>/`), never into the worktree: a file
  *   in the worktree is something the Worker can edit and commit (d-0035). The token file is
  *   created owner-only where the OS supports it, and the config is validated by the same
  *   schema the hook parses with, so a bad URL fails here, before the run, not as a

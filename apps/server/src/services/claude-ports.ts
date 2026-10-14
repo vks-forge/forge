@@ -54,6 +54,7 @@ export function createClaudePorts(settings: ServerSettings, log: Logger): Extern
         spawn: nodeSpawn,
         log: deps.log,
         baseEnv: settings.env,
+        hookJsPath: settings.layout.hookJsPath,
       }),
     llm: createClaudeDirectorLLM({
       spawn: nodeSpawn,

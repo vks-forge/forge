@@ -7,7 +7,7 @@
  *   already carries provenance, and tests can assert the "never widens" invariant on it
  *   directly (tool-system.md §5.1, §12).
  *
- * Exports: LaneDefaults, RuleLayer, EffectiveGrant, GrantVerdict.
+ * Exports: LaneDefaults, RuleLayer, FloorInputs, EffectiveGrant, GrantVerdict.
  * Depends on: @forge/core (Lane), schemas/grant. No IO.
  */
 
@@ -32,9 +32,17 @@ export interface RuleLayer {
   readonly rules: readonly CallRule[];
 }
 
+/** Facts about the machine the floors need, passed in as data because this package reads no environment. */
+export interface FloorInputs {
+  /** Absolute path of Forge's data home; every path under it except the run's worktree is denied. */
+  readonly dataHome: string;
+}
+
 /** Merged policy for one run. Built only by `effectiveGrant()`. */
 export interface EffectiveGrant {
   readonly lane: Lane;
+  /** Absolute data home to protect; empty or relative means unknown, which denies every path (fail closed). */
+  readonly dataHome: string;
   /** Lane allow globs plus any project-gated tool the project grant named. */
   readonly ceiling: readonly string[];
   /** Tool-id globs a project grant named, honoured only for project MCPs when the lane allows them. */

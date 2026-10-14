@@ -74,7 +74,9 @@ const ctx = (): AdmitContext => ({
       ['read', def('read', 'read', 'Read')],
     ]),
   },
-  grant: effectiveGrant('standard'),
+  grant: effectiveGrant('standard', undefined, undefined, [], {
+    dataHome: '/forge-home',
+  }),
   liveSchemaHashes: {},
 });
 

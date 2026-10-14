@@ -13,11 +13,13 @@
  */
 
 export * from '#/domain/branch.js';
+export * from '#/domain/data-home.js';
 export * from '#/domain/ids.js';
 export * from '#/domain/lane-triage.js';
 export * from '#/domain/run-active.js';
 export * from '#/domain/state-machine.js';
 export * from '#/domain/ticket-patch.js';
+export * from '#/schemas/bootstrap-home.js';
 export * from '#/schemas/claims.js';
 export * from '#/schemas/errors.js';
 export * from '#/schemas/forge-config.js';
@@ -37,6 +39,7 @@ export * from '#/shared/errors.js';
 export * from '#/shared/glob.js';
 export * from '#/shared/result.js';
 export type * from '#/types/branch.types.js';
+export type * from '#/types/data-home.types.js';
 export type * from '#/types/errors.types.js';
 export type * from '#/types/ids.types.js';
 export type * from '#/types/lane-triage.types.js';

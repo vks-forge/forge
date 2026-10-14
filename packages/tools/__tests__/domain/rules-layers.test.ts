@@ -10,10 +10,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { effectiveGrant } from '#/domain/grants.js';
 import { evaluateShell, evaluateToolRules } from '#/domain/rules.js';
 import { tokenizeShell } from '#/domain/tokenizer.js';
-import { grant } from '#tests/helpers/fixtures.js';
+import { grant, testGrant } from '#tests/helpers/fixtures.js';
 import { sh, rule } from '#tests/helpers/rule-eval.js';
 
 describe('layers only tighten', () => {
@@ -42,7 +41,7 @@ describe('layers only tighten', () => {
   });
 
   it('a ticket layer tightens further', () => {
-    const eff = effectiveGrant(
+    const eff = testGrant(
       'standard',
       undefined,
       grant({ rules: [rule('shell', 'ls*', 'deny')] }),
@@ -64,7 +63,7 @@ describe('managed deny layer', () => {
   ];
 
   it('applies operator rules that no project or ticket allow can override', () => {
-    const eff = effectiveGrant(
+    const eff = testGrant(
       'full',
       grant({ rules: [rule('shell', 'curl*', 'allow')] }),
       grant({ rules: [rule('shell', 'curl*', 'allow')] }),

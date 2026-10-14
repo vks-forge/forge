@@ -98,6 +98,7 @@ account (container isolation later, d-0005); the rework path has not run live.
 
 Newest first. One line per milestone.
 
+- 2026-10-14 — B1: data home (%LOCALAPPDATA%\Forge) for DB, secrets, runs, worktrees.
 - 2026-10-14 — B0: CI on Windows, macOS, Linux.
 - 2026-10-14 — Build plan for realignment written (`docs/design/build-plan.md`).
 - 2026-10-14 — Product shape decided (d-0082 … d-0099); change map written.

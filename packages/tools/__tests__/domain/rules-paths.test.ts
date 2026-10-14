@@ -10,13 +10,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { effectiveGrant } from '#/domain/grants.js';
 import { evaluateToolRules, normalizePath } from '#/domain/rules.js';
 import { CWD } from '#tests/helpers/rule-eval.js';
+import { testGrant } from '#tests/helpers/fixtures.js';
 
 describe('path rules', () => {
-  const std = effectiveGrant('standard');
-  const exp = effectiveGrant('express');
+  const std = testGrant('standard');
+  const exp = testGrant('express');
   const ev = (g: typeof std, action: string, path: string) =>
     evaluateToolRules(g, action, path, CWD);
 
@@ -43,25 +43,24 @@ describe('path rules', () => {
     ['read', 'apps/web/.env'],
     ['write', 'certs/server.pem'],
     ['read', 'home/.ssh/id_rsa'],
-    ['read', '.forge/data/forge.db'],
-    ['read', '.forge/data/secrets/catalogue.key'],
-    ['edit', '.forge/data/runs/r1/hook.json'],
-    ['write', '.forge/data/forge.db-wal'],
-    ['read', '/work/repo/.forge/data/forge.db'],
+    ['read', '/forge-home/forge.db'],
+    ['read', '/forge-home/secrets/catalogue.key'],
+    ['edit', '/forge-home/runs/r1/hook.json'],
+    ['write', '/forge-home/forge.db-wal'],
     ['edit', '../outside.txt'],
     ['edit', 'src/../../outside.txt'],
     ['edit', '/etc/passwd'],
     ['write', 'C:\\Windows\\x.dll'],
   ])('floor: %s %s is a managed deny', (action, path) => {
-    expect(ev(effectiveGrant('full'), action, path)).toMatchObject({
+    expect(ev(testGrant('full'), action, path)).toMatchObject({
       effect: 'deny',
       reason: 'managed_deny',
     });
   });
 
-  it('keeps Forge memory readable while Forge data is not', () => {
+  it('keeps the .forge/memory of this repo readable while the data home is not', () => {
     expect(ev(std, 'read', '.forge/memory/MEMORY.md').effect).not.toBe('deny');
-    expect(ev(effectiveGrant('full'), 'read', '.forge/data/x').effect).toBe('deny');
+    expect(ev(testGrant('full'), 'read', '/forge-home/x').effect).toBe('deny');
   });
 
   it('lets an example env file through', () => {
@@ -69,7 +68,7 @@ describe('path rules', () => {
   });
 
   it('web rules by lane', () => {
-    const full = effectiveGrant('full');
+    const full = testGrant('full');
     expect(
       evaluateToolRules(std, 'web_fetch', 'https://docs.example.com/a/b').effect,
     ).toBe('allow');

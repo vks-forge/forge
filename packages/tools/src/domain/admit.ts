@@ -14,7 +14,7 @@
  *   (tool-system.md §5, §5.5, §12).
  *
  * Exports: admit(), visibleTools().
- * Depends on: domain/catalogue, domain/grants, domain/lane-defaults, domain/budgets,
+ * Depends on: domain/catalogue, domain/data-home-floor, domain/grants, domain/lane-defaults, domain/budgets,
  *   domain/admit-draft, domain/admit-call-rules, schemas/decision, types/admit. No IO.
  */
 
@@ -22,6 +22,7 @@ import { SEVERITY, deny, raise } from '#/domain/admit-draft.js';
 import { callRules } from '#/domain/admit-call-rules.js';
 import { checkBudget } from '#/domain/budgets.js';
 import { schemaMatches } from '#/domain/catalogue.js';
+import { DATA_HOME_UNKNOWN_RULE, dataHomeKnown } from '#/domain/data-home-floor.js';
 import { checkToolGranted } from '#/domain/grants.js';
 import { LANE_UNATTENDED } from '#/domain/lane-defaults.js';
 import type { Decision } from '#/schemas/decision.js';
@@ -85,6 +86,11 @@ function decide(
   // The grant is the single source of the lane; a context that disagrees is a wiring bug.
   if (ctx.lane !== ctx.grant.lane) {
     return no(deny('inspector_error', 'floor'));
+  }
+
+  // A floor that cannot say where Forge's data lives must not guess: deny everything.
+  if (!dataHomeKnown(ctx.grant.dataHome)) {
+    return no(deny('inspector_error', 'floor', DATA_HOME_UNKNOWN_RULE));
   }
 
   if (ctx.catalogue.status !== 'verified') {

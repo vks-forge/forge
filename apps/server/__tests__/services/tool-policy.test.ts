@@ -26,7 +26,7 @@ const CATALOGUE = fileURLToPath(
 );
 
 const settings = {
-  layout: { cataloguePath: CATALOGUE },
+  layout: { cataloguePath: CATALOGUE, data: { home: '/forge-home' } },
   catalogueKey: DEV_CATALOGUE_KEY,
   allowDevCatalogueKey: true,
 } as unknown as ServerSettings;

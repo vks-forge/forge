@@ -33,6 +33,7 @@ const ignored = (name: string): boolean => name.endsWith('.log');
 
 export function createFakeWorktreeHarness(): WorktreeHarness {
   const repoRoot = '/fake/repo';
+  const worktreeRoot = '/fake/data/worktrees/repo';
   const trees = new Map<string, FakeTree>();
   const branches = new Set<string>(['main']);
   let counter = 1;
@@ -52,7 +53,7 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
         throw new InvalidInputError('unsafe ref');
       }
 
-      const path = `${repoRoot}/.worktrees/${ticketId}`;
+      const path = `${worktreeRoot}/${ticketId}`;
       const existing = trees.get(path);
       if (existing) {
         if (existing.branch !== branch) {
@@ -162,6 +163,7 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
   return {
     manager,
     repoRoot,
+    worktreeRoot,
     exists: async (p) => trees.has(p),
     branchExists: async (b) => branches.has(b),
     write: async (p, rel, content) => {

@@ -22,8 +22,13 @@ const integer = (min: number, max: number, fallback: number) =>
   z.preprocess(blankIsUnset, z.coerce.number().int().min(min).max(max).default(fallback));
 
 export const ServerEnv = z.object({
-  /** The main checkout: `.forge/`, `.worktrees/` and the git repository live here. Default: the current directory. */
+  /** The project checkout: the yaml config is read from its `.forge/` for now and its repository is where branches are cut. Default: the current directory. Holds no Forge data. */
   FORGE_ROOT: text,
+  /**
+   * Data home override, an absolute folder, for development and tests only. Production uses
+   * `%LOCALAPPDATA%\Forge` (or the folder named in `forge-home.json`); see config/data-home.
+   */
+  FORGE_HOME: text,
   /** Bind address. Only `127.0.0.1` is accepted; anything else is refused when the server starts. */
   FORGE_HOST: z.preprocess(blankIsUnset, z.string().min(1).default('127.0.0.1')),
   /** Bind port; 0 asks the OS for a free one (tests). */

@@ -118,7 +118,7 @@ function writeJson(dir: string, name: string, value: unknown): void {
 /** Writes everything worth keeping from a probe run; never throws, so it is safe in `finally`. */
 export function writeArtefacts(
   out: string,
-  fixtureRoot: string,
+  dataHome: string,
   d: Diagnosis | null,
   serverLog: string,
 ): void {
@@ -144,7 +144,7 @@ export function writeArtefacts(
     );
 
     for (const { run } of d.runs) {
-      const runDir = join(fixtureRoot, '.forge', 'data', 'runs', run.id);
+      const runDir = join(dataHome, 'runs', run.id);
       if (existsSync(runDir)) {
         // Includes the gate reports and any raw harness output the driver kept; the
         // token-bearing files are left out.

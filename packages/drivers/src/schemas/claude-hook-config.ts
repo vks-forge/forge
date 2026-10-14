@@ -1,5 +1,5 @@
 /**
- * Per-run hook config file schema — `.forge/data/runs/<id>/hook.json`.
+ * Per-run hook config file schema — `<dataHome>/runs/<id>/hook.json`.
  *
  * Why: each Worker run needs its own server address, bearer token and timeout, and the
  *   hook process has no other channel to learn them (the harness gives it nothing but

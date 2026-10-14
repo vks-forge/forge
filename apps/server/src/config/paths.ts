@@ -1,44 +1,47 @@
 /**
- * Where the server's files live, derived from the repository root.
+ * Where the server's files live: config in the checkout, data in the data home.
  *
- * Why: runtime data, the database, per-run directories and secrets all sit under one
- *   gitignored `.forge/data/` in the main checkout, outside every Worker worktree, so the
- *   outside-cwd floors keep Workers away from them (d-0028, d-0059). Computing the layout
- *   in one place means the database path handed to the per-run MCP process, the report
- *   store and the secret store can never disagree.
+ * Why: Forge's own files (database, per-run directories, secrets, Worker worktrees) live in
+ *   one per-user data home outside every repository and outside every Worker worktree, so the
+ *   data-home floor can deny Workers the whole folder by absolute path (d-0098, d-0059). The
+ *   yaml config is still read from the checkout until it moves into the database; it is kept
+ *   in clearly separate fields so no caller can mix a config path with a data path. Computing
+ *   the layout in one place means the database path handed to the per-run MCP process, the
+ *   report store and the secret store can never disagree.
  *
- * Exports: resolveLayout(), MCP_ENTRY.
- * Depends on: node:path, node:url. No IO.
+ * Exports: resolveLayout().
+ * Depends on: node:path, @forge/core (DataHomeLayout), types/entrypoints, types/settings. No IO.
  */
 
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import type { DataHomeLayout } from '@forge/core';
+import type { Entrypoints } from '#/types/entrypoints.types.js';
 import type { Layout } from '#/types/settings.types.js';
 
-/** Built entry of the per-run MCP server; `apps/mcp` must be built (`pnpm build`) before a live run. */
-export const MCP_ENTRY = fileURLToPath(
-  new URL('../../../mcp/dist/main.js', import.meta.url),
-);
-
-/** All paths under `root`; `projectConfigPath` overrides the default `.forge/project.yaml`. */
-export function resolveLayout(root: string, projectConfigPath?: string): Layout {
-  const base = resolve(root);
+/**
+ * All paths for a server whose config is read from `configRoot` and whose data lives in
+ * `data`; `projectConfigPath` overrides the default `.forge/project.yaml` in the checkout.
+ */
+export function resolveLayout(
+  configRoot: string,
+  data: DataHomeLayout,
+  entrypoints: Entrypoints,
+  projectConfigPath?: string,
+): Layout {
+  const base = resolve(configRoot);
   const forgeDir = join(base, '.forge');
-  const dataDir = join(forgeDir, 'data');
 
   return {
-    root: base,
-    forgeDir,
-    dataDir,
-    dbPath: join(dataDir, 'forge.db'),
-    runsDir: join(dataDir, 'runs'),
-    secretsDir: join(dataDir, 'secrets'),
-    memoryDir: join(forgeDir, 'memory'),
+    configRoot: base,
+    repoRoot: base,
     cataloguePath: join(forgeDir, 'tools', 'catalog.yaml'),
     forgeConfigPath: join(forgeDir, 'config', 'forge.yaml'),
     projectConfigPath: projectConfigPath
       ? resolve(base, projectConfigPath)
       : join(forgeDir, 'project.yaml'),
-    mcpEntry: MCP_ENTRY,
+    memoryDir: join(forgeDir, 'memory'),
+    data,
+    mcpEntry: entrypoints.mcpEntry,
+    hookJsPath: entrypoints.hookJsPath,
   };
 }

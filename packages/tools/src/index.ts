@@ -17,6 +17,7 @@ export * from '#/domain/admit.js';
 export * from '#/domain/budgets.js';
 export * from '#/domain/call-resource.js';
 export * from '#/domain/catalogue.js';
+export * from '#/domain/data-home-floor.js';
 export * from '#/domain/floors.js';
 export * from '#/domain/grants.js';
 export * from '#/domain/lane-defaults.js';

@@ -1,22 +1,25 @@
 /**
- * Turns the process environment and the `.forge/` yaml files into `ServerSettings`.
+ * Turns the process environment, the data home and the yaml config files into `ServerSettings`.
  *
  * Why: this is the single place that reads `process.env` for the server (code.md rule 1).
  *   It validates the environment, then loads and validates `forge.yaml` (model matrix and
- *   engine limits) and the project config, so a bad port, a bad model name or a missing
+ *   engine limits) and the project config, and resolves where the data home is, so a bad port, a bad model name or a missing
  *   project file stops the process before it opens a database or spawns anything.
  *
  * Exports: readServerEnv(), loadSettings().
  * Depends on: @forge/core (ForgeConfig, ProjectConfig, InvalidInputError), @forge/tools
- *   (DEV_CATALOGUE_KEY, devKeyAllowed), config/paths, config/load-yaml, schemas/env.
- *   IO: reads two yaml files.
+ *   (DEV_CATALOGUE_KEY, devKeyAllowed), config/{paths,data-home,entrypoints,load-yaml}, schemas/env.
+ *   IO: reads two yaml files and, through config/data-home, the bootstrap file.
  */
 
 import { ForgeConfig, InvalidInputError, ProjectConfig } from '@forge/core';
 import { DEV_CATALOGUE_KEY, devKeyAllowed } from '@forge/tools';
 import { loadYaml } from '#/config/load-yaml.js';
+import { loadDataHome } from '#/config/data-home.js';
+import { resolveEntrypoints } from '#/config/entrypoints.js';
 import { resolveLayout } from '#/config/paths.js';
 import { ServerEnv } from '#/schemas/env.js';
+import type { DataHomeIo } from '#/types/data-home.types.js';
 import type { HttpTuning, ServerSettings } from '#/types/settings.types.js';
 
 const DEFAULT_HTTP: HttpTuning = { ssePollMs: 500, sseHeartbeatMs: 15_000 };
@@ -35,13 +38,23 @@ export function readServerEnv(
   return parsed.data;
 }
 
-/** Loads everything the server needs to start; `cwd` is the root when `FORGE_ROOT` is unset. */
+/**
+ * Loads everything the server needs to start; `cwd` is the config root when `FORGE_ROOT` is
+ * unset. `dataHomeIo` is the machine the data home is looked up on (the real one by default).
+ */
 export async function loadSettings(
   rawEnv: Readonly<Record<string, string | undefined>>,
   cwd: string,
+  dataHomeIo?: DataHomeIo,
 ): Promise<ServerSettings> {
   const env = readServerEnv(rawEnv);
-  const layout = resolveLayout(env.FORGE_ROOT ?? cwd, env.FORGE_PROJECT_CONFIG);
+  const layout = resolveLayout(
+    env.FORGE_ROOT ?? cwd,
+    await loadDataHome(rawEnv, dataHomeIo),
+    resolveEntrypoints(import.meta.url),
+    env.FORGE_PROJECT_CONFIG,
+  );
+
   const [forge, project] = await Promise.all([
     loadYaml(layout.forgeConfigPath, ForgeConfig, 'forge config'),
     loadYaml(layout.projectConfigPath, ProjectConfig, 'project config'),

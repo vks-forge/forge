@@ -13,7 +13,8 @@
  *   the harness build the driver reports is the build the catalogue says was reviewed;
  *   on any other build the native hashes are left out and `admit()` denies those tools as
  *   `schema_changed` until someone re-probes and re-signs (d-0053). A pin compared with
- *   itself would detect nothing.
+ *   itself would detect nothing. Each run's grant carries the data home, so the floors deny a
+ *   Worker everything in Forge's folder except its own worktree (d-0098).
  *
  * Exports: loadToolPolicy().
  * Depends on: @forge/core (Run, PolicyDeniedError), @forge/engine (Logger), @forge/mcp
@@ -77,7 +78,9 @@ export async function loadToolPolicy(
       lane: run.lane,
       harness: run.harness,
       catalogue,
-      grant: effectiveGrant(run.lane),
+      grant: effectiveGrant(run.lane, undefined, undefined, [], {
+        dataHome: settings.layout.data.home,
+      }),
       liveSchemaHashes,
       cwd: run.cwd,
     }),

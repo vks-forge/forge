@@ -25,7 +25,12 @@ import { Grant } from '#/schemas/grant.js';
 import type { CallRule } from '#/schemas/grant.js';
 import { BannedAlwaysAllowError, InvalidGrantError } from '#/shared/errors.js';
 import { toolMatch } from '#/shared/pattern.js';
-import type { EffectiveGrant, GrantVerdict, RuleLayer } from '#/types/grants.types.js';
+import type {
+  EffectiveGrant,
+  FloorInputs,
+  GrantVerdict,
+  RuleLayer,
+} from '#/types/grants.types.js';
 
 /** Collapses an allow resource to its command words, e.g. `Bash -c *` to `bash -c`. */
 function core(resource: string): string {
@@ -87,12 +92,15 @@ export function parseGrant(input: unknown): Grant {
  * Merges lane defaults with the project and ticket grants. Narrowing only: `allow` lists
  * intersect, `deny` lists union, rule layers are kept separate and combined by severity
  * at evaluation. `managed` adds operator deny-only rules after the built-in floors.
+ * `floors.dataHome` names the folder the data-home floor protects; omitted, every path is
+ * denied (fail closed).
  */
 export function effectiveGrant(
   lane: Lane,
   projectGrant?: Grant,
   ticketGrant?: Grant,
   managed: readonly CallRule[] = [],
+  floors?: FloorInputs,
 ): EffectiveGrant {
   const defaults = LANE_DEFAULTS[lane];
   const layers = [projectGrant, ticketGrant];
@@ -114,6 +122,7 @@ export function effectiveGrant(
 
   return {
     lane,
+    dataHome: floors?.dataHome ?? '',
     ceiling: [...defaults.allow, ...named],
     projectMcpAllow: projectAllow.filter((p) => p !== '*'),
     projectMcps: defaults.projectMcps,

@@ -10,12 +10,11 @@
  * Depends on: domain/rules, domain/grants, domain/tokenizer, helpers/fixtures. No IO.
  */
 
-import { effectiveGrant } from '#/domain/grants.js';
 import { evaluateShell } from '#/domain/rules.js';
 import { tokenizeShell } from '#/domain/tokenizer.js';
 import type { Lane } from '@forge/core';
 import type { CallRule } from '#/schemas/grant.js';
-import { grant } from '#tests/helpers/fixtures.js';
+import { grant, testGrant } from '#tests/helpers/fixtures.js';
 
 export const CWD = '/work/repo';
 
@@ -25,7 +24,7 @@ export function sh(
   rules: CallRule[] = [],
   dialect: 'bash' | 'powershell' = 'bash',
 ) {
-  const eff = effectiveGrant(lane, grant({ rules }));
+  const eff = testGrant(lane, grant({ rules }));
   const t = tokenizeShell(command, dialect);
   if (!t.ok) {
     throw new Error(t.error);

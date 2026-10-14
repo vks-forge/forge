@@ -5,7 +5,7 @@ Git for tickets: the `WorktreeManager` adapter that shells out to the `git` bina
 ## Why it exists
 
 Every Worker run happens in its own git worktree on its own branch, whatever the ticket size
-(d-0059). That keeps the main checkout, and Forge's runtime data under `.forge/data`, outside
+(d-0059). That keeps the main checkout, and Forge's data home (database, secrets, runs), outside
 the Worker's cwd where the outside-cwd floors deny it, and lets several tickets run at once.
 The Director (engine) needs four things from git around a run: a clean tree cut from a known
 base commit before dispatch, the truth about which files the Worker really changed (not its own
@@ -22,15 +22,15 @@ credential must never reach a Worker, argv or a log. The `GitHost` adapters here
 
 Public API from `src/index.ts`:
 
-- `createGitWorktreeManager({ repoRoot, gitBinary?, author? })` returns a `WorktreeManager`
+- `createGitWorktreeManager({ repoRoot, worktreeRoot, gitBinary?, author? })` returns a `WorktreeManager`
   (port in `@forge/core`). `gitBinary` defaults to `git`; `author` to `Forge <forge@localhost>`.
-- `create(ticketId, branch, baseRef)`: adds `<repoRoot>/.worktrees/<ticketId>` on a new
+- `create(ticketId, branch, baseRef)`: adds `<worktreeRoot>/<ticketId>` (the data home's `worktrees/<projectSlug>`, outside the checkout, d-0098) on a new
   `branch` and returns `{ path, baseSha }` with `baseSha` resolved before the add. Calling it
   again for the same path and branch reuses the tree (`baseSha` = merge-base of `baseRef` and
   the branch). A path on another branch, a branch checked out elsewhere, a non-worktree
   directory in the way, or an unsafe ref raises `InvalidInputError`. If the branch exists but
-  has no worktree (kept after `remove`), it is re-attached. It also appends `/.worktrees/` to
-  `<git-common-dir>/info/exclude` so the main checkout never lists trees as untracked (d-0039).
+  has no worktree (kept after `remove`), it is re-attached. Because trees sit outside the
+  checkout, git never lists them as untracked and no ignore rule is written.
 - `remove(path)`: `worktree remove --force` then `prune`; already gone is fine; branch kept.
 - `changedFiles(path, baseSha)`: sorted, unique, repo-relative forward-slash paths that differ
   from `baseSha` (committed, modified, deleted) plus untracked non-ignored files.
@@ -81,7 +81,7 @@ GitHost adapters (the port is in `@forge/core`):
   (family `rate_limit`, so the engine backs off), 5xx and network failures are `crash`. Messages cut the response body to 300
   characters and replace the token, the JWT and the base64 form of the push header with `[redacted]`.
 
-Returned paths are absolute with forward slashes (`C:/repo/.worktrees/FRG-1`), accepted by both
+Returned paths are absolute with forward slashes (`C:/data/worktrees/proj/FRG-1`), accepted by both
 Node and git on Windows. Any git failure becomes a `CrashError` with the stderr tail.
 
 ## Why this approach
@@ -113,8 +113,7 @@ Node and git on Windows. Any git failure becomes a `CrashError` with the stderr 
 - `git` >= 2.38 on PATH (`merge-tree --write-tree` for the local host; worktrees need 2.5); no environment
   variables read besides inheriting `process.env` for git itself. The GitHub host needs the App private key
   from a `SecretStore` (see `@forge/secrets`) and network access to api.github.com and github.com.
-- No files under `.forge/`; the only files written outside worktrees are `<git-common-dir>/info/exclude` and,
-  for the local host, `<remotePath>/forge-prs/*.json`.
+- No files under `.forge/`; the only file written outside worktrees is, for the local host, `<remotePath>/forge-prs/*.json`.
 - Tests: `pnpm test`, or `npx vitest run packages/git`. They create throwaway repos in the OS
   temp dir (names with a space) and need `git` to run. The GitHub host tests use a fake REST server on
   127.0.0.1 that verifies the JWT signature, and test push through a recording git runner. Live GitHub is

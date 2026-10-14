@@ -13,12 +13,12 @@
  * Exports: assembleServer().
  * Depends on: @forge/db, @forge/drivers (systemClock), @forge/engine, @forge/git, @forge/hooks,
  *   @forge/memory, @forge/secrets, @forge/tools, and the services/routes of this app.
- *   IO: opens SQLite, creates the data directory, binds the port on `start()`.
+ *   IO: opens SQLite, creates the data home, binds the port on `start()`.
  */
 
 import { createServer } from 'node:http';
 import { mkdir } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { InvalidInputError } from '@forge/core';
 import type { Project } from '@forge/core';
 import { openSqlite } from '@forge/db';
@@ -71,21 +71,30 @@ export async function assembleServer(
   const clock = ports.clock ?? systemClock;
   const now = (): number => clock.now();
 
-  await mkdir(dirname(layout.dbPath), { recursive: true });
-  const { storage, receipts } = openSqlite(layout.dbPath);
+  await mkdir(dirname(layout.data.dbPath), { recursive: true });
+  const { storage, receipts } = openSqlite(layout.data.dbPath);
 
   try {
     const owner = createOwnerId();
     const registry = createRunSecretRegistry();
 
-    const worktrees = createGitWorktreeManager({ repoRoot: layout.root });
+    const worktrees = createGitWorktreeManager({
+      repoRoot: layout.repoRoot,
+      worktreeRoot: join(layout.data.worktreesDir, project.slug),
+    });
+
     const secrets =
       ports.secrets ??
       (project.git_host?.kind === 'github'
-        ? createDpapiSecretStore({ dir: layout.secretsDir })
+        ? createDpapiSecretStore({ dir: layout.data.secretsDir })
         : createMemorySecretStore());
 
-    const gitHost = createProjectGitHost(project, { root: layout.root, secrets, now });
+    const gitHost = createProjectGitHost(project, {
+      root: layout.repoRoot,
+      secrets,
+      now,
+    });
+
     const gates = createGates({
       storage,
       receipts,
@@ -98,8 +107,8 @@ export async function assembleServer(
 
     let address: ServerAddress | null = null;
     const prepareRun = createPrepareRun({
-      runsDir: layout.runsDir,
-      dbPath: layout.dbPath,
+      runsDir: layout.data.runsDir,
+      dbPath: layout.data.dbPath,
       mcpEntry: layout.mcpEntry,
       nodePath: process.execPath,
       registry,
@@ -150,7 +159,7 @@ export async function assembleServer(
         onSkip: (path, reason) => log('warn', 'memory record skipped', { path, reason }),
       }),
       receipts,
-      reports: createFileReportStore(layout.dataDir),
+      reports: createFileReportStore(layout.data.home),
       project: (slug) => (runtime && slug === project.slug ? runtime : null),
       clock,
       config: settings.forge,

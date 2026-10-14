@@ -36,7 +36,7 @@ export interface WorktreeDiff {
 
 /** Git worktrees for tickets. All paths are absolute; `create` is idempotent for the same ticket and branch. */
 export interface WorktreeManager {
-  /** Creates `.worktrees/<ticketId>` on a new `branch` cut from `baseRef`; reuses it if it already exists on that branch. */
+  /** Creates the ticket's worktree folder (`<worktreeRoot>/<ticketId>`, outside the checkout) on a new `branch` cut from `baseRef`; reuses it if it already exists on that branch. */
   create(ticketId: TicketId, branch: string, baseRef: string): Promise<Worktree>;
   /** Removes the worktree and prunes; the branch is kept. A path that is already gone is not an error. */
   remove(path: string): Promise<void>;

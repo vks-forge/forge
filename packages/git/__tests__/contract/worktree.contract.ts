@@ -4,7 +4,7 @@
  * Why: the Director cuts one worktree per ticket, reads what the Worker really changed
  *   from it, commits the result and removes the tree, all through the port (d-0059). It
  *   must behave the same whether git or an in-memory fake is behind it: the tree lands
- *   under `.worktrees/<id>`, create is safe to repeat after a crash, changed-file lists
+ *   under the configured worktree root (outside the checkout), create is safe to repeat after a crash, changed-file lists
  *   cover committed, modified and untracked files but not ignored ones, the diff reports
  *   added, modified, deleted and renamed files plus a readable patch for the gates, commits carry the
  *   Forge author, removal keeps the branch, and hostile refs are refused before git sees
@@ -25,6 +25,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 export interface WorktreeHarness {
   readonly manager: WorktreeManager;
   readonly repoRoot: string;
+  /** The folder the manager was told to put ticket worktrees in (outside `repoRoot`). */
+  readonly worktreeRoot: string;
   exists(path: string): Promise<boolean>;
   branchExists(branch: string): Promise<boolean>;
   /** Writes (or overwrites) a file relative to a worktree path. */
@@ -55,10 +57,12 @@ export function describeWorktreeContract(
       await h.close();
     });
 
-    it('creates the worktree under .worktrees/<id> on a new branch at the base commit', async () => {
+    it('creates the worktree under the worktree root, not in the checkout, on a new branch at the base commit', async () => {
       const wt = await h.manager.create(tid(1), 'feat/FRG-1-a', 'main');
 
-      expect(wt.path.replaceAll('\\', '/')).toMatch(/\/\.worktrees\/FRG-1$/);
+      const root = h.worktreeRoot.replaceAll('\\', '/');
+
+      expect(wt.path.replaceAll('\\', '/')).toBe(`${root}/FRG-1`);
       expect(await h.exists(wt.path)).toBe(true);
       expect(await h.branchExists('feat/FRG-1-a')).toBe(true);
       expect(wt.baseSha).toMatch(/^[0-9a-f]{40}$/);

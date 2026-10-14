@@ -4,18 +4,17 @@
  * Why: some actions are never what a Worker should do unattended whatever a ticket says:
  *   wiping the filesystem, pushing to a remote (the dispatcher merges, d-0012), publishing
  *   a package, reading credential files, writing outside the worktree, reading Forge's own
- *   data directory, reading the harness's own user config (which holds its logins), or
+ *   data home (guarded by absolute path in data-home-floor), reading the harness's own user config (which holds its logins), or
  *   editing the policy files that define these very limits. They are expressed as managed
  *   deny rules so they sit in the one layer that is evaluated last and can only tighten,
  *   and they hold inside containers too (tool-system.md §5.0, §13). Every path tool is
  *   covered (read, grep, glob, edit, write), the directory itself is floored as well as
- *   what is under it (`x/**` does not match `x`), and the Forge data floor matches at any
- *   depth because a Worker's cwd is a worktree whose Forge data lives in the main checkout.
- *   Path matching is case-insensitive (see shared/path.ts).
+ *   what is under it (`x/**` does not match `x`). Path matching is case-insensitive (see shared/path.ts).
  *
- * Exports: FLOOR_RULES, PROTECTED_PATHS, CREDENTIAL_PATHS, FORGE_DATA_PATHS, HARNESS_CONFIG_PATHS,
+ * Exports: FLOOR_RULES, PROTECTED_PATHS, CREDENTIAL_PATHS, HARNESS_CONFIG_PATHS,
  *   OUTSIDE_CWD_PATHS.
- * Depends on: schemas/grant. No IO.
+ * Depends on: schemas/grant. No IO. Forge's own data folder is not a glob here: it is an absolute
+ *   path that depends on the machine, so domain/data-home-floor guards it.
  */
 
 import type { CallRule } from '#/schemas/grant.js';
@@ -44,15 +43,6 @@ export const PROTECTED_PATHS: readonly string[] = [
   '.claude/**',
   '.codex/**',
   'opencode.json',
-];
-
-/**
- * Forge's own runtime state: the database, secrets and per-run dirs (hook config, tokens).
- * A Worker that can read these could forge receipts or speak as another run.
- */
-export const FORGE_DATA_PATHS: readonly string[] = [
-  '**/.forge/data',
-  '**/.forge/data/**',
 ];
 
 /** The harness's per-user config and logins; never readable by a Worker, inside the cwd or out. */
@@ -117,11 +107,7 @@ const forEach = (actions: readonly string[], paths: readonly string[]): CallRule
 /** Matched on the normalised segment text, so quoting tricks do not hide a floor. */
 export const FLOOR_RULES: readonly CallRule[] = [
   ...SHELL_DENY.map((r) => rule('shell', r)),
-  ...forEach(PATH_TOOLS, [
-    ...CREDENTIAL_PATHS,
-    ...FORGE_DATA_PATHS,
-    ...OUTSIDE_CWD_PATHS,
-  ]),
+  ...forEach(PATH_TOOLS, [...CREDENTIAL_PATHS, ...OUTSIDE_CWD_PATHS]),
   ...forEach(READ_TOOLS, HARNESS_CONFIG_PATHS),
   ...forEach(WRITE_TOOLS, WRITE_ONLY_FLOORS),
 ];

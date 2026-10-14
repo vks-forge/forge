@@ -57,6 +57,7 @@ describe('probe 8: Express ticket end to end on the real Claude harness', () => 
         {
           ...process.env,
           FORGE_ROOT: fixture.root,
+          FORGE_HOME: fixture.dataHome,
           FORGE_PORT: '0',
           FORGE_ALLOW_DEV_CATALOGUE_KEY: '1',
         },
@@ -149,7 +150,7 @@ describe('probe 8: Express ticket end to end on the real Claude harness', () => 
         passed = true;
       } finally {
         diagnosis ??= await collectDiagnosis(server, TICKET).catch(() => null);
-        writeArtefacts(out, fixture.root, diagnosis, log.join(''));
+        writeArtefacts(out, fixture.dataHome, diagnosis, log.join(''));
         await server.stop();
         if (passed) {
           fixture.dispose();
