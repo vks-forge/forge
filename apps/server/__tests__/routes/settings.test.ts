@@ -22,6 +22,7 @@ import { buildRoutes } from '#/routes/routes.js';
 import { stubHarnessDeps } from '#tests/helpers/harness-deps.js';
 import { startHttp } from '#tests/helpers/http-rig.js';
 import type { HttpRig } from '#tests/helpers/http-rig.js';
+import { inertRouteExtras } from '#tests/helpers/route-extras.js';
 
 let rig: HttpRig;
 let storage: StorageAdapter;
@@ -37,6 +38,8 @@ beforeEach(async () => {
       id: 'demo',
       slug: 'demo',
       prefix: 'DM',
+      status: 'ready',
+      ecosystems: [],
       harness_defaults: {},
       tier_c_globs: [],
     }),
@@ -48,6 +51,7 @@ beforeEach(async () => {
       engine: { liveRunIds: vi.fn(() => []) } as unknown as Engine,
       storage,
       config,
+      ...inertRouteExtras(),
       hooks: { handle: vi.fn() },
       owner: 'srv-test',
       startedAt: 0,

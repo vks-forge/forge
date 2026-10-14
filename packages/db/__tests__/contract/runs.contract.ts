@@ -22,6 +22,13 @@ export function describeRunsContract(getDb: () => StorageAdapter): void {
   };
 
   describe('runs', () => {
+    it('stores the project of a run and lets it be cleared', async () => {
+      await db.transaction((tx) => tx.runs.insert(makeRun('rp', { project: 'sf' })));
+      expect((await db.transaction((tx) => tx.runs.get('rp')))?.project).toBe('sf');
+      await db.transaction((tx) => tx.runs.update('rp', { project: undefined }));
+      expect((await db.transaction((tx) => tx.runs.get('rp')))?.project).toBeUndefined();
+    });
+
     it('round-trips a run, lists by ticket and applies updates', async () => {
       await db.transaction(async (tx) => {
         await tx.runs.insert(makeRun('r1'));

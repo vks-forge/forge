@@ -34,7 +34,7 @@ async function deliverOne(ctx: EngineCtx, reply: QueuedReply): Promise<void> {
     return;
   }
 
-  const supported = deps.driver.capabilities().steerModes;
+  const supported = pump.driver.capabilities().steerModes;
   const answer = await runStep(
     ctx,
     'steer_reply',
@@ -71,7 +71,7 @@ async function deliverOne(ctx: EngineCtx, reply: QueuedReply): Promise<void> {
     }),
   );
 
-  await deps.driver.steer(pump.handle, text, sendMode, msg.seq);
+  await pump.driver.steer(pump.handle, text, sendMode, msg.seq);
   await deps.storage.transaction((tx) =>
     tx.runInbox.markDelivered(pump.runId, msg.seq, ctx.nowIso),
   );

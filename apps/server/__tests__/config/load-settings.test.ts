@@ -88,9 +88,7 @@ describe('resolveLayout', () => {
     const layout = resolveLayout(root, home, entry);
 
     expect(layout.configRoot).toBe(root);
-    expect(layout.repoRoot).toBe(root);
     expect(layout.cataloguePath).toBe(join(root, '.forge', 'tools', 'catalog.yaml'));
-    expect(layout.projectConfigPath).toBe(join(root, '.forge', 'project.yaml'));
     expect(layout.data.dbPath).toBe('C:\\Forge\\forge.db');
     expect(layout.data.runsDir).toBe('C:\\Forge\\runs');
     expect(layout.data.secretsDir).toBe('C:\\Forge\\secrets');
@@ -109,12 +107,6 @@ describe('resolveLayout', () => {
 
     expect(layout.mcpEntry).toMatch(/mcp[\\/]dist[\\/]main\.js$/);
     expect(layout.hookJsPath).toMatch(/drivers[\\/]bin[\\/]hook\.js$/);
-  });
-
-  it('resolves a project config path against the root', () => {
-    expect(resolveLayout(root, home, entry, 'other.yaml').projectConfigPath).toBe(
-      join(root, 'other.yaml'),
-    );
   });
 });
 

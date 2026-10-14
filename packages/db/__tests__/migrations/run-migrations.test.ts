@@ -32,6 +32,7 @@ const EXPECTED_TABLES = [
   'skills_registry',
   'skill_usage',
   'run_tokens',
+  'github_connections',
   'schema_migrations',
 ];
 
@@ -61,7 +62,7 @@ describe('runMigrations', () => {
     runMigrations(driver, MIGRATIONS.slice(0, 1));
     const applied = runMigrations(driver);
     driver.close();
-    expect(applied).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 12]);
+    expect(applied).toEqual(MIGRATIONS.slice(1).map((m) => m.id));
   });
 
   it('rejects a migration edited after it was applied', () => {

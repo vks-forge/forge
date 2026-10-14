@@ -26,4 +26,11 @@ describe('nextTicketNumber', () => {
   it('ignores other projects, prefixes that merely start the same, and junk', () => {
     expect(nextTicketNumber(['SF-40', 'FGX-9', 'FG-x', 'nope', 'FG-2'], 'FG')).toBe(3);
   });
+
+  it('counts each project on its own when two projects share one id list', () => {
+    const ids = ['FG-1', 'FG-2', 'FG-3', 'AP-1'];
+    expect(nextTicketNumber(ids, 'FG')).toBe(4);
+    expect(nextTicketNumber(ids, 'AP')).toBe(2);
+    expect(nextTicketNumber(ids, 'ZZ')).toBe(1);
+  });
 });

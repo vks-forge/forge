@@ -69,8 +69,16 @@ Public API from `src/index.ts`:
   Each run row stores `config_version` (`c<company>:p<project>`). If the source cannot be read or a stored
   override no longer validates, the tick is skipped with a `load config` error in its report and nothing
   starts. `requestWake` outside a tick reads the current company settings for the re-wake cap.
+- Many projects (d-0082): every step takes its project's runtime (`runtimeFor`), never a shared one: worktrees are
+  created, diffed, committed and removed through `runtime.worktrees` of the ticket's project, gates and the git host
+  likewise, and a run row records its `project`. Ticket numbers count per prefix (`nextTicketNumber(ids, prefix)`).
+  Only a `ready` project runs work: intake for an `archived` project is ignored, and tickets of archived or onboarding
+  projects never spend a run slot. The harness is chosen per ticket from the project's effective `default_harness`
+  (`driverFor`); the run keeps its driver (`Pump.driver`) for steering, cancelling and results. A harness with no
+  registered driver is a typed `invalid_input` error and the ticket is parked with the reason (`tick/dispatch-park.ts`),
+  never run on another harness.
 - One base branch per project (`tick/project-runtime.ts`): `git_host.base_branch` drives the worktree base, the
-  diff base and the PR target; the engine's `baseRef` only serves projects without a host. A runtime
+  diff base and the PR target; the runtime's `baseRef` only serves projects without a host. A runtime
   whose `config.slug` is another project is refused (logged as a tick error, nothing published).
 - The `dispatch_prompt` input carries `worker_contract` (`domain/worker-contract.ts`), and the same rules are appended to the returned prompt verbatim under `## Rules of this run` so a paraphrase cannot drop them: the cwd is already the worktree (never `cd`), one shell command per call (compound lines are denied unattended), the project's exact test command, and the Worker must end
   with `finish` and a typed claim for every file it edited (G1 fails a finish without; a later `finish` replaces an earlier one), plus a rework
@@ -117,10 +125,12 @@ Public API from `src/index.ts`:
 ## Requirements
 
 - Node 24, pnpm. Runtime deps: `@forge/core`, `@forge/tools`, `zod`.
-- `EngineDeps` (see `src/types/engine.types.ts`): storage, driver, llm, worktrees, memory, receipts,
-  `reports` (a `ReportStore`), `project(slug)` (a `ProjectRuntime`: config, `GitHost`, gates; null = the
-  project's tickets stay in Verifying), clock, `config` (a `ConfigSource`: the settings in the database, read once at the start of each tick, see below), `ids`, `owner`
-  (this server's name), `baseRef`, `catalogueHash`, optional `mcpIdentity`, `onTickRequested`, `log`.
+- `EngineDeps` (see `src/types/engine.types.ts`): storage, `drivers` (a core `DriverRegistry`), llm, memory, receipts,
+  `reports` (a `ReportStore`), `project(slug, settings)` (the project's `ProjectRuntime`: config, `GitHost` or null,
+  gates, `worktrees` of its own clone and `baseRef`; null = unknown or archived project; `settings` is the project's
+  `ProjectConfigView` of this tick so the app can rebuild a runtime whose git host settings changed), clock, `config`
+  (a `ConfigSource`: the settings in the database, read once at the start of each tick, see below), `ids`, `owner`
+  (this server's name), `catalogueHash`, optional `mcpIdentity`, `onTickRequested`, `log`.
 - No env, files or processes are touched here (the id source reads only OS entropy). Tests: `pnpm test` (scenarios in
   `__tests__/scenarios`, pure rules in `__tests__/domain`, the status-write property in
   `__tests__/property`); coverage floor 80% lines.
@@ -141,7 +151,8 @@ Public API from `src/index.ts`:
   restart pumps are gone (runs are crash-settled) and holds reset. The requester's hint, type and
   title are read from the stored intake event (`intakeEvents.get`), so they survive a restart.
 - A running Worker keeps the limits it was started with (budget, stall time); a settings edit reaches runs started on the next tick. The stall scan itself uses the current `stall_ms`. Run rows predating migration 0010 have no `config_version`.
-- Ticket numbers come from listing every ticket id of the project (no counter); fine at M0 scale.
+- Ticket numbers come from listing every ticket id (no counter); fine at M0 scale. Candidates of different projects are ordered by ticket number only, so projects are not yet scheduled round-robin (per-project limits come later, d-0097).
+- A project with no git host has a runtime (worktrees, base) but its tickets wait in Verifying: there is nowhere to publish.
 - Failure attempts count failed runs of the same family for the ticket, with no decay.
 - `driver_version` on run rows is the constant `unversioned` until the driver exposes it cheaply.
 - Gate jobs, the re-gate counter and verify holds are process-local. A job that finishes after its ticket was

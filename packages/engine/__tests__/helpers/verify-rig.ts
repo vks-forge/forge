@@ -12,6 +12,7 @@
 
 import { ProjectConfig } from '@forge/core';
 import type { Claim } from '@forge/core';
+import type { ProjectRuntime } from '#/types/verify.types.js';
 import { createFakeGitHost, createScriptedGate } from '#tests/helpers/fake-git-host.js';
 import type { FakeGitHost, ScriptedGate } from '#tests/helpers/fake-git-host.js';
 import { makeRig } from '#tests/helpers/rig.js';
@@ -47,6 +48,7 @@ export async function makeVerifyRig(
   });
 
   rig.runtime.current = {
+    ...(rig.runtime.current as ProjectRuntime),
     config: ProjectConfig.parse({
       slug: 'forge',
       prefix: 'FG',

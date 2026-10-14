@@ -8,7 +8,7 @@
  *   supplies a `ProjectRuntime` per project and the engine stays free of IO. The records
  *   below carry one ticket through those steps and report what happened to it.
  *
- * Exports: ProjectRuntime, VerifyTarget, GateRun, GateRows, GateSummary, GateJob, GateJobOutcome, MergeOutcome, VerifyOutcome, VerifiedTicket.
+ * Exports: ProjectRuntime, ReadyRuntime, VerifyTarget, GateRun, GateRows, GateSummary, GateJob, GateJobOutcome, MergeOutcome, VerifyOutcome, VerifiedTicket.
  * Depends on: @forge/core (ports, schemas). Types only.
  */
 
@@ -23,21 +23,32 @@ import type {
   ProjectConfig,
   Run,
   Ticket,
+  WorktreeManager,
 } from '@forge/core';
 
-/** What verifying a project's tickets needs: its config, its git host and its gates (run in order). */
+/**
+ * Everything the engine needs to work on one project, built by the app: the project's
+ * identity, its git host (null when the settings name none), its gates (run in order), the
+ * worktrees cut from its own clone and the base branch they start from.
+ */
 export interface ProjectRuntime {
   readonly config: ProjectConfig;
-  readonly gitHost: GitHost;
+  readonly gitHost: GitHost | null;
   readonly gates: readonly Gate[];
+  readonly worktrees: WorktreeManager;
+  /** Base used when the project's settings name no git host. */
+  readonly baseRef: string;
 }
+
+/** A runtime that can publish: verifying needs a git host. */
+export type ReadyRuntime = ProjectRuntime & { readonly gitHost: GitHost };
 
 /** One ticket in Verifying with the run being judged and everything resolved for it. */
 export interface VerifyTarget {
   readonly ticket: Ticket;
   readonly run: Run;
   readonly project: Project;
-  readonly runtime: ProjectRuntime;
+  readonly runtime: ReadyRuntime;
   /** Worktree path of the ticket. */
   readonly worktree: string;
   readonly branch: string;

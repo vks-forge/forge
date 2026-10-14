@@ -7,7 +7,7 @@
  *   so the tick phases can be reorganised without touching callers (d-0058).
  *
  * Exports: createEngine, createIdSource, createOwnerId, createJsonLogger, requestWake, decideLane, decideFailure, findViolations,
- *   nextTicketNumber, and the engine types.
+ *   nextTicketNumber, ProjectRuntime and the engine types.
  * Depends on: tick/engine, tick/wakes, domain/*, types/*. No IO.
  */
 
@@ -23,3 +23,4 @@ export type * from '#/types/engine.types.js';
 export type * from '#/types/failure-policy.types.js';
 export type * from '#/types/invariants.types.js';
 export type * from '#/types/lane-rules.types.js';
+export type { ProjectRuntime, ReadyRuntime } from '#/types/verify.types.js';

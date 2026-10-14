@@ -15,7 +15,7 @@
  * Each repository's cases live in their own file and are registered from here, so every
  *   backend runs them: tickets, transactions, runs, run events, run tokens, ticket
  *   relations and the ticket fields derived from them, the run lifecycle, interaction answer/expire CAS, intake ids and ticket mapping, wake requests,
- *   the run inbox, gate results and projects (ports batch C), the harness registry.
+ *   the run inbox, gate results, projects and GitHub connections (ports batch C), the harness registry.
  *
  * Also pinned: optional columns can be cleared (a patch from `transition()` leaves no stale
  *   `blocked_reason` / `tier_actual`), the CAS owns `status_version`, a transaction
@@ -31,6 +31,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { StorageAdapter } from '@forge/core';
 import { makeInteraction } from '#tests/helpers/fixtures.js';
+import { describeConnectionsContract } from './connections.contract.js';
 import { describeRunEventsContract } from './run-events.contract.js';
 import { describeRunTokensContract } from './run-tokens.contract.js';
 import { describeRunsContract } from './runs.contract.js';
@@ -66,6 +67,7 @@ export function describeStorageContract(
     describeWakeRequestsContract(() => db);
     describeWorkQueuesContract(() => db);
     describeHarnessesContract(() => db);
+    describeConnectionsContract(() => db);
     describeTicketsContract(() => db);
     describeTransactionsContract(() => db);
     describeRunsContract(() => db);

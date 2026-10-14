@@ -263,6 +263,7 @@ export type RunStatus = z.infer<typeof RunStatus>;
 export const Run = z.object({
   id: z.string().min(1),
   ticket_id: z.string().min(1),
+  project: z.string().min(1).optional(),
   harness: z.string().min(1),
   driver_version: z.string().min(1),
   session_ref: SessionRef.optional(),

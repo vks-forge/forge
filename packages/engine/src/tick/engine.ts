@@ -149,13 +149,18 @@ export function createEngine(deps: EngineDeps): Engine {
       const pump = runId ? state.pumps.get(runId) : undefined;
       if (pump) {
         pump.cancelled = true;
-        await deps.driver.cancel(pump.handle).catch((e: unknown) => {
+        await pump.driver.cancel(pump.handle).catch((e: unknown) => {
           deps.log?.('error', `cancel of ${pump.runId} failed`, { error: String(e) });
         });
       }
 
-      if (moved.ticket.worktree) {
-        await deps.worktrees.remove(moved.ticket.worktree).catch((e: unknown) => {
+      const settings = await deps.config
+        .project(moved.ticket.project)
+        .catch(() => undefined);
+
+      const runtime = deps.project(moved.ticket.project, settings);
+      if (moved.ticket.worktree && runtime) {
+        await runtime.worktrees.remove(moved.ticket.worktree).catch((e: unknown) => {
           deps.log?.('warn', `could not remove worktree of ${ticketId}`, {
             error: String(e),
           });

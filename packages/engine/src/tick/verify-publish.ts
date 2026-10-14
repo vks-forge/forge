@@ -25,7 +25,7 @@ export async function publishBranch(ctx: EngineCtx, t: VerifyTarget): Promise<Ti
   const title = `${ticket.type}(${ticket.id}): ${ticket.title}`;
 
   // Null means nothing new to commit (a rework that changed nothing, or a retry of this step).
-  await deps.worktrees.commitAll(t.worktree, title);
+  await runtime.worktrees.commitAll(t.worktree, title);
   await runtime.gitHost.push(t.worktree, t.branch);
   if (ticket.pr_number !== undefined) {
     return ticket;

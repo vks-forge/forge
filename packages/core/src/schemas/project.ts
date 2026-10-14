@@ -9,7 +9,7 @@
  *   mid-ticket. `default_harness` is an opaque id because core must not know which
  *   harnesses exist; drivers are chosen by config (d-0034, d-0027).
  *
- * Exports: Profile, ProjectCommands, GitHostConfig, ProjectConfig, Project.
+ * Exports: Profile, ProjectCommands, GitHostConfig, ProjectConfig, ProjectStatus, Project.
  * Depends on: schemas/ids, schemas/secret-name, zod. No IO.
  */
 
@@ -45,9 +45,14 @@ export const GitHostConfig = z.discriminatedUnion('kind', [
     owner: z.string().min(1),
     repo: z.string().min(1),
     base_branch: z.string().min(1).default('main'),
-    app_id: z.string().regex(/^[0-9]+$/),
+    /** Omitted when the project is linked to a connection: the App id then comes from the connection. */
+    app_id: z
+      .string()
+      .regex(/^[0-9]+$/)
+      .optional(),
     installation_id: z.string().regex(/^[0-9]+$/),
-    key_secret: SecretName.default('github-app-key'),
+    /** Omitted when the project is linked to a connection: the key then comes from the connection. */
+    key_secret: SecretName.optional(),
   }),
 ]);
 export type GitHostConfig = z.infer<typeof GitHostConfig>;
@@ -73,11 +78,16 @@ export const ProjectConfig = z.object({
 });
 export type ProjectConfig = z.infer<typeof ProjectConfig>;
 
+/** `onboarding`: registered, not yet checked; `ready`: tickets run; `archived`: kept for history, no new work. */
+export const ProjectStatus = z.enum(['onboarding', 'ready', 'archived']);
+export type ProjectStatus = z.infer<typeof ProjectStatus>;
+
 /**
  * The `projects` table row (director-core.md §3): the registry the Director keeps of the
- * repos it works on. Distinct from `ProjectConfig`, which is the per-repo file; this is
- * the database's record of a project, with its origin, memory repo and the harness and
- * tier-C overrides the Director applies.
+ * repos it works on. Distinct from `ProjectConfig`, the settings shape; this is the
+ * database's record of a project: identity, where its clone lives on this machine, which
+ * GitHub connection and repository it belongs to, its lifecycle status and detected
+ * ecosystems. Git host, commands and tier-C paths are settings (versioned), not columns.
  */
 export const Project = z.object({
   id: z.string().min(1),
@@ -85,7 +95,20 @@ export const Project = z.object({
   prefix: ProjectPrefix,
   repo_origin: z.string().min(1).optional(),
   memory_repo: z.string().min(1).optional(),
+  /** Absolute path of the project's local clone; Worker worktrees are cut from it. */
+  local_path: z.string().min(1).optional(),
+  /** The GitHub connection (App) this project's repository is reached through, when it has one. */
+  connection_id: z.string().min(1).optional(),
+  /** `owner/name` of the GitHub repository, when the project has one. */
+  repo_full_name: z
+    .string()
+    .regex(/^[^/\s]+\/[^/\s]+$/)
+    .optional(),
+  status: ProjectStatus.default('ready'),
+  /** Ecosystems detected in the repository (`node`, `python`, ...); filled by onboarding. */
+  ecosystems: z.array(z.string().min(1)).default([]),
   harness_defaults: z.record(z.string(), z.unknown()),
-  tier_c_globs: z.array(z.string()),
+  /** @deprecated Settings own tier-C paths since B3b (`ProjectSettings.tier_c_globs`); stored, never read. */
+  tier_c_globs: z.array(z.string()).default([]),
 });
 export type Project = z.infer<typeof Project>;

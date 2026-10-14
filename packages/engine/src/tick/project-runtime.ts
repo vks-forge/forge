@@ -6,15 +6,16 @@
  *   the project's git host config) a project whose host merges into `develop` would be
  *   diffed and branched from `main`: tiers computed on the wrong diff, PRs full of
  *   unrelated commits. The project's own `git_host.base_branch` is the single answer; the
- *   engine default only serves projects without a host. A runtime built for another
+ *   runtime default only serves projects without a host. A runtime built for another
  *   project would push and merge into the wrong repository, so it is refused here.
  *
- * Exports: runtimeFor(), baseRefFor().
+ * Exports: runtimeFor(), baseRefFor(), driverFor().
  * Depends on: @forge/core (InvalidInputError), tick/tick-config, types/engine-state,
  *   types/verify. No IO of its own.
  */
 
 import { InvalidInputError } from '@forge/core';
+import type { WorkerDriver } from '@forge/core';
 import { projectSettings } from '#/tick/tick-config.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { ProjectRuntime } from '#/types/verify.types.js';
@@ -26,7 +27,7 @@ import type { ProjectRuntime } from '#/types/verify.types.js';
  * edit reaches the next gate run and the next Worker contract.
  */
 export function runtimeFor(ctx: EngineCtx, slug: string): ProjectRuntime | null {
-  const runtime = ctx.deps.project(slug);
+  const runtime = ctx.deps.project(slug, ctx.config.projects.get(slug));
   if (!runtime) {
     return null;
   }
@@ -45,5 +46,27 @@ export function runtimeFor(ctx: EngineCtx, slug: string): ProjectRuntime | null 
 
 /** The branch worktrees are cut from, tiers are diffed against and PRs target for `slug`. */
 export function baseRefFor(ctx: EngineCtx, slug: string): string {
-  return runtimeFor(ctx, slug)?.config.git_host?.base_branch ?? ctx.deps.baseRef;
+  const runtime = runtimeFor(ctx, slug);
+  if (!runtime) {
+    throw new InvalidInputError(`project ${slug} has no runtime (unknown or archived)`);
+  }
+
+  return runtime.config.git_host?.base_branch ?? runtime.baseRef;
+}
+
+/**
+ * The driver for the harness `slug`'s settings name. An id with no registered driver is a
+ * typed `invalid_input` error: the caller parks the ticket instead of running it on some
+ * other harness (fail closed).
+ */
+export function driverFor(ctx: EngineCtx, slug: string): WorkerDriver {
+  const harness = projectSettings(ctx.config, slug).default_harness;
+  const driver = ctx.deps.drivers.get(harness);
+  if (!driver) {
+    throw new InvalidInputError(
+      `project ${slug} uses harness "${harness}", which is not installed on this server (available: ${ctx.deps.drivers.ids().join(', ') || 'none'})`,
+    );
+  }
+
+  return driver;
 }

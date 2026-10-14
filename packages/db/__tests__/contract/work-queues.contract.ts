@@ -201,6 +201,21 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
       );
     });
 
+    it('round-trips the local clone, connection, repository, status and ecosystems', async () => {
+      const p = makeProject('p1', {
+        local_path: 'D:/repos/sf',
+        connection_id: 'acme',
+        repo_full_name: 'acme/sf',
+        status: 'onboarding',
+        ecosystems: ['node', 'python'],
+      });
+
+      await tx((t) => t.projects.upsert(p));
+      expect(await tx((t) => t.projects.get('p1'))).toEqual(p);
+      await tx((t) => t.projects.upsert({ ...p, status: 'archived' }));
+      expect((await tx((t) => t.projects.get('p1')))?.status).toBe('archived');
+    });
+
     it('two projects cannot share a slug', async () => {
       await tx((t) => t.projects.upsert(makeProject('p1', { slug: 'same' })));
       const failure = await tx((t) =>

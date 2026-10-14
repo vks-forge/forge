@@ -61,7 +61,7 @@ export async function shutdownServer(parts: ShutdownParts): Promise<void> {
 
     log('info', `shutdown: cancelling ${live.length} live run(s)`);
     const cancels = Promise.all(
-      live.map((runId) => step(`cancel ${runId}`, () => parts.driver.cancel({ runId }))),
+      live.map((runId) => step(`cancel ${runId}`, () => parts.cancelRun(runId))),
     );
 
     if (!(await within(remaining(), cancels))) {

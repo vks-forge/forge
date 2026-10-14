@@ -49,12 +49,15 @@ describe('ProjectConfig git_host', () => {
     installation_id: '456',
   };
 
-  it('defaults base_branch and key_secret', () => {
+  it('defaults base_branch and leaves the key and App id to a connection', () => {
     const r = ProjectConfig.parse({ ...ok, git_host: gh });
-    expect(r.git_host).toMatchObject({
-      base_branch: 'main',
-      key_secret: 'github-app-key',
-    });
+    expect(r.git_host).toMatchObject({ base_branch: 'main' });
+    expect(
+      ProjectConfig.parse({
+        ...ok,
+        git_host: { kind: 'github', owner: 'o', repo: 'r', installation_id: '456' },
+      }).git_host,
+    ).toMatchObject({ kind: 'github', installation_id: '456' });
 
     const l = ProjectConfig.parse({
       ...ok,
@@ -122,6 +125,29 @@ describe('Project record (projects table)', () => {
     expect(
       Project.safeParse({ ...project, repo_origin: 'git@x', memory_repo: 'm' }).success,
     ).toBe(true);
+  });
+
+  it('defaults to a ready project with no ecosystems and no deprecated globs', () => {
+    const p = Project.parse({ id: 'p1', slug: 'sf', prefix: 'SF', harness_defaults: {} });
+    expect(p).toMatchObject({ status: 'ready', ecosystems: [], tier_c_globs: [] });
+  });
+
+  it('takes the local clone, connection and repository, and rejects bad ones', () => {
+    const linked = {
+      ...project,
+      local_path: 'D:/repos/sf',
+      connection_id: 'acme',
+      repo_full_name: 'acme/sf',
+      status: 'onboarding',
+      ecosystems: ['node'],
+    };
+
+    expect(Project.parse(linked)).toMatchObject({ status: 'onboarding' });
+    expect(Project.safeParse({ ...linked, repo_full_name: 'no-slash' }).success).toBe(
+      false,
+    );
+
+    expect(Project.safeParse({ ...linked, status: 'deleted' }).success).toBe(false);
   });
 
   it('rejects a bad slug or prefix', () => {

@@ -30,6 +30,7 @@ export * from '#/schemas/errors.js';
 export * from '#/schemas/forge-config.js';
 export * from '#/schemas/gate-result.js';
 export * from '#/schemas/harness.js';
+export * from '#/schemas/github-connection.js';
 export * from '#/schemas/ids.js';
 export * from '#/schemas/intake.js';
 export * from '#/schemas/interaction.js';

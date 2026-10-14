@@ -51,7 +51,8 @@ async function resolveTarget(
   }));
 
   const runtime = project ? runtimeFor(ctx, project.slug) : null;
-  if (!project || !runtime || !run || run.status !== 'success') {
+  // A project with no git host has nowhere to publish: its tickets wait in Verifying.
+  if (!project || !runtime?.gitHost || !run || run.status !== 'success') {
     deps.log?.(
       'debug',
       `${ticket.id} waits in verifying: no project runtime or finished run`,
@@ -69,13 +70,13 @@ async function resolveTarget(
   // One base for the worktree, the diff and the PR: the project's own, never a second default.
   const baseRef = baseRefFor(ctx, project.slug);
   // `create` is idempotent for the same ticket and branch and returns the original base.
-  const wt = await deps.worktrees.create(ticket.id, ticket.branch, baseRef);
+  const wt = await runtime.worktrees.create(ticket.id, ticket.branch, baseRef);
 
   return {
     ticket,
     run,
     project,
-    runtime,
+    runtime: { ...runtime, gitHost: runtime.gitHost },
     worktree: ticket.worktree,
     branch: ticket.branch,
     baseRef,
@@ -87,7 +88,7 @@ async function resolveTarget(
 async function startGating(ctx: EngineCtx, t: VerifyTarget): Promise<void> {
   const target = { ...t, ticket: await publishBranch(ctx, t) };
   const claims = await readClaims(ctx, t.run.id);
-  const headSha = await ctx.deps.worktrees.head(t.worktree);
+  const headSha = await t.runtime.worktrees.head(t.worktree);
   startGateJob(ctx, target, claims, headSha);
   ctx.deps.log?.('info', `gates started for ${t.ticket.id} on ${headSha}`, {
     run: t.run.id,

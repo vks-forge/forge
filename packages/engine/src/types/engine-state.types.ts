@@ -15,7 +15,7 @@
  * Depends on: @forge/core (RunHandle, RunResult), types/engine. Types only.
  */
 
-import type { RunHandle, RunResult } from '@forge/core';
+import type { RunHandle, RunResult, WorkerDriver } from '@forge/core';
 import type { EngineDeps, TickReport } from '#/types/engine.types.js';
 import type { TickConfig } from '#/types/tick.types.js';
 import type { GateJob } from '#/types/verify.types.js';
@@ -24,6 +24,8 @@ import type { GateJob } from '#/types/verify.types.js';
 export interface Pump {
   readonly runId: string;
   readonly handle: RunHandle;
+  /** The driver that started the run; steering, cancelling and results go back to it. */
+  readonly driver: WorkerDriver;
   done: boolean;
   result?: RunResult;
   error?: unknown;

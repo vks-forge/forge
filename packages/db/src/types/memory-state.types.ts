@@ -14,6 +14,7 @@
 import type {
   GateResult,
   Harness,
+  GithubConnection,
   Interaction,
   Project,
   Run,
@@ -48,4 +49,5 @@ export interface MemoryState {
   gateSeq: number;
   projects: Map<string, Project>;
   harnesses: Map<string, Harness>;
+  githubConnections: Map<string, GithubConnection>;
 }

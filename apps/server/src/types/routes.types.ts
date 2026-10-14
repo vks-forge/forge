@@ -15,6 +15,7 @@ import type { ConfigSource, SecretStore, StorageAdapter } from '@forge/core';
 import type { HarnessSetup, HarnessTestResult } from '@forge/drivers';
 import type { Engine } from '@forge/engine';
 import type { HookHandler } from '@forge/hooks';
+import type { ProjectRegistry } from '#/types/project-registry.types.js';
 import type { HttpTuning } from '#/types/settings.types.js';
 
 export interface RouteDeps {
@@ -22,8 +23,10 @@ export interface RouteDeps {
   readonly storage: StorageAdapter;
   /** Versioned settings behind `/settings/*`. */
   readonly config: ConfigSource;
+  /** Projects being served; the projects API adds to it and archives from it. */
+  readonly projects: ProjectRegistry;
   readonly hooks: HookHandler;
-  /** Holds harness API keys and OAuth tokens behind `PUT /harnesses/:id/secret`; values are never read back out. */
+  /** Holds harness API keys and OAuth tokens (`PUT /harnesses/:id/secret`) and GitHub App keys (`github/<connection>/key`); values are never read back out. */
   readonly secrets: SecretStore;
   /** Runs the harness environment test; `live` allows the one paid hello call. */
   readonly harnessTest: (

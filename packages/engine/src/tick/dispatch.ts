@@ -112,6 +112,13 @@ export async function dispatchReady(ctx: EngineCtx): Promise<void> {
       }
     }
 
+    // Only a project that is ready runs work: archived ones are history, onboarding ones
+    // are not checked yet. Filtered here so they never spend a run slot.
+    const waiting = new Set(
+      (await tx.projects.list()).filter((p) => p.status !== 'ready').map((p) => p.id),
+    );
+
+    const runnable = list.filter((c) => !waiting.has(c.ticket.project));
     const active = await tx.runs.listByStatus(['starting', 'running']);
     const capacity: Capacity = {
       free: engine.global_slots - active.length,
@@ -120,7 +127,7 @@ export async function dispatchReady(ctx: EngineCtx): Promise<void> {
         engine.max_concurrent_by_state.in_progress ?? Number.POSITIVE_INFINITY,
     };
 
-    return { candidates: list, capacity };
+    return { candidates: runnable, capacity };
   });
 
   for (const c of candidates) {

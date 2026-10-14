@@ -21,6 +21,7 @@ import { buildRoutes } from '#/routes/routes.js';
 import { stubHarnessDeps } from '#tests/helpers/harness-deps.js';
 import { startHttp } from '#tests/helpers/http-rig.js';
 import type { HttpRig } from '#tests/helpers/http-rig.js';
+import { inertRouteExtras } from '#tests/helpers/route-extras.js';
 
 const TICKET: Ticket = {
   id: 'FX-1' as Ticket['id'],
@@ -88,6 +89,7 @@ beforeEach(async () => {
       engine: engine as unknown as Engine,
       storage,
       config: createMemoryConfigSource(),
+      ...inertRouteExtras(),
       hooks,
       owner: 'srv-test',
       startedAt: 0,

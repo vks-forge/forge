@@ -22,7 +22,7 @@ const integer = (min: number, max: number, fallback: number) =>
   z.preprocess(blankIsUnset, z.coerce.number().int().min(min).max(max).default(fallback));
 
 export const ServerEnv = z.object({
-  /** The project checkout: the yaml config is read from its `.forge/` for now and its repository is where branches are cut. Default: the current directory. Holds no Forge data. */
+  /** The folder whose `.forge/` holds the signed tool catalogue and project memory (a checkout of Forge itself in development). Projects are registered through the API, each with its own clone. Default: the current directory. Holds no Forge data. */
   FORGE_ROOT: text,
   /**
    * Data home override, an absolute folder, for development and tests only. Production uses
@@ -33,8 +33,6 @@ export const ServerEnv = z.object({
   FORGE_HOST: z.preprocess(blankIsUnset, z.string().min(1).default('127.0.0.1')),
   /** Bind port; 0 asks the OS for a free one (tests). */
   FORGE_PORT: integer(0, 65535, 4310),
-  /** Project config path; default `<root>/.forge/project.yaml`. */
-  FORGE_PROJECT_CONFIG: text,
   /** Catalogue signing key (32 bytes or more). */
   FORGE_CATALOGUE_KEY: text,
   /** `1` lets the public development key verify the catalogue. */

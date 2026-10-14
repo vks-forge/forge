@@ -11,8 +11,10 @@
 import { harnessRoutes } from '#/routes/harnesses.js';
 import { answerRoute } from '#/routes/interactions.js';
 import { healthRoute } from '#/routes/health.js';
+import { githubConnectionRoutes } from '#/routes/github-connections.js';
 import { hookRoute } from '#/routes/hook.js';
 import { intakeRoute } from '#/routes/intake.js';
+import { projectsRoutes } from '#/routes/projects.js';
 import { runEventsRoute } from '#/routes/run-events.js';
 import { settingsRoutes } from '#/routes/settings.js';
 import { ticketRoute } from '#/routes/tickets.js';
@@ -29,5 +31,7 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     healthRoute(deps),
     ...settingsRoutes(deps),
     ...harnessRoutes(deps),
+    ...projectsRoutes(deps),
+    ...githubConnectionRoutes(deps),
   ];
 }

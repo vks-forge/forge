@@ -1,0 +1,65 @@
+/**
+ * An HTTP rig with the real projects and connections routes over in-memory storage.
+ *
+ * Why: the projects API tests need the real route table, the real project registry and a
+ *   real git clone to register, but not a whole server (no engine, no harness, no database
+ *   file). This builds exactly that, so each test file is about its endpoint.
+ *
+ * Exports: ProjectsRig, startProjectsRig().
+ * Depends on: @forge/db, @forge/secrets, src/routes, src/services/project-registry,
+ *   helpers/http-rig. IO: a loopback socket.
+ */
+
+import { createMemoryConfigSource, createMemoryStorage } from '@forge/db';
+import type { ConfigSource, StorageAdapter } from '@forge/core';
+import type { Engine } from '@forge/engine';
+import { createMemorySecretStore } from '@forge/secrets';
+import { vi } from 'vitest';
+import { buildRoutes } from '#/routes/routes.js';
+import { createProjectRegistry } from '#/services/project-registry.js';
+import type { ProjectRegistry } from '#/types/project-registry.types.js';
+import { stubHarnessDeps } from '#tests/helpers/harness-deps.js';
+import { startHttp } from '#tests/helpers/http-rig.js';
+import type { HttpRig } from '#tests/helpers/http-rig.js';
+
+export interface ProjectsRig {
+  readonly rig: HttpRig;
+  readonly storage: StorageAdapter;
+  readonly config: ConfigSource;
+  readonly registry: ProjectRegistry;
+}
+
+/** Worktrees of the registry's projects would go under `worktreesDir`; nothing is created there. */
+export async function startProjectsRig(worktreesDir: string): Promise<ProjectsRig> {
+  const storage = createMemoryStorage();
+  const config = createMemoryConfigSource();
+  const secrets = createMemorySecretStore();
+  const registry = createProjectRegistry({
+    storage,
+    config,
+    secrets,
+    worktreesDir,
+    gates: () => [],
+    now: () => 0,
+    log: () => undefined,
+  });
+
+  const rig = await startHttp(
+    buildRoutes({
+      engine: { liveRunIds: vi.fn(() => []) } as unknown as Engine,
+      storage,
+      config,
+      projects: registry,
+      ...stubHarnessDeps(),
+      secrets,
+      hooks: { handle: vi.fn() },
+      owner: 'srv-test',
+      startedAt: 0,
+      now: () => Date.parse('2026-10-14T00:00:00.000Z'),
+      http: { ssePollMs: 5, sseHeartbeatMs: 1000 },
+      shutdown: new AbortController().signal,
+    }),
+  );
+
+  return { rig, storage, config, registry };
+}

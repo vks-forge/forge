@@ -14,7 +14,7 @@
  *   events after n and then the `end` frame.
  *
  * Pins: ticket reaches `done`; the run row names its settings version and the settings API
- *   serves the project imported from project.yaml; the change is in the bare repo's main; G1 passed; every
+ *   serves the project registered through POST /projects; the change is in the bare repo's main; G1 passed; every
  *   tool call has a decision receipt and the chain verifies; hook liveness was registered;
  *   SSE live delivery and resume from a cursor.
  * Depends on: helpers/e2e-rig. IO: git, SQLite, npm, a loopback socket.
@@ -98,11 +98,11 @@ describe('express flow end to end', { timeout: 300_000 }, () => {
     expect(spec).toContain('adds two numbers');
   });
 
-  it('names the settings version the run started under: built-in company, imported project', () => {
+  it('names the settings version the run started under: built-in company, registered project', () => {
     expect(view.runs[0]?.config_version).toBe('c0:p1');
   });
 
-  it('serves the imported project settings and their history through the settings API', async () => {
+  it('serves the registered project settings and their history through the settings API', async () => {
     const got = await rig.call('GET', '/settings/projects/fixture');
     const history = await rig.call('GET', '/settings/projects/fixture/history');
 
@@ -112,7 +112,7 @@ describe('express flow end to end', { timeout: 300_000 }, () => {
     });
 
     expect(history.body).toMatchObject({
-      versions: [{ version: 1, author: 'import' }],
+      versions: [{ version: 1, author: 'tester' }],
     });
   });
 

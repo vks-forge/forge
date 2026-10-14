@@ -76,9 +76,10 @@ G1 gate; git worktrees; GitHub App git host; DPAPI secrets; HTTP server with
 SSE. 3621 tests; live probes 1–9 pass, including a real Express ticket from
 intake to merge and a real GitHub PR round trip.
 
-**Not yet aligned with the product shape:** the code still assumes one repo
-per server, config in `<repo>/.forge/*.yaml`,
-restart kills runs, no UI, no CI, not publishable. See
+**Not yet aligned with the product shape:** the code still assumes
+restart kills runs, no UI, no CI, not publishable. One server now serves many
+projects (registered through the API, each with its own clone, worktrees, git
+host and ticket prefix) and settings live in the database. See
 `docs/design/product-shape-change-map.md`.
 
 **Known limits:** project checks run Worker-written code as the user's own
@@ -98,6 +99,7 @@ account (container isolation later, d-0005); the rework path has not run live.
 
 Newest first. One line per milestone.
 
+- 2026-10-14 — B4: many projects per server; projects and GitHub connection API.
 - 2026-10-14 — B6: Workers and the Director run the user's installed claude; login, API key or OAuth token per harness.
 - 2026-10-14 — B3b: engine reads config from the database each tick; settings API.
 - 2026-10-14 � B13a: tests clean up their temp folders; clean-temp script.

@@ -15,16 +15,17 @@
  *
  * Exports: startRun().
  * Depends on: @forge/core (branchName, DispatchPromptOutput), @forge/tools (sha256Hex),
- *   steps/run-step, domain/worker-contract, tick/project-runtime, tick/pump, tick/settle, tick/ticket-moves, domain/results.
+ *   steps/run-step, domain/worker-contract, tick/project-runtime, tick/dispatch-park, tick/pump, tick/settle, tick/ticket-moves, domain/results.
  */
 
 import { DispatchPromptOutput, branchName } from '@forge/core';
-import type { Interaction, Run, RunRequest, Ticket } from '@forge/core';
+import type { Interaction, Run, RunRequest, Ticket, WorkerDriver } from '@forge/core';
 import { sha256Hex } from '@forge/tools';
 import { familyOf, failureResult } from '#/domain/results.js';
 import { renderWorkerContract, workerContract } from '#/domain/worker-contract.js';
 import { hold, rejectStep, runStep } from '#/steps/run-step.js';
-import { baseRefFor, runtimeFor } from '#/tick/project-runtime.js';
+import { parkForHarness } from '#/tick/dispatch-park.js';
+import { baseRefFor, driverFor, runtimeFor } from '#/tick/project-runtime.js';
 import { configVersionRef } from '#/tick/tick-config.js';
 import { startPump } from '#/tick/pump.js';
 import { settleRun } from '#/tick/settle.js';
@@ -106,8 +107,22 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
     throw new Error(`ticket ${ticket.id} names unknown project ${ticket.project}`);
   }
 
+  const runtime = runtimeFor(ctx, project.slug);
+  if (!runtime) {
+    throw new Error(`project ${project.slug} has no runtime on this server`);
+  }
+
+  let driver: WorkerDriver;
+  try {
+    driver = driverFor(ctx, project.slug);
+  } catch (e) {
+    await parkForHarness(ctx, ticket, e);
+
+    return false;
+  }
+
   const branch = ticket.branch ?? branchName(ticket.type, ticket.id, ticket.title);
-  const wt = await deps.worktrees.create(
+  const wt = await runtime.worktrees.create(
     ticket.id,
     branch,
     baseRefFor(ctx, project.slug),
@@ -116,7 +131,7 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
   const slice = await deps.memory.slice(project.slug);
   const contract = workerContract({
     rework: c.kind === 'retry' && c.wake?.kind === 'continuation',
-    testCommand: runtimeFor(ctx, project.slug)?.config.commands.test,
+    testCommand: runtime.config.commands.test,
   });
 
   const drafted = await runStep(
@@ -155,7 +170,8 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
   const run: Run = {
     id: runId,
     ticket_id: ticket.id,
-    harness: deps.driver.id,
+    project: ticket.project,
+    harness: driver.id,
     driver_version: 'unversioned',
     cwd: wt.path,
     lane: ticket.lane,
@@ -181,7 +197,7 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
   const { forge } = ctx.config;
   const b = forge.engine.run_budget;
   const resumeSession =
-    c.kind === 'resume' && deps.driver.capabilities().resume
+    c.kind === 'resume' && driver.capabilities().resume
       ? previous?.session_ref
       : undefined;
 
@@ -208,7 +224,7 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
 
   let handle;
   try {
-    handle = await deps.driver.start(req);
+    handle = await driver.start(req);
   } catch (e) {
     deps.log?.('error', `driver.start failed for ${runId}`, { error: msg(e) });
     await settleRun(ctx, run, failureResult(familyOf(e)));
@@ -216,7 +232,7 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
     return false;
   }
 
-  startPump(deps, state, runId, handle);
+  startPump(deps, state, runId, handle, driver);
   await deps.storage.transaction((tx) => tx.runs.update(runId, { status: 'running' }));
 
   const fields = { assignee_run_id: runId, branch, worktree: wt.path };
@@ -243,7 +259,7 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
       { reason: moved.reason },
     );
 
-    await deps.driver.cancel(handle).catch(() => undefined);
+    await driver.cancel(handle).catch(() => undefined);
 
     return false;
   }

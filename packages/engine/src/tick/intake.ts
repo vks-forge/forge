@@ -44,6 +44,10 @@ export async function ingest(
       return { status: 'ignored', reason: `unknown project ${event.project}` };
     }
 
+    if (project.status === 'archived') {
+      return { status: 'ignored', reason: `project ${event.project} is archived` };
+    }
+
     const { inserted, event: stored } = await tx.intakeEvents.insertIfNew(event);
     if (!inserted) {
       return { status: 'duplicate' };

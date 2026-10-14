@@ -19,7 +19,7 @@
  * Exports: TicketPatch, TicketRepository, TicketRelationRepository, RunRepository,
  *   RunEventRepository, RunInboxRepository, RunTokenRepository, IntakeEventRepository,
  *   InteractionRepository, WakeRequestRepository, GateResultRepository, ProjectRepository,
- *   HarnessRepository, StorageTx, StorageAdapter.
+ *   HarnessRepository, GithubConnectionRepository, StorageTx, StorageAdapter.
  * Depends on: schemas/*, types/run-event.types. No IO (interfaces only).
  */
 
@@ -28,6 +28,7 @@ import type { GateResult, NewGateResult } from '#/schemas/gate-result.js';
 import type { Harness } from '#/schemas/harness.js';
 import type { IntakeEvent, StoredIntakeEvent } from '#/schemas/intake.js';
 import type { Interaction } from '#/schemas/interaction.js';
+import type { GithubConnection } from '#/schemas/github-connection.js';
 import type { Project } from '#/schemas/project.js';
 import type { NewRunInboxMessage, RunInboxMessage } from '#/schemas/run-inbox.js';
 import type { Run, RunEvent, RunStatus } from '#/schemas/run.js';
@@ -216,6 +217,15 @@ export interface HarnessRepository {
   list(): Promise<Harness[]>;
 }
 
+/** The `github_connections` registry (d-0094): one GitHub App per org or account. Private keys live in the SecretStore, never here. */
+export interface GithubConnectionRepository {
+  get(id: string): Promise<GithubConnection | null>;
+  // Insert or replace by id.
+  upsert(connection: GithubConnection): Promise<void>;
+  // Oldest first.
+  list(): Promise<GithubConnection[]>;
+}
+
 /** The repositories visible inside one transaction. */
 export interface StorageTx {
   readonly tickets: TicketRepository;
@@ -229,6 +239,7 @@ export interface StorageTx {
   readonly gateResults: GateResultRepository;
   readonly projects: ProjectRepository;
   readonly harnesses: HarnessRepository;
+  readonly githubConnections: GithubConnectionRepository;
   readonly ticketRelations: TicketRelationRepository;
 }
 

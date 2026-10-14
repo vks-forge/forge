@@ -20,6 +20,7 @@
 import type { StorageAdapter, StorageTx } from '@forge/core';
 import { createSqliteConfigSource } from '#/adapters/sqlite/config-source.js';
 import { createGateResultRepository } from '#/adapters/sqlite/gate-results-repository.js';
+import { createGithubConnectionRepository } from '#/adapters/sqlite/github-connections-repository.js';
 import { createIntakeEventRepository } from '#/adapters/sqlite/intake-events-repository.js';
 import { createInteractionRepository } from '#/adapters/sqlite/interactions-repository.js';
 import { runImmediate } from '#/adapters/sqlite/immediate-tx.js';
@@ -61,6 +62,7 @@ export function createStorageOnDriver(
     gateResults: createGateResultRepository(driver),
     projects: createProjectRepository(driver),
     harnesses: createHarnessRepository(driver),
+    githubConnections: createGithubConnectionRepository(driver),
     ticketRelations: createTicketRelationRepository(driver),
   };
 

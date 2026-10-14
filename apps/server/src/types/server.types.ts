@@ -33,6 +33,7 @@ import type {
 import type { Engine, IdSource, Logger } from '@forge/engine';
 import type { RunSecretRegistry } from '@forge/hooks';
 import type { AdmitContext, ReceiptLog } from '@forge/tools';
+import type { ProjectRegistry } from '#/types/project-registry.types.js';
 
 /** The harness the Workers run on: its driver id and the build it reports, null when unknown. */
 export interface HarnessIdentity {
@@ -113,6 +114,8 @@ export interface ForgeServer {
   readonly receipts: ReceiptLog;
   readonly engine: Engine;
   readonly runSecrets: RunSecretRegistry;
+  /** The projects being served. */
+  readonly projects: ProjectRegistry;
   /** Opens the port and starts the tick; resolves with the bound address. */
   start(): Promise<ServerAddress>;
   /** Graceful shutdown; safe to call more than once. */
@@ -133,7 +136,8 @@ export interface GateDeps {
 export interface ShutdownParts {
   readonly ticker: Ticker;
   readonly engine: Engine;
-  readonly driver: WorkerDriver;
+  /** Cancels one live run on the driver that started it. */
+  readonly cancelRun: (runId: string) => Promise<void>;
   readonly storage: StorageAdapter;
   /** Ends open event streams so the port can close. */
   readonly endStreams: () => void;

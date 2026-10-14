@@ -42,12 +42,10 @@ function rig(
       },
     },
     engine,
-    driver: {
-      cancel: async (handle: { runId: string }) => {
-        order.push(`cancel ${handle.runId}`);
-        await over.cancel?.();
-      },
-    } as unknown as ShutdownParts['driver'],
+    cancelRun: async (runId: string) => {
+      order.push(`cancel ${runId}`);
+      await over.cancel?.();
+    },
     storage: { close: async () => void order.push('storage'), transaction: vi.fn() },
     endStreams: () => void order.push('streams'),
     closeHttp: async () => void order.push('http'),

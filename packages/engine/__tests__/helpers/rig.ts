@@ -12,7 +12,14 @@
  *   helpers/*. No IO.
  */
 
-import type { ConfigSource, IntakeEvent, StorageAdapter, Ticket } from '@forge/core';
+import { ProjectConfig } from '@forge/core';
+import type {
+  ConfigSource,
+  DriverRegistry,
+  IntakeEvent,
+  StorageAdapter,
+  Ticket,
+} from '@forge/core';
 import { createMemoryConfigSource, createMemoryStorage } from '@forge/db';
 import { createEngine } from '#/tick/engine.js';
 import type { Engine, EngineDeps, Logger, TickReport } from '#/types/engine.types.js';
@@ -36,8 +43,12 @@ export interface Rig {
   readonly memory: ReturnType<typeof createFakeMemory>;
   readonly receipts: ReturnType<typeof createFakeReceipts>;
   readonly reports: ReturnType<typeof createFakeReports>;
-  /** What `deps.project` resolves for every slug; null (the default) leaves tickets in Verifying. */
+  /** What `deps.project` resolves for a slug with no entry in `runtimes`; null makes the project unknown to the app. */
   readonly runtime: { current: ProjectRuntime | null };
+  /** Per-project runtimes for tests with several projects; takes precedence over `runtime`. */
+  readonly runtimes: Map<string, ProjectRuntime>;
+  /** Harness ids the registry knows; all resolve to the scripted driver. Remove one to make it unknown. */
+  readonly harnesses: Set<string>;
   readonly clock: ReturnType<typeof createFakeClock>;
   /** Settings the engine reads each tick; edit through `append` to change behaviour mid-test. */
   readonly config: ConfigSource;
@@ -128,7 +139,28 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
   const memory = createFakeMemory();
   const receipts = createFakeReceipts();
   const reports = createFakeReports();
-  const runtime: { current: ProjectRuntime | null } = { current: null };
+  const runtime: { current: ProjectRuntime | null } = {
+    current: {
+      config: ProjectConfig.parse({
+        slug: 'forge',
+        prefix: 'FG',
+        profile: 'generic',
+        default_harness: 'claude-code',
+      }),
+      gitHost: null,
+      gates: [],
+      worktrees,
+      baseRef: 'main',
+    },
+  };
+
+  const runtimes = new Map<string, ProjectRuntime>();
+  const harnesses = new Set(['claude-code', 'scripted']);
+  const drivers: DriverRegistry = {
+    get: (id) => (harnesses.has(id) ? driver.driver : null),
+    ids: () => [...harnesses].sort(),
+  };
+
   const clock = createFakeClock();
   const ids = createIds();
   const logs: { level: string; message: string }[] = [];
@@ -163,18 +195,16 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
 
   const deps: EngineDeps = {
     storage,
-    driver: driver.driver,
+    drivers,
     llm: llm.llm,
-    worktrees,
     memory,
     receipts,
     reports,
-    project: () => runtime.current,
+    project: (slug) => runtimes.get(slug) ?? runtime.current,
     clock,
     config,
     ids,
     owner: 'srv-a',
-    baseRef: 'main',
     catalogueHash: 'c'.repeat(64),
     onTickRequested: () => void tickRequests.count++,
     log,
@@ -199,6 +229,8 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
     receipts,
     reports,
     runtime,
+    runtimes,
+    harnesses,
     clock,
     config,
     configReads,
@@ -212,8 +244,10 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
           id: 'forge',
           slug: 'forge',
           prefix: 'FG',
+          status: 'ready',
+          ecosystems: [],
           harness_defaults: {},
-          tier_c_globs: ['**/auth/**'],
+          tier_c_globs: [],
           ...over,
         }),
       );

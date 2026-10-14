@@ -20,24 +20,19 @@ import type { Layout } from '#/types/settings.types.js';
 
 /**
  * All paths for a server whose config is read from `configRoot` and whose data lives in
- * `data`; `projectConfigPath` overrides the default `.forge/project.yaml` in the checkout.
+ * `data`. Projects keep their own clone paths in the database, not here.
  */
 export function resolveLayout(
   configRoot: string,
   data: DataHomeLayout,
   entrypoints: Entrypoints,
-  projectConfigPath?: string,
 ): Layout {
   const base = resolve(configRoot);
   const forgeDir = join(base, '.forge');
 
   return {
     configRoot: base,
-    repoRoot: base,
     cataloguePath: join(forgeDir, 'tools', 'catalog.yaml'),
-    projectConfigPath: projectConfigPath
-      ? resolve(base, projectConfigPath)
-      : join(forgeDir, 'project.yaml'),
     memoryDir: join(forgeDir, 'memory'),
     data,
     mcpEntry: entrypoints.mcpEntry,

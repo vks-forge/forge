@@ -20,11 +20,7 @@ import type { DataHomeLayout } from '@forge/core';
 export interface Layout {
   /** Folder the yaml config is read from: `FORGE_ROOT` or the cwd. Never holds data. */
   readonly configRoot: string;
-  /** The project checkout that source-control commands run in; the same folder as `configRoot` for now. */
-  readonly repoRoot: string;
   readonly cataloguePath: string;
-  /** `.forge/project.yaml`: read once, only to register the project on the first start (bridge removed by B4). */
-  readonly projectConfigPath: string;
   /** Project memory records; still read from the checkout until memory moves into the data home. */
   readonly memoryDir: string;
   /** Everything Forge owns on the machine: database, secrets, runs, worktrees, backups, logs. */

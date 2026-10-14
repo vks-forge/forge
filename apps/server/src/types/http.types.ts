@@ -12,7 +12,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH';
 
 /** Everything a handler may read about the request. */
 export interface RouteContext {

@@ -40,7 +40,7 @@ describe('checkSchemaCurrent', () => {
     driver.close();
     expect(behind).toMatchObject({
       status: 'behind',
-      pending: [3, 4, 5, 6, 7, 8, 9, 10, 12],
+      pending: MIGRATIONS.slice(2).map((m) => m.id),
     });
 
     expect(current).toMatchObject({ status: 'current', pending: [], unknown: [] });

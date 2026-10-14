@@ -27,7 +27,11 @@ import { describe, expect, it } from 'vitest';
 import { loadSettings } from '#/config/load-settings.js';
 import { assembleServer } from '#/services/assemble.js';
 import { createClaudePorts } from '#/services/claude-ports.js';
-import { createFixtureRepo, git } from '#tests/helpers/fixture-repo.js';
+import {
+  createFixtureRepo,
+  fixtureProjectBody,
+  git,
+} from '#tests/helpers/fixture-repo.js';
 import {
   STOPPED_STATUSES,
   collectDiagnosis,
@@ -80,6 +84,10 @@ describe('probe 8: Express ticket end to end on the real Claude harness', () => 
       let diagnosis: Diagnosis | null = null;
       let passed = false;
       try {
+        // Registered through the API like a user would, into the data home's database.
+        const registered = await call('POST', '/projects', fixtureProjectBody(fixture));
+        expect(registered.status).toBe(201);
+
         const intake = await call('POST', '/intake', {
           source: 'chat',
           kind: 'new_request',

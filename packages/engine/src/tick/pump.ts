@@ -12,7 +12,13 @@
  * Depends on: @forge/core (RunEvent, WorkerDriver port), tick/tick-requests, shared/time.
  */
 
-import type { NewRunEvent, RunEvent, RunHandle, RunResult } from '@forge/core';
+import type {
+  NewRunEvent,
+  RunEvent,
+  RunHandle,
+  RunResult,
+  WorkerDriver,
+} from '@forge/core';
 import { failureResult, familyOf } from '#/domain/results.js';
 import { iso } from '#/shared/time.js';
 import { requestTick } from '#/tick/tick-requests.js';
@@ -43,10 +49,12 @@ export function startPump(
   state: EngineState,
   runId: string,
   handle: RunHandle,
+  driver: WorkerDriver,
 ): Pump {
   const pump: Pump = {
     runId,
     handle,
+    driver,
     done: false,
     asks: new Map(),
     finished: Promise.resolve(),
@@ -54,12 +62,12 @@ export function startPump(
 
   pump.finished = (async () => {
     try {
-      for await (const event of deps.driver.events(handle)) {
+      for await (const event of driver.events(handle)) {
         await record(deps, pump, event);
         requestTick(deps, state);
       }
 
-      pump.result = await deps.driver.result(handle);
+      pump.result = await driver.result(handle);
     } catch (e) {
       pump.error = e;
     } finally {

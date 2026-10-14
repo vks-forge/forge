@@ -76,6 +76,7 @@ describe('config is read through the ConfigSource each tick', () => {
   it('puts a project edit into the next Worker contract', async () => {
     const rig = await makeRig();
     rig.runtime.current = {
+      ...rig.runtime.current!,
       config: ProjectConfig.parse({
         slug: 'forge',
         prefix: 'FG',

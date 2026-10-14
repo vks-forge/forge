@@ -2,7 +2,7 @@
  * Starts the real server over a fixture repository for the end-to-end tests.
  *
  * Why: every end-to-end scenario needs the same setup: a fixture repo and bare remote, the
- *   settings loaded from the fixture's `.forge/` files exactly as production does, the real
+ *   settings loaded as production does, the fixture registered through `POST /projects`, the real
  *   assembly (SQLite in the fixture, worktrees, hook route, G1, local-bare host) listening on
  *   an ephemeral loopback port, and only the Worker harness and the Director's model
  *   replaced by fakes. One rig keeps the scenarios about behaviour, not plumbing.
@@ -16,7 +16,7 @@ import { loadSettings } from '#/config/load-settings.js';
 import { assembleServer } from '#/services/assemble.js';
 import type { ForgeServer, ServerAddress } from '#/types/server.types.js';
 import type { ServerSettings } from '#/types/settings.types.js';
-import { createFixtureRepo } from '#tests/helpers/fixture-repo.js';
+import { createFixtureRepo, fixtureProjectBody } from '#tests/helpers/fixture-repo.js';
 import type { FixtureRepo } from '#tests/helpers/fixture-repo.js';
 import { createFakeWorker } from '#tests/helpers/fake-worker-driver.js';
 import type { Behaviour, FakeWorker } from '#tests/helpers/fake-worker-driver.js';
@@ -96,6 +96,25 @@ export async function startE2eRig(behaviours: readonly Behaviour[]): Promise<E2e
 
     const address = await server.start();
     const live = server;
+    const call: E2eRig['call'] = async (method, path, body, headers = {}) => {
+      const res = await fetch(`${address.url}${path}`, {
+        method,
+        headers: { 'content-type': 'application/json', ...headers },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+
+      const text = await res.text();
+
+      return { status: res.status, body: text ? (JSON.parse(text) as unknown) : null };
+    };
+
+    // The project is registered the way a user does it, never by touching the database.
+    const registered = await call('POST', '/projects', fixtureProjectBody(fixture));
+    if (registered.status !== 201) {
+      throw new Error(
+        `could not register the fixture project: ${JSON.stringify(registered.body)}`,
+      );
+    }
 
     return {
       server: live,
@@ -105,17 +124,7 @@ export async function startE2eRig(behaviours: readonly Behaviour[]): Promise<E2e
       worker: worker as FakeWorker,
       director,
       logs,
-      async call(method, path, body, headers = {}) {
-        const res = await fetch(`${address.url}${path}`, {
-          method,
-          headers: { 'content-type': 'application/json', ...headers },
-          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-        });
-
-        const text = await res.text();
-
-        return { status: res.status, body: text ? (JSON.parse(text) as unknown) : null };
-      },
+      call,
       async dispose() {
         await live.stop();
         fixture.dispose();

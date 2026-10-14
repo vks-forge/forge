@@ -92,7 +92,9 @@ describe('createProjectGitHost', () => {
     const host = createProjectGitHost(project, deps());
 
     await expect(host?.prStatus(1)).rejects.toBeInstanceOf(AuthError);
-    await expect(host?.prStatus(1)).rejects.toThrow(/github-app-key.*forge secret wrap/);
+    await expect(host?.prStatus(1)).rejects.toThrow(
+      /github-app-key.*not in the secret store/,
+    );
   });
 });
 

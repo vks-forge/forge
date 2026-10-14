@@ -18,15 +18,15 @@ import type {
   Clock,
   ConfigSource,
   DirectorLLM,
+  DriverRegistry,
   ErrorFamily,
   IntakeEvent,
   MemorySource,
+  ProjectConfigView,
   ReportStore,
   RunStatus,
   StepName,
   StorageAdapter,
-  WorkerDriver,
-  WorktreeManager,
 } from '@forge/core';
 import type { ReceiptLog } from '@forge/tools';
 import type { ProjectRuntime, VerifiedTicket } from '#/types/verify.types.js';
@@ -49,23 +49,29 @@ export interface IdSource {
 
 export interface EngineDeps {
   readonly storage: StorageAdapter;
-  readonly driver: WorkerDriver;
+  /** The harnesses this server runs, by id; a ticket's harness comes from its effective settings. */
+  readonly drivers: DriverRegistry;
   readonly llm: DirectorLLM;
-  readonly worktrees: WorktreeManager;
   readonly memory: MemorySource;
   readonly receipts: ReceiptLog;
   /** Where gate reports are saved; the returned reference goes on the `gate_results` row. */
   readonly reports: ReportStore;
-  /** The git host, gates and config for a project slug; null when the project has none (its tickets are left in Verifying). */
-  readonly project: (slug: string) => ProjectRuntime | null;
+  /**
+   * The runtime (git host, gates, worktrees, base branch) for a project, or null when the
+   * app has none (unknown or archived project). `settings` is the project's settings as of
+   * this tick; the app compares its version with the one its runtime was built from and
+   * rebuilds the runtime when the git host settings changed, so no restart is needed.
+   */
+  readonly project: (
+    slug: string,
+    settings: ProjectConfigView | undefined,
+  ) => ProjectRuntime | null;
   readonly clock: Clock;
   /** Versioned settings in the database; read once at the start of every tick (d-0085). */
   readonly config: ConfigSource;
   readonly ids: IdSource;
   /** This server instance; a `running` run owned by anyone else is a crash after a restart (d-0054). */
   readonly owner: string;
-  /** Git ref worktrees are cut from, e.g. `main`. */
-  readonly baseRef: string;
   /** SHA-256 of the signed tool catalogue the runs are admitted under; stored on each run row. */
   readonly catalogueHash: string;
   /** Server name the run's Forge MCP server is registered under (default `forge`). */

@@ -52,7 +52,6 @@ export async function loadSettings(
     env.FORGE_ROOT ?? cwd,
     await loadDataHome(rawEnv, dataHomeIo),
     resolveEntrypoints(import.meta.url),
-    env.FORGE_PROJECT_CONFIG,
   );
 
   return {

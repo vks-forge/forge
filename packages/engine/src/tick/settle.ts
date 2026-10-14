@@ -13,9 +13,10 @@
  * Depends on: @forge/core, domain/results, tick/outcome, shared/time. Reads git and receipts via ports.
  */
 
-import type { ErrorFamily, Run, RunResult } from '@forge/core';
+import type { ErrorFamily, Run, RunResult, TicketId } from '@forge/core';
 import { runStatusFor } from '#/domain/results.js';
 import { applyOutcome } from '#/tick/outcome.js';
+import { runtimeFor } from '#/tick/project-runtime.js';
 import type { EngineCtx, Pump } from '#/types/engine-state.types.js';
 
 /** The family stored on the run row: the driver's, else implied by the status. */
@@ -49,7 +50,20 @@ export async function settleRun(
   const baseSha = state.baseShas.get(run.id);
   if (baseSha) {
     try {
-      files = await deps.worktrees.changedFiles(run.cwd, baseSha);
+      const slug =
+        run.project ??
+        (
+          await deps.storage.transaction((tx) =>
+            tx.tickets.get(run.ticket_id as TicketId),
+          )
+        )?.project;
+
+      const runtime = slug ? runtimeFor(ctx, slug) : null;
+      if (!runtime) {
+        throw new Error(`no runtime for project ${slug ?? '(unknown)'}`);
+      }
+
+      files = await runtime.worktrees.changedFiles(run.cwd, baseSha);
     } catch (e) {
       deps.log?.('warn', `could not list changed files for ${run.id}`, {
         error: String(e),

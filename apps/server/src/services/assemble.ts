@@ -2,47 +2,47 @@
  * Assembles the Forge server: config, adapters, engine, HTTP, clock and shutdown.
  *
  * Why: this is the composition root (code.md rule 1). It is the only place that opens the
- *   database (and runs its migrations, which the server owns), creates worktrees, builds
- *   the hook ingress and starts a socket. It holds no logic of its own: it picks adapters
- *   from config, hands them to the engine and the routes, and returns a small handle. The
- *   harness settings and credentials are read from the database and the SecretStore at the
- *   start of each run, so the same wiring serves the drivers and the Settings API. The
- *   Worker driver and the Director's model arrive as ports, so production passes the Claude
- *   adapters and the end-to-end test passes fakes through the same assembly, the same hook
- *   route, the same receipts and the same G1 gate. A failure while assembling closes the
+ *   database (and runs its migrations, which the server owns), builds the hook ingress and
+ *   starts a socket. It holds no logic of its own: it picks adapters from config, hands them
+ *   to the engine and the routes, and returns a small handle. Projects are not built here:
+ *   the project registry serves every registered project (each with its own clone,
+ *   worktrees, git host and gates) and the projects API adds more while the server runs.
+ *   The Worker driver and the Director's model arrive as ports, so production passes the
+ *   Claude adapters and the end-to-end test passes fakes through the same assembly, the same
+ *   hook route, the same receipts and the same G1 gate. A failure while assembling closes the
  *   database again, so a bad config never leaves a locked file behind.
  *
  * Exports: assembleServer().
- * Depends on: @forge/db, @forge/drivers (systemClock), @forge/engine, @forge/git, @forge/hooks,
+ * Depends on: @forge/db, @forge/drivers (systemClock), @forge/engine, @forge/hooks,
  *   @forge/memory, @forge/secrets, @forge/tools, and the services/routes of this app.
  *   IO: opens SQLite, creates the data home, binds the port on `start()`.
  */
 
 import { createServer } from 'node:http';
 import { mkdir } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { dirname } from 'node:path';
 import { InvalidInputError } from '@forge/core';
 import { openSqlite } from '@forge/db';
 import { createReceiptLookup, systemClock } from '@forge/drivers';
 import { createEngine, createIdSource, createOwnerId } from '@forge/engine';
 import { createFileReportStore } from '@forge/gates';
-import { createGitWorktreeManager } from '@forge/git';
 import {
   createHookHandler,
   createLivenessRecorder,
   createRunSecretRegistry,
 } from '@forge/hooks';
 import { createFileMemorySource } from '@forge/memory';
-import { createDpapiSecretStore, createMemorySecretStore } from '@forge/secrets';
+import { createDpapiSecretStore } from '@forge/secrets';
 import { admit } from '@forge/tools';
 import { buildRoutes } from '#/routes/routes.js';
+import { createDriverRegistry } from '#/services/driver-registry.js';
 import { createGates } from '#/services/gates.js';
-import { createProjectGitHost } from '#/services/git-host.js';
 import { createHarnessSource } from '#/services/harness-source.js';
 import { assertLoopbackBind, closeServer, listen } from '#/services/http/listen.js';
 import { createRouter } from '#/services/http/router.js';
-import { ensureProject } from '#/services/project-import.js';
+import { createLazySecretStore } from '#/services/lazy-secrets.js';
 import { createPrepareRun } from '#/services/prepare-run.js';
+import { createProjectRegistry } from '#/services/project-registry.js';
 import { shutdownServer } from '#/services/shutdown.js';
 import { createTicker } from '#/services/ticker.js';
 import { loadToolPolicy } from '#/services/tool-policy.js';
@@ -64,46 +64,31 @@ export async function assembleServer(
   const { storage, receipts, config } = openSqlite(layout.data.dbPath);
 
   try {
-    // Identity from the database; the yaml is read only on the very first start (B4 removes this).
-    const project = await ensureProject({
-      storage,
-      config,
-      projectConfigPath: layout.projectConfigPath,
-      log,
-    });
-
     const owner = createOwnerId();
     const registry = createRunSecretRegistry();
 
-    const worktrees = createGitWorktreeManager({
-      repoRoot: layout.repoRoot,
-      worktreeRoot: join(layout.data.worktreesDir, project.slug),
-    });
-
-    // Harness API keys and OAuth tokens must survive a restart, so DPAPI wherever it exists.
+    // The DPAPI store is only created when a GitHub key is first read or written, so a
+    // server with local projects only (or off Windows) never touches it.
     const secrets =
       ports.secrets ??
-      (project.git_host?.kind === 'github' || process.platform === 'win32'
-        ? createDpapiSecretStore({ dir: layout.data.secretsDir })
-        : createMemorySecretStore());
+      createLazySecretStore(() =>
+        createDpapiSecretStore({ dir: layout.data.secretsDir }),
+      );
 
     const harness = createHarnessSource(storage);
 
-    const gitHost = createProjectGitHost(project, {
-      root: layout.repoRoot,
-      secrets,
-      now,
-    });
-
-    const gates = createGates({
+    const projects = createProjectRegistry({
       storage,
-      receipts,
-      worktrees,
-      registry,
-      env: settings.env,
+      config,
+      secrets,
+      worktreesDir: layout.data.worktreesDir,
+      gates: (worktrees) =>
+        createGates({ storage, receipts, worktrees, registry, env: settings.env }),
+      now,
+      log,
     });
 
-    const runtime = gitHost ? { config: project, gitHost, gates } : null;
+    await projects.load();
 
     let address: ServerAddress | null = null;
     const prepareRun = createPrepareRun({
@@ -141,6 +126,9 @@ export async function assembleServer(
       });
     }
 
+    // One harness is installed today; the registry is where the next one is added.
+    const drivers = createDriverRegistry([driver]);
+
     const policy = await loadToolPolicy(
       settings,
       { id: driver.id, version: preflight.harnessVersion ?? null },
@@ -156,20 +144,18 @@ export async function assembleServer(
 
     const engine = createEngine({
       storage,
-      driver,
+      drivers,
       llm,
-      worktrees,
       memory: createFileMemorySource(layout.memoryDir, {
         onSkip: (path, reason) => log('warn', 'memory record skipped', { path, reason }),
       }),
       receipts,
       reports: createFileReportStore(layout.data.home),
-      project: (slug) => (runtime && slug === project.slug ? runtime : null),
+      project: (slug, view) => projects.runtime(slug, view),
       clock,
       config,
       ids: ports.ids ?? createIdSource(),
       owner,
-      baseRef: project.git_host?.base_branch ?? 'main',
       catalogueHash: policy.catalogueHash,
       onTickRequested: ticker.requestTick,
       log,
@@ -202,6 +188,7 @@ export async function assembleServer(
         engine,
         storage,
         config,
+        projects,
         hooks,
         secrets,
         harnessTest: (setup, live) =>
@@ -233,6 +220,7 @@ export async function assembleServer(
       receipts,
       engine,
       runSecrets: registry,
+      projects,
       address: () => address,
       async start() {
         if (address) {
@@ -250,7 +238,11 @@ export async function assembleServer(
         stopping ??= shutdownServer({
           ticker,
           engine,
-          driver,
+          // A run keeps the driver that started it.
+          cancelRun: async (runId) => {
+            const run = await storage.transaction((tx) => tx.runs.get(runId));
+            await (run ? drivers.get(run.harness) : null)?.cancel({ runId });
+          },
           storage,
           endStreams: () => streams.abort(),
           closeHttp: () => closeServer(http),

@@ -9,7 +9,7 @@
  *   place of guesswork. Types only, so core has no runtime dependency on any driver
  *   (execution-plane.md §3, d-0029, d-0035).
  *
- * Exports: Preflight, WorkerDriver.
+ * Exports: Preflight, WorkerDriver, DriverRegistry.
  * Depends on: schemas/run. No IO (interfaces only).
  */
 
@@ -53,4 +53,16 @@ export interface WorkerDriver {
   cancel(handle: RunHandle): Promise<void>;
   events(handle: RunHandle): AsyncIterable<RunEvent>;
   result(handle: RunHandle): Promise<RunResult>;
+}
+
+/**
+ * The harnesses this server can run, by id. The Director picks one per ticket from the
+ * effective settings (`default_harness`) and a run keeps its driver for life, so steering,
+ * cancelling and result reading all go to the harness that started it.
+ */
+export interface DriverRegistry {
+  /** The driver registered under `harnessId`, or null when none is. */
+  get(harnessId: string): WorkerDriver | null;
+  /** Registered harness ids, sorted. */
+  ids(): string[];
 }

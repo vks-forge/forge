@@ -19,6 +19,7 @@ import { buildRoutes } from '#/routes/routes.js';
 import { stubHarnessDeps } from '#tests/helpers/harness-deps.js';
 import { startHttp } from '#tests/helpers/http-rig.js';
 import type { HttpRig } from '#tests/helpers/http-rig.js';
+import { inertRouteExtras } from '#tests/helpers/route-extras.js';
 
 const RUN: Run = {
   id: 'run-1',
@@ -61,6 +62,7 @@ beforeEach(async () => {
       engine: {} as unknown as Engine,
       storage,
       config: createMemoryConfigSource(),
+      ...inertRouteExtras(),
       hooks: {
         handle: async () => ({ decision: 'allow', reason: 'ok', receipt_hash: '' }),
       },

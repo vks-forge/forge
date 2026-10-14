@@ -28,6 +28,8 @@ const HEAVY = [
   'packages/gates/__tests__/adapters/command-runner.test.ts',
   'packages/drivers/__tests__/adapters/**/*.test.ts',
   'apps/server/__tests__/e2e/**/*.test.ts',
+  'apps/server/__tests__/routes/projects.test.ts',
+  'apps/server/__tests__/routes/projects-archive.test.ts',
   'apps/server/__tests__/services/run-server.test.ts',
   'apps/server/__tests__/services/composition-parts.test.ts',
 ];

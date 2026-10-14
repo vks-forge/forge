@@ -31,7 +31,7 @@ import type { GateRows, MergeOutcome, VerifyTarget } from '#/types/verify.types.
 
 /** The tier the current diff implies. */
 async function tierOfDiff(ctx: EngineCtx, t: VerifyTarget): Promise<Tier> {
-  const diff = await ctx.deps.worktrees.diff(t.worktree, t.baseSha);
+  const diff = await t.runtime.worktrees.diff(t.worktree, t.baseSha);
   const paths = diff.files.flatMap((f) => (f.oldPath ? [f.path, f.oldPath] : [f.path]));
 
   return computeTierActual(
@@ -59,7 +59,7 @@ async function recordPass(ctx: EngineCtx, t: VerifyTarget, tier: Tier): Promise<
 /** Best-effort removal of the worktree and the merged branch. */
 async function cleanup(ctx: EngineCtx, t: VerifyTarget): Promise<void> {
   const { deps } = ctx;
-  await deps.worktrees.remove(t.worktree).catch((e: unknown) => {
+  await t.runtime.worktrees.remove(t.worktree).catch((e: unknown) => {
     deps.log?.('warn', `could not remove worktree of ${t.ticket.id}`, {
       error: String(e),
     });

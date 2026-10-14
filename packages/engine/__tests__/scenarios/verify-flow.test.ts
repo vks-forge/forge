@@ -92,10 +92,10 @@ describe('verify: success path', () => {
     );
   });
 
-  it('leaves tickets in verifying when the project has no runtime', async () => {
+  it('leaves tickets in verifying when the project has no git host', async () => {
     const { rig } = await makeVerifyRig();
-    rig.runtime.current = null;
     const id = await startAndFinish(rig);
+    rig.runtime.current = { ...rig.runtime.current!, gitHost: null };
     await rig.tick();
     expect((await rig.ticket(id)).status).toBe('verifying');
   });

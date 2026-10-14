@@ -80,7 +80,7 @@ export async function cancelStalled(ctx: EngineCtx): Promise<void> {
 
     let stopTimer = (): void => undefined;
     try {
-      await deps.driver.cancel(pump.handle);
+      await pump.driver.cancel(pump.handle);
       const grace = new Promise<void>((r) => {
         stopTimer = deps.clock.after(CANCEL_GRACE_MS, r);
       });

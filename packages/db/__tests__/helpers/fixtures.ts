@@ -6,7 +6,7 @@
  *   would reject, and a schema change breaks the fixtures in one place.
  *
  * Exports: T0, makeTicket(), makeRun(), makeTextEvent(), makeInteraction(), makeIntake(),
- *   makeWake(), makeInboxMessage(), makeGate(), makeProject(), makeHarness().
+ *   makeWake(), makeInboxMessage(), makeGate(), makeProject(), makeHarness(), makeConnection().
  * Depends on: @forge/core. No IO.
  */
 
@@ -18,6 +18,7 @@ import type {
   NewGateResult,
   NewRunEvent,
   NewRunInboxMessage,
+  GithubConnection,
   NewWakeRequest,
   Project,
   Run,
@@ -137,6 +138,8 @@ export function makeProject(id = 'p1', overrides: Partial<Project> = {}): Projec
     id,
     slug: `project-${id}`,
     prefix: 'SF',
+    status: 'ready',
+    ecosystems: [],
     harness_defaults: { default: 'claude' },
     tier_c_globs: ['**/*.sql'],
     ...overrides,
@@ -149,6 +152,22 @@ export function makeHarness(id = 'claude', overrides: Partial<Harness> = {}): Ha
     kind: 'claude',
     auth_mode: 'login',
     status: 'unknown',
+    ...overrides,
+  };
+}
+
+/** A GitHub connection whose key sits under the namespaced secret name. */
+export function makeConnection(
+  id = 'acme',
+  overrides: Partial<GithubConnection> = {},
+): GithubConnection {
+  return {
+    id,
+    account: 'acme-inc',
+    app_id: '12345',
+    key_secret_name: `github/${id}/key`,
+    status: 'active',
+    created_at: T0,
     ...overrides,
   };
 }

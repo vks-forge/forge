@@ -5,13 +5,14 @@
  *   `local-bare` git host and the real G1 gate against a real repository, never against
  *   mocks of git. This builds the smallest repository those need: a node-only project whose
  *   `test` and `lint` scripts need no install, a source file and a test file, a bare
- *   repository standing in for the remote with `main` pushed, and the server's own config
- *   (`project.yaml`, the signed tool catalogue) copied in, so
- *   `loadSettings()` is exercised exactly as in production. Forge's data home is a sibling temp
- *   directory, never inside the repository. Everything lives under the OS
- *   temp directory (or a directory the caller names) and is removed by `dispose()`.
+ *   repository standing in for the remote with `main` pushed, and the signed tool catalogue
+ *   copied in, so `loadSettings()` is exercised exactly as in production. The repository
+ *   is registered like a user would: `fixtureProjectBody()` is the `POST /projects` body for
+ *   it. Forge's data home is a sibling temp directory, never inside the repository.
+ *   Everything lives under the OS temp directory (or a directory the caller names) and is
+ *   removed by `dispose()`.
  *
- * Exports: FixtureRepo, createFixtureRepo(), git().
+ * Exports: FixtureRepo, createFixtureRepo(), fixtureProjectBody(), git().
  * Depends on: node:child_process, node:fs, node:os, node:path. IO: creates directories and runs git.
  */
 
@@ -62,6 +63,28 @@ if (source.includes('debugger')) {
 }
 `;
 
+/** The `POST /projects` body that registers `fixture` as project `fixture` (prefix FX) with a local bare host. */
+export function fixtureProjectBody(
+  fixture: FixtureRepo,
+  over: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    slug: 'fixture',
+    prefix: 'FX',
+    local_path: fixture.root,
+    base_branch: 'main',
+    git_host: { kind: 'local', remote_path: fixture.remote, base_branch: 'main' },
+    settings: {
+      profile: 'generic',
+      commands: { test: 'npm test', lint: 'node scripts/lint.mjs' },
+      default_harness: 'claude-code',
+    },
+    author: 'tester',
+    reason: 'fixture project',
+    ...over,
+  };
+}
+
 /** `dir` defaults to a fresh temp directory; pass one to keep artefacts (the live probe does). */
 export function createFixtureRepo(dir?: string): FixtureRepo {
   // A caller-named `dir` is kept on purpose (the live probe keeps it on failure); anything
@@ -96,24 +119,6 @@ export function createFixtureRepo(dir?: string): FixtureRepo {
   cpSync(
     join(REPO_ROOT, '.forge', 'tools', 'catalog.yaml'),
     join(root, '.forge', 'tools', 'catalog.yaml'),
-  );
-
-  writeFileSync(
-    join(root, '.forge', 'project.yaml'),
-    [
-      'slug: fixture',
-      'prefix: FX',
-      'profile: generic',
-      'commands:',
-      '  test: npm test',
-      '  lint: node scripts/lint.mjs',
-      'default_harness: claude-code',
-      'git_host:',
-      '  kind: local',
-      `  remote_path: '${remote.replaceAll('\\', '/')}'`,
-      '  base_branch: main',
-      '',
-    ].join('\n'),
   );
 
   git(root, 'init', '-b', 'main');

@@ -24,6 +24,7 @@ import type { ColumnCodec, SqlDriver, SqlRow } from '#/types/storage-driver.type
 
 const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
   ticket_id: { column: 'ticket_id' },
+  project: { column: 'project', clearable: true },
   harness: { column: 'harness' },
   driver_version: { column: 'driver_version' },
   session_ref: { column: 'session_ref', clearable: true },
@@ -90,13 +91,14 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
     async insert(run) {
       const r = Run.parse(run);
       driver.run(
-        `INSERT INTO runs (id, ticket_id, harness, driver_version, session_ref, cwd, lane,
+        `INSERT INTO runs (id, ticket_id, project, harness, driver_version, session_ref, cwd, lane,
            started_at, ended_at, status, usage_json, cost_usd, error_family, retry_of, owner,
            pid, last_event_at, final_chain_hash, catalogue_hash, prompt_hash, config_version, hook_registered_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           r.id,
           r.ticket_id,
+          r.project ?? null,
           r.harness,
           r.driver_version,
           r.session_ref ?? null,

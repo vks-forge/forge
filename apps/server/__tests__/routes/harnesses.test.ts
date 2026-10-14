@@ -21,6 +21,7 @@ import type { Engine } from '@forge/engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildRoutes } from '#/routes/routes.js';
 import { startHttp } from '#tests/helpers/http-rig.js';
+import { inertRouteExtras } from '#tests/helpers/route-extras.js';
 import type { HttpRig } from '#tests/helpers/http-rig.js';
 
 const KEY = 'sk-ant-api03-ROUTE-TEST-SECRET';
@@ -49,6 +50,7 @@ beforeEach(async () => {
       engine: { liveRunIds: vi.fn(() => []) } as unknown as Engine,
       storage,
       config: createMemoryConfigSource(),
+      ...inertRouteExtras(),
       hooks: { handle: vi.fn() },
       secrets,
       harnessTest: async (setup, live) => {
