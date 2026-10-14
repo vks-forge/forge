@@ -67,6 +67,15 @@ describe('non-Express lanes are parked in M0', () => {
 
   it('parks a ticket whose predicted files touch a tier-C path as Full, tier C', async () => {
     const rig = await makeRig();
+    await rig.config.append({
+      scope: 'project',
+      project: 'forge',
+      doc: { tier_c_globs: ['**/auth/**'] },
+      author: 'test',
+      reason: 'tier C paths',
+      expectedVersion: 0,
+    });
+
     rig.llm.script('triage', triageAnswer({ predicted_files: ['src/auth/login.ts'] }));
     const id = await rig.request('Tweak login');
     const report = await rig.tick();

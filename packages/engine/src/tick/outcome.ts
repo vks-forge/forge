@@ -58,7 +58,7 @@ async function ensureInteraction(
     payload: { prompt: ask?.prompt ?? '(the Worker paused without a recorded question)' },
     status: 'pending',
     asked_at: ctx.nowIso,
-    timeout_at: iso(ctx.now + ctx.deps.config.engine.interaction_timeout_ms),
+    timeout_at: iso(ctx.now + ctx.config.forge.engine.interaction_timeout_ms),
   });
 }
 
@@ -118,23 +118,28 @@ export async function applyOutcome(
     attempts: Math.max(1, attempts),
     ...(result.retryNotBefore ? { retryNotBefore: result.retryNotBefore } : {}),
     now: ctx.now,
-    policy: ctx.deps.config.engine.retry,
+    policy: ctx.config.forge.engine.retry,
   });
 
   if (decision.action === 'park') {
     return parkIn(ctx, tx, ticket, decision.reason);
   }
 
-  const wake = await requestWakeTx(tx, ctx.deps, {
-    ticketId: ticket.id,
-    kind: 'retry',
-    reason: decision.family,
-    key: run.id,
-    notBefore: decision.notBefore,
-  });
+  const wake = await requestWakeTx(
+    tx,
+    ctx.deps,
+    {
+      ticketId: ticket.id,
+      kind: 'retry',
+      reason: decision.family,
+      key: run.id,
+      notBefore: decision.notBefore,
+    },
+    ctx.config.forge.engine.rewake_cap,
+  );
 
   if (wake.capped) {
-    const cap = ctx.deps.config.engine.rewake_cap;
+    const cap = ctx.config.forge.engine.rewake_cap;
     await parkIn(
       ctx,
       tx,

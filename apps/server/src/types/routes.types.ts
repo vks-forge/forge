@@ -11,7 +11,7 @@
  *   types/settings. Types only.
  */
 
-import type { StorageAdapter } from '@forge/core';
+import type { ConfigSource, StorageAdapter } from '@forge/core';
 import type { Engine } from '@forge/engine';
 import type { HookHandler } from '@forge/hooks';
 import type { HttpTuning } from '#/types/settings.types.js';
@@ -19,6 +19,8 @@ import type { HttpTuning } from '#/types/settings.types.js';
 export interface RouteDeps {
   readonly engine: Engine;
   readonly storage: StorageAdapter;
+  /** Versioned settings behind `/settings/*`. */
+  readonly config: ConfigSource;
   readonly hooks: HookHandler;
   readonly owner: string;
   /** Epoch ms when the server started, for `/health` uptime. */

@@ -12,20 +12,30 @@
  * Depends on: @forge/core (WakeRequest ports), types/tick, shared/time. No IO of its own.
  */
 
+import { InvalidInputError } from '@forge/core';
 import type { StorageTx } from '@forge/core';
 import { iso } from '#/shared/time.js';
 import type { EngineDeps } from '#/types/engine.types.js';
-import type { WakeInput, WakeOutcome } from '#/types/tick.types.js';
+import type { RewakeCap, WakeInput, WakeOutcome } from '#/types/tick.types.js';
 
-/** Queues a wake inside an open transaction. Retry wakes past the hourly cap are refused. */
+/**
+ * Queues a wake inside an open transaction. Retry wakes past the hourly cap are refused;
+ * the cap comes from the caller's settings snapshot, and a retry wake without one is a bug
+ * (it would skip the cap), so it throws.
+ */
 export async function requestWakeTx(
   tx: StorageTx,
   deps: EngineDeps,
   input: WakeInput,
+  rewakeCap?: RewakeCap,
 ): Promise<WakeOutcome> {
   const now = deps.clock.now();
   if (input.kind === 'retry') {
-    const { max, window_ms } = deps.config.engine.rewake_cap;
+    if (!rewakeCap) {
+      throw new InvalidInputError('a retry wake needs the re-wake cap of the settings');
+    }
+
+    const { max, window_ms } = rewakeCap;
     const recent = await tx.wakeRequests.countSince(
       input.ticketId,
       iso(now - window_ms),
@@ -50,7 +60,17 @@ export async function requestWakeTx(
   return { created: inserted, capped: false, wake: request };
 }
 
-/** {@link requestWakeTx} in its own transaction. */
-export function requestWake(deps: EngineDeps, input: WakeInput): Promise<WakeOutcome> {
-  return deps.storage.transaction((tx) => requestWakeTx(tx, deps, input));
+/**
+ * {@link requestWakeTx} in its own transaction, for callers outside a tick: reads the cap
+ * from the current company settings.
+ */
+export async function requestWake(
+  deps: EngineDeps,
+  input: WakeInput,
+): Promise<WakeOutcome> {
+  const { config } = await deps.config.company();
+
+  return deps.storage.transaction((tx) =>
+    requestWakeTx(tx, deps, input, config.engine.rewake_cap),
+  );
 }

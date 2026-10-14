@@ -15,10 +15,11 @@
  *   RunBudget, RunRequest, RunHandle, RunResultStatus, RunResult, InteractionKind,
  *   PermissionDecision, RunEvent, RunStatus, Run, SteerMode, DriverCapabilities, Sha256Hex,
  *   ErrorFamily (re-export).
- * Depends on: schemas/ticket, schemas/errors, zod. No IO.
+ * Depends on: schemas/ticket, schemas/errors, schemas/config-override, zod. No IO.
  */
 
 import { z } from 'zod';
+import { ConfigVersionRef } from '#/schemas/config-override.js';
 import { ErrorFamily } from '#/schemas/errors.js';
 import { Lane } from './ticket.js';
 
@@ -280,6 +281,8 @@ export const Run = z.object({
   final_chain_hash: Sha256Hex.optional(),
   catalogue_hash: Sha256Hex.optional(),
   prompt_hash: Sha256Hex.optional(),
+  /** Settings versions the run started under, `c<company>:p<project>` (d-0085); 0 means built-in defaults. */
+  config_version: ConfigVersionRef.optional(),
   hook_registered_at: Timestamp.optional(),
 });
 export type Run = z.infer<typeof Run>;

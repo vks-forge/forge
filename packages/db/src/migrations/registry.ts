@@ -21,6 +21,7 @@ import { MIGRATION_0006 } from '#/migrations/0006-ticket-pr.js';
 import { MIGRATION_0007 } from '#/migrations/0007-ticket-parked-from.js';
 import { MIGRATION_0008 } from '#/migrations/0008-gate-head-sha.js';
 import { MIGRATION_0009 } from '#/migrations/0009-config-versions.js';
+import { MIGRATION_0010 } from '#/migrations/0010-run-config-version.js';
 import type { Migration } from '#/types/migrations.types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -33,4 +34,5 @@ export const MIGRATIONS: readonly Migration[] = [
   MIGRATION_0007,
   MIGRATION_0008,
   MIGRATION_0009,
+  MIGRATION_0010,
 ];

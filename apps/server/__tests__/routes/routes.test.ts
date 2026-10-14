@@ -12,7 +12,7 @@
  * Depends on: src/routes/routes, helpers/http-rig, @forge/db (memory storage). IO: a loopback socket.
  */
 
-import { createMemoryStorage } from '@forge/db';
+import { createMemoryConfigSource, createMemoryStorage } from '@forge/db';
 import type { StorageAdapter, Ticket } from '@forge/core';
 import type { Engine } from '@forge/engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -85,6 +85,7 @@ beforeEach(async () => {
     buildRoutes({
       engine: engine as unknown as Engine,
       storage,
+      config: createMemoryConfigSource(),
       hooks,
       owner: 'srv-test',
       startedAt: 0,

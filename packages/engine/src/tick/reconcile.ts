@@ -69,7 +69,7 @@ export async function cancelStalled(ctx: EngineCtx): Promise<void> {
     }
 
     const last = Date.parse(run.last_event_at ?? run.started_at);
-    if (ctx.now - last <= deps.config.engine.stall_ms) {
+    if (ctx.now - last <= ctx.config.forge.engine.stall_ms) {
       continue;
     }
 

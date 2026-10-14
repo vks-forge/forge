@@ -51,6 +51,7 @@ describe('run lifecycle (batch C item 2)', () => {
       final_chain_hash: 'b'.repeat(64),
       catalogue_hash: 'c'.repeat(64),
       prompt_hash: 'd'.repeat(64),
+      config_version: 'c3:p1',
       retry_of: 'r0',
       hook_registered_at: ts,
     };
@@ -58,6 +59,7 @@ describe('run lifecycle (batch C item 2)', () => {
     expect(Run.parse(full)).toEqual(full);
     expect(Run.safeParse({ ...baseRun, pid: -1 }).success).toBe(false);
     expect(Run.safeParse({ ...baseRun, prompt_hash: 'nope' }).success).toBe(false);
+    expect(Run.safeParse({ ...baseRun, config_version: 'v3' }).success).toBe(false);
   });
 });
 

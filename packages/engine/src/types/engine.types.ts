@@ -16,9 +16,9 @@
 
 import type {
   Clock,
+  ConfigSource,
   DirectorLLM,
   ErrorFamily,
-  ForgeConfig,
   IntakeEvent,
   MemorySource,
   ReportStore,
@@ -59,7 +59,8 @@ export interface EngineDeps {
   /** The git host, gates and config for a project slug; null when the project has none (its tickets are left in Verifying). */
   readonly project: (slug: string) => ProjectRuntime | null;
   readonly clock: Clock;
-  readonly config: ForgeConfig;
+  /** Versioned settings in the database; read once at the start of every tick (d-0085). */
+  readonly config: ConfigSource;
   readonly ids: IdSource;
   /** This server instance; a `running` run owned by anyone else is a crash after a restart (d-0054). */
   readonly owner: string;

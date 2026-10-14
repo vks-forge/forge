@@ -90,7 +90,7 @@ async function unblocked(tx: StorageTx, ticket: Ticket): Promise<boolean> {
 /** Starts runs for ready tickets until slots or limits run out. */
 export async function dispatchReady(ctx: EngineCtx): Promise<void> {
   const { deps } = ctx;
-  const { engine } = deps.config;
+  const { engine } = ctx.config.forge;
   const { candidates, capacity } = await deps.storage.transaction(async (tx) => {
     const wakes = await tx.wakeRequests.listDue(FAR_FUTURE);
     const waking = new Set(wakes.map((w) => w.ticket_id));

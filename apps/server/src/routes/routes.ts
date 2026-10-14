@@ -13,6 +13,7 @@ import { healthRoute } from '#/routes/health.js';
 import { hookRoute } from '#/routes/hook.js';
 import { intakeRoute } from '#/routes/intake.js';
 import { runEventsRoute } from '#/routes/run-events.js';
+import { settingsRoutes } from '#/routes/settings.js';
 import { ticketRoute } from '#/routes/tickets.js';
 import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
@@ -25,5 +26,6 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     runEventsRoute(deps),
     hookRoute(deps),
     healthRoute(deps),
+    ...settingsRoutes(deps),
   ];
 }

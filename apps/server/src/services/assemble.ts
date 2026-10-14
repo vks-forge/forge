@@ -20,7 +20,6 @@ import { createServer } from 'node:http';
 import { mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { InvalidInputError } from '@forge/core';
-import type { Project } from '@forge/core';
 import { openSqlite } from '@forge/db';
 import { createReceiptLookup, systemClock } from '@forge/drivers';
 import { createEngine, createIdSource, createOwnerId } from '@forge/engine';
@@ -39,6 +38,7 @@ import { createGates } from '#/services/gates.js';
 import { createProjectGitHost } from '#/services/git-host.js';
 import { assertLoopbackBind, closeServer, listen } from '#/services/http/listen.js';
 import { createRouter } from '#/services/http/router.js';
+import { ensureProject } from '#/services/project-import.js';
 import { createPrepareRun } from '#/services/prepare-run.js';
 import { shutdownServer } from '#/services/shutdown.js';
 import { createTicker } from '#/services/ticker.js';
@@ -46,35 +46,29 @@ import { loadToolPolicy } from '#/services/tool-policy.js';
 import type { ExternalPorts, ForgeServer, ServerAddress } from '#/types/server.types.js';
 import type { ServerSettings } from '#/types/settings.types.js';
 
-/** The `projects` row for the one project this server works on. */
-function projectRow(settings: ServerSettings): Project {
-  const { project } = settings;
-
-  return {
-    id: project.slug,
-    slug: project.slug,
-    prefix: project.prefix,
-    ...(project.remote ? { repo_origin: project.remote } : {}),
-    harness_defaults: { default_harness: project.default_harness },
-    tier_c_globs: [...project.tier_c_globs],
-  };
-}
-
 /** Builds the server; nothing listens and no tick runs until `start()`. */
 export async function assembleServer(
   settings: ServerSettings,
   ports: ExternalPorts,
 ): Promise<ForgeServer> {
   assertLoopbackBind(settings.host);
-  const { layout, project } = settings;
+  const { layout } = settings;
   const log = ports.log ?? (() => undefined);
   const clock = ports.clock ?? systemClock;
   const now = (): number => clock.now();
 
   await mkdir(dirname(layout.data.dbPath), { recursive: true });
-  const { storage, receipts } = openSqlite(layout.data.dbPath);
+  const { storage, receipts, config } = openSqlite(layout.data.dbPath);
 
   try {
+    // Identity from the database; the yaml is read only on the very first start (B4 removes this).
+    const project = await ensureProject({
+      storage,
+      config,
+      projectConfigPath: layout.projectConfigPath,
+      log,
+    });
+
     const owner = createOwnerId();
     const registry = createRunSecretRegistry();
 
@@ -142,11 +136,10 @@ export async function assembleServer(
       log,
     );
 
-    await storage.transaction((tx) => tx.projects.upsert(projectRow(settings)));
-
     const ticker = createTicker({
       tick: () => engine.tick(),
-      intervalMs: settings.forge.engine.tick_interval_ms,
+      // Read once at start: the timer period is the one dial that needs a restart.
+      intervalMs: (await config.company()).config.engine.tick_interval_ms,
       log,
     });
 
@@ -162,7 +155,7 @@ export async function assembleServer(
       reports: createFileReportStore(layout.data.home),
       project: (slug) => (runtime && slug === project.slug ? runtime : null),
       clock,
-      config: settings.forge,
+      config,
       ids: ports.ids ?? createIdSource(),
       owner,
       baseRef: project.git_host?.base_branch ?? 'main',
@@ -197,6 +190,7 @@ export async function assembleServer(
       buildRoutes({
         engine,
         storage,
+        config,
         hooks,
         owner,
         startedAt: now(),

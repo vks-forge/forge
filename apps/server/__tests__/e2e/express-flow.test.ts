@@ -13,7 +13,8 @@
  *   every event in order, and a client reconnecting with `Last-Event-ID: n` gets only the
  *   events after n and then the `end` frame.
  *
- * Pins: ticket reaches `done`; the change is in the bare repo's main; G1 passed; every
+ * Pins: ticket reaches `done`; the run row names its settings version and the settings API
+ *   serves the project imported from project.yaml; the change is in the bare repo's main; G1 passed; every
  *   tool call has a decision receipt and the chain verifies; hook liveness was registered;
  *   SSE live delivery and resume from a cursor.
  * Depends on: helpers/e2e-rig. IO: git, SQLite, npm, a loopback socket.
@@ -31,7 +32,12 @@ import { waitFor } from '#tests/helpers/wait-for.js';
 
 interface TicketView {
   ticket: { id: string; status: string; blocked_reason?: string };
-  runs: { id: string; status: string; hook_registered_at?: string }[];
+  runs: {
+    id: string;
+    status: string;
+    hook_registered_at?: string;
+    config_version?: string;
+  }[];
   gate_results: { gate: string; status: string; head_sha?: string }[];
   interactions: unknown[];
 }
@@ -90,6 +96,24 @@ describe('express flow end to end', { timeout: 300_000 }, () => {
 
     expect(math).toContain('export function add(a, b)');
     expect(spec).toContain('adds two numbers');
+  });
+
+  it('names the settings version the run started under: built-in company, imported project', () => {
+    expect(view.runs[0]?.config_version).toBe('c0:p1');
+  });
+
+  it('serves the imported project settings and their history through the settings API', async () => {
+    const got = await rig.call('GET', '/settings/projects/fixture');
+    const history = await rig.call('GET', '/settings/projects/fixture/history');
+
+    expect(got.body).toMatchObject({
+      version: { company: 0, project: 1 },
+      config: { project: { profile: 'generic', commands: { test: 'npm test' } } },
+    });
+
+    expect(history.body).toMatchObject({
+      versions: [{ version: 1, author: 'import' }],
+    });
   });
 
   it('records a passed G1 verdict on the judged commit', () => {

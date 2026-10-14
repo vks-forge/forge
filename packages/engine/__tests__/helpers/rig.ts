@@ -7,15 +7,13 @@
  *   "intake, tick, run does X, tick, assert" and lets a second engine be created over the
  *   same storage to simulate a server restart (d-0054).
  *
- * Exports: Rig, makeConfig(), makeRig(), intake(), tickToIdle().
+ * Exports: Rig, makeRig(), intake(), tickToIdle().
  * Depends on: @forge/core, @forge/db (in-memory storage, dev-only fake), src/tick/engine,
  *   helpers/*. No IO.
  */
 
-import { ForgeConfig } from '@forge/core';
-import type { IntakeEvent, Ticket } from '@forge/core';
-import { createMemoryStorage } from '@forge/db';
-import type { StorageAdapter } from '@forge/core';
+import type { ConfigSource, IntakeEvent, StorageAdapter, Ticket } from '@forge/core';
+import { createMemoryConfigSource, createMemoryStorage } from '@forge/db';
 import { createEngine } from '#/tick/engine.js';
 import type { Engine, EngineDeps, Logger, TickReport } from '#/types/engine.types.js';
 import type { ProjectRuntime } from '#/types/verify.types.js';
@@ -30,35 +28,6 @@ import {
 import { createScriptedDriver } from '#tests/helpers/scripted-driver.js';
 import { createScriptedLLM } from '#tests/helpers/scripted-llm.js';
 
-/** The shipped defaults (see .forge/config/forge.yaml), spelled out so tests can override one dial. */
-export function makeConfig(over: { engine?: Record<string, unknown> } = {}): ForgeConfig {
-  return ForgeConfig.parse({
-    models: {
-      director: { triage: 'opus', dispatch_prompt: 'opus', steer_reply: 'opus' },
-      worker: { express: 'sonnet', standard: 'sonnet', full: 'sonnet' },
-    },
-    engine: {
-      tick_interval_ms: 30_000,
-      global_slots: 3,
-      max_concurrent_by_state: { in_progress: 3, verifying: 1 },
-      stall_ms: 300_000,
-      rewake_cap: { max: 3, window_ms: 3_600_000 },
-      step_retries: 1,
-      step_budget_usd: 0.5,
-      confidence_threshold: 0.7,
-      interaction_timeout_ms: 14_400_000,
-      run_budget: { max_turns: 40, max_usd: 5, turn_ms: 600_000 },
-      retry: {
-        rate_limit: { base_ms: 60_000, max_ms: 3_600_000, max_attempts: 5 },
-        crash: { delay_ms: 10_000, max_attempts: 1 },
-        stall: { delay_ms: 10_000, max_attempts: 2 },
-        unknown: { delay_ms: 30_000, max_attempts: 1 },
-      },
-      ...over.engine,
-    },
-  });
-}
-
 export interface Rig {
   readonly storage: StorageAdapter;
   readonly driver: ReturnType<typeof createScriptedDriver>;
@@ -70,6 +39,10 @@ export interface Rig {
   /** What `deps.project` resolves for every slug; null (the default) leaves tickets in Verifying. */
   readonly runtime: { current: ProjectRuntime | null };
   readonly clock: ReturnType<typeof createFakeClock>;
+  /** Settings the engine reads each tick; edit through `append` to change behaviour mid-test. */
+  readonly config: ConfigSource;
+  /** How many times the engine asked the config source, to pin one read per tick. */
+  readonly configReads: { company: number; project: number };
   readonly deps: EngineDeps;
   readonly engine: Engine;
   readonly logs: { level: string; message: string }[];
@@ -83,7 +56,7 @@ export interface Rig {
   flush(): Promise<void>;
   ticket(id: string): Promise<Ticket>;
   /** A second engine over the same storage and fakes: a restarted server. */
-  restart(owner: string): Engine;
+  restart(owner: string, over?: Partial<EngineDeps>): Engine;
   seedProject(over?: Record<string, unknown>): Promise<void>;
 }
 
@@ -161,6 +134,33 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
   const logs: { level: string; message: string }[] = [];
   const tickRequests = { count: 0 };
   const log: Logger = (level, message) => logs.push({ level, message });
+  const source = createMemoryConfigSource(clock);
+  const configReads = { company: 0, project: 0 };
+  const config: ConfigSource = {
+    company: () => {
+      configReads.company++;
+
+      return source.company();
+    },
+    project: (slug) => {
+      configReads.project++;
+
+      return source.project(slug);
+    },
+    history: (scope, project) => source.history(scope, project),
+    append: (input) => source.append(input),
+  };
+
+  if (opts.engine) {
+    await config.append({
+      scope: 'company',
+      doc: { engine: opts.engine },
+      author: 'test',
+      reason: 'rig engine override',
+      expectedVersion: 0,
+    });
+  }
+
   const deps: EngineDeps = {
     storage,
     driver: driver.driver,
@@ -171,7 +171,7 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
     reports,
     project: () => runtime.current,
     clock,
-    config: makeConfig(opts.engine ? { engine: opts.engine } : {}),
+    config,
     ids,
     owner: 'srv-a',
     baseRef: 'main',
@@ -200,6 +200,8 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
     reports,
     runtime,
     clock,
+    config,
+    configReads,
     deps,
     engine,
     logs,
@@ -235,7 +237,7 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
 
       return t;
     },
-    restart: (owner) => createEngine({ ...deps, owner }),
+    restart: (owner, over = {}) => createEngine({ ...deps, ...over, owner }),
   };
 
   await rig.seedProject();

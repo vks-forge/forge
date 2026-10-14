@@ -8,8 +8,8 @@
  *   request; all are strict, so a typo or a project trying to set its own slug is refused
  *   when written, not discovered when a tick reads it.
  *
- * Exports: CompanyOverride, ProjectSettings, ProjectOverride, EffectiveConfig, ConfigScope,
- *   ConfigVersion, ConfigAppend (and their types).
+ * Exports: CompanyOverride, ProjectSettings, ProjectOverride, EffectiveConfig, ConfigVersionRef,
+ *   ConfigScope, ConfigVersion, ConfigAppend (and their types).
  * Depends on: schemas/forge-config, schemas/project, shared/deep-partial, types/config.types,
  *   zod. No IO.
  */
@@ -39,6 +39,10 @@ export const ProjectOverride = deepPartial(ProjectSettings) as unknown as z.ZodT
   DeepPartial<ProjectSettings>
 >;
 export type ProjectOverride = z.infer<typeof ProjectOverride>;
+
+/** `c<company version>:p<project version>`, e.g. `c3:p1`; names the exact settings a run used. */
+export const ConfigVersionRef = z.string().regex(/^c\d+:p\d+$/);
+export type ConfigVersionRef = z.infer<typeof ConfigVersionRef>;
 
 export const ConfigScope = z.enum(['company', 'project']);
 export type ConfigScope = z.infer<typeof ConfigScope>;

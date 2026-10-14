@@ -50,7 +50,7 @@ async function resolveTarget(
     run: ticket.assignee_run_id ? await tx.runs.get(ticket.assignee_run_id) : null,
   }));
 
-  const runtime = project ? runtimeFor(deps, project.slug) : null;
+  const runtime = project ? runtimeFor(ctx, project.slug) : null;
   if (!project || !runtime || !run || run.status !== 'success') {
     deps.log?.(
       'debug',
@@ -67,7 +67,7 @@ async function resolveTarget(
   }
 
   // One base for the worktree, the diff and the PR: the project's own, never a second default.
-  const baseRef = baseRefFor(deps, project.slug);
+  const baseRef = baseRefFor(ctx, project.slug);
   // `create` is idempotent for the same ticket and branch and returns the original base.
   const wt = await deps.worktrees.create(ticket.id, ticket.branch, baseRef);
 
@@ -179,7 +179,7 @@ async function regate(ctx: EngineCtx, t: VerifyTarget, key: string): Promise<voi
 export async function verifyReady(ctx: EngineCtx): Promise<void> {
   const { deps } = ctx;
   const limit =
-    deps.config.engine.max_concurrent_by_state.verifying ?? Number.POSITIVE_INFINITY;
+    ctx.config.forge.engine.max_concurrent_by_state.verifying ?? Number.POSITIVE_INFINITY;
 
   const tickets = (
     await deps.storage.transaction((tx) => tx.tickets.listByStatus('verifying'))

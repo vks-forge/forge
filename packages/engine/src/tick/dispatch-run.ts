@@ -25,6 +25,7 @@ import { familyOf, failureResult } from '#/domain/results.js';
 import { renderWorkerContract, workerContract } from '#/domain/worker-contract.js';
 import { hold, rejectStep, runStep } from '#/steps/run-step.js';
 import { baseRefFor, runtimeFor } from '#/tick/project-runtime.js';
+import { configVersionRef } from '#/tick/tick-config.js';
 import { startPump } from '#/tick/pump.js';
 import { settleRun } from '#/tick/settle.js';
 import { moveTicket } from '#/tick/ticket-moves.js';
@@ -109,13 +110,13 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
   const wt = await deps.worktrees.create(
     ticket.id,
     branch,
-    baseRefFor(deps, project.slug),
+    baseRefFor(ctx, project.slug),
   );
 
   const slice = await deps.memory.slice(project.slug);
   const contract = workerContract({
     rework: c.kind === 'retry' && c.wake?.kind === 'continuation',
-    testCommand: runtimeFor(deps, project.slug)?.config.commands.test,
+    testCommand: runtimeFor(ctx, project.slug)?.config.commands.test,
   });
 
   const drafted = await runStep(
@@ -164,6 +165,7 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
     ...(previous ? { retry_of: previous.id } : {}),
     prompt_hash: promptHash,
     catalogue_hash: deps.catalogueHash,
+    config_version: configVersionRef(ctx.config, project.slug),
   };
 
   await deps.storage.transaction(async (tx) => {
@@ -176,7 +178,8 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
 
   state.baseShas.set(runId, wt.baseSha);
 
-  const b = deps.config.engine.run_budget;
+  const { forge } = ctx.config;
+  const b = forge.engine.run_budget;
   const resumeSession =
     c.kind === 'resume' && deps.driver.capabilities().resume
       ? previous?.session_ref
@@ -191,11 +194,11 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
     ticketId: ticket.id,
     cwd: wt.path,
     prompt,
-    model: deps.config.models.worker[ticket.lane],
+    model: forge.models.worker[ticket.lane],
     budget: {
       maxTurns: b.max_turns,
       maxUsd: b.max_usd,
-      stallMs: deps.config.engine.stall_ms,
+      stallMs: forge.engine.stall_ms,
       turnMs: b.turn_ms,
     },
     ...(resumeSession ? { resume: resumeSession } : {}),

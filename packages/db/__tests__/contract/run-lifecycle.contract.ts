@@ -30,6 +30,7 @@ export function describeRunLifecycleContract(getDb: () => StorageAdapter): void 
       final_chain_hash: 'b'.repeat(64),
       catalogue_hash: 'c'.repeat(64),
       prompt_hash: 'd'.repeat(64),
+      config_version: 'c3:p1',
       retry_of: 'r0',
       hook_registered_at: T1,
     };

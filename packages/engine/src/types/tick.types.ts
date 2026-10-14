@@ -7,11 +7,19 @@
  *   and keeps hand-written types in one place.
  *
  * Exports: EventSpec, TicketFields, TicketPlan, MoveResult, WakeInput, WakeOutcome,
- *   DispatchKind, Candidate, Capacity, StepReject.
+ *   DispatchKind, Candidate, Capacity, StepReject, TickConfig, RewakeCap.
  * Depends on: @forge/core (TicketEvent, Ticket, WakeKind, WakeRequest, StepError). Types only.
  */
 
-import type { StepError, Ticket, TicketEvent, WakeKind, WakeRequest } from '@forge/core';
+import type {
+  ForgeConfig,
+  ProjectConfigView,
+  StepError,
+  Ticket,
+  TicketEvent,
+  WakeKind,
+  WakeRequest,
+} from '@forge/core';
 
 type WithoutAt<E> = E extends TicketEvent ? Omit<E, 'at' | 'expected_version'> : never;
 
@@ -78,3 +86,17 @@ export interface Capacity {
 export interface StepReject {
   readonly error: StepError;
 }
+
+/**
+ * The settings one tick runs on, read once at its start: the company-wide dials and, per
+ * project, the project's own settings with the versions both came from. Phases read this,
+ * never the source, so a settings edit lands between ticks and never inside one.
+ */
+export interface TickConfig {
+  readonly forge: ForgeConfig;
+  readonly companyVersion: number;
+  readonly projects: ReadonlyMap<string, ProjectConfigView>;
+}
+
+/** The hourly re-wake cap of the engine settings. */
+export type RewakeCap = ForgeConfig['engine']['rewake_cap'];

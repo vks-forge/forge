@@ -10,26 +10,40 @@
  *   project would push and merge into the wrong repository, so it is refused here.
  *
  * Exports: runtimeFor(), baseRefFor().
- * Depends on: @forge/core (InvalidInputError), types/engine, types/verify. No IO of its own.
+ * Depends on: @forge/core (InvalidInputError), tick/tick-config, types/engine-state,
+ *   types/verify. No IO of its own.
  */
 
 import { InvalidInputError } from '@forge/core';
-import type { EngineDeps } from '#/types/engine.types.js';
+import { projectSettings } from '#/tick/tick-config.js';
+import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { ProjectRuntime } from '#/types/verify.types.js';
 
-/** The runtime the app built for `slug`, or null when it has none; throws when it belongs to another project. */
-export function runtimeFor(deps: EngineDeps, slug: string): ProjectRuntime | null {
-  const runtime = deps.project(slug);
-  if (runtime && runtime.config.slug !== slug) {
+/**
+ * The runtime the app built for `slug`, or null when it has none; throws when it belongs to
+ * another project. Its `config` carries the project's identity from the runtime and its
+ * settings (profile, commands, git host, ...) from this tick's snapshot, so a settings
+ * edit reaches the next gate run and the next Worker contract.
+ */
+export function runtimeFor(ctx: EngineCtx, slug: string): ProjectRuntime | null {
+  const runtime = ctx.deps.project(slug);
+  if (!runtime) {
+    return null;
+  }
+
+  if (runtime.config.slug !== slug) {
     throw new InvalidInputError(
       `the runtime supplied for project ${slug} is configured for project ${runtime.config.slug}`,
     );
   }
 
-  return runtime;
+  return {
+    ...runtime,
+    config: { ...runtime.config, ...projectSettings(ctx.config, slug) },
+  };
 }
 
 /** The branch worktrees are cut from, tiers are diffed against and PRs target for `slug`. */
-export function baseRefFor(deps: EngineDeps, slug: string): string {
-  return runtimeFor(deps, slug)?.config.git_host?.base_branch ?? deps.baseRef;
+export function baseRefFor(ctx: EngineCtx, slug: string): string {
+  return runtimeFor(ctx, slug)?.config.git_host?.base_branch ?? ctx.deps.baseRef;
 }

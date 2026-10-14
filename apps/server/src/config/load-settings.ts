@@ -2,19 +2,19 @@
  * Turns the process environment, the data home and the yaml config files into `ServerSettings`.
  *
  * Why: this is the single place that reads `process.env` for the server (code.md rule 1).
- *   It validates the environment, then loads and validates `forge.yaml` (model matrix and
- *   engine limits) and the project config, and resolves where the data home is, so a bad port, a bad model name or a missing
- *   project file stops the process before it opens a database or spawns anything.
+ *   It validates the environment and resolves where the data home and the config files are,
+ *   so a bad port stops the process before it opens a database or spawns anything. Engine
+ *   limits and project settings are not read here: they live in the database (d-0085) and
+ *   the engine reads them each tick.
  *
  * Exports: readServerEnv(), loadSettings().
- * Depends on: @forge/core (ForgeConfig, ProjectConfig, InvalidInputError), @forge/tools
- *   (DEV_CATALOGUE_KEY, devKeyAllowed), config/{paths,data-home,entrypoints,load-yaml}, schemas/env.
- *   IO: reads two yaml files and, through config/data-home, the bootstrap file.
+ * Depends on: @forge/core (InvalidInputError), @forge/tools (DEV_CATALOGUE_KEY,
+ *   devKeyAllowed), config/{paths,data-home,entrypoints}, schemas/env.
+ *   IO: through config/data-home, the bootstrap file.
  */
 
-import { ForgeConfig, InvalidInputError, ProjectConfig } from '@forge/core';
+import { InvalidInputError } from '@forge/core';
 import { DEV_CATALOGUE_KEY, devKeyAllowed } from '@forge/tools';
-import { loadYaml } from '#/config/load-yaml.js';
 import { loadDataHome } from '#/config/data-home.js';
 import { resolveEntrypoints } from '#/config/entrypoints.js';
 import { resolveLayout } from '#/config/paths.js';
@@ -55,17 +55,10 @@ export async function loadSettings(
     env.FORGE_PROJECT_CONFIG,
   );
 
-  const [forge, project] = await Promise.all([
-    loadYaml(layout.forgeConfigPath, ForgeConfig, 'forge config'),
-    loadYaml(layout.projectConfigPath, ProjectConfig, 'project config'),
-  ]);
-
   return {
     layout,
     host: env.FORGE_HOST,
     port: env.FORGE_PORT,
-    forge,
-    project,
     env: rawEnv,
     catalogueKey: env.FORGE_CATALOGUE_KEY ?? DEV_CATALOGUE_KEY,
     allowDevCatalogueKey: devKeyAllowed(rawEnv),

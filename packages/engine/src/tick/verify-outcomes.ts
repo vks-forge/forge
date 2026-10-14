@@ -151,7 +151,7 @@ export async function handleVerifyFailure(
   const message = error instanceof Error ? error.message : String(error);
   deps.log?.('warn', `verify of ${t.ticket.id} failed (${family})`, { error: message });
 
-  const { window_ms: windowMs, max } = deps.config.engine.rewake_cap;
+  const { window_ms: windowMs, max } = ctx.config.forge.engine.rewake_cap;
   const recent = await deps.storage.transaction((tx) =>
     tx.wakeRequests.countSince(t.ticket.id, new Date(ctx.now - windowMs).toISOString(), [
       'retry',
@@ -163,7 +163,7 @@ export async function handleVerifyFailure(
     family,
     attempts: recent + 1,
     now: ctx.now,
-    policy: deps.config.engine.retry,
+    policy: ctx.config.forge.engine.retry,
   });
 
   if (decision.action === 'park') {
@@ -173,13 +173,18 @@ export async function handleVerifyFailure(
   // The wake row only counts toward the hourly cap; verify retries itself through a hold,
   // so the row is consumed at once and dispatch never sees it.
   const capped = await deps.storage.transaction(async (tx) => {
-    const wake = await requestWakeTx(tx, deps, {
-      ticketId: t.ticket.id,
-      kind: 'retry',
-      reason: `verify:${family}`,
-      key: `verify:${t.run.id}:${recent + 1}`,
-      notBefore: decision.notBefore,
-    });
+    const wake = await requestWakeTx(
+      tx,
+      deps,
+      {
+        ticketId: t.ticket.id,
+        kind: 'retry',
+        reason: `verify:${family}`,
+        key: `verify:${t.run.id}:${recent + 1}`,
+        notBefore: decision.notBefore,
+      },
+      ctx.config.forge.engine.rewake_cap,
+    );
 
     if (wake.wake) {
       await tx.wakeRequests.markConsumed(wake.wake.id, ctx.nowIso);

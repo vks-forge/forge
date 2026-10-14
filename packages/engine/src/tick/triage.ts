@@ -19,6 +19,7 @@ import type { Ticket } from '@forge/core';
 import { decideLane } from '#/domain/lane-rules.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { hold, isHeld, rejectStep, runStep } from '#/steps/run-step.js';
+import { projectSettings } from '#/tick/tick-config.js';
 import { moveTicket } from '#/tick/ticket-moves.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { TicketPlan } from '#/types/tick.types.js';
@@ -48,7 +49,8 @@ async function triageOne(ctx: EngineCtx, ticket: Ticket): Promise<void> {
 
   const meta = await requestMeta(ctx, ticket);
   const slice = await deps.memory.slice(project.slug);
-  const globs = project.tier_c_globs;
+  // Tier C paths are policy: they come from the settings snapshot, so an edit applies at once.
+  const globs = projectSettings(ctx.config, project.slug).tier_c_globs;
   const early = preCheckLane({
     tierCGlobs: globs,
     bodyLength: ticket.body.length,
@@ -90,7 +92,7 @@ async function triageOne(ctx: EngineCtx, ticket: Ticket): Promise<void> {
     pre,
     llm: out,
     ...(meta?.hint ? { hint: meta.hint } : {}),
-    threshold: deps.config.engine.confidence_threshold,
+    threshold: ctx.config.forge.engine.confidence_threshold,
     tierCGlobs: globs,
   });
 

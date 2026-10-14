@@ -38,7 +38,11 @@ describe('checkSchemaCurrent', () => {
     runMigrations(driver);
     const current = checkSchemaCurrent(driver);
     driver.close();
-    expect(behind).toMatchObject({ status: 'behind', pending: [3, 4, 5, 6, 7, 8, 9] });
+    expect(behind).toMatchObject({
+      status: 'behind',
+      pending: [3, 4, 5, 6, 7, 8, 9, 10],
+    });
+
     expect(current).toMatchObject({ status: 'current', pending: [], unknown: [] });
   });
 

@@ -17,6 +17,7 @@
 
 import type { RunHandle, RunResult } from '@forge/core';
 import type { EngineDeps, TickReport } from '#/types/engine.types.js';
+import type { TickConfig } from '#/types/tick.types.js';
 import type { GateJob } from '#/types/verify.types.js';
 
 /** One live run: its handle and, once the stream and result are in, the outcome. */
@@ -70,6 +71,8 @@ export interface EngineCtx {
   readonly deps: EngineDeps;
   readonly state: EngineState;
   readonly report: TickReport;
+  /** Settings snapshot taken when this tick began. */
+  readonly config: TickConfig;
   /** Epoch ms for this tick. */
   readonly now: number;
   readonly nowIso: string;

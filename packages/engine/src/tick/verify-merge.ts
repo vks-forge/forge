@@ -24,6 +24,7 @@ import type { PrStatus, Ticket, Tier } from '@forge/core';
 import { gatedHeadOf } from '#/domain/gate-rows.js';
 import { computeTierActual } from '#/domain/tier-actual.js';
 import { moveTicket } from '#/tick/ticket-moves.js';
+import { projectSettings } from '#/tick/tick-config.js';
 import { recordVerified } from '#/tick/verify-outcomes.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { GateRows, MergeOutcome, VerifyTarget } from '#/types/verify.types.js';
@@ -33,7 +34,11 @@ async function tierOfDiff(ctx: EngineCtx, t: VerifyTarget): Promise<Tier> {
   const diff = await ctx.deps.worktrees.diff(t.worktree, t.baseSha);
   const paths = diff.files.flatMap((f) => (f.oldPath ? [f.path, f.oldPath] : [f.path]));
 
-  return computeTierActual(t.ticket.tier_predicted, t.project.tier_c_globs, paths);
+  return computeTierActual(
+    t.ticket.tier_predicted,
+    projectSettings(ctx.config, t.project.slug).tier_c_globs,
+    paths,
+  );
 }
 
 /** Records `gate_passed` with `tier` (once per cycle). */

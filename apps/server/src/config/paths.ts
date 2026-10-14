@@ -35,7 +35,6 @@ export function resolveLayout(
     configRoot: base,
     repoRoot: base,
     cataloguePath: join(forgeDir, 'tools', 'catalog.yaml'),
-    forgeConfigPath: join(forgeDir, 'config', 'forge.yaml'),
     projectConfigPath: projectConfigPath
       ? resolve(base, projectConfigPath)
       : join(forgeDir, 'project.yaml'),

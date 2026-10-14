@@ -11,7 +11,7 @@
  * Depends on: src/routes/run-events, helpers/http-rig, @forge/db. IO: a loopback socket.
  */
 
-import { createMemoryStorage } from '@forge/db';
+import { createMemoryConfigSource, createMemoryStorage } from '@forge/db';
 import type { Engine } from '@forge/engine';
 import type { Run, StorageAdapter } from '@forge/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -58,6 +58,7 @@ beforeEach(async () => {
     buildRoutes({
       engine: {} as unknown as Engine,
       storage,
+      config: createMemoryConfigSource(),
       hooks: {
         handle: async () => ({ decision: 'allow', reason: 'ok', receipt_hash: '' }),
       },

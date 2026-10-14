@@ -42,6 +42,7 @@ const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
   final_chain_hash: { column: 'final_chain_hash', clearable: true },
   catalogue_hash: { column: 'catalogue_hash', clearable: true },
   prompt_hash: { column: 'prompt_hash', clearable: true },
+  config_version: { column: 'config_version', clearable: true },
   hook_registered_at: { column: 'hook_registered_at', clearable: true },
 };
 
@@ -91,8 +92,8 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
       driver.run(
         `INSERT INTO runs (id, ticket_id, harness, driver_version, session_ref, cwd, lane,
            started_at, ended_at, status, usage_json, cost_usd, error_family, retry_of, owner,
-           pid, last_event_at, final_chain_hash, catalogue_hash, prompt_hash, hook_registered_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           pid, last_event_at, final_chain_hash, catalogue_hash, prompt_hash, config_version, hook_registered_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           r.id,
           r.ticket_id,
@@ -114,6 +115,7 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
           r.final_chain_hash ?? null,
           r.catalogue_hash ?? null,
           r.prompt_hash ?? null,
+          r.config_version ?? null,
           r.hook_registered_at ?? null,
         ],
       );

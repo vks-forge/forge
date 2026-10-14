@@ -1,18 +1,20 @@
 /**
- * Loading settings: environment parsing and the two yaml files.
+ * Loading settings: environment parsing and the file layout.
  *
  * Why: a bad config must stop the server at startup with a message that names the file or
- *   variable, not surface as a Worker or gate failing mid-ticket. Empty environment values
+ *   variable, not surface as a Worker or gate failing mid-ticket. The server no longer reads
+ *   forge.yaml or project.yaml here (settings live in the database); a test pins that a root
+ *   with no yaml files still loads. Empty environment values
  *   must count as unset (a shell exporting `FORGE_PORT=` must not mean port 0), the layout
  *   must put runtime data in the data home (never the checkout), and a project config path
  *   must be honoured.
  *
- * Pins: defaults, blank-is-unset, bad port/engine rejected, missing/invalid/non-yaml files,
- *   layout paths (config in the checkout, data in the data home), tier-C globs from the project config, harness env passthrough, dev catalogue key gating.
- * Depends on: src/config/load-settings, src/config/paths. IO: temp directory with yaml files.
+ * Pins: defaults, blank-is-unset, bad port/engine rejected, no yaml needed,
+ *   layout paths (config in the checkout, data in the data home), harness env passthrough, dev catalogue key gating.
+ * Depends on: src/config/load-settings, src/config/paths. IO: an empty temp directory.
  */
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { InvalidInputError, dataHomeLayout } from '@forge/core';
@@ -21,36 +23,6 @@ import { resolveEntrypoints } from '#/config/entrypoints.js';
 import { resolveLayout } from '#/config/paths.js';
 import { loadSettings, readServerEnv } from '#/config/load-settings.js';
 import type { DataHomeIo } from '#/types/data-home.types.js';
-
-const FORGE_YAML = `
-models:
-  director: { triage: opus, dispatch_prompt: opus, steer_reply: opus }
-  worker: { express: sonnet, standard: sonnet, full: sonnet }
-engine:
-  tick_interval_ms: 30000
-  global_slots: 3
-  max_concurrent_by_state: { in_progress: 3, verifying: 1 }
-  stall_ms: 300000
-  rewake_cap: { max: 3, window_ms: 3600000 }
-  step_retries: 1
-  step_budget_usd: 0.5
-  confidence_threshold: 0.7
-  interaction_timeout_ms: 14400000
-  run_budget: { max_turns: 40, max_usd: 5, turn_ms: 600000 }
-  retry:
-    rate_limit: { base_ms: 60000, max_ms: 3600000, max_attempts: 5 }
-    crash: { delay_ms: 10000, max_attempts: 1 }
-    stall: { delay_ms: 10000, max_attempts: 2 }
-    unknown: { delay_ms: 30000, max_attempts: 1 }
-`;
-
-const PROJECT_YAML = `
-slug: demo
-prefix: DM
-profile: generic
-default_harness: claude-code
-git_host: { kind: local, remote_path: ../remote.git }
-`;
 
 let root: string;
 
@@ -69,9 +41,6 @@ const load = (
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'forge-settings-'));
-  mkdirSync(join(root, '.forge', 'config'), { recursive: true });
-  writeFileSync(join(root, '.forge', 'config', 'forge.yaml'), FORGE_YAML);
-  writeFileSync(join(root, '.forge', 'project.yaml'), PROJECT_YAML);
 });
 
 afterEach(() => {
@@ -121,7 +90,7 @@ describe('resolveLayout', () => {
     expect(layout.configRoot).toBe(root);
     expect(layout.repoRoot).toBe(root);
     expect(layout.cataloguePath).toBe(join(root, '.forge', 'tools', 'catalog.yaml'));
-    expect(layout.forgeConfigPath).toBe(join(root, '.forge', 'config', 'forge.yaml'));
+    expect(layout.projectConfigPath).toBe(join(root, '.forge', 'project.yaml'));
     expect(layout.data.dbPath).toBe('C:\\Forge\\forge.db');
     expect(layout.data.runsDir).toBe('C:\\Forge\\runs');
     expect(layout.data.secretsDir).toBe('C:\\Forge\\secrets');
@@ -150,7 +119,7 @@ describe('resolveLayout', () => {
 });
 
 describe('loadSettings', () => {
-  it('loads both files and applies the environment', async () => {
+  it('applies the environment and reads no yaml file', async () => {
     const settings = await load(
       {
         FORGE_ROOT: root,
@@ -161,31 +130,11 @@ describe('loadSettings', () => {
       'ignored-cwd',
     );
 
-    expect(settings.project.slug).toBe('demo');
-    expect(settings.forge.engine.tick_interval_ms).toBe(30_000);
     expect(settings.port).toBe(0);
     expect(settings.engine).toBe('cli');
     expect(settings.claudeBinary).toBe('claude.exe');
-    expect(settings.project.tier_c_globs).toEqual([
-      '.forge/**',
-      '.claude/**',
-      '.github/**',
-    ]);
-
     expect(settings.harnessEnvPassthrough).toEqual([]);
     expect(settings.allowDevCatalogueKey).toBe(false);
-  });
-
-  it('reads tier_c_globs from the project config instead of a hardcoded list', async () => {
-    writeFileSync(
-      join(root, '.forge', 'project.yaml'),
-      `${PROJECT_YAML}tier_c_globs: ['.forge/**', 'db/migrations/**']
-`,
-    );
-
-    const settings = await load({ FORGE_ROOT: root }, 'ignored-cwd');
-
-    expect(settings.project.tier_c_globs).toEqual(['.forge/**', 'db/migrations/**']);
   });
 
   it('keeps harness env passthrough empty unless named, and splits a list', async () => {
@@ -228,36 +177,5 @@ describe('loadSettings', () => {
 
     expect(asked.allowDevCatalogueKey).toBe(true);
     expect(test.allowDevCatalogueKey).toBe(true);
-  });
-
-  it('names the file when it is missing', async () => {
-    rmSync(join(root, '.forge', 'project.yaml'));
-
-    await expect(load({}, root)).rejects.toThrow(
-      /project config not found.*project\.yaml/,
-    );
-  });
-
-  it('names the file and key when the content is invalid', async () => {
-    writeFileSync(join(root, '.forge', 'project.yaml'), 'slug: Bad Slug\nprefix: x\n');
-
-    await expect(load({}, root)).rejects.toThrow(/project config is invalid.*slug/);
-  });
-
-  it('rejects a tick interval below the floor', async () => {
-    writeFileSync(
-      join(root, '.forge', 'config', 'forge.yaml'),
-      FORGE_YAML.replace('tick_interval_ms: 30000', 'tick_interval_ms: 1000'),
-    );
-
-    await expect(load({}, root)).rejects.toThrow(
-      /forge config is invalid.*tick_interval_ms/,
-    );
-  });
-
-  it('rejects text that is not yaml', async () => {
-    writeFileSync(join(root, '.forge', 'config', 'forge.yaml'), 'a: [unclosed');
-
-    await expect(load({}, root)).rejects.toThrow(/not valid yaml/);
   });
 });

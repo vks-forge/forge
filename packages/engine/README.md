@@ -60,6 +60,15 @@ Public API from `src/index.ts`:
   `gate_results` rows, then calls `requestTick()`; the next tick consumes it and applies the outcome
   (rework, merge, retry, park) through the usual CAS moves. A restart loses in-flight jobs; with no rows
   for the run the next tick gates again. Tickets with a job in flight count toward `max_concurrent_by_state.verifying`.
+- Settings snapshot (`tick/tick-config.ts`, d-0085): each tick starts with one read of `deps.config`
+  (`company()` plus `project(slug)` for every registered project) and every phase reads that snapshot
+  (`ctx.config`), never the source, so an edit saved between ticks applies to the next tick as a whole
+  with no restart and never half-applies inside one. Company dials (limits, retries, models) come
+  from `ctx.config.forge`; project settings (commands, profile, git host, `tier_c_globs`) overlay the
+  `ProjectRuntime.config` the app built and drive triage, tier computation, the Worker contract and the gates.
+  Each run row stores `config_version` (`c<company>:p<project>`). If the source cannot be read or a stored
+  override no longer validates, the tick is skipped with a `load config` error in its report and nothing
+  starts. `requestWake` outside a tick reads the current company settings for the re-wake cap.
 - One base branch per project (`tick/project-runtime.ts`): `git_host.base_branch` drives the worktree base, the
   diff base and the PR target; the engine's `baseRef` only serves projects without a host. A runtime
   whose `config.slug` is another project is refused (logged as a tick error, nothing published).
@@ -110,7 +119,7 @@ Public API from `src/index.ts`:
 - Node 24, pnpm. Runtime deps: `@forge/core`, `@forge/tools`, `zod`.
 - `EngineDeps` (see `src/types/engine.types.ts`): storage, driver, llm, worktrees, memory, receipts,
   `reports` (a `ReportStore`), `project(slug)` (a `ProjectRuntime`: config, `GitHost`, gates; null = the
-  project's tickets stay in Verifying), clock, `config` (a parsed `ForgeConfig`, from `.forge/config/forge.yaml`), `ids`, `owner`
+  project's tickets stay in Verifying), clock, `config` (a `ConfigSource`: the settings in the database, read once at the start of each tick, see below), `ids`, `owner`
   (this server's name), `baseRef`, `catalogueHash`, optional `mcpIdentity`, `onTickRequested`, `log`.
 - No env, files or processes are touched here (the id source reads only OS entropy). Tests: `pnpm test` (scenarios in
   `__tests__/scenarios`, pure rules in `__tests__/domain`, the status-write property in
@@ -131,6 +140,7 @@ Public API from `src/index.ts`:
 - Process-local by design: live run pumps, step/dispatch holds and queued steering replies. After a
   restart pumps are gone (runs are crash-settled) and holds reset. The requester's hint, type and
   title are read from the stored intake event (`intakeEvents.get`), so they survive a restart.
+- A running Worker keeps the limits it was started with (budget, stall time); a settings edit reaches runs started on the next tick. The stall scan itself uses the current `stall_ms`. Run rows predating migration 0010 have no `config_version`.
 - Ticket numbers come from listing every ticket id of the project (no counter); fine at M0 scale.
 - Failure attempts count failed runs of the same family for the ticket, with no decay.
 - `driver_version` on run rows is the constant `unversioned` until the driver exposes it cheaply.

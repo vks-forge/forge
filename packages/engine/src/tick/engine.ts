@@ -29,11 +29,13 @@ import {
 import { deliverReplies } from '#/tick/steering.js';
 import { beginTick, endTick, requestTick } from '#/tick/tick-requests.js';
 import { moveTicket } from '#/tick/ticket-moves.js';
+import { loadTickConfig } from '#/tick/tick-config.js';
 import { triageInbox } from '#/tick/triage.js';
 import { verifyReady } from '#/tick/verify.js';
 import { checkInvariants } from '#/tick/violations.js';
 import type { EngineCtx, EngineState } from '#/types/engine-state.types.js';
 import type { Engine, EngineDeps, TickReport } from '#/types/engine.types.js';
+import type { TickConfig } from '#/types/tick.types.js';
 
 function emptyReport(nowIso: string, firstTick: boolean): TickReport {
   return {
@@ -69,15 +71,24 @@ async function phase(
 
 async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport> {
   const now = deps.clock.now();
-  const ctx: EngineCtx = {
-    deps,
-    state,
-    report: emptyReport(iso(now), state.firstTick),
-    now,
-    nowIso: iso(now),
-  };
-
+  const report = emptyReport(iso(now), state.firstTick);
   beginTick(state);
+
+  // One read of the settings for the whole tick. If they cannot be read (or a stored
+  // override no longer validates) nothing is decided on a guess: the tick is skipped and
+  // the error is reported, and the next tick tries again (d-0085).
+  let config: TickConfig;
+  try {
+    config = await loadTickConfig(deps);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    report.errors.push({ where: 'load config', message });
+    deps.log?.('error', 'load config failed', { error: message });
+
+    return report;
+  }
+
+  const ctx: EngineCtx = { deps, state, report, config, now, nowIso: iso(now) };
   if (state.firstTick) {
     await phase(ctx, 'restart reconcile', crashForeignRuns);
     state.firstTick = false;

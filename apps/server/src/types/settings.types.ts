@@ -11,7 +11,7 @@
  * Depends on: @forge/core (DataHomeLayout, ForgeConfig, ProjectConfig). Types only.
  */
 
-import type { DataHomeLayout, ForgeConfig, ProjectConfig } from '@forge/core';
+import type { DataHomeLayout } from '@forge/core';
 
 /**
  * Absolute paths of everything the server reads or writes. Config paths come from the
@@ -23,7 +23,7 @@ export interface Layout {
   /** The project checkout that source-control commands run in; the same folder as `configRoot` for now. */
   readonly repoRoot: string;
   readonly cataloguePath: string;
-  readonly forgeConfigPath: string;
+  /** `.forge/project.yaml`: read once, only to register the project on the first start (bridge removed by B4). */
   readonly projectConfigPath: string;
   /** Project memory records; still read from the checkout until memory moves into the data home. */
   readonly memoryDir: string;
@@ -47,8 +47,6 @@ export interface ServerSettings {
   readonly layout: Layout;
   readonly host: string;
   readonly port: number;
-  readonly forge: ForgeConfig;
-  readonly project: ProjectConfig;
   /** Environment handed to project commands and the harness; only an allowlist reaches gates and
    * harness children. */
   readonly env: Readonly<Record<string, string | undefined>>;

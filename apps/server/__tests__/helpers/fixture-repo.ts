@@ -6,7 +6,7 @@
  *   mocks of git. This builds the smallest repository those need: a node-only project whose
  *   `test` and `lint` scripts need no install, a source file and a test file, a bare
  *   repository standing in for the remote with `main` pushed, and the server's own config
- *   (`forge.yaml`, `project.yaml`, the signed tool catalogue) copied in, so
+ *   (`project.yaml`, the signed tool catalogue) copied in, so
  *   `loadSettings()` is exercised exactly as in production. Forge's data home is a sibling temp
  *   directory, never inside the repository. Everything lives under the OS
  *   temp directory (or a directory the caller names) and is removed by `dispose()`.
@@ -77,7 +77,6 @@ export function createFixtureRepo(dir?: string): FixtureRepo {
   mkdirSync(join(root, 'src'), { recursive: true });
   mkdirSync(join(root, 'test'), { recursive: true });
   mkdirSync(join(root, 'scripts'), { recursive: true });
-  mkdirSync(join(root, '.forge', 'config'), { recursive: true });
   mkdirSync(join(root, '.forge', 'tools'), { recursive: true });
 
   const pkg = {
@@ -93,11 +92,6 @@ export function createFixtureRepo(dir?: string): FixtureRepo {
   writeFileSync(join(root, 'test', 'math.test.js'), TEST);
   writeFileSync(join(root, 'scripts', 'lint.mjs'), LINT);
   writeFileSync(join(root, '.gitignore'), 'node_modules/\n');
-
-  cpSync(
-    join(REPO_ROOT, '.forge', 'config', 'forge.yaml'),
-    join(root, '.forge', 'config', 'forge.yaml'),
-  );
 
   cpSync(
     join(REPO_ROOT, '.forge', 'tools', 'catalog.yaml'),

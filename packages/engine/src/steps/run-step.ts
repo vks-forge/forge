@@ -23,7 +23,8 @@ export async function runStep<T>(
   input: Record<string, unknown>,
   schema: ZodType<T>,
 ): Promise<Result<T, StepError>> {
-  const { llm, config } = ctx.deps;
+  const { llm } = ctx.deps;
+  const config = ctx.config.forge;
   const opts = {
     model: config.models.director[name],
     budgetUsd: config.engine.step_budget_usd,
@@ -58,7 +59,7 @@ export function isHeld(ctx: EngineCtx, key: string): boolean {
 /** Holds `key` off until `untilMs`, or one tick interval from now. */
 export function hold(ctx: EngineCtx, key: string, untilMs?: number): void {
   ctx.state.holds.set(key, {
-    until: untilMs ?? ctx.now + ctx.deps.config.engine.tick_interval_ms,
+    until: untilMs ?? ctx.now + ctx.config.forge.engine.tick_interval_ms,
   });
 }
 
