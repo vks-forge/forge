@@ -35,6 +35,12 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0114 — Issue analysis: new/updated issues auto; backlog newest-first within daily budget; Analyse now; cheap triage pass then deep analysis only where warranted
+- d-0113 — Issues page (PRs later): analyst agent researches every open issue (code, blast radius, relations) → report + verdict; auto-card if solvable without user, else approval
+- d-0112 — Card policing: opt-in issues + allow-list, Director dedupe/merge, 20/h cap, 7/14-day nudges never auto-close, card budget cap, audit log, sensitive paths need approval
+- d-0111 — Card↔issue sync: edits/comments into card chat, card chat private (Director posts public updates), column labels, Done closes issue, Closed needs confirm, GitHub close/reopen reflected
+- d-0110 — Ticket deps set by Director; start after upstream merged (or gated + stacked if safe); upstream change pauses dependents, Director decides; cross-card allowed; no cycles
+- d-0109 — Card chat = Director, ticket page = Worker live thread + direct steer; Director steers Workers (instruct, pause, stop, restart, new worker, re-plan) via engine doors, all recorded
 - d-0108 — Director investigates (code, all cards/tickets, memory) and decides run-now vs needs-approval with reasons, not a file count; escalation returns card to Needs you; per-project "always ask"
 - d-0107 — Board columns = card lifecycle: New, Shaping, Needs you, In progress, Done, Closed; rolled up from tickets (Needs you wins), never moved by hand
 - d-0106 — Card types Discussion / Plan / Issue / PR issue; Director suggests, user changes, convertible; types are data in an extensible registry
