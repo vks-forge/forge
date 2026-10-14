@@ -5,9 +5,10 @@ statement: For M0, a Forge server restart kills every in-flight run. The per-run
 source: { type: chat, ref: "2026-10-13 user approved review recommendation 2 ('yes')" }
 author: user
 origin: owner
-status: active
+status: superseded
 valid_from: 2026-10-13
-superseded_by: null
+superseded_by: d-0092
+valid_to: 2026-10-14
 supersedes: null
 tags: [execution-plane, receipts, secrets, engine]
 pinned: false

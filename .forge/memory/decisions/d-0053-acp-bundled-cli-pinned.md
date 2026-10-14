@@ -5,9 +5,10 @@ statement: The ACP engine runs the Claude Code CLI bundled with the pinned `@ant
 source: { type: chat, ref: "2026-10-13 user approved review recommendation 1 ('yes') after the fable review found the adapter resolves its bundled claude.exe" }
 author: user
 origin: owner
-status: active
+status: superseded
 valid_from: 2026-10-13
-superseded_by: null
+superseded_by: d-0088
+valid_to: 2026-10-14
 supersedes: d-0048
 tags: [execution-plane, drivers, claude, acp, probes]
 pinned: true

@@ -84,9 +84,13 @@ family, not the message.
 
 ## 9. Config over code
 
-Lanes, floors, tool catalogue, harness options, model matrix live in yaml
-under `.forge/`, validated by core schemas at load. Behaviour changes that
-need a code edit for a config-shaped thing are a smell.
+Lanes, floors, agents, pipelines, tool catalogue, harness options, model
+matrix and project settings are data, not code: stored as versioned rows in
+Forge's database, edited only through the UI, read through a source port and
+validated by core zod schemas at load (d-0085, d-0090). Defaults ship as seed
+data. No product behaviour may require a hand-edited file or env var to
+configure; env vars are for dev/test builds only. Behaviour changes that need
+a code edit for a config-shaped thing are a smell.
 
 ## 10. Files, folders and names
 

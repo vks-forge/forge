@@ -5,9 +5,10 @@ statement: Agent role definitions are Markdown files with a YAML frontmatter hea
 source: { type: chat, ref: "2026-10-14 grill x-0011 Q1: user chose 'Markdown + frontmatter (Rec.)'" }
 author: user
 origin: owner
-status: active
+status: superseded
 valid_from: 2026-10-14
-superseded_by: null
+superseded_by: d-0085
+valid_to: 2026-10-14
 supersedes: null
 tags: [agents, config, x-0011]
 pinned: false

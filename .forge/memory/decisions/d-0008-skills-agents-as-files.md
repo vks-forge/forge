@@ -5,10 +5,11 @@ statement: Skills are canonical `SKILL.md` directories (Agent Skills standard) a
 source: { type: chat, ref: 2026-10-12 user "yes" to files-canonical proposal }
 author: user
 origin: owner
-status: active
+status: superseded
 valid_from: 2026-10-12
 supersedes: null
-superseded_by: null
+superseded_by: d-0085
+valid_to: 2026-10-14
 tags: [skills, agents, execution-plane]
 pinned: true
 ---

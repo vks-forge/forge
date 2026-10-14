@@ -5,9 +5,10 @@ statement: Agent and pipeline definitions are protected config. Now (M0/M1) they
 source: { type: chat, ref: "2026-10-14 grill x-0011 Q3: user: \"ok then go for option 1 but also later we need option 3 so wecan approve it from UI also or later we will only make it editable though UI, the full pipeline infuture will be only controlled from UI and store in database so no file changes. if alater we add ACL then only admin will be able to edit this\"" }
 author: user
 origin: owner
-status: active
+status: superseded
 valid_from: 2026-10-14
-superseded_by: null
+superseded_by: d-0085
+valid_to: 2026-10-14
 supersedes: null
 tags: [pipelines, agents, governance, signing, ui, acl, x-0011]
 pinned: true

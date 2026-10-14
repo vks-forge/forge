@@ -14,7 +14,6 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0005 — Workers run on installed harnesses via `WorkerDriver`; containers/WSL2 optional per lane (supersedes d-0004)
 - d-0006 — Process lanes Express / Standard / Full; start light, escalate on signal, never down
 - d-0007 — Memory: git-backed markdown per project, Director-only writer, propose-only janitor
-- d-0008 — Skills (`SKILL.md`) and agent specs (YAML) are files in git; DB is registry only
 - d-0009 — Stack: TS pnpm monorepo, SQLite WAL, Bifrost gateway, Phoenix traces, assistant-ui threads
 - d-0010 — Control room built in React, lifting from Paperclip (MIT); no embedded tracker
 - d-0012 — Workers never push or hold git creds; dispatcher pushes; factory bot merges by policy
@@ -31,12 +30,31 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0032 — `DirectorLLM` adapter, default logged-in harness with hygiene flags; subscription-turn counter (supersedes d-0024)
 - d-0025 — Always LLM triage before validation; process correctness over call count
 - d-0033 — Receipt hooks `onFailure: block` + timeout, SessionStart liveness registration, PreToolUse chokepoint (supersedes d-0026)
-- d-0034 — Any-language targets; `profile: ts | generic`, TS-only checks `skipped` with reason under generic (supersedes d-0027)
 - d-0040 — One package skeleton (`src/{schemas,domain,ports|adapters,shared}`), single root `__tests__/` mirroring `src/`
 - d-0041 — Every file opens with a header comment (what / why + doc ref / exports / depends on); lint-enforced
 - d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0099 — Published npm package `vks-forge`; command `forge`; internal `@forge/*` stay private, bundled; amends d-0091
+- d-0098 — Data folder `%LOCALAPPDATA%\Forge` (worktrees too), daily snapshots keep 7 + export/restore, notify-then-update, backup before migrate, rollback; amends d-0085, d-0059 (product grill)
+- d-0097 — Layered Worker limits (global 2 / per-project 1 / per-harness), priority + round-robin queue, quota waits with reset time (product grill)
+- d-0096 — Ticket sources = TriggerAdapter folders: chat first, GitHub Issues (label, polled) next, more later; all via Director triage, outsiders need approval; amends d-0002 (product grill)
+- d-0095 — Onboarding: detect (ecosystem detectors + CI + Director) → run each command once → Director onboarding chat seeds memory; any language, role-tagged command lists (supersedes d-0034)
+- d-0094 — One company per install (company → projects → tickets); multiple GitHub connections (one App per org/account); multi-company deferred (product grill)
+- d-0093 — No auth ⇒ 127.0.0.1 only, no network bind setting; per-install API token for UI/CLI; server mode starts with an install-wide key; amends d-0061, d-0082 (product grill)
+- d-0092 — Background daemon (`forge start/status/stop`, tray, start on login); resume interrupted runs with fresh run secret, else retry keeping worktree (supersedes d-0054)
+- d-0091 — Distribute via npm first (Node 24), standalone exe later; `forge start` opens the UI; package name open (`forge`/`@forge` taken) (product grill)
+- d-0090 — UI is the only control surface (no hand-edited code/config); open source later; CLI = install/start/stop/script (product grill)
+- d-0089 — Windows first release; CI matrix Win/macOS/Linux from now; macOS + Linux next release (Keychain / Secret Service, notifiers, live probes) (product grill)
+- d-0088 — No harness pin: per-install compatibility check on each new version, changed tools denied until approved in Settings, known-good list per release (supersedes d-0053)
+- d-0087 — Paperclip model: run user-installed harnesses with their own login (or API key / setup-token OAuth), Test-environment probe, no bundling; amends d-0031, d-0032, d-0053 (product grill)
+- d-0086 — Project memory in Forge data folder (private git repo per project), optional one-way mirror PR to the repo, default off; amends d-0007, d-0044 (product grill)
+- d-0085 — Settings, agents, pipelines, skills in Forge data folder DB, UI-only; company defaults + per-project overrides; versioned; export/import later (supersedes d-0008, d-0065, d-0068)
+- d-0084 — Each install creates its own GitHub App via the manifest flow (manual fallback); Settings page manages it; PR status polled (product grill)
+- d-0083 — Git via a GitHub App installed on the repo; new project = from scratch or pick a GitHub repo, always into a chosen local folder (product grill)
+- d-0082 — Installed product (exe/CLI), one binary: local mode first, server mode later; one company, many repos; no team features/auth now (product grill)
+- d-0081 — Scorecards per agent and pipeline shape from outcomes; Director reads them, no auto-tuning (x-0011 Q16)
+- d-0080 — Agent unavailable: retry with backoff → fallback list → Director substitute → pause; UI-refinable (x-0011 Q15)
 - d-0079 — Notify via control room inbox + Windows desktop notification; notifier port for more channels later (x-0011 Q14)
 - d-0078 — Each agent declares its skills and memory slice (tags, rejected); Director sees all memory (x-0011 Q13)
 - d-0077 — Director builds each ticket's pipeline freely (no safety floor), default pipeline exists, built pipeline + reasons recorded; amends d-0001, d-0006, d-0069 (x-0011 Q12)
@@ -48,10 +66,8 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0071 — Reviewers advisory (findings as notes); critical/high holds auto-merge for the user; deterministic gates still block (x-0011 Q6)
 - d-0070 — Nodes hand off typed artifacts; each agent declares inputs/output/write_scope; reviewers never see the Worker narrative (x-0011 Q5)
 - d-0069 — Pipeline choice = lane default + routing rules (paths, type, labels), project override, only ever stricter (x-0011 Q4)
-- d-0068 — Pipelines/agents protected: files now (signed, tier C, Workers locked out, run records version); later UI approve, end state DB + UI-only edits, admin-only with ACL; read via a source port (x-0011 Q3)
 - d-0067 — Measured: Claude Code defers MCP schemas behind ToolSearch; Workers run with `ENABLE_TOOL_SEARCH=false`; finish may be re-called (author=director, measured)
 - d-0066 — Pipelines are graphs (nodes + outcome edges, branches, loops); validated at load (x-0011 Q2)
-- d-0065 — Agent roles are `.forge/agents/<name>.md`: YAML frontmatter settings + prose instructions (x-0011 Q1)
 - d-0064 — Measured: ACP announces a tool call before its input streams; receipt cross-check waits for the tool result for empty-input announces (author=director, measured)
 - d-0063 — Readable layout: Prettier + ESLint auto-fix `curly: all` and blank-line padding (`@stylistic`); repo reformatted once, lint keeps it
 - d-0062 — GitHost port: local bare host + GitHub App host (DPAPI SecretStore for the App key); merge one door
@@ -62,8 +78,6 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0057 — Measured: hook tool_use_id == ACP toolCallId; budget exit 0 or 1 (classify by subtype); project-source defaultMode filtered, set_mode still required (author=director, measured)
 - d-0056 — Claude hook client + settings renderers move to `drivers/claude/hooks`; `@forge/hooks` keeps neutral receipt ingress
 - d-0055 — One ticket id `<PROJECT>-<n>` is the primary key, no UUID; rest of d-0021 carries over (supersedes d-0021)
-- d-0054 — M0: server restart kills in-flight runs (run secret memory-only); reconcile marks unowned `running` as crash
-- d-0053 — ACP runs the SDK-bundled CLI (2.1.293), pinned; probes re-run on adapter/SDK bumps; carries d-0048 facts (supersedes d-0048)
 - d-0052 — Layering: core + tools are inner rings; adapters import core+tools only, never each other; standalone processes compose in `apps/<name>/src/main.ts` (amends rule 1)
 - d-0051 — READMEs are living docs: every reader-visible change updates the README in the same commit; stale README = review block (amends d-0050)
 - d-0050 — Package/app README contract: 7 sections (what, why exists, what it does, why this approach, requirements, extending, limits), ≤150 lines, updated with the change
@@ -76,6 +90,10 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 
 ## Superseded
 
+- d-0034 — `profile: ts | generic` → superseded by d-0095 (role-tagged commands, any language, 2026-10-14)
+- d-0054 — restart kills in-flight runs → superseded by d-0092 (daemon + resume, 2026-10-14)
+- d-0053 — ACP on SDK-bundled pinned CLI 2.1.293 → superseded by d-0088 (installed harness, per-version compat check, 2026-10-14)
+- d-0008, d-0065, d-0068 — skills/agents/pipelines as repo files (signed) → superseded by d-0085 (DB + UI-only in Forge data folder, 2026-10-14)
 - d-0011 — worktree only for big/parallel tickets → superseded by d-0059 (always worktree, 2026-10-13)
 - d-0048 — Measured Claude harness facts → superseded by d-0053 (version attribution corrected, 2026-10-13)
 - d-0021 — git/PR/branches/ids incl. internal UUID → superseded by d-0055 (no UUID, 2026-10-13)
@@ -110,9 +128,11 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 
 ## Pending proposals (need user approve / reject)
 
-- x-0011 — Agents (`.forge/agents/*.yaml`) and per-lane pipelines (`.forge/pipelines/*.yaml`) as config; engine = generic stage runner; fixed invariants (being grilled 2026-10-14)
+- x-0011 — Agents (`.forge/agents/*.yaml`) and per-lane pipelines (`.forge/pipelines/*.yaml`) as config; engine = generic stage runner; fixed invariants (grill paused 2026-10-14 after Q16; decisions d-0065..d-0081; more discussion before the brief)
 
 ## Outcomes
 
 - 2026-10-12 — hyperresearch run + design docs session: `outcomes/2026-10/2026-10-12-design-session.md`
 - 2026-10-12 — scope review + self-improvement research + tool-system reverse engineering: `outcomes/2026-10/2026-10-12-review-and-research-session.md`
+- 2026-10-14 — E2 done + pushed; pipelines-as-config grill (x-0011, d-0065..d-0081) paused: `outcomes/2026-10/2026-10-14-e2-done-and-pipelines-grill.md`
+- 2026-10-14 — Product shape grill (installed product, company, many repos; d-0082..d-0098): `outcomes/2026-10/2026-10-14-product-shape-grill.md`
