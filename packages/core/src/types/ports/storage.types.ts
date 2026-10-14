@@ -19,12 +19,13 @@
  * Exports: TicketPatch, TicketRepository, TicketRelationRepository, RunRepository,
  *   RunEventRepository, RunInboxRepository, RunTokenRepository, IntakeEventRepository,
  *   InteractionRepository, WakeRequestRepository, GateResultRepository, ProjectRepository,
- *   StorageTx, StorageAdapter.
+ *   HarnessRepository, StorageTx, StorageAdapter.
  * Depends on: schemas/*, types/run-event.types. No IO (interfaces only).
  */
 
 import type { TicketId } from '#/schemas/ids.js';
 import type { GateResult, NewGateResult } from '#/schemas/gate-result.js';
+import type { Harness } from '#/schemas/harness.js';
 import type { IntakeEvent, StoredIntakeEvent } from '#/schemas/intake.js';
 import type { Interaction } from '#/schemas/interaction.js';
 import type { Project } from '#/schemas/project.js';
@@ -206,6 +207,15 @@ export interface ProjectRepository {
   list(): Promise<Project[]>;
 }
 
+/** The `harnesses` registry: installed harnesses and how each authenticates (d-0087). */
+export interface HarnessRepository {
+  get(id: string): Promise<Harness | null>;
+  // Insert or replace by id; the row keeps its place in `list`.
+  upsert(harness: Harness): Promise<void>;
+  // Every harness, in first-insert order.
+  list(): Promise<Harness[]>;
+}
+
 /** The repositories visible inside one transaction. */
 export interface StorageTx {
   readonly tickets: TicketRepository;
@@ -218,6 +228,7 @@ export interface StorageTx {
   readonly wakeRequests: WakeRequestRepository;
   readonly gateResults: GateResultRepository;
   readonly projects: ProjectRepository;
+  readonly harnesses: HarnessRepository;
   readonly ticketRelations: TicketRelationRepository;
 }
 

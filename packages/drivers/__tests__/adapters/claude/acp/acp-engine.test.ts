@@ -14,7 +14,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RequestError } from '@agentclientprotocol/sdk';
 import { describe, expect, it } from 'vitest';
+import { createClaudeDriver } from '#/adapters/claude/claude-driver.js';
+import { HarnessNotInstalledError } from '#/shared/errors.js';
 import { makeAcpRig } from '#tests/helpers/claude-rigs.js';
+import { TEST_CLAUDE } from '#tests/helpers/rig-base.js';
 
 const sessionNew = (rig: ReturnType<typeof makeAcpRig>) =>
   rig.agents[0]?.paramsOf('session/new')[0] as Record<string, unknown>;
@@ -42,8 +45,45 @@ describe('ACP engine: process and environment (rule 1)', () => {
     for (const k of ['CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'FORGE_HOOK_CONFIG']) {
       expect(env).not.toHaveProperty(k);
     }
+  });
 
-    expect(env).not.toHaveProperty('CLAUDE_CODE_EXECUTABLE');
+  it("points the adapter at the user's installed claude with forward slashes (d-0101)", async () => {
+    const rig = makeAcpRig();
+    await rig.driver.result(await rig.driver.start(rig.request()));
+    expect(rig.spawns[0]?.options.env?.['CLAUDE_CODE_EXECUTABLE']).toBe(TEST_CLAUDE);
+
+    const win = makeAcpRig({}, undefined, 'win32');
+    const driver = createClaudeDriver({
+      ...win.deps,
+      harness: () => ({
+        id: 'claude',
+        binaryPath: String.raw`C:\Users\me\.local\bin\claude.exe`,
+        authMode: 'login',
+      }),
+    });
+
+    await driver.result(await driver.start(win.request()));
+    expect(win.spawns[0]?.options.env?.['CLAUDE_CODE_EXECUTABLE']).toBe(
+      'C:/Users/me/.local/bin/claude.exe',
+    );
+  });
+
+  it('fails closed when claude is not installed: typed error, nothing spawned', async () => {
+    const rig = makeAcpRig();
+    const driver = createClaudeDriver({
+      ...rig.deps,
+      harness: () => ({ id: 'claude', authMode: 'login' }),
+      fileExists: () => false,
+      baseEnv: { PATH: '/nowhere' },
+    });
+
+    const failure = await driver.start(rig.request()).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(HarnessNotInstalledError);
+    expect((failure as Error).message).toContain(
+      'Install Claude Code: https://code.claude.com/docs/en/setup',
+    );
+
+    expect(rig.spawns).toHaveLength(0);
   });
 });
 
@@ -172,22 +212,41 @@ describe('ACP engine: session options and mode (rules 3 and 4)', () => {
   });
 });
 
-describe('ACP engine: preflight (d-0053)', () => {
-  it('reports the adapter and the bundled CLI version', async () => {
+describe('ACP engine: preflight (d-0087, d-0088)', () => {
+  it('reports the adapter version and the installed claude version, run from the installed path', async () => {
     const rig = makeAcpRig();
     const p = await rig.driver.preflight();
     expect(p).toEqual({
       ok: true,
       issues: [],
-      version: 'acp 0.89.1; claude-code 2.1.293',
-      harnessVersion: '2.1.293',
+      version: 'acp 0.89.1; claude-code 2.1.299',
+      harnessVersion: '2.1.299',
     });
+
+    const probe = rig.spawns.find((s) => s.command === TEST_CLAUDE);
+    expect(probe?.args).toEqual(['--version']);
   });
 
-  it('flags a version that differs from the pin', async () => {
-    const rig = makeAcpRig({ pinnedCliVersion: '9.9.9' });
+  it('flags an adapter that differs from its pin, but not a different installed claude', async () => {
+    const rig = makeAcpRig({ pinnedAdapterVersion: '9.9.9' });
     const p = await rig.driver.preflight();
     expect(p.ok).toBe(false);
     expect(p.issues.join(' ')).toContain('9.9.9');
+    expect(p.issues.join(' ')).not.toContain('claude');
+  });
+
+  it('reports a missing install with the install pointer and spawns nothing', async () => {
+    const rig = makeAcpRig();
+    const driver = createClaudeDriver({
+      ...rig.deps,
+      harness: () => ({ id: 'claude', authMode: 'login' }),
+      fileExists: () => false,
+      baseEnv: { PATH: '/nowhere' },
+    });
+
+    const p = await driver.preflight();
+    expect(p.ok).toBe(false);
+    expect(p.issues.join(' ')).toContain('https://code.claude.com/docs/en/setup');
+    expect(rig.spawns).toHaveLength(0);
   });
 });

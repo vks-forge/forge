@@ -7,7 +7,8 @@
  *   end-to-end test. The handle it returns is the small surface `main.ts`, tests and the
  *   shutdown path use.
  *
- * Exports: HarnessIdentity, ToolPolicy, GateDeps, ShutdownParts, DriverFactoryDeps, ExternalPorts, ServerAddress, ForgeServer, Ticker.
+ * Exports: HarnessIdentity, ToolPolicy, GateDeps, ShutdownParts, HarnessWiring, DriverFactoryDeps,
+ *   LlmFactory, HarnessTester, ExternalPorts, ServerAddress, ForgeServer, Ticker.
  * Depends on: @forge/core, @forge/drivers (types), @forge/engine (types), @forge/hooks (types),
  *   @forge/tools (types). Types only.
  */
@@ -22,7 +23,13 @@ import type {
   WorkerDriver,
   WorktreeManager,
 } from '@forge/core';
-import type { PreparedRun, ReceiptLookup } from '@forge/drivers';
+import type {
+  HarnessSetup,
+  HarnessSource,
+  HarnessTestResult,
+  PreparedRun,
+  ReceiptLookup,
+} from '@forge/drivers';
 import type { Engine, IdSource, Logger } from '@forge/engine';
 import type { RunSecretRegistry } from '@forge/hooks';
 import type { AdmitContext, ReceiptLog } from '@forge/tools';
@@ -40,8 +47,17 @@ export interface ToolPolicy {
   readonly admitContext: (run: Run) => Promise<AdmitContext>;
 }
 
+/**
+ * Where a run finds its harness settings and credentials. Read per run from the database
+ * and the SecretStore, so an edit in Settings applies to the next run with no restart.
+ */
+export interface HarnessWiring {
+  readonly harness: HarnessSource;
+  readonly secrets: SecretStore;
+}
+
 /** What the driver factory is given to build a WorkerDriver for this server. */
-export interface DriverFactoryDeps {
+export interface DriverFactoryDeps extends HarnessWiring {
   /** Creates the run directory, registers the token and secret, returns the MCP entry and hook URL. */
   readonly prepareRun: (req: RunRequest) => Promise<PreparedRun>;
   /** Read access to the receipt chain the hook route writes. */
@@ -49,10 +65,23 @@ export interface DriverFactoryDeps {
   readonly log: Logger;
 }
 
+/** Builds the Director's model once the harness settings source exists. */
+export type LlmFactory = (wiring: HarnessWiring) => DirectorLLM;
+
+/** The "Test environment" check behind `POST /harnesses/:id/test`; `live` allows the one paid call. */
+export type HarnessTester = (
+  setup: HarnessSetup,
+  live: boolean,
+  secrets: SecretStore,
+) => Promise<HarnessTestResult>;
+
 /** The parts the app does not build: real Claude adapters in `main`, fakes in tests. */
 export interface ExternalPorts {
   readonly driver: (deps: DriverFactoryDeps) => WorkerDriver;
-  readonly llm: DirectorLLM;
+  /** The model itself (fakes), or a factory when it needs the harness settings (the Claude adapter). */
+  readonly llm: DirectorLLM | LlmFactory;
+  /** Absent means harness testing reports itself unavailable. */
+  readonly harnessTest?: HarnessTester;
   readonly secrets?: SecretStore;
   readonly clock?: Clock;
   readonly ids?: IdSource;

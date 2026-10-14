@@ -15,6 +15,11 @@ All 16 probe tests passed in the 2026-10-13 runs (probes 1-7; probe 8 lives in `
 The ACP adapter resolves its own bundled binary and Forge does not set `CLAUDE_CODE_EXECUTABLE`, so the
 host version never affects probes 3-5.
 
+**Since B6 (d-0087, d-0101):** the measurements below were taken on the bundled 2.1.293. The probe helper
+(`helpers/acp-probe.ts`) and the driver now set `CLAUDE_CODE_EXECUTABLE` to the installed `claude`, so
+probes 3-6 run on the user's build; probe 3 asserts on Windows that the adapter's child process is that
+executable. Results recorded before B6 stay as measured; re-probe against the installed build per d-0088.
+
 **Re-probe trigger (d-0053):** re-run `pnpm probes` and update this file on a host Claude Code upgrade
 **or** an adapter / SDK version bump.
 

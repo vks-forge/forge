@@ -15,6 +15,7 @@
 export * from '#/domain/branch.js';
 export * from '#/domain/data-home.js';
 export * from '#/domain/builtin-config.js';
+export * from '#/domain/harness-secret.js';
 export * from '#/domain/ids.js';
 export * from '#/domain/merge-config.js';
 export * from '#/domain/lane-triage.js';
@@ -28,6 +29,7 @@ export * from '#/schemas/config-override.js';
 export * from '#/schemas/errors.js';
 export * from '#/schemas/forge-config.js';
 export * from '#/schemas/gate-result.js';
+export * from '#/schemas/harness.js';
 export * from '#/schemas/ids.js';
 export * from '#/schemas/intake.js';
 export * from '#/schemas/interaction.js';

@@ -34,7 +34,7 @@ process.stdin.on('end', () => {
         stdin,
         cwd: process.cwd(),
         env: Object.fromEntries(
-          Object.entries(env).filter(([k]) => /^(CLAUDE|FORGE|FAKE)/.test(k)),
+          Object.entries(env).filter(([k]) => /^(CLAUDE|FORGE|FAKE|ANTHROPIC)/.test(k)),
         ),
       }),
     );

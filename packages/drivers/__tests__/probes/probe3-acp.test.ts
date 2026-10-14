@@ -7,15 +7,22 @@
  * Pins: initialize succeeds and an `account` auth status is pushed; a plain reply completes
  *   with "pong" and no permission request; a Bash/shell request produces
  *   `session/request_permission` (we deny) and the command output never appears.
+ *   The adapter's child process is the user's installed claude, not the SDK-bundled one
+ *   (d-0101; Windows only, read through CIM).
  * Depends on: helpers/acp-probe, helpers/probe-env, the pinned ACP adapter. IO: spawns the
- *   adapter and the bundled claude binary (billable, capped at $0.05 per session).
+ *   adapter and the installed claude binary (billable, capped at $0.05 per session).
  */
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { claudeOptionsMeta, promptTurn, withAcp } from '#tests/helpers/acp-probe.js';
-import { freshTempCwd, PROBES_ENABLED, SKIP_REASON } from '#tests/helpers/probe-env.js';
+import {
+  childExecutablePaths,
+  freshTempCwd,
+  PROBES_ENABLED,
+  SKIP_REASON,
+} from '#tests/helpers/probe-env.js';
 
 const probe = it.skipIf(!PROBES_ENABLED);
 
@@ -47,6 +54,32 @@ describe('probe 3: ACP adapter (d-0035)', () => {
         const statuses = h.authUpdates as { authStatus?: { kind?: string } }[];
         expect(statuses.length).toBeGreaterThan(0);
         expect(statuses.some((s) => s.authStatus?.kind === 'account')).toBe(true);
+      });
+    },
+    150_000,
+  );
+
+  probe(
+    `the adapter's child process is the installed claude, not the bundled one ${SKIP_REASON}`,
+    async (ctx) => {
+      if (process.platform !== 'win32') {
+        ctx.skip('child executable paths are read with CIM, which is Windows-only');
+      }
+
+      await withAcp(async (h) => {
+        const session = await h.ctx
+          .buildSession({
+            cwd: freshTempCwd(),
+            mcpServers: [],
+            _meta: claudeOptionsMeta(1),
+          })
+          .start();
+
+        await promptTurn(session, 'reply with the single word pong');
+        const children = childExecutablePaths(h.adapterPid ?? 0) ?? [];
+        const norm = (p: string): string => p.replaceAll('\\', '/').toLowerCase();
+        expect(children.map(norm)).toContain(norm(h.claudePath));
+        expect(children.some((p) => norm(p).includes('claude-agent-sdk'))).toBe(false);
       });
     },
     150_000,

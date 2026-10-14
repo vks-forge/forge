@@ -6,7 +6,7 @@
  * only in how the harness process is faked. One base keeps the two engines under test
  * against identical inputs, so a difference in behaviour is the engine's, not the setup's.
  *
- * Exports: fakeGit(), RigBase, baseDeps().
+ * Exports: TEST_CLAUDE, fakeGit(), RigBase, baseDeps().
  * Depends on: src/adapters/claude types, helpers/fake-clock, helpers/fake-receipts,
  *   helpers/run-request. IO: temp dirs.
  */
@@ -24,6 +24,9 @@ import type { FakeReceipts } from '#tests/helpers/fake-receipts.js';
 import type { ContractHarness } from '#tests/contract/worker-driver.contract.js';
 import { makePrepareRun, tempDir } from '#tests/helpers/run-request.js';
 import { SECRET_ENV } from '#tests/helpers/secret-env.js';
+
+/** Where the rigs pretend the user's `claude` is installed (always "exists"). */
+export const TEST_CLAUDE = '/forge/test/bin/claude';
 
 export const fakeGit = (files: string[] = ['src/a.ts']): GitPort => ({
   head: async () => 'base-sha',
@@ -79,6 +82,8 @@ export function baseDeps(
     signalGroup: (pid, signal) => groupSignals.push({ pid, signal }),
     hookJsPath: '/forge/bin/hook.js',
     acpEntry: '/acp/dist/index.js',
+    harness: () => ({ id: 'claude', binaryPath: TEST_CLAUDE, authMode: 'login' }),
+    fileExists: () => true,
     homeDir: tempDir('forge-home-'),
   };
 

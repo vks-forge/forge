@@ -46,7 +46,7 @@ export type PromptOutcome = PromptResponse | RequestError;
 
 export interface FakeAcpOptions {
   /** `_auth/status_update` kind to push after initialize; 'silent' never sends one. */
-  auth?: 'account' | 'none' | 'silent';
+  auth?: 'account' | 'none' | 'silent' | 'api_key' | 'external';
   steering?: boolean;
   failSetMode?: boolean;
   /** How the adapter handles one prompt; default streams "done" and ends the turn. */

@@ -61,7 +61,7 @@ describe('runMigrations', () => {
     runMigrations(driver, MIGRATIONS.slice(0, 1));
     const applied = runMigrations(driver);
     driver.close();
-    expect(applied).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(applied).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 12]);
   });
 
   it('rejects a migration edited after it was applied', () => {

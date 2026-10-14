@@ -77,7 +77,7 @@ SSE. 3621 tests; live probes 1–9 pass, including a real Express ticket from
 intake to merge and a real GitHub PR round trip.
 
 **Not yet aligned with the product shape:** the code still assumes one repo
-per server, config in `<repo>/.forge/*.yaml`, a pinned bundled harness,
+per server, config in `<repo>/.forge/*.yaml`,
 restart kills runs, no UI, no CI, not publishable. See
 `docs/design/product-shape-change-map.md`.
 
@@ -98,6 +98,7 @@ account (container isolation later, d-0005); the rework path has not run live.
 
 Newest first. One line per milestone.
 
+- 2026-10-14 — B6: Workers and the Director run the user's installed claude; login, API key or OAuth token per harness.
 - 2026-10-14 — B3b: engine reads config from the database each tick; settings API.
 - 2026-10-14 � B13a: tests clean up their temp folders; clean-temp script.
 - 2026-10-14 — B3a: versioned config in the database (ConfigSource port, sqlite + memory).

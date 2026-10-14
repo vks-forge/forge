@@ -11,12 +11,16 @@
  *   credentials. The host environment is therefore reduced to an allowlist before it is
  *   the base (subscription auth needs only the profile directory, d-0031); anything else
  *   is an explicit opt-in by name. Per-run and request values layer on top. Windows env
- *   names are case-insensitive, so matching ignores case.
+ *   names are case-insensitive, so matching ignores case. The credential variables
+ *   (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`) are different again: whichever layer
+ *   carried them, they are removed, and only the harness's configured auth mode puts one
+ *   back, so a stray key in the server's environment can never change who pays (d-0087).
  *
  * Exports: STRIPPED_ENV, HARNESS_ENV_ALLOWLIST, allowlistEnv(), buildChildEnv().
- * Depends on: types/claude/driver-deps. No IO.
+ * Depends on: domain/harness-auth, types/claude/driver-deps. No IO.
  */
 
+import { AUTH_ENV_NAMES } from '#/domain/harness-auth.js';
 import type { EnvLike } from '#/types/claude/driver-deps.types.js';
 
 /** Variables removed from every harness child, whatever set them. */
@@ -86,11 +90,16 @@ export function allowlistEnv(
   return out;
 }
 
-/** Merges host, request and prepared env (later wins), drops undefined values and the stripped names. */
+/**
+ * Merges host, request and prepared env (later wins), drops undefined values and the
+ * stripped names, removes every credential variable, then adds `authEnv` (the one the
+ * harness's auth mode asks for) last.
+ */
 export function buildChildEnv(
   base: EnvLike,
   requestEnv: EnvLike,
   preparedEnv: EnvLike,
+  authEnv: Readonly<Record<string, string>> = {},
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const source of [base, requestEnv, preparedEnv]) {
@@ -101,12 +110,12 @@ export function buildChildEnv(
     }
   }
 
-  const stripped = new Set<string>(STRIPPED_ENV);
+  const stripped = new Set<string>([...STRIPPED_ENV, ...AUTH_ENV_NAMES]);
   for (const key of Object.keys(out)) {
     if (stripped.has(key.toUpperCase())) {
       delete out[key];
     }
   }
 
-  return out;
+  return { ...out, ...authEnv };
 }

@@ -19,6 +19,7 @@ import type { ConfigSource, StorageAdapter } from '@forge/core';
 import type { Engine } from '@forge/engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildRoutes } from '#/routes/routes.js';
+import { stubHarnessDeps } from '#tests/helpers/harness-deps.js';
 import { startHttp } from '#tests/helpers/http-rig.js';
 import type { HttpRig } from '#tests/helpers/http-rig.js';
 
@@ -43,6 +44,7 @@ beforeEach(async () => {
 
   rig = await startHttp(
     buildRoutes({
+      ...stubHarnessDeps(),
       engine: { liveRunIds: vi.fn(() => []) } as unknown as Engine,
       storage,
       config,

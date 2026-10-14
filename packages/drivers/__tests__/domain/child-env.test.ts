@@ -48,3 +48,26 @@ describe('allowlistEnv', () => {
     expect(Object.keys(env)).toEqual(['PATH']);
   });
 });
+
+describe('buildChildEnv credential variables (d-0087)', () => {
+  it('removes a credential variable from every layer, whatever its case', () => {
+    const env = buildChildEnv(
+      { PATH: 'p', ANTHROPIC_API_KEY: 'from-host' },
+      { anthropic_api_key: 'from-request' },
+      { CLAUDE_CODE_OAUTH_TOKEN: 'from-prepared' },
+    );
+
+    expect(env).toEqual({ PATH: 'p' });
+  });
+
+  it('adds only the auth env of the harness, last', () => {
+    const env = buildChildEnv(
+      { PATH: 'p', ANTHROPIC_API_KEY: 'from-host' },
+      {},
+      {},
+      { CLAUDE_CODE_OAUTH_TOKEN: 'tok' },
+    );
+
+    expect(env).toEqual({ PATH: 'p', CLAUDE_CODE_OAUTH_TOKEN: 'tok' });
+  });
+});

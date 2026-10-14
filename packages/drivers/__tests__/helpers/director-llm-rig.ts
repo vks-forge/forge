@@ -95,6 +95,9 @@ export function makeDirectorRig(over: Partial<ClaudeDirectorLLMDeps> = {}): Dire
       CLAUDE_CONFIG_DIR: '/kept',
       ...SECRET_ENV,
     },
+    // The user's claude is "installed" at a fixed fake path; the spawn runs the fake anyway.
+    claudeBinary: '/forge/test/bin/claude',
+    fileExists: () => true,
     // 'linux' so the kill path is the process-group one; the rig signals the single real pid.
     platform: 'linux',
     signalGroup: (pid, signal) => {

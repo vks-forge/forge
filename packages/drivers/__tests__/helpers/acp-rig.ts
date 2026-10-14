@@ -47,7 +47,8 @@ export function makeAcpRig(
     if (call.args.includes('--version')) {
       const child = createFakeChild();
       child.stdoutPipe.write(
-        call.args.includes('--cli') ? '2.1.293 (Claude Code)\n' : '0.89.1\n',
+        // The adapter is `node <entry> --version`; anything else is the installed claude.
+        call.command === process.execPath ? '0.89.1\n' : '2.1.299 (Claude Code)\n',
       );
 
       child.exit(0);

@@ -5,6 +5,8 @@
  *   database (and runs its migrations, which the server owns), creates worktrees, builds
  *   the hook ingress and starts a socket. It holds no logic of its own: it picks adapters
  *   from config, hands them to the engine and the routes, and returns a small handle. The
+ *   harness settings and credentials are read from the database and the SecretStore at the
+ *   start of each run, so the same wiring serves the drivers and the Settings API. The
  *   Worker driver and the Director's model arrive as ports, so production passes the Claude
  *   adapters and the end-to-end test passes fakes through the same assembly, the same hook
  *   route, the same receipts and the same G1 gate. A failure while assembling closes the
@@ -36,6 +38,7 @@ import { admit } from '@forge/tools';
 import { buildRoutes } from '#/routes/routes.js';
 import { createGates } from '#/services/gates.js';
 import { createProjectGitHost } from '#/services/git-host.js';
+import { createHarnessSource } from '#/services/harness-source.js';
 import { assertLoopbackBind, closeServer, listen } from '#/services/http/listen.js';
 import { createRouter } from '#/services/http/router.js';
 import { ensureProject } from '#/services/project-import.js';
@@ -77,11 +80,14 @@ export async function assembleServer(
       worktreeRoot: join(layout.data.worktreesDir, project.slug),
     });
 
+    // Harness API keys and OAuth tokens must survive a restart, so DPAPI wherever it exists.
     const secrets =
       ports.secrets ??
-      (project.git_host?.kind === 'github'
+      (project.git_host?.kind === 'github' || process.platform === 'win32'
         ? createDpapiSecretStore({ dir: layout.data.secretsDir })
         : createMemorySecretStore());
+
+    const harness = createHarnessSource(storage);
 
     const gitHost = createProjectGitHost(project, {
       root: layout.repoRoot,
@@ -121,7 +127,12 @@ export async function assembleServer(
       prepareRun,
       receipts: createReceiptLookup(receipts),
       log,
+      harness,
+      secrets,
     });
+
+    const llm =
+      typeof ports.llm === 'function' ? ports.llm({ harness, secrets }) : ports.llm;
 
     const preflight = await driver.preflight();
     if (!preflight.ok) {
@@ -146,7 +157,7 @@ export async function assembleServer(
     const engine = createEngine({
       storage,
       driver,
-      llm: ports.llm,
+      llm,
       worktrees,
       memory: createFileMemorySource(layout.memoryDir, {
         onSkip: (path, reason) => log('warn', 'memory record skipped', { path, reason }),
@@ -192,6 +203,16 @@ export async function assembleServer(
         storage,
         config,
         hooks,
+        secrets,
+        harnessTest: (setup, live) =>
+          ports.harnessTest
+            ? ports.harnessTest(setup, live, secrets)
+            : Promise.resolve({
+                auth_mode: setup.authMode,
+                ok: false,
+                live: 'skipped',
+                error: 'harness testing is not available in this build',
+              }),
         owner,
         startedAt: now(),
         now,

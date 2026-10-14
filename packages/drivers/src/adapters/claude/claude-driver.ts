@@ -7,16 +7,20 @@
  *   token, MCP server), renders the hook files the harness needs, records the git base to
  *   diff against, picks the engine from config (ACP by default, `claude -p` as fallback;
  *   never by branching on a harness name elsewhere) and hands the run to a supervisor that
- *   owns events, timers, the receipt cross-check and the final result. A run's handle is
+ *   owns events, timers, the receipt cross-check and the final result. Each run first
+ *   resolves the user's installed `claude` and, for an API key or OAuth token harness,
+ *   reads that credential from the SecretStore into this run's child env only; a missing
+ *   install or credential fails the start before anything is spawned (d-0087). A run's handle is
  *   serialisable; the live state is kept in this process only, because a Forge restart
  *   kills in-flight runs (d-0054).
  *
  * Exports: createClaudeDriver(), CONTINUE_PROMPT.
  * Depends on: @forge/core (RunRequest, InvalidInputError, port types), run-supervisor,
- *   run-files, settings-sources, git-cli, acp-engine, cli-engine, domain/child-env,
- *   schemas/claude-config. IO: through the injected ports and the run files.
+ *   run-files, settings-sources, git-cli, harness-resolver, acp-engine, cli-engine,
+ *   domain/child-env, schemas/claude-config. IO: through the injected ports and the run files.
  */
 
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { InvalidInputError, RunRequest } from '@forge/core';
@@ -24,6 +28,7 @@ import type { RunHandle, WorkerDriver } from '@forge/core';
 import { createAcpEngine } from '#/adapters/claude/acp/acp-engine.js';
 import { createCliEngine } from '#/adapters/claude/cli/cli-engine.js';
 import { createGitCli } from '#/adapters/claude/git-cli.js';
+import { createHarnessResolver } from '#/adapters/claude/harness-resolver.js';
 import { writeRunFiles } from '#/adapters/claude/run-files.js';
 import { superviseRun } from '#/adapters/claude/run-supervisor.js';
 import {
@@ -53,6 +58,15 @@ export function createClaudeDriver(deps: ClaudeDriverDeps): WorkerDriver {
   const hookJsPath =
     deps.hookJsPath ?? fileURLToPath(new URL('../../../bin/hook.js', import.meta.url));
 
+  const resolver = createHarnessResolver({
+    platform,
+    env: baseEnv,
+    exists: deps.fileExists ?? existsSync,
+    defaultBinary: config.claudeBinary,
+    source: deps.harness,
+    secrets: deps.secrets,
+  });
+
   const factory = deps.engineFactories?.[config.engine] ?? ENGINES[config.engine];
   const engine = factory({
     config,
@@ -63,6 +77,7 @@ export function createClaudeDriver(deps: ClaudeDriverDeps): WorkerDriver {
     log,
     baseEnv,
     acpEntry: deps.acpEntry,
+    resolver,
   });
 
   const capabilities = engine.capabilities();
@@ -82,6 +97,8 @@ export function createClaudeDriver(deps: ClaudeDriverDeps): WorkerDriver {
     resumeSession: string | undefined,
     prompt: string,
   ): Promise<RunHandle> {
+    // Before prepareRun: a missing install or credential must not leave a run directory behind.
+    const harness = await resolver.forRun();
     const prepared = await deps.prepareRun(req);
     const files = await writeRunFiles(req.runId, prepared, hookJsPath);
     const checked = settingsSourcePaths(req.cwd, deps.homeDir ?? homedir(), platform);
@@ -97,7 +114,7 @@ export function createClaudeDriver(deps: ClaudeDriverDeps): WorkerDriver {
       log('warn', 'git head failed; files touched will be empty', { error: String(e) });
     }
 
-    const env = buildChildEnv(baseEnv, req.env, prepared.env);
+    const env = buildChildEnv(baseEnv, req.env, prepared.env, harness.authEnv);
     const run = superviseRun({
       req,
       config,
@@ -108,7 +125,19 @@ export function createClaudeDriver(deps: ClaudeDriverDeps): WorkerDriver {
       base,
       startSession: resumeSession ?? null,
       launch: (sink) =>
-        engine.launch({ req, prepared, files, env, prompt, resumeSession }, sink),
+        engine.launch(
+          {
+            req,
+            prepared,
+            files,
+            env,
+            claudeBinary: harness.binaryPath,
+            authMode: harness.authMode,
+            prompt,
+            resumeSession,
+          },
+          sink,
+        ),
     });
 
     runs.set(req.runId, run);

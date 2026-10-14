@@ -13,6 +13,7 @@
 
 import type {
   GateResult,
+  Harness,
   Interaction,
   Project,
   Run,
@@ -46,4 +47,5 @@ export interface MemoryState {
   /** Last gate result id handed out. */
   gateSeq: number;
   projects: Map<string, Project>;
+  harnesses: Map<string, Harness>;
 }

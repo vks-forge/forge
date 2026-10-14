@@ -18,6 +18,7 @@ import type { Engine } from '@forge/engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HOOK_BODY_LIMIT } from '#/routes/hook.js';
 import { buildRoutes } from '#/routes/routes.js';
+import { stubHarnessDeps } from '#tests/helpers/harness-deps.js';
 import { startHttp } from '#tests/helpers/http-rig.js';
 import type { HttpRig } from '#tests/helpers/http-rig.js';
 
@@ -83,6 +84,7 @@ beforeEach(async () => {
   hooks.handle.mockResolvedValue({ decision: 'allow', reason: 'ok', receipt_hash: '' });
   rig = await startHttp(
     buildRoutes({
+      ...stubHarnessDeps(),
       engine: engine as unknown as Engine,
       storage,
       config: createMemoryConfigSource(),

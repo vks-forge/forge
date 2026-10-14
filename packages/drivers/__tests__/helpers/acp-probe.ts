@@ -5,7 +5,8 @@
  *
  * Exports: AcpHarness, claudeOptionsMeta(), withAcp(), TurnOutcome, promptTurn().
  * Depends on: @agentclientprotocol/sdk, helpers/probe-env, node:child_process, node:module,
- *   node:stream. IO: spawns the ACP server (which spawns the bundled claude binary).
+ *   node:stream. IO: spawns the ACP server, which runs the user's installed claude (it is
+ *   given `CLAUDE_CODE_EXECUTABLE`, as the driver does, d-0101).
  */
 
 import { spawn } from 'node:child_process';
@@ -20,7 +21,7 @@ import {
   type InitializeResponse,
   type RequestPermissionRequest,
 } from '@agentclientprotocol/sdk';
-import { childEnv, PROBE_MODEL } from './probe-env.js';
+import { childEnv, installedClaudePath, PROBE_MODEL, slashPath } from './probe-env.js';
 
 export interface AcpHarness {
   ctx: ClientContext;
@@ -29,6 +30,10 @@ export interface AcpHarness {
   authUpdates: unknown[];
   /** Raw params of every `session/request_permission` request received. */
   permissionRequests: RequestPermissionRequest[];
+  /** Pid of the adapter process (its direct child is the claude it runs). */
+  adapterPid: number | undefined;
+  /** The installed claude the adapter was told to run. */
+  claudePath: string;
   /** Everything the server wrote to stderr (diagnostics only). */
   stderr(): string;
 }
@@ -59,8 +64,9 @@ export async function withAcp<T>(body: (h: AcpHarness) => Promise<T>): Promise<T
     '@agentclientprotocol/claude-agent-acp/dist/index.js',
   );
 
+  const claudePath = installedClaudePath();
   const child = spawn(process.execPath, [entry], {
-    env: childEnv(),
+    env: childEnv({ CLAUDE_CODE_EXECUTABLE: slashPath(claudePath) }),
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 
@@ -99,7 +105,15 @@ export async function withAcp<T>(body: (h: AcpHarness) => Promise<T>): Promise<T
         clientInfo: { name: 'forge-probe', version: '0.0.0' },
       });
 
-      return body({ ctx, init, authUpdates, permissionRequests, stderr: () => stderr });
+      return body({
+        ctx,
+        init,
+        authUpdates,
+        permissionRequests,
+        adapterPid: child.pid,
+        claudePath,
+        stderr: () => stderr,
+      });
     });
   } finally {
     child.kill();

@@ -16,6 +16,7 @@ import type { Engine } from '@forge/engine';
 import type { Run, StorageAdapter } from '@forge/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildRoutes } from '#/routes/routes.js';
+import { stubHarnessDeps } from '#tests/helpers/harness-deps.js';
 import { startHttp } from '#tests/helpers/http-rig.js';
 import type { HttpRig } from '#tests/helpers/http-rig.js';
 
@@ -56,6 +57,7 @@ beforeEach(async () => {
   stop = new AbortController();
   rig = await startHttp(
     buildRoutes({
+      ...stubHarnessDeps(),
       engine: {} as unknown as Engine,
       storage,
       config: createMemoryConfigSource(),

@@ -2,23 +2,27 @@
  * The ACP engine: hosts Claude Code through the pinned `claude-agent-acp` adapter.
  *
  * Why: this is the default engine because the adapter gives live steering and session
- *   resume, which the CLI's stream-json lacks. It runs the Claude Code binary bundled with
- *   the pinned SDK, never the host's `claude`, so every measured fact about hooks, modes and
- *   budgets stays tied to one known build (d-0053); `preflight()` therefore reports both the
- *   adapter version and the bundled CLI version and flags drift from the pin. Capabilities
- *   are declared here, not guessed from the adapter at run time: the steering the Director
- *   may use is a config value, and a run whose adapter does not advertise it refuses the
- *   `steer` mode with a typed error.
+ *   resume, which the CLI's stream-json lacks. The adapter is a bundled npm dependency, but
+ *   the Claude Code it drives is the user's installed `claude`: the adapter reads
+ *   `CLAUDE_CODE_EXECUTABLE` from its own process env and otherwise falls back to the CLI
+ *   inside its SDK, which Forge never wants (measured, d-0101; `_meta` cannot do this).
+ *   The engine sets that variable on every launch, so there is no silent fallback.
+ *   `preflight()` reports the installed `claude` version and the adapter version and flags
+ *   only drift of the adapter from its pin; whether a new `claude` version is compatible is
+ *   the per-install check's job (d-0088). Capabilities are declared here, not guessed from
+ *   the adapter at run time: the steering the Director may use is a config value, and a run
+ *   whose adapter does not advertise it refuses the `steer` mode with a typed error.
  *
  * Exports: createAcpEngine(), resolveAcpEntry().
- * Depends on: acp-run, version-probe, domain/child-env, types/claude/engine. IO: resolves
- *   the adapter package; preflight spawns the adapter twice.
+ * Depends on: acp-run, version-probe, domain/{child-env,claude-binary}, types/claude/engine.
+ *   IO: resolves the adapter package; preflight spawns the adapter and `claude --version`.
  */
 
 import { createRequire } from 'node:module';
 import { launchAcp } from '#/adapters/claude/acp/acp-run.js';
 import { probeVersion } from '#/adapters/claude/version-probe.js';
 import { buildChildEnv } from '#/domain/child-env.js';
+import { toForwardSlashes } from '#/domain/claude-binary.js';
 import type { ClaudeEngine, EngineDeps } from '#/types/claude/engine.types.js';
 
 /** Absolute path of the pinned adapter's executable entry (`node <entry>`, no shell). */
@@ -45,6 +49,13 @@ export function createAcpEngine(deps: EngineDeps): ClaudeEngine {
     }),
     async preflight() {
       const issues: string[] = [];
+      let installed: string;
+      try {
+        installed = (await deps.resolver.binary()).binaryPath;
+      } catch (e) {
+        return { ok: false, issues: [e instanceof Error ? e.message : String(e)] };
+      }
+
       let entry: string;
       try {
         entry = deps.acpEntry ?? resolveAcpEntry();
@@ -67,8 +78,8 @@ export function createAcpEngine(deps: EngineDeps): ClaudeEngine {
       const cli = await probeVersion(
         deps.spawn,
         deps.clock,
-        process.execPath,
-        [entry, '--cli', '--version'],
+        installed,
+        ['--version'],
         env,
       );
 
@@ -81,11 +92,7 @@ export function createAcpEngine(deps: EngineDeps): ClaudeEngine {
       }
 
       if (cli === null) {
-        issues.push('missing binary: the bundled Claude Code did not report a version');
-      } else if (cli !== config.pinnedCliVersion) {
-        issues.push(
-          `bundled Claude Code ${cli} differs from the pinned ${config.pinnedCliVersion}`,
-        );
+        issues.push('missing binary: the installed claude did not report a version');
       }
 
       return {
@@ -96,7 +103,18 @@ export function createAcpEngine(deps: EngineDeps): ClaudeEngine {
       };
     },
     launch(launch, sink) {
-      return launchAcp(deps, deps.acpEntry ?? resolveAcpEntry(), launch, sink);
+      // Forward slashes: the adapter's own path handling needs them on Windows (d-0101).
+      const env = {
+        ...launch.env,
+        CLAUDE_CODE_EXECUTABLE: toForwardSlashes(launch.claudeBinary),
+      };
+
+      return launchAcp(
+        deps,
+        deps.acpEntry ?? resolveAcpEntry(),
+        { ...launch, env },
+        sink,
+      );
     },
   };
 }

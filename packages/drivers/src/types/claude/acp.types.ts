@@ -15,7 +15,7 @@ import type { RateLimitInfo } from '#/schemas/claude-acp.js';
 import type { ChildLike } from '#/types/claude/driver-deps.types.js';
 import type { EngineEnd } from '#/types/claude/engine.types.js';
 
-export type AuthState = 'unknown' | 'account' | 'none';
+export type AuthState = 'unknown' | 'accepted' | 'rejected';
 
 /** A started adapter process with its exit watcher and idempotent tree kill. */
 export interface AdapterProcess {

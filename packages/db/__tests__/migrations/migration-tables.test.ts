@@ -108,7 +108,7 @@ describe('runMigrations', () => {
                 ('old2', 'r1', 2, 't', 'a', 'allow', 'rule', 'ts', 'h')`,
       );
 
-      expect(runMigrations(driver)).toEqual([4, 5, 6, 7, 8, 9, 10]);
+      expect(runMigrations(driver)).toEqual([4, 5, 6, 7, 8, 9, 10, 12]);
       const rows = driver.all<{ chain_seq: number }>(
         'SELECT chain_seq FROM tool_decisions',
       );
@@ -258,7 +258,7 @@ describe('runMigrations', () => {
          VALUES ('old', 'SF-1', 'h', '1', '/w', 'express', '2026-10-13T00:00:00.000Z', 'running')`,
       );
 
-      expect(runMigrations(driver)).toEqual([5, 6, 7, 8, 9, 10]);
+      expect(runMigrations(driver)).toEqual([5, 6, 7, 8, 9, 10, 12]);
       const edges = driver.all<{ from_id: string; to_id: string; kind: string }>(
         'SELECT from_id, to_id, kind FROM ticket_relations ORDER BY rowid',
       );

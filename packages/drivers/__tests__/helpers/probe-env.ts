@@ -4,15 +4,18 @@
  * Why: The live probes drive the real harness on the user's subscription. If they ran in plain `pnpm test` they would spend money and make CI nondeterministic; if they inherited the parent session's env the child `claude` refuses to start; if they wrote into the repo tree they would pollute it. This helper gates them on FORGE_PROBES=1, sanitises the child env and confines artefacts to the gitignored .forge/data/probes/ (m0-brief.md Slice 2).
  *
  * Exports: PROBES_ENABLED, SKIP_REASON, PROBE_MODEL, REPO_ROOT, childEnv(), freshProbeDir(),
- *   freshTempCwd(), slashPath(), RunResult, runClaude(), parseJsonLines().
- * Depends on: node:child_process, node:fs, node:os, node:path. IO: spawns `claude`, writes
- *   under .forge/data/probes/ and the OS temp dir.
+ *   freshTempCwd(), slashPath(), installedClaudePath(), childExecutablePaths(), RunResult,
+ *   runClaude(), parseJsonLines().
+ * Depends on: node:child_process, node:fs, node:os, node:path, src/domain/claude-binary.
+ *   IO: spawns `claude` (and PowerShell for process listings), writes under .forge/data/probes/
+ *   and the OS temp dir.
  */
 
-import { spawn } from 'node:child_process';
-import { mkdirSync, rmSync } from 'node:fs';
+import { execFileSync, spawn } from 'node:child_process';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveInstalledClaude } from '#/domain/claude-binary.js';
 import { makeTempDir } from '#tests/helpers/temp.js';
 
 /** True only when the operator asked for the live probes (`pnpm probes`). */
@@ -56,6 +59,40 @@ export function freshTempCwd(): string {
 /** Forward-slash form of a path, safe to embed in a hook `command` string on Windows. */
 export function slashPath(p: string): string {
   return p.replaceAll('\\', '/');
+}
+
+/** The user's installed `claude` as Forge resolves it (PATH, `.exe` on Windows); throws if absent. */
+export function installedClaudePath(): string {
+  return resolveInstalledClaude('claude', {
+    platform: process.platform,
+    pathVar: process.env['Path'] ?? process.env['PATH'],
+    exists: existsSync,
+  });
+}
+
+/**
+ * Executable paths of the direct children of `parentPid`. Windows only (CIM); returns null
+ * elsewhere so the caller can skip with a reason.
+ */
+export function childExecutablePaths(parentPid: number): string[] | null {
+  if (process.platform !== 'win32') {
+    return null;
+  }
+
+  const out = execFileSync(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-Command',
+      `Get-CimInstance Win32_Process -Filter "ParentProcessId=${String(parentPid)}" | ForEach-Object { $_.ExecutablePath }`,
+    ],
+    { encoding: 'utf8' },
+  );
+
+  return out
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l !== '');
 }
 
 export interface RunResult {

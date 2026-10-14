@@ -6,12 +6,13 @@
  *   would reject, and a schema change breaks the fixtures in one place.
  *
  * Exports: T0, makeTicket(), makeRun(), makeTextEvent(), makeInteraction(), makeIntake(),
- *   makeWake(), makeInboxMessage(), makeGate(), makeProject().
+ *   makeWake(), makeInboxMessage(), makeGate(), makeProject(), makeHarness().
  * Depends on: @forge/core. No IO.
  */
 
 import { makeTicketId } from '@forge/core';
 import type {
+  Harness,
   IntakeEvent,
   Interaction,
   NewGateResult,
@@ -138,6 +139,16 @@ export function makeProject(id = 'p1', overrides: Partial<Project> = {}): Projec
     prefix: 'SF',
     harness_defaults: { default: 'claude' },
     tier_c_globs: ['**/*.sql'],
+    ...overrides,
+  };
+}
+
+export function makeHarness(id = 'claude', overrides: Partial<Harness> = {}): Harness {
+  return {
+    id,
+    kind: 'claude',
+    auth_mode: 'login',
+    status: 'unknown',
     ...overrides,
   };
 }

@@ -8,6 +8,7 @@
  * Depends on: every route module, types/routes. No IO.
  */
 
+import { harnessRoutes } from '#/routes/harnesses.js';
 import { answerRoute } from '#/routes/interactions.js';
 import { healthRoute } from '#/routes/health.js';
 import { hookRoute } from '#/routes/hook.js';
@@ -27,5 +28,6 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     hookRoute(deps),
     healthRoute(deps),
     ...settingsRoutes(deps),
+    ...harnessRoutes(deps),
   ];
 }

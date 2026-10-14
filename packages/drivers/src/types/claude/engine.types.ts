@@ -11,11 +11,12 @@
  * Exports: EventDraft, EngineEndKind, EngineEnd, ToolCallRef, EngineSink, RunFiles,
  *   EngineLaunch, EngineHandle, ClaudeEngine, EngineDeps.
  * Depends on: @forge/core (RunEvent, RunRequest, ...), @forge/tools (Decision),
- *   types/claude/driver-deps. Types only.
+ *   types/claude/{driver-deps,harness}. Types only.
  */
 
 import type {
   DriverCapabilities,
+  HarnessAuthMode,
   Preflight,
   RunEvent,
   RunRequest,
@@ -24,6 +25,7 @@ import type {
 } from '@forge/core';
 import type { Decision } from '@forge/tools';
 import type { ClaudeDriverConfig } from '#/schemas/claude-config.js';
+import type { HarnessResolver } from '#/types/claude/harness.types.js';
 import type {
   Clock,
   Logger,
@@ -93,8 +95,12 @@ export interface EngineLaunch {
   readonly req: RunRequest;
   readonly prepared: PreparedRun;
   readonly files: RunFiles;
-  /** Child env: host + request + prepared, with the nesting variables removed. */
+  /** Child env: host + request + prepared, nesting variables removed, plus this run's credential variable. */
   readonly env: Readonly<Record<string, string>>;
+  /** The user's installed `claude`, resolved for this run (absolute path). */
+  readonly claudeBinary: string;
+  /** How the harness authenticates; the ACP engine accepts only the matching account report. */
+  readonly authMode: HarnessAuthMode;
   readonly prompt: string;
   readonly resumeSession: string | undefined;
 }
@@ -124,4 +130,6 @@ export interface EngineDeps {
   /** Host env the harness inherits; used to run version probes the way a run would. */
   readonly baseEnv: Readonly<Record<string, string | undefined>>;
   readonly acpEntry?: string | undefined;
+  /** Finds the installed `claude` (preflight and version probes). */
+  readonly resolver: HarnessResolver;
 }

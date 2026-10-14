@@ -7,11 +7,12 @@
  *   reaching for globals such as the clock or the process.
  *
  * Exports: RouteDeps.
- * Depends on: @forge/core (StorageAdapter), @forge/engine (Engine), @forge/hooks (HookHandler),
- *   types/settings. Types only.
+ * Depends on: @forge/core (StorageAdapter, SecretStore), @forge/drivers (types), @forge/engine (Engine),
+ *   @forge/hooks (HookHandler), types/settings. Types only.
  */
 
-import type { ConfigSource, StorageAdapter } from '@forge/core';
+import type { ConfigSource, SecretStore, StorageAdapter } from '@forge/core';
+import type { HarnessSetup, HarnessTestResult } from '@forge/drivers';
 import type { Engine } from '@forge/engine';
 import type { HookHandler } from '@forge/hooks';
 import type { HttpTuning } from '#/types/settings.types.js';
@@ -22,6 +23,13 @@ export interface RouteDeps {
   /** Versioned settings behind `/settings/*`. */
   readonly config: ConfigSource;
   readonly hooks: HookHandler;
+  /** Holds harness API keys and OAuth tokens behind `PUT /harnesses/:id/secret`; values are never read back out. */
+  readonly secrets: SecretStore;
+  /** Runs the harness environment test; `live` allows the one paid hello call. */
+  readonly harnessTest: (
+    setup: HarnessSetup,
+    live: boolean,
+  ) => Promise<HarnessTestResult>;
   readonly owner: string;
   /** Epoch ms when the server started, for `/health` uptime. */
   readonly startedAt: number;

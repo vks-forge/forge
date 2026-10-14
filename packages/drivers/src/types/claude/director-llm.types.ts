@@ -11,18 +11,26 @@
  * Depends on: types/claude/driver-deps. Types only.
  */
 
+import type { SecretStore } from '@forge/core';
 import type {
   Clock,
   EnvLike,
   Logger,
   SpawnFn,
 } from '#/types/claude/driver-deps.types.js';
+import type { HarnessSource } from '#/types/claude/harness.types.js';
 
 export interface ClaudeDirectorLLMDeps {
   readonly spawn: SpawnFn;
   readonly clock: Clock;
-  /** Executable to run; default `claude`. On Windows it must be a real executable, not a `.cmd` shim. */
+  /** Executable name or path used when the harness registry gives no override; default `claude`, found on PATH. On Windows it must be a real executable, not a `.cmd` shim. */
   readonly claudeBinary?: string;
+  /** The owner's harness settings (override path, auth mode), read per step; default `claude` with its own login. */
+  readonly harness?: HarnessSource;
+  /** Where API keys and OAuth tokens are read from; required for those auth modes. */
+  readonly secrets?: SecretStore;
+  /** File-existence check used to find `claude`; defaults to `fs.existsSync`. */
+  readonly fileExists?: (path: string) => boolean;
   /** Host env the child inherits (login, PATH); default empty, so the app passes `process.env`. */
   readonly baseEnv?: EnvLike;
   /** Extra host variable names the child may inherit beyond the allowlist; default none. */

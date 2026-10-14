@@ -15,7 +15,7 @@
  * Each repository's cases live in their own file and are registered from here, so every
  *   backend runs them: tickets, transactions, runs, run events, run tokens, ticket
  *   relations and the ticket fields derived from them, the run lifecycle, interaction answer/expire CAS, intake ids and ticket mapping, wake requests,
- *   the run inbox, gate results and projects (ports batch C).
+ *   the run inbox, gate results and projects (ports batch C), the harness registry.
  *
  * Also pinned: optional columns can be cleared (a patch from `transition()` leaves no stale
  *   `blocked_reason` / `tier_actual`), the CAS owns `status_version`, a transaction
@@ -41,6 +41,7 @@ import { describeIntakeEventsContract } from './intake-events.contract.js';
 import { describeRunLifecycleContract } from './run-lifecycle.contract.js';
 import { describeTicketRelationsContract } from './ticket-relations.contract.js';
 import { describeWakeRequestsContract } from './wake-requests.contract.js';
+import { describeHarnessesContract } from './harnesses.contract.js';
 import { describeWorkQueuesContract } from './work-queues.contract.js';
 
 /** Register the shared contract; `makeAdapter` must return a fresh, empty adapter each call. */
@@ -64,6 +65,7 @@ export function describeStorageContract(
     describeIntakeEventsContract(() => db);
     describeWakeRequestsContract(() => db);
     describeWorkQueuesContract(() => db);
+    describeHarnessesContract(() => db);
     describeTicketsContract(() => db);
     describeTransactionsContract(() => db);
     describeRunsContract(() => db);

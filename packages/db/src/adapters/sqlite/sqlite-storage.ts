@@ -23,6 +23,7 @@ import { createGateResultRepository } from '#/adapters/sqlite/gate-results-repos
 import { createIntakeEventRepository } from '#/adapters/sqlite/intake-events-repository.js';
 import { createInteractionRepository } from '#/adapters/sqlite/interactions-repository.js';
 import { runImmediate } from '#/adapters/sqlite/immediate-tx.js';
+import { createHarnessRepository } from '#/adapters/sqlite/harnesses-repository.js';
 import { createProjectRepository } from '#/adapters/sqlite/projects-repository.js';
 import { createSqliteReceiptLog } from '#/adapters/sqlite/receipt-log.js';
 import { createRunInboxRepository } from '#/adapters/sqlite/run-inbox-repository.js';
@@ -59,6 +60,7 @@ export function createStorageOnDriver(
     wakeRequests: createWakeRequestRepository(driver),
     gateResults: createGateResultRepository(driver),
     projects: createProjectRepository(driver),
+    harnesses: createHarnessRepository(driver),
     ticketRelations: createTicketRelationRepository(driver),
   };
 

@@ -191,11 +191,21 @@ describe('createClaudePorts', () => {
       },
       receipts: { decisionFor: async () => null },
       log: () => undefined,
+      harness: () => ({ id: 'claude', authMode: 'login' }),
+      secrets: createMemorySecretStore(),
     });
+
+    const llm =
+      typeof ports.llm === 'function'
+        ? ports.llm({
+            harness: () => ({ id: 'claude', authMode: 'login' }),
+            secrets: createMemorySecretStore(),
+          })
+        : ports.llm;
 
     expect(driver.id).toBe('claude-code');
     expect(driver.capabilities().resume).toBe(true);
-    expect(ports.llm.capabilities().structuredOutput).toBe(true);
+    expect(llm.capabilities().structuredOutput).toBe(true);
     expect(logged).toEqual([]);
 
     return ports.dispose?.();
@@ -214,14 +224,41 @@ describe('createClaudePorts', () => {
   });
 
   it.runIf(process.platform === 'win32')(
-    'refuses a claude.cmd shim at startup with the variable to set',
-    () => {
+    'a claude.cmd shim is reported at preflight and at run start, naming the variable to set',
+    async () => {
       const shim = join(dir, 'claude.cmd');
       writeFileSync(shim, '@echo off');
 
-      expect(() =>
-        createClaudePorts(settingsFor({ claudeBinary: shim }), () => undefined),
-      ).toThrow(/FORGE_CLAUDE_BINARY/);
+      const ports = createClaudePorts(
+        settingsFor({ claudeBinary: shim }),
+        () => undefined,
+      );
+
+      const driver = ports.driver({
+        prepareRun: async () => {
+          throw new Error('not used');
+        },
+        receipts: { decisionFor: async () => null },
+        log: () => undefined,
+        harness: () => ({ id: 'claude', authMode: 'login' }),
+        secrets: createMemorySecretStore(),
+      });
+
+      const preflight = await driver.preflight();
+      await ports.dispose?.();
+
+      expect(preflight.ok).toBe(false);
+      expect(preflight.issues.join(' ')).toMatch(/FORGE_CLAUDE_BINARY/);
     },
   );
+
+  it('does not require claude to be installed to start, so the path can be set in Settings', async () => {
+    const ports = createClaudePorts(
+      settingsFor({ claudeBinary: 'forge-no-such-claude-xyz' }),
+      () => undefined,
+    );
+
+    await ports.dispose?.();
+    expect(typeof ports.llm).toBe('function');
+  });
 });

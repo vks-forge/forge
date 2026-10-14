@@ -11,15 +11,16 @@
  *
  * Exports: EnvLike, McpServerSpec, PreparedRun, ToolCallMatch, ReceiptLookup, Clock, ChildLike,
  *   SpawnOptions, SpawnFn, KillTreeOptions, GitPort, LogLevel, Logger, ClaudeDriverDeps.
- * Depends on: @forge/core (RunRequest), @forge/tools (Decision), schemas/claude-config,
- *   types/claude/engine. Types only.
+ * Depends on: @forge/core (RunRequest, SecretStore), @forge/tools (Decision), schemas/claude-config,
+ *   types/claude/{engine,harness}. Types only.
  */
 
 import type { Readable, Writable } from 'node:stream';
-import type { RunRequest } from '@forge/core';
+import type { RunRequest, SecretStore } from '@forge/core';
 import type { Decision } from '@forge/tools';
 import type { ClaudeDriverConfig } from '#/schemas/claude-config.js';
 import type { ClaudeEngine, EngineDeps } from '#/types/claude/engine.types.js';
+import type { HarnessSource } from '#/types/claude/harness.types.js';
 
 /** A process environment where unset values are allowed (as in `process.env`). */
 export type EnvLike = Readonly<Record<string, string | undefined>>;
@@ -133,6 +134,15 @@ export interface ClaudeDriverDeps {
   >;
   /** Absolute `bin/hook.js`; defaults to the one shipped in this package. */
   readonly hookJsPath?: string;
+  /**
+   * The owner's harness settings (executable override, auth mode), read at the start of
+   * every run. Default: `claude` on PATH with its own login.
+   */
+  readonly harness?: HarnessSource;
+  /** Where API keys and OAuth tokens are read from (`harness/<id>/...`); required for api_key and oauth_token modes. */
+  readonly secrets?: SecretStore;
+  /** File-existence check used to find `claude`; defaults to `fs.existsSync`. */
+  readonly fileExists?: (path: string) => boolean;
   /** Absolute ACP adapter entry; defaults to the pinned dependency. */
   readonly acpEntry?: string;
   /** Home directory used to report which settings files exist. */

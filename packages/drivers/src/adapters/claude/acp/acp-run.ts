@@ -3,8 +3,9 @@
  *
  * Why: the ACP adapter is the default way to host Claude Code because it gives live
  *   steering and session resume. A run is a fixed sequence that must not be reordered:
- *   `initialize`; wait for the adapter to report a subscription account (a logged-out host
- *   otherwise looks like a stall); `session/new` or `session/load` with the isolation
+ *   `initialize`; wait for the adapter to report the account kind the harness's auth mode
+ *   expects (a logged-out host otherwise looks like a stall; an API-key harness must report
+ *   `api_key`, never silently run on a subscription); `session/new` or `session/load` with the isolation
  *   options; `session/set_mode default` straight away, because the adapter still reads the
  *   user's settings and may start in `acceptEdits` (probe 3 finding A, d-0049); then the
  *   prompt loop. Permission requests are answered from the hook's receipts, not decided
@@ -14,8 +15,8 @@
  *
  * Exports: launchAcp().
  * Depends on: @agentclientprotocol/sdk, @forge/core (InvalidInputError), acp-meta,
- *   acp-permission, acp-process, acp-steer, acp-turns, domain/{acp-events,failure-classify},
- *   schemas/claude-acp. IO: the adapter process and its stdio.
+ *   acp-permission, acp-process, acp-steer, acp-turns,
+ *   domain/{acp-events,failure-classify,harness-auth}, schemas/claude-acp. IO: the adapter process and its stdio.
  */
 
 import { Readable, Writable } from 'node:stream';
@@ -29,6 +30,7 @@ import { deliverSteer } from '#/adapters/claude/acp/acp-steer.js';
 import { runTurns } from '#/adapters/claude/acp/acp-turns.js';
 import { normaliseAcpUpdate } from '#/domain/acp-events.js';
 import { classifyRejection, retryNotBeforeFrom } from '#/domain/failure-classify.js';
+import { authVerdict } from '#/domain/harness-auth.js';
 import { AuthStatusUpdate, readSteering } from '#/schemas/claude-acp.js';
 import type { AcpRunState, AuthState } from '#/types/claude/acp.types.js';
 import type {
@@ -74,6 +76,7 @@ export function launchAcp(
   const { child, exitedEnd, kill, hasExited } = proc;
 
   let authState: AuthState = 'unknown';
+  const seenKinds: string[] = [];
   let onAuth: (() => void) | null = null;
   let markReady: () => void = () => undefined;
   let failReady: (e: Error) => void = () => undefined;
@@ -118,10 +121,17 @@ export function launchAcp(
       },
       (c) => {
         const kind = c.params.authStatus.kind;
-        if (kind === 'account') {
-          authState = 'account';
-        } else if (kind === 'none') {
-          authState = 'none';
+        if (!seenKinds.includes(kind)) {
+          seenKinds.push(kind);
+          // The kind only: the update also carries account details that must not be logged.
+          log('info', 'adapter auth status', { authMode: launch.authMode, kind });
+        }
+
+        const verdict = authVerdict(launch.authMode, kind);
+        if (verdict === 'accept') {
+          authState = 'accepted';
+        } else if (verdict === 'reject') {
+          authState = 'rejected';
         }
 
         onAuth?.();
@@ -169,13 +179,15 @@ export function launchAcp(
 
     state.steering = readSteering(init._meta);
     const account = await waitForAccount();
-    if (account !== 'account') {
+    if (account !== 'accepted') {
+      const seen = seenKinds.length > 0 ? ` (reported: ${seenKinds.join(', ')})` : '';
+
       return {
         kind: 'auth',
         detail:
-          account === 'none'
+          account === 'rejected'
             ? 'the adapter reports no Claude login'
-            : `no account report from the adapter within ${config.authTimeoutMs} ms`,
+            : `no ${launch.authMode} account report from the adapter within ${config.authTimeoutMs} ms${seen}`,
       };
     }
 

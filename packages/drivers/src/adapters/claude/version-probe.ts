@@ -2,56 +2,34 @@
  * Runs `<binary> --version` and returns the first version number it prints.
  *
  * Why: `preflight()` has to tell the Director, before any money is spent, that the harness
- *   is installed and is the version Forge was measured against. Every measured fact about
- *   hooks, modes and budgets is tied to a pinned Claude Code build (d-0053), so an adapter
- *   or CLI that drifted must show up as a preflight issue, not as a surprise mid-run. A
- *   missing binary, a hang and a garbled answer all map to `null` so the caller reports
+ *   is installed and which build it is. Forge runs the user's installed `claude` (d-0087),
+ *   so the version is information to record and check per install (d-0088), and an adapter
+ *   that drifted from its pin must show up as a preflight issue, not as a surprise mid-run.
+ *   A missing binary, a hang and a garbled answer all map to `null` so the caller reports
  *   "missing binary" instead of throwing.
  *
  * Exports: probeVersion().
- * Depends on: types/claude/driver-deps. IO: spawns one short-lived process.
+ * Depends on: adapters/claude/capture-output, types/claude/driver-deps. IO: spawns one
+ *   short-lived process.
  */
 
+import { captureOutput } from '#/adapters/claude/capture-output.js';
 import type { Clock, SpawnFn } from '#/types/claude/driver-deps.types.js';
 
 const VERSION_TIMEOUT_MS = 15_000;
 const SEMVER = /\d+\.\d+\.\d+/;
 
 /** First `x.y.z` printed by the command, or null if it is missing, hangs or prints none. */
-export function probeVersion(
+export async function probeVersion(
   spawn: SpawnFn,
   clock: Clock,
   command: string,
   args: readonly string[],
   env: Readonly<Record<string, string>>,
 ): Promise<string | null> {
-  return new Promise((resolve) => {
-    let out = '';
-    let done = false;
-    const finish = (value: string | null): void => {
-      if (done) {
-        return;
-      }
-
-      done = true;
-      cancel();
-      resolve(value);
-    };
-
-    let cancel = (): void => undefined;
-    try {
-      const child = spawn(command, args, { env });
-      child.stdout.on('data', (chunk: Buffer) => (out += chunk.toString('utf8')));
-      child.stdin.end();
-      child.on('error', () => finish(null));
-      // stdout 'end', not process 'exit': exit can fire before the last chunk is read.
-      child.stdout.on('end', () => finish(SEMVER.exec(out)?.[0] ?? null));
-      cancel = clock.after(VERSION_TIMEOUT_MS, () => {
-        child.kill('SIGKILL');
-        finish(null);
-      });
-    } catch {
-      finish(null);
-    }
+  const out = await captureOutput(spawn, clock, command, args, env, {
+    timeoutMs: VERSION_TIMEOUT_MS,
   });
+
+  return out === null ? null : (SEMVER.exec(out)?.[0] ?? null);
 }

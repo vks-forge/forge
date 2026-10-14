@@ -9,7 +9,9 @@
  *   allow list lets them, and the per-run hook decides the rest (d-0035). The exit code is
  *   not trusted: a budget stop exits 0 without result text (probe 1), so the `result`
  *   line's subtype decides. A process that printed its result but did not exit is killed
- *   after the cancel grace, because a lingering harness keeps the worktree open.
+ *   after the cancel grace, because a lingering harness keeps the worktree open. It runs the
+ *   user's installed `claude` as resolved for this run (d-0087); the executable and the
+ *   credential environment arrive in the launch, never from config.
  *
  * Exports: createCliEngine().
  * Depends on: node:readline, @forge/core (InvalidInputError), process-tree, version-probe,
@@ -56,7 +58,7 @@ function launchCli(
   let child: ChildLike;
   try {
     child = deps.spawn(
-      config.claudeBinary,
+      launch.claudeBinary,
       buildCliArgs(launch.req, launch.files, launch.resumeSession),
       {
         cwd: launch.req.cwd,
@@ -230,11 +232,18 @@ export function createCliEngine(deps: EngineDeps): ClaudeEngine {
       permissionRequests: false,
     }),
     async preflight() {
+      let installed: string;
+      try {
+        installed = (await deps.resolver.binary()).binaryPath;
+      } catch (e) {
+        return { ok: false, issues: [e instanceof Error ? e.message : String(e)] };
+      }
+
       const env = buildChildEnv(deps.baseEnv, {}, {});
       const version = await probeVersion(
         deps.spawn,
         deps.clock,
-        deps.config.claudeBinary,
+        installed,
         ['--version'],
         env,
       );
@@ -242,9 +251,7 @@ export function createCliEngine(deps: EngineDeps): ClaudeEngine {
       return version === null
         ? {
             ok: false,
-            issues: [
-              `missing binary: ${deps.config.claudeBinary} did not report a version`,
-            ],
+            issues: [`missing binary: ${installed} did not report a version`],
           }
         : { ok: true, issues: [], version, harnessVersion: version };
     },
