@@ -33,3 +33,5 @@ d-0098 per-user data folder, backups, safe updates.
 - x-0011 open details (replay size, canary, default pipelines, human steps …).
 - Write the design brief covering d-0065..d-0098, then plan slice 3 against it.
 - Memory files committed and pushed at the user's request.
+- Build plan for realignment: `docs/design/build-plan.md` (B0–B14, awaiting approval; needs probe P-A and decision D-1).
+- `PRODUCT.md` created at the repo root; CLAUDE.md requires keeping it current.

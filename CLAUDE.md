@@ -1,5 +1,14 @@
 # CLAUDE
 
+## Product description (`PRODUCT.md`) — keep it current
+
+`PRODUCT.md` at the repo root says what Forge is, who it is for, how a user
+experiences it, its status and roadmap, and a progress log. Read it at session
+start. Any change that alters what a reader would believe about the product
+(scope, user flow, status, roadmap, a milestone reached, a limit found or
+closed) updates `PRODUCT.md` in the same commit: edit the relevant section and
+add one line to the progress log. Builder subagents are told to do the same.
+
 ## Project memory (`.forge/memory/`) — use this, not auto-memory
 
 This repo keeps its own project memory, following `docs/design/memory-system.md`.
