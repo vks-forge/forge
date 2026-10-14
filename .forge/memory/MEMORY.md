@@ -35,6 +35,9 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0042 — Namespace imports: `#/` package root, `@forge/<name>` cross-package; `../` is a lint error
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
+- d-0108 — Director investigates (code, all cards/tickets, memory) and decides run-now vs needs-approval with reasons, not a file count; escalation returns card to Needs you; per-project "always ask"
+- d-0107 — Board columns = card lifecycle: New, Shaping, Needs you, In progress, Done, Closed; rolled up from tickets (Needs you wins), never moved by hand
+- d-0106 — Card types Discussion / Plan / Issue / PR issue; Director suggests, user changes, convertible; types are data in an extensible registry
 - d-0105 — Cards: every chat/GitHub issue = one card (typed); Director triage in the card makes linked tickets; Board = cards + tickets toggle; card page = chat panel + details + ticket timeline; card Director sees the whole project
 - d-0104 — No company Home: Home is project-scoped (first project), sidebar project switcher with unsaved-changes alert; Forge settings in a separate area; direction A Instrument, more distinct and calmer
 - d-0103 — Web stack = Paperclip's (Vite, React 19, Router, TanStack Query, Tailwind 4, Radix, assistant-ui, motion), latest versions; fully spring-animated, 60 fps, no jank (major)
@@ -136,6 +139,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 
 - x-0011 — Agents (`.forge/agents/*.yaml`) and per-lane pipelines (`.forge/pipelines/*.yaml`) as config; engine = generic stage runner; fixed invariants (grill paused 2026-10-14 after Q16; decisions d-0065..d-0081; more discussion before the brief)
 - x-0012 — Director project context + live code graph (index of cards/tickets/runs/memory + incrementally updated code graph, read via tools) — to grill
+- x-0013 — Memory in the database with exact + relevance search (FTS first), tools instead of loading all files; reopens part of r-0001; needs research
 
 ## Outcomes
 
