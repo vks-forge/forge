@@ -46,6 +46,17 @@ switcher (List / Compact / Grouped in the prototype); what each view shows is
 decided after the Board, Director chat and Ticket pages are approved. Ledger
 (autonomy tiers) is deferred.
 
+Cards and issues (d-0105 … d-0115): the project Board shows **Cards** (one per
+chat request or approved GitHub issue; columns New, Shaping, Needs you, In
+progress, Done, Closed, rolled up from tickets) with a toggle to a **Tickets**
+view. Opening a card opens the **Card page**: chat panel with the card's
+Director and history, card details, a Tickets tab with a timeline, and ticket
+detail (status, live Worker thread with direct steer, gates, PR and merge
+links). The project sidebar gains **Issues** (open GitHub issues with verdict,
+confidence, size, risk and the analysis report; Approve → card, Re-analyse,
+Skip) and later **PRs**. Project nav: Home, Board, Issues, (PRs), Chat, Runs,
+Memory, Project settings.
+
 Visual direction: A "Instrument" (Instrument Sans + IBM Plex Mono, graphite
 with one cobalt signal, amber only for what needs the user, critically damped
 springs). Prototype: https://claude.ai/artifact/1bdAeov3SxXfQYydSrgWrP
