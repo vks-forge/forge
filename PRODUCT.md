@@ -65,7 +65,7 @@ TypeScript pnpm monorepo, Node 24, SQLite. Inner rings: `packages/core`
 floors, grants, receipts), `packages/engine` (tick, dispatch, settle, verify).
 Adapters: `db`, `drivers` (harnesses), `hooks`, `mcp`, `gates`, `git`,
 `memory`, `secrets`. Apps compose: `apps/server` (HTTP + SSE), `apps/cli`,
-`apps/mcp`, `apps/web` (UI, not built yet). Rules: `.claude/rules/code.md`.
+`apps/mcp`, `apps/web` (UI shell, in progress). Rules: `.claude/rules/code.md`.
 
 ## Status — 2026-10-14
 
@@ -105,6 +105,7 @@ realignment (d-0117, d-0005).
 Newest first. One line per milestone.
 
 - 2026-10-16 — C4 fixes: brace and glob expansion, provider drives and attached git `-c` no longer slip past the floors.
+- 2026-10-15 — W1: web app shell, theme, motion system, data layer.
 - 2026-10-15 — W3b: ticket list per project for the board.
 - 2026-10-15 — C3 fixes: graceful stop waits for in-flight tool calls; resume phase isolated per run; atomic project slug.
 - 2026-10-15 — B13: live rework probe; pnpm probes runs single probes.

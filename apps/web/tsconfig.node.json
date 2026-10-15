@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist/node",
+    "tsBuildInfoFile": "dist/node/.tsbuildinfo",
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "emitDeclarationOnly": true
+  },
+  "include": ["vite.config.ts", "vite.forge-proxy.ts", "playwright.config.ts", "e2e"],
+  "references": [{ "path": "../../packages/core" }]
+}

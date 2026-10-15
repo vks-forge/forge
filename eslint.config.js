@@ -9,13 +9,14 @@
  *   smuggle in a forbidden edge. The same config rejects a file with no header comment,
  *   so every file explains its purpose to the next developer or agent, and keeps
  *   hand-written types in `types/`. The local rules are defined inline so the toolchain
- *   needs no extra dependency.
+ *   needs no extra dependency beyond the React hooks rules the web app needs.
  *
  * Exports: default export (flat config array).
- * Depends on: typescript-eslint. No IO.
+ * Depends on: typescript-eslint, @stylistic/eslint-plugin, eslint-plugin-react-hooks. No IO.
  */
 
 import stylistic from '@stylistic/eslint-plugin';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 const EXT = '{ts,mts,cts,tsx,js,mjs,cjs}';
@@ -425,6 +426,12 @@ export default tseslint.config(
       'forge/types-in-types-folder': 'error',
       'forge/types-file-suffix': 'error',
     },
+  },
+  {
+    // The React app: hook rules (rules-of-hooks, exhaustive-deps and the compiler-era checks)
+    // apply to components and hooks; the plugin recognises them by name, so only apps/web needs it.
+    ...reactHooks.configs.flat.recommended,
+    files: [`apps/web/**/*.{ts,tsx}`],
   },
   {
     // One concept per file, at most 300 lines, tests included (code.md rule 10).

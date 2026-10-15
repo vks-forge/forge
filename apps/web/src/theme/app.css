@@ -1,0 +1,66 @@
+/*
+ * Global stylesheet: Tailwind, self-hosted fonts, tokens and base rules.
+ *
+ * Why: the control room must look the same offline and behind a firewall, so fonts come from
+ *   @fontsource packages bundled with the app, never a CDN. Base rules set the page up for
+ *   a layout that never scrolls sideways (overflow-x: clip on html and body) and give every
+ *   focusable control a visible ring that appears instantly. Reduced-motion users get no CSS
+ *   transitions at all; the JS springs are switched off separately by MotionConfig.
+ *
+ * Exports: the base cascade for the whole app.
+ * Depends on: tailwindcss, @fontsource/instrument-sans, @fontsource/ibm-plex-mono, ./tokens.css.
+ */
+
+@import 'tailwindcss';
+@import '@fontsource/instrument-sans/400.css';
+@import '@fontsource/instrument-sans/500.css';
+@import '@fontsource/instrument-sans/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import './tokens.css';
+
+@layer base {
+  html,
+  body {
+    overflow-x: clip;
+    min-height: 100%;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-ui);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-style: normal;
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--signal-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

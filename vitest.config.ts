@@ -7,7 +7,9 @@
  *   machine and storage the Director's correctness rests on; 80% for tools, mcp, hooks,
  *   drivers, engine, git, memory, secrets, triggers and apps/mcp, apps/cli and apps/server, the policy and adapter code) so they cannot quietly lose test
  *   coverage. Live probes (any `__tests__/probes` folder: harness, GitHub App) skip themselves
- *   unless FORGE_PROBES=1, so they never count toward or against these floors.
+ *   unless FORGE_PROBES=1, so they never count toward or against these floors. The web app
+ *   (apps/web, React components and hooks, 70%) runs in its own `web` project under jsdom,
+ *   because its tests need a DOM and a JSX transform the Node projects do not.
  *   Test files that spawn git, node children, PowerShell or a whole server run in a
  *   separate `heavy` project, two at a time: on Windows every spawn costs hundreds of
  *   milliseconds, and a dozen such files running at once starved each other into hook and
@@ -42,6 +44,8 @@ const HEAVY = [
 
 const INCLUDE = ['packages/*/__tests__/**/*.test.ts', 'apps/*/__tests__/**/*.test.ts'];
 const EXCLUDE = ['**/node_modules/**', '**/dist/**'];
+/** The web app's tests need a browser-like DOM; they run in their own `web` project. */
+const WEB_INCLUDE = ['apps/web/__tests__/**/*.test.{ts,tsx}'];
 
 export default defineConfig({
   resolve: { conditions: ['development'] },
@@ -52,9 +56,24 @@ export default defineConfig({
         test: {
           name: 'unit',
           include: INCLUDE,
-          exclude: [...EXCLUDE, ...HEAVY],
+          exclude: [...EXCLUDE, ...HEAVY, ...WEB_INCLUDE],
           // Vitest runs projects with different worker limits one group after the other, so
           // the fast files finish before the heavy ones start and never compete with them.
+          sequence: { groupOrder: 1 },
+          testTimeout: 20_000,
+          hookTimeout: 30_000,
+        },
+      },
+      {
+        extends: true,
+        // Vite compiles JSX itself; the app's tsconfig says `react-jsx`, so match it here.
+        oxc: { jsx: { runtime: 'automatic' } },
+        test: {
+          name: 'web',
+          include: WEB_INCLUDE,
+          exclude: EXCLUDE,
+          environment: 'jsdom',
+          setupFiles: ['apps/web/__tests__/helpers/setup.ts'],
           sequence: { groupOrder: 1 },
           testTimeout: 20_000,
           hookTimeout: 30_000,
@@ -95,11 +114,13 @@ export default defineConfig({
         'apps/mcp/src/**/*.ts',
         'apps/cli/src/**/*.ts',
         'apps/server/src/**/*.ts',
+        'apps/web/src/**/*.{ts,tsx}',
       ],
       exclude: [
         '**/__tests__/**',
         '**/index.ts',
         'apps/*/src/main.ts',
+        'apps/web/src/main.tsx',
         // DPAPI is Windows-only and its real-API tests skip elsewhere (see the secrets
         // contract test), so off Windows its lines would count as uncovered against the floor.
         ...(process.platform === 'win32'
@@ -122,6 +143,7 @@ export default defineConfig({
         'apps/mcp/src/**': { lines: 80 },
         'apps/cli/src/**': { lines: 80 },
         'apps/server/src/**': { lines: 80 },
+        'apps/web/src/**': { lines: 70 },
       },
     },
   },

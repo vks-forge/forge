@@ -1,0 +1,105 @@
+/**
+ * The destinations of the control room and the URLs they live at.
+ *
+ * Why: the sidebar, the router and the placeholder pages must agree on what exists and where.
+ *   One list makes adding a screen a one-line change, and keeps project-scoped URLs
+ *   (`/p/<slug>/...`) separate from Forge-wide settings (`/settings/...`), as d-0104 requires:
+ *   no company Home, everything about Forge itself in its own area. Switching project keeps
+ *   the user on the same screen of the new project, so `swapProjectSlug()` rewrites only the
+ *   slug.
+ *
+ * Exports: PROJECT_NAV, SETTINGS_NAV, projectPath(), settingsPath(), swapProjectSlug().
+ * Depends on: types/nav.types. No IO.
+ */
+
+import type { NavEntry } from '#/types/nav.types.js';
+
+export const PROJECT_NAV: readonly NavEntry[] = [
+  { segment: '', label: 'Home', batch: 'W5', blurb: 'Project statistics and graphs.' },
+  {
+    segment: 'inbox',
+    label: 'Inbox',
+    batch: 'W5',
+    blurb: 'Everything that needs you or has news, in one list.',
+  },
+  {
+    segment: 'board',
+    label: 'Board',
+    batch: 'W3',
+    blurb: 'Tickets by state, with cards arriving in W6.',
+  },
+  {
+    segment: 'issues',
+    label: 'Issues',
+    batch: 'W8',
+    blurb: 'GitHub issues with the Director’s verdict.',
+  },
+  {
+    segment: 'chat',
+    label: 'Chat',
+    batch: 'W6',
+    blurb: 'Talk to the Director; requests become tickets.',
+  },
+  {
+    segment: 'runs',
+    label: 'Runs',
+    batch: 'W5',
+    blurb: 'Every Worker run, working, waiting or done.',
+  },
+  {
+    segment: 'memory',
+    label: 'Memory',
+    batch: 'W4',
+    blurb: 'Decisions, rejections and proposals to approve.',
+  },
+  {
+    segment: 'settings',
+    label: 'Project settings',
+    batch: 'W4',
+    blurb: 'Checks, repository and per-project overrides.',
+  },
+];
+
+export const SETTINGS_NAV: readonly NavEntry[] = [
+  {
+    segment: 'harnesses',
+    label: 'Harnesses',
+    batch: 'W2',
+    blurb: 'Installed CLIs, login mode and tool approvals.',
+  },
+  {
+    segment: 'github',
+    label: 'GitHub',
+    batch: 'W2',
+    blurb: 'Connections and installations.',
+  },
+  {
+    segment: 'limits',
+    label: 'Limits',
+    batch: 'W2',
+    blurb: 'Global, per-project and per-harness limits.',
+  },
+  {
+    segment: 'general',
+    label: 'General',
+    batch: 'W2',
+    blurb: 'Data folder, backups and updates.',
+  },
+];
+
+/** `/p/<slug>` or `/p/<slug>/<segment>`. */
+export function projectPath(slug: string, segment = ''): string {
+  return segment === '' ? `/p/${slug}` : `/p/${slug}/${segment}`;
+}
+
+export function settingsPath(segment: string): string {
+  return `/settings/${segment}`;
+}
+
+/** The same screen under another project; from any other URL, the new project's Home. */
+export function swapProjectSlug(pathname: string, slug: string): string {
+  const match = /^\/p\/[^/]+(\/.*)?$/.exec(pathname);
+  const rest = match?.[1] ?? '';
+
+  return `/p/${slug}${rest.replace(/\/$/, '')}`;
+}

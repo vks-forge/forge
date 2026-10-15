@@ -1,40 +1,64 @@
 # @forge/web
 
-The Forge control room: a React app for watching and steering tickets, runs and the human queue. Not implemented yet; this app has only a `package.json`.
+The Forge control room: a React app for watching and steering a project's work. The shell, theme, motion system and data layer exist; the screens arrive one batch at a time.
 
 ## Why it exists
 
-Forge runs work autonomously, but the user still decides what needs a human: answering a Worker's question, approving a tier B review, signing off tier C, reading what a run did. They need to see state at a glance (which tickets are blocked, what each run costs, what the gates said) and talk to the Director and Workers live. Without a control room the only view is logs and the database. The UI is built natively rather than embedding a third-party tracker (d-0010, r-0004).
+Forge runs work autonomously, but the user still decides what needs a human: answering a Worker's question, approving a review, reading what a run did. They need to see state at a glance and talk to the Director and Workers live. Without a control room the only view is logs and the database. The UI is built natively rather than embedding a third-party tracker (d-0010, r-0004).
+
+There is no company-wide Home (d-0104). The user always works inside one project and switches project from a dropdown at the top of the left sidebar; everything about Forge itself (harnesses, GitHub, limits, general) lives in a separate "Forge settings" group.
 
 ## What it does
 
-Intended screens, from `docs/design/control-room-and-platform.md` (none exist yet):
+Built (batch W1, `docs/design/web-build-plan.md`):
 
-- Projects, Board (kanban columns from the ticket state machine, cards with id, lane, tier, harness, cost), Ticket (live thread, gate results strip, diff viewer, injected memory slice, run list), Agents, Needs you (interactions, tier B and C approvals, timeouts), Ledger, Cost, Memory, Settings (default harness, per-agent credential mode, model matrix).
-- Live thread over the server's SSE stream, with permission prompts and Worker questions as blocking cards sharing the answer surface with Needs you.
-- State shown in form (pill, stripe, countdown), summary above detail.
+- **Shell**: left sidebar (project switcher, project nav, Forge settings, theme toggle), a drawer on screens under 768 px, skip link, animated page transitions.
+- **Project switcher**: dropdown of open projects from `GET /projects`, `Ctrl+K` / `Cmd+K` opens it, switching keeps the same screen under the new project. Loading, empty and error states.
+- **Unsaved-changes guard**: any view calls `useUnsavedChanges(isDirty)`; while true, switching project or navigating shows an in-page "Keep editing / Discard changes" alert.
+- **Theme**: "Instrument" tokens (graphite, one cobalt signal, amber only for what needs the user), light and dark, system by default with a toggle, fonts self-hosted.
+- **Motion**: critically damped spring presets, shared-layout sidebar indicator, route transitions, `MotionConfig reducedMotion="user"`. Only `transform` and `opacity` animate.
+- **Data layer** (`src/api/`): the `ForgeApi` port with an `http` and a `mock` adapter, one table choosing between them per resource, a validated SSE helper `watchRunEvents()` (not used by a screen yet).
+- **Placeholders** for every destination, each naming the batch that builds it.
 
-Public API: none; it is an app.
+Routes: `/` redirects to a project; `/p/:slug` and `/p/:slug/{inbox,board,issues,chat,runs,memory,settings}`; `/settings/{harnesses,github,limits,general}`.
+
+Public API: none; it is an app. Entry is `src/main.tsx`.
 
 ## Why this approach
 
-- React, with assistant-ui for threads and AG-UI event types as the wire schema so the UI stays swappable (d-0009). Patterns lifted from Paperclip's React UI (MIT): board, ticket thread, approval card (d-0010, x-0004).
-- Rejected: embedding Plane, Huly, OpenProject, Planka, Focalboard or Vibe Kanban (r-0004).
-- Each screen gets a Hallmark and a Nielsen-10 pass before it is built.
-- Dependencies: none yet; versions will be pinned exactly when added.
+- Stack fixed by d-0103: Vite, React 19, React Router, TanStack Query, Tailwind 4, Radix primitives with our own styling (no shadcn), lucide icons, `motion`. assistant-ui joins when the live thread is built (W3).
+- **Types come from `@forge/core` zod schemas.** `src/schemas/projects.ts` derives the `/projects` response from core's `Project`; `src/schemas/http.ts` holds the two server envelopes core does not export (error body, SSE ticket reply), each documenting the server route it mirrors.
+- **One adapter table** (`src/api/adapter-table.ts`) is the only switch between the real server and typed fixtures, so a screen is written once and a resource moves from `mock` to `http` in the batch that builds its endpoint. No screen ships with mock data in a release (d-0118).
+- **The token never reaches the browser.** In development `vite.forge-proxy.ts` proxies `/api/*` to `127.0.0.1:4310`, strips any page-supplied `Authorization`, reads the install token from the data home on every request and adds the header itself. Rejected: `define` or `import.meta.env` for the token (readable by any script on the page).
+- Springs are critically damped (damping = 2 * sqrt(stiffness * mass)): fast, no wobble. Animating only `transform` and `opacity` keeps 60 fps.
+- Radix for menus and dialogs gives focus trap, Escape, ARIA and typeahead for free; the look is ours.
+- `Button`, `StatePanel` and the nav items carry every state (hover, focus-visible, active, disabled, loading, error, success where meaningful).
 
 ## Requirements
 
-- No TypeScript exists yet, so there is no `tsconfig.json` and the root `tsconfig.json` has no reference to this app. The first source file must add `tsconfig.json` and `tsconfig.test.json` (copy `apps/mcp`) and add both to the root `references`; the root `vitest.config.ts` coverage include and threshold need an entry too.
-- Node 24.20 and pnpm. Nothing is required today: no source, no tests, no env vars.
-- Intended: a running `@forge/server` on `127.0.0.1` as its only backend.
-- Build and test follow the root scripts once source exists.
+- Node 24.20, pnpm 12, and `pnpm install` at the repo root.
+- Run it: start the server with `forge start` (default port 4310; `FORGE_PORT` changes it), then `pnpm --filter @forge/web dev` and open <http://127.0.0.1:5173>.
+- The dev proxy needs `@forge/core` built once (`pnpm build` at the root) to find the data home; without it, `/api` calls go out without a token and the page shows its "Forge did not accept this session" state. It honours `FORGE_HOME` like the server.
+- The install token is read from `<data home>/install-token` (Windows default `%LOCALAPPDATA%\Forge`). The server regenerates it on restart; the proxy follows with no reload.
+- Dev and test flags (rule 9, never product configuration): `VITE_FORGE_API=mock` serves every resource from fixtures and shows a "Fixture data" mark; `VITE_FORGE_MOCK=empty|error` makes the fixtures answer empty or fail.
+- Scripts: `dev`, `build` (to `dist/web`), `preview`, `e2e`.
+- Tests: component tests are part of the root `pnpm test` (`web` project, jsdom, 70% line floor). The Playwright smoke is separate: `pnpm --filter @forge/web exec playwright install chromium` once, then `pnpm --filter @forge/web e2e` (builds with fixtures, drives 375 px and 1280 px).
+- Root `pnpm typecheck`, `pnpm lint` and `pnpm format:check` cover this app too.
 
 ## Extending
 
-Follow the app skeleton: `src/main.ts` as the single entry, `routes/` per screen, `services/` for server access, shared types from `@forge/core`. Each new screen needs its Nielsen-10 coverage recorded before build.
+- **Add a screen**: its entry already exists in `PROJECT_NAV` or `SETTINGS_NAV` (`src/domain/nav-entries.ts`). Build the component under `src/routes/` and swap its `PlaceholderPage` in `src/routes/app-routes.tsx`. Read data with TanStack Query over `useForgeApi()`; give it loading, empty, error and offline states (`StatePanel`). Hold edits? Call `useUnsavedChanges(isDirty)`.
+- **Add a resource**: add it to `ResourceApis` (`src/types/api.types.ts`), implement it in `src/api/http/http-adapter.ts` if its endpoint exists and always in `src/api/mock/mock-adapter.ts`, parse responses with a schema from `@forge/core` (or a minimal one in `src/schemas/` that names the server route it mirrors), then set it in `ADAPTER_TABLE`. `createForgeApi()` fails at startup if the table names an adapter that cannot serve it.
+- **Move a resource to the real server**: add the method to the http adapter and flip its line in `ADAPTER_TABLE` to `'http'`. No screen changes.
+- **Watch a run**: `watchRunEvents({ runId, baseUrl: '/api', onEvent, onEnd, onError })` gets a ticket, streams, validates frames and resumes with `?after=<seq>`.
+- **Animate**: pick a preset from `src/theme/motion.ts`; never write raw stiffness numbers or animate layout properties.
+- Every new screen records its Nielsen-10 coverage and a Hallmark pass before build.
 
 ## Limits
 
-- Not implemented yet: no source, no screens, no tests.
-- `none yet` for dependencies, env vars and configuration.
+- Only the shell exists: every destination is a placeholder (Home and Runs W5, Board W3, Inbox W5, Chat W6, Issues W8, Memory and Project settings W4, Forge settings W2).
+- Only `projects` is wired to the real server; the sidebar has no Inbox badge yet (W5).
+- No production token hand-off: `forge start` does not yet serve this UI or give it a credential (W7). Until then only the dev proxy can reach the server.
+- The bundle is one 700 kB chunk (all of `@forge/core`'s schemas are included); code-splitting waits for the first heavy screen.
+- Archived projects are hidden from the switcher; there is no way to open one yet.
+- The Playwright smoke is not part of `pnpm test` and needs a downloaded browser.

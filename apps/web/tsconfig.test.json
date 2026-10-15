@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist/test",
+    "tsBuildInfoFile": "dist/test/.tsbuildinfo",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["vite/client", "node", "@testing-library/jest-dom"],
+    "emitDeclarationOnly": true
+  },
+  "include": ["__tests__"],
+  "references": [
+    { "path": "./tsconfig.json" },
+    { "path": "./tsconfig.node.json" },
+    { "path": "../../packages/core" }
+  ]
+}

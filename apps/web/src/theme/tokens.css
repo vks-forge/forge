@@ -1,0 +1,117 @@
+/*
+ * Design tokens, "Instrument" direction: graphite surfaces, one cobalt signal, amber only for
+ * what needs the user.
+ *
+ * Why: every colour in the control room must come from one named place so light and dark stay
+ *   in step and "needs you" keeps its meaning. Amber (`attn`) is reserved for work that waits
+ *   on a person; cobalt (`signal`) marks the single live or primary thing on a screen; the
+ *   rest is neutral graphite. Light is the default, dark follows the system unless the user
+ *   picks one (data-theme on <html>), so the same values are written twice below.
+ *
+ * Exports: CSS variables --bg, --rail, --surface, --fg, --muted, --faint, --line, --hover,
+ *   --signal*, --attn*, --good, --chart-bar, --scrim, --shadow, --font-ui, --font-data, and the
+ *   Tailwind utilities generated from them (bg-bg, text-fg, border-line, font-data, ...).
+ * Depends on: tailwindcss (@theme). Pairs with theme/motion.ts for the spring presets.
+ */
+
+:root {
+  --bg: oklch(98.4% 0.003 250);
+  --rail: oklch(96.6% 0.004 250);
+  --surface: oklch(100% 0 0);
+  --fg: oklch(22% 0.014 255);
+  --muted: oklch(51% 0.013 255);
+  --faint: oklch(68% 0.01 255);
+  --line: oklch(91% 0.005 255);
+  --hover: oklch(94.5% 0.006 255);
+  --signal: oklch(50% 0.17 262);
+  --signal-hi: oklch(44% 0.17 262);
+  --on-signal: oklch(99% 0 0);
+  --signal-soft: oklch(94% 0.03 262);
+  --attn: oklch(64% 0.15 65);
+  --attn-soft: oklch(95% 0.045 80);
+  --good: oklch(58% 0.12 155);
+  --danger: oklch(52% 0.18 27);
+  --danger-soft: oklch(95% 0.03 27);
+  --chart-bar: oklch(83% 0.03 262);
+  --scrim: oklch(20% 0.02 255 / 0.32);
+  --shadow: 0 12px 32px oklch(25% 0.03 255 / 0.12), 0 2px 6px oklch(25% 0.03 255 / 0.08);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: oklch(17.5% 0.01 255);
+    --rail: oklch(15.5% 0.01 255);
+    --surface: oklch(21% 0.011 255);
+    --fg: oklch(93% 0.006 255);
+    --muted: oklch(70% 0.012 255);
+    --faint: oklch(52% 0.012 255);
+    --line: oklch(28% 0.012 255);
+    --hover: oklch(25% 0.012 255);
+    --signal: oklch(70% 0.14 262);
+    --signal-hi: oklch(76% 0.13 262);
+    --on-signal: oklch(16% 0.03 262);
+    --signal-soft: oklch(28% 0.06 262);
+    --attn: oklch(79% 0.14 75);
+    --attn-soft: oklch(29% 0.06 70);
+    --good: oklch(74% 0.12 155);
+    --danger: oklch(72% 0.15 27);
+    --danger-soft: oklch(28% 0.06 27);
+    --chart-bar: oklch(41% 0.045 262);
+    --scrim: oklch(5% 0.01 255 / 0.55);
+    --shadow: 0 16px 40px oklch(0% 0 0 / 0.45), 0 2px 8px oklch(0% 0 0 / 0.3);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: oklch(17.5% 0.01 255);
+  --rail: oklch(15.5% 0.01 255);
+  --surface: oklch(21% 0.011 255);
+  --fg: oklch(93% 0.006 255);
+  --muted: oklch(70% 0.012 255);
+  --faint: oklch(52% 0.012 255);
+  --line: oklch(28% 0.012 255);
+  --hover: oklch(25% 0.012 255);
+  --signal: oklch(70% 0.14 262);
+  --signal-hi: oklch(76% 0.13 262);
+  --on-signal: oklch(16% 0.03 262);
+  --signal-soft: oklch(28% 0.06 262);
+  --attn: oklch(79% 0.14 75);
+  --attn-soft: oklch(29% 0.06 70);
+  --good: oklch(74% 0.12 155);
+  --danger: oklch(72% 0.15 27);
+  --danger-soft: oklch(28% 0.06 27);
+  --chart-bar: oklch(41% 0.045 262);
+  --scrim: oklch(5% 0.01 255 / 0.55);
+  --shadow: 0 16px 40px oklch(0% 0 0 / 0.45), 0 2px 8px oklch(0% 0 0 / 0.3);
+  color-scheme: dark;
+}
+
+/* Tailwind reads the variables above at use time, so utilities follow the theme switch. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-rail: var(--rail);
+  --color-surface: var(--surface);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-hover: var(--hover);
+  --color-signal: var(--signal);
+  --color-signal-hi: var(--signal-hi);
+  --color-on-signal: var(--on-signal);
+  --color-signal-soft: var(--signal-soft);
+  --color-attn: var(--attn);
+  --color-attn-soft: var(--attn-soft);
+  --color-good: var(--good);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-scrim: var(--scrim);
+  --shadow-float: var(--shadow);
+}
+
+@theme {
+  --font-ui: 'Instrument Sans', system-ui, sans-serif;
+  --font-data: 'IBM Plex Mono', ui-monospace, monospace;
+}
