@@ -35,3 +35,4 @@ d-0098 per-user data folder, backups, safe updates.
 - Memory files committed and pushed at the user's request.
 - Build plan for realignment: `docs/design/build-plan.md` (B0–B14, awaiting approval; needs probe P-A and decision D-1).
 - `PRODUCT.md` created at the repo root; CLAUDE.md requires keeping it current.
+- 2026-10-15: build plan progress - B0, B1, B2, B3a, B3b, B4, B6, B7, B13a pushed; full gates 4093 tests green; live probes 1-9 pass on installed Claude 2.1.300 after B7 (B6 had broken probe 8 until B7 landed: native tools refused as schema_changed). Remaining: B5, B8, B9, B10, B11, B12, B14 and the C2/C3 reviews.
