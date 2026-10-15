@@ -4,7 +4,8 @@
  * Why: a person scanning the Board decides in a second what to open. The card therefore shows
  *   only what separates tickets: id and title (the whole card is one link to the Ticket page,
  *   d-0116), the lane, the exact state when a column holds several, the current run's status,
- *   rework count and, in amber, that it waits on the user. Amber appears nowhere else on a
+ *   rework count and, in amber, that it waits on the user. A ticket that came out of a card
+ *   links back to it (its id, above the overlay link) so the user can reach the conversation. Amber appears nowhere else on a
  *   card, so it keeps its meaning.
  *
  * Exports: TicketCard.
@@ -13,8 +14,10 @@
 
 import type { TicketSummary } from '@forge/core';
 import { CircleAlert, RotateCcw } from 'lucide-react';
+import { Link } from 'react-router';
 import { LaneChip, RunChip, StateChip } from '#/components/ticket/status-chips.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
+import { cardPath } from '#/domain/card-paths.js';
 import { timeAgo } from '#/domain/relative-time.js';
 
 export function TicketCard(props: {
@@ -35,7 +38,18 @@ export function TicketCard(props: {
         <span className="whitespace-nowrap font-data text-xs text-muted">
           {ticket.id}
         </span>
-        <LaneChip lane={ticket.lane} />
+        <span className="flex items-center gap-2">
+          {ticket.card_id ? (
+            <Link
+              to={cardPath(ticket.project, ticket.card_id)}
+              aria-label={`Parent card ${ticket.card_id}`}
+              className="relative z-10 whitespace-nowrap rounded-sm font-data text-xs text-signal underline-offset-2 hover:underline"
+            >
+              {ticket.card_id}
+            </Link>
+          ) : null}
+          <LaneChip lane={ticket.lane} />
+        </span>
       </div>
       <h3 className="text-sm font-medium leading-snug">
         <TicketLink

@@ -16,6 +16,7 @@ import type { ReactNode } from 'react';
 import type { RouteObject } from 'react-router';
 import { AppShell } from '#/components/shell/app-shell.js';
 import { PROJECT_NAV } from '#/domain/nav-entries.js';
+import { CardPage } from '#/routes/card/card-page.js';
 import { BoardPage } from '#/routes/board/board-page.js';
 import { CostPage } from '#/routes/cost/cost-page.js';
 import { HomePage } from '#/routes/home/home-page.js';
@@ -54,6 +55,7 @@ export const appRoutes: RouteObject[] = [
         element: <ProjectScope />,
         children: [
           { path: 'tickets/:id', element: <TicketPage /> },
+          { path: 'cards/:id', element: <CardPage /> },
           ...PROJECT_NAV.map((entry) =>
             entry.segment === ''
               ? { index: true, element: <HomePage /> }

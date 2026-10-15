@@ -1,5 +1,5 @@
 /**
- * The `http` side of the work resources: stats, cost, inbox and runs.
+ * The `http` side of the work resources: stats, cost, inbox and runs (including steering a run).
  *
  * Why: Home, Inbox, Runs and Cost answer "what is happening and what did it cost?" and must
  *   show exactly what the server computed. This is the only place that knows those paths and
@@ -8,7 +8,8 @@
  *   field the server renames fails here with its name instead of rendering as a blank or a 0.
  *
  * Exports: createWorkHttp().
- * Depends on: @forge/core (schemas), api/http/request-json, types/api.types.
+ * Depends on: @forge/core (schemas), api/http/request-json, schemas/tickets (SteerReply),
+ *   types/api.types.
  */
 
 import {
@@ -21,6 +22,7 @@ import {
   RunListPage,
 } from '@forge/core';
 import { requestJson } from '#/api/http/request-json.js';
+import { SteerReply } from '#/schemas/tickets.js';
 import type { HttpClientOptions, ResourceApis } from '#/types/api.types.js';
 import type { QueryParams } from '#/types/work-api.types.js';
 
@@ -99,6 +101,11 @@ export function createWorkHttp(
           options,
         ),
       get: (id, options) => requestJson(client, `/runs/${enc(id)}`, RunDetail, options),
+      steer: (id, message, author) =>
+        requestJson(client, `/runs/${enc(id)}/steer`, SteerReply, {
+          method: 'POST',
+          body: { message, author },
+        }),
     },
   };
 }

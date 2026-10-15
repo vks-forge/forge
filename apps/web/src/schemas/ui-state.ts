@@ -40,6 +40,10 @@ export const BoardPrefsSchema: z.ZodType<BoardPrefs> = z.object({
     state: z.union([TicketStatus, z.literal('all')]),
     query: z.string().max(500),
   }),
+  cardFilter: z.object({
+    type: z.string().min(1).max(64),
+    query: z.string().max(500),
+  }),
 });
 
 export const ThreadPrefsSchema: z.ZodType<ThreadPrefs> = z.object({

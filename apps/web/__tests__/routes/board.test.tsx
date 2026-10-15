@@ -1,7 +1,7 @@
 /**
  * Pins: the Board shows every ticket in its column with the facts that matter, links each
- * card to its page, filters, shows loading/empty/error states, lets the user file a request
- * with the Director, and keeps Cards disabled until W6.
+ * card to its page, filters, shows loading/empty/error states and lets the user file a request
+ * with the Director. (The Cards view is pinned in board-cards.test.tsx.)
  *
  * Why: the Board is the first screen a user opens each day. A ticket in the wrong column, a
  *   card that is not a link (d-0116), a filter with no way back, or a silent failure would
@@ -11,7 +11,8 @@
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { boardPrefsStore } from '#/state/board-prefs.js';
 import { json, networkDown } from '#tests/helpers/fetch-stub.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
@@ -21,7 +22,12 @@ async function column(name: RegExp | string) {
   return within(await screen.findByRole('region', { name }));
 }
 
-describe('Board', () => {
+describe('Board, Tickets view', () => {
+  // Cards is the default view; these tests are about the Tickets view.
+  beforeEach(() => {
+    boardPrefsStore.setState({ view: 'tickets' });
+  });
+
   it('puts tickets in their columns with the facts that matter', async () => {
     renderApp({ path: BOARD });
 
@@ -67,19 +73,6 @@ describe('Board', () => {
     await user.selectOptions(screen.getByLabelText('Lane'), 'full');
     expect(screen.queryByText(/Stream large CSV/)).not.toBeInTheDocument();
     expect(screen.getByText(/Move sessions/)).toBeInTheDocument();
-  });
-
-  it('keeps the Cards view disabled and says when it comes', async () => {
-    renderApp({ path: BOARD });
-
-    const cards = await screen.findByRole('button', { name: /Cards/ });
-
-    expect(cards).toBeDisabled();
-    expect(cards).toHaveAttribute('title', 'Coming in W6');
-    expect(screen.getByRole('button', { name: 'Tickets' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
   });
 
   it('says so when the project has no tickets, with the way to start', async () => {

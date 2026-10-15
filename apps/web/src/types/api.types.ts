@@ -21,6 +21,7 @@ import type { MemoryApi } from '#/types/memory.types.js';
 import type { OnboardingApi } from '#/types/onboarding.types.js';
 import type { ProjectSettingsApi } from '#/types/project-settings.types.js';
 import type { AnswerReply, IngestReply, TicketDetail } from '#/schemas/tickets.js';
+import type { CardsApi } from '#/types/cards-api.types.js';
 import type { CostApi, InboxApi, RunsApi, StatsApi } from '#/types/work-api.types.js';
 import type { RunEventWatch, RunEventWatchOptions } from '#/types/sse.types.js';
 
@@ -90,6 +91,7 @@ export interface ResourceApis {
   readonly inbox: InboxApi;
   readonly runs: RunsApi;
   readonly onboarding: OnboardingApi;
+  readonly cards: CardsApi;
 }
 
 export type ResourceName = keyof ResourceApis;

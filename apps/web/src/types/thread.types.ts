@@ -55,7 +55,15 @@ export interface StatusItem extends ItemBase {
   readonly family?: ErrorFamily;
 }
 
-export type ThreadItem = MessageItem | ToolItem | AskItem | DecisionItem | StatusItem;
+/** What a person typed to the Worker mid-run (a steering message, d-0109). */
+export interface UserItem extends ItemBase {
+  readonly kind: 'user';
+  readonly author: string;
+  readonly text: string;
+}
+
+export type ThreadItem =
+  MessageItem | ToolItem | AskItem | DecisionItem | StatusItem | UserItem;
 
 export interface ThreadState {
   readonly items: readonly ThreadItem[];

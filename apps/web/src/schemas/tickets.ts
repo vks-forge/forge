@@ -10,7 +10,7 @@
  *   `IngestResult` returned by `POST /intake`; `AnswerReply` is the body of
  *   `POST /interactions/:id/answer`.
  *
- * Exports: TicketDetail, IngestReply, AnswerReply (schemas and inferred types).
+ * Exports: TicketDetail, IngestReply, AnswerReply, SteerReply (schemas and inferred types).
  * Depends on: @forge/core (Ticket, Run, GateResult, Interaction), zod.
  */
 
@@ -30,6 +30,7 @@ export type TicketDetail = z.infer<typeof TicketDetail>;
 
 export const IngestReply = z.discriminatedUnion('status', [
   z.object({ status: z.literal('ticket_created'), ticketId: z.string().min(1) }),
+  z.object({ status: z.literal('card_created'), cardId: z.string().min(1) }),
   z.object({ status: z.literal('duplicate') }),
   z.object({ status: z.literal('reply_queued'), ticketId: z.string().min(1) }),
   z.object({ status: z.literal('answered'), interactionId: z.string().min(1) }),
@@ -42,3 +43,12 @@ export const AnswerReply = z.object({
   status: z.literal('answered'),
 });
 export type AnswerReply = z.infer<typeof AnswerReply>;
+
+/** Body of `POST /runs/:id/steer`: the engine stored the message and the driver took it. */
+export const SteerReply = z.object({
+  run_id: z.string().min(1),
+  inbox_seq: z.number().int().nonnegative(),
+  mode: z.string(),
+  status: z.literal('delivered'),
+});
+export type SteerReply = z.infer<typeof SteerReply>;

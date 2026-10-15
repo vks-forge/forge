@@ -6,7 +6,8 @@
  *   running/ok/failed mark) that expands to the full input and output, because most calls
  *   are noise until something goes wrong; permission denials are red and always visible;
  *   questions are amber and say whether they are still waiting; finish and error end the
- *   run in plain words. Text is rendered as text, never as HTML or markdown, because it is
+ *   run in plain words; a message the user sent to the Worker is a right-aligned line labelled
+ *   with who wrote it. Text is rendered as text, never as HTML or markdown, because it is
  *   untrusted model output.
  *
  * Exports: ThreadItemView.
@@ -140,6 +141,20 @@ export function ThreadItemView(props: {
         <div className="grid gap-0.5">
           <Time ts={item.ts} />
           <p className="whitespace-pre-wrap break-words text-sm">{item.text}</p>
+        </div>
+      );
+    case 'user':
+      return (
+        <div className="grid justify-items-end gap-0.5">
+          <p className="flex items-center gap-2 text-xs text-muted">
+            <span className="font-medium text-fg">
+              {item.author === 'owner' ? 'You' : item.author}
+            </span>
+            <Time ts={item.ts} />
+          </p>
+          <p className="max-w-[88%] whitespace-pre-wrap break-words rounded-2xl bg-signal-soft px-3 py-2 text-sm">
+            {item.text}
+          </p>
         </div>
       );
     case 'tool':

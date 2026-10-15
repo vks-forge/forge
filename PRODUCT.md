@@ -79,7 +79,7 @@ intake to merge and a real GitHub PR round trip.
 **Not yet aligned with the product shape:** no UI, not publishable. Runs now
 survive a restart: Forge resumes them from the saved harness session. One server now serves many
 projects (registered through the API, each with its own clone, worktrees, git
-host and ticket prefix) and settings live in the database. Every request now becomes a card (the intake record) with a rolled-up board column and history; the card API exists, the card pages and card chat do not yet. See
+host and ticket prefix) and settings live in the database. Every request now becomes a card (the intake record) with a rolled-up board column and history; the card API exists, and the web Board shows cards in six columns with a Card page (header, type change, close with a reason, tickets, details) and a chat panel for the card's Director; the Director's side of that chat is still being built on the server. You can also message a running Worker from its ticket page. See
 `docs/design/product-shape-change-map.md`.
 
 **Known limits:** Workers and project checks run as the user's own Windows
@@ -104,6 +104,7 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-16 — W6: Board Cards view, Card page with Director chat, and messaging a running Worker.
 - 2026-10-16 — W7: first-run wizard and new-project flow.
 - 2026-10-16 — W6b-1: cards — every intake becomes a card with a rolled-up board column and history.
 - 2026-10-16 — Web app runs on the real server API only (mock removed); UI preferences persist across reloads.

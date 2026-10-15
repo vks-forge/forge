@@ -93,6 +93,17 @@ export function applyEvent(state: ThreadState, event: RunEvent): ThreadState {
         ...state.items,
         { kind: 'message', seq: event.seq, ts: event.ts, text: event.text },
       ]);
+    case 'user_message':
+      return next([
+        ...state.items,
+        {
+          kind: 'user',
+          seq: event.seq,
+          ts: event.ts,
+          author: event.author,
+          text: event.text,
+        },
+      ]);
     case 'tool_call':
       return next([
         ...state.items,

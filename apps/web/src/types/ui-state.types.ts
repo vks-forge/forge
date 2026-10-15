@@ -7,17 +7,21 @@
  *
  * Exports: BoardPrefs, ThreadPrefs, ThemePrefs, ProjectPrefs, AnswerDrafts, MemoryPrefs,
  *   AuthorPrefs, WelcomePrefs.
- * Depends on: types/board.types, types/memory.types, types/nav.types. Types only.
+ * Depends on: types/board.types, types/cards-ui.types, types/memory.types, types/nav.types. Types only.
  */
 
 import type { BoardFilter } from '#/types/board.types.js';
+import type { CardFilter } from '#/types/cards-ui.types.js';
 import type { MemoryTab } from '#/types/memory.types.js';
 import type { ThemeMode } from '#/types/nav.types.js';
 
 export interface BoardPrefs {
-  /** Cards arrive in W6; until then only `tickets` can be chosen. */
+  /** Which Board view the user last chose; Cards is the default. */
   readonly view: 'tickets' | 'cards';
+  /** Filter of the Tickets view. */
   readonly filter: BoardFilter;
+  /** Filter of the Cards view. */
+  readonly cardFilter: CardFilter;
 }
 
 export interface ThreadPrefs {

@@ -5,7 +5,8 @@
  *   the ticket is not moving, why. The header gives those, then the facts that explain them:
  *   lane and tier (how much care it gets), rework count, the pull request when there is one,
  *   the scheduler's wait reason ("quota: claude-code until 14:20 UTC") and any tickets it
- *   waits on, each a link (d-0116). Every fact is text; nothing is only a colour.
+ *   waits on, each a link (d-0116), and the card it came from, so the conversation behind it is
+ *   one click away. Every fact is text; nothing is only a colour.
  *
  * Exports: TicketHeader.
  * Depends on: react, react-router, lucide-react, components/ticket/*, domain/nav-entries,
@@ -16,6 +17,7 @@ import { ArrowLeft, ExternalLink, GitPullRequest, RotateCcw } from 'lucide-react
 import { Link } from 'react-router';
 import { LaneChip, StateChip } from '#/components/ticket/status-chips.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
+import { cardPath } from '#/domain/card-paths.js';
 import { projectPath } from '#/domain/nav-entries.js';
 import type { TicketDetail } from '#/schemas/tickets.js';
 
@@ -69,6 +71,17 @@ export function TicketHeader(props: { slug: string; detail: TicketDetail }) {
                 <TicketLink id={id} slug={props.slug} />
               </span>
             ))}
+          </span>
+        ) : null}
+        {ticket.card_id ? (
+          <span>
+            From card{' '}
+            <Link
+              to={cardPath(props.slug, ticket.card_id)}
+              className="rounded-sm font-medium text-signal underline-offset-2 hover:underline"
+            >
+              <span className="font-data">{ticket.card_id}</span>
+            </Link>
           </span>
         ) : null}
         {ticket.parent ? (

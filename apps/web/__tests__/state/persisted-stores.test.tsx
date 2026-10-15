@@ -127,7 +127,8 @@ describe('what the app persists', () => {
     const memory = renderHook(() => useMemoryPrefs('decisions'));
 
     act(() => {
-      board.result.current.setView('cards');
+      board.result.current.setView('tickets');
+      board.result.current.setCardFilter({ type: 'plan' });
       board.result.current.setFilter({ query: 'csv', lane: 'full' });
       thread.result.current.setFollowLatest(false);
       draft.result.current.setDraft('Use UTC');
@@ -144,7 +145,7 @@ describe('what the app persists', () => {
     });
 
     const allowed: Record<string, string[]> = {
-      board: ['filter', 'view'],
+      board: ['cardFilter', 'filter', 'view'],
       thread: ['expandTools', 'followLatest'],
       drafts: ['drafts'],
       author: ['author'],
@@ -195,7 +196,7 @@ describe('what the app persists', () => {
   });
 
   it('puts every store back to its defaults between tests', () => {
-    expect(boardPrefsStore.getState().view).toBe('tickets');
+    expect(boardPrefsStore.getState().view).toBe('cards');
     expect(threadPrefsStore.getState().followLatest).toBe(true);
     expect(answerDraftsStore.getState().drafts).toEqual({});
     expect(authorPrefsStore.getState().author).toBe('');

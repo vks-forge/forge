@@ -127,6 +127,8 @@ export function buildSampleTickets(): SampleTicket[] {
         created_at: ago(seed.updated + 60),
         updated_at: ago(seed.updated),
         blocked_by: seed.id === 'SVC-9' ? ['SVC-5'] : [],
+        // SVC-3 came out of a card, so the page and the tile can link back to it.
+        ...(seed.id === 'SVC-3' ? { card_id: 'FG-C4' } : {}),
       }),
       runs: [run, earlier].filter((r): r is Run => r !== null),
       gates: buildGates(seed),

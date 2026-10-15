@@ -41,6 +41,7 @@ function summarize(item: SampleTicket, slug: string): TicketSummary {
     type: ticket.type,
     tier_predicted: ticket.tier_predicted,
     project: slug,
+    ...(ticket.card_id ? { card_id: ticket.card_id } : {}),
     priority: ticket.priority,
     rework_count: ticket.rework_count,
     needs_you: NEEDS_YOU_STATUSES.includes(ticket.status),

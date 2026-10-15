@@ -4,7 +4,8 @@
  * Why: this is where a person follows and unblocks a single piece of work. It loads the
  *   ticket (refreshing on a slow poll and on focus), shows header, gates and runs, and
  *   streams the current run's thread. Amber questions sit above the thread. Choosing a past
- *   run replays that run's thread; the thread is re-created per run so one run's lines can
+ *   run replays that run's thread; while the current run is live, a "Message the Worker" box
+ *   under the thread steers it; the thread is re-created per run so one run's lines can
  *   never leak into another's. Loading, not-found, error (with retry) and offline-with-old-
  *   data are each handled in words; a ticket id that does not exist is a clear "no such
  *   ticket", not an empty page.
@@ -24,9 +25,11 @@ import { useRunThread } from '#/components/thread/use-run-thread.js';
 import { WorkerThread } from '#/components/thread/worker-thread.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { projectPath } from '#/domain/nav-entries.js';
+import { isRunLive } from '#/domain/run-status.js';
 import { pendingAsk } from '#/domain/thread.js';
 import { AnswerPanel } from '#/routes/ticket/answer-panel.js';
 import { TicketHeader } from '#/routes/ticket/ticket-header.js';
+import { SteerPanel } from '#/routes/ticket/steer-panel.js';
 import { GateStrip, RunsList } from '#/routes/ticket/ticket-side.js';
 import { useNow } from '#/state/use-now.js';
 import { useOnline } from '#/state/use-online.js';
@@ -47,6 +50,14 @@ function TicketBody(props: {
     [detail.interactions],
   );
 
+  // Steering is for the run the ticket is working on right now, and only while it is live.
+  const current = detail.runs.find((run) => run.id === runId);
+  const live =
+    runId !== undefined &&
+    runId === detail.ticket.assignee_run_id &&
+    current !== undefined &&
+    isRunLive(current.status);
+
   return (
     <>
       <AnswerPanel
@@ -63,14 +74,17 @@ function TicketBody(props: {
             </p>
           </section>
         ) : (
-          <WorkerThread
-            items={thread.items}
-            connection={thread.connection}
-            endStatus={thread.endStatus}
-            notice={thread.notice}
-            pending={pending}
-            onRetry={thread.retry}
-          />
+          <div className="grid content-start gap-3">
+            <WorkerThread
+              items={thread.items}
+              connection={thread.connection}
+              endStatus={thread.endStatus}
+              notice={thread.notice}
+              pending={pending}
+              onRetry={thread.retry}
+            />
+            {live ? <SteerPanel runId={runId} /> : null}
+          </div>
         )}
         <RunsList
           runs={detail.runs}

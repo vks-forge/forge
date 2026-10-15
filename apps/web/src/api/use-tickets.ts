@@ -137,6 +137,12 @@ export function useChatIntake() {
 
   return useMutation({
     mutationFn: (input: ChatIntake) => api.intake.chat(input),
-    onSuccess: () => client.invalidateQueries({ queryKey: TICKETS_KEY }),
+    // A new request becomes a card first (d-0105), so the Cards view refetches too; its key is
+    // written out here because `use-card-board` imports `POLL_MS` from this file.
+    onSuccess: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: TICKETS_KEY }),
+        client.invalidateQueries({ queryKey: ['cards'] }),
+      ]),
   });
 }

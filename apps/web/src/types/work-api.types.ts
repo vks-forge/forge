@@ -23,6 +23,7 @@ import type {
   RunStatus,
   StatsRange,
 } from '@forge/core';
+import type { SteerReply } from '#/schemas/tickets.js';
 import type { RequestOptions } from '#/types/api.types.js';
 
 /** Values of a URL query; an array repeats the key. */
@@ -60,4 +61,6 @@ export interface InboxApi {
 export interface RunsApi {
   list(slug: string, args: RunListArgs, options?: RequestOptions): Promise<RunListPage>;
   get(id: string, options?: RequestOptions): Promise<RunDetail>;
+  /** Messages a running Worker; refused with 409 when the run is over or cannot take it. */
+  steer(id: string, message: string, author: string): Promise<SteerReply>;
 }

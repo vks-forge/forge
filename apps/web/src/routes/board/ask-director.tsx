@@ -14,10 +14,12 @@
  */
 
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { describeError } from '#/api/describe-error.js';
 import { useChatIntake } from '#/api/use-tickets.js';
 import { Button } from '#/components/ui/button.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
+import { cardPath } from '#/domain/card-paths.js';
 import type { ProjectView } from '#/schemas/projects.js';
 
 export function AskDirector(props: { project: ProjectView }) {
@@ -101,6 +103,18 @@ export function AskDirector(props: { project: ProjectView }) {
             <>
               Filed as <TicketLink id={reply.ticketId} slug={props.project.slug} />. It
               appears in Inbox shortly.
+            </>
+          ) : null}
+          {reply.status === 'card_created' ? (
+            <>
+              Started a card.{' '}
+              <Link
+                to={cardPath(props.project.slug, reply.cardId)}
+                className="font-medium text-signal underline-offset-2 hover:underline"
+              >
+                Open <span className="font-data">{reply.cardId}</span>
+              </Link>{' '}
+              to talk it through with the Director.
             </>
           ) : null}
           {reply.status === 'duplicate'

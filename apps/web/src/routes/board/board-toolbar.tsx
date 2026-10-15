@@ -1,10 +1,9 @@
 /**
- * BoardToolbar: the view switch and the filter above the columns.
+ * BoardToolbar: the filter above the Tickets view's columns.
  *
- * Why: the Board has two planned views (Cards, arriving in W6, and Tickets) and the user
- *   narrows by lane, state or a word. The switch shows both so the roadmap is visible, but
- *   Cards is disabled and says when it arrives. Filters are labelled controls, not icons, and
- *   "Clear filters" appears only while one is active, so the way back is always one click.
+ * Why: the user narrows the Board's tickets by lane, state or a word. Filters are labelled
+ *   controls, not icons, and "Clear filters" appears only while one is active, so the way back
+ *   is always one click. (The Cards | Tickets switch lives in BoardViewSwitch.)
  *
  * Exports: BoardToolbar.
  * Depends on: react, lucide-react, @forge/core (schemas), domain/board-columns,
@@ -21,35 +20,11 @@ const CONTROL =
   'min-h-9 rounded-lg border border-line bg-surface px-2 text-sm text-fg hover:bg-hover';
 
 export function BoardToolbar(props: { shown: number; total: number }) {
-  const { view, setView, filter, setFilter, resetFilter } = useBoardPrefs();
+  const { filter, setFilter, resetFilter } = useBoardPrefs();
   const active = isFilterActive(filter);
 
   return (
     <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-      <div
-        role="group"
-        aria-label="Board view"
-        className="flex rounded-lg bg-hover p-0.5"
-      >
-        <button
-          type="button"
-          disabled
-          title="Coming in W6"
-          className="min-h-8 cursor-not-allowed rounded-md px-3 text-sm text-muted opacity-60"
-        >
-          Cards
-          <span className="ml-1.5 text-xs">W6</span>
-        </button>
-        <button
-          type="button"
-          aria-pressed={view === 'tickets'}
-          onClick={() => setView('tickets')}
-          className="min-h-8 rounded-md bg-surface px-3 text-sm font-medium shadow-[0_1px_2px_oklch(25%_0.03_255/0.12)]"
-        >
-          Tickets
-        </button>
-      </div>
-
       <label className="grid gap-1 text-xs text-muted">
         Search
         <span className="relative">
