@@ -41,6 +41,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0120 — (superseded by d-0121) CI Windows per push, Linux + macOS daily
 - d-0121 — CI paced for free quota: Windows per code push, docs-only skip, Linux daily EOD, Linux + macOS weekly Sunday, all three on demand
 - d-0122 — Web UI state in zustand + persist (localStorage), UI prefs/drafts only; server data stays in TanStack Query; never tokens/secrets
+- d-0123 — Web uses the real server API only: mock adapter/fixtures/switches removed; missing backends built with their screen; tests stub fetch in __tests__ only
 - d-0116 — Tickets clickable everywhere on cards; Inbox page (Paperclip-style: needs action/unread/all/archived, read + archive, resurface); Home = project stats + graphs only
 - d-0115 — Issue flow approved (docs/design/issue-flow.md): triage → deep analysis → verified findings → typed verdict (floor only stricter) → policy layer acts; auto-ready needs all 9 checks
 - d-0114 — Issue analysis: new/updated issues auto; backlog newest-first within daily budget; Analyse now; cheap triage pass then deep analysis only where warranted
