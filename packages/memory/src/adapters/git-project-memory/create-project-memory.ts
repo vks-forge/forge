@@ -6,12 +6,14 @@
  *   `<dataHome>/memory/<slug>/` by "Forge Director", so the owner can read the history,
  *   diff it and revert it. Writes to one project run one at a time (two writers would pick
  *   the same id), files land atomically, and a state move never edits `statement`,
- *   `source`, `author` or `origin`. The folder sits in the data home, which the Worker
- *   floor denies by absolute path, so a Worker has no route to it (d-0086, d-0098).
+ *   `source`, `author` or `origin`. A write that died halfway is repaired before the next one
+ *   so no commit carries another write's leftovers, and readers see only committed state.
+ *   The folder sits in the data home, which the Worker floor denies by absolute path, so a
  *
  * Exports: createProjectMemory().
  * Depends on: node:fs/promises, node:path, @forge/core (ports, errors), domain/memory-plans,
- *   shared/serial-queue, adapters/git-project-memory/repo, types/project-memory.
+ *   shared/serial-queue, adapters/git-project-memory/repo, adapters/git-project-memory/records,
+ *   types/project-memory.
  *   IO: one project's folder and `git`.
  */
 
@@ -33,11 +35,15 @@ import {
   planReject,
   planSupersede,
 } from '#/domain/memory-plans.js';
+import {
+  loadCommittedRecords,
+  loadRecords,
+} from '#/adapters/git-project-memory/records.js';
 import { createSerialQueue } from '#/shared/serial-queue.js';
 import {
   applyChange,
   ensureRepo,
-  loadRecords,
+  recoverRepo,
 } from '#/adapters/git-project-memory/repo.js';
 import type {
   MemoryPlanner,
@@ -60,19 +66,20 @@ export function createProjectMemory(deps: ProjectMemoryDeps): ProjectMemory {
     return join(deps.rootDir, slug);
   };
 
-  /** One write: ensure the repository, plan from what is on disk, apply, commit; all in the project's queue. */
+  /** One write: ensure the repository, repair any crashed write, plan from what is on disk, apply, commit; all in the project's queue. */
   async function write(slug: string, plan: MemoryPlanner): Promise<MemoryWriteResult> {
     const dir = dirOf(slug);
 
     return queue.run(slug, async () => {
       await ensureRepo(slug, dir, onSkip);
+      await recoverRepo(slug, dir, onSkip);
       const change = plan(await loadRecords(dir, onSkip), deps.now().toISOString());
 
       return { id: change.id, commit: await applyChange(slug, dir, change, onSkip) };
     });
   }
 
-  /** Reads what is committed, never creating a repository; an unknown project reads as empty. */
+  /** Reads the last commit, never a write in flight, never creating a repository; an unknown project reads as empty. */
   async function read(slug: string): Promise<StoredRecord[]> {
     if (!SLUG.test(slug)) {
       return [];
@@ -87,7 +94,7 @@ export function createProjectMemory(deps: ProjectMemoryDeps): ProjectMemory {
         return [];
       }
 
-      return loadRecords(dir, onSkip);
+      return loadCommittedRecords(dir, onSkip);
     });
   }
 

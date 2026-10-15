@@ -3,22 +3,27 @@
  *
  * Why: the Director must never plan against a decision the owner superseded, nor repeat
  *   an approach the owner rejected. Memory lives as markdown files in git; this adapter
- *   turns them into the small read-only slice the engine needs. It fails closed: an
- *   unreadable, malformed or unapproved record is skipped and reported, never loaded as
- *   a constraint. `proposed/` and `outcomes/` are never read (memory-system.md, d-0007).
+ *   turns them into the small read-only slice the engine needs. It reads the last commit,
+ *   never the working tree, so a write in flight (an old decision already marked
+ *   superseded, its successor not yet written) can never show a tick a torn state. It
+ *   fails closed: an unreadable, malformed or unapproved record is skipped and reported,
+ *   never loaded as a constraint. `proposed/` and `outcomes/` are never read (memory-system.md, d-0007).
  *   The root is the project memory folder in the data home; this repository's own
  *   `.forge/memory` is the dev team's memory and is never read by the product (d-0086).
  *
  * Exports: createFileMemorySource().
  * Depends on: node:fs/promises, node:path, @forge/core (MemorySource types),
- *   domain/front-matter, schemas/memory-record, types/memory-source-deps.
+ *   domain/front-matter, schemas/memory-record, shared/committed-files,
+ *   types/memory-source-deps. IO: `git` in one project's folder.
  */
 
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { MemoryRecordRef, MemorySlice, MemorySource } from '@forge/core';
 import { parseFrontMatter } from '#/domain/front-matter.js';
 import { MemoryRecordFrontMatter } from '#/schemas/memory-record.js';
+import { readCommittedFiles } from '#/shared/committed-files.js';
+import type { CommittedFile } from '#/types/git.types.js';
 import type { MemorySourceDeps } from '#/types/memory-source-deps.types.js';
 
 const SLUG = /^[a-z][a-z0-9-]*$/;
@@ -40,30 +45,27 @@ async function isDir(path: string): Promise<boolean> {
   }
 }
 
-async function loadFolder(
-  dir: string,
+async function isRepo(path: string): Promise<boolean> {
+  try {
+    await stat(join(path, '.git'));
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function toRefs(
+  base: string,
+  files: readonly CommittedFile[],
+  folder: string,
   accepted: readonly (string | undefined)[],
   onSkip: (path: string, reason: string) => void,
-): Promise<MemoryRecordRef[]> {
-  let names: string[];
-  try {
-    names = (await readdir(dir)).filter((n) => n.endsWith('.md'));
-  } catch {
-    return [];
-  }
-
+): MemoryRecordRef[] {
   const out: MemoryRecordRef[] = [];
-  for (const name of names) {
-    const path = join(dir, name);
-    let text: string;
-    try {
-      text = await readFile(path, 'utf8');
-    } catch (err) {
-      onSkip(path, `unreadable: ${err instanceof Error ? err.message : String(err)}`);
-      continue;
-    }
-
-    const fm = parseFrontMatter(text);
+  for (const file of files.filter((f) => f.relPath.startsWith(`${folder}/`))) {
+    const path = join(base, ...file.relPath.split('/'));
+    const fm = parseFrontMatter(file.text);
     if (!fm.ok) {
       onSkip(path, fm.reason);
       continue;
@@ -107,16 +109,27 @@ export function createFileMemorySource(
       }
 
       const base = join(rootDir, projectSlug);
-      if (!(await isDir(base))) {
+      if (!(await isRepo(base))) {
+        if (await isDir(base)) {
+          onSkip(base, 'not a git repository; memory is read from commits only');
+        }
+
         return EMPTY;
       }
 
-      const [decisions, rejected] = await Promise.all([
-        loadFolder(join(base, 'decisions'), DECISION_STATUSES, onSkip),
-        loadFolder(join(base, 'rejected'), REJECTED_STATUSES, onSkip),
-      ]);
+      let files: CommittedFile[];
+      try {
+        files = await readCommittedFiles(base, ['decisions', 'rejected']);
+      } catch (err) {
+        onSkip(base, `unreadable: ${err instanceof Error ? err.message : String(err)}`);
 
-      return { decisions, rejected };
+        return EMPTY;
+      }
+
+      return {
+        decisions: toRefs(base, files, 'decisions', DECISION_STATUSES, onSkip),
+        rejected: toRefs(base, files, 'rejected', REJECTED_STATUSES, onSkip),
+      };
     },
   };
 }
