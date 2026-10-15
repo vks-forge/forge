@@ -70,13 +70,12 @@ const failed = (code: FailClosedCode): HookResponse => ({
 });
 
 /**
- * The deny recorded for a call refused because the server is draining. `server_draining` is
- * not a policy reason (`ReasonCode` in @forge/tools is the policy's closed set), so it is
- * typed in here rather than judged by `admit()`.
+ * The deny recorded for a call refused because the server is draining. It is set here, not
+ * judged by `admit()`, so no policy rule is consulted.
  */
 const drainDecision = (tool: string): Decision => ({
   decision: 'deny',
-  reason: 'server_draining' as Decision['reason'],
+  reason: 'server_draining',
   enforced_by: 'forge_admit',
   enforcement: null,
   layer: 'hook',

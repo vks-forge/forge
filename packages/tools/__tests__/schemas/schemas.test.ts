@@ -6,12 +6,14 @@
  * `admit()`. The receipt schemas must also keep matching the `tool_decisions` /
  * `tool_effects` column names so rows persist without translation.
  *
- * Pins: ToolDefinition, Grant, CallRule, BudgetLimits, DecisionReceipt column names.
+ * Pins: ToolDefinition, Grant, CallRule, BudgetLimits, DecisionReceipt column names,
+ * the `server_draining` reason code and its denial receipt.
  * Depends on: schemas/*, helpers/fixtures, vitest. No IO.
  */
 
 import { describe, expect, it } from 'vitest';
 import { BudgetLimits } from '#/schemas/budget.js';
+import { Decision, ReasonCode } from '#/schemas/decision.js';
 import { Grant } from '#/schemas/grant.js';
 import { DecisionReceipt, EffectReceipt } from '#/schemas/receipt.js';
 import { ToolDefinition } from '#/schemas/tool-definition.js';
@@ -127,5 +129,52 @@ describe('receipt rows mirror the db tables', () => {
         'hash',
       ]),
     );
+  });
+});
+
+describe('server_draining', () => {
+  it('is a valid ReasonCode and a valid deny Decision', () => {
+    expect(ReasonCode.safeParse('server_draining').success).toBe(true);
+
+    const decision = {
+      decision: 'deny',
+      reason: 'server_draining',
+      enforced_by: 'forge_admit',
+      enforcement: null,
+      layer: 'hook',
+      matched_rule: null,
+      finding_ids: [],
+      tool: 'Edit',
+    };
+
+    expect(Decision.safeParse(decision).success).toBe(true);
+  });
+
+  it('parses as a decision receipt, so G1 finds the refused call in the chain', () => {
+    const hex = 'a'.repeat(64);
+    const receipt = {
+      kind: 'decision',
+      id: 'u1',
+      run_id: 'r1',
+      seq: 1,
+      tool: 'Edit',
+      version: null,
+      schema_hash: null,
+      args_hash: hex,
+      decision: 'deny',
+      layer: 'hook',
+      reason: 'server_draining',
+      rule_id: null,
+      resource: null,
+      finding_ids: [],
+      approver: null,
+      approval_ref: null,
+      enforced_by: null,
+      ts: '2026-10-15T00:00:00.000Z',
+      prev_hash: null,
+      hash: hex,
+    };
+
+    expect(DecisionReceipt.safeParse(receipt).success).toBe(true);
   });
 });

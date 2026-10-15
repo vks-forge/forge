@@ -52,6 +52,11 @@ export const ReasonCode = z.enum([
   'fail_closed_inactive_run',
   'fail_closed_no_liveness',
   'fail_closed_internal',
+  /**
+   * The Forge server is stopping and refuses new tool calls (set by the hook handler, never by
+   * `admit()`). The Worker should repeat the call after the run resumes.
+   */
+  'server_draining',
 ]);
 export type ReasonCode = z.infer<typeof ReasonCode>;
 
