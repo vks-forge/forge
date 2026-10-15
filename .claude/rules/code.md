@@ -80,7 +80,8 @@ family, not the message.
   before it gets its own tests.
 - Property tests for the state machine and policy functions.
 - Gates (d-0119): locally, `pnpm check` (typecheck, lint, format check and
-  the tests related to the changed files, no coverage) must be green before
+  the tests related to the changed files in the `unit` and `web` projects,
+  no coverage; `--heavy` adds the slow `heavy` project) must be green before
   merge. The full suite with coverage (`pnpm test`) runs in CI after every
   push to main; a red CI run is fixed forward before anything else merges.
   Builders never run the full suite locally. Nothing merges with a gate red
