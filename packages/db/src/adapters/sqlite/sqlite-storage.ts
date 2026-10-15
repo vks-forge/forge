@@ -18,12 +18,17 @@
  */
 
 import type { StorageAdapter, StorageTx } from '@forge/core';
+import { createSqliteCatalogueStore } from '#/adapters/sqlite/catalogue-store.js';
 import { createSqliteConfigSource } from '#/adapters/sqlite/config-source.js';
 import { createGateResultRepository } from '#/adapters/sqlite/gate-results-repository.js';
 import { createGithubConnectionRepository } from '#/adapters/sqlite/github-connections-repository.js';
 import { createIntakeEventRepository } from '#/adapters/sqlite/intake-events-repository.js';
 import { createInteractionRepository } from '#/adapters/sqlite/interactions-repository.js';
 import { runImmediate } from '#/adapters/sqlite/immediate-tx.js';
+import {
+  createHarnessToolSchemaRepository,
+  createHarnessVersionRepository,
+} from '#/adapters/sqlite/harness-compat-repository.js';
 import { createHarnessRepository } from '#/adapters/sqlite/harnesses-repository.js';
 import { createProjectRepository } from '#/adapters/sqlite/projects-repository.js';
 import { createSqliteReceiptLog } from '#/adapters/sqlite/receipt-log.js';
@@ -63,6 +68,8 @@ export function createStorageOnDriver(
     projects: createProjectRepository(driver),
     harnesses: createHarnessRepository(driver),
     githubConnections: createGithubConnectionRepository(driver),
+    harnessVersions: createHarnessVersionRepository(driver),
+    harnessToolSchemas: createHarnessToolSchemaRepository(driver),
     ticketRelations: createTicketRelationRepository(driver),
   };
 
@@ -105,5 +112,6 @@ export function openSqlite(path: string, opts: SqliteStorageOptions = {}): Sqlit
     storage: createStorageOnDriver(driver, mutex),
     receipts: createSqliteReceiptLog(driver, mutex),
     config: createSqliteConfigSource(driver, mutex),
+    catalogue: createSqliteCatalogueStore(driver, mutex),
   };
 }

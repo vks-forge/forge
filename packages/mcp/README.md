@@ -22,7 +22,7 @@ Public API (`src/index.ts`): `createForgeMcpServer(deps)` (verifies the run toke
 that the run is active (`isRunActive` from `@forge/core`: `starting` or `running`, no `ended_at`), returns an unconnected `McpServer`), `serveStdio(server)`,
 `withDefaultNetwork(deps)` (fills in the production DNS resolver, address-pinned transport and `fetch`; only the composition root calls it),
 `verifyRunToken(storage, runId, token)`, `hashToken()` (re-exported from `@forge/tools`, as is the constant-time compare),
-`toolSchemaHash()`, `computeToolSchemaHashes()`, `DEV_CATALOGUE_KEY`, `FORGE_TOOLS`,
+`toolSchemaHash()`, `computeToolSchemaHashes()`, `FORGE_TOOLS`,
 `Claim` (re-exported from `@forge/core`, where the schema now lives so the gates share it), and the dependency type `ForgeMcpDeps`.
 
 | Tool             | Risk      | What it stores or does                                                                                                                                                                                                  |
@@ -54,9 +54,10 @@ process. The process that hosts it is `apps/mcp` (`forge-mcp`).
   (defeats rebinding), re-validate every redirect (max 5), refuse an https to http redirect, and reach only ports 80/443
   (8080/8443 when the host is in `FORGE_FETCH_ALLOW_HOSTS`). Rejected: validating the
   hostname string only, and letting the HTTP client resolve again.
-- Signed catalogue (`.forge/tools/catalog.yaml`, d-0038): each tool's `schema_hash` is
+- Catalogue in the database (built-in seed `BUILT_IN_CATALOGUE` in `@forge/tools`, d-0085): each tool's `schema_hash` is
   taken from the schema the server advertises, so a silently widened tool is
-  quarantined. A test fails on drift.
+  quarantined. A test fails on drift. This package never reads the catalogue itself; the
+  server builds each run's policy from the database and the MCP process only serves tools.
 - Token hashes live in `StorageAdapter` (`tx.runTokens.getHash(runId)`, a core port), so this
   package needs no database of its own (code.md rule 1) and no private token port. The check
   is a constant-time compare (`@forge/tools` `constantTimeEqual`) of `sha256(token)`; a missing, revoked or unreadable hash is a
@@ -67,22 +68,20 @@ process. The process that hosts it is `apps/mcp` (`forge-mcp`).
 - Node 24; `pnpm build` before any live run (`apps/mcp/dist/main.js` is the entry).
 - Env, read only by `apps/mcp`: `FORGE_RUN_ID`, `FORGE_RUN_TOKEN`, `FORGE_DB_PATH`,
   `FORGE_SEARXNG_URL` (optional), plus optional `FORGE_SEARXNG_ALLOW_HOSTS`,
-  `FORGE_FETCH_ALLOW_HOSTS`, `FORGE_DOCS_DIRS`. `FORGE_CATALOGUE_KEY` is read by the
-  signer script only.
+  `FORGE_FETCH_ALLOW_HOSTS`, `FORGE_DOCS_DIRS`.
 - SearXNG at `http://localhost:8888` for `web_search` (docker container
   `searxng-openclaw`).
-- Catalogue: `pnpm build && node scripts/sign-catalogue.mjs` refreshes hashes and
-  signs; see the script for key handling (`FORGE_CATALOGUE_KEY`, or `--dev` for the public INSECURE dev key).
+- Catalogue: no signing step. After a change to a tool's schema, copy the hash the catalogue test prints into the seed (`packages/tools/src/domain/catalogue-seed-forge.ts`) and the mirror `.forge/tools/catalog.yaml`.
 - Tests: `pnpm test` at the root (coverage floor 80% lines).
 
 ## Extending
 
 1. Add `src/domain/tools/<name>.ts` with `defineTool({...})`, its input shape in
    `schemas/tool-inputs.ts`, and append it to `FORGE_TOOLS`.
-2. Add a `mcp__forge__<name>` entry to `.forge/tools/catalog.yaml` (declared `risk`,
-   `exposure`, `resources`, `support`), add the id to the lane in `@forge/tools`
-   `lane-defaults`, then run the sign script. The catalogue test fails until hashes
-   and signature match.
+2. Add a `mcp__forge__<name>` entry to the built-in catalogue (`@forge/tools` `catalogue-seed-forge.ts` and the mirror `.forge/tools/catalog.yaml`: declared `risk`,
+   `exposure`, `resources`, `support`), and add the id to the lane in `@forge/tools`
+   `lane-defaults`. The catalogue test fails until the hashes match; an existing database
+   keeps its saved catalogue, so add the entry there with `PUT /settings/catalogue` too.
 
 ## Limits
 

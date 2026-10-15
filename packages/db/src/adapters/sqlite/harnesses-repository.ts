@@ -32,11 +32,11 @@ export function createHarnessRepository(driver: SqlDriver): HarnessRepository {
     async upsert(harness) {
       const h = Harness.parse(harness);
       driver.run(
-        `INSERT INTO harnesses (id, kind, binary_path, version, auth_mode, status, last_checked_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO harnesses (id, kind, binary_path, version, auth_mode, status, last_checked_at, status_note)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (id) DO UPDATE SET kind = excluded.kind, binary_path = excluded.binary_path,
            version = excluded.version, auth_mode = excluded.auth_mode, status = excluded.status,
-           last_checked_at = excluded.last_checked_at`,
+           last_checked_at = excluded.last_checked_at, status_note = excluded.status_note`,
         [
           h.id,
           h.kind,
@@ -45,6 +45,7 @@ export function createHarnessRepository(driver: SqlDriver): HarnessRepository {
           h.auth_mode,
           h.status,
           h.last_checked_at ?? null,
+          h.status_note ?? null,
         ],
       );
     },

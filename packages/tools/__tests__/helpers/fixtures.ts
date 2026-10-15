@@ -1,27 +1,24 @@
 /**
  * Shared fixtures for @forge/tools tests.
  *
- * Why: admit, grants and catalogue tests all need a realistic signed M0 catalogue and a
+ * Why: admit, grants and catalogue tests all need a realistic M0 catalogue and a
  * run context. Building them from the production loader and grant builder means the
- * tests exercise the same signature check and narrowing as a real run, and a schema or
+ * tests exercise the same validation and narrowing as a real run, and a schema or
  * lane-default change breaks the fixtures in one place.
  *
- * Exports: KEY, OTHER_KEY, HARNESS, DATA_HOME, FLOORS, testGrant(), ENTRIES, makeCtx(), signedYaml(), liveHashes(), call(), grant(), withEntry().
- * Depends on: yaml, @forge/core, domain/catalogue, domain/grants, shared/hmac. No IO.
+ * Exports: HARNESS, DATA_HOME, FLOORS, testGrant(), ENTRIES, makeCtx(), catalogueDoc(), liveHashes(), call(), grant(), withEntry().
+ * Depends on: @forge/core, domain/catalogue, domain/grants, shared/hmac. No IO.
  */
 
 import type { Lane } from '@forge/core';
-import { stringify } from 'yaml';
 import type { z } from 'zod';
-import { loadCatalogue, signCatalogue } from '#/domain/catalogue.js';
+import { loadCatalogue } from '#/domain/catalogue.js';
 import { effectiveGrant } from '#/domain/grants.js';
 import { Grant } from '#/schemas/grant.js';
 import type { CallRule } from '#/schemas/grant.js';
 import { sha256Hex } from '#/shared/hmac.js';
 import type { AdmitCall, AdmitContext } from '#/types/admit.types.js';
 
-export const KEY = 'test-catalogue-key-0123456789abcdef';
-export const OTHER_KEY = 'other-catalogue-key-0123456789abcdef';
 export const HARNESS = 'claude-code';
 
 /** A data home that is not an ancestor of the default test cwd (/work/repo). */
@@ -87,8 +84,10 @@ export const ENTRIES: Record<string, unknown>[] = [
   entry('mcp__github__create_issue', { kind: 'project', risk: 'network' }),
 ];
 
-export function signedYaml(entries: readonly unknown[] = ENTRIES, key = KEY): string {
-  return stringify({ entries, signature: signCatalogue(entries, key) });
+export function catalogueDoc(entries: readonly unknown[] = ENTRIES): {
+  entries: readonly unknown[];
+} {
+  return { entries };
 }
 
 export function liveHashes(
@@ -108,7 +107,7 @@ export function makeCtx(
   return {
     lane,
     harness: HARNESS,
-    catalogue: loadCatalogue(signedYaml(entries), KEY),
+    catalogue: loadCatalogue(catalogueDoc(entries)),
     grant: testGrant(lane, grants.project, grants.ticket),
     liveSchemaHashes: liveHashes(entries),
     cwd: '/work/repo',

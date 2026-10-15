@@ -6,7 +6,8 @@
  *   executable (the registry's override path, else the server's configured default, else
  *   PATH) and which credential. A missing install fails closed with the install pointer;
  *   there is no silent fallback to a bundled copy. A missing API key or token is an `auth`
- *   error before any process starts, so the owner sees "paste a key" instead of a Worker
+ *   error before any process starts, and so is a paused harness (its installed build failed
+ *   the compatibility check, d-0088), so no Worker starts on a build known to break policy; so the owner sees "paste a key" instead of a Worker
  *   that dies at its first prompt. The secret is read from the SecretStore per call and
  *   returned only inside `authEnv`; it is never logged and never taken from the server's
  *   own environment.
@@ -58,6 +59,10 @@ export function createHarnessResolver(deps: HarnessResolverDeps): HarnessResolve
 
     async forRun() {
       const { s, resolved } = await binary();
+      if (s.pausedReason !== undefined) {
+        throw new AuthError(`harness ${s.id} is paused: ${s.pausedReason}`);
+      }
+
       if (s.authMode === 'login') {
         return { ...resolved, authEnv: {} };
       }

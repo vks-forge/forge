@@ -32,6 +32,11 @@ export interface AdmitContext {
   readonly grant: EffectiveGrant;
   /** Schema hashes the harness reports for the live tools; a missing entry counts as a mismatch. */
   readonly liveSchemaHashes: Readonly<Record<string, string>>;
+  /**
+   * Native tools whose schema for the installed harness build is not approved: `pending`
+   * (new build or changed schema, awaiting the owner) or `denied`. Absent means none.
+   */
+  readonly schemaStatus?: Readonly<Record<string, 'pending' | 'denied'>>;
   /** No human can answer an `ask`. Defaults to true on Express, false elsewhere. */
   readonly unattended?: boolean;
   /** Worker cwd, used to turn absolute paths into cwd-relative ones before rule matching. */

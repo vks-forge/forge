@@ -12,10 +12,12 @@
  */
 
 import {
+  createMemoryCatalogueStore,
   createMemoryConfigSource,
   createMemoryReceiptLog,
   createMemoryStorage,
 } from '#/index.js';
+import { describeCatalogueStoreContract } from '#tests/contract/catalogue-store.contract.js';
 import { describeConfigSourceContract } from '#tests/contract/config-source.contract.js';
 import { describeReceiptLogContract } from '#tests/contract/receipt-log.contract.js';
 import { describeStorageContract } from '#tests/contract/storage.contract.js';
@@ -28,5 +30,10 @@ describeReceiptLogContract('memory', () => ({
 
 describeConfigSourceContract('memory', () => ({
   source: createMemoryConfigSource(),
+  close: () => undefined,
+}));
+
+describeCatalogueStoreContract('memory', () => ({
+  store: createMemoryCatalogueStore(),
   close: () => undefined,
 }));

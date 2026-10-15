@@ -1,89 +1,217 @@
 /**
- * The native tool schema pin: trusted only on the harness build that was reviewed.
+ * The tool policy: native tools are trusted only through approved schemas of the installed build.
  *
- * Why: Claude Code does not report its native tool schemas, so the catalogue's pin for
- * `read`, `shell` and friends has nothing live to be compared with. If the server fed the
- * catalogue's own hash back as the "live" hash, a harness upgrade that changed a tool's
- * input shape would pass unnoticed. The pin therefore counts only while the build the
- * driver reports is the build the catalogue says was reviewed (d-0053); on any other build
- * the native hashes are absent and admit() denies the tools as `schema_changed` until
- * someone re-probes and re-signs.
+ * Why: Claude Code reports no schema for its built-in tools, so Forge fingerprints them per
+ * build (d-0088) and the owner approves each new or changed shape. If a pending tool were
+ * admitted, a harness upgrade that changed a tool's input would pass unnoticed; if an
+ * approved one were refused, Workers could not read a file. The policy also has to follow
+ * edits made while the server runs (an approval, a new catalogue version) and apply the
+ * project's own grant, which used to be dropped on the floor.
  *
- * Pins: matching version admits `read`; mismatched or unknown version denies it as
- *   `schema_changed` with a "not reviewed" log; Forge MCP tools stay hashed live.
- * Depends on: src/services/tool-policy, the repo's signed catalogue. IO: reads the catalogue.
+ * Pins: an approved row admits `read`; a pending, denied, unknown-build or unapproved tool
+ *   is denied with `schema_pending` / `schema_denied`; an approval applies to the next call;
+ *   the catalogue hash follows the approvals; a project grant narrows tools; Forge MCP tools
+ *   stay hashed live; a broken catalogue is refused.
+ * Depends on: src/services/tool-policy, @forge/db memory stores. No IO.
  */
 
-import { fileURLToPath } from 'node:url';
-import type { Run } from '@forge/core';
-import { DEV_CATALOGUE_KEY, admit } from '@forge/tools';
-import { describe, expect, it, vi } from 'vitest';
-import { loadToolPolicy } from '#/services/tool-policy.js';
-import type { ServerSettings } from '#/types/settings.types.js';
+import {
+  createMemoryCatalogueStore,
+  createMemoryConfigSource,
+  createMemoryStorage,
+} from '@forge/db';
+import type { ConfigSource, Run, StorageAdapter } from '@forge/core';
+import { BUILT_IN_CATALOGUE, admit } from '@forge/tools';
+import type { CatalogueStore } from '@forge/tools';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { createToolPolicy } from '#/services/tool-policy.js';
+import type { HarnessCompat } from '#/types/harness-compat.types.js';
 
-const CATALOGUE = fileURLToPath(
-  new URL('../../../../.forge/tools/catalog.yaml', import.meta.url),
-);
+const HASH = `sha256:${'a'.repeat(64)}`;
+const run = {
+  lane: 'express',
+  harness: 'claude-code',
+  cwd: '/w',
+  project: 'demo',
+} as Run;
 
-const settings = {
-  layout: { cataloguePath: CATALOGUE, data: { home: '/forge-home' } },
-  catalogueKey: DEV_CATALOGUE_KEY,
-  allowDevCatalogueKey: true,
-} as unknown as ServerSettings;
+let storage: StorageAdapter;
+let catalogue: CatalogueStore;
+let config: ConfigSource;
+let version: string | null;
 
-const run = { lane: 'express', harness: 'claude-code', cwd: '/w' } as Run;
+const compat = { installedVersion: () => version } as unknown as HarnessCompat;
+const policy = () =>
+  createToolPolicy({ storage, catalogue, config, compat, dataHome: '/forge-home' });
 
-async function decide(version: string | null, log = vi.fn()) {
-  const policy = await loadToolPolicy(settings, { id: 'claude-code', version }, log);
-  const ctx = await policy.admitContext(run);
+const rowFor = (tool: string, status: 'approved' | 'pending' | 'denied', v = '2.1.299') =>
+  storage.transaction((tx) =>
+    tx.harnessToolSchemas.upsert({
+      harness_kind: 'claude',
+      version: v,
+      tool,
+      schema_hash: HASH,
+      status,
+    }),
+  );
 
-  return {
-    log,
-    read: admit(ctx, { phase: 'call', tool: 'read', input: { file_path: 'a.txt' } }),
-  };
+async function readCall(
+  tool = 'read',
+  input: Record<string, unknown> = { file_path: 'a.txt' },
+) {
+  const ctx = await policy().admitContext(run);
+
+  return admit(ctx, { phase: 'call', tool, input });
 }
 
-describe('native schema pin', () => {
-  it('admits read on the reviewed harness version', async () => {
-    const { read, log } = await decide('2.1.293');
+beforeEach(() => {
+  storage = createMemoryStorage();
+  catalogue = createMemoryCatalogueStore();
+  config = createMemoryConfigSource();
+  version = '2.1.299';
+});
 
-    expect(read.decision).toBe('allow');
-    expect(log).not.toHaveBeenCalledWith('warn', expect.any(String), expect.anything());
+describe('native schema approvals', () => {
+  it('admits read once its schema is approved for the installed build', async () => {
+    await rowFor('read', 'approved');
+
+    expect((await readCall()).decision).toBe('allow');
   });
 
-  it('denies read as schema_changed on another harness version and says how to fix it', async () => {
-    const { read, log } = await decide('2.1.296');
+  it('denies a pending tool as schema_pending', async () => {
+    await rowFor('read', 'pending');
 
-    expect(read).toMatchObject({ decision: 'deny', reason: 'schema_changed' });
-    expect(log).toHaveBeenCalledWith(
-      'warn',
-      expect.stringMatching(
-        /harness version 2\.1\.296 not reviewed.*re-probe and re-sign.*d-0053/,
-      ),
-      expect.objectContaining({ denied: expect.arrayContaining(['read', 'shell']) }),
-    );
+    expect(await readCall()).toMatchObject({
+      decision: 'deny',
+      reason: 'schema_pending',
+    });
   });
 
-  it('denies native tools when the driver reports no version', async () => {
-    const { read, log } = await decide(null);
+  it('denies a denied tool as schema_denied', async () => {
+    await rowFor('read', 'denied');
 
-    expect(read).toMatchObject({ decision: 'deny', reason: 'schema_changed' });
-    expect(log).toHaveBeenCalledWith(
-      'warn',
-      expect.stringContaining('harness version unknown'),
-      expect.anything(),
-    );
+    expect(await readCall()).toMatchObject({ decision: 'deny', reason: 'schema_denied' });
   });
 
-  it('still hashes the Forge MCP tools live whatever the harness version', async () => {
-    const policy = await loadToolPolicy(settings, {
-      id: 'claude-code',
-      version: '0.0.1',
+  it('denies every native tool of a build with no rows, and when no build is known', async () => {
+    expect(await readCall()).toMatchObject({ reason: 'schema_pending' });
+    version = null;
+    await rowFor('read', 'approved');
+
+    expect(await readCall()).toMatchObject({
+      decision: 'deny',
+      reason: 'schema_pending',
+    });
+  });
+
+  it('does not borrow another build approval', async () => {
+    await rowFor('read', 'approved', '2.1.293');
+
+    expect(await readCall()).toMatchObject({ reason: 'schema_pending' });
+  });
+
+  it('applies an approval to the next call without a restart', async () => {
+    const p = policy();
+    await rowFor('read', 'pending');
+    const before = admit(await p.admitContext(run), {
+      phase: 'call',
+      tool: 'read',
+      input: { file_path: 'a.txt' },
     });
 
-    const ctx = await policy.admitContext(run);
+    await rowFor('read', 'approved');
+    const after = admit(await p.admitContext(run), {
+      phase: 'call',
+      tool: 'read',
+      input: { file_path: 'a.txt' },
+    });
+
+    expect([before.decision, after.decision]).toEqual(['deny', 'allow']);
+  });
+
+  it('changes the catalogue hash when an approval changes', async () => {
+    const p = policy();
+    const none = await p.catalogueHash();
+    await rowFor('read', 'approved');
+    const some = await p.catalogueHash();
+
+    expect(none).toMatch(/^[0-9a-f]{64}$/);
+    expect(some).not.toBe(none);
+  });
+});
+
+describe('Forge MCP tools and the catalogue', () => {
+  it('still hashes the Forge MCP tools live whatever the build', async () => {
+    version = '0.0.1';
+    const ctx = await policy().admitContext(run);
 
     expect(Object.keys(ctx.liveSchemaHashes)).toContain('mcp__forge__finish');
     expect(Object.keys(ctx.liveSchemaHashes)).not.toContain('read');
+  });
+
+  it('follows a new catalogue version', async () => {
+    await rowFor('read', 'approved');
+    const doc = {
+      entries: BUILT_IN_CATALOGUE.entries.filter((e) => e.id !== 'read'),
+    };
+
+    await catalogue.append({
+      doc,
+      author: 'owner',
+      reason: 'drop read',
+      expectedVersion: 1,
+    });
+
+    expect(await readCall()).toMatchObject({ decision: 'deny', reason: 'unknown_tool' });
+  });
+});
+
+describe('a catalogue that does not load', () => {
+  it('is refused with a pointer to the fix instead of running with no policy', async () => {
+    catalogue = {
+      current: async () => ({
+        version: 3,
+        doc: { entries: [] },
+        author: 'x',
+        reason: 'y',
+        created_at: 0,
+      }),
+      history: async () => [],
+      append: async () => {
+        throw new Error('unused');
+      },
+    };
+
+    await expect(policy().catalogueHash()).rejects.toThrow(/does not load/);
+  });
+});
+
+describe('project tool grants', () => {
+  it('narrows the lane with the project grant from its settings', async () => {
+    await rowFor('read', 'approved');
+    await rowFor('grep', 'approved');
+    await config.append({
+      scope: 'project',
+      project: 'demo',
+      doc: { tool_grants: { deny: ['grep'] } },
+      author: 'owner',
+      reason: 'no grep',
+      expectedVersion: 0,
+    });
+
+    expect((await readCall()).decision).toBe('allow');
+    expect(await readCall('grep', { pattern: 'x' })).toMatchObject({
+      decision: 'deny',
+      reason: 'not_granted',
+    });
+  });
+
+  it('applies no project grant when the run has no project', async () => {
+    await rowFor('grep', 'approved');
+    const ctx = await policy().admitContext({ ...run, project: undefined } as Run);
+
+    expect(
+      admit(ctx, { phase: 'call', tool: 'grep', input: { pattern: 'x' } }).decision,
+    ).toBe('allow');
   });
 });

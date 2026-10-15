@@ -37,7 +37,8 @@ import { admit } from '@forge/tools';
 import { buildRoutes } from '#/routes/routes.js';
 import { createDriverRegistry } from '#/services/driver-registry.js';
 import { createGates } from '#/services/gates.js';
-import { createHarnessSource } from '#/services/harness-source.js';
+import { createHarnessCompat } from '#/services/harness-compat.js';
+import { DEFAULT_HARNESS, createHarnessSource } from '#/services/harness-source.js';
 import { assertLoopbackBind, closeServer, listen } from '#/services/http/listen.js';
 import { createRouter } from '#/services/http/router.js';
 import { createLazySecretStore } from '#/services/lazy-secrets.js';
@@ -45,7 +46,7 @@ import { createPrepareRun } from '#/services/prepare-run.js';
 import { createProjectRegistry } from '#/services/project-registry.js';
 import { shutdownServer } from '#/services/shutdown.js';
 import { createTicker } from '#/services/ticker.js';
-import { loadToolPolicy } from '#/services/tool-policy.js';
+import { createToolPolicy } from '#/services/tool-policy.js';
 import type { ExternalPorts, ForgeServer, ServerAddress } from '#/types/server.types.js';
 import type { ServerSettings } from '#/types/settings.types.js';
 
@@ -61,7 +62,7 @@ export async function assembleServer(
   const now = (): number => clock.now();
 
   await mkdir(dirname(layout.data.dbPath), { recursive: true });
-  const { storage, receipts, config } = openSqlite(layout.data.dbPath);
+  const { storage, receipts, config, catalogue } = openSqlite(layout.data.dbPath);
 
   try {
     const owner = createOwnerId();
@@ -129,11 +130,28 @@ export async function assembleServer(
     // One harness is installed today; the registry is where the next one is added.
     const drivers = createDriverRegistry([driver]);
 
-    const policy = await loadToolPolicy(
-      settings,
-      { id: driver.id, version: preflight.harnessVersion ?? null },
+    const compat = createHarnessCompat({
+      storage,
+      catalogue,
+      port: ports.compat,
+      supportKey: driver.id,
+      now,
       log,
-    );
+    });
+
+    // Reads the installed build; a build seen for the first time is checked in the background.
+    await compat.observe(DEFAULT_HARNESS);
+
+    const policy = createToolPolicy({
+      storage,
+      catalogue,
+      config,
+      compat,
+      dataHome: layout.data.home,
+    });
+
+    // A catalogue that does not load stops the server here, not at the first tool call.
+    await policy.catalogueHash();
 
     const ticker = createTicker({
       tick: () => engine.tick(),
@@ -156,7 +174,7 @@ export async function assembleServer(
       config,
       ids: ports.ids ?? createIdSource(),
       owner,
-      catalogueHash: policy.catalogueHash,
+      catalogueHash: () => policy.catalogueHash(),
       onTickRequested: ticker.requestTick,
       log,
     });
@@ -188,6 +206,8 @@ export async function assembleServer(
         engine,
         storage,
         config,
+        catalogue,
+        compat,
         projects,
         hooks,
         secrets,
@@ -221,6 +241,8 @@ export async function assembleServer(
       engine,
       runSecrets: registry,
       projects,
+      compat,
+      catalogue,
       address: () => address,
       async start() {
         if (address) {

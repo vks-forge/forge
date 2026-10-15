@@ -37,7 +37,7 @@ Fail-closed matrix (PreToolUse; SessionStart advisory): server down, timeout, no
 - Matcher `.*`: every tool, incl. Edit/Write/Read, goes through `admit()` and gets a receipt; PreToolUse is the single chokepoint (d-0033). The CLI on Windows says PowerShell, ACP says Bash (d-0048); narrow via `renderHookSettings({ matcher })`.
 - Run secret stays server-side; the hook file holds only a token (verification-plane.md §2). The secret comes from the `credentials()` callback, i.e. Forge server memory, and is never written to the database: `@forge/db` stores only a SHA-256 of the token, so a Worker that can read the DB file can neither forge receipts nor impersonate a run (a test greps the SQLite file and WAL for the secret).
 - `seq` comes from the chain tail inside one atomic append, not from the client, so concurrent posts cannot fork the chain.
-- Tool names resolve through the signed catalogue, where `native` may list several names: `Bash` (ACP) and `PowerShell` (Windows CLI) both become `shell`, and `admit()` picks the tokenizer dialect from the native name that was actually called. A name the catalogue does not list stays raw and is denied as `unknown_tool`.
+- Tool names resolve through the run's catalogue, where `native` may list several names: `Bash` (ACP) and `PowerShell` (Windows CLI) both become `shell`, and `admit()` picks the tokenizer dialect from the native name that was actually called. A name the catalogue does not list stays raw and is denied as `unknown_tool`.
 - Rejected: SDK callback hooks and `canUseTool` (do not cross ACP JSON-RPC, d-0049).
 
 ## Requirements

@@ -281,4 +281,14 @@ not exercised live, because no run needed a rework.
 
 - Probe 9 (GitHub App, `packages/git/__tests__/probes/`) now needs `FORGE_PROBE_GITHUB=1` as well as `FORGE_PROBES=1` and the `FORGE_GH_*` variables, so `pnpm probes` never pushes to a real repository because the App variables happen to be set.
 - Harness children run with an allowlisted environment (`HARNESS_ENV_ALLOWLIST`); subscription login needs only the profile directory and `CLAUDE_CONFIG_DIR` when set. Probe 8 is the live check that the allowlist does not break the login.
-- The catalogue now records the reviewed harness build (`harness_version: 2.1.293`) per native tool; a different build leaves the native pins out until re-probed and re-signed.
+- (Replaced by B7, d-0088: native tool schemas are approved per harness build in the database; see the compatibility notes below.)
+
+## Compatibility check (B7, d-0088), measured 2026-10-15
+
+`checkInstalled` (`pnpm probes`, `probe-compat.test.ts`) drives the real driver, hook and ACP adapter against a local scripted model API (`ANTHROPIC_BASE_URL`, throwaway `CLAUDE_CONFIG_DIR`, fake key): no cost, about 55 s, deterministic.
+
+- The model request carries the exact tool schemas (name, description, `input_schema`) of every built-in tool, and a `user-agent: claude-cli/<version>` header. That is the only place the real schemas are visible (ACP exposes none), and the header proves the installed build ran, not the SDK-bundled one (d-0101).
+- ACP session on Windows offers 24 tools: `Agent` (the Task tool is named `Agent` since at least 2.1.293), `Bash` (no `PowerShell`), `Read`, `Write`, `Edit`, `Glob`, `Grep`, ... The CLI engine's list differs (it also offers `PowerShell`), so hashes are per engine.
+- Hashes over name plus input schema: 2.1.293 (SDK-bundled binary), 2.1.299 and 2.1.300 (installed) agree on `glob`, `grep`, `edit`, `write`, `shell`, `task`; **only `read` differs** between 2.1.293 and 2.1.299/2.1.300. 2.1.299 and 2.1.300 have identical shapes for all seven. Both 2.1.293 and 2.1.299 pass every check; 2.1.300 passes too. The shipped list (`KNOWN_GOOD_BUILDS`) holds 2.1.293 and 2.1.299.
+- The host `claude` updated itself from 2.1.299 to 2.1.300 while B7 was built; a build not on the list is checked on first sight, which is the case the check exists for.
+- Under load (four probes in parallel) a healthy build misses the 10 s hook deadline (probe 5 failed the same way): the check then reports `permission_requests`/`receipt_timing` failures. Run probes serially (`pnpm probes --maxWorkers=1`); the server repeats a failed check once before pausing a harness.

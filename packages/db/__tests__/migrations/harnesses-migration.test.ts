@@ -6,7 +6,7 @@
  *   mode no driver implements, a run could start on the wrong binary or the wrong billing
  *   account, while a fresh install would still look fine.
  *
- * Pins: 0012 harnesses columns, no seed rows, the auth_mode CHECK.
+ * Pins: 0012 harnesses columns (plus the 0013 status_note), no seed rows, the auth_mode CHECK.
  * Depends on: src/index.
  */
 
@@ -40,6 +40,7 @@ describe('0012 harnesses', () => {
       'auth_mode',
       'status',
       'last_checked_at',
+      'status_note',
     ]);
 
     expect(rows).toEqual([]);

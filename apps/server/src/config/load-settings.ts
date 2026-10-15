@@ -8,13 +8,11 @@
  *   the engine reads them each tick.
  *
  * Exports: readServerEnv(), loadSettings().
- * Depends on: @forge/core (InvalidInputError), @forge/tools (DEV_CATALOGUE_KEY,
- *   devKeyAllowed), config/{paths,data-home,entrypoints}, schemas/env.
+ * Depends on: @forge/core (InvalidInputError), config/{paths,data-home,entrypoints}, schemas/env.
  *   IO: through config/data-home, the bootstrap file.
  */
 
 import { InvalidInputError } from '@forge/core';
-import { DEV_CATALOGUE_KEY, devKeyAllowed } from '@forge/tools';
 import { loadDataHome } from '#/config/data-home.js';
 import { resolveEntrypoints } from '#/config/entrypoints.js';
 import { resolveLayout } from '#/config/paths.js';
@@ -59,8 +57,6 @@ export async function loadSettings(
     host: env.FORGE_HOST,
     port: env.FORGE_PORT,
     env: rawEnv,
-    catalogueKey: env.FORGE_CATALOGUE_KEY ?? DEV_CATALOGUE_KEY,
-    allowDevCatalogueKey: devKeyAllowed(rawEnv),
     ...(env.FORGE_CLAUDE_BINARY ? { claudeBinary: env.FORGE_CLAUDE_BINARY } : {}),
     harnessEnvPassthrough: env.FORGE_HARNESS_ENV_PASSTHROUGH,
     engine: env.FORGE_ENGINE,

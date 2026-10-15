@@ -20,6 +20,7 @@ import { createProjectRegistry } from '#/services/project-registry.js';
 import type { ProjectRegistry } from '#/types/project-registry.types.js';
 import { stubHarnessDeps } from '#tests/helpers/harness-deps.js';
 import { startHttp } from '#tests/helpers/http-rig.js';
+import { inertRouteExtras } from '#tests/helpers/route-extras.js';
 import type { HttpRig } from '#tests/helpers/http-rig.js';
 
 export interface ProjectsRig {
@@ -34,6 +35,7 @@ export async function startProjectsRig(worktreesDir: string): Promise<ProjectsRi
   const storage = createMemoryStorage();
   const config = createMemoryConfigSource();
   const secrets = createMemorySecretStore();
+  const extras = inertRouteExtras();
   const registry = createProjectRegistry({
     storage,
     config,
@@ -51,6 +53,8 @@ export async function startProjectsRig(worktreesDir: string): Promise<ProjectsRi
       config,
       projects: registry,
       ...stubHarnessDeps(),
+      catalogue: extras.catalogue,
+      compat: extras.compat,
       secrets,
       hooks: { handle: vi.fn() },
       owner: 'srv-test',

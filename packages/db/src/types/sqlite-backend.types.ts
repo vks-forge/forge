@@ -8,11 +8,12 @@
  *   middle of a Director transaction.
  *
  * Exports: SqliteBackend.
- * Depends on: @forge/core (StorageAdapter, ConfigSource), @forge/tools (ReceiptLog). Types only.
+ * Depends on: @forge/core (StorageAdapter, ConfigSource), @forge/tools (ReceiptLog, CatalogueStore).
+ *   Types only.
  */
 
 import type { ConfigSource, StorageAdapter } from '@forge/core';
-import type { ReceiptLog } from '@forge/tools';
+import type { CatalogueStore, ReceiptLog } from '@forge/tools';
 
 export interface SqliteBackend {
   /** `close()` also closes the shared connection, after queued work finishes. */
@@ -20,4 +21,6 @@ export interface SqliteBackend {
   readonly receipts: ReceiptLog;
   /** Versioned settings on the same connection and writer queue. */
   readonly config: ConfigSource;
+  /** The versioned tool catalogue on the same connection and writer queue. */
+  readonly catalogue: CatalogueStore;
 }

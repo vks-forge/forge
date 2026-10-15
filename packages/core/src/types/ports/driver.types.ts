@@ -30,8 +30,8 @@ export interface Preflight {
   readonly version?: string;
   /**
    * Build of the harness itself (not an adapter around it) that runs Workers, as `x.y.z`.
-   * The server compares it with the catalogue's reviewed version before it trusts the
-   * harness's native tool schemas (d-0053).
+   * The server records it per build: native tool schemas are approved for exactly this
+   * build (d-0088).
    */
   readonly harnessVersion?: string;
 }

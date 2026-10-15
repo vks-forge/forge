@@ -30,8 +30,12 @@ export type HarnessAuthMode = z.infer<typeof HarnessAuthMode>;
 export const HarnessSecretKind = z.enum(['api_key', 'oauth_token']);
 export type HarnessSecretKind = z.infer<typeof HarnessSecretKind>;
 
-/** Result of the last environment test; `unknown` until one ran. */
-export const HarnessStatus = z.enum(['unknown', 'ok', 'error']);
+/**
+ * Result of the last environment test; `unknown` until one ran. `paused` means the
+ * compatibility check of the installed build failed: runs refuse to start until a later
+ * check passes (d-0088).
+ */
+export const HarnessStatus = z.enum(['unknown', 'ok', 'error', 'paused']);
 export type HarnessStatus = z.infer<typeof HarnessStatus>;
 
 /** The `harnesses` table row. */
@@ -45,5 +49,7 @@ export const Harness = z.object({
   auth_mode: HarnessAuthMode,
   status: HarnessStatus,
   last_checked_at: z.iso.datetime().optional(),
+  /** Plain-language reason shown next to a `paused` status (what failed, what to do). */
+  status_note: z.string().min(1).optional(),
 });
 export type Harness = z.infer<typeof Harness>;

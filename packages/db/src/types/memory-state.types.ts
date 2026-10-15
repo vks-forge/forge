@@ -15,6 +15,8 @@ import type {
   GateResult,
   Harness,
   GithubConnection,
+  HarnessToolSchema,
+  HarnessVersion,
   Interaction,
   Project,
   Run,
@@ -50,4 +52,8 @@ export interface MemoryState {
   projects: Map<string, Project>;
   harnesses: Map<string, Harness>;
   githubConnections: Map<string, GithubConnection>;
+  /** Keyed by `kind/version`. */
+  harnessVersions: Map<string, HarnessVersion>;
+  /** Keyed by `kind/version/tool`; insertion order is list order. */
+  harnessToolSchemas: Map<string, HarnessToolSchema>;
 }

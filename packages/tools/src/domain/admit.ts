@@ -114,6 +114,19 @@ function decide(
     return no(deny('exposure', 'capability'), enf);
   }
 
+  // A native tool whose schema for this harness build is not approved: say which of the two.
+  const schemaState = Object.hasOwn(ctx.schemaStatus ?? {}, def.id)
+    ? ctx.schemaStatus?.[def.id]
+    : undefined;
+
+  if (schemaState === 'pending') {
+    return no(deny('schema_pending', 'floor'), enf);
+  }
+
+  if (schemaState === 'denied') {
+    return no(deny('schema_denied', 'floor'), enf);
+  }
+
   if (!schemaMatches(def, ctx.liveSchemaHashes)) {
     return no(deny('schema_changed', 'floor'), enf);
   }

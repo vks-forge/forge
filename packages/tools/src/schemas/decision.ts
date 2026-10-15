@@ -29,6 +29,8 @@ export const ReasonCode = z.enum([
   'unknown_tool',
   'quarantined',
   'schema_changed',
+  'schema_pending',
+  'schema_denied',
   'unsupported_harness',
   'enforcement_insufficient',
   'exposure',

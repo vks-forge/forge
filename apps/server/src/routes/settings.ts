@@ -15,7 +15,8 @@
  */
 
 import { ConfigAppend, ConfigVersionConflictError } from '@forge/core';
-import { SettingsPutBody } from '#/schemas/api.js';
+import { CatalogueDoc } from '@forge/tools';
+import { CataloguePutBody, SettingsPutBody } from '#/schemas/api.js';
 import { readJson } from '#/services/http/body.js';
 import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
@@ -102,6 +103,50 @@ export function settingsRoutes(deps: RouteDeps): Route[] {
       async handle(ctx) {
         const slug = await requireProject(deps, ctx);
         sendJson(ctx.res, 200, { versions: await deps.config.history('project', slug) });
+      },
+    },
+    {
+      method: 'GET',
+      path: '/settings/catalogue',
+      async handle({ res }) {
+        sendJson(res, 200, await deps.catalogue.current());
+      },
+    },
+    {
+      method: 'GET',
+      path: '/settings/catalogue/history',
+      async handle({ res }) {
+        sendJson(res, 200, { versions: await deps.catalogue.history() });
+      },
+    },
+    {
+      method: 'PUT',
+      path: '/settings/catalogue',
+      async handle(ctx) {
+        const body = await readJson(ctx.req, CataloguePutBody);
+        const doc = CatalogueDoc.safeParse(body.doc);
+        if (!doc.success) {
+          throw HttpError.fromZod(doc.error);
+        }
+
+        try {
+          sendJson(
+            ctx.res,
+            200,
+            await deps.catalogue.append({
+              doc: doc.data,
+              author: body.author,
+              reason: body.reason,
+              expectedVersion: body.expectedVersion,
+            }),
+          );
+        } catch (error) {
+          if (error instanceof ConfigVersionConflictError) {
+            throw new HttpError(409, 'version_conflict', error.message);
+          }
+
+          throw error;
+        }
       },
     },
   ];

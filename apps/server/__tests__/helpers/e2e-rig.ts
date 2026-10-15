@@ -13,6 +13,7 @@
  */
 
 import { loadSettings } from '#/config/load-settings.js';
+import { KNOWN_GOOD_BUILDS } from '@forge/drivers';
 import { assembleServer } from '#/services/assemble.js';
 import type { ForgeServer, ServerAddress } from '#/types/server.types.js';
 import type { ServerSettings } from '#/types/settings.types.js';
@@ -85,6 +86,15 @@ export async function startE2eRig(behaviours: readonly Behaviour[]): Promise<E2e
 
     server = await assembleServer(settings, {
       llm: director.llm,
+      // The fake worker's harness is a build the release shipped as verified, so its native
+      // tools are approved at start-up and nothing is checked (d-0088).
+      compat: {
+        engine: 'acp',
+        installedVersion: async () => KNOWN_GOOD_BUILDS[0]?.version ?? null,
+        check: async () => {
+          throw new Error('the e2e rig never runs a real compatibility check');
+        },
+      },
       log: (level, message, fields) =>
         logs.push(`${level} ${message} ${fields ? JSON.stringify(fields) : ''}`),
       driver: (deps) => {

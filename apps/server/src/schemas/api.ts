@@ -7,7 +7,7 @@
  *   of a half-valid object reaching the engine. The intake body is the core `IntakeEvent`
  *   itself, so a second hand-written shape cannot drift from it.
  *
- * Exports: AnswerBody, LastEventId, SettingsPutBody, HarnessPutBody, HarnessSecretBody, LiveQuery,
+ * Exports: ToolDecisionBody, CataloguePutBody, AnswerBody, LastEventId, SettingsPutBody, HarnessPutBody, HarnessSecretBody, LiveQuery,
  *   ProjectCreateBody, ProjectPatchBody, ConnectionCreateBody.
  * Depends on: @forge/core (HarnessAuthMode, HarnessKind, HarnessSecretKind, GitHostConfig, ProjectPrefix,
  *   ProjectCommands, Profile), zod. No IO.
@@ -175,3 +175,26 @@ export const ConnectionCreateBody = z
   })
   .strict();
 export type ConnectionCreateBody = z.infer<typeof ConnectionCreateBody>;
+
+/** Approve and deny bodies of a built-in tool schema: who decides and why. */
+export const ToolDecisionBody = z
+  .object({
+    author: z.string().min(1),
+    reason: z.string().min(1),
+  })
+  .strict();
+export type ToolDecisionBody = z.infer<typeof ToolDecisionBody>;
+
+/**
+ * `PUT /settings/catalogue`: a whole catalogue document and the version the editor saw. The
+ * document is judged by the catalogue schema, not here.
+ */
+export const CataloguePutBody = z
+  .object({
+    doc: z.record(z.string(), z.unknown()),
+    author: z.string().min(1),
+    reason: z.string().min(1),
+    expectedVersion: z.number().int().nonnegative(),
+  })
+  .strict();
+export type CataloguePutBody = z.infer<typeof CataloguePutBody>;

@@ -29,6 +29,7 @@ export * from '#/schemas/config-override.js';
 export * from '#/schemas/errors.js';
 export * from '#/schemas/forge-config.js';
 export * from '#/schemas/gate-result.js';
+export * from '#/schemas/harness-compat.js';
 export * from '#/schemas/harness.js';
 export * from '#/schemas/github-connection.js';
 export * from '#/schemas/ids.js';

@@ -180,7 +180,7 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
     owner: deps.owner,
     ...(previous ? { retry_of: previous.id } : {}),
     prompt_hash: promptHash,
-    catalogue_hash: deps.catalogueHash,
+    catalogue_hash: await deps.catalogueHash(driver.id),
     config_version: configVersionRef(ctx.config, project.slug),
   };
 

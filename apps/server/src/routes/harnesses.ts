@@ -18,9 +18,15 @@
 
 import { Harness, HarnessId, harnessSecretName } from '@forge/core';
 import type { HarnessSetup } from '@forge/drivers';
-import { HarnessPutBody, HarnessSecretBody, LiveQuery } from '#/schemas/api.js';
+import {
+  HarnessPutBody,
+  HarnessSecretBody,
+  LiveQuery,
+  ToolDecisionBody,
+} from '#/schemas/api.js';
 import { readJson } from '#/services/http/body.js';
 import { HttpError } from '#/services/http/http-errors.js';
+import { DEFAULT_HARNESS } from '#/services/harness-source.js';
 import { sendJson } from '#/services/http/respond.js';
 import type { Route, RouteContext } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
@@ -43,6 +49,16 @@ async function requireHarness(deps: RouteDeps, id: string): Promise<Harness> {
   return row;
 }
 
+/** The harness named in the path for the compat and tool routes: the default one counts even before it is registered (it runs on the defaults). */
+async function knownHarnessId(deps: RouteDeps, ctx: RouteContext): Promise<string> {
+  const id = idOf(ctx);
+  if (id !== DEFAULT_HARNESS) {
+    await requireHarness(deps, id);
+  }
+
+  return id;
+}
+
 /** Row plus whether a credential of each kind is stored; never the credential. */
 async function describe(deps: RouteDeps, row: Harness) {
   const names = new Set(await deps.secrets.list(`harness/${row.id}/`));
@@ -56,11 +72,44 @@ async function describe(deps: RouteDeps, row: Harness) {
   };
 }
 
+/** A paused harness stays paused through an edit: only a passing check lifts it. */
+const pausedOf = (row: Harness | null) =>
+  row?.status === 'paused'
+    ? {
+        status: 'paused' as const,
+        ...(row.status_note === undefined ? {} : { status_note: row.status_note }),
+      }
+    : { status: 'unknown' as const };
+
+const currentRow = (deps: RouteDeps, id: string): Promise<Harness | null> =>
+  deps.storage.transaction((tx) => tx.harnesses.get(id));
+
 const setupOf = (row: Harness): HarnessSetup => ({
   id: row.id,
   binaryPath: row.binary_path,
   authMode: row.auth_mode,
 });
+
+/** Approves or denies the stored schema of one tool of the installed build. */
+async function decide(
+  deps: RouteDeps,
+  ctx: RouteContext,
+  decision: 'approved' | 'denied',
+): Promise<void> {
+  const id = await knownHarnessId(deps, ctx);
+  const body = await readJson(ctx.req, ToolDecisionBody);
+  const tool = ctx.params['tool'] ?? '';
+  const saved = await deps.compat.decide(id, tool, decision, body);
+  if (!saved) {
+    throw new HttpError(
+      404,
+      'tool_not_found',
+      `no schema for tool ${tool} of the installed build of ${id}`,
+    );
+  }
+
+  sendJson(ctx.res, 200, saved);
+}
 
 export function harnessRoutes(deps: RouteDeps): Route[] {
   return [
@@ -85,7 +134,7 @@ export function harnessRoutes(deps: RouteDeps): Route[] {
           kind: body.kind,
           ...(body.binary_path === undefined ? {} : { binary_path: body.binary_path }),
           auth_mode: body.auth_mode,
-          status: 'unknown',
+          ...pausedOf(await currentRow(deps, id)),
         });
 
         await deps.storage.transaction((tx) => tx.harnesses.upsert(row));
@@ -113,7 +162,7 @@ export function harnessRoutes(deps: RouteDeps): Route[] {
               kind: row.kind,
               ...(row.binary_path === undefined ? {} : { binary_path: row.binary_path }),
               auth_mode: row.auth_mode,
-              status: 'unknown',
+              ...pausedOf(row),
             }),
           ),
         );
@@ -134,11 +183,16 @@ export function harnessRoutes(deps: RouteDeps): Route[] {
             Harness.parse({
               ...row,
               ...(result.version === undefined ? {} : { version: result.version }),
-              status: result.ok ? 'ok' : 'error',
+              status: row.status === 'paused' ? 'paused' : result.ok ? 'ok' : 'error',
               last_checked_at: new Date(deps.now()).toISOString(),
             }),
           ),
         );
+
+        // A build seen for the first time is checked (or recorded as verified) from here too.
+        if (result.ok) {
+          await deps.compat.observe(row.id);
+        }
 
         sendJson(ctx.res, 200, {
           ...result,
@@ -147,6 +201,42 @@ export function harnessRoutes(deps: RouteDeps): Route[] {
             : { live_note: 'live probe skipped; add ?live=1 to make one paid call' }),
         });
       },
+    },
+    {
+      method: 'GET',
+      path: '/harnesses/:id/compat',
+      async handle(ctx) {
+        const id = await knownHarnessId(deps, ctx);
+        sendJson(ctx.res, 200, await deps.compat.view(id));
+      },
+    },
+    {
+      method: 'POST',
+      path: '/harnesses/:id/compat/run',
+      async handle(ctx) {
+        const id = await knownHarnessId(deps, ctx);
+        // Reads the installed build first so the check is about what is installed now.
+        await deps.compat.observe(id);
+        sendJson(ctx.res, 202, await deps.compat.start(id));
+      },
+    },
+    {
+      method: 'GET',
+      path: '/harnesses/:id/tools',
+      async handle(ctx) {
+        const id = await knownHarnessId(deps, ctx);
+        sendJson(ctx.res, 200, await deps.compat.tools(id));
+      },
+    },
+    {
+      method: 'POST',
+      path: '/harnesses/:id/tools/:tool/approve',
+      handle: (ctx) => decide(deps, ctx, 'approved'),
+    },
+    {
+      method: 'POST',
+      path: '/harnesses/:id/tools/:tool/deny',
+      handle: (ctx) => decide(deps, ctx, 'denied'),
     },
   ];
 }

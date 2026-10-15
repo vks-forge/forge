@@ -10,7 +10,7 @@
  *   must be honoured.
  *
  * Pins: defaults, blank-is-unset, bad port/engine rejected, no yaml needed,
- *   layout paths (config in the checkout, data in the data home), harness env passthrough, dev catalogue key gating.
+ *   layout paths (config in the checkout, data in the data home), harness env passthrough.
  * Depends on: src/config/load-settings, src/config/paths. IO: an empty temp directory.
  */
 
@@ -88,7 +88,6 @@ describe('resolveLayout', () => {
     const layout = resolveLayout(root, home, entry);
 
     expect(layout.configRoot).toBe(root);
-    expect(layout.cataloguePath).toBe(join(root, '.forge', 'tools', 'catalog.yaml'));
     expect(layout.data.dbPath).toBe('C:\\Forge\\forge.db');
     expect(layout.data.runsDir).toBe('C:\\Forge\\runs');
     expect(layout.data.secretsDir).toBe('C:\\Forge\\secrets');
@@ -126,7 +125,6 @@ describe('loadSettings', () => {
     expect(settings.engine).toBe('cli');
     expect(settings.claudeBinary).toBe('claude.exe');
     expect(settings.harnessEnvPassthrough).toEqual([]);
-    expect(settings.allowDevCatalogueKey).toBe(false);
   });
 
   it('keeps harness env passthrough empty unless named, and splits a list', async () => {
@@ -161,13 +159,5 @@ describe('loadSettings', () => {
     const settings = await load(env, root);
 
     expect(settings.layout.data.home).toBe('C:\\Users\\Ana\\AppData\\Local\\Forge');
-  });
-
-  it('allows the dev catalogue key only when asked or under test', async () => {
-    const asked = await load({ FORGE_ALLOW_DEV_CATALOGUE_KEY: '1' }, root);
-    const test = await load({ NODE_ENV: 'test' }, root);
-
-    expect(asked.allowDevCatalogueKey).toBe(true);
-    expect(test.allowDevCatalogueKey).toBe(true);
   });
 });

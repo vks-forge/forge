@@ -1,6 +1,6 @@
 # @forge/tools
 
-Tool policy as pure functions: signed catalogue, lane grants, shell tokenizer, call-time rules, one `admit()`, hash-chained receipts and budgets.
+Tool policy as pure functions: the versioned catalogue, lane grants, shell tokenizer, call-time rules, one `admit()`, hash-chained receipts and budgets.
 
 ## Why it exists
 
@@ -11,7 +11,7 @@ Workers are LLM sessions inside third-party harnesses, and what they can touch (
 Public API (`src/index.ts`):
 
 - Hook wire schemas (`schemas/hook-wire.ts`, also the subpath `@forge/tools/hook-wire`, which imports zod only so the hook process starts fast): `HookPayload`, `HookRequest`, `HookResponse`, `HookVerdict`, `HOOK_EVENTS`. A harness driver's hook client and the receipt ingress in `@forge/hooks` share them (d-0056).
-- Catalogue: `loadCatalogue(yaml, key, { allowDevKey? })` and `readCatalogueFile(path, key, opts)` return `verified` or `quarantined` (nothing usable, never a throw; reasons `malformed`, `bad_signature`, `bad_key`); `signCatalogue(entries, key)`; `schemaMatches` checks a live schema hash. A key under 32 bytes, or the public `DEV_CATALOGUE_KEY`, is `bad_key` unless `allowDevKey: true`. `devKeyAllowed(env)` is the one pure test production callers use for that flag: true when `NODE_ENV === 'test'` or `FORGE_ALLOW_DEV_CATALOGUE_KEY=1` (this package still reads no env itself; the caller passes `process.env`).
+- Catalogue: `loadCatalogue(doc)` validates a catalogue document (`{ entries: ToolDefinition[] }`) and returns `verified` (tools by id plus `hash`, the SHA-256 of the canonical entries) or `quarantined` (nothing usable, never a throw; reason `malformed`: bad entry, duplicate id, an MCP tool without `schema_hash`). `effectiveCatalogue(doc, rows)` applies one harness build's native schema rows (`NativeSchemaRow`: tool, hash, `approved|pending|denied`): an approved native tool carries the approved hash, every other native tool is reported in `schemaStatus` as `pending` (never reviewed, or its shape changed) or `denied`, and the catalogue `hash` covers the applied hashes, so a run's recorded `catalogue_hash` pins exactly what it was allowed. `schemaMatches` checks a live schema hash. `BUILT_IN_CATALOGUE` is the document a fresh database starts with (version 1; `SEED_AUTHOR`, `SEED_REASON`); its readable mirror is `.forge/tools/catalog.yaml` and a test pins the two equal. There is no signing: the catalogue lives in the database outside every worktree (d-0085).
 - Crypto helpers (`shared/hmac.ts`, used by hooks and mcp too, do not copy them): `sha256Hex`, `hashToken` (what is stored for a bearer token), `constantTimeEqual` (digest both sides, then `timingSafeEqual`), `hmacHex` (throws on a key under `MIN_KEY_BYTES` = 32).
 - Grants: `effectiveGrant(lane, projectGrant?, ticketGrant?, managed?, floors?)` (`floors.dataHome` is the absolute data home the data-home floor protects; leave it out and every path is denied, fail closed), `checkToolGranted()`, `parseGrant()`, `LANE_DEFAULTS`, `FLOOR_RULES`. The result is the intersection of lane, project, ticket and managed rules; deny always wins.
 - Shell: `tokenizeShell(command, 'bash' | 'powershell')`, `evaluateShell()`, `evaluateToolRules()`. Chains are judged by their worst segment. The one `ask` that is lifted is a `cd` to exactly the run's own cwd (or `.`), a no-op (`domain/cd-cwd.ts`, rule id `builtin:cd-cwd`); every other `cd`, flag, extra argument or redirect, and every other segment of the chain, is judged as before.
@@ -20,16 +20,16 @@ Public API (`src/index.ts`):
 - Receipts: `makeDecisionReceipt()`, `makeEffectReceipt()`, `verifyChain()`. A decision receipt has a `resource` (from `callResource`, `null` if none), covered by the MAC. Each receipt is HMAC'd and linked to the previous one; `verifyChain` fails at a named index on edit, delete, reorder or splice, on a second effect for one decision (`duplicate_effect`) and on an effect for a decision that was not `allow` (`effect_not_allowed`).
 - Budgets: `checkBudget()`, `recordUsage()`, `EMPTY_USAGE`. Limits and usage are parsed with their zod schemas inside the check; hard caps deny, soft rolling-window caps force an approval, invalid or non-sane input denies.
 - Receipt log port (types only, `types/ports/receipt-log.types.ts`): `ReceiptLog` (`append(runId, build)` atomic and serialised per run, `list(runId)`) and `ChainView`. Implementations live in `@forge/db`; the hook is the writer.
-- Catalogue `support[harness].harness_version` (optional) is the harness build whose native tool schemas were reviewed. Native tools have no live schema source, so the server trusts a native `schema_hash` pin only while the running harness reports exactly that build (d-0053); otherwise `admit()` denies the tool as `schema_changed`. Changing it changes the entry's pin: re-sign with `node scripts/sign-catalogue.mjs`.
+- `CatalogueStore` port (types only, `types/ports/catalogue-store.types.ts`): `current()`, `history()`, `append({ doc, author, reason, expectedVersion })` (compare-and-swap; `ConfigVersionConflictError` when stale). Implementations live in `@forge/db`. A harness-native entry has no `schema_hash` of its own: its schema belongs to the harness build and is approved per build (d-0088). `AdmitContext.schemaStatus` carries the unapproved ones; `admit()` denies them as `schema_pending` or `schema_denied` (before any grant or rule), both when listing and when calling.
 - Hook wire: `TruncatedOutput` (`{ truncated, bytes, sha256, prefix }`) is what the hook posts for a tool output over `MAX_TOOL_OUTPUT_BYTES` (1 MiB); the receipt's `result_hash` is the `sha256`. New denial reason `fail_closed_no_liveness`.
 - Catalogue `support[harness].native` is one name or a list (`shell` is `[Bash, PowerShell]`: the Windows CLI says PowerShell, ACP says Bash); `nativeNames(support)` normalises it.
 
-Layout: `schemas/` zod, `types/` hand-written types, `domain/` policy, `adapters/catalogue-file.ts` (the only file reader), `shared/` canonical JSON, HMAC and matchers. Tests in `__tests__/` mirror `src/`.
+Layout: `schemas/` zod, `types/` hand-written types (and `types/ports/`), `domain/` policy (the catalogue seed in `catalogue-seed*.ts`), `shared/` canonical JSON, HMAC and matchers. Tests in `__tests__/` mirror `src/`.
 
 ## Why this approach
 
-- `zod@4.6.7` for every boundary; `yaml@2.9.1` for the catalogue file; HMAC via `node:crypto` (no crypto dependency); `@forge/core` for lane and error types.
-- Signed catalogue: a Worker or a stray edit in its worktree must not be able to add or loosen a tool. Any signature mismatch quarantines the whole catalogue. A per-tool `schema_hash` catches an MCP server that changes a tool's schema after review.
+- `zod@4.6.7` for every boundary; `yaml@2.9.1` only in tests (the mirror file); HMAC via `node:crypto` (no crypto dependency); `@forge/core` for lane and error types.
+- Catalogue in the database: a Worker or a stray edit in its worktree must not be able to add or loosen a tool, and a file in the checkout could be both. Every change is a new immutable numbered version with an author and a reason. Anything that does not load quarantines the whole catalogue. A per-tool `schema_hash` catches an MCP server that changes a tool's schema after review; native tools are checked per harness build through approved rows, and an unknown build or tool is denied (fail closed).
 - Hash-chained HMAC receipts under a per-run secret the harness never sees: gates can prove behaviour without trusting the Worker. The MAC covers `prev_hash || seq || tool || input_hash || output_hash`.
 - Shell tokenizer, not a full parser (d-0038, which superseded the tree-sitter-first plan x-0009): split on `;`, `&&`, `||`, `|`, newlines, `$(...)` and backticks, honouring quotes, with longest-prefix matching. Anything it cannot understand is refused or forced to `ask`. Claude Code's own `Bash(prefix:*)` rules remain a floor underneath.
 - Floors are managed deny rules no lane, project, ticket or approval can lift: no push or publish; credential files, Forge's data home (an absolute path passed in as `FloorInputs.dataHome`, denied for every path tool and every path a shell command names, except inside the run's own worktree, which sits within it; an empty or relative data home denies every call, fail closed) and anything outside the worktree for every path tool (`read`, `grep`, `glob`, `edit`, `write`), with the directory itself floored as well as its contents; the harness's user config (`**/.claude/**`, `**/.claude.json`, `**/.codex/**`) for reads; `.forge/tools` and `.git` for edits. Paths are compared case-insensitively on their normalised absolute form (`shared/path.ts`: `\\?\` and `//?/` prefixes stripped, trailing dots/spaces and `:stream` dropped, dots resolved before making the path cwd-relative, a leading `~` and drive-relative `C:x` counted as outside). A path tool whose input has no string path is denied (`invalid_resource`), never read as "the cwd"; `grep` and `glob` are judged on `path` and on the pattern.
@@ -40,8 +40,7 @@ Layout: `schemas/` zod, `types/` hand-written types, `domain/` policy, `adapters
 ## Requirements
 
 - Node 24.20 and pnpm; no native binaries, no external services.
-- The signing key is passed in by the caller (`key` parameters); this package reads no env var. Where the key is stored: not verified in this package.
-- A catalogue file (`.forge/tools/catalog.yaml` by convention in the docs) read from the main checkout's HEAD by the caller, never from the Worker's cwd (d-0038). The `.forge/tools/` folder holds the signed catalogue produced by `scripts/sign-catalogue.mjs`.
+- The catalogue and the native schema rows come from a store the caller provides (`@forge/db`); this package reads no file and no env var. The HMAC key of the receipt chain is likewise passed in by the caller.
 - `pnpm build` at the root produces `dist/`; the `development` export condition resolves `src/` in tests and typecheck.
 - Tests: `pnpm test` at the root. Coverage floor is 80% lines.
 
@@ -49,19 +48,19 @@ Layout: `schemas/` zod, `types/` hand-written types, `domain/` policy, `adapters
 
 To add a tool to the catalogue:
 
-1. Add an entry to `.forge/tools/catalog.yaml`: `id` (`mcp__<server>__<tool>` or a native snake name), `kind`, `version`, declared `risk`, `exposure`, `schema_hash` (`sha256:` of the live schema), `support` per harness with `enforced` (`os|harness|hook|in-tool|server|attribution-only`).
+1. Save a new catalogue version (Settings, `PUT /settings/catalogue`) with an entry: `id` (`mcp__<server>__<tool>` or a native snake name), `kind`, `version`, declared `risk`, `exposure`, `schema_hash` (`sha256:` of the live schema; omitted for a native tool), `support` per harness with `enforced` (`os|harness|hook|in-tool|server|attribution-only`). To ship it built in, add it to `domain/catalogue-seed-*.ts` and to the mirror `.forge/tools/catalog.yaml` (a test keeps them equal).
 2. Add the id to the right lane in `domain/lane-defaults.ts` (`allow`) and a rule for its action (`toolAction(id)`: bare name; `project_mcp` for project servers).
    When a harness reports one capability under several names, list them: `native: [ Bash, PowerShell ]`.
-3. Re-sign with `signCatalogue(entries, key)` and commit (Tier C). The loader quarantines on any mismatch.
+3. A save that does not load is refused before it is stored.
 
 New policy logic goes in `domain/` as a pure function reached through `admit()`.
 
 ## Limits
 
 - Shell tokenizer: heredocs, process substitution and bare `( )` are refused; `$(...)`, wrappers (`env`, `sudo`) and interpreter eval (`bash -c`) force at least `ask`. Tree-sitter parsing is not built.
-- The catalogue text must come from the main checkout's HEAD; this package does not do that read.
+- The catalogue is only as safe as the database file; anyone who can write it can change policy. Saves through the API are attributed (author, reason) but not authenticated until the install token (B8).
 - This package decides and records; it does not persist receipts (see `@forge/db`'s `ReceiptLog` implementations) or intercept calls (hook and MCP packages).
 - Floors act only through `admit()`; a harness that bypasses the hook (or a shell the tokenizer cannot see into, such as a script file or `node -e` code beyond a textual scan for `git push`) is not stopped by them alone.
 - Path matching is lexical: symlinks, junctions and 8.3 short names (`FORGE~1`) are not resolved, and shell variable expansion (`$X/..`) is not evaluated. The wildcard check for shell readers compares a glob with a fixed list of protected names; it is a heuristic, not an expansion.
-- Signing keys are 32 bytes or more. The committed catalogue is signed with the public dev key (`node scripts/sign-catalogue.mjs --dev`); loading it needs `allowDevKey`, which production code should derive from `devKeyAllowed(process.env)`. A real operator key is set with `FORGE_CATALOGUE_KEY` and the same script without `--dev`.
+- No ticket-level grant source exists yet: `effectiveGrant` accepts a ticket grant but the server supplies only the project grant (`tool_grants` in project settings).
 - Tail truncation of a chain is detected only if the final chain hash is recorded on the run row by the caller.

@@ -1,7 +1,7 @@
 /**
  * Pins admit() fail-closed behaviour, exposure rules, inspectors, budgets and list/call agreement.
  *
- * Why: an unverified catalogue, a changed schema, an unsupported harness, a hidden or
+ * Why: a quarantined catalogue, a changed schema, an unsupported harness, a hidden or
  * unreachable tool, a throwing inspector or a budget breach must each end in a denial
  * with a stable reason, never an accidental allow. Listing and calling must agree, so a
  * model is never shown a tool a call would refuse for reasons known up front.
@@ -17,12 +17,10 @@ import { loadCatalogue } from '#/domain/catalogue.js';
 import { Decision } from '#/schemas/decision.js';
 import {
   ENTRIES,
-  KEY,
-  OTHER_KEY,
   call,
   grant,
   makeCtx,
-  signedYaml,
+  catalogueDoc,
   withEntry,
 } from '#tests/helpers/fixtures.js';
 
@@ -33,7 +31,7 @@ const verdict = (d: Decision) => [d.decision, d.reason];
 
 describe('fail closed', () => {
   it('denies everything when the catalogue is quarantined', () => {
-    const quarantined = loadCatalogue(signedYaml(), OTHER_KEY);
+    const quarantined = loadCatalogue({ entries: [] });
     const ctx = makeCtx('full', { catalogue: quarantined });
     expect(verdict(admit(ctx, call('read', { path: 'a' })))).toEqual([
       'deny',
@@ -236,8 +234,8 @@ describe('list and call agree', () => {
     );
   });
 
-  it('is signed with the production loader (fixture sanity)', () => {
-    expect(loadCatalogue(signedYaml(), KEY).status).toBe('verified');
+  it('loads with the production loader (fixture sanity)', () => {
+    expect(loadCatalogue(catalogueDoc()).status).toBe('verified');
   });
 });
 

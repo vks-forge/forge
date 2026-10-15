@@ -9,7 +9,7 @@
  *   mid-ticket. `default_harness` is an opaque id because core must not know which
  *   harnesses exist; drivers are chosen by config (d-0034, d-0027).
  *
- * Exports: Profile, ProjectCommands, GitHostConfig, ProjectConfig, ProjectStatus, Project.
+ * Exports: Profile, ProjectCommands, GitHostConfig, ToolGrantConfig, ProjectConfig, ProjectStatus, Project.
  * Depends on: schemas/ids, schemas/secret-name, zod. No IO.
  */
 
@@ -57,6 +57,29 @@ export const GitHostConfig = z.discriminatedUnion('kind', [
 ]);
 export type GitHostConfig = z.infer<typeof GitHostConfig>;
 
+/**
+ * What the project lets Workers use beyond the lane defaults: the same shape as a tool
+ * `Grant` in `@forge/tools` (that package parses it again before use, so a malformed one
+ * fails closed). `allow` narrows what the lane offers, or names project MCP tools; `deny`
+ * always wins; `rules` are call-time allow/ask/deny rules.
+ */
+export const ToolGrantConfig = z.object({
+  allow: z.array(z.string().min(1)).optional(),
+  deny: z.array(z.string().min(1)).default([]),
+  rules: z
+    .array(
+      z.object({
+        id: z.string().min(1).optional(),
+        action: z.string().min(1),
+        resource: z.string(),
+        effect: z.enum(['allow', 'ask', 'deny']),
+        save: z.string().optional(),
+      }),
+    )
+    .default([]),
+});
+export type ToolGrantConfig = z.infer<typeof ToolGrantConfig>;
+
 /** `project.yaml` (d-0034). `default_harness` is an opaque id: core never names harnesses. */
 export const ProjectConfig = z.object({
   slug: z.string().regex(/^[a-z][a-z0-9-]*$/),
@@ -75,6 +98,8 @@ export const ProjectConfig = z.object({
   tier_c_globs: z
     .array(z.string().min(1))
     .default(['.forge/**', '.claude/**', '.github/**']),
+  /** Project-wide tool grant (B7); absent means the lane defaults alone. */
+  tool_grants: ToolGrantConfig.optional(),
 });
 export type ProjectConfig = z.infer<typeof ProjectConfig>;
 

@@ -170,7 +170,7 @@ export function createFakeWorker(
       structuredOutput: false,
       permissionRequests: false,
     }),
-    // The catalogue's reviewed Claude Code build; natives are denied on any other (d-0053).
+    // A build the release shipped as verified (the rig's compat port reports the same one).
     preflight: async () => ({ ok: true, issues: [], harnessVersion: '2.1.293' }),
     async start(req) {
       const prepared = await deps.prepareRun(req);

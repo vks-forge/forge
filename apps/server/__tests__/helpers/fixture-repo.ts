@@ -5,7 +5,7 @@
  *   `local-bare` git host and the real G1 gate against a real repository, never against
  *   mocks of git. This builds the smallest repository those need: a node-only project whose
  *   `test` and `lint` scripts need no install, a source file and a test file, a bare
- *   repository standing in for the remote with `main` pushed, and the signed tool catalogue
+ *   repository standing in for the remote with `main` pushed, and no tool catalogue (it lives in the database)
  *   copied in, so `loadSettings()` is exercised exactly as in production. The repository
  *   is registered like a user would: `fixtureProjectBody()` is the `POST /projects` body for
  *   it. Forge's data home is a sibling temp directory, never inside the repository.
@@ -17,13 +17,10 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { trackTemp } from '#tests/helpers/temp.js';
-
-const REPO_ROOT = fileURLToPath(new URL('../../../../', import.meta.url));
 
 export interface FixtureRepo {
   /** The main checkout the server runs in (FORGE_ROOT). */
@@ -100,7 +97,6 @@ export function createFixtureRepo(dir?: string): FixtureRepo {
   mkdirSync(join(root, 'src'), { recursive: true });
   mkdirSync(join(root, 'test'), { recursive: true });
   mkdirSync(join(root, 'scripts'), { recursive: true });
-  mkdirSync(join(root, '.forge', 'tools'), { recursive: true });
 
   const pkg = {
     name: 'fixture',
@@ -115,11 +111,6 @@ export function createFixtureRepo(dir?: string): FixtureRepo {
   writeFileSync(join(root, 'test', 'math.test.js'), TEST);
   writeFileSync(join(root, 'scripts', 'lint.mjs'), LINT);
   writeFileSync(join(root, '.gitignore'), 'node_modules/\n');
-
-  cpSync(
-    join(REPO_ROOT, '.forge', 'tools', 'catalog.yaml'),
-    join(root, '.forge', 'tools', 'catalog.yaml'),
-  );
 
   git(root, 'init', '-b', 'main');
   git(root, 'config', 'user.name', 'Fixture');

@@ -3,7 +3,7 @@
  *
  * Why: the server, the catalogue hash computation and the docs all need the same list
  *   of tools. One array means a tool added here is served, hashed and checked against
- *   the signed catalogue together, and cannot be served without being reviewed there.
+ *   the catalogue together, and cannot be served without being reviewed there.
  *
  * Exports: FORGE_TOOLS.
  * Depends on: domain/tools/*. No IO.

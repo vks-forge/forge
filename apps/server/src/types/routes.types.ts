@@ -15,6 +15,8 @@ import type { ConfigSource, SecretStore, StorageAdapter } from '@forge/core';
 import type { HarnessSetup, HarnessTestResult } from '@forge/drivers';
 import type { Engine } from '@forge/engine';
 import type { HookHandler } from '@forge/hooks';
+import type { CatalogueStore } from '@forge/tools';
+import type { HarnessCompat } from '#/types/harness-compat.types.js';
 import type { ProjectRegistry } from '#/types/project-registry.types.js';
 import type { HttpTuning } from '#/types/settings.types.js';
 
@@ -23,6 +25,10 @@ export interface RouteDeps {
   readonly storage: StorageAdapter;
   /** Versioned settings behind `/settings/*`. */
   readonly config: ConfigSource;
+  /** Versioned tool catalogue behind `/settings/catalogue`. */
+  readonly catalogue: CatalogueStore;
+  /** Harness build checks and tool approvals behind `/harnesses/:id/compat` and `/tools`. */
+  readonly compat: HarnessCompat;
   /** Projects being served; the projects API adds to it and archives from it. */
   readonly projects: ProjectRegistry;
   readonly hooks: HookHandler;

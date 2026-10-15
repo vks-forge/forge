@@ -42,6 +42,7 @@ import { describeIntakeEventsContract } from './intake-events.contract.js';
 import { describeRunLifecycleContract } from './run-lifecycle.contract.js';
 import { describeTicketRelationsContract } from './ticket-relations.contract.js';
 import { describeWakeRequestsContract } from './wake-requests.contract.js';
+import { describeHarnessCompatContract } from './harness-compat.contract.js';
 import { describeHarnessesContract } from './harnesses.contract.js';
 import { describeWorkQueuesContract } from './work-queues.contract.js';
 
@@ -68,6 +69,7 @@ export function describeStorageContract(
     describeWorkQueuesContract(() => db);
     describeHarnessesContract(() => db);
     describeConnectionsContract(() => db);
+    describeHarnessCompatContract(() => db);
     describeTicketsContract(() => db);
     describeTransactionsContract(() => db);
     describeRunsContract(() => db);

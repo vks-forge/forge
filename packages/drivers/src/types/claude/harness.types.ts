@@ -21,6 +21,8 @@ export interface HarnessSetup {
   /** Absolute executable path; undefined means "find `claude` on PATH". */
   readonly binaryPath?: string | undefined;
   readonly authMode: HarnessAuthMode;
+  /** Set when the harness is paused (its build failed the compatibility check): why, in plain words. */
+  readonly pausedReason?: string | undefined;
 }
 
 /** Reads the current settings; called at the start of every run and preflight. */

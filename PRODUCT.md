@@ -99,6 +99,7 @@ account (container isolation later, d-0005); the rework path has not run live.
 
 Newest first. One line per milestone.
 
+- 2026-10-14 — B7: tool catalogue in the database; per-version harness compatibility check with tool approvals.
 - 2026-10-14 — B4: many projects per server; projects and GitHub connection API.
 - 2026-10-14 — B6: Workers and the Director run the user's installed claude; login, API key or OAuth token per harness.
 - 2026-10-14 — B3b: engine reads config from the database each tick; settings API.

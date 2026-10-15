@@ -63,7 +63,6 @@ describe('probe 8: Express ticket end to end on the real Claude harness', () => 
           FORGE_ROOT: fixture.root,
           FORGE_HOME: fixture.dataHome,
           FORGE_PORT: '0',
-          FORGE_ALLOW_DEV_CATALOGUE_KEY: '1',
         },
         fixture.root,
       );
@@ -71,6 +70,20 @@ describe('probe 8: Express ticket end to end on the real Claude harness', () => 
       const write = createJsonLogger((line) => log.push(line), 'debug');
       const server = await assembleServer(loaded, createClaudePorts(loaded, write));
       const address = await server.start();
+
+      // First sight of an installed build (Claude Code updates itself): the compatibility
+      // check runs in the background and its native tools wait for the owner. The probe
+      // approves what the check captured through the same service the API uses.
+      await server.compat.idle();
+      const captured = await server.compat.tools('claude');
+      for (const t of captured.tools.filter((row) => row.status === 'pending')) {
+        await server.compat.decide('claude', t.tool, 'approved', {
+          author: 'probe8',
+          reason: 'live probe approves the shapes the check captured',
+        });
+      }
+
+      expect((await server.compat.view('claude')).compat).not.toBe('fail');
       const call = async (method: string, path: string, body?: unknown) => {
         const res = await fetch(`${address.url}${path}`, {
           method,

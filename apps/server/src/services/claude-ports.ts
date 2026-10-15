@@ -15,6 +15,8 @@
  *   own env stay out of reach of model-chosen shell commands). `FORGE_CLAUDE_BINARY` is the
  *   default executable when the registry gives no path.
  *
+ *   The compatibility check (d-0088) drives the same engine against a scripted model.
+ *
  * Exports: createClaudePorts().
  * Depends on: node:fs, node:os, node:path, @forge/drivers, types/server, types/settings.
  *   IO: creates one empty temp directory for the Director's working directory; `dispose()`
@@ -26,11 +28,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   createClaudeDirectorLLM,
+  checkInstalled,
   createClaudeDriver,
+  installedBuild,
   nodeSpawn,
   systemClock,
   testClaudeHarness,
 } from '@forge/drivers';
+import type { HarnessSetup } from '@forge/drivers';
 import type { Logger } from '@forge/engine';
 import type { ExternalPorts } from '#/types/server.types.js';
 import type { ServerSettings } from '#/types/settings.types.js';
@@ -39,6 +44,16 @@ import type { ServerSettings } from '#/types/settings.types.js';
 export function createClaudePorts(settings: ServerSettings, log: Logger): ExternalPorts {
   const claudeBinary = settings.claudeBinary ?? 'claude';
   const envPassthrough = [...settings.harnessEnvPassthrough];
+  const compatDeps = (setup: HarnessSetup) => ({
+    source: () => setup,
+    spawn: nodeSpawn,
+    clock: systemClock,
+    engine: settings.engine,
+    baseEnv: settings.env,
+    envPassthrough,
+    defaultBinary: claudeBinary,
+  });
+
   const directorDir = mkdtempSync(join(tmpdir(), 'forge-director-'));
 
   return {
@@ -81,6 +96,12 @@ export function createClaudePorts(settings: ServerSettings, log: Logger): Extern
         },
         { live },
       ),
+    compat: {
+      engine: settings.engine,
+      installedVersion: async (setup) =>
+        (await installedBuild(compatDeps(setup))).version,
+      check: (setup, nativeTools) => checkInstalled(compatDeps(setup), nativeTools),
+    },
     dispose: () => rmSync(directorDir, { recursive: true, force: true }),
   };
 }

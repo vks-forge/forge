@@ -1,24 +1,20 @@
 /**
- * Pins the committed tool catalogue against the live server.
+ * Pins the built-in tool catalogue against the live server.
  *
- * Why: the run's admission policy trusts `.forge/tools/catalog.yaml`. If it is not
- *   validly signed, every tool is quarantined; if a Forge tool's schema hash drifts from
- *   what the server actually exposes, the harness-side check would flag a tampered tool
- *   (or, worse, nobody would notice a schema widened without review). This test fails
- *   when either happens, and names the command that fixes it.
+ * Why: the run's admission policy trusts the catalogue, whose first version is the built-in
+ *   seed. If the seed does not load, every tool is quarantined; if a Forge tool's schema
+ *   hash drifts from what the server actually exposes, the harness-side check would flag a
+ *   tampered tool (or, worse, nobody would notice a schema widened without review). This
+ *   test fails when either happens.
  *
- * Pins: .forge/tools/catalog.yaml, computeToolSchemaHashes(), DEV_CATALOGUE_KEY.
- * Depends on: @forge/tools, helpers/harness, domain/schema-hash, node:fs.
+ * Pins: BUILT_IN_CATALOGUE, computeToolSchemaHashes().
+ * Depends on: @forge/tools, domain/schema-hash.
  */
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { loadCatalogue } from '@forge/tools';
+import { BUILT_IN_CATALOGUE, loadCatalogue } from '@forge/tools';
 import { describe, expect, it } from 'vitest';
-import { DEV_CATALOGUE_KEY } from '#/domain/catalogue-key.js';
 import { computeToolSchemaHashes } from '#/domain/schema-hash.js';
 
-const FILE = resolve(import.meta.dirname, '../../../../.forge/tools/catalog.yaml');
 const FORGE_TOOLS = [
   'add_comment',
   'ask_director',
@@ -30,20 +26,11 @@ const FORGE_TOOLS = [
   'web_search',
 ].map((t) => `mcp__forge__${t}`);
 
-describe('committed catalogue', () => {
-  const state = loadCatalogue(readFileSync(FILE, 'utf8'), DEV_CATALOGUE_KEY, {
-    allowDevKey: true,
-  });
+describe('built-in catalogue', () => {
+  const state = loadCatalogue(BUILT_IN_CATALOGUE);
 
-  it('verifies with the dev key', () => {
+  it('loads', () => {
     expect(state.status).toBe('verified');
-  });
-
-  it('rejects a different key', () => {
-    expect(
-      loadCatalogue(readFileSync(FILE, 'utf8'), 'another-catalogue-key-0123456789abcdef')
-        .status,
-    ).toBe('quarantined');
   });
 
   it('lists the eight forge tools and the native tools', () => {
@@ -77,7 +64,7 @@ describe('committed catalogue', () => {
     expect(native).toEqual(['Bash', 'PowerShell']);
   });
 
-  it('pins the schema hash the server really exposes (fix: node scripts/sign-catalogue.mjs)', async () => {
+  it('pins the schema hash the server really exposes', async () => {
     if (state.status !== 'verified') {
       throw new Error('not verified');
     }
@@ -89,7 +76,7 @@ describe('committed catalogue', () => {
     }
   });
 
-  it('declares risk per tool as the server reports it', async () => {
+  it('declares risk per tool as the server reports it', () => {
     if (state.status !== 'verified') {
       throw new Error('not verified');
     }

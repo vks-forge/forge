@@ -19,13 +19,16 @@
  * Exports: TicketPatch, TicketRepository, TicketRelationRepository, RunRepository,
  *   RunEventRepository, RunInboxRepository, RunTokenRepository, IntakeEventRepository,
  *   InteractionRepository, WakeRequestRepository, GateResultRepository, ProjectRepository,
- *   HarnessRepository, GithubConnectionRepository, StorageTx, StorageAdapter.
+ *   HarnessRepository, GithubConnectionRepository, HarnessVersionRepository,
+ *   HarnessToolSchemaRepository, StorageTx,
+ *   StorageAdapter.
  * Depends on: schemas/*, types/run-event.types. No IO (interfaces only).
  */
 
 import type { TicketId } from '#/schemas/ids.js';
 import type { GateResult, NewGateResult } from '#/schemas/gate-result.js';
 import type { Harness } from '#/schemas/harness.js';
+import type { HarnessToolSchema, HarnessVersion } from '#/schemas/harness-compat.js';
 import type { IntakeEvent, StoredIntakeEvent } from '#/schemas/intake.js';
 import type { Interaction } from '#/schemas/interaction.js';
 import type { GithubConnection } from '#/schemas/github-connection.js';
@@ -226,6 +229,22 @@ export interface GithubConnectionRepository {
   list(): Promise<GithubConnection[]>;
 }
 
+/** Per-build compatibility results of an installed harness (d-0088). */
+export interface HarnessVersionRepository {
+  get(kind: string, version: string): Promise<HarnessVersion | null>;
+  // Insert or replace by (kind, version).
+  upsert(row: HarnessVersion): Promise<void>;
+}
+
+/** Per-build native tool schemas and the owner's decision on each (d-0088). */
+export interface HarnessToolSchemaRepository {
+  get(kind: string, version: string, tool: string): Promise<HarnessToolSchema | null>;
+  // Every tool row of one build, in first-insert order.
+  list(kind: string, version: string): Promise<HarnessToolSchema[]>;
+  // Insert or replace by (kind, version, tool).
+  upsert(row: HarnessToolSchema): Promise<void>;
+}
+
 /** The repositories visible inside one transaction. */
 export interface StorageTx {
   readonly tickets: TicketRepository;
@@ -240,6 +259,8 @@ export interface StorageTx {
   readonly projects: ProjectRepository;
   readonly harnesses: HarnessRepository;
   readonly githubConnections: GithubConnectionRepository;
+  readonly harnessVersions: HarnessVersionRepository;
+  readonly harnessToolSchemas: HarnessToolSchemaRepository;
   readonly ticketRelations: TicketRelationRepository;
 }
 

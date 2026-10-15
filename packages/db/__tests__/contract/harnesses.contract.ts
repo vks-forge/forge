@@ -37,6 +37,22 @@ export function describeHarnessesContract(getDb: () => StorageAdapter): void {
       expect(await tx((t) => t.harnesses.get('claude'))).toEqual(h);
     });
 
+    it('stores a paused status with its plain-language note and clears it on the next save', async () => {
+      const paused = makeHarness('claude', {
+        status: 'paused',
+        status_note:
+          'Claude Code 2.1.300 failed the compatibility check: hooks did not run.',
+      });
+
+      await tx((t) => t.harnesses.upsert(paused));
+      expect(await tx((t) => t.harnesses.get('claude'))).toEqual(paused);
+
+      await tx((t) => t.harnesses.upsert(makeHarness('claude', { status: 'ok' })));
+      expect(await tx((t) => t.harnesses.get('claude'))).toEqual(
+        makeHarness('claude', { status: 'ok' }),
+      );
+    });
+
     it('upsert replaces by id, clears omitted optionals and keeps list order', async () => {
       await tx(async (t) => {
         await t.harnesses.upsert(makeHarness('a', { binary_path: 'C:/a/claude.exe' }));

@@ -72,8 +72,11 @@ export interface EngineDeps {
   readonly ids: IdSource;
   /** This server instance; a `running` run owned by anyone else is a crash after a restart (d-0054). */
   readonly owner: string;
-  /** SHA-256 of the signed tool catalogue the runs are admitted under; stored on each run row. */
-  readonly catalogueHash: string;
+  /**
+   * SHA-256 of the effective tool catalogue a run on this harness is admitted under (the
+   * catalogue version plus the harness build's approved native schemas); stored on the run row.
+   */
+  readonly catalogueHash: (harnessId: string) => Promise<string>;
   /** Server name the run's Forge MCP server is registered under (default `forge`). */
   readonly mcpIdentity?: string;
   /** Called (never re-entrantly, coalesced) when something wants an immediate tick; the app schedules `engine.tick()`. */

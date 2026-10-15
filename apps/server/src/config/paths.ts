@@ -32,7 +32,6 @@ export function resolveLayout(
 
   return {
     configRoot: base,
-    cataloguePath: join(forgeDir, 'tools', 'catalog.yaml'),
     memoryDir: join(forgeDir, 'memory'),
     data,
     mcpEntry: entrypoints.mcpEntry,

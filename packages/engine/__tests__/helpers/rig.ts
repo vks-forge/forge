@@ -205,7 +205,7 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
     config,
     ids,
     owner: 'srv-a',
-    catalogueHash: 'c'.repeat(64),
+    catalogueHash: async () => 'c'.repeat(64),
     onTickRequested: () => void tickRequests.count++,
     log,
   };

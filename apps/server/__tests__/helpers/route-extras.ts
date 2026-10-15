@@ -1,19 +1,33 @@
 /**
- * Inert project registry and secret store for route tests that do not touch projects.
+ * Inert project registry, catalogue and compatibility service for route tests that do not touch them.
  *
  * Why: `RouteDeps` carries the project registry for the projects endpoints. Route tests about tickets, settings or run events must still
- *   build the whole dependency bag; giving them one inert pair keeps those tests about
- *   their own route instead of about registry wiring.
+ *   build the whole dependency bag (it also carries the tool catalogue and the harness
+ *   compatibility service); giving them inert ones keeps those tests about their own route
+ *   instead of about wiring.
  *
  * Exports: inertRouteExtras().
- * Depends on: types/routes. No IO.
+ * Depends on: @forge/db (memory stores), services/harness-compat, types/routes. No IO.
  */
 
+import { createMemoryCatalogueStore, createMemoryStorage } from '@forge/db';
+import { createHarnessCompat } from '#/services/harness-compat.js';
 import type { RouteDeps } from '#/types/routes.types.js';
 
 /** A registry that serves nothing. */
-export function inertRouteExtras(): Pick<RouteDeps, 'projects'> {
+export function inertRouteExtras(): Pick<RouteDeps, 'projects' | 'catalogue' | 'compat'> {
+  const catalogue = createMemoryCatalogueStore();
+
   return {
+    catalogue,
+    compat: createHarnessCompat({
+      storage: createMemoryStorage(),
+      catalogue,
+      port: undefined,
+      supportKey: 'claude-code',
+      now: () => 0,
+      log: () => undefined,
+    }),
     projects: {
       load: async () => undefined,
       register: async () => undefined,

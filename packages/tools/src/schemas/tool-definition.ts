@@ -65,27 +65,34 @@ export const HarnessSupport = z.object({
   native: NativeName.optional(),
   mechanism: z.string().min(1),
   enforced: Enforcement,
-  /**
-   * Harness build (`x.y.z`) whose native tool schemas were reviewed for this entry. Native
-   * tools have no live schema source, so the pin is trusted only while the running harness
-   * reports exactly this version (d-0053); absent means never reviewed.
-   */
-  harness_version: z.string().min(1).optional(),
 });
 export type HarnessSupport = z.infer<typeof HarnessSupport>;
 
-export const ToolDefinition = z.object({
-  id: z.string().regex(TOOL_ID_PATTERN),
-  kind: ToolKind,
-  version: z.string().min(1),
-  risk: Risk,
-  exposure: Exposure,
-  reaches_tools: z.array(z.string().min(1)).default([]),
-  resources: z.array(z.string().min(1)).default([]),
-  cost_class: z.enum(['free', 'metered']).default('free'),
-  taints: z.boolean().default(false),
-  schema_hash: z.string().regex(/^sha256:[0-9a-f]{64}$/),
-  support: z.record(z.string().min(1), HarnessSupport),
-  denies_native: z.array(z.string().min(1)).default([]),
-});
+export const ToolDefinition = z
+  .object({
+    id: z.string().regex(TOOL_ID_PATTERN),
+    kind: ToolKind,
+    version: z.string().min(1),
+    risk: Risk,
+    exposure: Exposure,
+    reaches_tools: z.array(z.string().min(1)).default([]),
+    resources: z.array(z.string().min(1)).default([]),
+    cost_class: z.enum(['free', 'metered']).default('free'),
+    taints: z.boolean().default(false),
+    /**
+     * Hash of the tool's input schema. Required for every tool the catalogue itself vouches
+     * for (MCP tools). A harness-native tool has none here: its schema differs per harness
+     * build, so the allowed hash is the approved row for the installed build (d-0088).
+     */
+    schema_hash: z
+      .string()
+      .regex(/^sha256:[0-9a-f]{64}$/)
+      .optional(),
+    support: z.record(z.string().min(1), HarnessSupport),
+    denies_native: z.array(z.string().min(1)).default([]),
+  })
+  .refine((d) => d.kind === 'harness-native' || d.schema_hash !== undefined, {
+    message: 'schema_hash is required unless the tool is harness-native',
+    path: ['schema_hash'],
+  });
 export type ToolDefinition = z.infer<typeof ToolDefinition>;

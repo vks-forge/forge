@@ -20,7 +20,6 @@ import type { DataHomeLayout } from '@forge/core';
 export interface Layout {
   /** Folder the yaml config is read from: `FORGE_ROOT` or the cwd. Never holds data. */
   readonly configRoot: string;
-  readonly cataloguePath: string;
   /** Project memory records; still read from the checkout until memory moves into the data home. */
   readonly memoryDir: string;
   /** Everything Forge owns on the machine: database, secrets, runs, worktrees, backups, logs. */
@@ -46,9 +45,6 @@ export interface ServerSettings {
   /** Environment handed to project commands and the harness; only an allowlist reaches gates and
    * harness children. */
   readonly env: Readonly<Record<string, string | undefined>>;
-  /** Key the tool catalogue is verified with. */
-  readonly catalogueKey: string;
-  readonly allowDevCatalogueKey: boolean;
   readonly claudeBinary?: string;
   /** Host variable names the harness may inherit beyond the allowlist (default none). */
   readonly harnessEnvPassthrough: readonly string[];

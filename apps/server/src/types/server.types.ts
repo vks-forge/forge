@@ -7,7 +7,7 @@
  *   end-to-end test. The handle it returns is the small surface `main.ts`, tests and the
  *   shutdown path use.
  *
- * Exports: HarnessIdentity, ToolPolicy, GateDeps, ShutdownParts, HarnessWiring, DriverFactoryDeps,
+ * Exports: ToolPolicy, ToolPolicyDeps, GateDeps, ShutdownParts, HarnessWiring, DriverFactoryDeps,
  *   LlmFactory, HarnessTester, ExternalPorts, ServerAddress, ForgeServer, Ticker.
  * Depends on: @forge/core, @forge/drivers (types), @forge/engine (types), @forge/hooks (types),
  *   @forge/tools (types). Types only.
@@ -15,6 +15,7 @@
 
 import type {
   Clock,
+  ConfigSource,
   DirectorLLM,
   Run,
   RunRequest,
@@ -32,20 +33,24 @@ import type {
 } from '@forge/drivers';
 import type { Engine, IdSource, Logger } from '@forge/engine';
 import type { RunSecretRegistry } from '@forge/hooks';
-import type { AdmitContext, ReceiptLog } from '@forge/tools';
+import type { AdmitContext, CatalogueStore, ReceiptLog } from '@forge/tools';
+import type { CompatPort, HarnessCompat } from '#/types/harness-compat.types.js';
 import type { ProjectRegistry } from '#/types/project-registry.types.js';
 
-/** The harness the Workers run on: its driver id and the build it reports, null when unknown. */
-export interface HarnessIdentity {
-  readonly id: string;
-  readonly version: string | null;
+/** The effective tool catalogue and the per-run admission context built from it. */
+export interface ToolPolicy {
+  /** SHA-256 of the effective catalogue (stored on every run row); throws when it does not load. */
+  readonly catalogueHash: () => Promise<string>;
+  readonly admitContext: (run: Run) => Promise<AdmitContext>;
 }
 
-/** The verified tool catalogue and the per-run admission context built from it. */
-export interface ToolPolicy {
-  /** SHA-256 of the verified catalogue; stored on every run row. */
-  readonly catalogueHash: string;
-  readonly admitContext: (run: Run) => Promise<AdmitContext>;
+/** What the tool policy reads: the catalogue, the approvals of the installed build, project grants. */
+export interface ToolPolicyDeps {
+  readonly storage: StorageAdapter;
+  readonly catalogue: CatalogueStore;
+  readonly config: ConfigSource;
+  readonly compat: HarnessCompat;
+  readonly dataHome: string;
 }
 
 /**
@@ -83,6 +88,8 @@ export interface ExternalPorts {
   readonly llm: DirectorLLM | LlmFactory;
   /** Absent means harness testing reports itself unavailable. */
   readonly harnessTest?: HarnessTester;
+  /** The harness compatibility check; absent means no build is ever checked or known. */
+  readonly compat?: CompatPort;
   readonly secrets?: SecretStore;
   readonly clock?: Clock;
   readonly ids?: IdSource;
@@ -116,6 +123,10 @@ export interface ForgeServer {
   readonly runSecrets: RunSecretRegistry;
   /** The projects being served. */
   readonly projects: ProjectRegistry;
+  /** Per-build harness compatibility: checks, pauses and tool approvals. */
+  readonly compat: HarnessCompat;
+  /** The versioned tool catalogue. */
+  readonly catalogue: CatalogueStore;
   /** Opens the port and starts the tick; resolves with the bound address. */
   start(): Promise<ServerAddress>;
   /** Graceful shutdown; safe to call more than once. */

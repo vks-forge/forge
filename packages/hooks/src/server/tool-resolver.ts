@@ -2,7 +2,7 @@
  * Maps a harness-native tool name to its catalogue id, and a result to an effect state.
  *
  * Why: the harness says `PowerShell` or `Bash`; policy, rules and receipts speak the
- *   catalogue id (`shell`). Resolving through the run's own signed catalogue, using the
+ *   catalogue id (`shell`). Resolving through the run's own catalogue, using the
  *   `support[harness].native` field (one name or a list), means one shell rule covers both names (d-0048:
  *   Windows CLI reports PowerShell, ACP reports Bash) and a tool the catalogue does not
  *   know stays under its raw name so `admit()` denies it as `unknown_tool` instead of
