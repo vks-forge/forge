@@ -28,6 +28,9 @@ const HEAVY = [
   'packages/gates/__tests__/adapters/command-runner.test.ts',
   'packages/gates/__tests__/adapters/any-language-fixtures.test.ts',
   'packages/drivers/__tests__/adapters/**/*.test.ts',
+  // Project memory is a real git repo per project; every write spawns several git processes.
+  'packages/memory/__tests__/**/*.test.ts',
+  'apps/server/__tests__/routes/memory*.test.ts',
   'apps/server/__tests__/e2e/**/*.test.ts',
   'apps/server/__tests__/routes/projects.test.ts',
   'apps/server/__tests__/routes/projects-archive.test.ts',
