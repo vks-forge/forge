@@ -19,6 +19,7 @@ import {
   CircleDot,
   Cpu,
   Folder,
+  Coins,
   Gauge,
   House,
   Inbox,
@@ -29,6 +30,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useDataSources } from '#/api/api-provider.js';
+import { useInboxCounts } from '#/api/use-inbox.js';
 import { useProjects } from '#/api/use-projects.js';
 import { NavLinkItem } from '#/components/shell/nav-link-item.js';
 import { ProjectSwitcher } from '#/components/shell/project-switcher.js';
@@ -44,6 +46,7 @@ import { useCurrentSlug } from '#/state/current-project.js';
 const ICONS: Readonly<Record<string, LucideIcon>> = {
   '': House,
   inbox: Inbox,
+  cost: Coins,
   board: SquareKanban,
   issues: CircleDot,
   chat: MessageSquare,
@@ -60,6 +63,7 @@ export function SidebarContent() {
   const projects = useProjects();
   const slug = useCurrentSlug(projects.data);
   const { usesFixtures } = useDataSources();
+  const inbox = useInboxCounts(slug ?? '');
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 p-3">
@@ -79,6 +83,15 @@ export function SidebarContent() {
               label={entry.label}
               icon={ICONS[entry.segment] ?? House}
               exact={entry.segment === ''}
+              badge={
+                entry.segment === 'inbox' && inbox.data
+                  ? {
+                      count: inbox.data.unread,
+                      label: `${inbox.data.unread} unread in Inbox`,
+                      attention: inbox.data.needs_action > 0,
+                    }
+                  : undefined
+              }
             />
           ))
         ) : (

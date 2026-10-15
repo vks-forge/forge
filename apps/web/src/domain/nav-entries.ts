@@ -47,6 +47,12 @@ export const PROJECT_NAV: readonly NavEntry[] = [
     blurb: 'Every Worker run, working, waiting or done.',
   },
   {
+    segment: 'cost',
+    label: 'Cost',
+    batch: 'W5',
+    blurb: 'Where the money and tokens went.',
+  },
+  {
     segment: 'memory',
     label: 'Memory',
     batch: 'W4',

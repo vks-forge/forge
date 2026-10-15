@@ -17,19 +17,26 @@ import type { RouteObject } from 'react-router';
 import { AppShell } from '#/components/shell/app-shell.js';
 import { PROJECT_NAV } from '#/domain/nav-entries.js';
 import { BoardPage } from '#/routes/board/board-page.js';
+import { CostPage } from '#/routes/cost/cost-page.js';
+import { HomePage } from '#/routes/home/home-page.js';
+import { InboxPage } from '#/routes/inbox/inbox-page.js';
 import { MemoryPage } from '#/routes/memory/memory-page.js';
 import { NotFound } from '#/routes/not-found.js';
 import { PlaceholderPage } from '#/routes/placeholder-page.js';
 import { ProjectSettingsPage } from '#/routes/project-settings/project-settings-page.js';
 import { ProjectScope } from '#/routes/project-scope.js';
 import { RootRedirect } from '#/routes/root-redirect.js';
+import { RunsPage } from '#/routes/runs/runs-page.js';
 import { settingsRoutes } from '#/routes/settings/settings-routes.js';
 import { TicketPage } from '#/routes/ticket/ticket-page.js';
 
 /** Project screens that are built; any segment not listed here still shows its placeholder. */
 const PROJECT_SCREENS: Readonly<Record<string, ReactNode>> = {
   board: <BoardPage />,
+  cost: <CostPage />,
+  inbox: <InboxPage />,
   memory: <MemoryPage />,
+  runs: <RunsPage />,
   settings: <ProjectSettingsPage />,
 };
 
@@ -46,7 +53,7 @@ export const appRoutes: RouteObject[] = [
           { path: 'tickets/:id', element: <TicketPage /> },
           ...PROJECT_NAV.map((entry) =>
             entry.segment === ''
-              ? { index: true, element: <PlaceholderPage entry={entry} inProject /> }
+              ? { index: true, element: <HomePage /> }
               : {
                   path: entry.segment,
                   element: PROJECT_SCREENS[entry.segment] ?? (

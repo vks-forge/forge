@@ -10,12 +10,20 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { ADAPTER_TABLE, createForgeApi, forced, sourcesOf } from '#/api/adapter-table.js';
+import {
+  ADAPTER_TABLE,
+  HTTP_ONLY_RESOURCES,
+  createForgeApi,
+  forced,
+  sourcesOf,
+} from '#/api/adapter-table.js';
 import { composeApi } from '#/api/compose-api.js';
 import type { ForgeApiAdapter } from '#/types/api.types.js';
 
 /** Every resource in the table gets an empty stub, so the test does not change when a resource is added. */
-const stubs = Object.fromEntries(Object.keys(ADAPTER_TABLE).map((name) => [name, {}]));
+const stubs = Object.fromEntries(
+  [...Object.keys(ADAPTER_TABLE), ...HTTP_ONLY_RESOURCES].map((name) => [name, {}]),
+);
 
 const fakeProjects = (slug: string): ForgeApiAdapter => ({
   ...stubs,

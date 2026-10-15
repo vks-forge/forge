@@ -21,6 +21,8 @@ export function NavLinkItem(props: {
   icon: LucideIcon;
   /** Match only this exact path (Home), not its children. */
   exact?: boolean;
+  /** A count shown after the label, such as unread inbox items; hidden at 0 or when unknown. */
+  badge?: { count: number; label: string; attention: boolean } | undefined;
 }) {
   const Icon = props.icon;
 
@@ -34,7 +36,18 @@ export function NavLinkItem(props: {
         <>
           {isActive ? <ActiveIndicator /> : null}
           <Icon aria-hidden="true" className="relative size-4 shrink-0" />
-          <span className="relative truncate">{props.label}</span>
+          <span className="relative flex-1 truncate">{props.label}</span>
+          {props.badge && props.badge.count > 0 ? (
+            <span
+              role="status"
+              aria-label={props.badge.label}
+              className={`relative rounded-md px-1.5 font-data text-xs ${
+                props.badge.attention ? 'bg-attn-soft text-fg' : 'bg-hover text-muted'
+              }`}
+            >
+              {props.badge.count}
+            </span>
+          ) : null}
         </>
       )}
     </NavLink>

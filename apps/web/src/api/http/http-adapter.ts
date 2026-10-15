@@ -16,6 +16,7 @@ import { createMemoryHttp } from '#/api/http/memory-http.js';
 import { createProjectSettingsHttp } from '#/api/http/project-settings-http.js';
 import { requestJson } from '#/api/http/request-json.js';
 import { createSettingsHttp } from '#/api/http/settings-http.js';
+import { createWorkHttp } from '#/api/http/work-http.js';
 import { TicketListPage } from '@forge/core';
 import { watchRunEvents } from '#/api/sse/watch-run-events.js';
 import { ProjectsResponse } from '#/schemas/projects.js';
@@ -49,6 +50,7 @@ function ticketQuery(params: TicketListParams): string {
 export function createHttpAdapter(client: HttpClientOptions): ForgeApiAdapter {
   return {
     ...createSettingsHttp(client),
+    ...createWorkHttp(client),
     memory: createMemoryHttp(client),
     projectSettings: createProjectSettingsHttp(client),
     projects: {

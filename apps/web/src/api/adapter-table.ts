@@ -8,7 +8,7 @@
  *   that cannot serve a resource, so a half-wired switch fails on load, not on the user's
  *   first click.
  *
- * Exports: ADAPTER_TABLE, createForgeApi(), sourcesOf().
+ * Exports: ADAPTER_TABLE, HTTP_ONLY_RESOURCES, createForgeApi(), forced(), sourcesOf().
  * Depends on: api/api-error, types/api.types.
  */
 
@@ -18,7 +18,9 @@ import type {
   AdapterTable,
   ForgeApi,
   ForgeApiAdapter,
+  HttpOnlyName,
   ResourceName,
+  TabledName,
 } from '#/types/api.types.js';
 
 /** Which adapter serves each resource. Flip a line to `'http'` when its server endpoint ships. */
@@ -35,7 +37,15 @@ export const ADAPTER_TABLE: AdapterTable = {
   intake: 'http',
 };
 
-const RESOURCES = Object.keys(ADAPTER_TABLE) as ResourceName[];
+const RESOURCES = Object.keys(ADAPTER_TABLE) as TabledName[];
+
+/** Resources with no fixtures: always served by the real server, never in the table (d-0123). */
+export const HTTP_ONLY_RESOURCES: readonly HttpOnlyName[] = [
+  'stats',
+  'cost',
+  'inbox',
+  'runs',
+];
 
 /** The table with every resource forced to one adapter (dev and test only: `VITE_FORGE_API=mock`). */
 export function forced(kind: AdapterKind): AdapterTable {
@@ -56,6 +66,15 @@ export function createForgeApi(
         'payload',
         `The '${table[name]}' adapter does not serve '${name}'; fix ADAPTER_TABLE.`,
       );
+    }
+
+    api[name] = resource;
+  }
+
+  for (const name of HTTP_ONLY_RESOURCES) {
+    const resource = adapters.http[name];
+    if (resource === undefined) {
+      throw new ApiError('payload', `The 'http' adapter does not serve '${name}'.`);
     }
 
     api[name] = resource;

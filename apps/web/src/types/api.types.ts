@@ -7,7 +7,7 @@
  *   `http` adapter (the real server) or the `mock` adapter (typed fixtures) as chosen in
  *   one table, and moves to `http` the day its endpoint lands, with no screen edit.
  *
- * Exports: TicketsApi, InteractionsApi, RunEventsApi, IntakeApi, TicketListParams, ChatIntake,
+ * Exports: HttpOnlyApis, HttpOnlyName, TabledName, TicketsApi, InteractionsApi, RunEventsApi, IntakeApi, TicketListParams, ChatIntake,
  *   ForgeApi, ForgeApiAdapter, ResourceApis, ProjectsApi, ResourceName, AdapterKind,
  *   AdapterTable, RequestOptions, HttpClientOptions, MockScenario, MockOptions, ComposeOptions,
  *   JsonRequest, ApiContextValue, ApiErrorKind.
@@ -20,6 +20,7 @@ import type { GithubApi, HarnessesApi, SettingsApi } from '#/types/settings-api.
 import type { MemoryApi } from '#/types/memory.types.js';
 import type { ProjectSettingsApi } from '#/types/project-settings.types.js';
 import type { AnswerReply, IngestReply, TicketDetail } from '#/schemas/tickets.js';
+import type { CostApi, InboxApi, RunsApi, StatsApi } from '#/types/work-api.types.js';
 import type { RunEventWatch, RunEventWatchOptions } from '#/types/sse.types.js';
 
 /** Per-call options every method accepts so TanStack Query can cancel in-flight work. */
@@ -71,8 +72,19 @@ export interface IntakeApi {
   chat(input: ChatIntake, options?: RequestOptions): Promise<IngestReply>;
 }
 
+/**
+ * Resources that exist only on the real server: no fixture twin, so no adapter-table line
+ * (d-0123).
+ */
+export interface HttpOnlyApis {
+  readonly stats: StatsApi;
+  readonly cost: CostApi;
+  readonly inbox: InboxApi;
+  readonly runs: RunsApi;
+}
+
 /** One entry per resource the UI reads. Add a resource here first, then to the adapters and the table. */
-export interface ResourceApis {
+export interface ResourceApis extends HttpOnlyApis {
   readonly projects: ProjectsApi;
   readonly harnesses: HarnessesApi;
   readonly github: GithubApi;
@@ -87,6 +99,11 @@ export interface ResourceApis {
 
 export type ResourceName = keyof ResourceApis;
 
+export type HttpOnlyName = keyof HttpOnlyApis;
+
+/** Resources the adapter table chooses for; the http-only ones are always real. */
+export type TabledName = Exclude<ResourceName, HttpOnlyName>;
+
 /** The complete API a screen sees. */
 export type ForgeApi = Readonly<ResourceApis>;
 
@@ -96,7 +113,7 @@ export type ForgeApiAdapter = Partial<ResourceApis>;
 export type AdapterKind = 'http' | 'mock';
 
 /** Which adapter serves each resource. */
-export type AdapterTable = Readonly<Record<ResourceName, AdapterKind>>;
+export type AdapterTable = Readonly<Record<TabledName, AdapterKind>>;
 
 /** How the http adapter reaches the server; `fetch` is injectable for tests. */
 export interface HttpClientOptions {

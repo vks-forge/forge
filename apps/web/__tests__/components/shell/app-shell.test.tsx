@@ -31,6 +31,7 @@ describe('AppShell navigation', () => {
       'Issues',
       'Chat',
       'Runs',
+      'Cost',
       'Memory',
       'Project settings',
     ]);
@@ -67,10 +68,10 @@ describe('AppShell navigation', () => {
   });
 
   it('shows a placeholder naming the batch that will build the screen', async () => {
-    renderApp({ path: '/p/sample-service/runs' });
+    renderApp({ path: '/p/sample-service/issues' });
 
-    expect(await screen.findByRole('heading', { name: 'Runs' })).toBeInTheDocument();
-    expect(screen.getByText(/Coming in W5/)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Issues' })).toBeInTheDocument();
+    expect(screen.getByText(/Coming in W8/)).toBeInTheDocument();
   });
 
   it('says so when the project in the URL does not exist', async () => {
