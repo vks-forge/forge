@@ -101,6 +101,7 @@ describe('inspectRepository', () => {
     const holder = trackTemp(
       await realpath(await mkdtemp(join(tmpdir(), 'forge link '))),
     );
+
     const link = join(holder, 'clone-link');
     await symlink(dir, link, 'junction');
 

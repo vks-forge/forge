@@ -67,6 +67,7 @@ export function createGitWorktreeManager(
       const here = trees.find((t) =>
         samePath(canonicalPath(t.path), canonicalPath(path)),
       );
+
       if (here) {
         if (here.branch !== branch) {
           const on = here.branch ?? 'a detached head';
