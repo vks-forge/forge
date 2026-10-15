@@ -28,8 +28,9 @@ export type ModelMatrix = z.infer<typeof ModelMatrix>;
 /**
  * Per-family retry table (execution-plane.md §8). `rate_limit` backs off exponentially
  * and honours the harness's `retryNotBefore`; `crash`, `stall` and `unknown` retry a few
- * times with a fixed delay. `auth`, `policy_denied`, `refusal`, `budget` and
- * `invalid_input` are never retried automatically (they go to a human), so they have no
+ * times with a fixed delay. `quota` is not retried by this
+ * table: the harness is parked until its reset time instead (d-0097). `auth`, `policy_denied`,
+ * `refusal`, `budget` and `invalid_input` are never retried automatically (they go to a human), so they have no
  * knob: relaxing them is a code decision, not a config one.
  */
 export const RetryPolicy = z.object({
@@ -43,7 +44,15 @@ export type RetryPolicy = z.infer<typeof RetryPolicy>;
 /** Engine tick cadence and limits (director-core.md §2-§3). */
 export const EngineConfig = z.object({
   tick_interval_ms: z.number().int().min(10_000),
-  global_slots: PosInt,
+  /** Workers running at once on this machine (d-0097). Stored documents may still say `global_slots`; see `migrateLegacyCompanyDoc`. */
+  max_concurrent_global: PosInt,
+  /** Workers running at once in one project; a project may lower its own with `max_concurrent`. */
+  max_concurrent_per_project: PosInt,
+  /** Workers running at once on one harness: `default` unless `by_id` names the harness. */
+  max_concurrent_per_harness: z.object({
+    default: PosInt,
+    by_id: z.record(z.string().min(1), PosInt),
+  }),
   max_concurrent_by_state: z.partialRecord(TicketStatus, PosInt),
   stall_ms: PosInt,
   rewake_cap: z.object({ max: PosInt, window_ms: PosInt }),
@@ -57,6 +66,10 @@ export const EngineConfig = z.object({
     turn_ms: PosInt,
   }),
   retry: RetryPolicy,
+  /** How long a harness waits after a quota error that named no reset time (d-0097). */
+  quota_default_pause_ms: PosInt,
+  /** Harnesses to try, in order, when a ticket's own harness is out of quota (d-0080); empty means wait. */
+  harness_fallbacks: z.array(z.string().min(1)),
 });
 export type EngineConfig = z.infer<typeof EngineConfig>;
 

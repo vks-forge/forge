@@ -22,6 +22,7 @@ import {
   memoryIntakeEvents,
   memoryInteractions,
 } from '#/adapters/memory/interactions.js';
+import { memoryHarnessState } from '#/adapters/memory/harness-state.js';
 import { memoryHarnesses } from '#/adapters/memory/harnesses.js';
 import { memoryGithubConnections } from '#/adapters/memory/github-connections.js';
 import {
@@ -55,6 +56,7 @@ const emptyState = (): MemoryState => ({
   gateSeq: 0,
   projects: new Map(),
   harnesses: new Map(),
+  harnessState: new Map(),
   githubConnections: new Map(),
   harnessVersions: new Map(),
   harnessToolSchemas: new Map(),
@@ -74,6 +76,7 @@ function buildTx(state: MemoryState): StorageTx {
     gateResults: memoryGateResults(state),
     projects: memoryProjects(state),
     harnesses: memoryHarnesses(state),
+    harnessState: memoryHarnessState(state),
     githubConnections: memoryGithubConnections(state),
     harnessVersions: memoryHarnessVersions(state),
     harnessToolSchemas: memoryHarnessToolSchemas(state),

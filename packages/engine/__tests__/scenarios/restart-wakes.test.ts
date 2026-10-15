@@ -164,6 +164,7 @@ describe('invariant check', () => {
       status: 'in_progress',
       status_version: 3,
       rework_count: 0,
+      priority: 0,
       created_at: now,
       updated_at: now,
       blocked_by: [],

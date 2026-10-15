@@ -29,6 +29,7 @@ const ticket = (id: string, over: Partial<Ticket>): Ticket => ({
   status: 'in_progress',
   status_version: 1,
   rework_count: 0,
+  priority: 0,
   created_at: T,
   updated_at: T,
   blocked_by: [],

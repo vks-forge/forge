@@ -55,12 +55,17 @@ export function baseRefFor(ctx: EngineCtx, slug: string): string {
 }
 
 /**
- * The driver for the harness `slug`'s settings name. An id with no registered driver is a
+ * The driver for `harnessId`, which is the harness `slug`'s settings name unless the
+ * scheduler picked a configured fallback (d-0080). An id with no registered driver is a
  * typed `invalid_input` error: the caller parks the ticket instead of running it on some
  * other harness (fail closed).
  */
-export function driverFor(ctx: EngineCtx, slug: string): WorkerDriver {
-  const harness = projectSettings(ctx.config, slug).default_harness;
+export function driverFor(
+  ctx: EngineCtx,
+  slug: string,
+  harnessId?: string,
+): WorkerDriver {
+  const harness = harnessId ?? projectSettings(ctx.config, slug).default_harness;
   const driver = ctx.deps.drivers.get(harness);
   if (!driver) {
     throw new InvalidInputError(

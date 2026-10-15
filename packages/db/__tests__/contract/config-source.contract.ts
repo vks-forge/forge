@@ -74,8 +74,8 @@ export function describeConfigSourceContract(
     });
 
     it('saves the next version, applies it, and keeps every version readable', async () => {
-      const v1 = await save(source, { engine: { global_slots: 5 } }, 0);
-      const v2 = await save(source, { engine: { global_slots: 6 } }, 1);
+      const v1 = await save(source, { engine: { max_concurrent_global: 5 } }, 0);
+      const v2 = await save(source, { engine: { max_concurrent_global: 6 } }, 1);
 
       expect(v1).toMatchObject({
         scope: 'company',
@@ -88,18 +88,18 @@ export function describeConfigSourceContract(
       expect(v2.version).toBe(2);
       expect(v2.id).toBeGreaterThan(v1.id);
       expect((await source.company()).version).toBe(2);
-      expect((await source.company()).config.engine.global_slots).toBe(6);
+      expect((await source.company()).config.engine.max_concurrent_global).toBe(6);
 
       const history = await source.history('company');
 
       expect(history.map((h) => h.version)).toEqual([1, 2]);
-      expect(history[0]?.doc).toEqual({ engine: { global_slots: 5 } });
+      expect(history[0]?.doc).toEqual({ engine: { max_concurrent_global: 5 } });
     });
 
     it('refuses a save from a stale version and leaves the history alone', async () => {
-      await save(source, { engine: { global_slots: 5 } }, 0);
+      await save(source, { engine: { max_concurrent_global: 5 } }, 0);
 
-      const stale = save(source, { engine: { global_slots: 9 } }, 0);
+      const stale = save(source, { engine: { max_concurrent_global: 9 } }, 0);
 
       await expect(stale).rejects.toBeInstanceOf(ConfigVersionConflictError);
       await expect(stale).rejects.toMatchObject({ expected: 0, actual: 1 });
@@ -111,7 +111,9 @@ export function describeConfigSourceContract(
 
     it('lets exactly one of several racing saves win', async () => {
       const results = await Promise.allSettled(
-        [3, 4, 5, 6].map((slots) => save(source, { engine: { global_slots: slots } }, 0)),
+        [3, 4, 5, 6].map((slots) =>
+          save(source, { engine: { max_concurrent_global: slots } }, 0),
+        ),
       );
 
       expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);

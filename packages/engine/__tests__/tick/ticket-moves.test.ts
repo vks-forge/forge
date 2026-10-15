@@ -26,6 +26,7 @@ const ticket = (status: Ticket['status']): Ticket => ({
   status,
   status_version: 1,
   rework_count: 0,
+  priority: 0,
   created_at: '2026-10-13T00:00:00.000Z',
   updated_at: '2026-10-13T00:00:00.000Z',
   blocked_by: [],

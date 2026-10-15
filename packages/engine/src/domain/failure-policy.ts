@@ -46,6 +46,19 @@ export function decideFailure(input: FailureInput): FailureDecision {
     return park(`${family}: not retried automatically; needs a human`);
   }
 
+  // The engine parks the harness for a quota error before it asks this table; the answer
+  // here is the same wait, so a caller that does ask still gets "retry at the reset".
+  if (family === 'quota') {
+    const reset =
+      input.retryNotBefore === undefined ? NaN : Date.parse(input.retryNotBefore);
+
+    return {
+      action: 'retry',
+      notBefore: reset > now ? reset : now + policy.rate_limit.max_ms,
+      family,
+    };
+  }
+
   if (family === 'rate_limit') {
     const cfg = policy.rate_limit;
     if (attempts > cfg.max_attempts) {

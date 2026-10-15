@@ -9,7 +9,7 @@
  *   InvalidInputError (family `invalid_input`) marks caller bugs, in pure constructors
  *   and at the storage boundary, so they are not mistaken for harness faults and retried (execution-plane.md §8).
  *
- * Exports: ForgeError, AuthError, RateLimitError, BudgetError,
+ * Exports: ForgeError, AuthError, RateLimitError, QuotaError, BudgetError,
  *   StallError, RefusalError, CrashError, PolicyDeniedError, UnknownForgeError,
  *   InvalidInputError, HeadMovedError, ConfigVersionConflictError.
  * Depends on: schemas/errors, types/errors. No IO.
@@ -39,6 +39,24 @@ export class AuthError extends ForgeError {
 export class RateLimitError extends ForgeError {
   constructor(message: string, options?: ForgeErrorOptions) {
     super('rate_limit', message, options);
+  }
+}
+/**
+ * The account's usage window is used up ("The Claude account has no available quota.").
+ * Unlike a rate limit it will not clear with a short retry: the whole harness waits until
+ * `resetAt` (ISO time) when the provider named one (d-0097).
+ */
+export class QuotaError extends ForgeError {
+  readonly resetAt?: string;
+
+  constructor(
+    message: string,
+    options?: ForgeErrorOptions & { readonly resetAt?: string },
+  ) {
+    super('quota', message, options);
+    if (options?.resetAt !== undefined) {
+      this.resetAt = options.resetAt;
+    }
   }
 }
 /** A run or ticket budget was exhausted. */

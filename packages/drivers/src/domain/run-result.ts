@@ -28,6 +28,7 @@ export const EFFECTIVE_TABLE: Readonly<
   max_turns: { status: 'max_turns' },
   budget: { status: 'error', family: 'budget' },
   rate_limit: { status: 'error', family: 'rate_limit' },
+  quota: { status: 'error', family: 'quota' },
   auth: { status: 'error', family: 'auth' },
   cancelled: { status: 'cancelled' },
   policy_denied: { status: 'error', family: 'policy_denied' },
@@ -67,7 +68,7 @@ export function buildRunResult(i: SettleInput): RunResult {
     ...base,
     status: row.status,
     ...(row.family ? { errorFamily: row.family } : {}),
-    ...(kind === 'rate_limit' && i.end.retryNotBefore
+    ...((kind === 'rate_limit' || kind === 'quota') && i.end.retryNotBefore
       ? { retryNotBefore: i.end.retryNotBefore }
       : {}),
   };

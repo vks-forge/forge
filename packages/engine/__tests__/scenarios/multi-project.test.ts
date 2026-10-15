@@ -20,6 +20,7 @@ import { describe, expect, it } from 'vitest';
 import { createFakeWorktrees } from '#tests/helpers/fakes.js';
 import { intake, makeRig } from '#tests/helpers/rig.js';
 import type { Rig } from '#tests/helpers/rig.js';
+import { makeResult } from '#tests/helpers/scripted-driver.js';
 
 const API = { id: 'api', slug: 'api', prefix: 'AP' };
 
@@ -111,6 +112,8 @@ describe('several projects in one engine', () => {
     });
 
     await request(rig, 'forge', 'y');
+    rig.driver.finish('run-1', makeResult());
+    await rig.flush();
     rig.clock.advance(31_000);
     await rig.tickOn(engine);
 
@@ -184,7 +187,7 @@ describe('several projects in one engine', () => {
   });
 
   it('does not spend a run slot on a ticket of a project that is not ready', async () => {
-    const rig = await makeRig({ engine: { global_slots: 1 } });
+    const rig = await makeRig({ engine: { max_concurrent_global: 1 } });
     await addApi(rig);
     await request(rig, 'api', 'api work');
     await rig.seedProject({ ...API, status: 'onboarding' });

@@ -99,6 +99,7 @@ account (container isolation later, d-0005); the rework path has not run live.
 
 Newest first. One line per milestone.
 
+- 2026-10-15 — B11: fair scheduling across projects — priority, per-project and per-harness limits, quota waits.
 - 2026-10-15 — B5: project checks by role for any language; gate rules per ecosystem.
 - 2026-10-15 — B10: project memory lives in the data folder as a private git repo per project; Director writer; memory API.
 - 2026-10-15 — B8: install token on every API call; forge start/status/stop runs Forge in the background.

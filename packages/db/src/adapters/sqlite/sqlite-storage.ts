@@ -29,6 +29,7 @@ import {
   createHarnessToolSchemaRepository,
   createHarnessVersionRepository,
 } from '#/adapters/sqlite/harness-compat-repository.js';
+import { createHarnessStateRepository } from '#/adapters/sqlite/harness-state-repository.js';
 import { createHarnessRepository } from '#/adapters/sqlite/harnesses-repository.js';
 import { createProjectRepository } from '#/adapters/sqlite/projects-repository.js';
 import { createSqliteReceiptLog } from '#/adapters/sqlite/receipt-log.js';
@@ -67,6 +68,7 @@ export function createStorageOnDriver(
     gateResults: createGateResultRepository(driver),
     projects: createProjectRepository(driver),
     harnesses: createHarnessRepository(driver),
+    harnessState: createHarnessStateRepository(driver),
     githubConnections: createGithubConnectionRepository(driver),
     harnessVersions: createHarnessVersionRepository(driver),
     harnessToolSchemas: createHarnessToolSchemaRepository(driver),

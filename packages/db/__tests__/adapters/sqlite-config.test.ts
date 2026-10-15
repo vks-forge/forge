@@ -39,7 +39,7 @@ const handle = (path: string) => () => {
 describeConfigSourceContract('sqlite (file)', () => handle(nextPath())());
 describeConfigSourceContract('sqlite (:memory:)', () => handle(':memory:')());
 
-const doc = (slots: number) => ({ engine: { global_slots: slots } });
+const doc = (slots: number) => ({ engine: { max_concurrent_global: slots } });
 
 describe('sqlite config source specifics', () => {
   it('keeps versions across reopen and continues the numbering', async () => {
@@ -67,7 +67,7 @@ describe('sqlite config source specifics', () => {
 
     await second.storage.close();
     expect(view.version).toBe(1);
-    expect(view.config.engine.global_slots).toBe(4);
+    expect(view.config.engine.max_concurrent_global).toBe(4);
     expect(next.version).toBe(2);
   });
 

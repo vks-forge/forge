@@ -15,7 +15,11 @@ models:
 
 engine:
   tick_interval_ms: 30000 # minimum 10000
-  global_slots: 3 # concurrent Workers on one machine (execution-plane.md §9)
+  max_concurrent_global: 2 # concurrent Workers on one machine (d-0097)
+  max_concurrent_per_project: 1 # concurrent Workers in one project
+  max_concurrent_per_harness: # concurrent Workers on one harness; by_id overrides default
+    default: 2
+    by_id: {}
   max_concurrent_by_state:
     in_progress: 3
     verifying: 1
@@ -36,3 +40,5 @@ engine:
     crash: { delay_ms: 10000, max_attempts: 1 }
     stall: { delay_ms: 10000, max_attempts: 2 }
     unknown: { delay_ms: 30000, max_attempts: 1 }
+  quota_default_pause_ms: 3600000 # harness wait after a quota error that names no reset time
+  harness_fallbacks: [] # harnesses to try when a ticket's own is out of quota; empty = wait

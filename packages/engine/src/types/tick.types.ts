@@ -7,8 +7,9 @@
  *   and keeps hand-written types in one place.
  *
  * Exports: EventSpec, TicketFields, TicketPlan, MoveResult, WakeInput, WakeOutcome,
- *   DispatchKind, Candidate, Capacity, StepReject, TickConfig, RewakeCap.
- * Depends on: @forge/core (TicketEvent, Ticket, WakeKind, WakeRequest, StepError). Types only.
+ *   DispatchKind, Candidate, DispatchPlan, WakeView, ScheduleView, StepReject, TickConfig, RewakeCap.
+ * Depends on: @forge/core (TicketEvent, Ticket, WakeKind, WakeRequest, StepError),
+ *   types/pick-next. Types only.
  */
 
 import type {
@@ -20,6 +21,8 @@ import type {
   WakeKind,
   WakeRequest,
 } from '@forge/core';
+import type { EngineCtx } from '#/types/engine-state.types.js';
+import type { PickCandidate, PickCaps, PickRunning } from '#/types/pick-next.types.js';
 
 type WithoutAt<E> = E extends TicketEvent ? Omit<E, 'at' | 'expected_version'> : never;
 
@@ -49,6 +52,8 @@ export type MoveResult =
   | { readonly ok: false; readonly reason: string };
 
 export interface WakeInput {
+  /** A retry wake that is not an automated recovery attempt (a quota wait), so the hourly re-wake cap does not count it. */
+  readonly uncapped?: boolean;
   readonly ticketId: string;
   readonly kind: WakeKind;
   readonly reason: string;
@@ -75,11 +80,19 @@ export interface Candidate {
   readonly wake?: WakeRequest;
 }
 
-/** Free run slots and the in_progress headroom, decremented as the phase starts runs. */
-export interface Capacity {
-  free: number;
-  inProgress: number;
-  readonly inProgressLimit: number;
+/** What a wake check needs from the tick; a read-only caller builds one without a report. */
+export type WakeView = Pick<EngineCtx, 'deps' | 'state' | 'nowIso'>;
+
+/** What planning needs from the tick: the ports, process state, settings snapshot and clock. */
+export type ScheduleView = WakeView & Pick<EngineCtx, 'config' | 'now'>;
+
+/** What one dispatch decision is made from: the tickets that could start and the limits they meet. */
+export interface DispatchPlan {
+  /** The full candidate (ticket, kind, wake) behind each pickable id. */
+  readonly candidates: ReadonlyMap<string, Candidate>;
+  readonly pickable: readonly PickCandidate[];
+  readonly running: readonly PickRunning[];
+  readonly caps: PickCaps;
 }
 
 /** Why a Director step produced nothing; the engine logs it and holds the step off. */

@@ -90,6 +90,8 @@ export const Ticket = z.object({
   status: TicketStatus,
   status_version: z.number().int().nonnegative(),
   rework_count: z.number().int().nonnegative(),
+  /** Higher starts first among a project's waiting tickets (d-0097); 0 unless someone raised it. */
+  priority: z.number().int().default(0),
   blocked_reason: z.string().optional(),
   // Set while parked from Verifying; a release then returns there instead of to Planned.
   parked_from: z.literal('verifying').optional(),

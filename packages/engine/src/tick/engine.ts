@@ -19,6 +19,7 @@ import { TERMINAL_STATUSES } from '@forge/core';
 import type { Ticket } from '@forge/core';
 import { iso } from '#/shared/time.js';
 import { dispatchReady } from '#/tick/dispatch.js';
+import { explainWait } from '#/tick/explain.js';
 import { answerInteraction, expireInteractions } from '#/tick/interactions.js';
 import { ingest } from '#/tick/intake.js';
 import {
@@ -114,6 +115,7 @@ export function createEngine(deps: EngineDeps): Engine {
     requested: false,
     notified: false,
     pumps: new Map(),
+    schedulerCursor: undefined,
     holds: new Map(),
     baseShas: new Map(),
     gateJobs: new Map(),
@@ -171,6 +173,7 @@ export function createEngine(deps: EngineDeps): Engine {
 
       return true;
     },
+    explainWait: (ticketId) => explainWait(deps, state, ticketId),
     liveRunIds: () => [...state.pumps.keys()],
     gateJobsInFlight: () =>
       [...state.gateJobs.values()].filter((j) => j.outcome === undefined).length,

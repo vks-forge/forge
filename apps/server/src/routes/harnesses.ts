@@ -7,7 +7,9 @@
  *   The credential goes straight into the SecretStore and is never returned: the list only
  *   says whether one is stored. A save resets the last test result, because it no longer
  *   describes the new settings. The test costs nothing unless `?live=1` is given, which makes
- *   one real one-word model call. The `claude setup-token` sign-in flow (a terminal session
+ *   one real one-word model call. A harness that ran out of quota shows `paused_until` and
+ *   `pause_reason` (and the response lists every active pause, registered or not) so the owner
+ *   sees why tickets wait; the pause clears itself when the time passes. The `claude setup-token` sign-in flow (a terminal session
  *   driven from the UI) is not here yet; for now the owner pastes a token minted elsewhere.
  *
  * Exports: harnessRoutes().
@@ -17,6 +19,7 @@
  */
 
 import { Harness, HarnessId, harnessSecretName } from '@forge/core';
+import type { HarnessState } from '@forge/core';
 import type { HarnessSetup } from '@forge/drivers';
 import {
   HarnessPutBody,
@@ -59,12 +62,25 @@ async function knownHarnessId(deps: RouteDeps, ctx: RouteContext): Promise<strin
   return id;
 }
 
+/** Quota pauses still in force: a row whose time has passed is not a pause. */
+async function activePauses(deps: RouteDeps): Promise<HarnessState[]> {
+  const now = deps.now();
+
+  return (await deps.storage.transaction((tx) => tx.harnessState.list())).filter(
+    (s) => Date.parse(s.paused_until) > now,
+  );
+}
+
 /** Row plus whether a credential of each kind is stored; never the credential. */
-async function describe(deps: RouteDeps, row: Harness) {
+async function describe(deps: RouteDeps, row: Harness, pauses?: HarnessState[]) {
   const names = new Set(await deps.secrets.list(`harness/${row.id}/`));
+  const pause = (pauses ?? (await activePauses(deps))).find(
+    (s) => s.harness_id === row.id,
+  );
 
   return {
     ...row,
+    ...(pause ? { paused_until: pause.paused_until, pause_reason: pause.reason } : {}),
     secrets: {
       api_key: names.has(harnessSecretName(row.id, 'api_key')),
       oauth_token: names.has(harnessSecretName(row.id, 'oauth_token')),
@@ -118,8 +134,10 @@ export function harnessRoutes(deps: RouteDeps): Route[] {
       path: '/harnesses',
       async handle({ res }) {
         const rows = await deps.storage.transaction((tx) => tx.harnesses.list());
+        const pauses = await activePauses(deps);
         sendJson(res, 200, {
-          harnesses: await Promise.all(rows.map((row) => describe(deps, row))),
+          harnesses: await Promise.all(rows.map((row) => describe(deps, row, pauses))),
+          paused: pauses,
         });
       },
     },

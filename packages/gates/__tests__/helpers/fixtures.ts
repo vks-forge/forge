@@ -131,6 +131,7 @@ export function context(
       status: 'verifying',
       status_version: 1,
       rework_count: 0,
+      priority: 0,
       created_at: TS,
       updated_at: TS,
       blocked_by: [],

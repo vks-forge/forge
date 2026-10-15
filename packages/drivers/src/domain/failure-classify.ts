@@ -9,10 +9,13 @@
  *   with no result text (probe 1). This module is the one place those signals become
  *   `completed | refused | max_turns | budget | rate_limit | auth | ...`, so the result
  *   table of the brief is implemented once and tested without a process. Anything it does
- *   not recognise becomes `unknown`, never `completed` (fail closed).
+ *   not recognise becomes `unknown`, never `completed` (fail closed). A used-up account
+ *   ("The Claude account has no available quota.", a rejected rate-limit report) is `quota`,
+ *   not `rate_limit`: a short backoff cannot fix it, so the engine parks the whole harness
+ *   until the reset time the harness named (d-0097); a plain 429 stays `rate_limit`.
  *
  * Exports: classifyStopReason(), classifyRejection(), classifyCliResult(), classifyText(),
- *   retryNotBeforeFrom(), AUTH_REQUIRED_CODE.
+ *   retryNotBeforeFrom(), quotaEnd(), resetFromText(), AUTH_REQUIRED_CODE.
  * Depends on: schemas/claude-acp, schemas/claude-stream-json, types/claude/engine. No IO.
  */
 
@@ -24,7 +27,10 @@ import type { EngineEnd } from '#/types/claude/engine.types.js';
 /** JSON-RPC code the ACP adapter uses for `authRequired`. */
 export const AUTH_REQUIRED_CODE = -32000;
 
-const RATE = /rate.?limit|usage limit|\b429\b|overloaded|too many requests/i;
+const QUOTA =
+  /no available quota|quota (exceeded|exhausted|reached)|out of (extra )?usage|usage limit|hit your .{0,24}limit|limit reached/i;
+
+const RATE = /rate.?limit|\b429\b|overloaded|too many requests/i;
 const AUTH =
   /please run \/login|not logged in|unauthori[sz]ed|authentication (failed|error)|invalid api key|\b401\b|oauth token/i;
 
@@ -48,10 +54,51 @@ export function retryNotBeforeFrom(
   return new Date(at).toISOString();
 }
 
+/** ISO time a message names as the quota reset (`resets 2026-10-15T14:20:00Z`, `resets at 1760538000`), or undefined. */
+export function resetFromText(text: string): string | undefined {
+  const iso =
+    /resets?\s+(?:at\s+)?(\d{4}-\d{2}-\d{2}T[\d:.]+(?:Z|[+-]\d{2}:?\d{2})?)/i.exec(text);
+
+  const isoMs = iso?.[1] === undefined ? Number.NaN : Date.parse(iso[1]);
+  if (!Number.isNaN(isoMs)) {
+    return new Date(isoMs).toISOString();
+  }
+
+  const epoch = /resets?\s+(?:at\s+)?(\d{10})\b/i.exec(text);
+
+  return epoch?.[1] === undefined
+    ? undefined
+    : new Date(Number(epoch[1]) * 1000).toISOString();
+}
+
+/**
+ * A quota end. `retryNotBefore` is the reset the harness named (the rate-limit report's
+ * `resetsAt`, else a time in the message) and is absent when it named none: the engine then
+ * applies its own default wait. A reset already in the past is the engine's to ignore.
+ */
+export function quotaEnd(
+  detail: string,
+  info: RateLimitInfo | null,
+  text: string = detail,
+): EngineEnd {
+  const fromInfo =
+    info?.resetsAt === undefined
+      ? undefined
+      : new Date(info.resetsAt * 1000).toISOString();
+
+  const reset = fromInfo ?? resetFromText(text);
+
+  return { kind: 'quota', detail, ...(reset ? { retryNotBefore: reset } : {}) };
+}
+
 /** Message-text classification shared by both engines; `unknown` when nothing matches. */
 export function classifyText(text: string, rate: () => string): EngineEnd {
   if (BUDGET.test(text)) {
     return { kind: 'budget', detail: text };
+  }
+
+  if (QUOTA.test(text)) {
+    return quotaEnd(text, null);
   }
 
   if (TURNS.test(text)) {
@@ -77,10 +124,9 @@ export function classifyText(text: string, rate: () => string): EngineEnd {
 export function classifyStopReason(
   stopReason: string,
   rateLimit: RateLimitInfo | null,
-  rate: () => string,
 ): EngineEnd {
   if (rateLimit?.status === 'rejected') {
-    return { kind: 'rate_limit', detail: 'rate limit rejected', retryNotBefore: rate() };
+    return quotaEnd('rate limit rejected', rateLimit);
   }
 
   switch (stopReason) {
@@ -118,7 +164,9 @@ export function classifyRejection(
     }
 
     if (kind === 'rate_limit') {
-      return { kind: 'rate_limit', detail: message, retryNotBefore: rate() };
+      return QUOTA.test(message)
+        ? quotaEnd(message, rateLimit)
+        : { kind: 'rate_limit', detail: message, retryNotBefore: rate() };
     }
 
     if (kind === 'billing_error') {
@@ -127,7 +175,7 @@ export function classifyRejection(
   }
 
   if (rateLimit?.status === 'rejected') {
-    return { kind: 'rate_limit', detail: message, retryNotBefore: rate() };
+    return quotaEnd(message, rateLimit);
   }
 
   return classifyText(message, rate);
@@ -145,7 +193,9 @@ export function classifyCliResult(r: CliResultLine, rate: () => string): EngineE
 
   const text = r.result ?? r.errors?.join('; ') ?? r.subtype ?? '';
   if (r.api_error_status === 429) {
-    return { kind: 'rate_limit', detail: text, retryNotBefore: rate() };
+    return QUOTA.test(text)
+      ? quotaEnd(text, null)
+      : { kind: 'rate_limit', detail: text, retryNotBefore: rate() };
   }
 
   if (r.api_error_status === 401 || r.api_error_status === 403) {

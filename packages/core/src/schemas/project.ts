@@ -152,6 +152,10 @@ export const ProjectConfigShape = z.object({
   ecosystems: z.array(z.string().min(1)).default([]),
   gate_rules: GateRules.optional(),
   default_harness: z.string().min(1),
+  /** Lowers this project's own concurrent Workers below the company's `max_concurrent_per_project`; it can never raise it (d-0097). */
+  max_concurrent: z.number().int().positive().optional(),
+  /** Harnesses to try, in order, when `default_harness` is out of quota; absent inherits the company list, empty means wait (d-0080). */
+  harness_fallbacks: z.array(z.string().min(1)).optional(),
   remote: z.string().min(1).optional(),
   git_host: GitHostConfig.optional(),
   /**

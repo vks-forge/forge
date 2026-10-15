@@ -59,6 +59,8 @@ export interface EngineState {
   /** `onTickRequested` was called and no tick has started since. */
   notified: boolean;
   readonly pumps: Map<string, Pump>;
+  /** The project that got the last Worker slot; the next dispatch rotates to the project after it (d-0097). */
+  schedulerCursor: string | undefined;
   readonly holds: Map<string, Hold>;
   readonly baseShas: Map<string, string>;
   /** Gate runs in flight or finished-but-unapplied, by `ticket:run`; lost on restart, so the gates simply run again. */

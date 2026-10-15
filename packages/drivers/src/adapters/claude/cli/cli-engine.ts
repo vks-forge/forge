@@ -26,7 +26,11 @@ import { probeVersion } from '#/adapters/claude/version-probe.js';
 import { buildChildEnv } from '#/domain/child-env.js';
 import { buildCliArgs } from '#/domain/cli-args.js';
 import { normaliseCliLine, usageFromResult } from '#/domain/cli-events.js';
-import { classifyCliResult, retryNotBeforeFrom } from '#/domain/failure-classify.js';
+import {
+  classifyCliResult,
+  quotaEnd,
+  retryNotBeforeFrom,
+} from '#/domain/failure-classify.js';
 import { parseCliLine } from '#/schemas/claude-stream-json.js';
 import type { CliResultLine } from '#/schemas/claude-stream-json.js';
 import type { RateLimitInfo } from '#/schemas/claude-acp.js';
@@ -169,22 +173,14 @@ function launchCli(
         (end.kind === 'unknown' || end.kind === 'crash') &&
         state.rateLimit?.status === 'rejected'
       ) {
-        return {
-          kind: 'rate_limit',
-          detail: end.detail ?? 'rate limit rejected',
-          retryNotBefore: rate(),
-        };
+        return quotaEnd(end.detail ?? 'rate limit rejected', state.rateLimit);
       }
 
       return end;
     }
 
     if (state.rateLimit?.status === 'rejected') {
-      return {
-        kind: 'rate_limit',
-        detail: 'rate limit rejected',
-        retryNotBefore: rate(),
-      };
+      return quotaEnd('rate limit rejected', state.rateLimit);
     }
 
     return {

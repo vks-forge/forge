@@ -20,6 +20,7 @@ import {
   ForgeError,
   HeadMovedError,
   PolicyDeniedError,
+  QuotaError,
   RateLimitError,
   RefusalError,
   StallError,
@@ -30,6 +31,7 @@ describe('ForgeError', () => {
   it.each([
     [new AuthError('x'), 'auth'],
     [new RateLimitError('x'), 'rate_limit'],
+    [new QuotaError('x'), 'quota'],
     [new BudgetError('x'), 'budget'],
     [new StallError('x'), 'stall'],
     [new RefusalError('x'), 'refusal'],
@@ -43,6 +45,14 @@ describe('ForgeError', () => {
     expect(e).toBeInstanceOf(Error);
     expect(e.errorFamily).toBe(family);
     expect(e.name).toBe(e.constructor.name);
+  });
+
+  it('QuotaError keeps the reset time the provider named', () => {
+    expect(new QuotaError('x', { resetAt: '2026-10-15T14:20:00.000Z' }).resetAt).toBe(
+      '2026-10-15T14:20:00.000Z',
+    );
+
+    expect(new QuotaError('x').resetAt).toBeUndefined();
   });
 
   it('keeps the cause', () => {

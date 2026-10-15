@@ -84,6 +84,49 @@ describe('GET /harnesses', () => {
   });
 });
 
+describe('quota pauses on GET /harnesses', () => {
+  const pause = (id: string, until: string) =>
+    storage.transaction((tx) =>
+      tx.harnessState.upsert({
+        harness_id: id,
+        paused_until: until,
+        reason: 'Out of quota; resets at 14:20 UTC.',
+        updated_at: '2026-10-14T09:00:00.000Z',
+      }),
+    );
+
+  it('shows the pause on the harness and lists every active pause', async () => {
+    await register();
+    await pause('claude', '2026-10-14T14:20:00.000Z');
+    await pause('other', '2026-10-14T15:00:00.000Z');
+
+    const { body } = await rig.json('GET', '/harnesses');
+
+    expect(body).toMatchObject({
+      harnesses: [
+        {
+          id: 'claude',
+          paused_until: '2026-10-14T14:20:00.000Z',
+          pause_reason: 'Out of quota; resets at 14:20 UTC.',
+        },
+      ],
+      paused: [{ harness_id: 'claude' }, { harness_id: 'other' }],
+    });
+  });
+
+  it('shows no pause once its time has passed', async () => {
+    await register();
+    await pause('claude', '2026-10-14T09:59:59.000Z');
+
+    const { body } = (await rig.json('GET', '/harnesses')) as {
+      body: { harnesses: Record<string, unknown>[]; paused: unknown[] };
+    };
+
+    expect(body.paused).toEqual([]);
+    expect(body.harnesses[0]).not.toHaveProperty('paused_until');
+  });
+});
+
 describe('PUT /harnesses/:id', () => {
   it('saves the executable path and auth mode and lists it with no stored secrets', async () => {
     const res = await register({

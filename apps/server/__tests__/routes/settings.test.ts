@@ -73,13 +73,13 @@ describe('company settings', () => {
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       version: 0,
-      config: { engine: { global_slots: 3 } },
+      config: { engine: { max_concurrent_global: 2 } },
     });
   });
 
   it('saves a change as the next version and serves the merged result', async () => {
     const put = await rig.json('PUT', '/settings/company', {
-      doc: { engine: { global_slots: 5 } },
+      doc: { engine: { max_concurrent_global: 5 } },
       expectedVersion: 0,
       ...WHO,
     });
@@ -90,25 +90,25 @@ describe('company settings', () => {
       version: 1,
       author: 'owner',
       reason: 'tuning',
-      doc: { engine: { global_slots: 5 } },
+      doc: { engine: { max_concurrent_global: 5 } },
     });
 
     const got = await rig.json('GET', '/settings/company');
     expect(got.body).toMatchObject({
       version: 1,
-      config: { engine: { global_slots: 5, stall_ms: 300_000 } },
+      config: { engine: { max_concurrent_global: 5, stall_ms: 300_000 } },
     });
   });
 
   it('refuses a stale expectedVersion with 409 and leaves the settings alone', async () => {
     await rig.json('PUT', '/settings/company', {
-      doc: { engine: { global_slots: 5 } },
+      doc: { engine: { max_concurrent_global: 5 } },
       expectedVersion: 0,
       ...WHO,
     });
 
     const res = await rig.json('PUT', '/settings/company', {
-      doc: { engine: { global_slots: 7 } },
+      doc: { engine: { max_concurrent_global: 7 } },
       expectedVersion: 0,
       ...WHO,
     });
@@ -120,7 +120,7 @@ describe('company settings', () => {
 
   it('refuses a document the engine could not run on with 400', async () => {
     const res = await rig.json('PUT', '/settings/company', {
-      doc: { engine: { global_slots: 'many' } },
+      doc: { engine: { max_concurrent_global: 'many' } },
       expectedVersion: 0,
       ...WHO,
     });
@@ -155,13 +155,13 @@ describe('company settings', () => {
 
   it('lists every saved version, oldest first', async () => {
     await rig.json('PUT', '/settings/company', {
-      doc: { engine: { global_slots: 4 } },
+      doc: { engine: { max_concurrent_global: 4 } },
       expectedVersion: 0,
       ...WHO,
     });
 
     await rig.json('PUT', '/settings/company', {
-      doc: { engine: { global_slots: 2 } },
+      doc: { engine: { max_concurrent_global: 2 } },
       expectedVersion: 1,
       author: 'owner',
       reason: 'back off',
@@ -188,7 +188,7 @@ describe('project settings', () => {
       version: { company: 0, project: 0 },
       config: {
         project: { checks: [], ecosystems: [] },
-        forge: { engine: { global_slots: 3 } },
+        forge: { engine: { max_concurrent_global: 2 } },
       },
     });
   });

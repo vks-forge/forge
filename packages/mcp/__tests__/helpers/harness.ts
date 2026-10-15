@@ -37,6 +37,7 @@ export function ticket(n: number, over: Partial<Ticket> = {}): Ticket {
     status: 'in_progress',
     status_version: 1,
     rework_count: 0,
+    priority: 0,
     created_at: T0,
     updated_at: T0,
     blocked_by: [],

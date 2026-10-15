@@ -23,7 +23,10 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
   },
   engine: {
     tick_interval_ms: 30_000,
-    global_slots: 3,
+    // Layered Worker limits (d-0097): 2 at once overall, 1 per project, 2 per harness.
+    max_concurrent_global: 2,
+    max_concurrent_per_project: 1,
+    max_concurrent_per_harness: { default: 2, by_id: {} },
     max_concurrent_by_state: { in_progress: 3, verifying: 1 },
     stall_ms: 300_000,
     rewake_cap: { max: 3, window_ms: 3_600_000 },
@@ -39,6 +42,8 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
       stall: { delay_ms: 10_000, max_attempts: 2 },
       unknown: { delay_ms: 30_000, max_attempts: 1 },
     },
+    quota_default_pause_ms: 3_600_000,
+    harness_fallbacks: [],
   },
 };
 

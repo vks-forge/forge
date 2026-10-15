@@ -4,11 +4,14 @@
  * Why: the Ticket screen and the CLI need the whole story of a ticket in one call: where it
  *   is, which runs worked on it, what the gates said and what is waiting for a human. They
  *   are read in one transaction so the picture is consistent (a run row never ahead of
- *   its ticket). Only pending interactions are listed; answered ones are history.
+ *   its ticket). Only pending interactions are listed; answered ones are history. A ticket
+ *   that has not started also says why in `wait_reason` (`quota: claude-code until 14:20 UTC`,
+ *   `cap: per-project 1/1`, `deps: PAY-231`), computed by the scheduler's own decision so the
+ *   page cannot disagree with dispatch; it is null when nothing holds the ticket back.
  *
  * Exports: ticketRoute().
  * Depends on: @forge/core (TicketId), services/http/http-errors, services/http/respond,
- *   types/routes. IO: reads storage.
+ *   types/routes. IO: reads storage and the engine's read-only wait explanation.
  */
 
 import { TicketId } from '@forge/core';
@@ -51,7 +54,10 @@ export function ticketRoute(deps: RouteDeps): Route {
         throw new HttpError(404, 'ticket_not_found', `no ticket ${id.data}`);
       }
 
-      sendJson(res, 200, found);
+      sendJson(res, 200, {
+        ...found,
+        wait_reason: await deps.engine.explainWait(found.ticket.id),
+      });
     },
   };
 }

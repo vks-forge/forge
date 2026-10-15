@@ -34,6 +34,7 @@ const TICKET: Ticket = {
   status: 'waiting_human',
   status_version: 1,
   rework_count: 0,
+  priority: 0,
   created_at: '2026-10-13T00:00:00.000Z',
   updated_at: '2026-10-13T00:00:00.000Z',
   blocked_by: [],
@@ -77,6 +78,7 @@ beforeEach(async () => {
     ingest: vi.fn(async () => ({ status: 'ticket_created', ticketId: 'FX-1' })),
     answerInteraction: vi.fn(async () => true),
     cancelTicket: vi.fn(),
+    explainWait: vi.fn(async () => null),
     liveRunIds: vi.fn(() => ['run-a', 'run-b']),
     gateJobsInFlight: vi.fn(() => 1),
   };
@@ -157,6 +159,20 @@ describe('GET /tickets/:id', () => {
     expect(body.ticket.id).toBe('FX-1');
     expect(body.runs).toEqual([]);
     expect(body.interactions.map((i) => i.id)).toEqual(['int-1']);
+  });
+
+  it('carries the scheduler wait reason, null when nothing holds the ticket back', async () => {
+    engine.explainWait.mockResolvedValueOnce('quota: claude-code until 14:20 UTC');
+
+    const waiting = await rig.json('GET', '/tickets/FX-1');
+    const free = await rig.json('GET', '/tickets/FX-1');
+
+    expect(engine.explainWait).toHaveBeenCalledWith('FX-1');
+    expect((waiting.body as { wait_reason: unknown }).wait_reason).toBe(
+      'quota: claude-code until 14:20 UTC',
+    );
+
+    expect((free.body as { wait_reason: unknown }).wait_reason).toBeNull();
   });
 
   it('answers 404 for an unknown ticket and 400 for a malformed id', async () => {

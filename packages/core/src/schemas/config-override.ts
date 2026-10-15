@@ -10,12 +10,13 @@
  *
  * Exports: CompanyOverride, ProjectSettings, ProjectOverride, EffectiveConfig, ConfigVersionRef,
  *   ConfigScope, ConfigVersion, ConfigAppend (and their types).
- * Depends on: domain/legacy-project-doc, schemas/forge-config, schemas/project, shared/deep-partial, types/config.types,
+ * Depends on: domain/legacy-company-doc, domain/legacy-project-doc, schemas/forge-config, schemas/project, shared/deep-partial, types/config.types,
  *   zod. No IO.
  */
 
 import { z } from 'zod';
 import { ForgeConfig } from '#/schemas/forge-config.js';
+import { migrateLegacyCompanyDoc } from '#/domain/legacy-company-doc.js';
 import {
   legacyProjectDocProblem,
   migrateLegacyProjectDoc,
@@ -32,10 +33,11 @@ export type ProjectSettings = z.infer<typeof ProjectSettings>;
 export const EffectiveConfig = z.object({ forge: ForgeConfig, project: ProjectSettings });
 export type EffectiveConfig = z.infer<typeof EffectiveConfig>;
 
-/** Company override: any subset of `ForgeConfig`, strict. */
-export const CompanyOverride = deepPartial(ForgeConfig) as unknown as z.ZodType<
-  DeepPartial<ForgeConfig>
->;
+/** Company override: any subset of `ForgeConfig`, strict. A stored document that says `engine.global_slots` is read as `max_concurrent_global`. */
+export const CompanyOverride = z.preprocess(
+  migrateLegacyCompanyDoc,
+  deepPartial(ForgeConfig),
+) as unknown as z.ZodType<DeepPartial<ForgeConfig>>;
 export type CompanyOverride = z.infer<typeof CompanyOverride>;
 
 /**

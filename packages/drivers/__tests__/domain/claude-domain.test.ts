@@ -45,14 +45,12 @@ describe('buildChildEnv', () => {
 
 describe('classification', () => {
   it('maps stop reasons', () => {
-    expect(classifyStopReason('end_turn', null, rate).kind).toBe('completed');
-    expect(classifyStopReason('max_turn_requests', null, rate).kind).toBe('max_turns');
-    expect(classifyStopReason('refusal', null, rate).kind).toBe('refused');
-    expect(classifyStopReason('cancelled', null, rate).kind).toBe('cancelled');
-    expect(classifyStopReason('max_tokens', null, rate).kind).toBe('unknown');
-    expect(classifyStopReason('end_turn', { status: 'rejected' }, rate).kind).toBe(
-      'rate_limit',
-    );
+    expect(classifyStopReason('end_turn', null).kind).toBe('completed');
+    expect(classifyStopReason('max_turn_requests', null).kind).toBe('max_turns');
+    expect(classifyStopReason('refusal', null).kind).toBe('refused');
+    expect(classifyStopReason('cancelled', null).kind).toBe('cancelled');
+    expect(classifyStopReason('max_tokens', null).kind).toBe('unknown');
+    expect(classifyStopReason('end_turn', { status: 'rejected' }).kind).toBe('quota');
   });
 
   it('maps rejections by code, errorKind, rate state and text', () => {
@@ -69,7 +67,9 @@ describe('classification', () => {
     expect(kind(err('x', { errorKind: 'authentication_failed' }))).toBe('auth');
     expect(kind(err('x', { errorKind: 'rate_limit' }))).toBe('rate_limit');
     expect(kind(err('x', { errorKind: 'billing_error' }))).toBe('budget');
-    expect(kind(err('x'), { status: 'rejected' })).toBe('rate_limit');
+    expect(kind(err('x'), { status: 'rejected' })).toBe('quota');
+    expect(kind(err('The Claude account has no available quota.'))).toBe('quota');
+    expect(kind(err('x', { errorKind: 'rate_limit' }))).toBe('rate_limit');
     expect(kind(err('weird'))).toBe('unknown');
     expect(kind('plain string')).toBe('unknown');
   });

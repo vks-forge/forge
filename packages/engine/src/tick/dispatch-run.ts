@@ -66,11 +66,18 @@ function wakeDelta(c: Candidate, answered: Interaction | null): Record<string, u
   };
 }
 
-/** Starts a run for `c`; returns true when a run is now live. Never throws. */
-export async function startRun(ctx: EngineCtx, c: Candidate): Promise<boolean> {
+/**
+ * Starts a run for `c` on `harnessId` (the project's own harness unless the scheduler
+ * chose a fallback); returns true when a run is now live. Never throws.
+ */
+export async function startRun(
+  ctx: EngineCtx,
+  c: Candidate,
+  harnessId?: string,
+): Promise<boolean> {
   const { ticket } = c;
   try {
-    return await tryStart(ctx, c);
+    return await tryStart(ctx, c, harnessId);
   } catch (e) {
     hold(ctx, `dispatch:${ticket.id}`);
     ctx.report.errors.push({ where: `dispatch ${ticket.id}`, message: msg(e) });
@@ -80,7 +87,11 @@ export async function startRun(ctx: EngineCtx, c: Candidate): Promise<boolean> {
   }
 }
 
-async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
+async function tryStart(
+  ctx: EngineCtx,
+  c: Candidate,
+  harnessId?: string,
+): Promise<boolean> {
   const { deps, state } = ctx;
   const { ticket } = c;
   const { project, previous, answered } = await deps.storage.transaction(async (tx) => {
@@ -114,7 +125,7 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
 
   let driver: WorkerDriver;
   try {
-    driver = driverFor(ctx, project.slug);
+    driver = driverFor(ctx, project.slug, harnessId);
   } catch (e) {
     await parkForHarness(ctx, ticket, e);
 
@@ -197,7 +208,8 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
   const { forge } = ctx.config;
   const b = forge.engine.run_budget;
   const resumeSession =
-    c.kind === 'resume' && driver.capabilities().resume
+    // A session belongs to the harness that made it: a fallback harness starts fresh.
+    c.kind === 'resume' && driver.capabilities().resume && previous?.harness === driver.id
       ? previous?.session_ref
       : undefined;
 

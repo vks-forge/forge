@@ -150,6 +150,8 @@ export interface Engine {
   answerInteraction(interactionId: string, answer: unknown): Promise<boolean>;
   /** Cancels a ticket through `transition()` and stops its live run. False when the ticket is terminal or unknown. */
   cancelTicket(ticketId: string): Promise<boolean>;
+  /** Why the ticket has not started (`quota: claude-code until 14:20 UTC`, `cap: per-project 1/1`, `deps: PAY-231`), or null when nothing holds it back. Read-only. */
+  explainWait(ticketId: string): Promise<string | null>;
   /** Ids of runs with a live pump in this process. */
   liveRunIds(): string[];
   /** Gate runs currently executing in the background (finished ones await the next tick). */

@@ -14,6 +14,7 @@
 import type {
   GateResult,
   Harness,
+  HarnessState,
   GithubConnection,
   HarnessToolSchema,
   HarnessVersion,
@@ -51,6 +52,8 @@ export interface MemoryState {
   gateSeq: number;
   projects: Map<string, Project>;
   harnesses: Map<string, Harness>;
+  /** Parked harnesses keyed by harness id. */
+  harnessState: Map<string, HarnessState>;
   githubConnections: Map<string, GithubConnection>;
   /** Keyed by `kind/version`. */
   harnessVersions: Map<string, HarnessVersion>;

@@ -33,6 +33,8 @@ Public API from `src/index.ts`:
     sources never get here.
   - `answerInteraction(id, answer)`: CAS answer, queues the `response_wake`.
   - `cancelTicket(id)`: `cancelled` through `transition()`, cancels the live run, removes the worktree.
+  - `explainWait(ticketId)`: why a ticket has not started, as one line (`quota: claude-code until 14:20 UTC`,
+    `cap: per-project 1/1`, `deps: PAY-231`), or null; read-only, from the same decision dispatch makes.
   - `liveRunIds()`, `gateJobsInFlight()` (gate runs executing beside the tick).
 - Per tick: restart reconcile on the first tick (runs owned by another server are crash-settled,
   tokens revoked, retry wake queued, d-0054); settle finished runs; cancel runs silent for
@@ -85,8 +87,26 @@ Public API from `src/index.ts`:
 - The `dispatch_prompt` input carries `worker_contract` (`domain/worker-contract.ts`), and the same rules are appended to the returned prompt verbatim under `## Rules of this run` so a paraphrase cannot drop them: the cwd is already the worktree (never `cd`), one shell command per call (compound lines are denied unattended), the project's exact test command (or the several test-role commands, any of which counts), the other checks listed by role (lint, typecheck, build, ...; the gates re-run all of them), and the Worker must end
   with `finish` and a typed claim for every file it edited (G1 fails a finish without; a later `finish` replaces an earlier one), plus a rework
   note after a failed gate.
+- Scheduling across projects (d-0097; `domain/pick-next.ts`, `tick/schedule.ts`, `tick/dispatch.ts`): dispatch reads
+  one plan (waiting tickets, due wakes, live runs, parked harnesses, the tick's settings) and `pickNext` chooses.
+  Rules: due wakes (retry, resume, rework) go before new tickets; inside each group projects take turns in id
+  order, starting after the project that got the last slot (`state.schedulerCursor`), so with any slot at all every
+  project with work reaches the front within as many ticks as there are projects; inside a project the highest
+  `priority` goes first, then the lowest ticket number. A candidate is skipped, with a stated reason, when it has
+  unfinished blockers, its harness is parked, or starting it would pass a limit: global (`max_concurrent_global`,
+  default 2), per project (`max_concurrent_per_project`, default 1; a project's own `max_concurrent` can only lower
+  it), per harness (`max_concurrent_per_harness`, `by_id` over `default` 2), or `max_concurrent_by_state.in_progress`.
+  Blocked and parked tickets sit out of the rotation so they never spend a project's turn. A ticket held by a
+  failing step (`dispatch:` / `dispatch_prompt:` holds) is removed before the choice.
+- Quota waits (`tick/quota.ts`, `domain/harness-choice.ts`): a run that ends with the `quota` error family (the
+  drivers classify "no available quota" and a rejected rate-limit report as `quota`, a plain 429 stays `rate_limit`)
+  parks `run.harness` in `harness_state` until the reset the harness named, else `quota_default_pause_ms` (1 h);
+  the ticket gets a `retry` wake with reason `quota_wait` at that time (not counted by the re-wake cap) and is not
+  parked. Every other ticket on that harness waits too. If the project's `harness_fallbacks` (else the company's)
+  lists an installed, unparked harness, the wake is due at once and dispatch runs the ticket there (a session is
+  only resumed on the harness that made it). Expired pauses are cleared by the first dispatch that sees them.
 - Pure rules, also exported: `decideLane`, `decideFailure`, `findViolations`, `nextTicketNumber`,
-  `requestWake`.
+  `pickNext`, `orderCandidates`, `chooseHarness`, `describeWait`, `requestWake`.
 - Process-edge helpers the app plugs in, kept here so `apps/server` holds no port implementation: `createIdSource()` (the `IdSource`: random `run-`/`wake-`/`int-` ids and 256-bit base64url run tokens from the OS random source), `createOwnerId()`, and `createJsonLogger(write, min?, now?)` (one JSON line per log call, never throws, redacts fields whose names look like credentials).
 - Run settle records status, usage, cost, error family, the files git says changed, the receipt
   chain's last hash and revokes the token; the worktree is kept for the PR step.
@@ -101,7 +121,8 @@ Public API from `src/index.ts`:
   `dispatched` + `asked`. A property test pins it.
 - Resume is a new run (d-0055): a run with `ended_at` is never reopened; `retry_of` links the chain.
 - Failure policy by error family (`domain/failure-policy.ts`, config `engine.retry`):
-  `auth`, `policy_denied`, `refusal`, `budget`, `invalid_input` never retry; `rate_limit` waits for
+  `auth`, `policy_denied`, `refusal`, `budget`, `invalid_input` never retry; `quota` is handled before the table (above;
+  the table's own answer is a retry at the reset, or after `rate_limit.max_ms`); `rate_limit` waits for
   the harness's reset time, else exponential backoff (`base_ms * 2^(n-1)`, capped by `max_ms`, up to
   `max_attempts`); `crash` and `unknown` retry after `delay_ms` up to `max_attempts` (1 each);
   `stall` retries after `delay_ms` up to `max_attempts` (2). Past a cap the ticket parks in
@@ -121,6 +142,8 @@ Public API from `src/index.ts`:
   Worker. Gate findings still go through `gate_failed` (rework, or park at the cap, which releases
   to `planned`). A ticket with no stored PR number asks the host (`findPr`) before `openPr`, so a
   crash between opening and storing the PR adopts it instead of opening a duplicate.
+- Fairness is by project turns, not by global priority: a ticket's `priority` ranks it inside its own project only. A
+  global priority would let one project's urgent tickets starve every other project (a property test pins no starvation).
 - Alternatives rejected: engine in `apps/server` (breaks "apps compose only"); timers inside the
   engine (the app owns the clock, so tests move a fake one).
 
@@ -135,7 +158,7 @@ Public API from `src/index.ts`:
   (this server's name), `catalogueHash`, optional `mcpIdentity`, `onTickRequested`, `log`.
 - No env, files or processes are touched here (the id source reads only OS entropy). Tests: `pnpm test` (scenarios in
   `__tests__/scenarios`, pure rules in `__tests__/domain`, the status-write property in
-  `__tests__/property`); coverage floor 80% lines.
+  `__tests__/property`, including the scheduler's limit, fairness and priority properties); coverage floor 80% lines.
 
 ## Extending
 
@@ -144,6 +167,8 @@ Public API from `src/index.ts`:
 - A new lane: change `triage.ts` (the Express-only park) and `dispatch-run.ts` (model per lane
   already comes from the matrix); the lane rule itself is in `domain/lane-rules.ts`.
 - A new failure family rule: `domain/failure-policy.ts` plus its config in `engine.retry`.
+- A new scheduling limit: add it to `PickCaps`, check it in `pickNext`'s `blocker`, name it in `describeWait`, fill it in
+  `tick/schedule.ts` from the settings, and extend the limit property test.
 - Never write ticket status elsewhere; add events to `core`'s state machine and plan them through
   `ticket-moves.ts`.
 
@@ -153,7 +178,9 @@ Public API from `src/index.ts`:
   restart pumps are gone (runs are crash-settled) and holds reset. The requester's hint, type and
   title are read from the stored intake event (`intakeEvents.get`), so they survive a restart.
 - A running Worker keeps the limits it was started with (budget, stall time); a settings edit reaches runs started on the next tick. The stall scan itself uses the current `stall_ms`. Run rows predating migration 0010 have no `config_version`.
-- Ticket numbers come from listing every ticket id (no counter); fine at M0 scale. Candidates of different projects are ordered by ticket number only, so projects are not yet scheduled round-robin (per-project limits come later, d-0097).
+- Ticket numbers come from listing every ticket id (no counter); fine at M0 scale.
+- The rotation cursor is process-local: after a restart the first dispatch starts at the first project by id. Priority
+  is set directly on the ticket row (no API to change it yet). A wait reason is computed on request and not stored.
 - A project with no git host has a runtime (worktrees, base) but its tickets wait in Verifying: there is nowhere to publish.
 - Failure attempts count failed runs of the same family for the ticket, with no decay.
 - `driver_version` on run rows is the constant `unversioned` until the driver exposes it cheaply.

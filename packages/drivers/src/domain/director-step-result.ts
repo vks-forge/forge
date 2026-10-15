@@ -104,6 +104,13 @@ function toStepError(end: EngineEnd, message: string): StepError {
         message,
         ...(end.retryNotBefore ? { retryNotBefore: end.retryNotBefore } : {}),
       };
+    // A Director step has no queue to park: out of quota is a rate limit that names its reset.
+    case 'quota':
+      return {
+        kind: 'rate_limit',
+        message,
+        ...(end.retryNotBefore ? { retryNotBefore: end.retryNotBefore } : {}),
+      };
     case 'auth':
       return { kind: 'auth', message };
     case 'crash':
@@ -143,6 +150,10 @@ export function interpretOutput<T>(
   const rate = (): string =>
     retryNotBeforeFrom(output.rateLimit, ctx.nowMs, ctx.backoffMs);
 
+  // A step has no queue to park, so a quota end without a named reset waits the usual backoff.
+  const timed = (e: EngineEnd): EngineEnd =>
+    e.kind === 'quota' && !e.retryNotBefore ? { ...e, retryNotBefore: rate() } : e;
+
   const rejected = output.rateLimit?.status === 'rejected';
   const { result } = output;
   if (result === null) {
@@ -157,7 +168,9 @@ export function interpretOutput<T>(
 
     const end = classifyText(ctx.tail, rate);
 
-    return err(toStepError(end.kind === 'unknown' ? { kind: 'crash' } : end, message));
+    return err(
+      toStepError(end.kind === 'unknown' ? { kind: 'crash' } : timed(end), message),
+    );
   }
 
   let end = classifyCliResult(result, rate);
@@ -171,5 +184,5 @@ export function interpretOutput<T>(
 
   const message = end.detail || `claude ended with ${result.subtype ?? 'an error'}`;
 
-  return err(toStepError(end, message));
+  return err(toStepError(timed(end), message));
 }

@@ -37,6 +37,7 @@ describe('verify: park and release', () => {
     expect(parked).toMatchObject({
       status: 'waiting_human',
       rework_count: 0,
+      priority: 0,
       parked_from: 'verifying',
     });
 

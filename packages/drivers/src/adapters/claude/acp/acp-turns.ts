@@ -53,7 +53,7 @@ export async function runTurns(
         sink.emit({ type: 'usage', usage });
       }
 
-      end = classifyStopReason(resp.stopReason, state.rateLimit, rate);
+      end = classifyStopReason(resp.stopReason, state.rateLimit);
     } catch (e) {
       end = classifyRejection(e, state.rateLimit, rate);
     }

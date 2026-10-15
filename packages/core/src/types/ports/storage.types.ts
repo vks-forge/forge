@@ -19,7 +19,7 @@
  * Exports: TicketPatch, TicketRepository, TicketRelationRepository, RunRepository,
  *   RunEventRepository, RunInboxRepository, RunTokenRepository, IntakeEventRepository,
  *   InteractionRepository, WakeRequestRepository, GateResultRepository, ProjectRepository,
- *   HarnessRepository, GithubConnectionRepository, HarnessVersionRepository,
+ *   HarnessRepository, HarnessStateRepository, GithubConnectionRepository, HarnessVersionRepository,
  *   HarnessToolSchemaRepository, StorageTx,
  *   StorageAdapter.
  * Depends on: schemas/*, types/run-event.types. No IO (interfaces only).
@@ -28,6 +28,7 @@
 import type { TicketId } from '#/schemas/ids.js';
 import type { GateResult, NewGateResult } from '#/schemas/gate-result.js';
 import type { Harness } from '#/schemas/harness.js';
+import type { HarnessState } from '#/schemas/harness-state.js';
 import type { HarnessToolSchema, HarnessVersion } from '#/schemas/harness-compat.js';
 import type { IntakeEvent, StoredIntakeEvent } from '#/schemas/intake.js';
 import type { Interaction } from '#/schemas/interaction.js';
@@ -220,6 +221,17 @@ export interface HarnessRepository {
   list(): Promise<Harness[]>;
 }
 
+/** Which harnesses are parked until their quota resets (d-0097). */
+export interface HarnessStateRepository {
+  get(harnessId: string): Promise<HarnessState | null>;
+  // Insert or replace by harness id.
+  upsert(state: HarnessState): Promise<void>;
+  // Removes the row; false when the harness was not paused.
+  clear(harnessId: string): Promise<boolean>;
+  // Every row, ordered by harness id (expired rows included: the caller compares to `now`).
+  list(): Promise<HarnessState[]>;
+}
+
 /** The `github_connections` registry (d-0094): one GitHub App per org or account. Private keys live in the SecretStore, never here. */
 export interface GithubConnectionRepository {
   get(id: string): Promise<GithubConnection | null>;
@@ -258,6 +270,7 @@ export interface StorageTx {
   readonly gateResults: GateResultRepository;
   readonly projects: ProjectRepository;
   readonly harnesses: HarnessRepository;
+  readonly harnessState: HarnessStateRepository;
   readonly githubConnections: GithubConnectionRepository;
   readonly harnessVersions: HarnessVersionRepository;
   readonly harnessToolSchemas: HarnessToolSchemaRepository;

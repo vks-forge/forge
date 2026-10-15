@@ -45,6 +45,7 @@ export type EngineEndKind =
   | 'max_turns'
   | 'budget'
   | 'rate_limit'
+  | 'quota'
   | 'auth'
   | 'cancelled'
   | 'policy_denied'
@@ -54,7 +55,7 @@ export type EngineEndKind =
 export interface EngineEnd {
   readonly kind: EngineEndKind;
   readonly detail?: string;
-  /** ISO time before which a `rate_limit` end must not be retried. */
+  /** ISO time before which a `rate_limit` end must not be retried; for `quota`, the reset the harness named (absent when it named none). */
   readonly retryNotBefore?: string;
 }
 

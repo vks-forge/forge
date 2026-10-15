@@ -19,6 +19,7 @@ import { describe, expect, it } from 'vitest';
 import { createFakeGitHost } from '#tests/helpers/fake-git-host.js';
 import { makeRig } from '#tests/helpers/rig.js';
 import type { Rig } from '#tests/helpers/rig.js';
+import { makeResult } from '#tests/helpers/scripted-driver.js';
 
 async function saveCompany(rig: Rig, doc: Record<string, unknown>): Promise<void> {
   const { version } = await rig.config.company();
@@ -33,14 +34,20 @@ async function saveCompany(rig: Rig, doc: Record<string, unknown>): Promise<void
 
 describe('config is read through the ConfigSource each tick', () => {
   it('applies a company edit on the next tick without recreating the engine', async () => {
-    const rig = await makeRig({ engine: { global_slots: 1 } });
+    const rig = await makeRig({
+      engine: { max_concurrent_global: 1, max_concurrent_per_project: 2 },
+    });
+
     await rig.request('first');
     await rig.request('second');
 
     const before = await rig.tick();
     expect(before.dispatched).toHaveLength(1);
 
-    await saveCompany(rig, { engine: { global_slots: 2 } });
+    await saveCompany(rig, {
+      engine: { max_concurrent_global: 2, max_concurrent_per_project: 2 },
+    });
+
     const after = await rig.tick();
 
     expect(after.dispatched).toEqual([
@@ -54,6 +61,9 @@ describe('config is read through the ConfigSource each tick', () => {
     await rig.tick();
     expect(rig.driver.starts[0]).toMatchObject({ model: 'sonnet' });
 
+    // One run per project at a time: let the first end so the second may start.
+    rig.driver.finish('run-1', makeResult());
+    await rig.flush();
     await saveCompany(rig, { models: { worker: { express: 'opus' } } });
     await rig.request('second');
     await rig.tick();
@@ -118,6 +128,8 @@ describe('config is read through the ConfigSource each tick', () => {
     });
 
     await rig.request('second');
+    rig.driver.finish('run-1', makeResult());
+    await rig.flush();
     await rig.tick();
 
     const runs = await rig.storage.transaction(async (tx) => [

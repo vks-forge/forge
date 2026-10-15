@@ -30,7 +30,7 @@ export async function requestWakeTx(
   rewakeCap?: RewakeCap,
 ): Promise<WakeOutcome> {
   const now = deps.clock.now();
-  if (input.kind === 'retry') {
+  if (input.kind === 'retry' && !input.uncapped) {
     if (!rewakeCap) {
       throw new InvalidInputError('a retry wake needs the re-wake cap of the settings');
     }

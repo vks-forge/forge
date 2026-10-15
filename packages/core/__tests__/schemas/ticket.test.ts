@@ -33,12 +33,23 @@ const base = {
   status: 'inbox',
   status_version: 0,
   rework_count: 0,
+  priority: 0,
   created_at: '2026-10-13T00:00:00.000Z',
   updated_at: '2026-10-13T00:00:00.000Z',
   blocked_by: [],
 };
 
 describe('ticket schemas', () => {
+  it('reads a row without a priority as 0 and keeps a raised or lowered one', () => {
+    const { priority: _p, ...old } = base;
+    void _p;
+
+    expect(Ticket.parse(old).priority).toBe(0);
+    expect(Ticket.parse({ ...base, priority: 5 }).priority).toBe(5);
+    expect(Ticket.parse({ ...base, priority: -1 }).priority).toBe(-1);
+    expect(Ticket.safeParse({ ...base, priority: 1.5 }).success).toBe(false);
+  });
+
   it('exposes the documented enums', () => {
     expect(Lane.options).toEqual(['express', 'standard', 'full']);
     expect(Tier.options).toEqual(['A', 'B', 'C']);

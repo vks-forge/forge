@@ -46,10 +46,10 @@ describe('built-in defaults', () => {
 describe('mergeConfig', () => {
   it('merges objects key by key and leaves siblings alone', () => {
     const out = mergeConfig(BUILTIN_CONFIG, {
-      engine: { global_slots: 7, retry: { crash: { max_attempts: 4 } } },
+      engine: { max_concurrent_global: 7, retry: { crash: { max_attempts: 4 } } },
     });
 
-    expect(out.forge.engine.global_slots).toBe(7);
+    expect(out.forge.engine.max_concurrent_global).toBe(7);
     expect(out.forge.engine.retry.crash).toEqual({ delay_ms: 10_000, max_attempts: 4 });
     expect(out.forge.engine.retry.stall).toEqual(BUILTIN_FORGE_CONFIG.engine.retry.stall);
     expect(out.forge.models).toEqual(BUILTIN_FORGE_CONFIG.models);
@@ -99,8 +99,8 @@ describe('mergeConfig', () => {
 
   it('mergeCompany applies only the company layer', () => {
     expect(
-      mergeCompany(BUILTIN_FORGE_CONFIG, { engine: { global_slots: 9 } }).engine
-        .global_slots,
+      mergeCompany(BUILTIN_FORGE_CONFIG, { engine: { max_concurrent_global: 9 } }).engine
+        .max_concurrent_global,
     ).toBe(9);
   });
 });
@@ -117,7 +117,7 @@ const companyArb = fc.record(
     ),
     engine: fc.record(
       {
-        global_slots: slots,
+        max_concurrent_global: slots,
         confidence_threshold: fc.double({ min: 0, max: 1, noNaN: true }),
         max_concurrent_by_state: fc.record({ verifying: slots }, { requiredKeys: [] }),
       },
@@ -151,8 +151,10 @@ describe('mergeConfig properties', () => {
           expect(out.project.tier_c_globs).toEqual(project.tier_c_globs);
         }
 
-        if (company.engine?.global_slots !== undefined) {
-          expect(out.forge.engine.global_slots).toBe(company.engine.global_slots);
+        if (company.engine?.max_concurrent_global !== undefined) {
+          expect(out.forge.engine.max_concurrent_global).toBe(
+            company.engine.max_concurrent_global,
+          );
         }
       }),
     );

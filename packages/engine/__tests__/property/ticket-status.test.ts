@@ -65,6 +65,7 @@ const template = (status: TicketStatus): Ticket => ({
   status,
   status_version: 1,
   rework_count: 0,
+  priority: 0,
   created_at: AT,
   updated_at: AT,
   blocked_by: [],

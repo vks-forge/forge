@@ -177,7 +177,7 @@ describe('Express flow', () => {
   });
 
   it('respects the global slot limit and starts the waiting ticket when a slot frees', async () => {
-    const rig = await makeRig({ engine: { global_slots: 1 } });
+    const rig = await makeRig({ engine: { max_concurrent_global: 1 } });
     await rig.request('One');
     await rig.request('Two');
     const first = await rig.tick();
@@ -194,7 +194,7 @@ describe('Express flow', () => {
 
   it('respects the per-state limit', async () => {
     const rig = await makeRig({
-      engine: { max_concurrent_by_state: { in_progress: 1 }, global_slots: 5 },
+      engine: { max_concurrent_by_state: { in_progress: 1 }, max_concurrent_global: 5 },
     });
 
     await rig.request('One');

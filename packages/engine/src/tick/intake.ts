@@ -77,6 +77,7 @@ export async function ingest(
         status: 'inbox',
         status_version: 0,
         rework_count: 0,
+        priority: 0,
         created_by_intake: stored.id,
         created_at: now,
         updated_at: now,
