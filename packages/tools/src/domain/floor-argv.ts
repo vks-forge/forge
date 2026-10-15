@@ -35,8 +35,39 @@ const DELETERS = new Set(['rm', 'remove-item', 'ri', 'rimraf', ...CMD_DELETERS])
 const RISKY_GIT_CONFIG =
   /^(alias\.|core\.(sshcommand|hookspath|fsmonitor|pager|editor|askpass|gitproxy|attributesfile)|push\.|remote\.|url\.|credential\.|diff\.external|difftool\.|mergetool\.|merge\.[^.]+\.driver|filter\.|include\.|includeif\.|protocol\.|sequence\.editor|gpg\.|ssh\.|pager\.|uploadpack\.|receive\.)/i;
 
-const RISKY_GIT_ENV =
-  /^GIT_(SSH|SSH_COMMAND|CONFIG[A-Z_]*|EXTERNAL_DIFF|ASKPASS|PAGER|EDITOR|PROXY_COMMAND|EXEC_PATH|TEMPLATE_DIR)=/i;
+/**
+ * Every `GIT_*=` assignment: git reads the repository location (`GIT_DIR`, `GIT_WORK_TREE`,
+ * `GIT_INDEX_FILE`, `GIT_OBJECT_DIRECTORY`, ...), programs (`GIT_SSH_COMMAND`, `GIT_PAGER`) and
+ * config from the environment, and a Worker has no use for any of them. A list of the known
+ * risky ones goes stale with each git release; the prefix does not.
+ */
+const GIT_ENV = /^GIT_[A-Z0-9_]*=/i;
+
+const GIT_GLOBAL_WITH_VALUE = new Set([
+  '-c',
+  '-C',
+  '--git-dir',
+  '--work-tree',
+  '--namespace',
+  '--super-prefix',
+  '--config-env',
+  '--attr-source',
+  '--exec-path',
+]);
+
+/** The word at git's subcommand position: the first non-option word after global options and their values. */
+function gitSubcommand(args: readonly string[]): string | undefined {
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i] as string;
+    if (GIT_GLOBAL_WITH_VALUE.has(a)) {
+      i++;
+    } else if (!a.startsWith('-')) {
+      return a;
+    }
+  }
+
+  return undefined;
+}
 
 const hasInOrder = (args: readonly string[], ...seq: string[]): boolean => {
   let k = 0;
@@ -99,7 +130,7 @@ function isCatastrophicTarget(target: string, cwd?: string): boolean {
 }
 
 function gitViolation(args: readonly string[], cwd?: string): string | null {
-  if (args.includes('push')) {
+  if (gitSubcommand(args) === 'push') {
     return 'floor:argv:git-push';
   }
 
@@ -178,7 +209,7 @@ export function floorViolation(seg: ShellSegment, cwd?: string): string | null {
   const runsGit = candidates.some((c) => commandName(c[0]) === 'git');
   if (runsGit) {
     const gitEnv = [...seg.assignments, ...seg.argv.filter((t) => ASSIGNMENT.test(t))];
-    if (gitEnv.some((e) => RISKY_GIT_ENV.test(e))) {
+    if (gitEnv.some((e) => GIT_ENV.test(e))) {
       return 'floor:argv:git-config';
     }
   }

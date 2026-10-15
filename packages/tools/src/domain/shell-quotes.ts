@@ -12,7 +12,7 @@
  * Depends on: domain/shell-flags (bail), types/tokenizer.types. No IO.
  */
 
-import { bail } from '#/domain/shell-flags.js';
+import { bail, startsExpansion } from '#/domain/shell-flags.js';
 import type { QuoteHost } from '#/types/tokenizer.types.js';
 
 /** Backtick substitution (bash). `i` is the opening backtick; returns the index after the closing one. */
@@ -56,6 +56,10 @@ export function scanDoubleQuoted(host: QuoteHost, i: number): number {
     if (c === '$' && src[j + 1] === '(') {
       j = host.sub(src, j + 2, true);
       continue;
+    }
+
+    if (startsExpansion(src, j, ps)) {
+      host.expansion();
     }
 
     if (c === '`' && !ps) {

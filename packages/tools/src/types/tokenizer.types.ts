@@ -17,7 +17,12 @@ export type ShellDialect = 'bash' | 'powershell';
 
 /** Constructs that force at least an `ask` however the command text matches a rule. */
 export type ShellFlag =
-  'subshell' | 'wrapper' | 'interpreter_eval' | 'pipe_to_interpreter' | 'background';
+  | 'subshell'
+  | 'wrapper'
+  | 'interpreter_eval'
+  | 'pipe_to_interpreter'
+  | 'background'
+  | 'expansion';
 
 /** A redirect target; `write` targets are evaluated as file writes, `read` as reads. */
 export interface ShellRedirect {
@@ -63,6 +68,8 @@ export interface QuoteHost {
   append(text: string): void;
   /** Marks the current word as present even if empty (`""`). */
   markStarted(): void;
+  /** Records that the shell would expand a variable or home reference in this word. */
+  expansion(): void;
 }
 
 /** Where a redirect operator ends and what it redirects to, if it names a file. */

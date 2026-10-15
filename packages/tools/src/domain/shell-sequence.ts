@@ -13,7 +13,7 @@
  */
 
 import { scanRedirect } from '#/domain/shell-redirect.js';
-import { MAX_DEPTH, bail, buildSegment } from '#/domain/shell-flags.js';
+import { MAX_DEPTH, bail, buildSegment, expandsHere } from '#/domain/shell-flags.js';
 import {
   scanBacktick,
   scanDoubleQuoted,
@@ -119,6 +119,9 @@ export function parseSeq(
     },
     markStarted: () => {
       started = true;
+    },
+    expansion: () => {
+      flags.add('expansion');
     },
   };
 
@@ -266,6 +269,10 @@ export function parseSeq(
     if (c === '"' || c === "'") {
       i = (c === '"' ? scanDoubleQuoted(host, i) : scanSingleQuoted(host, i)) - 1;
       continue;
+    }
+
+    if (expandsHere(src, i, ps, !started)) {
+      flags.add('expansion');
     }
 
     cur += c;

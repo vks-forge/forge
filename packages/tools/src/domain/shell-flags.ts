@@ -8,7 +8,7 @@
  *   the tokenizer only has to split text and the rule engine only has to read flags
  *   (tool-system.md §5.2, d-0048).
  *
- * Exports: MAX_DEPTH, Abort, bail(), baseName(), buildSegment().
+ * Exports: MAX_DEPTH, Abort, bail(), baseName(), buildSegment(), startsExpansion(), expandsHere().
  * Depends on: domain/command-classes, types/tokenizer.types. No IO.
  */
 
@@ -78,6 +78,33 @@ function classify(
 }
 
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
+
+/**
+ * True when `src[i]` is a `$` that the shell would expand: `$NAME`, `${...}` or PowerShell
+ * `$env:X`. The text stays literal in our argv (`$LOCALAPPDATA/Forge/x` would resolve inside
+ * the worktree), so the floors cannot judge it and the segment must go to a human. `$null`
+ * is PowerShell's constant and is harmless; `$?`, `$1` and friends name no file.
+ */
+export function startsExpansion(src: string, i: number, ps: boolean): boolean {
+  if (src[i] !== '$' || !/[A-Za-z_{]/.test(src[i + 1] ?? '')) {
+    return false;
+  }
+
+  return !(ps && /^\$null(?![A-Za-z0-9_:])/i.test(src.slice(i, i + 6)));
+}
+
+/** `~user` at the start of a bash word expands to another user's home directory. */
+const startsTildeUser = (src: string, i: number): boolean =>
+  src[i] === '~' && /[A-Za-z_]/.test(src[i + 1] ?? '');
+
+/** True when the unquoted character at `i` begins something the shell would expand. */
+export const expandsHere = (
+  src: string,
+  i: number,
+  ps: boolean,
+  atWordStart: boolean,
+): boolean =>
+  startsExpansion(src, i, ps) || (!ps && atWordStart && startsTildeUser(src, i));
 
 /** Builds one segment: strips leading `NAME=value` words (bash), classifies, derives match texts. */
 export function buildSegment(

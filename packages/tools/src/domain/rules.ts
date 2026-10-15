@@ -18,13 +18,11 @@
  *   deny, not just an ask. Every path, from a tool or any word of an argv, passes the data-home floor.
  *
  * Exports: evaluateToolRules(), evaluateShell(), normalizePath() (re-exported).
- * Depends on: @forge/core (globMatch), domain/argv-home, domain/argv-paths, domain/cd-cwd, domain/command-candidates,
- *   domain/data-home-floor, domain/floor-argv, domain/nested-scripts, domain/tokenizer, schemas/grant, shared/path,
- *   shared/pattern, types/grants, types/rules, types/tokenizer. No IO.
+ * Depends on: domain/argv-home, domain/argv-paths, domain/cd-cwd, domain/command-candidates,
+ *   domain/data-home-floor, domain/floor-argv, domain/nested-scripts, domain/rule-layers, domain/tokenizer, shared/path,
+ *   types/grants, types/rules, types/tokenizer. No IO.
  */
 
-import { globMatch } from '@forge/core';
-import type { CallRule, Effect } from '#/schemas/grant.js';
 import { argvDataHomeOutcome } from '#/domain/argv-home.js';
 import { argvReads, argvWrites, wildcardHitsFloor } from '#/domain/argv-paths.js';
 import { commandCandidates, commandName } from '#/domain/command-candidates.js';
@@ -33,101 +31,17 @@ import { dataHomeGuard, dataHomeOutcome } from '#/domain/data-home-floor.js';
 import { floorViolation } from '#/domain/floor-argv.js';
 import { looseFloorHit, nestedScripts } from '#/domain/nested-scripts.js';
 import { tokenizeShell } from '#/domain/tokenizer.js';
+import { evaluate, worse } from '#/domain/rule-layers.js';
 import { normalizePath } from '#/shared/path.js';
-import { commandMatch, literalPrefixLength, toolMatch } from '#/shared/pattern.js';
 import type { EffectiveGrant } from '#/types/grants.types.js';
-import type { MatchMode, RuleOutcome } from '#/types/rules.types.js';
+import type { RuleOutcome } from '#/types/rules.types.js';
 import type { ShellDialect, ShellSegment } from '#/types/tokenizer.types.js';
 
 export { normalizePath };
 
 const PATH_ACTIONS = new Set(['read', 'edit', 'write', 'grep', 'glob']);
-const SEVERITY: Record<Effect, number> = { allow: 0, ask: 1, deny: 2 };
 const MAX_NESTING = 4;
 const NULL_DEVICES = new Set(['/dev/null', '$null', 'nul']);
-const REASON = { allow: 'rule_allow', ask: 'rule_ask', deny: 'rule_deny' } as const;
-
-function matches(
-  pattern: string,
-  text: string,
-  mode: MatchMode,
-  ignoreCase: boolean,
-): boolean {
-  if (mode === 'shell') {
-    return commandMatch(pattern, text, ignoreCase);
-  }
-
-  // Both sides are case-folded: the Windows filesystem ignores case (see shared/path.ts).
-  if (mode === 'path') {
-    return globMatch(pattern.toLowerCase(), text.toLowerCase());
-  }
-
-  return toolMatch(pattern, text);
-}
-
-/** Last match wins; for shell the longest literal prefix wins, ties going to the later rule. */
-function pick(
-  rules: readonly CallRule[],
-  action: string,
-  resource: string,
-  mode: MatchMode,
-  ignoreCase: boolean,
-): { rule: CallRule; index: number } | null {
-  let best: { rule: CallRule; index: number; len: number } | null = null;
-  for (const [index, rule] of rules.entries()) {
-    if (rule.action !== action || !matches(rule.resource, resource, mode, ignoreCase)) {
-      continue;
-    }
-
-    const len = mode === 'shell' ? literalPrefixLength(rule.resource) : 0;
-    if (best === null || len >= best.len) {
-      best = { rule, index, len };
-    }
-  }
-
-  return best;
-}
-
-const idOf = (layer: string, hit: { rule: CallRule; index: number }): string =>
-  hit.rule.id ?? `${layer}#${hit.index}`;
-
-function worse(a: RuleOutcome | null, b: RuleOutcome): RuleOutcome {
-  return a === null || SEVERITY[b.effect] > SEVERITY[a.effect] ? b : a;
-}
-
-function evaluate(
-  grant: EffectiveGrant,
-  action: string,
-  resource: string,
-  mode: MatchMode,
-  ignoreCase: boolean,
-): RuleOutcome {
-  const denyHit = pick(
-    grant.managed.filter((r) => r.effect === 'deny'),
-    action,
-    resource,
-    mode,
-    ignoreCase,
-  );
-
-  if (denyHit) {
-    return { effect: 'deny', reason: 'managed_deny', rule: idOf('managed', denyHit) };
-  }
-
-  let out: RuleOutcome | null = null;
-  for (const [i, layer] of grant.ruleLayers.entries()) {
-    const hit = pick(layer.rules, action, resource, mode, ignoreCase);
-    if (hit) {
-      const effect = hit.rule.effect;
-      out = worse(out, { effect, reason: REASON[effect], rule: idOf(layer.name, hit) });
-    } else if (i === 0) {
-      // The lane layer is the baseline: silence there means "ask", whatever later layers say.
-      out = worse(out, { effect: 'ask', reason: 'no_matching_rule', rule: null });
-    }
-  }
-
-  return out ?? { effect: 'ask', reason: 'no_matching_rule', rule: null };
-}
 
 const INVALID: RuleOutcome = { effect: 'deny', reason: 'invalid_resource', rule: null };
 
@@ -174,7 +88,10 @@ function evaluateArgv(
   cwd: string | undefined,
   depth: number,
 ): RuleOutcome | null {
-  let out: RuleOutcome | null = null;
+  // `NAME=value cmd` assignments are not argv, but the value can be a path the command opens.
+  // The value may itself be `--flag=path`, so it is judged as a word of its own too.
+  const assigned = seg.assignments.flatMap((a) => [a, a.slice(a.indexOf('=') + 1)]);
+  let out = argvDataHomeOutcome(grant.dataHome, assigned, cwd);
   for (const argv of commandCandidates(seg.argv)) {
     const cmd = commandName(argv[0]);
     const rest = argv.slice(1);

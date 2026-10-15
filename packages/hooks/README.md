@@ -55,6 +55,8 @@ A durable backend implements `ReceiptLog` in `@forge/db` (`append` must be atomi
 
 ## Limits
 
+- Hardlinks cannot be detected by `realpath`: a hardlink to a file in the data home resolves to its own path, so the physical-path pass sees nothing odd. The command that creates one (`ln`, `mklink /H`, `New-Item -ItemType HardLink`, `fsutil hardlink create`) is what the floors and the shell allow-list refuse or ask about; a link that already exists is out of reach.
+
 - Only path tools are resolved on disk. A shell command line is text the shell expands later, so its paths are judged lexically (a junction named in a `cat` argument is not followed). A race between the check and the harness's own open (a link swapped in between) is not closed here; real isolation is a separate OS account (d-0005).
 - The catalogue must know every native tool the Worker uses, or `.*` makes `admit()` deny it as `unknown_tool`.
 - No run-token issuance, secret generation or HTTP route here: the app registers `sha256(token)` through `tx.runTokens.put(...)` before launch, keeps the HMAC secret in the `SecretStore` for the life of the run (so a restart does not lose it; a resume gets a new generation, d-0100), and serves `credentials()`.

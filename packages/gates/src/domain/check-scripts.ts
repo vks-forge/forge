@@ -18,9 +18,20 @@ import { foldPath } from '#/shared/paths.js';
 const SEGMENT_SPLIT = /&&|\|\||;|\|/;
 /** Wrapper scripts that live at the project root and are run by bare or `./` name. */
 const LAUNCHERS = new Set(['gradlew', 'gradlew.bat', 'mvnw', 'mvnw.cmd']);
-const SCRIPT_FILE = /\.(sh|bash|zsh|ps1|bat|cmd)$/;
+const SCRIPT_FILE = /\.(sh|bash|zsh|ps1|bat|cmd|mjs|cjs|js|ts|mts|cts|py|rb|php|pl)$/;
 
 const unquote = (token: string): string => token.replace(/^["']|["']$/g, '');
+
+/** `--flag=value` names a path in its value; a bare flag names none. */
+function pathPart(token: string): string {
+  if (!token.startsWith('-')) {
+    return token;
+  }
+
+  const eq = token.indexOf('=');
+
+  return eq === -1 ? '' : unquote(token.slice(eq + 1));
+}
 
 /** A path inside the worktree: not absolute, not drive/UNC, not `~`, not climbing out. */
 function insideWorktree(folded: string): boolean {
@@ -34,18 +45,24 @@ function insideWorktree(folded: string): boolean {
  */
 export function checkScriptPaths(checks: ProjectConfig['checks']): Set<string> {
   const paths = new Set<string>();
-  for (const { command } of checks) {
-    let dir = '';
+  for (const { command, cwd } of checks) {
+    // The check runs in `cwd`, so a script it names is relative to that folder.
+    const base = cwd === undefined ? '' : foldPath(cwd).replace(/\/+$/, '');
+    let dir = base;
     for (const segment of command.split(SEGMENT_SPLIT)) {
       const tokens = segment
         .trim()
         .split(/\s+/)
         .filter((t) => t !== '')
-        .map(unquote);
+        .map(unquote)
+        .map(pathPart);
 
       const first = foldPath(tokens[0] ?? '');
       if (first === 'cd' && tokens[1] !== undefined) {
-        dir = foldPath(tokens[1]).replace(/\/+$/, '');
+        dir = [base, foldPath(tokens[1]).replace(/\/+$/, '')]
+          .filter((d) => d !== '')
+          .join('/');
+
         continue;
       }
 
@@ -53,7 +70,9 @@ export function checkScriptPaths(checks: ProjectConfig['checks']): Set<string> {
         .filter((t, i) => {
           const runsByPath = i === 0 && (/[/\\]/.test(t) || LAUNCHERS.has(first));
 
-          return runsByPath || SCRIPT_FILE.test(foldPath(t));
+          // Any word that looks like a path or a script is guarded; one naming a folder or
+          // a flag value matches no changed file and costs nothing.
+          return runsByPath || /[/\\]/.test(t) || SCRIPT_FILE.test(foldPath(t));
         })
         .map((t) => foldPath(t));
 

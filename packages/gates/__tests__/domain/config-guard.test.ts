@@ -152,12 +152,34 @@ describe('checkGateConfig guards scripts a check command runs', () => {
     ['bin/test', 'bin/test'],
     ['bash scripts/check.sh --fast', 'scripts/check.sh'],
     ['cd app && ./ci/run.sh', 'ci/run.sh'],
+    ['node scripts/lint.mjs', 'scripts/lint.mjs'],
+    ['node scripts/lint.cjs --fix', 'scripts/lint.cjs'],
+    ['node lint.js', 'lint.js'],
+    ['python scripts/check.py', 'scripts/check.py'],
+    ['python3 -u check.py', 'check.py'],
+    ['ruby scripts/check.rb', 'scripts/check.rb'],
+    ['php scripts/check.php', 'scripts/check.php'],
+    ['perl scripts/check.pl', 'scripts/check.pl'],
+    ['bun run scripts/check.ts', 'scripts/check.ts'],
+    ['node --import ./hooks/setup.mjs --test', 'hooks/setup.mjs'],
+    ['pytest -c tools/pytest.ini', 'tools/pytest.ini'],
+    ['"python" "scripts/check.py"', 'scripts/check.py'],
     ['.\\scripts\\test.ps1', 'scripts/test.ps1'],
   ])('a check "%s" makes edits to %s a finding', (command, path) => {
     const out = guard(command, path);
 
     expect(out.status).toBe('failed');
     expect(out.findings[0]?.message).toContain('run by a project check');
+  });
+
+  it('a check cwd prefixes the script it runs', () => {
+    const out = checkGateConfig(
+      diffOf([{ status: 'M', path: 'tools/scripts/lint.mjs' }], ''),
+      [],
+      [{ name: 'lint', role: 'lint', command: 'node scripts/lint.mjs', cwd: 'tools' }],
+    );
+
+    expect(out.status).toBe('failed');
   });
 
   it('a deleted guarded script is a finding too', () => {
@@ -171,6 +193,9 @@ describe('checkGateConfig guards scripts a check command runs', () => {
     ['pnpm test', 'scripts/test.sh'],
     ['/usr/bin/make test', 'usr/bin/make'],
     ['../outside/test.sh', 'outside/test.sh'],
+    ['node ../outside/lint.mjs', 'outside/lint.mjs'],
+    ['node /abs/lint.mjs', 'abs/lint.mjs'],
+    ['node scripts/lint.mjs', 'scripts/other.mjs'],
   ])('a check "%s" does not guard %s', (command, path) => {
     expect(guard(command, path).status).toBe('passed');
   });
