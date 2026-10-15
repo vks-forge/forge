@@ -15,7 +15,11 @@
  *   shared/db-errors, types/mutex.types, types/storage-driver.types.
  */
 
-import { ConfigVersion, ConfigVersionConflictError } from '@forge/core';
+import {
+  ConfigVersion,
+  ConfigVersionConflictError,
+  legacyProjectDocWarnings,
+} from '@forge/core';
 import type { Clock, ConfigScope, ConfigSource } from '@forge/core';
 import { runImmediate } from '#/adapters/sqlite/immediate-tx.js';
 import {
@@ -57,6 +61,18 @@ export function createSqliteConfigSource(
     return row ? toVersion(row) : null;
   };
 
+  // The stored JSON of the latest project version, before the schema converted it: the
+  // conversion of an old-format document drops some things, and only the raw text knows which.
+  const legacyWarnings = (slug: string): string[] => {
+    const row = driver.get(
+      `SELECT doc_json FROM config_versions
+       WHERE scope = 'project' AND project = ? ORDER BY version DESC LIMIT 1`,
+      [slug],
+    );
+
+    return row ? legacyProjectDocWarnings(JSON.parse(String(row['doc_json']))) : [];
+  };
+
   const read = <T>(body: () => T): Promise<T> =>
     mutex.run(async () => {
       try {
@@ -85,6 +101,7 @@ export function createSqliteConfigSource(
           {
             doc: project?.scope === 'project' ? project.doc : null,
             version: project?.version ?? 0,
+            warnings: legacyWarnings(slug),
           },
         );
       }),

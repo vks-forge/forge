@@ -11,7 +11,8 @@
  *   the worktree, so the Worker cannot edit what the hook reads), and the per-run MCP
  *   server is described so the harness can launch `apps/mcp` with exactly this run's id,
  *   token and database path. The hook is told the server's base URL, which is only known
- *   once the port is bound, so it is read lazily. A resume runs this again, so the hook
+ *   once the port is bound, so it is read lazily. Before any of that, `checkBuild` can refuse
+ *   the start when the installed harness build changed since its approvals were loaded. A resume runs this again, so the hook
  *   config the driver writes next carries the new URL, port and token.
  *
  * Exports: createPrepareRun().
@@ -39,6 +40,9 @@ export function createPrepareRun(
         `run ${req.runId} has no FORGE_RUN_TOKEN in its request`,
       );
     }
+
+    // First: a refused start must not leave a run directory or a registered secret behind.
+    await opts.checkBuild?.(req.runId);
 
     const runDir = join(opts.runsDir, req.runId);
     await mkdir(runDir, { recursive: true });

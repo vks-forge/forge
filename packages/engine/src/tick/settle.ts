@@ -103,7 +103,16 @@ export async function settleRun(
     });
 
     await tx.runTokens.revoke(run.id, ctx.nowIso);
-    await applyOutcome(ctx, tx, run, result, family, pump, opts.retryReason);
+    await applyOutcome(
+      ctx,
+      tx,
+      run,
+      result,
+      family,
+      pump,
+      opts.retryReason,
+      opts.parkReason,
+    );
   });
 
   state.pumps.delete(run.id);

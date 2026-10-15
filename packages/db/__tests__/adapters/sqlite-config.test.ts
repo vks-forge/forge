@@ -42,6 +42,30 @@ describeConfigSourceContract('sqlite (:memory:)', () => handle(':memory:')());
 const doc = (slots: number) => ({ engine: { max_concurrent_global: slots } });
 
 describe('sqlite config source specifics', () => {
+  it('returns warnings for an old-format stored document that the conversion cut down', async () => {
+    const path = nextPath();
+    await openSqlite(path).storage.close();
+    const raw = new Database(path);
+    raw
+      .prepare(
+        `INSERT INTO config_versions (scope, project, version, doc_json, author, reason, created_at)
+         VALUES ('project', 'old', 1, ?, 'a', 'legacy', ?)`,
+      )
+      .run(
+        JSON.stringify({ profile: 'ts', commands: { test: 'pnpm test', tset: 'x' } }),
+        Date.now(),
+      );
+
+    raw.close();
+
+    const backend = openSqlite(path);
+    const view = await backend.config.project('old');
+    await backend.storage.close();
+
+    expect(view.warnings).toEqual(['the command for unknown role "tset" was dropped']);
+    expect(view.config.project.checks.map((c) => c.role)).toEqual(['test']);
+  });
+
   it('keeps versions across reopen and continues the numbering', async () => {
     const path = nextPath();
     const first = openSqlite(path);

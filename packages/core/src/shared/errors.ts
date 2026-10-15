@@ -11,7 +11,8 @@
  *
  * Exports: ForgeError, AuthError, RateLimitError, QuotaError, BudgetError,
  *   StallError, RefusalError, CrashError, PolicyDeniedError, UnknownForgeError,
- *   InvalidInputError, HeadMovedError, ConfigVersionConflictError.
+ *   InvalidInputError, HeadMovedError, ConfigVersionConflictError, ProjectNotFoundError,
+ *   HarnessChangedError.
  * Depends on: schemas/errors, types/errors. No IO.
  */
 
@@ -110,6 +111,41 @@ export class InvalidInputError extends ForgeError {
 export class HeadMovedError extends ForgeError {
   constructor(message: string, options?: ForgeErrorOptions) {
     super('invalid_input', message, options);
+  }
+}
+
+/**
+ * The installed harness build is not the one whose tool approvals Forge loaded (an in-place
+ * upgrade while it runs). Family `policy_denied`: not retried, the ticket parks until the
+ * owner has looked at the new build; the engine uses its message as the park reason.
+ */
+export class HarnessChangedError extends ForgeError {
+  readonly loaded: string | null;
+  readonly installed: string | null;
+
+  constructor(
+    loaded: string | null,
+    installed: string | null,
+    options?: ForgeErrorOptions,
+  ) {
+    super(
+      'policy_denied',
+      `harness_changed: the installed harness build is ${installed ?? 'unknown'}, but Forge loaded its tool approvals for ${loaded ?? 'no build'}; Forge is checking the new build. Review it and approve its tools in Settings, then release this ticket`,
+      options,
+    );
+
+    this.loaded = loaded;
+    this.installed = installed;
+  }
+}
+
+/** A settings read named a project that is not in the registry; the caller reports it instead of serving built-in defaults for a typo. */
+export class ProjectNotFoundError extends ForgeError {
+  readonly slug: string;
+
+  constructor(slug: string, options?: ForgeErrorOptions) {
+    super('invalid_input', `no project ${slug}`, options);
+    this.slug = slug;
   }
 }
 

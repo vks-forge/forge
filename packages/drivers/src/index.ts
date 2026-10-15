@@ -24,7 +24,11 @@ export * from '#/adapters/claude/system.js';
 export { evaluateChecks, summarize } from '#/compat/evaluate.js';
 export { KNOWN_GOOD_BUILDS, findKnownGood } from '#/compat/known-good.js';
 export { runCompatCheck } from '#/compat/run-compat.js';
-export { checkInstalled, installedBuild } from '#/compat/run-installed.js';
+export {
+  checkInstalled,
+  clearBuildCache,
+  installedBuild,
+} from '#/compat/run-installed.js';
 export { diffToolShapes, hashToolSchema, toolShapes } from '#/compat/tool-shapes.js';
 export { resolveClaudeBinary, resolveInstalledClaude } from '#/domain/claude-binary.js';
 export { authVerdict } from '#/domain/harness-auth.js';

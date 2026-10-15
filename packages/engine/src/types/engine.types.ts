@@ -162,6 +162,8 @@ export interface Engine {
    * whose result already arrived are left alone.
    */
   interruptRun(runId: string): Promise<void>;
+  /** Projects the last tick skipped because their stored settings no longer validate, slug to reason. */
+  unservableProjects(): ReadonlyMap<string, string>;
   /** Ids of runs with a live pump in this process. */
   liveRunIds(): string[];
   /** Gate runs currently executing in the background (finished ones await the next tick). */

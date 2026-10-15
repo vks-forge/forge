@@ -52,6 +52,12 @@ export interface ProjectRegistry {
   register(project: Project, view: ProjectConfigView): Promise<void>;
   /** Builds a runtime from `settings` and throws if it cannot, without keeping it (validation before saving). */
   check(project: Project, settings: ProjectSettings): Promise<void>;
+  /**
+   * Re-reads every project's row and GitHub connection and rebuilds the runtime of a project
+   * whose connection (or the link to it) changed since it was built; a project that can no
+   * longer be built is dropped from service and retried on the next call. Archived rows are dropped. Never throws.
+   */
+  refresh(): Promise<void>;
   /** Stops serving a project. Its rows stay. */
   archive(slug: string): void;
   /**

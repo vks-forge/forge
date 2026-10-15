@@ -20,6 +20,8 @@ import {
   ForgeError,
   HeadMovedError,
   PolicyDeniedError,
+  ProjectNotFoundError,
+  HarnessChangedError,
   QuotaError,
   RateLimitError,
   RefusalError,
@@ -40,6 +42,8 @@ describe('ForgeError', () => {
     [new UnknownForgeError('x'), 'unknown'],
     [new InvalidInputError('x'), 'invalid_input'],
     [new HeadMovedError('x'), 'invalid_input'],
+    [new ProjectNotFoundError('x'), 'invalid_input'],
+    [new HarnessChangedError('1.0.0', '1.1.0'), 'policy_denied'],
   ])('%o carries its family', (e, family) => {
     expect(e).toBeInstanceOf(ForgeError);
     expect(e).toBeInstanceOf(Error);

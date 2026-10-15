@@ -29,4 +29,10 @@ export interface PrepareRunOptions {
   readonly now?: () => number;
   /** Base URL of this server, e.g. `http://127.0.0.1:4310`; read per run because the port may be dynamic. */
   readonly hookBaseUrl: () => string;
+  /**
+   * Runs first, before anything is created for the run; a throw refuses the start (the
+   * installed harness build is not the one whose approvals were loaded) and is recorded
+   * by the engine as the run's failure.
+   */
+  readonly checkBuild?: (runId: string) => Promise<void>;
 }

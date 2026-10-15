@@ -52,6 +52,30 @@ export function createGithubConnectionRepository(
       );
     },
 
+    async insertIfAbsent(connection) {
+      const c = GithubConnection.parse(connection);
+      const result = driver.run(
+        `INSERT INTO github_connections (id, account, app_id, app_slug, key_secret_name, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (id) DO NOTHING`,
+        [
+          c.id,
+          c.account,
+          c.app_id,
+          c.app_slug ?? null,
+          c.key_secret_name,
+          c.status,
+          c.created_at,
+        ],
+      );
+
+      return result.changes > 0;
+    },
+
+    async delete(id) {
+      return driver.run('DELETE FROM github_connections WHERE id = ?', [id]).changes > 0;
+    },
+
     async list() {
       return driver
         .all('SELECT * FROM github_connections ORDER BY rowid')

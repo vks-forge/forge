@@ -9,7 +9,7 @@
  *   secret and its receipt chain gets the `resumed` link first, so G1 can verify each
  *   generation with its own secret (d-0100); a first start writes no link.
  *
- * Pins: run directory, MCP entry env, hook URL and token, registration, missing token refused,
+ * Pins: a build check that throws refuses the start before a directory or secret exists; run directory, MCP entry env, hook URL and token, registration, missing token refused,
  *   the resumed link and the second secret on a resume, the new URL and token on a resume.
  * Depends on: src/services/prepare-run, @forge/hooks (registry), @forge/db (memory receipts).
  *   IO: temp directory.
@@ -18,7 +18,7 @@
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { InvalidInputError } from '@forge/core';
+import { HarnessChangedError, InvalidInputError } from '@forge/core';
 import type { RunRequest } from '@forge/core';
 import { createMemoryReceiptLog } from '@forge/db';
 import { createRunSecretRegistry } from '@forge/hooks';
@@ -95,6 +95,30 @@ describe('createPrepareRun', () => {
     ]);
 
     expect((await registry.credentials('run-9'))?.token).toBe('tok-1');
+  });
+
+  it('refuses the start before creating anything when the build check throws', async () => {
+    const secrets = createMemorySecretStore();
+    const registry = createRunSecretRegistry({ store: secrets });
+    const prepare = createPrepareRun({
+      runsDir: join(dir, 'runs'),
+      dbPath: join(dir, 'forge.db'),
+      mcpEntry: join(dir, 'mcp.js'),
+      nodePath: 'node',
+      registry,
+      receipts: createMemoryReceiptLog(),
+      hookBaseUrl: () => 'http://127.0.0.1:4310',
+      checkBuild: async () => {
+        throw new HarnessChangedError('1.0.0', '1.1.0');
+      },
+    });
+
+    await expect(prepare(request({ FORGE_RUN_TOKEN: 'tok-1' }))).rejects.toBeInstanceOf(
+      HarnessChangedError,
+    );
+
+    expect(existsSync(join(dir, 'runs', 'run-9'))).toBe(false);
+    expect(await secrets.list('run/')).toEqual([]);
   });
 
   it('refuses a request without the run token', async () => {

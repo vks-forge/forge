@@ -10,12 +10,12 @@
  *   `HarnessNotInstalledError` with the install pointer, not as a failed check: nothing was
  *   there to fail.
  *
- * Exports: installedBuild(), checkInstalled().
+ * Exports: installedBuild(), clearBuildCache(), checkInstalled().
  * Depends on: @forge/core (CompatReport), adapters/claude/{harness-resolver,version-probe},
  *   compat/run-compat, domain/child-env, types. IO: spawns `claude --version` and the check.
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import type { CompatReport } from '@forge/core';
 import { createHarnessResolver } from '#/adapters/claude/harness-resolver.js';
 import { probeVersion } from '#/adapters/claude/version-probe.js';
@@ -49,11 +49,62 @@ async function locate(deps: InstalledCompatDeps) {
   return { binaryPath, version, platform };
 }
 
-/** The installed executable and the build it reports; null version when it printed none. */
+/** Builds already read, by `path|mtime|size`: an in-place upgrade changes the file, so it misses. */
+const buildCache = new Map<string, string | null>();
+
+/** The cache key of an executable, or null when it cannot be stat-ed (then nothing is cached). */
+function fileKey(binaryPath: string): string | null {
+  try {
+    const s = statSync(binaryPath);
+
+    return `${binaryPath}|${s.mtimeMs}|${s.size}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Forgets every cached build (tests). */
+export function clearBuildCache(): void {
+  buildCache.clear();
+}
+
+/**
+ * The installed executable and the build it reports; null version when it printed none.
+ * The `--version` child is spawned once per file state (path, mtime, size): the server asks
+ * before every run start, and a spawn each time would cost a process per Worker, while a
+ * replaced binary has a new mtime or size and is read again.
+ */
 export async function installedBuild(
   deps: InstalledCompatDeps,
 ): Promise<{ binaryPath: string; version: string | null }> {
-  const { binaryPath, version } = await locate(deps);
+  const platform = deps.platform ?? process.platform;
+  const resolver = createHarnessResolver({
+    platform,
+    env: deps.baseEnv,
+    exists: deps.fileExists ?? existsSync,
+    defaultBinary: deps.defaultBinary ?? 'claude',
+    source: deps.source,
+  });
+
+  const { binaryPath } = await resolver.binary();
+  const key = fileKey(binaryPath);
+  if (key !== null && buildCache.has(key)) {
+    return { binaryPath, version: buildCache.get(key) ?? null };
+  }
+
+  const env = allowlistEnv(deps.baseEnv, deps.envPassthrough ?? []);
+  const version = await probeVersion(
+    deps.spawn,
+    deps.clock,
+    binaryPath,
+    ['--version'],
+    env,
+  );
+
+  // A build that printed nothing is not cached: the next ask tries again.
+  if (key !== null && version !== null) {
+    buildCache.set(key, version);
+  }
 
   return { binaryPath, version };
 }

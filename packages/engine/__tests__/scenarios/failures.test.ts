@@ -15,7 +15,7 @@
  * Depends on: helpers/rig, @forge/core (AuthError), vitest.
  */
 
-import { AuthError } from '@forge/core';
+import { AuthError, HarnessChangedError } from '@forge/core';
 import { describe, expect, it } from 'vitest';
 import { makeRig } from '#tests/helpers/rig.js';
 import type { Rig } from '#tests/helpers/rig.js';
@@ -204,6 +204,25 @@ describe('start failures', () => {
     ).toBeNull();
 
     expect((await rig.ticket(id)).status).toBe('waiting_human');
+  });
+
+  it('parks the ticket with harness_changed when the installed build changed under the approvals', async () => {
+    const rig = await makeRig();
+    const id = await rig.request('x');
+    rig.driver.failNextStart(new HarnessChangedError('2.1.0', '2.2.0'));
+
+    await rig.tick();
+
+    const ticket = await rig.ticket(id);
+    expect(ticket.status).toBe('waiting_human');
+    expect(ticket.blocked_reason).toMatch(/^harness_changed:.*2\.2\.0/);
+    expect(await rig.storage.transaction((tx) => tx.runs.get('run-1'))).toMatchObject({
+      status: 'error',
+      error_family: 'policy_denied',
+    });
+
+    // Parked, not retried: another tick starts nothing.
+    expect((await rig.tick()).dispatched).toEqual([]);
   });
 
   it('holds dispatch back after a worktree failure instead of retrying every tick', async () => {

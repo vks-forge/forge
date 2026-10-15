@@ -10,7 +10,8 @@
  *   uses the new shape. Without this, an upgrade would leave old projects with no checks
  *   at all, and G1 would pass them on nothing (d-0095).
  *
- * Exports: migrateLegacyProjectDoc(), legacyProjectDocProblem().
+ * Exports: migrateLegacyProjectDoc(), migrateLegacyProjectDocWithWarnings(),
+ *   legacyProjectDocWarnings(), legacyProjectDocProblem().
  * Depends on: none. Pure; no IO.
  */
 
@@ -60,8 +61,38 @@ function legacyChecks(commands: unknown, profile: unknown): unknown[] {
  * override that sets no command gets no `checks` key, so it cannot blank an inherited list.
  */
 export function migrateLegacyProjectDoc(raw: unknown): unknown {
+  return migrateLegacyProjectDocWithWarnings(raw).doc;
+}
+
+/**
+ * What the conversion leaves out, in plain words: a `commands` value that is not an object
+ * and every command under a role the old format never had (a typo such as `tset`). Neither
+ * is an error (old documents stay readable), but without a warning the project would run
+ * with fewer checks than its owner believes it has.
+ */
+export function legacyProjectDocWarnings(raw: unknown): string[] {
+  if (!isRecord(raw) || !isLegacy(raw) || raw['commands'] === undefined) {
+    return [];
+  }
+
+  const commands = raw['commands'];
+  if (!isRecord(commands)) {
+    return ['"commands" is not an object, so none of its commands became checks'];
+  }
+
+  return Object.keys(commands)
+    .filter((role) => !(LEGACY_ORDER as readonly string[]).includes(role))
+    .map((role) => `the command for unknown role "${role}" was dropped`);
+}
+
+/** `migrateLegacyProjectDoc` with the warnings of `legacyProjectDocWarnings` returned beside the document. */
+export function migrateLegacyProjectDocWithWarnings(raw: unknown): {
+  readonly doc: unknown;
+  readonly warnings: string[];
+} {
+  const warnings = legacyProjectDocWarnings(raw);
   if (!isRecord(raw) || !isLegacy(raw)) {
-    return raw;
+    return { doc: raw, warnings };
   }
 
   const { profile, commands, ...rest } = raw;
@@ -75,5 +106,5 @@ export function migrateLegacyProjectDoc(raw: unknown): unknown {
     out['ecosystems'] = ['node'];
   }
 
-  return out;
+  return { doc: out, warnings };
 }

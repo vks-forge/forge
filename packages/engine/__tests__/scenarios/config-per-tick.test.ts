@@ -141,6 +141,30 @@ describe('config is read through the ConfigSource each tick', () => {
     expect(runs[1]?.config_version).toBe('c2:p1');
   });
 
+  it('records an exact version when a company save lands between the two reads', async () => {
+    const rig = await makeRig();
+    let saved = false;
+    const racing = {
+      ...rig.config,
+      project: async (slug: string) => {
+        if (!saved) {
+          saved = true;
+          await saveCompany(rig, { engine: { stall_ms: 400_000 } });
+        }
+
+        return rig.config.project(slug);
+      },
+    };
+
+    const engine = rig.restart('srv-b', { config: racing });
+    await rig.request('first');
+    await rig.tickOn(engine);
+
+    const run = await rig.storage.transaction((tx) => tx.runs.get('run-1'));
+
+    expect(run?.config_version).toBe('c1:p0');
+  });
+
   it('fails the tick and starts nothing when the stored settings no longer validate', async () => {
     const rig = await makeRig();
     const broken = {

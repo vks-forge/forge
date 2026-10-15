@@ -6,8 +6,9 @@
  *   enters an existing App's id and private key (d-0084 fallback). The key is the one
  *   secret here: it goes straight into the SecretStore under `github/<id>/key` and is
  *   never written to the database, logged or echoed in any response; the row only holds
- *   the secret's name. If the row cannot be saved after the key was stored, the key is
- *   removed again so no orphan secret is left behind.
+ *   the secret's name. The id is chosen and the row inserted in one transaction, and the key
+ *   is written only afterwards, so two concurrent adds can never share an id or overwrite
+ *   each other's key; if the key cannot be written the row is removed again.
  *
  * Exports: githubConnectionRoutes().
  * Depends on: @forge/core, schemas/api, services/http/*, types/routes. IO: storage, SecretStore.
@@ -16,6 +17,7 @@
 import type { GithubConnection } from '@forge/core';
 import { ConnectionCreateBody } from '#/schemas/api.js';
 import { readJson } from '#/services/http/body.js';
+import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
 import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
@@ -66,28 +68,40 @@ export function githubConnectionRoutes(deps: RouteDeps): Route[] {
         const body = await readJson(req, ConnectionCreateBody);
         const { private_key_pem: pem, ...fields } = body;
 
-        const taken = new Set(
-          (await deps.storage.transaction((tx) => tx.githubConnections.list())).map(
-            (c) => c.id,
-          ),
-        );
+        // Pick the id and insert the row in one transaction: two concurrent requests for the
+        // same account then get different ids, and neither can reach another's secret name.
+        const connection = await deps.storage.transaction(async (tx) => {
+          const taken = new Set((await tx.githubConnections.list()).map((c) => c.id));
+          const id = freeId(slugOf(body.account), taken);
+          const row: GithubConnection = {
+            id,
+            account: fields.account,
+            app_id: fields.app_id,
+            ...(fields.app_slug ? { app_slug: fields.app_slug } : {}),
+            key_secret_name: `github/${id}/key`,
+            status: 'active',
+            created_at: new Date(deps.now()).toISOString(),
+          };
 
-        const id = freeId(slugOf(body.account), taken);
-        const connection: GithubConnection = {
-          id,
-          account: fields.account,
-          app_id: fields.app_id,
-          ...(fields.app_slug ? { app_slug: fields.app_slug } : {}),
-          key_secret_name: `github/${id}/key`,
-          status: 'active',
-          created_at: new Date(deps.now()).toISOString(),
-        };
+          if (!(await tx.githubConnections.insertIfAbsent(row))) {
+            throw new HttpError(409, 'connection_exists', `connection ${id} exists`);
+          }
 
-        await deps.secrets.put(connection.key_secret_name, new TextEncoder().encode(pem));
+          return row;
+        });
+
+        // The key is written only once the row (and so the secret name) is ours; a failed
+        // write removes the row again so no connection exists without its key.
         try {
-          await deps.storage.transaction((tx) => tx.githubConnections.upsert(connection));
+          await deps.secrets.put(
+            connection.key_secret_name,
+            new TextEncoder().encode(pem),
+          );
         } catch (error) {
-          await deps.secrets.delete(connection.key_secret_name).catch(() => undefined);
+          await deps.storage
+            .transaction((tx) => tx.githubConnections.delete(connection.id))
+            .catch(() => undefined);
+
           throw error;
         }
 

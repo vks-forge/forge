@@ -21,7 +21,7 @@ import { pickNext } from '#/domain/pick-next.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { FAR_FUTURE } from '#/shared/time.js';
 import { classifyWake, wakeIsDue } from '#/tick/wake-candidates.js';
-import { projectSettings } from '#/tick/tick-config.js';
+import { isUnservable, projectSettings } from '#/tick/tick-config.js';
 import type {
   PausedHarness,
   PickCandidate,
@@ -91,7 +91,12 @@ export async function planDispatch(
 
   const projects = await tx.projects.list();
   const slugOf = new Map(projects.map((p) => [p.id, p.slug]));
-  const ready = new Set(projects.filter((p) => p.status === 'ready').map((p) => p.id));
+  const ready = new Set(
+    projects
+      .filter((p) => p.status === 'ready' && !isUnservable(view.config, p.slug))
+      .map((p) => p.id),
+  );
+
   const paused = await pausedHarnesses(tx, view.now, consume);
   const installed = (id: string): boolean => view.deps.drivers.get(id) !== null;
 

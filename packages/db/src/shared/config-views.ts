@@ -58,10 +58,11 @@ export function companyView(
 /** Built-ins, then the latest company override, then the latest project override. */
 export function projectView(
   company: { doc: CompanyOverride | null; version: number },
-  project: { doc: ProjectOverride | null; version: number },
+  project: { doc: ProjectOverride | null; version: number; warnings?: string[] },
 ): ProjectConfigView {
   return {
     config: mergeConfig(BUILTIN_CONFIG, company.doc ?? {}, project.doc ?? {}),
     version: { company: company.version, project: project.version },
+    ...(project.warnings?.length ? { warnings: project.warnings } : {}),
   };
 }

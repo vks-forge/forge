@@ -124,6 +124,9 @@ export function memoryProjects(state: MemoryState): ProjectRepository {
       // Map.set on an existing key keeps its position, like the SQLite upsert keeps its rowid.
       state.projects.set(p.id, p);
     },
+    async delete(id) {
+      return state.projects.delete(id);
+    },
     async list() {
       return [...state.projects.values()].map((p) => structuredClone(p));
     },

@@ -42,6 +42,7 @@ export function createRunWiring(deps: RunWiringDeps): {
       registry,
       receipts,
       now,
+      ...(deps.checkBuild ? { checkBuild: deps.checkBuild } : {}),
       hookBaseUrl: () => {
         const address = deps.address();
         if (!address) {

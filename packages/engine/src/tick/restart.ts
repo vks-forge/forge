@@ -15,7 +15,10 @@
  *   start that fails) is never lost: it is settled as a crash and the ticket is retried as a
  *   new run in the same worktree, so the Worker continues from the existing changes. A lost
  *   run with no session at all is crash-settled exactly as before. Resumes are due work like any
- *   other wake: they wait for the scheduler's global, per-project and per-harness limits.
+ *   other wake: they wait for the scheduler's global, per-project and per-harness limits, at
+ *   the priority of their ticket and on the same rotation cursor as new starts. A start that
+ *   fails before the chain's `resumed` link was written gives the generation back, so the
+ *   chain stays 1, 2, 3 without a gap.
  *
  * Exports: reconcileRestart(), resumeInterrupted(), RESUME_PROMPT.
  * Depends on: @forge/core (TERMINAL_STATUSES, branchName), @forge/tools (sha256Hex), domain/results,
@@ -30,9 +33,11 @@ import { failureResult } from '#/domain/results.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { baseRefFor, driverFor, runtimeFor } from '#/tick/project-runtime.js';
 import { startPump } from '#/tick/pump.js';
+import { generationLinked } from '#/tick/resume-chain.js';
 import { buildRunRequest } from '#/tick/run-request.js';
 import { planDispatch } from '#/tick/schedule.js';
 import { settleRun } from '#/tick/settle.js';
+import { isUnservable } from '#/tick/tick-config.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 
 /** What the resumed Worker is told: the session is back, check the worktree, do not start over. */
@@ -150,11 +155,17 @@ async function tryResume(
     startPump(deps, state, run.id, handle, driver, { resumed: true });
   } catch (e) {
     state.baseShas.delete(run.id);
+    // The receipt chain must read generation 1, 2, 3 with a `resumed` link for each. When the
+    // start failed before the link was written, the generation stored above never entered
+    // the chain; leaving it would make the next resume link generation N+2 and G1 would fail
+    // the chain at the join. The generation goes back to what the chain shows.
+    const linked = await generationLinked(ctx, run.id, generation);
     await deps.storage.transaction((tx) =>
       tx.runs.update(run.id, {
         status: 'interrupted',
         interrupted_at: ctx.nowIso,
         resumable_session: session,
+        ...(linked ? {} : { generation: run.generation ?? 1 }),
       }),
     );
 
@@ -200,7 +211,7 @@ export async function resumeInterrupted(ctx: EngineCtx): Promise<void> {
   const { deps, state } = ctx;
   const waiting = (
     await deps.storage.transaction((tx) => tx.runs.listByStatus(['interrupted']))
-  ).filter((r) => !state.pumps.has(r.id));
+  ).filter((r) => !state.pumps.has(r.id) && !isUnservable(ctx.config, r.project ?? ''));
 
   if (waiting.length === 0) {
     return;
@@ -219,19 +230,40 @@ export async function resumeInterrupted(ctx: EngineCtx): Promise<void> {
     return;
   }
 
-  const plan = await deps.storage.transaction((tx) => planDispatch(ctx, tx, true));
+  // Read-only: the dispatch phase of this tick consumes stale wakes and expired pauses once.
+  const { plan, priorities } = await deps.storage.transaction(async (tx) => ({
+    plan: await planDispatch(ctx, tx, false),
+    priorities: new Map(
+      await Promise.all(
+        [...candidates.values()].map(async (run): Promise<[string, number]> => [
+          run.id,
+          (await tx.tickets.get(run.ticket_id as TicketId))?.priority ?? 0,
+        ]),
+      ),
+    ),
+  }));
+
   const pickable = [...candidates.values()].map((run) => ({
     id: run.id,
     project: run.project ?? '',
     harness: run.harness,
-    priority: 0,
+    priority: priorities.get(run.id) ?? 0,
     number: ticketNumber(run.ticket_id),
     wake: true,
     entering: false,
     blockedBy: [],
   }));
 
-  const { picked, waits } = pickNext(pickable, plan.running, plan.caps, ctx.now);
+  // The same rotation cursor as dispatch, so resumes and new starts take turns fairly.
+  const { picked, waits, cursor } = pickNext(
+    pickable,
+    plan.running,
+    plan.caps,
+    ctx.now,
+    state.schedulerCursor,
+  );
+
+  state.schedulerCursor = cursor;
   for (const p of picked) {
     const run = candidates.get(p.id);
     const session = run ? sessionOf(run) : undefined;

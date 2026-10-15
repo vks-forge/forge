@@ -11,13 +11,21 @@
  *   driving a real harness), so tests substitute a scripted one. One check runs at a time
  *   per harness, a second request returns the one in flight, and the outcome is written in
  *   one transaction so the version row, the tool rows and the harness status never disagree.
+ *   The build is read at boot and when Settings change, but the owner can upgrade `claude`
+ *   in place while Forge runs; a Worker started on the new build would be judged by the old
+ *   build's approvals. So before every run starts `assertCurrent` reads the installed build
+ *   again (the read is a cached `--version`, one spawn per file state), and a build that
+ *   differs from the loaded one starts the first-sight check of the new build in the
+ *   background and refuses this start with `HarnessChangedError`; the ticket parks until the
+ *   owner has approved the new build's tools.
  *
  * Exports: createHarnessCompat().
- * Depends on: @forge/core, @forge/drivers (findKnownGood), services/compat-record,
+ * Depends on: @forge/core (HarnessChangedError), @forge/drivers (findKnownGood), services/compat-record,
  *   services/harness-source, types/harness-compat. IO: storage; the
  *   injected check spawns the harness.
  */
 
+import { HarnessChangedError } from '@forge/core';
 import type { HarnessToolSchema } from '@forge/core';
 import { findKnownGood } from '@forge/drivers';
 import type { CompatJobState } from '@forge/drivers';
@@ -139,8 +147,46 @@ export function createHarnessCompat(deps: HarnessCompatDeps): HarnessCompat {
     return true;
   }
 
-  return {
+  const service: HarnessCompat = {
     installedVersion: (harnessId) => builds.get(harnessId) ?? null,
+
+    async assertCurrent(harnessId) {
+      if (!port) {
+        return null;
+      }
+
+      const loaded = builds.get(harnessId) ?? null;
+      let installed: string | null = null;
+      try {
+        installed = await port.installedVersion(
+          await readHarnessSetup(storage, harnessId),
+        );
+      } catch (error) {
+        // Not readable now: the driver's own lookup fails the run with the install pointer.
+        deps.log('info', 'no installed harness build could be read', {
+          harness: harnessId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      if (installed === null || installed === loaded) {
+        return loaded;
+      }
+
+      deps.log(
+        'warn',
+        'the installed harness build changed since its approvals were loaded',
+        {
+          harness: harnessId,
+          loaded,
+          installed,
+        },
+      );
+
+      await service.observe(harnessId);
+
+      throw new HarnessChangedError(loaded, installed);
+    },
 
     async observe(harnessId) {
       if (!port) {
@@ -241,4 +287,6 @@ export function createHarnessCompat(deps: HarnessCompatDeps): HarnessCompat {
       await Promise.all([...running.values()]);
     },
   };
+
+  return service;
 }

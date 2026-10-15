@@ -35,17 +35,17 @@ import { createDriverRegistry } from '#/services/driver-registry.js';
 import { createGates } from '#/services/gates.js';
 import { createHooks } from '#/services/hook-wiring.js';
 import { harnessTestFor } from '#/services/harness-test-route.js';
-import { createHarnessCompat } from '#/services/harness-compat.js';
-import { DEFAULT_HARNESS, createHarnessSource } from '#/services/harness-source.js';
+import { composeHarnessGuard } from '#/services/harness-guard.js';
+import { createHarnessSource } from '#/services/harness-source.js';
 import { assertLoopbackBind, closeServer, listen } from '#/services/http/listen.js';
 import { createRouter } from '#/services/http/router.js';
 import { createLazySecretStore } from '#/services/lazy-secrets.js';
 import { composeProjectMemory } from '#/services/project-memory.js';
+import { withKnownProjects } from '#/services/known-project-config.js';
 import { createProjectRegistry } from '#/services/project-registry.js';
 import { createRunWiring } from '#/services/run-wiring.js';
 import { shutdownServer } from '#/services/shutdown.js';
 import { createTicker } from '#/services/ticker.js';
-import { createToolPolicy } from '#/services/tool-policy.js';
 import { composeTriggers } from '#/services/triggers.js';
 import type {
   AssembleOptions,
@@ -68,7 +68,10 @@ export async function assembleServer(
   const now = (): number => clock.now();
 
   await mkdir(dirname(layout.data.dbPath), { recursive: true });
-  const { storage, receipts, config, catalogue } = openSqlite(layout.data.dbPath);
+  const sqlite = openSqlite(layout.data.dbPath);
+  const { storage, receipts, catalogue } = sqlite;
+  // Settings are only served for registered projects; an unknown slug is not given defaults.
+  const config = withKnownProjects(sqlite.config, storage);
 
   try {
     // Before any socket: a server that cannot read or create its token must not start open.
@@ -90,6 +93,8 @@ export async function assembleServer(
         createDpapiSecretStore({ dir: layout.data.secretsDir }),
       );
 
+    // Both are built below; a run cannot start before the server listens.
+    let buildCheck: (runId: string) => Promise<void> = async () => undefined;
     let address: ServerAddress | null = null;
     const { registry, retirement, prepareRun } = createRunWiring({
       layout,
@@ -99,6 +104,9 @@ export async function assembleServer(
       now,
       log,
       address: () => address,
+      // Refuses a run on a harness build whose approvals were never loaded, and records the
+      // build on the run row. `compat` is built below, before any run can start.
+      checkBuild: (runId) => buildCheck(runId),
     });
 
     const harness = createHarnessSource(storage);
@@ -116,8 +124,12 @@ export async function assembleServer(
 
     await projects.load();
 
-    const dir = layout.data.memoryDir;
-    const parts = await composeProjectMemory(dir, now, log, projects.slugs());
+    const parts = await composeProjectMemory(
+      layout.data.memoryDir,
+      now,
+      log,
+      projects.slugs(),
+    );
 
     const driver = ports.driver({
       prepareRun,
@@ -140,31 +152,22 @@ export async function assembleServer(
     // One harness is installed today; the registry is where the next one is added.
     const drivers = createDriverRegistry([driver]);
 
-    const compat = createHarnessCompat({
+    const { compat, policy, checkBuild } = await composeHarnessGuard({
       storage,
       catalogue,
+      config,
       port: ports.compat,
       supportKey: driver.id,
+      dataHome: layout.data.home,
       now,
       log,
     });
 
-    // Reads the installed build; a build seen for the first time is checked in the background.
-    await compat.observe(DEFAULT_HARNESS);
-
-    const policy = createToolPolicy({
-      storage,
-      catalogue,
-      config,
-      compat,
-      dataHome: layout.data.home,
-    });
-
-    // A catalogue that does not load stops the server here, not at the first tool call.
-    await policy.catalogueHash();
+    buildCheck = checkBuild;
 
     const ticker = createTicker({
       tick: async () => {
+        await projects.refresh();
         const report = await engine.tick();
         await retirement.sweep();
 
@@ -226,6 +229,7 @@ export async function assembleServer(
         tickets: auth.tickets,
         requestShutdown: () =>
           options.onShutdownRequested ? options.onShutdownRequested() : void stopServer(),
+        dataHome: layout.data,
         owner,
         startedAt: now(),
         now,

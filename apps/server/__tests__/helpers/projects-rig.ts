@@ -10,6 +10,7 @@
  *   helpers/http-rig. IO: a loopback socket.
  */
 
+import { dirname } from 'node:path';
 import { createMemoryConfigSource, createMemoryStorage } from '@forge/db';
 import type { ConfigSource, StorageAdapter } from '@forge/core';
 import type { Engine } from '@forge/engine';
@@ -29,6 +30,8 @@ export interface ProjectsRig {
   readonly storage: StorageAdapter;
   readonly config: ConfigSource;
   readonly registry: ProjectRegistry;
+  /** What the fake engine reports as skipped for invalid settings (slug to reason). */
+  readonly unservable: Map<string, string>;
 }
 
 /** Worktrees of the registry's projects would go under `worktreesDir`; nothing is created there. */
@@ -37,6 +40,7 @@ export async function startProjectsRig(
   memory: RouteDeps['memory'] = inertRouteExtras().memory,
 ): Promise<ProjectsRig> {
   const storage = createMemoryStorage();
+  const unservable = new Map<string, string>();
   const config = createMemoryConfigSource();
   const secrets = createMemorySecretStore();
   const extras = inertRouteExtras();
@@ -52,7 +56,10 @@ export async function startProjectsRig(
 
   const rig = await startHttp(
     buildRoutes({
-      engine: { liveRunIds: vi.fn(() => []) } as unknown as Engine,
+      engine: {
+        liveRunIds: vi.fn(() => []),
+        unservableProjects: () => unservable,
+      } as unknown as Engine,
       storage,
       config,
       projects: registry,
@@ -64,6 +71,7 @@ export async function startProjectsRig(
       tickets: extras.tickets,
       requestShutdown: extras.requestShutdown,
       secrets,
+      dataHome: { home: dirname(worktreesDir), worktreesDir },
       hooks: { handle: vi.fn() },
       owner: 'srv-test',
       startedAt: 0,
@@ -73,5 +81,5 @@ export async function startProjectsRig(
     }),
   );
 
-  return { rig, storage, config, registry };
+  return { rig, storage, config, registry, unservable };
 }

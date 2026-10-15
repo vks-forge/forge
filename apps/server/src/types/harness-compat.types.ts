@@ -62,6 +62,14 @@ export interface HarnessCompat {
    * installed leaves the build unknown.
    */
   observe(harnessId: string): Promise<string | null>;
+  /**
+   * Asks, before a run starts, which build is installed now. Returns the loaded build when
+   * it is unchanged (null when none is known); when the installed build differs from the
+   * one the approvals were loaded for, starts the first-sight check of the new build in the
+   * background and throws `HarnessChangedError` so the start is refused. A build that cannot
+   * be read is not a change.
+   */
+  assertCurrent(harnessId: string): Promise<string | null>;
   /** Starts a check now (or returns the one running). */
   start(harnessId: string): Promise<CompatJobState>;
   view(harnessId: string): Promise<HarnessCompatView>;

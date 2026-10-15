@@ -7,7 +7,9 @@
  *   prove they act for the owner. The file is created with 0600 where the OS has modes; on
  *   Windows the ACL is cut down to the current user through `icacls`. If that fails the
  *   server still starts (a locked-down machine must not be unable to run Forge) but says so
- *   in the log. The token itself is never logged. A file that does not hold a well-formed
+ *   in the log. The restriction is applied on every start, not only on creation, so a file
+ *   whose ACL was widened since (a restored backup, a copied data folder) is narrowed again.
+ *   The token itself is never logged. A file that does not hold a well-formed
  *   token (truncated by a crash, edited by hand) is replaced, because starting with a token
  *   nobody can type correctly would lock the owner out silently.
  *
@@ -39,20 +41,11 @@ async function readToken(path: string): Promise<string | null> {
   }
 }
 
-/** Returns the install token at `path`, creating the file on first use. */
-export async function ensureInstallToken(
+/** Narrows `path` to the current user; a failure warns (without the token) and does not stop the start. */
+async function restrictToUser(
   path: string,
   deps: { readonly restrict: RestrictFile; readonly log: Logger },
-): Promise<string> {
-  const existing = await readToken(path);
-  if (existing) {
-    return existing;
-  }
-
-  const token = randomBytes(32).toString('base64url');
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${token}\n`, { mode: 0o600 });
-
+): Promise<void> {
   try {
     // A replaced file keeps its old mode on POSIX, so narrow it explicitly either way.
     await chmod(path, 0o600);
@@ -63,6 +56,24 @@ export async function ensureInstallToken(
       error: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+/** Returns the install token at `path`, creating the file on first use; the file is restricted on every call. */
+export async function ensureInstallToken(
+  path: string,
+  deps: { readonly restrict: RestrictFile; readonly log: Logger },
+): Promise<string> {
+  const existing = await readToken(path);
+  if (existing) {
+    await restrictToUser(path, deps);
+
+    return existing;
+  }
+
+  const token = randomBytes(32).toString('base64url');
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${token}\n`, { mode: 0o600 });
+  await restrictToUser(path, deps);
 
   return token;
 }

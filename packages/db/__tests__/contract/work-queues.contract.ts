@@ -170,6 +170,14 @@ export function describeWorkQueuesContract(getDb: () => StorageAdapter): void {
   });
 
   describe('projects', () => {
+    it('deletes a project row and reports whether there was one', async () => {
+      await tx((t) => t.projects.upsert(makeProject('p9')));
+
+      expect(await tx((t) => t.projects.delete('p9'))).toBe(true);
+      expect(await tx((t) => t.projects.delete('p9'))).toBe(false);
+      expect(await tx((t) => t.projects.get('p9'))).toBeNull();
+    });
+
     it('returns null for an unknown project and reads back an upserted one', async () => {
       const p = makeProject('p1', { repo_origin: 'git@host:x.git', memory_repo: 'mem' });
       await tx((t) => t.projects.upsert(p));

@@ -18,7 +18,7 @@
  *   steps/run-step, domain/worker-contract, tick/project-runtime, tick/dispatch-park, tick/pump, tick/settle, tick/ticket-moves, domain/results.
  */
 
-import { DispatchPromptOutput, branchName } from '@forge/core';
+import { DispatchPromptOutput, HarnessChangedError, branchName } from '@forge/core';
 import type { Interaction, Run, Ticket, WorkerDriver } from '@forge/core';
 import { sha256Hex } from '@forge/tools';
 import { familyOf, failureResult } from '#/domain/results.js';
@@ -227,7 +227,14 @@ async function tryStart(
     handle = await driver.start(req);
   } catch (e) {
     deps.log?.('error', `driver.start failed for ${runId}`, { error: msg(e) });
-    await settleRun(ctx, run, failureResult(familyOf(e)));
+    // A build that changed under the approvals parks the ticket with that reason, not a generic one.
+    await settleRun(
+      ctx,
+      run,
+      failureResult(familyOf(e)),
+      undefined,
+      e instanceof HarnessChangedError ? { parkReason: msg(e) } : {},
+    );
 
     return false;
   }

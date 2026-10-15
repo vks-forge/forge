@@ -209,6 +209,8 @@ export interface ProjectRepository {
   get(id: string): Promise<Project | null>;
   // Insert or replace by id.
   upsert(project: Project): Promise<void>;
+  // Remove the row (undoing a registration that did not complete); false when there was none.
+  delete(id: string): Promise<boolean>;
   list(): Promise<Project[]>;
 }
 
@@ -237,6 +239,10 @@ export interface GithubConnectionRepository {
   get(id: string): Promise<GithubConnection | null>;
   // Insert or replace by id.
   upsert(connection: GithubConnection): Promise<void>;
+  // Insert only: false (and nothing written) when a connection with that id exists.
+  insertIfAbsent(connection: GithubConnection): Promise<boolean>;
+  // Remove the row; false when there was none.
+  delete(id: string): Promise<boolean>;
   // Oldest first.
   list(): Promise<GithubConnection[]>;
 }

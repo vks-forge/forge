@@ -96,6 +96,8 @@ export function createFakeMemory(): MemorySource & { calls: string[] } {
 export interface FakeReceipts extends ReceiptLog {
   /** Sets the chain the run "produced"; the last receipt's hash becomes final_chain_hash. */
   setChain(runId: string, lastHash: string): void;
+  /** Sets the receipts the run's chain holds, as the app's resume link would leave them. */
+  setReceipts(runId: string, receipts: readonly unknown[]): void;
 }
 
 export function createFakeReceipts(): FakeReceipts {
@@ -104,6 +106,9 @@ export function createFakeReceipts(): FakeReceipts {
   return {
     setChain(runId, lastHash) {
       chains.set(runId, [{ hash: lastHash } as unknown as Receipt]);
+    },
+    setReceipts(runId, receipts) {
+      chains.set(runId, receipts as readonly Receipt[]);
     },
     async append() {
       throw new Error('the engine never appends receipts');

@@ -13,6 +13,7 @@
 
 import type {
   ConfigSource,
+  DataHomeLayout,
   ProjectMemory,
   SecretStore,
   StorageAdapter,
@@ -54,6 +55,8 @@ export interface RouteDeps {
   readonly tickets: SseTicketIssuer;
   /** Starts the graceful shutdown (`POST /admin/shutdown`); returns at once. */
   readonly requestShutdown: () => void;
+  /** Where Forge keeps its own files; a project clone may not be inside them. */
+  readonly dataHome: Pick<DataHomeLayout, 'home' | 'worktreesDir'>;
   readonly owner: string;
   /** Epoch ms when the server started, for `/health` uptime. */
   readonly startedAt: number;

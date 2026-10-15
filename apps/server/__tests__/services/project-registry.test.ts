@@ -128,6 +128,35 @@ describe('load', () => {
     );
   });
 
+  it('logs the warnings the settings read returned for an old-format document', async () => {
+    await seed(row('old'));
+    const base = config;
+    config = {
+      ...base,
+      project: async (slug) => ({
+        ...(await base.project(slug)),
+        warnings: ['the command for unknown role "tset" was dropped'],
+      }),
+    };
+
+    registry = createProjectRegistry({
+      storage,
+      config,
+      secrets: createMemorySecretStore(),
+      worktreesDir: DATA,
+      gates: vi.fn(() => []),
+      now: () => 0,
+      log: (level, message) => logs.push({ level, message }),
+    });
+
+    await registry.load();
+
+    expect(registry.slugs()).toEqual(['old']);
+    expect(logs.find((l) => l.level === 'warn')?.message).toContain(
+      'unknown role "tset"',
+    );
+  });
+
   it('skips a project whose connection row is missing', async () => {
     await seed(row('linked', { connection_id: 'ghost' }), {
       git_host: { kind: 'github', owner: 'o', repo: 'r', installation_id: '1' },

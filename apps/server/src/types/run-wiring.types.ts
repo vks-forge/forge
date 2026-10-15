@@ -26,4 +26,6 @@ export interface RunWiringDeps {
   readonly log: Logger;
   /** Where the server listens, or null before it is bound; read per run because the port may be dynamic. */
   readonly address: () => ServerAddress | null;
+  /** Refuses a run start when the installed harness build is not the loaded one; see `PrepareRunOptions.checkBuild`. */
+  readonly checkBuild?: (runId: string) => Promise<void>;
 }

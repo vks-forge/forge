@@ -73,6 +73,10 @@ export function createProjectRepository(driver: SqlDriver): ProjectRepository {
       );
     },
 
+    async delete(id) {
+      return driver.run('DELETE FROM projects WHERE id = ?', [id]).changes > 0;
+    },
+
     async list() {
       return driver.all('SELECT * FROM projects ORDER BY rowid').map(toProject);
     },

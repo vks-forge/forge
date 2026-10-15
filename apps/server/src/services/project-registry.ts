@@ -10,7 +10,12 @@
  *   registry rebuilds the runtime when the project's settings version moved and the git
  *   host part changed; an unrelated edit (a command, a tier-C path) costs nothing. A
  *   rebuild that fails keeps the old version number unset, so the error is reported and
- *   retried on the next use instead of silently serving a stale host.
+ *   retried on the next use instead of silently serving a stale host. The GitHub connection
+ *   a project uses can change after load (the row is re-pointed, the connection disabled or
+ *   its App replaced), and a runtime built on the old one would keep minting tokens for it,
+ *   so `refresh()` re-reads each served project's row and connection and rebuilds the
+ *   runtime when either differs; a project that can no longer be built stops being served
+ *   (its tickets park) and is retried on the next refresh.
  *
  * Exports: createProjectRegistry().
  * Depends on: node:path, @forge/core, @forge/engine (ProjectRuntime), @forge/git
@@ -20,7 +25,12 @@
 
 import { join } from 'node:path';
 import { InvalidInputError, ProjectConfig } from '@forge/core';
-import type { GithubConnection, Project, ProjectSettings } from '@forge/core';
+import type {
+  GithubConnection,
+  Project,
+  ProjectConfigView,
+  ProjectSettings,
+} from '@forge/core';
 import type { ProjectRuntime } from '@forge/engine';
 import { createGitWorktreeManager } from '@forge/git';
 import { createProjectGitHost } from '#/services/git-host.js';
@@ -35,6 +45,12 @@ const DEFAULT_BASE = 'main';
 /** The part of the settings a runtime is built from; a change here (and only here) rebuilds it. */
 const signatureOf = (settings: ProjectSettings): string =>
   JSON.stringify(settings.git_host ?? null);
+
+/** What a runtime depends on in the connection row: a change to any of it means a rebuild. */
+const connectionSignature = (c: GithubConnection | null): string =>
+  JSON.stringify(
+    c === null ? null : [c.id, c.status, c.app_id, c.app_slug, c.key_secret_name],
+  );
 
 export function createProjectRegistry(deps: ProjectRegistryDeps): ProjectRegistry {
   const entries = new Map<string, ProjectEntry>();
@@ -89,6 +105,16 @@ export function createProjectRegistry(deps: ProjectRegistryDeps): ProjectRegistr
     return found;
   }
 
+  /** Logs what reading an old-format settings document left out, so a typo does not silently remove a check. */
+  function warnAboutLegacyDocs(slug: string, view: ProjectConfigView): void {
+    for (const warning of view.warnings ?? []) {
+      deps.log('warn', `settings of project ${slug}: ${warning}`, {
+        project: slug,
+        version: view.version.project,
+      });
+    }
+  }
+
   return {
     async load() {
       const rows = await deps.storage.transaction((tx) => tx.projects.list());
@@ -107,6 +133,7 @@ export function createProjectRegistry(deps: ProjectRegistryDeps): ProjectRegistr
 
         try {
           const view = await deps.config.project(project.slug);
+          warnAboutLegacyDocs(project.slug, view);
           const connection = await connectionOf(project);
           entries.set(project.slug, {
             project,
@@ -134,6 +161,62 @@ export function createProjectRegistry(deps: ProjectRegistryDeps): ProjectRegistr
         version: view.version.project,
         signature: signatureOf(view.config.project),
       });
+    },
+
+    async refresh() {
+      let rows: Project[];
+      try {
+        rows = await deps.storage.transaction((tx) => tx.projects.list());
+      } catch (error) {
+        // Never throws: a failed refresh must not skip the tick; the engine fails closed itself.
+        deps.log('warn', 'project refresh failed', { error: String(error) });
+
+        return;
+      }
+
+      for (const project of rows) {
+        const entry = entries.get(project.slug);
+        if (project.status === 'archived') {
+          entries.delete(project.slug);
+
+          continue;
+        }
+
+        if (!entry && !project.local_path) {
+          continue;
+        }
+
+        try {
+          const connection = await connectionOf(project);
+          if (
+            entry &&
+            entry.project.connection_id === project.connection_id &&
+            connectionSignature(entry.connection) === connectionSignature(connection)
+          ) {
+            continue;
+          }
+
+          const view = await deps.config.project(project.slug);
+          entries.set(project.slug, {
+            project,
+            connection,
+            runtime: build(project, connection, view.config.project),
+            version: view.version.project,
+            signature: signatureOf(view.config.project),
+          });
+
+          deps.log('info', 'project runtime rebuilt after a connection change', {
+            project: project.slug,
+          });
+        } catch (error) {
+          // Fail closed: a runtime on a connection that is gone or unreadable is not served.
+          entries.delete(project.slug);
+          deps.log('error', 'project could not be served', {
+            project: project.slug,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
     },
 
     async check(project, settings) {

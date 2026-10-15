@@ -9,8 +9,9 @@
  *
  * Pins: 201 returns the connection without key material; the key is in the SecretStore at
  *   `github/<id>/key`; ids are slugs of the account and never collide; listing is oldest
- *   first and has no key; bad bodies are 400 and store nothing; a database failure after the
- *   key was stored removes the key again.
+ *   first and has no key; bad bodies are 400 and store nothing; a database failure stores no
+ *   key; a failed key write removes the row; two simultaneous adds get different ids and keep
+ *   their own keys.
  * Depends on: helpers/http-rig, helpers/route-extras, src/routes. IO: in-memory storage and secrets.
  */
 
@@ -34,9 +35,14 @@ let rig: HttpRig;
 let storage: StorageAdapter;
 let secrets: ReturnType<typeof createMemorySecretStore>;
 
-async function start(over: { storage?: StorageAdapter } = {}) {
+async function start(
+  over: {
+    storage?: StorageAdapter;
+    secrets?: ReturnType<typeof createMemorySecretStore>;
+  } = {},
+) {
   storage = over.storage ?? createMemoryStorage();
-  secrets = createMemorySecretStore();
+  secrets = over.secrets ?? createMemorySecretStore();
   rig = await startHttp(
     buildRoutes({
       engine: { liveRunIds: vi.fn(() => []) } as unknown as Engine,
@@ -146,7 +152,7 @@ describe('POST /github/connections', () => {
               ...tx,
               githubConnections: {
                 ...tx.githubConnections,
-                upsert: async () => {
+                insertIfAbsent: async () => {
                   throw new Error('disk full');
                 },
               },
@@ -159,6 +165,49 @@ describe('POST /github/connections', () => {
 
     expect(res.status).toBe(500);
     expect(await secrets.list('')).toEqual([]);
+  });
+
+  it('gives two simultaneous adds different ids and keeps each key under its own name', async () => {
+    const other = PEM.replace('TOPSECRETBYTES', 'SECONDKEYBYTES');
+
+    const [a, b] = await Promise.all([
+      rig.json('POST', '/github/connections', GOOD),
+      rig.json('POST', '/github/connections', { ...GOOD, private_key_pem: other }),
+    ]);
+
+    const ids = [a, b].map(
+      (r) => (r.body as { connection: { id: string } }).connection.id,
+    );
+
+    expect(new Set(ids).size).toBe(2);
+
+    const stored = new Map<string, string>();
+    for (const id of ids) {
+      stored.set(
+        id,
+        new TextDecoder().decode((await secrets.get(`github/${id}/key`)) ?? undefined),
+      );
+    }
+
+    expect([...stored.values()].sort()).toEqual([PEM, other].sort());
+  });
+
+  it('deletes the row again when the key cannot be stored', async () => {
+    await rig.close();
+    const real = createMemorySecretStore();
+    await start({
+      secrets: {
+        ...real,
+        put: async () => {
+          throw new Error('keychain locked');
+        },
+      },
+    });
+
+    const res = await rig.json('POST', '/github/connections', GOOD);
+
+    expect(res.status).toBe(500);
+    expect(await storage.transaction((tx) => tx.githubConnections.list())).toEqual([]);
   });
 });
 

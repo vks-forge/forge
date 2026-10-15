@@ -30,6 +30,11 @@ export interface CompanyConfigView {
 export interface ProjectConfigView {
   readonly config: EffectiveConfig;
   readonly version: { readonly company: number; readonly project: number };
+  /**
+   * What reading an old-format stored document left out (a command under an unknown role),
+   * so the owner can be told; absent or empty for a clean document.
+   */
+  readonly warnings?: readonly string[];
 }
 
 export interface ConfigSource {

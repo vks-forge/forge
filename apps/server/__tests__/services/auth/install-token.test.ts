@@ -8,7 +8,8 @@
  *   `icacls` must warn (without the token) and not stop Forge from starting.
  *
  * Pins: first start writes a 43-char base64url token; second start returns the same one;
- *   a malformed file is replaced; the restrict port runs on creation only; its failure is a
+ *   a malformed file is replaced; the restrict port runs on every start, including for an
+ *   existing token; the Windows adapter grants by SID, parsed from `whoami`; its failure is a
  *   warning that does not contain the token; POSIX mode is 0600; the real Windows ACL adapter
  *   leaves only the current user.
  * Depends on: src/services/auth/{install-token,restrict-file}, helpers/temp. IO: temp files,
@@ -24,7 +25,7 @@ import {
   INSTALL_TOKEN_PATTERN,
   ensureInstallToken,
 } from '#/services/auth/install-token.js';
-import { nodeRestrictFile } from '#/services/auth/restrict-file.js';
+import { nodeRestrictFile, parseWhoamiSid } from '#/services/auth/restrict-file.js';
 import { makeTempDir } from '#tests/helpers/temp.js';
 
 const fresh = (): string => join(makeTempDir('forge-token-'), 'home', 'install-token');
@@ -49,7 +50,18 @@ describe('ensureInstallToken', () => {
     const second = await ensureInstallToken(path, { restrict, log: vi.fn() });
 
     expect(second).toBe(first);
-    expect(restrict).toHaveBeenCalledOnce();
+    expect(await readFile(path, 'utf8')).toBe(`${first}\n`);
+  });
+
+  it('restricts an existing token file again on every start', async () => {
+    const path = fresh();
+    const restrict = vi.fn(async () => undefined);
+    await ensureInstallToken(path, { restrict, log: vi.fn() });
+
+    await ensureInstallToken(path, { restrict, log: vi.fn() });
+    await ensureInstallToken(path, { restrict, log: vi.fn() });
+
+    expect(restrict).toHaveBeenCalledTimes(3);
   });
 
   it('replaces a file that does not hold a token', async () => {
@@ -90,6 +102,17 @@ describe('ensureInstallToken', () => {
     await ensureInstallToken(path, { restrict: nodeRestrictFile(), log: vi.fn() });
 
     expect((await stat(path)).mode & 0o777).toBe(0o600);
+  });
+
+  it.each([
+    ['a local account', '"DESKTOP-1\\vikas","S-1-5-21-1-2-3-1001"\r\n'],
+    ['an Entra account', '"AzureAD\\Vikash Sharma","S-1-12-1-111-222-333-444"\r\n'],
+  ])('reads the SID from the whoami output of %s', (_name, output) => {
+    expect(parseWhoamiSid(output)).toMatch(/^S-1-/);
+  });
+
+  it('refuses whoami output with no SID', () => {
+    expect(() => parseWhoamiSid('INFO: nothing here')).toThrow(/SID/);
   });
 
   it.skipIf(process.platform !== 'win32')(

@@ -48,6 +48,31 @@ export function describeConnectionsContract(getDb: () => StorageAdapter): void {
       });
     });
 
+    it('inserts a new id once and refuses to overwrite an existing one', async () => {
+      const first = makeConnection('acme', { account: 'First' });
+      const second = makeConnection('acme', { account: 'Second' });
+
+      expect(await db.transaction((t) => t.githubConnections.insertIfAbsent(first))).toBe(
+        true,
+      );
+
+      expect(
+        await db.transaction((t) => t.githubConnections.insertIfAbsent(second)),
+      ).toBe(false);
+
+      expect(
+        (await db.transaction((t) => t.githubConnections.get('acme')))?.account,
+      ).toBe('First');
+    });
+
+    it('deletes a row and reports whether there was one', async () => {
+      await db.transaction((t) => t.githubConnections.upsert(makeConnection('gone')));
+
+      expect(await db.transaction((t) => t.githubConnections.delete('gone'))).toBe(true);
+      expect(await db.transaction((t) => t.githubConnections.delete('gone'))).toBe(false);
+      expect(await db.transaction((t) => t.githubConnections.get('gone'))).toBeNull();
+    });
+
     it('rejects a row that is not a valid connection', async () => {
       await expect(
         db.transaction((t) => t.githubConnections.upsert(makeConnection('A b'))),

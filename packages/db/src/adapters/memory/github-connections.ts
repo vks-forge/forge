@@ -31,6 +31,19 @@ export function memoryGithubConnections(state: MemoryState): GithubConnectionRep
         existing ? { ...c, created_at: existing.created_at } : c,
       );
     },
+    async insertIfAbsent(connection) {
+      const c = GithubConnection.parse(connection);
+      if (state.githubConnections.has(c.id)) {
+        return false;
+      }
+
+      state.githubConnections.set(c.id, c);
+
+      return true;
+    },
+    async delete(id) {
+      return state.githubConnections.delete(id);
+    },
     async list() {
       return [...state.githubConnections.values()].map((c) => structuredClone(c));
     },

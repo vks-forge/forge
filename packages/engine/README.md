@@ -53,12 +53,18 @@ Public API from `src/index.ts`:
   ended, `start` throws, or the resumed harness ends before reporting anything) is settled
   `interrupted -> settled` with error family `crash` and a `retry` wake with reason `resume_failed`,
   so the ticket continues as a new run in the same worktree. A lost run with no session is
-  crash-settled as before (wake reason `crash`). The report lists `resumed`, `resumeFailed` and
-  `crashed`. Then settle finished runs (skipping interrupted pumps); cancel runs silent for
+  crash-settled as before (wake reason `crash`). Resumes queue at their ticket's priority on the same
+  rotation cursor as new starts and read the schedule without consuming wakes or pauses (dispatch does
+  that once per tick). A start that fails before the app wrote the chain's `resumed` link gives the
+  generation back (the receipt chain must read 1, 2, 3 without a gap for G1); a link that was written
+  keeps it. The report lists `resumed`, `resumeFailed` and `crashed`. Then settle finished runs (skipping interrupted pumps); cancel runs silent for
   `stall_ms` and settle them as `stall`; expire overdue questions (ticket to `blocked`); deliver
   steering replies (`steer_reply` step, then `run_inbox`, then `driver.steer`); triage `inbox`
   tickets (pre-check, `triage` step, lane rule); verify finished work (below); dispatch ready tickets (worktree, `dispatch_prompt`
-  step, run row and token hash, `driver.start`, ticket `in_progress`).
+  step, run row and token hash, `driver.start`, ticket `in_progress`). A `driver.start` that throws
+  `HarnessChangedError` (the installed harness build is not the one whose approvals were loaded,
+  family `policy_denied`) settles the run and parks the ticket with the error's own text, which starts
+  with `harness_changed:`, instead of the generic family reason.
 - Verify phase (`tick/verify*.ts`, up to `max_concurrent_by_state.verifying` tickets per tick), for a
   `verifying` ticket whose current run succeeded and whose project `deps.project(slug)` resolves:
   `commitAll` (Forge author), `GitHost.push`, `openPr` once (after `findPr` finds no open PR for the branch; the number is stored on the ticket by CAS
@@ -82,14 +88,22 @@ Public API from `src/index.ts`:
   (rework, merge, retry, park) through the usual CAS moves. A restart loses in-flight jobs; with no rows
   for the run the next tick gates again. Tickets with a job in flight count toward `max_concurrent_by_state.verifying`.
 - Settings snapshot (`tick/tick-config.ts`, d-0085): each tick starts with one read of `deps.config`
-  (`company()` plus `project(slug)` for every registered project) and every phase reads that snapshot
+  (`company()` plus `project(slug)` for every registered, non-archived project; archived projects are
+  never read) and every phase reads that snapshot
   (`ctx.config`), never the source, so an edit saved between ticks applies to the next tick as a whole
   with no restart and never half-applies inside one. Company dials (limits, retries, models) come
   from `ctx.config.forge`; project settings (checks, ecosystems, git host, `tier_c_globs`) overlay the
   `ProjectRuntime.config` the app built and drive triage, tier computation, the Worker contract and the gates.
-  Each run row stores `config_version` (`c<company>:p<project>`). If the source cannot be read or a stored
-  override no longer validates, the tick is skipped with a `load config` error in its report and nothing
-  starts. `requestWake` outside a tick reads the current company settings for the re-wake cap.
+  Each run row stores `config_version` (`c<company>:p<project>`); a company save that lands between the
+  company read and the project reads is detected (each project view names the company version it was
+  merged from) and the read is repeated, so the recorded version is exact, and a read that never settles
+  marks the mismatched projects unservable for that tick. If the company settings cannot be read the tick is
+  skipped with a `load config` error and nothing starts. A project whose stored override no longer validates
+  is only that project's problem: it lands in `TickConfig.unservable` (slug to reason), is reported in the
+  tick `errors` as `project config <slug>` with the reason and through `engine.unservableProjects()` (the
+  server shows it as `config_error` on `GET /projects`), and is skipped by triage, verify, dispatch and resume
+  while every other project is reconciled, settled and dispatched as usual.
+  `requestWake` outside a tick reads the current company settings for the re-wake cap.
 - Many projects (d-0082): every step takes its project's runtime (`runtimeFor`), never a shared one: worktrees are
   created, diffed, committed and removed through `runtime.worktrees` of the ticket's project, gates and the git host
   likewise, and a run row records its `project`. Ticket numbers count per prefix (`nextTicketNumber(ids, prefix)`).

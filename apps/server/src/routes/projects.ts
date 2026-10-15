@@ -6,19 +6,22 @@
  *   Registering is where a bad setup must be caught: a folder that is not a clone, a
  *   missing base branch, a git host the server cannot build, or a prefix another project
  *   already uses (ticket ids would collide) are all refused with a plain message before
- *   anything is saved. Once checked, the project's first settings version and its row are
- *   written and the registry starts serving it, so tickets can run in it on the next tick
- *   with no restart. Archiving stops new work but deletes nothing.
+ *   anything is saved. A folder inside Forge's own data home (its memory repositories and
+ *   Worker worktrees) is refused too, so the floor between what Workers may touch and what
+ *   only the Director writes cannot be inverted by naming the wrong folder. Once checked,
+ *   the project's row and first settings version are written and the registry starts
+ *   serving it, so tickets can run in it on the next tick with no restart; a failure part
+ *   way removes the row so the same request can be sent again. Archiving stops new work but
+ *   deletes nothing. The list shows `config_error` for a project the engine skips.
  *
  * Exports: projectsRoutes().
  * Depends on: node:path, @forge/core, @forge/git (inspectRepository), schemas/api,
- *   services/http/*, types/routes. IO: storage, settings, reads the clone through git.
+ *   services/http/*, services/path-guard, types/routes. IO: storage, settings, reads the clone through git.
  */
 
 import { isAbsolute, resolve } from 'node:path';
 import {
   BUILTIN_CONFIG,
-  ConfigVersionConflictError,
   InvalidInputError,
   ProjectOverride,
   mergeConfig,
@@ -29,16 +32,22 @@ import { ProjectCreateBody, ProjectPatchBody } from '#/schemas/api.js';
 import { readJson } from '#/services/http/body.js';
 import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
+import { appendFirstSettings } from '#/services/first-settings.js';
+import { insideForgeStorage } from '#/services/path-guard.js';
 import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
 
-/** What the API shows of a project row; the deprecated tier-C column is left out. */
-function view(project: Project) {
+/**
+ * What the API shows of a project row; the deprecated tier-C column is left out.
+ * `config_error` appears while the engine skips the project because its stored settings
+ * no longer validate.
+ */
+function view(project: Project, configError?: string) {
   const { tier_c_globs: _deprecated, harness_defaults: _defaults, ...rest } = project;
   void _deprecated;
   void _defaults;
 
-  return rest;
+  return configError === undefined ? rest : { ...rest, config_error: configError };
 }
 
 const samePath = (a: string, b: string): boolean =>
@@ -90,6 +99,21 @@ async function create(
   const body = await readJson(ctx.req, ProjectCreateBody);
   if (!isAbsolute(body.local_path)) {
     throw new HttpError(400, 'invalid_local_path', 'local_path must be an absolute path');
+  }
+
+  // Forge's own storage is never a project: its memory repositories and worktrees are what
+  // the Director and Workers write, so a project there would erase the floor between them.
+  const inside = await insideForgeStorage(body.local_path, [
+    deps.dataHome.home,
+    deps.dataHome.worktreesDir,
+  ]);
+
+  if (inside !== null) {
+    throw new HttpError(
+      400,
+      'path_in_data_home',
+      "local_path is inside Forge's own data folder; register the repository clone instead",
+    );
   }
 
   const existing = await deps.storage.transaction((tx) => tx.projects.list());
@@ -155,30 +179,25 @@ async function create(
     );
   }
 
+  // The row goes in first so every read of the project's settings sees a registered slug.
+  // Settings are versioned append-only and cannot be removed, so a failure after the row is
+  // saved is undone by deleting the row: the slug, prefix and folder are free again, and the
+  // retry appends on top of whatever versions the slug already has.
+  await deps.storage.transaction((tx) => tx.projects.upsert(project));
+  let version: number;
   try {
-    await deps.config.append({
-      scope: 'project',
-      project: body.slug,
-      doc,
-      author: body.author,
-      reason: body.reason,
-      expectedVersion: 0,
-    });
+    version = await appendFirstSettings(deps, body, doc);
+    await deps.projects.register(project, await deps.config.project(body.slug));
   } catch (error) {
-    if (error instanceof ConfigVersionConflictError) {
-      throw new HttpError(
-        409,
-        'settings_exist',
-        `settings already exist for ${body.slug}`,
-      );
-    }
+    deps.projects.archive(body.slug);
+    await deps.storage
+      .transaction((tx) => tx.projects.delete(project.id))
+      .catch(() => undefined);
 
     throw error;
   }
 
-  await deps.storage.transaction((tx) => tx.projects.upsert(project));
-  await deps.projects.register(project, await deps.config.project(body.slug));
-  sendJson(ctx.res, 201, { project: view(project), settings_version: 1 });
+  sendJson(ctx.res, 201, { project: view(project), settings_version: version });
 }
 
 const messageOf = (error: unknown): string =>
@@ -207,7 +226,10 @@ export function projectsRoutes(deps: RouteDeps): Route[] {
       path: '/projects',
       async handle({ res }) {
         const projects = await deps.storage.transaction((tx) => tx.projects.list());
-        sendJson(res, 200, { projects: projects.map(view) });
+        const broken = deps.engine.unservableProjects();
+        sendJson(res, 200, {
+          projects: projects.map((p) => view(p, broken.get(p.slug))),
+        });
       },
     },
     {

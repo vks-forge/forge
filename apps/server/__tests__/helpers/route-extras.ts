@@ -45,11 +45,13 @@ export function inertRouteExtras(): Pick<
   | 'tickets'
   | 'requestShutdown'
   | 'memory'
+  | 'dataHome'
 > {
   const catalogue = createMemoryCatalogueStore();
 
   return {
     memory: inertMemory,
+    dataHome: { home: '/forge-test-home', worktreesDir: '/forge-test-home/worktrees' },
     triggers: createTriggerRegistry([createChatTrigger()]),
     tickets: createSseTicketIssuer(() => Date.now()),
     requestShutdown: () => undefined,
@@ -66,6 +68,7 @@ export function inertRouteExtras(): Pick<
       load: async () => undefined,
       register: async () => undefined,
       check: async () => undefined,
+      refresh: async () => undefined,
       archive: () => undefined,
       runtime: () => null,
       slugs: () => [],

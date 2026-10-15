@@ -25,6 +25,7 @@ import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { isHeld } from '#/steps/run-step.js';
 import { jobKey, pruneGateJobs, startGateJob } from '#/tick/gate-jobs.js';
 import { baseRefFor, runtimeFor } from '#/tick/project-runtime.js';
+import { isUnservable } from '#/tick/tick-config.js';
 import { readClaims } from '#/tick/verify-gates.js';
 import { passAndMerge } from '#/tick/verify-merge.js';
 import {
@@ -194,7 +195,7 @@ export async function verifyReady(ctx: EngineCtx): Promise<void> {
       break;
     }
 
-    if (isHeld(ctx, `verify:${ticket.id}`)) {
+    if (isHeld(ctx, `verify:${ticket.id}`) || isUnservable(ctx.config, ticket.project)) {
       continue;
     }
 

@@ -68,7 +68,9 @@ async function ensureInteraction(
 /**
  * Applies the ticket effect of `run` ending with `result` (family already resolved); inside
  * `tx`. `retryReason` names the retry wake when the cause is not the family itself (an
- * interrupted run that could not be resumed wakes with `resume_failed`).
+ * interrupted run that could not be resumed wakes with `resume_failed`); `parkReason` is
+ * what a parking failure tells the owner when the family's generic text would hide the cause
+ * (a harness build that changed under the approvals).
  */
 export async function applyOutcome(
   ctx: EngineCtx,
@@ -78,6 +80,7 @@ export async function applyOutcome(
   family: ErrorFamily | undefined,
   pump?: Pump,
   retryReason?: string,
+  parkReason?: string,
 ): Promise<void> {
   const ticket = await tx.tickets.get(run.ticket_id as Ticket['id']);
   if (!ticket || TERMINAL_STATUSES.includes(ticket.status) || pump?.cancelled) {
@@ -137,7 +140,7 @@ export async function applyOutcome(
   });
 
   if (decision.action === 'park') {
-    return parkIn(ctx, tx, ticket, decision.reason);
+    return parkIn(ctx, tx, ticket, parkReason ?? decision.reason);
   }
 
   const wake = await requestWakeTx(

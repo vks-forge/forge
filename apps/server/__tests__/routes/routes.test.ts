@@ -81,6 +81,7 @@ beforeEach(async () => {
     explainWait: vi.fn(async () => null),
     interruptRun: vi.fn(),
     liveRunIds: vi.fn(() => ['run-a', 'run-b']),
+    unservableProjects: vi.fn(() => new Map()),
     gateJobsInFlight: vi.fn(() => 1),
   };
 

@@ -76,7 +76,7 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
   beginTick(state);
 
   // One read of the settings for the whole tick. If they cannot be read (or a stored
-  // override no longer validates) nothing is decided on a guess: the tick is skipped and
+  // company override no longer validates) nothing is decided on a guess: the tick is skipped and
   // the error is reported, and the next tick tries again (d-0085).
   let config: TickConfig;
   try {
@@ -87,6 +87,16 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
     deps.log?.('error', 'load config failed', { error: message });
 
     return report;
+  }
+
+  // A project whose settings do not validate is skipped by triage, verify, dispatch and
+  // resume; the others carry on. It is reported here and through `unservableProjects()`.
+  state.unservable = config.unservable;
+  for (const [slug, reason] of config.unservable) {
+    report.errors.push({ where: `project config ${slug}`, message: reason });
+    deps.log?.('error', `project ${slug} is unservable: its settings are invalid`, {
+      error: reason,
+    });
   }
 
   const ctx: EngineCtx = { deps, state, report, config, now, nowIso: iso(now) };
@@ -118,6 +128,7 @@ export function createEngine(deps: EngineDeps): Engine {
     notified: false,
     pumps: new Map(),
     schedulerCursor: undefined,
+    unservable: new Map(),
     holds: new Map(),
     baseShas: new Map(),
     gateJobs: new Map(),
@@ -178,6 +189,7 @@ export function createEngine(deps: EngineDeps): Engine {
     explainWait: (ticketId) => explainWait(deps, state, ticketId),
     interruptRun: (runId) => interruptRun(deps, state, runId),
     liveRunIds: () => [...state.pumps.keys()],
+    unservableProjects: () => new Map(state.unservable),
     gateJobsInFlight: () =>
       [...state.gateJobs.values()].filter((j) => j.outcome === undefined).length,
   };

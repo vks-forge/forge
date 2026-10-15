@@ -19,7 +19,7 @@ import type { Ticket } from '@forge/core';
 import { decideLane } from '#/domain/lane-rules.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { hold, isHeld, rejectStep, runStep } from '#/steps/run-step.js';
-import { projectSettings } from '#/tick/tick-config.js';
+import { isUnservable, projectSettings } from '#/tick/tick-config.js';
 import { moveTicket } from '#/tick/ticket-moves.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { TicketPlan } from '#/types/tick.types.js';
@@ -137,7 +137,7 @@ export async function triageInbox(ctx: EngineCtx): Promise<void> {
   for (const ticket of [...inbox].sort(
     (a, b) => ticketNumber(a.id) - ticketNumber(b.id),
   )) {
-    if (isHeld(ctx, `triage:${ticket.id}`)) {
+    if (isHeld(ctx, `triage:${ticket.id}`) || isUnservable(ctx.config, ticket.project)) {
       continue;
     }
 

@@ -111,6 +111,8 @@ export interface TickConfig {
   readonly forge: ForgeConfig;
   readonly companyVersion: number;
   readonly projects: ReadonlyMap<string, ProjectConfigView>;
+  /** Slug to reason for each live project whose stored settings did not validate; it is skipped this tick. */
+  readonly unservable: ReadonlyMap<string, string>;
 }
 
 /** The hourly re-wake cap of the engine settings. */
@@ -122,6 +124,8 @@ export interface SettleOptions {
   readonly status?: RunStatus;
   /** The retry wake's reason instead of the error family. */
   readonly retryReason?: string;
+  /** The reason the ticket parks with, when the failure parks it, instead of the family's generic one. */
+  readonly parkReason?: string;
 }
 
 /** What differs between one run's start request and another's; the rest comes from the settings. */

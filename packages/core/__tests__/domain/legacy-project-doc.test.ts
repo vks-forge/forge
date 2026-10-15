@@ -7,7 +7,8 @@
  *   that an old document yields the same checks in the same order, and that the new
  *   shape is validated as strictly as the old one was (d-0095).
  *
- * Pins: ts/generic conversion, order, build included, no blanking of inherited checks,
+ * Pins: warnings for commands the conversion drops (non-object, unknown role), none for a clean
+ *   or new-shape document; ts/generic conversion, order, build included, no blanking of inherited checks,
  *   unknown profile rejected, new-shape validation (empty command, duplicate names,
  *   escaping cwd), stored override and effective-config round trip.
  * Depends on: src/domain/legacy-project-doc, src/domain/merge-config, src/schemas/*, vitest.
@@ -15,12 +16,42 @@
 
 import { describe, expect, it } from 'vitest';
 import { BUILTIN_CONFIG } from '#/domain/builtin-config.js';
-import { migrateLegacyProjectDoc } from '#/domain/legacy-project-doc.js';
+import {
+  legacyProjectDocWarnings,
+  migrateLegacyProjectDoc,
+  migrateLegacyProjectDocWithWarnings,
+} from '#/domain/legacy-project-doc.js';
 import { mergeConfig } from '#/domain/merge-config.js';
 import { ProjectOverride } from '#/schemas/config-override.js';
 import { ProjectConfig } from '#/schemas/project.js';
 
 const commands = { test: 'pnpm test', lint: 'pnpm lint', typecheck: 'pnpm typecheck' };
+
+describe('legacy document warnings', () => {
+  it('names a command under a role the old format never had', () => {
+    const out = migrateLegacyProjectDocWithWarnings({
+      profile: 'ts',
+      commands: { test: 'pnpm test', tset: 'pnpm test' },
+    });
+
+    expect(out.warnings).toEqual(['the command for unknown role "tset" was dropped']);
+    expect(out.doc).toMatchObject({
+      checks: [{ name: 'test', role: 'test', command: 'pnpm test' }],
+    });
+  });
+
+  it('says so when commands is not an object', () => {
+    expect(legacyProjectDocWarnings({ profile: 'ts', commands: ['pnpm test'] })).toEqual([
+      '"commands" is not an object, so none of its commands became checks',
+    ]);
+  });
+
+  it('has nothing to say about a clean legacy document or a new-shape one', () => {
+    expect(legacyProjectDocWarnings({ profile: 'ts', commands })).toEqual([]);
+    expect(legacyProjectDocWarnings({ checks: [], ecosystems: ['node'] })).toEqual([]);
+    expect(legacyProjectDocWarnings(undefined)).toEqual([]);
+  });
+});
 
 describe('migrateLegacyProjectDoc', () => {
   it('converts a ts profile to checks in run order and the node ecosystem', () => {
