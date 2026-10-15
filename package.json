@@ -10,6 +10,11 @@
   "scripts": {
     "test": "vitest run --coverage",
     "probes": "node scripts/probes.mjs",
+    "test:changed": "vitest run --changed origin/main",
+    "test:unit": "vitest run --project unit",
+    "test:heavy": "vitest run --project heavy",
+    "test:web": "vitest run --project web",
+    "check": "node scripts/check.mjs",
     "test:watch": "vitest",
     "lint": "eslint .",
     "typecheck": "tsc -b",
