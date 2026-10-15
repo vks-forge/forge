@@ -6,7 +6,7 @@
  *   `cat /proc/self/environ` print them into the Worker's transcript, and from there they
  *   leave Forge. File floors do not see this: `Env:` is a PowerShell provider drive, not a
  *   file. Such a read is a managed deny in every lane, whether it comes by command name
- *   (`printenv`, bare `env`, `export -p`), by drive (`env:`, `variable:`, `HKLM:`), by
+ *   (`printenv`, bare `env`, `export -p`), by drive (`env:`, `variable:`, `temp:`, `HKLM:`, any named drive for a path cmdlet), by
  *   expansion (`$env:X`, `${env:X}`), by provider-qualified path (`Environment::`) or by the .NET API. `env pnpm test` (a wrapper) is not
  *   a dump and stays allowed.
  *
@@ -25,7 +25,28 @@ const RULE = 'floor:argv:env-read';
 
 /** PowerShell provider drives that expose credentials or system state, at the start of a value. */
 const PROVIDER_DRIVE =
-  /(?:^|[=:,'"(])(?:env|variable|function|alias|cert|hk(?:lm|cu)|wsman):/i;
+  /(?:^|[=:,'"(])(?:env|variable|function|alias|cert|hk(?:lm|cu)|wsman|temp):/i;
+
+/**
+ * Any other `<name>:` is a PowerShell drive too (a provider list is not closed: modules add
+ * drives, `New-PSDrive` makes more), so for the cmdlets and aliases that take a path a name
+ * of two or more characters before the colon is denied; only a single drive letter is a
+ * filesystem drive. `Name: x` and `scheme://` are prose and URLs, not drives.
+ */
+const ANY_DRIVE = /(?:^|[=:,'"(])[a-z][a-z0-9_.-]+:(?!\s|\/\/)/i;
+
+const PATH_COMMANDS = new Set([
+  ...['get-childitem', 'get-content', 'set-content', 'add-content', 'clear-content'],
+  ...['get-item', 'set-item', 'new-item', 'remove-item', 'copy-item', 'move-item'],
+  ...['rename-item', 'get-itemproperty', 'set-itemproperty', 'test-path', 'invoke-item'],
+  ...['set-location', 'push-location', 'resolve-path', 'select-string', 'get-acl'],
+  ...['out-file', 'import-csv', 'export-csv', 'get-filehash', 'expand-archive'],
+  ...['compress-archive', 'get-itemproperty', 'get-itempropertyvalue', 'clear-item'],
+  ...['gci', 'ls', 'dir', 'gc', 'cat', 'type', 'sc', 'ac', 'gi', 'si', 'ni', 'ri'],
+  ...['cp', 'copy', 'cpi', 'mv', 'move', 'mi', 'rm', 'del', 'erase', 'rd', 'rmdir'],
+  ...['rni', 'ren', 'rename', 'ii', 'cd', 'chdir', 'sl', 'pushd', 'rvpa', 'sls'],
+  ...['gp', 'sp', 'gpv', 'cli', 'clc', 'md', 'mkdir', 'more', 'head', 'tail'],
+]);
 
 /**
  * The provider-qualified spelling, `Environment::NAME` or `Microsoft.PowerShell.Core\Registry::HKLM`,
@@ -98,7 +119,10 @@ export function envViolation(seg: ShellSegment): string | null {
     if (
       args.some(
         (a) =>
-          PROVIDER_DRIVE.test(a) || PROVIDER_QUALIFIED.test(a) || PROC_ENVIRON.test(a),
+          PROVIDER_DRIVE.test(a) ||
+          PROVIDER_QUALIFIED.test(a) ||
+          PROC_ENVIRON.test(a) ||
+          (PATH_COMMANDS.has(cmd) && ANY_DRIVE.test(a)),
       )
     ) {
       return RULE;

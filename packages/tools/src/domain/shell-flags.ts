@@ -9,7 +9,7 @@
  *   (tool-system.md §5.2, d-0048).
  *
  * Exports: MAX_DEPTH, Abort, bail(), baseName(), buildSegment(), startsExpansion(), expandsHere().
- * Depends on: domain/command-classes, types/tokenizer.types. No IO.
+ * Depends on: domain/command-classes, domain/shell-expansion, types/tokenizer.types. No IO.
  */
 
 import {
@@ -19,6 +19,7 @@ import {
   isEvalFlag,
   isWrapper,
 } from '#/domain/command-classes.js';
+import { globCanMatchParent, startsBraceExpansion } from '#/domain/shell-expansion.js';
 import type {
   ShellDialect,
   ShellFlag,
@@ -98,13 +99,29 @@ const startsTildeUser = (src: string, i: number): boolean =>
   src[i] === '~' && /[A-Za-z_]/.test(src[i + 1] ?? '');
 
 /** True when the unquoted character at `i` begins something the shell would expand. */
-export const expandsHere = (
+export function expandsHere(
   src: string,
   i: number,
   ps: boolean,
   atWordStart: boolean,
-): boolean =>
-  startsExpansion(src, i, ps) || (!ps && atWordStart && startsTildeUser(src, i));
+): boolean {
+  if (startsExpansion(src, i, ps)) {
+    return true;
+  }
+
+  if (!ps && atWordStart && startsTildeUser(src, i)) {
+    return true;
+  }
+
+  if (!ps && startsBraceExpansion(src, i)) {
+    return true;
+  }
+
+  const prev = src[i - 1];
+  const componentStart = atWordStart || prev === '/' || (ps && prev === '\\');
+
+  return componentStart && globCanMatchParent(src, i);
+}
 
 /** Builds one segment: strips leading `NAME=value` words (bash), classifies, derives match texts. */
 export function buildSegment(

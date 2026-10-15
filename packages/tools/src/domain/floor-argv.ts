@@ -145,7 +145,7 @@ function gitViolation(args: readonly string[], cwd?: string): string | null {
       if (a === '--config-env' || RISKY_GIT_CONFIG.test(key)) {
         return 'floor:argv:git-config';
       }
-    } else if (/^-c[^c]/.test(a) || a.startsWith('--config-env=')) {
+    } else if (/^-c./.test(a) || a.startsWith('--config-env=')) {
       if (
         a.startsWith('--config-env=') ||
         RISKY_GIT_CONFIG.test(a.slice(2).split('=')[0] ?? '')
