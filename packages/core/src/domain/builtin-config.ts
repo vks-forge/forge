@@ -18,7 +18,12 @@ import type { ForgeConfig } from '#/schemas/forge-config.js';
 export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
   models: {
     // Director LLM steps run on the logged-in harness subscription (d-0032).
-    director: { triage: 'opus', dispatch_prompt: 'opus', steer_reply: 'opus' },
+    director: {
+      triage: 'opus',
+      dispatch_prompt: 'opus',
+      steer_reply: 'opus',
+      card_chat: 'opus',
+    },
     worker: { express: 'sonnet', standard: 'sonnet', full: 'sonnet' },
   },
   engine: {

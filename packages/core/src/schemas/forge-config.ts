@@ -20,7 +20,12 @@ const PosInt = z.number().int().positive();
 
 /** Role x lane -> model; Director steps are keyed by step name, Workers by lane (d-0060). */
 export const ModelMatrix = z.object({
-  director: z.object({ triage: Model, dispatch_prompt: Model, steer_reply: Model }),
+  director: z.object({
+    triage: Model,
+    dispatch_prompt: Model,
+    steer_reply: Model,
+    card_chat: Model,
+  }),
   worker: z.object({ express: Model, standard: Model, full: Model }),
 });
 export type ModelMatrix = z.infer<typeof ModelMatrix>;

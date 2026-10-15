@@ -32,9 +32,15 @@ export interface CardListFilter {
   readonly limit: number;
 }
 
-/** History page request: oldest first, strictly after `afterSeq` (absent = from the start). */
+/**
+ * History page request over `seq`: strictly after `afterSeq` and strictly before `beforeSeq`
+ * (each absent = unbounded). `order` is `asc` (oldest first, the default) or `desc` (newest
+ * first, so `limit` takes the newest events in range).
+ */
 export interface CardEventListFilter {
   readonly afterSeq?: number;
+  readonly beforeSeq?: number;
+  readonly order?: 'asc' | 'desc';
   readonly limit: number;
 }
 

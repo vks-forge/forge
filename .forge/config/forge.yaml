@@ -7,6 +7,7 @@ models:
     triage: opus
     dispatch_prompt: opus
     steer_reply: opus
+    card_chat: opus
   # Workers: sonnet in every lane until changed in Settings.
   worker:
     express: sonnet

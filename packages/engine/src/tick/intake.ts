@@ -14,34 +14,20 @@
  *   on, or is queued to steer the ticket's live run on the next tick.
  *
  * Exports: ingest().
- * Depends on: @forge/core (schemas, makeTicketId), domain/ticket-numbers, domain/titles,
- *   tick/card-log, tick/interactions, tick/tick-requests. Reads and writes storage.
+ * Depends on: @forge/core (schemas), domain/titles, tick/card-log, tick/interactions,
+ *   tick/ticket-insert, tick/tick-requests. Reads and writes storage.
  */
 
-import {
-  NewRequestPayload,
-  ReplyPayload,
-  TicketStatus,
-  makeCardId,
-  makeTicketId,
-} from '@forge/core';
-import type { CardActor, IntakeEvent, StorageTx, Ticket } from '@forge/core';
-import { nextTicketNumber } from '#/domain/ticket-numbers.js';
+import { NewRequestPayload, ReplyPayload, makeCardId } from '@forge/core';
+import type { CardActor, IntakeEvent, Ticket } from '@forge/core';
 import { deriveTitle } from '#/domain/titles.js';
 import { iso } from '#/shared/time.js';
 import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
 import { answerPending } from '#/tick/interactions.js';
+import { insertInboxTicket } from '#/tick/ticket-insert.js';
 import { requestTick } from '#/tick/tick-requests.js';
 import type { EngineState } from '#/types/engine-state.types.js';
 import type { EngineDeps, IngestResult } from '#/types/engine.types.js';
-
-async function allTicketIds(tx: StorageTx): Promise<string[]> {
-  const lists = await Promise.all(
-    TicketStatus.options.map((s) => tx.tickets.listByStatus(s)),
-  );
-
-  return lists.flat().map((t) => t.id);
-}
 
 /** Who the card names as its creator: the GitHub login when the text came from GitHub, else the intake actor. */
 function cardActor(event: IntakeEvent): CardActor {
@@ -124,41 +110,19 @@ export async function ingest(
         return { status: 'card_created', cardId };
       }
 
-      const id = makeTicketId(
-        project.prefix,
-        nextTicketNumber(await allTicketIds(tx), project.prefix),
-      );
-
-      const ticket: Ticket = {
-        id,
-        project: project.id,
-        card_id: cardId,
+      const ticket = await insertInboxTicket(tx, project, {
+        cardId,
         title,
         body: p.text,
         type: p.type ?? 'chore',
-        lane: 'express',
-        tier_predicted: 'A',
-        status: 'inbox',
-        status_version: 0,
-        rework_count: 0,
-        priority: 0,
-        created_by_intake: stored.id,
-        created_at: now,
-        updated_at: now,
-        blocked_by: [],
-      };
-
-      await tx.tickets.insert(ticket);
-      await tx.intakeEvents.markTicket(stored.id, id);
-
-      await logCardEvent(tx, cardId, {
-        kind: 'ticket_created',
+        createdByIntake: stored.id,
         at: now,
         actor: ENGINE_ACTOR,
-        payload: { ticket_id: id, title },
       });
 
-      return { status: 'ticket_created', ticketId: id, cardId };
+      await tx.intakeEvents.markTicket(stored.id, ticket.id);
+
+      return { status: 'ticket_created', ticketId: ticket.id, cardId };
     }
 
     if (event.kind === 'reply') {

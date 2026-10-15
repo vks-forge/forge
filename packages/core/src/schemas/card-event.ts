@@ -10,18 +10,25 @@
  *   is about. `seq` is allocated by storage alone, as for run events, so two writers cannot
  *   collide and a page boundary is a stable cursor.
  *
+ *   The card chat adds three entries: `director_message` carries the actions the Director took
+ *   with its reply, `director_action` logs each executed action, and `close_suggested`
+ *   records a suggestion to close that only the user can act on (d-0112).
+ *
  * Exports: CARD_EVENT_KINDS, CardEventKind, NewCardEvent, CardEvent.
- * Depends on: schemas/card, schemas/ids, schemas/ticket, zod. No IO.
+ * Depends on: schemas/card, schemas/card-chat, schemas/ids, schemas/ticket, zod. No IO.
  */
 
 import { z } from 'zod';
 import { CardActor, CardTypeName } from '#/schemas/card.js';
+import { ActionTaken } from '#/schemas/card-chat.js';
 import { CardId } from '#/schemas/ids.js';
 import { TicketStatus } from '#/schemas/ticket.js';
 
 export const CARD_EVENT_KINDS = [
   'user_message',
   'director_message',
+  'director_action',
+  'close_suggested',
   'ticket_created',
   'ticket_state',
   'interaction_opened',
@@ -47,7 +54,12 @@ const ticket = z.object({ ticket_id: z.string().min(1) });
 /** A card event before storage has numbered it. */
 export const NewCardEvent = z.discriminatedUnion('kind', [
   event('user_message', text),
-  event('director_message', text),
+  event(
+    'director_message',
+    text.extend({ actions_taken: z.array(ActionTaken).optional() }),
+  ),
+  event('director_action', ActionTaken),
+  event('close_suggested', z.object({ reason: z.string().min(1) })),
   event('ticket_created', ticket.extend({ title: z.string().min(1) })),
   event(
     'ticket_state',

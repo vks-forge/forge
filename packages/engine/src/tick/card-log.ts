@@ -13,21 +13,23 @@
  * Depends on: @forge/core (card schemas, storage tx). Writes inside the caller's transaction.
  */
 
-import type { CardActor, CardId, NewCardEvent, StorageTx } from '@forge/core';
+import type { CardActor, CardEvent, CardId, NewCardEvent, StorageTx } from '@forge/core';
 
 /** Who the card history names for changes the engine makes on its own. */
 export const ENGINE_ACTOR: CardActor = { type: 'director', id: 'engine' };
 
-/** Appends `event` to the card's history and bumps the card's `updated_at`; no-op without a card id. */
+/** Appends `event` to the card's history and bumps the card's `updated_at`; returns the stored event, or undefined without a card id. */
 export async function logCardEvent(
   tx: StorageTx,
   cardId: CardId | undefined,
   event: NewCardEvent,
-): Promise<void> {
+): Promise<CardEvent | undefined> {
   if (cardId === undefined) {
-    return;
+    return undefined;
   }
 
-  await tx.cardEvents.append(cardId, event);
+  const stored = await tx.cardEvents.append(cardId, event);
   await tx.cards.update(cardId, { updated_at: event.at });
+
+  return stored;
 }

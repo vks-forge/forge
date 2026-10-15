@@ -18,6 +18,8 @@
 import { TERMINAL_STATUSES } from '@forge/core';
 import type { Ticket } from '@forge/core';
 import { iso } from '#/shared/time.js';
+import { runCardChats } from '#/tick/card-chat.js';
+import { cardDirectorStatus, postCardMessage } from '#/tick/card-chat-post.js';
 import { dispatchReady } from '#/tick/dispatch.js';
 import { explainWait } from '#/tick/explain.js';
 import { answerInteraction, expireInteractions } from '#/tick/interactions.js';
@@ -112,6 +114,7 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
   await phase(ctx, 'stall scan', cancelStalled);
   await phase(ctx, 'expire interactions', expireInteractions);
   await phase(ctx, 'deliver replies', deliverReplies);
+  await phase(ctx, 'card chat', runCardChats);
   await phase(ctx, 'triage', triageInbox);
   await phase(ctx, 'verify', verifyReady);
   await phase(ctx, 'dispatch', dispatchReady);
@@ -135,6 +138,7 @@ export function createEngine(deps: EngineDeps): Engine {
     gateJobs: new Map(),
     regates: new Map(),
     replies: [],
+    chat: { pending: new Set(), busy: new Set(), errors: new Map() },
   };
 
   const engine: Engine = {
@@ -152,6 +156,9 @@ export function createEngine(deps: EngineDeps): Engine {
     ingest: (event) => ingest(deps, state, event),
     answerInteraction: (id, answer) => answerInteraction(deps, state, id, answer),
     steerRun: (runId, message, author) => steerRun(deps, state, runId, message, author),
+    postCardMessage: (cardId, text, author) =>
+      postCardMessage(deps, state, cardId, text, author),
+    cardDirector: (cardId) => cardDirectorStatus(state, cardId),
     async cancelTicket(ticketId) {
       const nowIso = iso(deps.clock.now());
       const moved = await moveTicket(deps.storage, ticketId, nowIso, (t: Ticket) =>

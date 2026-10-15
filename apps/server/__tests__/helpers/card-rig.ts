@@ -5,7 +5,9 @@
  *   but both need the same project, card, ticket and question rows and the same route table
  *   over in-memory storage, so a change to a card fixture lands in one place.
  *
- * Exports: project(), at(), card(), ticket(), question(), startCardRig(), CardRig.
+ * Exports: project(), at(), card(), ticket(), question(), startCardRig(), CardRig. `engineOverrides`
+ *   replace or add engine methods the routes call (for example `postCardMessage`); `routeOverrides`
+ *   replace route deps such as `isDraining`.
  * Depends on: src/routes/routes, helpers/http-rig, @forge/db (memory storage). IO: a loopback socket.
  */
 
@@ -93,7 +95,10 @@ export const question = (ticketId: string): Interaction => ({
 });
 
 /** Starts the production routes over fresh in-memory storage holding two projects, `fixture` (FX) and `other` (OT). */
-export async function startCardRig(): Promise<CardRig> {
+export async function startCardRig(
+  engineOverrides: Record<string, unknown> = {},
+  routeOverrides: Record<string, unknown> = {},
+): Promise<CardRig> {
   const storage = createMemoryStorage();
   await storage.transaction(async (tx) => {
     await tx.projects.upsert(project('fixture', 'FX'));
@@ -105,6 +110,8 @@ export async function startCardRig(): Promise<CardRig> {
       ...stubHarnessDeps(),
       engine: {
         explainWait: vi.fn(async () => null),
+        cardDirector: vi.fn(() => ({ state: 'idle' })),
+        ...engineOverrides,
         unservableProjects: vi.fn(() => new Map()),
       } as unknown as Engine,
       storage,
@@ -116,6 +123,7 @@ export async function startCardRig(): Promise<CardRig> {
       now: () => Date.parse(at(30)),
       http: { ssePollMs: 5, sseHeartbeatMs: 1000 },
       shutdown: new AbortController().signal,
+      ...routeOverrides,
     }),
   );
 

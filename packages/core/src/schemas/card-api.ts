@@ -11,11 +11,12 @@
  * Exports: CARD_LIST_DEFAULT_LIMIT, CARD_LIST_MAX_LIMIT, CARD_EVENTS_DEFAULT_LIMIT,
  *   CARD_EVENTS_MAX_LIMIT, CardSummary, CardListQuery, CardListPage, CardDetail,
  *   CardEventsQuery, CardEventsPage, CardPatchBody.
- * Depends on: schemas/card, schemas/card-event, schemas/interaction, schemas/ticket-summary, zod. No IO.
+ * Depends on: schemas/card, schemas/card-chat, schemas/card-event, schemas/interaction, schemas/ticket-summary, zod. No IO.
  */
 
 import { z } from 'zod';
 import { Card, CardColumn, CardTypeName } from '#/schemas/card.js';
+import { CardDirectorStatus } from '#/schemas/card-chat.js';
 import { CardEvent } from '#/schemas/card-event.js';
 import { Interaction } from '#/schemas/interaction.js';
 import { TicketSummary } from '#/schemas/ticket-summary.js';
@@ -51,18 +52,27 @@ export const CardListPage = z.object({
 });
 export type CardListPage = z.infer<typeof CardListPage>;
 
-/** `GET /cards/:id`: the card, its rolled-up column, linked tickets and the questions waiting on the user. */
+/** `GET /cards/:id`: the card, its rolled-up column, linked tickets, the questions waiting on the user and whether the Director is answering a chat message. */
 export const CardDetail = CardSummary.extend({
   tickets: z.array(TicketSummary),
   pending_interactions: z.array(Interaction),
+  director: CardDirectorStatus,
 });
 export type CardDetail = z.infer<typeof CardDetail>;
 
 export const CARD_EVENTS_DEFAULT_LIMIT = 50;
 export const CARD_EVENTS_MAX_LIMIT = 200;
 
-/** `GET /cards/:id/events` parameters. */
+/**
+ * `GET /cards/:id/events` parameters. `after` and `before` are event `seq` bounds (exclusive);
+ * `order` is `asc` (oldest first, default) or `desc` (newest first); `before` alone implies
+ * `desc`, so `?before=<oldest seq shown>&limit=N` is "load older". `cursor` is the opaque
+ * continuation of the previous page and cannot be combined with `after` or `before`.
+ */
 export const CardEventsQuery = z.object({
+  after: z.coerce.number().int().nonnegative().optional(),
+  before: z.coerce.number().int().nonnegative().optional(),
+  order: z.enum(['asc', 'desc']).optional(),
   limit: z.coerce
     .number()
     .int()

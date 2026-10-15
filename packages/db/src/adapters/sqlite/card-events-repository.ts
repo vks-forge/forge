@@ -53,8 +53,14 @@ export function createCardEventRepository(driver: SqlDriver): CardEventRepositor
     async list(cardId, filter) {
       return driver
         .all(
-          'SELECT * FROM card_events WHERE card_id = ? AND seq > ? ORDER BY seq LIMIT ?',
-          [cardId, filter.afterSeq ?? -1, filter.limit],
+          `SELECT * FROM card_events WHERE card_id = ? AND seq > ? AND seq < ?
+           ORDER BY seq ${filter.order === 'desc' ? 'DESC' : 'ASC'} LIMIT ?`,
+          [
+            cardId,
+            filter.afterSeq ?? -1,
+            filter.beforeSeq ?? Number.MAX_SAFE_INTEGER,
+            filter.limit,
+          ],
         )
         .map(toEvent);
     },

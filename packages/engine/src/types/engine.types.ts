@@ -9,13 +9,15 @@
  *   back so the app, the control room and tests can see what changed, which invariants
  *   broke and which Director steps were rejected, without scraping logs.
  *
- * Exports: LogLevel, Logger, IdSource, EngineDeps, IngestResult, SteerRunResult, TickReport, SettledRun,
+ * Exports: LogLevel, Logger, IdSource, EngineDeps, IngestResult, PostCardMessageResult, SteerRunResult, TickReport, SettledRun,
  *   Violation, RejectedStep, TickError, Engine.
  * Depends on: @forge/core (ports, schemas), @forge/tools (ReceiptLog). Types only.
  */
 
 import type {
   Clock,
+  CardDirectorStatus,
+  CardEvent,
   ConfigSource,
   DirectorLLM,
   DriverRegistry,
@@ -97,6 +99,12 @@ export type IngestResult =
   | { readonly status: 'answered'; readonly interactionId: string }
   | { readonly status: 'ignored'; readonly reason: string };
 
+/** What `postCardMessage` did with a person's message to a card's Director. */
+export type PostCardMessageResult =
+  | { readonly status: 'stored'; readonly event: CardEvent }
+  | { readonly status: 'not_found' }
+  | { readonly status: 'closed' };
+
 /** What `steerRun` did with a person's message to a Worker. */
 export type SteerRunResult =
   | { readonly status: 'delivered'; readonly inboxSeq: number }
@@ -172,6 +180,18 @@ export interface Engine {
    * refusal throws; the message then stays undelivered in the inbox.
    */
   steerRun(runId: string, message: string, author: string): Promise<SteerRunResult>;
+  /**
+   * Stores a person's message on a card (`user_message`) and schedules the card Director's
+   * reply for the next tick (d-0109). The reply, and any actions the Director takes, arrive
+   * later as card events. Closed cards take no chat.
+   */
+  postCardMessage(
+    cardId: string,
+    text: string,
+    author: string,
+  ): Promise<PostCardMessageResult>;
+  /** Whether the card's Director is answering (`thinking`), failed its last answer (`error`) or is `idle`. Process-local; read-only. */
+  cardDirector(cardId: string): CardDirectorStatus;
   /** Cancels a ticket through `transition()` and stops its live run. False when the ticket is terminal or unknown. */
   cancelTicket(ticketId: string): Promise<boolean>;
   /** Why the ticket has not started (`quota: claude-code until 14:20 UTC`, `cap: per-project 1/1`, `deps: PAY-231`), or null when nothing holds it back. Read-only. */

@@ -11,11 +11,11 @@
  *   change (409), so a late request cannot quietly reopen or retype dropped work.
  *
  * Exports: cardPatchRoute().
- * Depends on: @forge/core (CardId, CardPatchBody), services/card-view, services/http/*,
- *   types/routes. IO: reads and writes storage.
+ * Depends on: @forge/core (CardId, CardPatchBody, checkTypeChange), services/card-view,
+ *   services/http/*, types/routes. IO: reads and writes storage.
  */
 
-import { CardId, CardPatchBody } from '@forge/core';
+import { CardId, CardPatchBody, checkTypeChange } from '@forge/core';
 import type { CardActor, NewCardEvent } from '@forge/core';
 import { cardDetail, viewCard } from '#/services/card-view.js';
 import { readJson } from '#/services/http/body.js';
@@ -53,24 +53,21 @@ export function cardPatchRoute(deps: RouteDeps): Route {
         const patch: { type?: string; closed_reason?: string } = {};
         if (body.type !== undefined && body.type !== card.type) {
           const next = await tx.cardTypes.get(body.type);
-          if (!next) {
-            throw new HttpError(400, 'unknown_card_type', `no card type ${body.type}`);
-          }
-
-          if (!next.allowed_sources.includes(card.source.kind)) {
+          const check = checkTypeChange(card, next, body.type);
+          if (!check.ok) {
             throw new HttpError(
-              409,
-              'card_type_source',
-              `card type ${next.name} does not accept ${card.source.kind}`,
+              check.code === 'unknown_card_type' ? 400 : 409,
+              check.code,
+              check.message,
             );
           }
 
-          patch.type = next.name;
+          patch.type = body.type;
           events.push({
             kind: 'type_changed',
             at,
             actor: OWNER,
-            payload: { from: card.type, to: next.name },
+            payload: { from: card.type, to: body.type },
           });
         }
 
@@ -95,7 +92,7 @@ export function cardPatchRoute(deps: RouteDeps): Route {
         const fresh = (await tx.cards.get(card.id)) ?? card;
         const view = await viewCard(tx, fresh, await tx.interactions.listPending());
 
-        return cardDetail(tx, view, slug);
+        return cardDetail(tx, view, slug, deps.engine.cardDirector(card.id));
       });
 
       sendJson(res, 200, detail);

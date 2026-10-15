@@ -65,7 +65,12 @@ describe('NewRequestPayload / STEP_NAMES', () => {
     expect(NewRequestPayload.safeParse({ hint: 'quick' }).success).toBe(false);
   });
 
-  it('names exactly the three M0 steps', () => {
-    expect([...STEP_NAMES]).toEqual(['triage', 'dispatch_prompt', 'steer_reply']);
+  it('names exactly the four steps', () => {
+    expect([...STEP_NAMES]).toEqual([
+      'triage',
+      'dispatch_prompt',
+      'steer_reply',
+      'card_chat',
+    ]);
   });
 });

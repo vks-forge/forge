@@ -37,6 +37,7 @@ describe('default .forge/config/forge.yaml', () => {
       triage: 'opus',
       dispatch_prompt: 'opus',
       steer_reply: 'opus',
+      card_chat: 'opus',
     });
 
     expect(models.worker).toEqual({

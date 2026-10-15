@@ -12,13 +12,14 @@
  *
  * Exports: cardRoutes().
  * Depends on: @forge/core (card schemas), services/card-view, services/find-project,
- *   services/page-cursor, services/seq-cursor, services/http/*, routes/card-patch,
+ *   services/page-cursor, services/seq-cursor, services/http/*, routes/card-patch, routes/card-messages,
  *   types/routes. IO: reads storage.
  */
 
 import { CardEventsQuery, CardId, CardListQuery } from '@forge/core';
 import type { CardEventsPage, CardListPage, CardSummary } from '@forge/core';
 import type { ZodType } from 'zod';
+import { cardMessageRoute } from '#/routes/card-messages.js';
 import { cardPatchRoute } from '#/routes/card-patch.js';
 import { cardDetail, summarizeCard, viewCard } from '#/services/card-view.js';
 import { findProject } from '#/services/find-project.js';
@@ -128,7 +129,7 @@ export function cardRoutes(deps: RouteDeps): Route[] {
         const slug = (await tx.projects.get(card.project))?.slug ?? card.project;
         const view = await viewCard(tx, card, await tx.interactions.listPending());
 
-        return cardDetail(tx, view, slug);
+        return cardDetail(tx, view, slug, deps.engine.cardDirector(card.id));
       });
 
       if (!body) {
@@ -149,20 +150,39 @@ export function cardRoutes(deps: RouteDeps): Route[] {
       }
 
       const query = parseQuery(CardEventsQuery, {
+        after: url.searchParams.get('after') ?? undefined,
+        before: url.searchParams.get('before') ?? undefined,
+        order: url.searchParams.get('order') ?? undefined,
         limit: url.searchParams.get('limit') ?? undefined,
         cursor: url.searchParams.get('cursor') ?? undefined,
       });
 
-      const afterSeq =
+      if (
+        query.cursor !== undefined &&
+        (query.after !== undefined || query.before !== undefined)
+      ) {
+        throw new HttpError(
+          400,
+          'invalid_query',
+          'cursor cannot be combined with after or before',
+        );
+      }
+
+      const cursorSeq =
         query.cursor === undefined ? undefined : decodeSeqCursor(query.cursor);
 
-      if (afterSeq === null) {
+      if (cursorSeq === null) {
         throw new HttpError(
           400,
           'invalid_cursor',
           'cursor is not one this server issued',
         );
       }
+
+      // `before` alone means "the newest N before it"; a cursor continues in the page's own order.
+      const order = query.order ?? (query.before === undefined ? 'asc' : 'desc');
+      const afterSeq = order === 'asc' ? (cursorSeq ?? query.after) : query.after;
+      const beforeSeq = order === 'desc' ? (cursorSeq ?? query.before) : query.before;
 
       const page = await deps.storage.transaction(async (tx) => {
         if (!(await tx.cards.get(id.data))) {
@@ -172,6 +192,8 @@ export function cardRoutes(deps: RouteDeps): Route[] {
         // One extra row tells whether another page exists without a second query.
         const rows = await tx.cardEvents.list(id.data, {
           ...(afterSeq === undefined ? {} : { afterSeq }),
+          ...(beforeSeq === undefined ? {} : { beforeSeq }),
+          order,
           limit: query.limit + 1,
         });
 
@@ -204,5 +226,5 @@ export function cardRoutes(deps: RouteDeps): Route[] {
     },
   };
 
-  return [list, detail, events, types, cardPatchRoute(deps)];
+  return [list, detail, events, types, cardPatchRoute(deps), cardMessageRoute(deps)];
 }

@@ -104,6 +104,7 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-16 — W6c: chat with the card's Director; it can file tickets, steer Workers and change the card type.
 - 2026-10-16 — W6: Board Cards view, Card page with Director chat, and messaging a running Worker.
 - 2026-10-16 — W7: first-run wizard and new-project flow.
 - 2026-10-16 — W6b-1: cards — every intake becomes a card with a rolled-up board column and history.

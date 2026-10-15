@@ -35,6 +35,7 @@ const ANSWERS: Record<StepName, unknown> = {
       'Add add(a, b) to src/math.js and a test for it, then call finish with claims.',
   },
   steer_reply: { mode: 'none', text: '' },
+  card_chat: { reply: 'Noted.', actions: [] },
 };
 
 export function createScriptedDirector(): ScriptedDirector {

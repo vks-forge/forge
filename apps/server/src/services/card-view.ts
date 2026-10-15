@@ -13,7 +13,14 @@
  */
 
 import { rollupCardColumn } from '@forge/core';
-import type { Card, CardDetail, CardSummary, Interaction, StorageTx } from '@forge/core';
+import type {
+  Card,
+  CardDetail,
+  CardDirectorStatus,
+  CardSummary,
+  Interaction,
+  StorageTx,
+} from '@forge/core';
 import { summarizeTicket } from '#/services/ticket-summary.js';
 import type { CardView } from '#/types/card-view.types.js';
 
@@ -41,11 +48,12 @@ export function summarizeCard(view: CardView, slug: string): CardSummary {
   };
 }
 
-/** The Card page shape: the summary plus ticket summaries (with run status) and pending questions. */
+/** The Card page shape: the summary plus ticket summaries (with run status), pending questions and the Director's chat status. */
 export async function cardDetail(
   tx: StorageTx,
   view: CardView,
   slug: string,
+  director: CardDirectorStatus,
 ): Promise<CardDetail> {
   const tickets = [];
   for (const ticket of view.tickets) {
@@ -57,5 +65,6 @@ export async function cardDetail(
     ...summarizeCard(view, slug),
     tickets,
     pending_interactions: [...view.pending],
+    director,
   };
 }

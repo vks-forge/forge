@@ -2,7 +2,7 @@
  * Director step schemas — names, request payload and the zod output of each LLM step.
  *
  * Why: the Director is a deterministic scheduler that calls the model in finite steps
- *   (triage, dispatch_prompt, steer_reply), and what comes back is untrusted text from a
+ *   (triage, dispatch_prompt, steer_reply, card_chat), and what comes back is untrusted text from a
  *   third-party harness. Each step's output is parsed against one of these schemas before
  *   the engine acts, so an out-of-range confidence or an empty prompt becomes a rejected
  *   step (retried once, then logged) and never a partial ticket write. The same schemas
@@ -20,7 +20,12 @@ import { CardTypeName } from '#/schemas/card.js';
 import { Lane, Tier, TicketType } from '#/schemas/ticket.js';
 
 /** The Director steps M0 runs; `clarify`, `plan`, `rework_brief`, `epic_summary` land later. */
-export const STEP_NAMES = ['triage', 'dispatch_prompt', 'steer_reply'] as const;
+export const STEP_NAMES = [
+  'triage',
+  'dispatch_prompt',
+  'steer_reply',
+  'card_chat',
+] as const;
 export const StepName = z.enum(STEP_NAMES);
 export type StepName = z.infer<typeof StepName>;
 

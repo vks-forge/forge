@@ -159,6 +159,7 @@ export const GENERAL_GROUPS: readonly FieldGroup[] = [
         label: 'Director: write the Worker prompt',
       },
       { kind: 'text', path: 'models.director.steer_reply', label: 'Director: reply' },
+      { kind: 'text', path: 'models.director.card_chat', label: 'Director: card chat' },
       { kind: 'text', path: 'models.worker.express', label: 'Worker: express lane' },
       { kind: 'text', path: 'models.worker.standard', label: 'Worker: standard lane' },
       { kind: 'text', path: 'models.worker.full', label: 'Worker: full lane' },

@@ -31,6 +31,16 @@ export const STEP_INSTRUCTIONS: Readonly<Record<StepName, string>> = {
     'You are the steering step of a software delivery system. A person replied about a ' +
     'ticket whose worker may be running. Decide whether the reply should steer the worker, ' +
     'be queued as a follow up, interrupt it, or need no delivery, and give the text to send.',
+  card_chat:
+    'You are the Director of one card (a request being turned into work) in a software ' +
+    'delivery system, talking with the person who owns it. `history` is the card so far, ' +
+    'newest last; answer the latest user message in `reply`, plainly and briefly. Add ' +
+    '`actions` only when the person asked for them or the card clearly needs them, and ' +
+    'only kinds listed in `allowed_actions`: create_ticket (file work linked to this card), ' +
+    "steer_run (send a live instruction to the Worker of one of this card's tickets), " +
+    'change_type (re-file the card), suggest_close (propose closing; you can never close). ' +
+    'Do not claim an action happened in `reply` unless you listed it; the system tells ' +
+    'the person what was done or refused.',
 };
 
 const CLOSING = 'Reply with JSON only, matching the provided schema.';

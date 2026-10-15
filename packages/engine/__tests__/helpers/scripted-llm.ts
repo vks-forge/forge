@@ -44,6 +44,7 @@ const DEFAULTS: Record<StepName, Scripted> = {
   },
   dispatch_prompt: { prompt: 'Do the ticket.' },
   steer_reply: { mode: 'steer', text: 'Please also update the docs.' },
+  card_chat: { reply: 'Noted.', actions: [] },
 };
 
 /** Marks a scripted answer as a failure rather than a value. */

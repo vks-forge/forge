@@ -13,6 +13,7 @@
  */
 
 export * from '#/domain/branch.js';
+export * from '#/domain/card-chat-actions.js';
 export * from '#/domain/card-rollup.js';
 export * from '#/domain/data-home.js';
 export * from '#/domain/builtin-config.js';
@@ -34,6 +35,7 @@ export * from '#/domain/stats-window.js';
 export * from '#/domain/ticket-patch.js';
 export * from '#/schemas/bootstrap-home.js';
 export * from '#/schemas/card-api.js';
+export * from '#/schemas/card-chat.js';
 export * from '#/schemas/card-event.js';
 export * from '#/schemas/card-type.js';
 export * from '#/schemas/card.js';
@@ -74,6 +76,7 @@ export * from '#/shared/glob.js';
 export * from '#/shared/memory-errors.js';
 export * from '#/shared/result.js';
 export type * from '#/types/branch.types.js';
+export type * from '#/types/card-chat.types.js';
 export type * from '#/types/card-rollup.types.js';
 export type * from '#/types/data-home.types.js';
 export type * from '#/types/config.types.js';

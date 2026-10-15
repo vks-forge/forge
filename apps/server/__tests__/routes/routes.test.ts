@@ -78,6 +78,8 @@ beforeEach(async () => {
     ingest: vi.fn(async () => ({ status: 'ticket_created', ticketId: 'FX-1' })),
     answerInteraction: vi.fn(async () => true),
     steerRun: vi.fn(),
+    postCardMessage: vi.fn(),
+    cardDirector: vi.fn(() => ({ state: 'idle' })),
     cancelTicket: vi.fn(),
     explainWait: vi.fn(async () => null),
     interruptRun: vi.fn(),

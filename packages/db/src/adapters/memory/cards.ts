@@ -103,8 +103,13 @@ export function memoryCardEvents(state: MemoryState): CardEventRepository {
       return structuredClone(stored);
     },
     async list(cardId, filter) {
-      return (state.cardEvents.get(cardId) ?? [])
-        .filter((e) => e.seq > (filter.afterSeq ?? -1))
+      const inRange = (state.cardEvents.get(cardId) ?? []).filter(
+        (e) =>
+          e.seq > (filter.afterSeq ?? -1) &&
+          e.seq < (filter.beforeSeq ?? Number.POSITIVE_INFINITY),
+      );
+
+      return (filter.order === 'desc' ? [...inRange].reverse() : inRange)
         .slice(0, filter.limit)
         .map((e) => structuredClone(e));
     },

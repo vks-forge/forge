@@ -12,7 +12,7 @@
  *   the tick instead of inside it, and the job map is what the next tick finds their result in. The requester's hint, type and title are not here: they are read back from the
  *   stored intake event, so a restart cannot lose them.
  *
- * Exports: Pump, Hold, QueuedReply, EngineState, EngineCtx.
+ * Exports: Pump, Hold, QueuedReply, CardChatState, EngineState, EngineCtx.
  * Depends on: @forge/core (RunHandle, RunResult), types/engine. Types only.
  */
 
@@ -58,6 +58,16 @@ export interface QueuedReply {
   readonly author: string;
 }
 
+/** Card chat bookkeeping, all process-local: a restart drops pending replies and error flags (the history keeps what was said). */
+export interface CardChatState {
+  /** Cards with a user message the Director has not answered yet. */
+  readonly pending: Set<string>;
+  /** Cards whose chat step is running now. */
+  readonly busy: Set<string>;
+  /** The last failed reply per card, cleared by the next message or a successful reply. */
+  readonly errors: Map<string, string>;
+}
+
 export interface EngineState {
   firstTick: boolean;
   running: Promise<TickReport> | null;
@@ -77,6 +87,7 @@ export interface EngineState {
   /** Re-gates after the PR head moved, per `ticket:run`, to stop a branch that never settles. */
   readonly regates: Map<string, number>;
   replies: QueuedReply[];
+  readonly chat: CardChatState;
 }
 
 /** What every phase receives. */

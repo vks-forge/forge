@@ -182,6 +182,25 @@ export function describeCardsContract(getDb: () => StorageAdapter): void {
       expect(rest.map((e) => e.seq)).toEqual([3]);
     });
 
+    it('lists newest first below a seq with order desc', async () => {
+      await tx(async (t) => {
+        for (const text of ['a', 'b', 'c', 'd']) {
+          await t.cardEvents.append(id(1), note(text));
+        }
+      });
+
+      const newest = await tx((t) =>
+        t.cardEvents.list(id(1), { order: 'desc', limit: 2 }),
+      );
+
+      const older = await tx((t) =>
+        t.cardEvents.list(id(1), { beforeSeq: 2, afterSeq: 0, order: 'desc', limit: 5 }),
+      );
+
+      expect(newest.map((e) => e.seq)).toEqual([3, 2]);
+      expect(older.map((e) => e.seq)).toEqual([1]);
+    });
+
     it('keeps each kind payload, actor and time intact', async () => {
       const event: NewCardEvent = {
         kind: 'ticket_state',
