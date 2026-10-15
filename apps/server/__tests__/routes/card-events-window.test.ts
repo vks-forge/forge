@@ -77,6 +77,7 @@ describe('GET /cards/:id/events windows', () => {
     expect(await seqs('/cards/FX-C1/events?after=0&before=4&order=asc')).toEqual([
       1, 2, 3,
     ]);
+
     expect(await seqs('/cards/FX-C1/events?after=0&before=4')).toEqual([3, 2, 1]);
   });
 
