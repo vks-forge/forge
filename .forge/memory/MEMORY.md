@@ -156,6 +156,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - x-0011 — Agents (`.forge/agents/*.yaml`) and per-lane pipelines (`.forge/pipelines/*.yaml`) as config; engine = generic stage runner; fixed invariants (grill paused 2026-10-14 after Q16; decisions d-0065..d-0081; more discussion before the brief)
 - x-0012 — Director project context + live code graph (index of cards/tickets/runs/memory + incrementally updated code graph, read via tools) — to grill
 - x-0013 — Memory in the database with exact + relevance search (FTS first), tools instead of loading all files; reopens part of r-0001; needs research
+- x-0014 — Bind the browser session to the port with a per-session secret held outside cookies (W7b review finding 1); pending
 
 ## Outcomes
 
