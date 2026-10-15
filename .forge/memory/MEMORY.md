@@ -136,6 +136,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - r-0004 — Embedding a third-party tracker (Plane, Huly, OpenProject, Planka, Focalboard, Vibe Kanban)
 - r-0005 — Bypass-permissions as default harness policy (Paperclip's default)
 - r-0006 — Uniform full process for every task size
+- r-0007 — Self-hosted CI runner (no spare machine; work PC would slow down again)
 
 ## Approved proposals (now in `decisions/`, author=director, approved 2026-10-12)
 
