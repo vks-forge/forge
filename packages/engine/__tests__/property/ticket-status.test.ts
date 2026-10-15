@@ -11,7 +11,7 @@
  *   that writes ticket rows after intake is the ticket-moves door.
  *
  * Pins: no illegal status edge under random scenarios; tick reports carry no errors; only
- *   tick/ticket-moves.ts calls updateTicketCas and only tick/intake.ts inserts tickets.
+ *   tick/ticket-moves.ts calls updateTicketCas and only tick/ticket-insert.ts (shared by intake and the card Director) inserts tickets.
  * Depends on: helpers/rig, @forge/core (transition), @forge/db, fast-check, vitest.
  */
 
@@ -266,6 +266,6 @@ describe('ticket status writes', () => {
         .map((f) => f.p.slice(f.p.indexOf('/src/') + 5));
 
     expect(using('updateTicketCas(')).toEqual(['tick/ticket-moves.ts']);
-    expect(using('tickets.insert(')).toEqual(['tick/intake.ts']);
+    expect(using('tickets.insert(')).toEqual(['tick/ticket-insert.ts']);
   });
 });
