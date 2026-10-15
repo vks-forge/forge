@@ -9,7 +9,8 @@
  *   never fetches, checks out or writes into the user's clone.
  *
  * Exports: inspectRepository().
- * Depends on: node:fs, node:path, adapters/git-cli/run-git, domain/porcelain, domain/ref-check.
+ * Depends on: node:fs, node:path, adapters/git-cli/run-git, domain/porcelain, domain/ref-check,
+ *   shared/canonical-path.
  *   IO: stats the path, runs git.
  */
 
@@ -18,6 +19,7 @@ import { resolve } from 'node:path';
 import { createGitRunner } from '#/adapters/git-cli/run-git.js';
 import { normalizePath, samePath } from '#/domain/porcelain.js';
 import { assertSafeRefArg } from '#/domain/ref-check.js';
+import { canonicalPath } from '#/shared/canonical-path.js';
 import type {
   RepositoryInspection,
   RepositoryInspectionOptions,
@@ -51,7 +53,14 @@ export async function inspectRepository(
   }
 
   // A subfolder would work for git but is almost certainly not the clone the user meant.
-  if (!samePath(normalizePath(top.stdout.trim()), normalizePath(path))) {
+  // Both sides by real path: git prints the physical spelling, the user may have typed a
+  // short name or a symlinked one for the same folder.
+  if (
+    !samePath(
+      normalizePath(canonicalPath(top.stdout.trim())),
+      normalizePath(canonicalPath(path)),
+    )
+  ) {
     return {
       ok: false,
       code: 'not_repository_root',

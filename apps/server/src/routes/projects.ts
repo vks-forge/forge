@@ -101,7 +101,7 @@ async function create(
 
   // Forge's own storage is never a project: its memory repositories and worktrees are what
   // the Director and Workers write, so a project there would erase the floor between them.
-  const inside = await insideForgeStorage(body.local_path, [
+  const inside = insideForgeStorage(body.local_path, [
     deps.dataHome.home,
     deps.dataHome.worktreesDir,
   ]);

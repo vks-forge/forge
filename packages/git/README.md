@@ -22,7 +22,7 @@ credential must never reach a Worker, argv or a log. The `GitHost` adapters here
 
 Public API from `src/index.ts`:
 
-- `inspectRepository({ path, baseBranch, gitBinary? })` checks a folder before a project is registered on it (read-only: no fetch, no checkout): it must be a folder, the root of a git repository, and `baseBranch` (a branch or a ref such as `origin/main`) must resolve to a commit. It returns `{ ok: true, baseSha }` or `{ ok: false, code, message }` with `code` one of `not_a_directory`, `not_a_repository`, `not_repository_root`, `base_branch_missing`; a base branch git could read as an option throws `InvalidInputError`.
+- `inspectRepository({ path, baseBranch, gitBinary? })` checks a folder before a project is registered on it (read-only: no fetch, no checkout): it must be a folder, the root of a git repository, and `baseBranch` (a branch or a ref such as `origin/main`) must resolve to a commit. It returns `{ ok: true, baseSha }` or `{ ok: false, code, message }` with `code` one of `not_a_directory`, `not_a_repository`, `not_repository_root`, `base_branch_missing`; the folder and git's reported root are compared by real path (Windows short names, symlinks and junctions expanded); a base branch git could read as an option throws `InvalidInputError`.
 - `createGitWorktreeManager({ repoRoot, worktreeRoot, gitBinary?, author? })` returns a `WorktreeManager`
   (port in `@forge/core`). `gitBinary` defaults to `git`; `author` to `Forge <forge@localhost>`.
 - `create(ticketId, branch, baseRef)`: adds `<worktreeRoot>/<ticketId>` (the data home's `worktrees/<projectSlug>`, outside the checkout, d-0098) on a new

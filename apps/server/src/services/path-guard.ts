@@ -12,10 +12,10 @@
  *   leads into the data home is the same hole.
  *
  * Exports: isInside(), insideForgeStorage().
- * Depends on: node:fs/promises, node:path. IO: resolves real paths.
+ * Depends on: node:fs, node:path. IO: resolves real paths.
  */
 
-import { realpath } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
 import { relative, resolve, isAbsolute } from 'node:path';
 
 /** True when `child` is `parent` or lies below it; compares case-insensitively on Windows. */
@@ -29,9 +29,10 @@ export function isInside(parent: string, child: string): boolean {
 }
 
 /** The real path of `path`, or null when it does not exist (the repository check refuses it later). */
-async function realOrNull(path: string): Promise<string | null> {
+function realOrNull(path: string): string | null {
   try {
-    return await realpath(path);
+    // native: expands Windows 8.3 short names and links, which the JS realpath leaves alone.
+    return realpathSync.native(path);
   } catch {
     return null;
   }
@@ -41,13 +42,13 @@ async function realOrNull(path: string): Promise<string | null> {
  * The root in `roots` that `path` lies in, by plain path or by real path; null when none.
  * Each root is also tried by its real path, so a data home reached through a link is covered.
  */
-export async function insideForgeStorage(
+export function insideForgeStorage(
   path: string,
   roots: readonly string[],
-): Promise<string | null> {
-  const real = await realOrNull(path);
+): string | null {
+  const real = realOrNull(path);
   for (const root of roots) {
-    const realRoot = await realOrNull(root);
+    const realRoot = realOrNull(root);
     const hit = [path, real].some(
       (candidate) =>
         candidate !== null &&
