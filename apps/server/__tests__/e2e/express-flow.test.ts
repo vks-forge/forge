@@ -56,7 +56,10 @@ describe('express flow end to end', { timeout: 300_000 }, () => {
     intakeStatus = intake.status;
     // Connect while the run is live: part of the stream is replay, part is delivered as it happens.
     const runId = await waitFor('the first run to start', () => rig.worker.started[0]);
-    live = readSse(`${rig.address.url}/runs/${runId}/events`);
+    live = readSse(`${rig.address.url}/runs/${runId}/events`, {
+      headers: rig.authHeaders,
+    });
+
     try {
       view = await waitFor(
         'ticket FX-1 to be done',
@@ -191,6 +194,7 @@ describe('express flow end to end', { timeout: 300_000 }, () => {
 
     const res = await readSse(`${rig.address.url}/runs/${runId}/events`, {
       lastEventId: String(cursor),
+      headers: rig.authHeaders,
     });
 
     const ids = res.frames.flatMap((f) => (f.id === undefined ? [] : [Number(f.id)]));
@@ -203,8 +207,13 @@ describe('express flow end to end', { timeout: 300_000 }, () => {
 
   it('rejects a malformed cursor and an unknown run', async () => {
     const runId = view.runs[0]?.id ?? '';
-    const bad = await readSse(`${rig.address.url}/runs/${runId}/events?after=abc`);
-    const missing = await readSse(`${rig.address.url}/runs/run-nope/events`);
+    const bad = await readSse(`${rig.address.url}/runs/${runId}/events?after=abc`, {
+      headers: rig.authHeaders,
+    });
+
+    const missing = await readSse(`${rig.address.url}/runs/run-nope/events`, {
+      headers: rig.authHeaders,
+    });
 
     expect(bad.status).toBe(400);
     expect(missing.status).toBe(404);
@@ -214,6 +223,6 @@ describe('express flow end to end', { timeout: 300_000 }, () => {
     const res = await rig.call('GET', '/health');
 
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ status: 'ok', owner: rig.server.owner });
+    expect(res.body).toEqual({ service: 'forge', status: 'ok' });
   });
 });

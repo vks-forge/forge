@@ -15,6 +15,10 @@ import type { ServerSettings } from '#/types/settings.types.js';
 export interface ProcessIo {
   readonly env: Readonly<Record<string, string | undefined>>;
   readonly cwd: string;
+  /** This process's id, written to the lock and `server.json`. */
+  readonly pid: number;
+  /** True when a process with this pid exists (stale-lock detection). */
+  isAlive(pid: number): boolean;
   stderr(text: string): void;
   exit(code: number): void;
   onSignal(signal: 'SIGINT' | 'SIGTERM', handler: (signal: string) => void): void;

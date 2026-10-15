@@ -56,6 +56,8 @@ export async function startProjectsRig(worktreesDir: string): Promise<ProjectsRi
       catalogue: extras.catalogue,
       compat: extras.compat,
       triggers: extras.triggers,
+      tickets: extras.tickets,
+      requestShutdown: extras.requestShutdown,
       secrets,
       hooks: { handle: vi.fn() },
       owner: 'srv-test',

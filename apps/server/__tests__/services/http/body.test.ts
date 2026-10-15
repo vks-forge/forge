@@ -101,7 +101,13 @@ describe('readBody', () => {
     const status = await new Promise<number>((resolve, reject) => {
       const port = Number(new URL(rig.url).port);
       const req = request(
-        { host: '127.0.0.1', port, method: 'POST', path: '/small' },
+        {
+          host: '127.0.0.1',
+          port,
+          method: 'POST',
+          path: '/small',
+          headers: rig.authHeaders,
+        },
         (res) => {
           res.resume();
           resolve(res.statusCode ?? 0);

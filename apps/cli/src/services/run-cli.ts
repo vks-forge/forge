@@ -8,11 +8,14 @@
  *   it was a usage mistake (2) or a failure (1).
  *
  * Exports: runCli().
- * Depends on: @forge/core (ForgeError, InvalidInputError), services/{parse-args,secret-wrap}, types/cli.
- *   IO: through the injected ports only.
+ * Depends on: @forge/core (ForgeError, InvalidInputError), services/{parse-args,secret-wrap},
+ *   services/daemon/{start-server,server-status,stop-server}, types/cli. IO: through the injected ports only.
  */
 
 import { ForgeError, InvalidInputError } from '@forge/core';
+import { serverStatus } from '#/services/daemon/server-status.js';
+import { startServer } from '#/services/daemon/start-server.js';
+import { stopServer } from '#/services/daemon/stop-server.js';
 import { parseCommand, USAGE } from '#/services/parse-args.js';
 import { describeWrap, wrapSecret } from '#/services/secret-wrap.js';
 import type { CliDeps } from '#/types/cli.types.js';
@@ -25,6 +28,18 @@ export async function runCli(argv: readonly string[], deps: CliDeps): Promise<nu
       deps.stdout(USAGE);
 
       return 0;
+    }
+
+    if (command.kind === 'start') {
+      return await startServer(deps.daemon);
+    }
+
+    if (command.kind === 'status') {
+      return await serverStatus(deps.daemon);
+    }
+
+    if (command.kind === 'stop') {
+      return await stopServer(deps.daemon);
     }
 
     const store = await deps.openStore();

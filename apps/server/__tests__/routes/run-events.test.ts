@@ -85,7 +85,7 @@ describe('GET /runs/:id/events after the run ended', () => {
     await seed(true);
 
     const res = await fetch(`${rig.url}/runs/run-1/events`, {
-      headers: { 'last-event-id': '1' },
+      headers: { ...rig.authHeaders, 'last-event-id': '1' },
     });
 
     expect(res.status).toBe(204);
@@ -95,7 +95,10 @@ describe('GET /runs/:id/events after the run ended', () => {
   it('streams the events and an end event to a client without a cursor', async () => {
     await seed(true);
 
-    const res = await fetch(`${rig.url}/runs/run-1/events`);
+    const res = await fetch(`${rig.url}/runs/run-1/events`, {
+      headers: rig.authHeaders,
+    });
+
     const body = await res.text();
 
     expect(res.status).toBe(200);
@@ -107,7 +110,10 @@ describe('GET /runs/:id/events after the run ended', () => {
   it('streams the tail to a client that is behind, then ends', async () => {
     await seed(true);
 
-    const res = await fetch(`${rig.url}/runs/run-1/events?after=0`);
+    const res = await fetch(`${rig.url}/runs/run-1/events?after=0`, {
+      headers: rig.authHeaders,
+    });
+
     const body = await res.text();
 
     expect(res.status).toBe(200);
@@ -119,7 +125,7 @@ describe('GET /runs/:id/events after the run ended', () => {
     await seed(false);
     const abort = new AbortController();
     const res = await fetch(`${rig.url}/runs/run-1/events`, {
-      headers: { 'last-event-id': '1' },
+      headers: { ...rig.authHeaders, 'last-event-id': '1' },
       signal: abort.signal,
     });
 

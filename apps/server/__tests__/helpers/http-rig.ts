@@ -4,18 +4,28 @@
  * Why: the router, body reader and routes only mean something on a real socket: headers,
  *   chunked bodies, `Connection: close` and client aborts are all socket behaviour. This
  *   starts the production router on `127.0.0.1:0` so each test asserts what a client sees.
+ *   The router is built with the production guard around `TEST_INSTALL_TOKEN`, and every
+ *   helper sends that token unless the test passes its own `authorization` header (an empty
+ *   string sends none that parses).
  *
  * Exports: HttpRig, startHttp().
- * Depends on: node:http, src/services/http/router, src/services/http/listen. IO: a loopback socket.
+ * Depends on: node:http, src/services/auth, src/services/http/router, src/services/http/listen,
+ *   helpers/install-token. IO: a loopback socket.
  */
 
 import { createServer, request } from 'node:http';
+import { createAuthGuard } from '#/services/auth/guard.js';
+import { createSseTicketIssuer } from '#/services/auth/sse-tickets.js';
 import { closeServer, listen } from '#/services/http/listen.js';
 import { createRouter } from '#/services/http/router.js';
+import type { AuthGuard } from '#/types/auth.types.js';
 import type { Route } from '#/types/http.types.js';
+import { TEST_INSTALL_TOKEN, bearer } from '#tests/helpers/install-token.js';
 
 export interface HttpRig {
   readonly url: string;
+  /** Headers that authenticate a request made with plain `fetch`. */
+  readonly authHeaders: Record<string, string>;
   /** Sends a JSON request and returns the status, headers and parsed body (null when empty). */
   json(
     method: string,
@@ -37,8 +47,15 @@ export interface HttpRig {
   close(): Promise<void>;
 }
 
-export async function startHttp(routes: readonly Route[]): Promise<HttpRig> {
-  const router = createRouter(routes);
+/** `guard` replaces the default (test token, real clock) for tests that drive ticket expiry. */
+export async function startHttp(
+  routes: readonly Route[],
+  guard: AuthGuard = createAuthGuard(
+    TEST_INSTALL_TOKEN,
+    createSseTicketIssuer(() => Date.now()),
+  ),
+): Promise<HttpRig> {
+  const router = createRouter(routes, guard);
   const server = createServer((req, res) => {
     void router.dispatch(req, res);
   });
@@ -48,10 +65,15 @@ export async function startHttp(routes: readonly Route[]): Promise<HttpRig> {
 
   return {
     url,
+    authHeaders: bearer(TEST_INSTALL_TOKEN),
     async json(method, path, body, headers = {}) {
       const res = await fetch(`${url}${path}`, {
         method,
-        headers: { 'content-type': 'application/json', ...headers },
+        headers: {
+          'content-type': 'application/json',
+          ...bearer(TEST_INSTALL_TOKEN),
+          ...headers,
+        },
         ...(body === undefined
           ? {}
           : { body: typeof body === 'string' ? body : JSON.stringify(body) }),
@@ -76,6 +98,7 @@ export async function startHttp(routes: readonly Route[]): Promise<HttpRig> {
             headers: {
               'content-type': 'application/json',
               'content-length': String(declaredBytes),
+              ...bearer(TEST_INSTALL_TOKEN),
               ...headers,
             },
           },

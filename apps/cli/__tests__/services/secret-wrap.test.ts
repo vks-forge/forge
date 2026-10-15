@@ -19,6 +19,7 @@ import { parseCommand } from '#/services/parse-args.js';
 import { runCli } from '#/services/run-cli.js';
 import { describeWrap, wrapSecret } from '#/services/secret-wrap.js';
 import type { CliDeps } from '#/types/cli.types.js';
+import { createFakeWorld } from '#tests/helpers/fake-daemon.js';
 
 const dirs: string[] = [];
 afterEach(async () => {
@@ -45,6 +46,7 @@ function cliRig(store: SecretStore) {
     resolvePath: resolve,
     stdout: (t) => out.push(t),
     stderr: (t) => err.push(t),
+    daemon: createFakeWorld().ports,
   };
 
   return { deps, out, err };

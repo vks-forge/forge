@@ -41,10 +41,19 @@ function parseFrame(raw: string): SseFrame {
  */
 export async function readSse(
   url: string,
-  options: { lastEventId?: string; stopAfter?: number; signal?: AbortSignal } = {},
+  options: {
+    lastEventId?: string;
+    stopAfter?: number;
+    signal?: AbortSignal;
+    /** Extra request headers, e.g. the install token. */
+    headers?: Record<string, string>;
+  } = {},
 ): Promise<{ status: number; contentType: string; frames: SseFrame[] }> {
   const res = await fetch(url, {
-    headers: options.lastEventId ? { 'last-event-id': options.lastEventId } : {},
+    headers: {
+      ...options.headers,
+      ...(options.lastEventId ? { 'last-event-id': options.lastEventId } : {}),
+    },
     ...(options.signal ? { signal: options.signal } : {}),
   });
 

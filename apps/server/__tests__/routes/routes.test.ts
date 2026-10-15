@@ -215,7 +215,7 @@ describe('POST /runs/:id/hook', () => {
   });
 
   it('sends an empty token when there is no bearer header', async () => {
-    await post('{}');
+    await post('{}', { authorization: '' });
 
     expect(hooks.handle).toHaveBeenCalledWith('run-1', '', {});
   });
@@ -253,7 +253,7 @@ describe('GET /runs/:id/events errors', () => {
     expect((await rig.json('GET', '/runs/run-x/events')).status).toBe(404);
 
     const bad = await fetch(`${rig.url}/runs/run-x/events`, {
-      headers: { 'last-event-id': 'zzz' },
+      headers: { ...rig.authHeaders, 'last-event-id': 'zzz' },
     });
 
     expect(bad.status).toBe(400);
@@ -261,18 +261,11 @@ describe('GET /runs/:id/events errors', () => {
 });
 
 describe('GET /health', () => {
-  it('reports owner, uptime and the engine counters', async () => {
-    const res = await rig.json('GET', '/health');
+  it('answers without a token and reports liveness only', async () => {
+    const res = await rig.json('GET', '/health', undefined, { authorization: '' });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({
-      status: 'ok',
-      database: 'ok',
-      owner: 'srv-test',
-      uptime_s: 5,
-      live_runs: 2,
-      gate_jobs_in_flight: 1,
-    });
+    expect(res.body).toEqual({ service: 'forge', status: 'ok' });
   });
 
   it('answers 503 when the database does not answer', async () => {
@@ -281,6 +274,6 @@ describe('GET /health', () => {
     const res = await rig.json('GET', '/health');
 
     expect(res.status).toBe(503);
-    expect(res.body).toMatchObject({ status: 'degraded', database: 'unavailable' });
+    expect(res.body).toEqual({ service: 'forge', status: 'degraded' });
   });
 });

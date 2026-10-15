@@ -8,7 +8,7 @@
  *   itself, so a second hand-written shape cannot drift from it.
  *
  * Exports: ToolDecisionBody, CataloguePutBody, AnswerBody, LastEventId, SettingsPutBody, HarnessPutBody, HarnessSecretBody, LiveQuery,
- *   ProjectCreateBody, ProjectPatchBody, ConnectionCreateBody.
+ *   ProjectCreateBody, ProjectPatchBody, ConnectionCreateBody, SseTicketBody.
  * Depends on: @forge/core (HarnessAuthMode, HarnessKind, HarnessSecretKind, GitHostConfig, ProjectPrefix,
  *   ProjectCommands, Profile), zod. No IO.
  */
@@ -32,6 +32,10 @@ export const AnswerBody = z
     path: ['answer'],
   });
 export type AnswerBody = z.infer<typeof AnswerBody>;
+
+/** `POST /auth/sse-ticket`: the run the stream ticket is for. */
+export const SseTicketBody = z.strictObject({ run_id: z.string().min(1).max(200) });
+export type SseTicketBody = z.infer<typeof SseTicketBody>;
 
 /** A non-negative integer sequence number, as sent in `Last-Event-ID` or `?after=`. */
 export const LastEventId = z.coerce.number().int().nonnegative();

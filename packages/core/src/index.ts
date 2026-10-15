@@ -39,6 +39,7 @@ export * from '#/schemas/project.js';
 export * from '#/schemas/run-inbox.js';
 export * from '#/schemas/run.js';
 export * from '#/schemas/secret-name.js';
+export * from '#/schemas/server-record.js';
 export * from '#/schemas/steps.js';
 export * from '#/schemas/ticket-relation.js';
 export * from '#/schemas/ticket.js';

@@ -26,17 +26,15 @@ import { openSqlite } from '@forge/db';
 import { createReceiptLookup, systemClock } from '@forge/drivers';
 import { createEngine, createIdSource, createOwnerId } from '@forge/engine';
 import { createFileReportStore } from '@forge/gates';
-import {
-  createHookHandler,
-  createLivenessRecorder,
-  createRunSecretRegistry,
-} from '@forge/hooks';
+import { createRunSecretRegistry } from '@forge/hooks';
 import { createFileMemorySource } from '@forge/memory';
 import { createDpapiSecretStore } from '@forge/secrets';
-import { admit } from '@forge/tools';
 import { buildRoutes } from '#/routes/routes.js';
+import { createAuth } from '#/services/auth/create-auth.js';
 import { createDriverRegistry } from '#/services/driver-registry.js';
 import { createGates } from '#/services/gates.js';
+import { createHooks } from '#/services/hook-wiring.js';
+import { harnessTestFor } from '#/services/harness-test-route.js';
 import { createHarnessCompat } from '#/services/harness-compat.js';
 import { DEFAULT_HARNESS, createHarnessSource } from '#/services/harness-source.js';
 import { assertLoopbackBind, closeServer, listen } from '#/services/http/listen.js';
@@ -48,13 +46,19 @@ import { shutdownServer } from '#/services/shutdown.js';
 import { createTicker } from '#/services/ticker.js';
 import { createToolPolicy } from '#/services/tool-policy.js';
 import { composeTriggers } from '#/services/triggers.js';
-import type { ExternalPorts, ForgeServer, ServerAddress } from '#/types/server.types.js';
+import type {
+  AssembleOptions,
+  ExternalPorts,
+  ForgeServer,
+  ServerAddress,
+} from '#/types/server.types.js';
 import type { ServerSettings } from '#/types/settings.types.js';
 
 /** Builds the server; nothing listens and no tick runs until `start()`. */
 export async function assembleServer(
   settings: ServerSettings,
   ports: ExternalPorts,
+  options: AssembleOptions = {},
 ): Promise<ForgeServer> {
   assertLoopbackBind(settings.host);
   const { layout } = settings;
@@ -66,6 +70,14 @@ export async function assembleServer(
   const { storage, receipts, config, catalogue } = openSqlite(layout.data.dbPath);
 
   try {
+    // Before any socket: a server that cannot read or create its token must not start open.
+    const auth = await createAuth({
+      tokenPath: layout.data.installTokenPath,
+      now,
+      log,
+      restrict: ports.restrictFile,
+    });
+
     const owner = createOwnerId();
     const registry = createRunSecretRegistry();
 
@@ -180,25 +192,14 @@ export async function assembleServer(
       log,
     });
 
-    const hooks = createHookHandler({
-      db: storage,
+    const hooks = createHooks({
+      storage,
       receipts,
-      admit,
-      credentials: registry.credentials,
-      admitContext: policy.admitContext,
-      clock: () => new Date(now()),
-      requireLiveness: true,
-      onLiveness: createLivenessRecorder({
-        storage,
-        now: () => new Date(now()),
-        onRegistered: ticker.requestTick,
-      }),
-      audit: (runId, entry) =>
-        log('warn', 'hook request refused', {
-          run: runId,
-          code: entry.code,
-          suppressed: entry.suppressed,
-        }),
+      registry,
+      policy,
+      now,
+      requestTick: ticker.requestTick,
+      log,
     });
 
     const { registry: triggers, poller } = composeTriggers({
@@ -220,21 +221,17 @@ export async function assembleServer(
         triggers,
         hooks,
         secrets,
-        harnessTest: (setup, live) =>
-          ports.harnessTest
-            ? ports.harnessTest(setup, live, secrets)
-            : Promise.resolve({
-                auth_mode: setup.authMode,
-                ok: false,
-                live: 'skipped',
-                error: 'harness testing is not available in this build',
-              }),
+        harnessTest: harnessTestFor(ports.harnessTest, secrets),
+        tickets: auth.tickets,
+        requestShutdown: () =>
+          options.onShutdownRequested ? options.onShutdownRequested() : void stopServer(),
         owner,
         startedAt: now(),
         now,
         http: settings.http,
         shutdown: streams.signal,
       }),
+      auth.guard,
     );
 
     const http = createServer((req, res) => {
@@ -243,7 +240,7 @@ export async function assembleServer(
 
     let stopping: Promise<void> | null = null;
 
-    return {
+    const handle: ForgeServer = {
       owner,
       storage,
       receipts,
@@ -266,27 +263,31 @@ export async function assembleServer(
 
         return address;
       },
-      stop() {
-        stopping ??= shutdownServer({
-          ticker,
-          stopPolling: () => poller.stop(),
-          engine,
-          // A run keeps the driver that started it.
-          cancelRun: async (runId) => {
-            const run = await storage.transaction((tx) => tx.runs.get(runId));
-            await (run ? drivers.get(run.harness) : null)?.cancel({ runId });
-          },
-          storage,
-          endStreams: () => streams.abort(),
-          closeHttp: () => closeServer(http),
-          disposePorts: ports.dispose,
-          graceMs: settings.shutdownGraceMs,
-          log,
-        });
-
-        return stopping;
-      },
+      stop: () => stopServer(),
     };
+
+    function stopServer(): Promise<void> {
+      stopping ??= shutdownServer({
+        ticker,
+        stopPolling: () => poller.stop(),
+        engine,
+        // A run keeps the driver that started it.
+        cancelRun: async (runId) => {
+          const run = await storage.transaction((tx) => tx.runs.get(runId));
+          await (run ? drivers.get(run.harness) : null)?.cancel({ runId });
+        },
+        storage,
+        endStreams: () => streams.abort(),
+        closeHttp: () => closeServer(http),
+        disposePorts: ports.dispose,
+        graceMs: settings.shutdownGraceMs,
+        log,
+      });
+
+      return stopping;
+    }
+
+    return handle;
   } catch (error) {
     await storage.close().catch(() => undefined);
     throw error;

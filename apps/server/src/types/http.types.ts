@@ -7,10 +7,11 @@
  *   SSE sink is an interface so the replay-then-live logic can be tested without a socket.
  *
  * Exports: HttpMethod, RouteContext, RouteHandler, Route, Router, SseSink, ErrorIssue, ErrorBody.
- * Depends on: node:http. Types only.
+ * Depends on: node:http, types/auth. Types only.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { RouteAccess } from '#/types/auth.types.js';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH';
 
@@ -30,6 +31,8 @@ export interface Route {
   /** Path with `:name` segments, e.g. `/tickets/:id`. */
   readonly path: string;
   readonly handle: RouteHandler;
+  /** Who may call it; absent means the install token is required. */
+  readonly access?: RouteAccess;
 }
 
 export interface Router {

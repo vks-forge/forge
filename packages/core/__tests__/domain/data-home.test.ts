@@ -144,6 +144,8 @@ describe('dataHomeLayout', () => {
       backupsDir: 'C:\\Forge\\backups',
       logsDir: 'C:\\Forge\\logs',
       serverJsonPath: 'C:\\Forge\\server.json',
+      installTokenPath: 'C:\\Forge\\install-token',
+      serverLockPath: 'C:\\Forge\\server.lock',
     });
   });
 

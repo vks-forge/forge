@@ -7,15 +7,19 @@
  *   services short and their callers honest.
  *
  * Exports: Command, CliDeps, WrapSecretDeps, WrapSecretResult.
- * Depends on: @forge/core (SecretStore type). Types only.
+ * Depends on: @forge/core (SecretStore type), types/daemon. Types only.
  */
 
 import type { SecretStore } from '@forge/core';
+import type { DaemonPorts } from '#/types/daemon.types.js';
 
 /** A parsed command line. */
 export type Command =
   | { readonly kind: 'help' }
-  | { readonly kind: 'secret-wrap'; readonly name: string; readonly file: string };
+  | { readonly kind: 'secret-wrap'; readonly name: string; readonly file: string }
+  | { readonly kind: 'start' }
+  | { readonly kind: 'status' }
+  | { readonly kind: 'stop' };
 
 /** Ports `forge secret wrap` needs. */
 export interface WrapSecretDeps {
@@ -38,6 +42,8 @@ export interface WrapSecretResult {
 export interface CliDeps extends Omit<WrapSecretDeps, 'store'> {
   /** Opens the secret store; called only by commands that need it. */
   readonly openStore: () => Promise<SecretStore>;
+  /** The background-server commands' view of the machine. */
+  readonly daemon: DaemonPorts;
   readonly stdout: (text: string) => void;
   readonly stderr: (text: string) => void;
 }

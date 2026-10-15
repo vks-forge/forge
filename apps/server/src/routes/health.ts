@@ -1,10 +1,12 @@
 /**
- * `GET /health`: is the server up, who owns it, how busy is it.
+ * `GET /health`: is the server up. Open to everyone, returns no data.
  *
- * Why: operators and the CLI need a cheap answer to "is Forge running and what is it doing"
- *   without reading the database themselves. It also proves the database answers, so a
- *   locked or broken store shows as 503 instead of a healthy-looking process that cannot
- *   move a ticket. It reports counts only, never ticket content or any credential.
+ * Why: the CLI needs a cheap, unauthenticated answer to "is the process on this port a Forge
+ *   server and does it work" before it has, or while it is looking for, the install token.
+ *   Because anyone on the machine can call it, it says only `forge` and `ok` or `degraded`;
+ *   owner ids, run counts and uptime would tell another local program what Forge is doing.
+ *   It still proves the database answers, so a locked or broken store shows as 503 instead
+ *   of a healthy-looking process that cannot move a ticket.
  *
  * Exports: healthRoute().
  * Depends on: services/http/respond, types/routes. IO: one storage read.
@@ -18,6 +20,7 @@ export function healthRoute(deps: RouteDeps): Route {
   return {
     method: 'GET',
     path: '/health',
+    access: 'open',
     async handle({ res }) {
       let database = true;
       try {
@@ -27,12 +30,8 @@ export function healthRoute(deps: RouteDeps): Route {
       }
 
       sendJson(res, database ? 200 : 503, {
+        service: 'forge',
         status: database ? 'ok' : 'degraded',
-        database: database ? 'ok' : 'unavailable',
-        owner: deps.owner,
-        uptime_s: Math.round((deps.now() - deps.startedAt) / 1000),
-        live_runs: deps.engine.liveRunIds().length,
-        gate_jobs_in_flight: deps.engine.gateJobsInFlight(),
       });
     },
   };

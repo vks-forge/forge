@@ -14,8 +14,14 @@ import { InvalidInputError } from '@forge/core';
 import type { Command } from '#/types/cli.types.js';
 
 export const USAGE = `Usage:
+  forge start                       run Forge in the background (prints its URL)
+  forge status                      is Forge running; pid, port, uptime, version
+  forge stop                        shut the background server down cleanly
   forge secret wrap <name> <file>   encrypt <file> with Windows DPAPI as secret <name>
   forge --help
+
+\`start\` keeps the server running after this terminal closes; its log is
+<dataHome>/logs/server.log. Run it from the Forge checkout (or set FORGE_ROOT).
 
 Secrets are stored in the Forge data home, under secrets/<name>.dpapi
 (%LOCALAPPDATA%\\Forge by default). The original file is never
@@ -39,6 +45,14 @@ export function parseCommand(argv: readonly string[]): Command {
   const [group, action, name, file, ...extra] = parsed.positionals;
   if (parsed.values.help === true || group === undefined) {
     return { kind: 'help' };
+  }
+
+  if (group === 'start' || group === 'status' || group === 'stop') {
+    if (action !== undefined) {
+      throw new InvalidInputError(`usage: forge ${group}`);
+    }
+
+    return { kind: group };
   }
 
   if (group !== 'secret' || action !== 'wrap') {

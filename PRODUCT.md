@@ -99,6 +99,7 @@ account (container isolation later, d-0005); the rework path has not run live.
 
 Newest first. One line per milestone.
 
+- 2026-10-15 — B8: install token on every API call; forge start/status/stop runs Forge in the background.
 - 2026-10-15 — B12: ticket sources behind a TriggerAdapter port; chat is the first adapter.
 - 2026-10-14 — B7: tool catalogue in the database; per-version harness compatibility check with tool approvals.
 - 2026-10-14 — B4: many projects per server; projects and GitHub connection API.

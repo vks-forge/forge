@@ -8,7 +8,7 @@
  *
  * Exports: RouteDeps.
  * Depends on: @forge/core (StorageAdapter, SecretStore), @forge/drivers (types), @forge/engine (Engine),
- *   @forge/hooks (HookHandler), types/settings. Types only.
+ *   @forge/hooks (HookHandler), types/auth, types/settings. Types only.
  */
 
 import type { ConfigSource, SecretStore, StorageAdapter } from '@forge/core';
@@ -16,6 +16,7 @@ import type { HarnessSetup, HarnessTestResult } from '@forge/drivers';
 import type { Engine } from '@forge/engine';
 import type { HookHandler } from '@forge/hooks';
 import type { CatalogueStore } from '@forge/tools';
+import type { SseTicketIssuer } from '#/types/auth.types.js';
 import type { HarnessCompat } from '#/types/harness-compat.types.js';
 import type { ProjectRegistry } from '#/types/project-registry.types.js';
 import type { HttpTuning } from '#/types/settings.types.js';
@@ -42,6 +43,10 @@ export interface RouteDeps {
     setup: HarnessSetup,
     live: boolean,
   ) => Promise<HarnessTestResult>;
+  /** Mints the short-lived tickets that let `EventSource` open a run's event stream. */
+  readonly tickets: SseTicketIssuer;
+  /** Starts the graceful shutdown (`POST /admin/shutdown`); returns at once. */
+  readonly requestShutdown: () => void;
   readonly owner: string;
   /** Epoch ms when the server started, for `/health` uptime. */
   readonly startedAt: number;

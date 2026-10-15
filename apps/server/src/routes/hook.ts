@@ -34,6 +34,8 @@ export function hookRoute(deps: RouteDeps): Route {
   return {
     method: 'POST',
     path: '/runs/:id/hook',
+    // The harness hook cannot know the install token; it proves itself with its per-run secret.
+    access: 'open',
     async handle({ req, res, params }) {
       const token = BEARER.exec(req.headers.authorization ?? '')?.[1] ?? '';
 

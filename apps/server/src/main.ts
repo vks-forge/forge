@@ -7,14 +7,17 @@
  *   process to `runServer`.
  *
  * Exports: none (executable).
- * Depends on: services/run-server.
+ * Depends on: services/run-server, services/instance/process-alive.
  */
 
+import { processIsAlive } from '#/services/instance/process-alive.js';
 import { runServer } from '#/services/run-server.js';
 
 await runServer({
   env: process.env,
   cwd: process.cwd(),
+  pid: process.pid,
+  isAlive: processIsAlive,
   stderr: (text) => process.stderr.write(text),
   exit: (code) => process.exit(code),
   onSignal: (signal, handler) => process.once(signal, () => handler(signal)),

@@ -32,6 +32,8 @@ const HEAVY = [
   'apps/server/__tests__/routes/projects-archive.test.ts',
   'apps/server/__tests__/services/run-server.test.ts',
   'apps/server/__tests__/services/composition-parts.test.ts',
+  'apps/server/__tests__/services/auth/install-token.test.ts',
+  'apps/cli/__tests__/services/node-daemon-ports.test.ts',
 ];
 
 const INCLUDE = ['packages/*/__tests__/**/*.test.ts', 'apps/*/__tests__/**/*.test.ts'];

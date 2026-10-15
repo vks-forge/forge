@@ -8,7 +8,7 @@
  *   shutdown path use.
  *
  * Exports: ToolPolicy, ToolPolicyDeps, GateDeps, ShutdownParts, HarnessWiring, DriverFactoryDeps,
- *   LlmFactory, HarnessTester, ExternalPorts, ServerAddress, ForgeServer, Ticker.
+ *   LlmFactory, HarnessTester, ExternalPorts, AssembleOptions, ServerAddress, ForgeServer, Ticker.
  * Depends on: @forge/core, @forge/drivers (types), @forge/engine (types), @forge/hooks (types),
  *   @forge/tools (types). Types only.
  */
@@ -35,6 +35,7 @@ import type {
 import type { Engine, IdSource, Logger } from '@forge/engine';
 import type { RunSecretRegistry } from '@forge/hooks';
 import type { AdmitContext, CatalogueStore, ReceiptLog } from '@forge/tools';
+import type { RestrictFile } from '#/types/auth.types.js';
 import type { CompatPort, HarnessCompat } from '#/types/harness-compat.types.js';
 import type { ProjectRegistry } from '#/types/project-registry.types.js';
 
@@ -99,8 +100,19 @@ export interface ExternalPorts {
   readonly clock?: Clock;
   readonly ids?: IdSource;
   readonly log?: Logger;
+  /** Narrows a file to the current user; absent means icacls on Windows, chmod elsewhere (tests pass a fake). */
+  readonly restrictFile?: RestrictFile;
   /** Releases what these ports hold; called once at the end of shutdown. */
   readonly dispose?: () => Promise<void> | void;
+}
+
+/** What the process that hosts the server decides about its lifecycle. */
+export interface AssembleOptions {
+  /**
+   * Called by `POST /admin/shutdown`; the host runs its normal signal path (shutdown, then
+   * exit). Absent means the route just stops the server.
+   */
+  readonly onShutdownRequested?: () => void;
 }
 
 export interface ServerAddress {

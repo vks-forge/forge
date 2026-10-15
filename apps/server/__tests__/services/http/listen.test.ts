@@ -1,11 +1,12 @@
 /**
  * Binding: loopback only, a typed refusal for anything else, bounded close.
  *
- * Why: the API is unauthenticated (d-0036), so the only thing keeping it private is the
- *   bind address. Any host other than 127.0.0.1 must be refused with a typed error before a
+ * Why: the install token guards the API (d-0093), but the bind address keeps it off the
+ *   network (d-0093). Any host other than 127.0.0.1 must be refused with a typed error before a
  *   socket exists, and closing must not hang on a client that keeps a connection open.
  *
  * Pins: BindRefusedError for 0.0.0.0, localhost, ::1 and empty; port 0 yields a real port; keep-alive above the client pool's reuse window;
+ *   a port another program holds is a plain PortInUseError (no hop to another port);
  *   close drops a lingering connection.
  * Depends on: src/services/http/listen. IO: loopback sockets.
  */
@@ -16,6 +17,7 @@ import { ForgeError } from '@forge/core';
 import { describe, expect, it } from 'vitest';
 import {
   BindRefusedError,
+  PortInUseError,
   assertLoopbackBind,
   HEADERS_TIMEOUT_MS,
   KEEP_ALIVE_TIMEOUT_MS,
@@ -44,6 +46,20 @@ describe('assertLoopbackBind', () => {
 });
 
 describe('listen and closeServer', () => {
+  it('reports a busy port as PortInUseError naming the port and FORGE_PORT', async () => {
+    const holder = createServer();
+    const port = await listen(holder, '127.0.0.1', 0);
+
+    try {
+      const second = listen(createServer(), '127.0.0.1', port);
+
+      await expect(second).rejects.toBeInstanceOf(PortInUseError);
+      await expect(second).rejects.toThrow(new RegExp(`port ${port}.*FORGE_PORT`));
+    } finally {
+      await closeServer(holder, 100);
+    }
+  });
+
   it('refuses a non-loopback host without opening a socket', async () => {
     const server = createServer();
 

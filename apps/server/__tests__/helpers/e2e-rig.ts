@@ -5,16 +5,19 @@
  *   settings loaded as production does, the fixture registered through `POST /projects`, the real
  *   assembly (SQLite in the fixture, worktrees, hook route, G1, local-bare host) listening on
  *   an ephemeral loopback port, and only the Worker harness and the Director's model
- *   replaced by fakes. One rig keeps the scenarios about behaviour, not plumbing.
+ *   replaced by fakes. Requests carry the install token the server wrote into the fixture's
+ *   data home, read the way the CLI reads it. One rig keeps the scenarios about behaviour,
+ *   not plumbing.
  *
  * Exports: E2eRig, startE2eRig(), intakeBody().
  * Depends on: src/config, src/services/assemble, helpers/fixture-repo, helpers/fake-worker-driver,
- *   helpers/scripted-llm. IO: git, SQLite, a loopback socket.
+ *   helpers/install-token, helpers/scripted-llm. IO: git, SQLite, a loopback socket.
  */
 
 import { loadSettings } from '#/config/load-settings.js';
 import { KNOWN_GOOD_BUILDS } from '@forge/drivers';
 import { assembleServer } from '#/services/assemble.js';
+import { bearer, readInstallToken } from '#tests/helpers/install-token.js';
 import type { ForgeServer, ServerAddress } from '#/types/server.types.js';
 import type { ServerSettings } from '#/types/settings.types.js';
 import { createFixtureRepo, fixtureProjectBody } from '#tests/helpers/fixture-repo.js';
@@ -33,6 +36,10 @@ export interface E2eRig {
   readonly director: ScriptedDirector;
   /** Server log lines (`level message fields`), for failure diagnostics. */
   readonly logs: string[];
+  /** The install token the server created in the fixture's data home. */
+  readonly token: string;
+  /** `Authorization` header for requests made without `call`. */
+  readonly authHeaders: Record<string, string>;
   /** JSON request to the server; returns the status and parsed body. */
   call(
     method: string,
@@ -106,10 +113,11 @@ export async function startE2eRig(behaviours: readonly Behaviour[]): Promise<E2e
 
     const address = await server.start();
     const live = server;
+    const token = await readInstallToken(fixture.dataHome);
     const call: E2eRig['call'] = async (method, path, body, headers = {}) => {
       const res = await fetch(`${address.url}${path}`, {
         method,
-        headers: { 'content-type': 'application/json', ...headers },
+        headers: { 'content-type': 'application/json', ...bearer(token), ...headers },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
 
@@ -134,6 +142,8 @@ export async function startE2eRig(behaviours: readonly Behaviour[]): Promise<E2e
       worker: worker as FakeWorker,
       director,
       logs,
+      token,
+      authHeaders: bearer(token),
       call,
       async dispose() {
         await live.stop();

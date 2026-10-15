@@ -163,5 +163,7 @@ export function dataHomeLayout(home: string, platform: DataHomePlatform): DataHo
     backupsDir: at('backups'),
     logsDir: at('logs'),
     serverJsonPath: at('server.json'),
+    installTokenPath: at('install-token'),
+    serverLockPath: at('server.lock'),
   };
 }

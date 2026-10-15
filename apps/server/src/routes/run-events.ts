@@ -6,7 +6,9 @@
  *   `?after=`) is the `seq` it last saw; the stream replays what is stored after it, then
  *   follows. The stream ends when the client leaves, the server shuts down, or the run is
  *   over and fully sent (services/http/sse.ts). A client that reconnects after that gets
- *   204, which makes EventSource stop instead of reconnecting for ever.
+ *   204, which makes EventSource stop instead of reconnecting for ever. Browsers cannot set
+ *   headers on an EventSource, so besides the install token the route accepts `?ticket=`, a
+ *   short-lived ticket for this run (`POST /auth/sse-ticket`).
  *
  * Exports: runEventsRoute().
  * Depends on: services/http/http-errors, services/http/response-sink, services/http/sse, types/routes.
@@ -23,6 +25,7 @@ export function runEventsRoute(deps: RouteDeps): Route {
   return {
     method: 'GET',
     path: '/runs/:id/events',
+    access: 'token_or_ticket',
     async handle({ req, res, params, url }) {
       const runId = params['id'] ?? '';
       const header = req.headers['last-event-id'];

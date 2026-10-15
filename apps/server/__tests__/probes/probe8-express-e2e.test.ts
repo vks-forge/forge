@@ -40,6 +40,7 @@ import {
 } from '#tests/helpers/probe-artefacts.js';
 import type { Diagnosis } from '#tests/helpers/probe-artefacts.js';
 import { PROBES_ENABLED, SKIP_REASON, probeDir } from '#tests/helpers/probe-env.js';
+import { bearer, readInstallToken } from '#tests/helpers/install-token.js';
 
 const probe = it.skipIf(!PROBES_ENABLED);
 const FIFTEEN_MINUTES = 15 * 60_000;
@@ -84,10 +85,12 @@ describe('probe 8: Express ticket end to end on the real Claude harness', () => 
       }
 
       expect((await server.compat.view('claude')).compat).not.toBe('fail');
+      // The install token the server created in the data home, as the CLI reads it.
+      const token = await readInstallToken(fixture.dataHome);
       const call = async (method: string, path: string, body?: unknown) => {
         const res = await fetch(`${address.url}${path}`, {
           method,
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', ...bearer(token) },
           ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         });
 

@@ -1,20 +1,25 @@
 /**
  * A tiny router over `node:http`: path patterns with `:name` segments, JSON errors.
  *
- * Why: the API has six routes, which does not justify a framework dependency (d-0061).
+ * Why: the API is a few dozen routes, which does not justify a framework dependency (d-0061).
  *   The router matches method and path, decodes path parameters, rejects a request whose
  *   Host header is not loopback (a browser page on a rebinding DNS name could otherwise
- *   reach a service that is bound to 127.0.0.1), answers 404 for unknown paths and 405
- *   with an `Allow` header for a known path with the wrong method, and turns anything a
- *   handler throws into the safe error response.
+ *   reach a service that is bound to 127.0.0.1), asks the auth guard before any handler
+ *   runs (a route needs the install token unless it declares itself `open`; the guard is a
+ *   required argument so a router cannot be built without one, and unknown paths also answer
+ *   401 to a caller without the token so the route table is not probed anonymously), answers
+ *   404 for unknown paths and 405 with an `Allow` header for a known path with the wrong
+ *   method, and turns anything a handler throws into the safe error response.
  *
  * Exports: createRouter(), isLoopbackHost().
- * Depends on: services/http/http-errors, services/http/respond, types/http. No IO of its own.
+ * Depends on: services/http/http-errors, services/http/respond, types/auth, types/http.
+ *   No IO of its own.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { HttpError } from '#/services/http/http-errors.js';
 import { sendError } from '#/services/http/respond.js';
+import type { AuthGuard } from '#/types/auth.types.js';
 import type { Route, Router } from '#/types/http.types.js';
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
@@ -61,7 +66,7 @@ function matchPath(pattern: string, path: string): Record<string, string> | null
 }
 
 /** Builds a router over a fixed route table. */
-export function createRouter(routes: readonly Route[]): Router {
+export function createRouter(routes: readonly Route[], guard: AuthGuard): Router {
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     if (!isLoopbackHost(req.headers.host)) {
       throw new HttpError(403, 'bad_host', 'host header must be a loopback address', {
@@ -70,6 +75,13 @@ export function createRouter(routes: readonly Route[]): Router {
     }
 
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+    const authorization = req.headers.authorization;
+    const unauthorized = (): HttpError => {
+      res.setHeader('www-authenticate', 'Bearer');
+
+      return new HttpError(401, 'unauthorized', 'unauthorized', { family: 'auth' });
+    };
+
     const allowed: string[] = [];
     for (const route of routes) {
       const params = matchPath(route.path, url.pathname);
@@ -78,12 +90,34 @@ export function createRouter(routes: readonly Route[]): Router {
       }
 
       if (route.method === req.method) {
+        const permitted = guard.allows({
+          access: route.access ?? 'token',
+          authorization,
+          ticket: url.searchParams.get('ticket'),
+          runId: params['id'],
+        });
+
+        if (!permitted) {
+          throw unauthorized();
+        }
+
         await route.handle({ req, res, params, url });
 
         return;
       }
 
       allowed.push(route.method);
+    }
+
+    const known = guard.allows({
+      access: 'token',
+      authorization,
+      ticket: null,
+      runId: undefined,
+    });
+
+    if (!known) {
+      throw unauthorized();
     }
 
     if (allowed.length > 0) {

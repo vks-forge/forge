@@ -1,15 +1,17 @@
 /**
  * Binding and closing the HTTP server: loopback only.
  *
- * Why: the API has no authentication in M0 (d-0036, d-0061); what keeps it private is
- *   that it listens on 127.0.0.1 and nowhere else. A config or env typo such as
- *   `0.0.0.0` would publish an unauthenticated control plane to the network, so any other
- *   host is refused with a typed error before a socket is opened. Closing is bounded: open
+ * Why: the API is protected by the install token (d-0093), but what keeps it off the network
+ *   is that it listens on 127.0.0.1 and nowhere else (d-0093). A config or env typo such as
+ *   `0.0.0.0` would publish the control plane to the LAN, so any other host is refused with
+ *   a typed error before a socket is opened. A port another program already holds is the
+ *   most common start failure of a background server, so it gets its own plain message
+ *   (no silent hop to another port: the CLI, the browser and hooks all expect one URL). Closing is bounded: open
  *   keep-alive and SSE connections are dropped after a short grace so a shutdown never
  *   hangs on a client that will not leave.
  *
- * Exports: LOOPBACK_HOST, KEEP_ALIVE_TIMEOUT_MS, HEADERS_TIMEOUT_MS, BindRefusedError, assertLoopbackBind(),
- *   listen(), closeServer().
+ * Exports: LOOPBACK_HOST, KEEP_ALIVE_TIMEOUT_MS, HEADERS_TIMEOUT_MS, BindRefusedError, PortInUseError,
+ *   assertLoopbackBind(), listen(), closeServer().
  * Depends on: node:http, node:net, @forge/core (ForgeError). IO: opens and closes a socket.
  */
 
@@ -25,6 +27,16 @@ export class BindRefusedError extends ForgeError {
     super(
       'policy_denied',
       `refusing to bind ${JSON.stringify(host)}: the server listens on ${LOOPBACK_HOST} only`,
+    );
+  }
+}
+
+/** The port is held by another program; family `policy_denied`. */
+export class PortInUseError extends ForgeError {
+  constructor(host: string, port: number) {
+    super(
+      'policy_denied',
+      `port ${port} on ${host} is already in use by another program; stop it or set FORGE_PORT to a free port`,
     );
   }
 }
@@ -57,9 +69,16 @@ export async function listen(
   server.headersTimeout = HEADERS_TIMEOUT_MS;
 
   return new Promise((resolve, reject) => {
-    server.once('error', reject);
+    server.once('error', (error) =>
+      reject(
+        (error as NodeJS.ErrnoException).code === 'EADDRINUSE'
+          ? new PortInUseError(host, port)
+          : error,
+      ),
+    );
+
     server.listen(port, host, () => {
-      server.off('error', reject);
+      server.removeAllListeners('error');
       resolve((server.address() as AddressInfo).port);
     });
   });

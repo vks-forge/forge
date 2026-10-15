@@ -2,12 +2,15 @@
  * The server's route table.
  *
  * Why: one list of every endpoint, in one place, is what a reviewer reads to see the whole
- *   API surface of an unauthenticated local service (d-0061).
+ *   API surface of the local service (d-0061). Every route needs the install token unless it
+ *   says `access: 'open'`; only `/health` and the hook route do.
  *
  * Exports: buildRoutes().
  * Depends on: every route module, types/routes. No IO.
  */
 
+import { adminRoutes } from '#/routes/admin.js';
+import { authRoutes } from '#/routes/auth.js';
 import { harnessRoutes } from '#/routes/harnesses.js';
 import { answerRoute } from '#/routes/interactions.js';
 import { healthRoute } from '#/routes/health.js';
@@ -29,6 +32,8 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     runEventsRoute(deps),
     hookRoute(deps),
     healthRoute(deps),
+    ...authRoutes(deps),
+    ...adminRoutes(deps),
     ...settingsRoutes(deps),
     ...harnessRoutes(deps),
     ...projectsRoutes(deps),

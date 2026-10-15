@@ -38,8 +38,12 @@ export interface DataHomeLayout {
   readonly runsDir: string;
   readonly backupsDir: string;
   readonly logsDir: string;
-  /** Written by the running server (port, pid); path only for now. */
+  /** Written by the running server once it listens (pid, port, start time, version); see `ServerRecord`. */
   readonly serverJsonPath: string;
+  /** The install token every API call must carry (`Authorization: Bearer`); a user-only file. */
+  readonly installTokenPath: string;
+  /** Held exclusively by the running server so only one instance runs per data home. */
+  readonly serverLockPath: string;
 }
 
 /** The few path operations the resolver needs, per platform; core has no node typings, so they are spelled out. */
