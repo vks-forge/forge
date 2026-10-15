@@ -17,19 +17,20 @@
  *   2, success; the chain has one `resumed` link and verifies with the two recorded secrets;
  *   the G1 report says it verified two generations; liveness registered again; the old token is
  *   refused; the secrets are deleted once the ticket is done; the change is in the remote main.
- * Depends on: helpers/e2e-rig, helpers/recording-secrets, @forge/db, @forge/tools.
+ * Depends on: helpers/e2e-rig, helpers/restart-scenario, helpers/gate-diagnostics, helpers/recording-secrets, @forge/tools.
  *   IO: git, SQLite, npm, loopback sockets.
  */
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { openSqlite } from '@forge/db';
 import { verifyGenerations } from '@forge/tools';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { intakeBody, startE2eRig } from '#tests/helpers/e2e-rig.js';
 import type { E2eRig } from '#tests/helpers/e2e-rig.js';
+import { assertNoFailedGate } from '#tests/helpers/gate-diagnostics.js';
 import { git } from '#tests/helpers/fixture-repo.js';
-import { waitFor } from '#tests/helpers/wait-for.js';
+import { interruptAndRestart } from '#tests/helpers/restart-scenario.js';
+import type { Stopped } from '#tests/helpers/restart-scenario.js';
+import { FatalWaitError, waitFor } from '#tests/helpers/wait-for.js';
 
 interface TicketView {
   ticket: { id: string; status: string };
@@ -42,56 +43,16 @@ describe('resume across a restart end to end', { timeout: 300_000 }, () => {
   let second: E2eRig;
   let runId = '';
   let view: TicketView;
-  let stopped: {
-    run: { status: string; generation?: number; resumable_session?: string };
-    ticket: string;
-    secrets: string[];
-  };
+  let stopped: Stopped;
 
   beforeAll(async () => {
-    first = await startE2eRig(['resumable']);
-    const intake = await first.call('POST', '/intake', intakeBody('resume-1'));
-    expect(intake.status).toBe(202);
-
-    runId = await waitFor('the first run to start', () => first.worker.started[0]);
-    // The Worker has made its first two tool calls (Read, Write) and is now waiting.
-    await waitFor('two tool calls', async () => {
-      const events = await first.server.storage.transaction((tx) =>
-        tx.runEvents.listByRun(runId),
-      );
-
-      return events.filter((e) => e.type === 'tool_call').length >= 2;
-    });
-
-    // The first server stops gracefully, the way `forge stop` does.
-    await first.server.stop();
-    const db = openSqlite(first.settings.layout.data.dbPath);
-    try {
-      const [run, ticket] = await db.storage.transaction(async (tx) => [
-        await tx.runs.get(runId),
-        await tx.tickets.get('FX-1' as never),
-      ]);
-
-      stopped = {
-        run: {
-          status: run?.status ?? 'missing',
-          ...(run?.generation === undefined ? {} : { generation: run.generation }),
-          ...(run?.resumable_session === undefined
-            ? {}
-            : { resumable_session: run.resumable_session }),
-        },
-        ticket: ticket?.status ?? 'missing',
-        secrets: await first.secrets.list('run/'),
-      };
-    } finally {
-      await db.storage.close();
-    }
-
-    // A second server on the same data home and the same secret store.
-    second = await startE2eRig(['resumable'], {
-      fixture: first.fixture,
-      secrets: first.secrets,
-    });
+    // Stop only once the Worker's Read and Write have both completed (each has its effect
+    // receipt) and it is parked; stopping on the Write's `tool_call` could cut the Write off
+    // before its effect receipt, which G1 rightly refuses to merge on (resume-cutoff.test.ts).
+    ({ first, second, runId, stopped } = await interruptAndRestart(['resumable'], {
+      type: 'tool_result',
+      count: 2,
+    }));
 
     try {
       view = await waitFor(
@@ -99,6 +60,13 @@ describe('resume across a restart end to end', { timeout: 300_000 }, () => {
         async () => {
           const res = await second.call('GET', '/tickets/FX-1');
           const found = res.body as TicketView;
+          // A failed gate or a crashed script ends the wait now, with the reason.
+          assertNoFailedGate(second, found.gate_results);
+          if (second.worker.failures.length > 0) {
+            throw new FatalWaitError(
+              `the scripted Worker failed: ${second.worker.failures.join('; ')}`,
+            );
+          }
 
           return found.ticket.status === 'done' ? found : false;
         },

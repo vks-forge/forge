@@ -11,7 +11,14 @@
  *   run, a run that plants a false claim, a run that asks a question, and a run that can be
  *   interrupted and resumed: it edits one file, reports its session and waits until the server
  *   stops it; started again with `resume` it finishes the job, hooking in again under its new
- *   token like a restored harness session would (d-0092).
+ *   token like a restored harness session would (d-0092). `resumable_cut_write` is the same
+ *   except the interruption lands inside its `Write`: the edit is on disk but the call's
+ *   effect receipt is never posted, the way a process killed between the edit and its
+ *   PostToolUse hook leaves it.
+ *
+ *   A run the script has no line for (a second fresh `resumable*` run, e.g. the rework run after
+ *   a failed gate) ends at once as an error recorded in `failures`, so a test fails with the
+ *   reason instead of waiting for a Worker that would park forever.
  *
  * Exports: Behaviour, FakeWorker, createFakeWorker().
  * Depends on: @forge/core (WorkerDriver, RunEvent), helpers/channel, helpers/harness-session.
@@ -27,7 +34,8 @@ import { createChannel } from '#tests/helpers/channel.js';
 import { createHarnessSession } from '#tests/helpers/harness-session.js';
 
 /** What one run does: write good code, plant a claim for a file it never touched, ask a question, or work until stopped and finish when resumed. */
-export type Behaviour = 'good' | 'false_claim' | 'ask' | 'resumable';
+export type Behaviour =
+  'good' | 'false_claim' | 'ask' | 'resumable' | 'resumable_cut_write';
 
 export interface FakeWorker {
   readonly driver: WorkerDriver;
@@ -52,6 +60,9 @@ test('adds two numbers', () => {
 `;
 
 const USAGE = { in: 0, out: 0, cachedIn: 0, cacheWrite: 0 };
+
+/** Thrown inside a tool call the server's stop cut off; ends the run as cancelled, not as a script error. */
+class CutOff extends Error {}
 
 const writeFile = (path: string, content: string) => (): string => {
   mkdirSync(dirname(path), { recursive: true });
@@ -90,9 +101,17 @@ export function createFakeWorker(
       emit,
     );
 
+    const resumable = behaviour === 'resumable' || behaviour === 'resumable_cut_write';
+    // The scenario is one run, started once and maybe resumed: any other fresh run is a retry.
+    if (resumable && req.resume === undefined && started.some((id) => id !== req.runId)) {
+      throw new Error(
+        `no script for run ${req.runId}: the resumable scenario has one run, this is a retry after a failed gate`,
+      );
+    }
+
     const session = `sess-${req.runId}`;
     await hook('SessionStart', {});
-    if (behaviour === 'resumable') {
+    if (resumable) {
       emit({ type: 'session', session_ref: session });
     }
 
@@ -119,7 +138,10 @@ export function createFakeWorker(
 
     const mathPath = join(req.cwd, 'src', 'math.js');
     const testPath = join(req.cwd, 'test', 'math.test.js');
-    if (behaviour !== 'resumable' || req.resume === undefined) {
+    const parked = (): Promise<void> =>
+      new Promise<void>((resolve) => stops.set(req.runId, resolve));
+
+    if (!resumable || req.resume === undefined) {
       await tool(
         'Read',
         { file_path: mathPath },
@@ -127,16 +149,39 @@ export function createFakeWorker(
       );
 
       const source = readFileSync(mathPath, 'utf8') + ADD;
-      await tool(
-        'Write',
-        { file_path: mathPath, content: source },
-        writeFile(mathPath, source),
-      );
+      const edit = writeFile(mathPath, source);
+      try {
+        await tool(
+          'Write',
+          { file_path: mathPath, content: source },
+          behaviour === 'resumable_cut_write'
+            ? async () => {
+                // The edit lands, then the process dies before PostToolUse is posted.
+                edit();
+                await parked();
+
+                throw new CutOff('stopped inside Write');
+              }
+            : edit,
+        );
+      } catch (error) {
+        if (!(error instanceof CutOff)) {
+          throw error;
+        }
+
+        return {
+          status: 'cancelled',
+          session,
+          usage: USAGE,
+          costUsd: null,
+          filesTouched: [],
+        };
+      }
     }
 
-    if (behaviour === 'resumable' && req.resume === undefined) {
+    if (resumable && req.resume === undefined) {
       // Half done: wait here until the server stops the run (shutdown interrupts it).
-      await new Promise<void>((resolve) => stops.set(req.runId, resolve));
+      await parked();
 
       return {
         status: 'cancelled',
@@ -190,7 +235,7 @@ export function createFakeWorker(
   const driver: WorkerDriver = {
     id: 'claude-code',
     capabilities: () => ({
-      resume: behaviours.includes('resumable'),
+      resume: behaviours.some((b) => b === 'resumable' || b === 'resumable_cut_write'),
       steerModes: [],
       nativeSandbox: false,
       reportsCost: false,

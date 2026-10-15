@@ -6,9 +6,12 @@
  *   state it expects. A named timeout with the last observed value in the message turns
  *   "the test hung" into "the ticket stayed in verifying", which is what a reader needs.
  *
- * Exports: waitFor().
+ * Exports: waitFor(), FatalWaitError.
  * Depends on: none. No IO of its own (timers).
  */
+
+/** Thrown by a probe to end the wait at once with its message, instead of being retried until the deadline. */
+export class FatalWaitError extends Error {}
 
 /** Resolves with the first truthy value of `probe`; rejects with `what` and the last error after `timeoutMs`. */
 export async function waitFor<T>(
@@ -26,6 +29,10 @@ export async function waitFor<T>(
         return value;
       }
     } catch (error) {
+      if (error instanceof FatalWaitError) {
+        throw error;
+      }
+
       lastError = error;
     }
 
