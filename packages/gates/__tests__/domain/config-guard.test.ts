@@ -138,3 +138,40 @@ describe('checkGateConfig', () => {
     expect(src.status).toBe('passed');
   });
 });
+
+describe('checkGateConfig guards scripts a check command runs', () => {
+  const guard = (command: string, path: string, status: 'M' | 'A' | 'D' = 'M') =>
+    checkGateConfig(diffOf([{ status, path }], ''), [], checksOf({ test: command }));
+
+  it.each([
+    ['./scripts/test.sh', 'scripts/test.sh'],
+    ['./gradlew test', 'gradlew'],
+    ['./gradlew.bat test', 'gradlew.bat'],
+    ['./mvnw verify', 'mvnw'],
+    ['mvnw.cmd verify', 'mvnw.cmd'],
+    ['bin/test', 'bin/test'],
+    ['bash scripts/check.sh --fast', 'scripts/check.sh'],
+    ['cd app && ./ci/run.sh', 'ci/run.sh'],
+    ['.\\scripts\\test.ps1', 'scripts/test.ps1'],
+  ])('a check "%s" makes edits to %s a finding', (command, path) => {
+    const out = guard(command, path);
+
+    expect(out.status).toBe('failed');
+    expect(out.findings[0]?.message).toContain('run by a project check');
+  });
+
+  it('a deleted guarded script is a finding too', () => {
+    expect(guard('./scripts/test.sh', 'scripts/test.sh', 'D').status).toBe('failed');
+  });
+
+  it.each([
+    ['./scripts/test.sh', 'scripts/other.sh'],
+    ['./scripts/test.sh', 'src/a.ts'],
+    ['pytest', 'tests/test_a.py'],
+    ['pnpm test', 'scripts/test.sh'],
+    ['/usr/bin/make test', 'usr/bin/make'],
+    ['../outside/test.sh', 'outside/test.sh'],
+  ])('a check "%s" does not guard %s', (command, path) => {
+    expect(guard(command, path).status).toBe('passed');
+  });
+});

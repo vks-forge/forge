@@ -18,13 +18,16 @@
  *   is parsed from the invocation (`pnpm -r test`, `pnpm --filter x run lint`), skipping
  *   flags and the values of value-taking flags. Scripts are matched by key on changed
  *   lines, not by parsing the full file, so a same-named key elsewhere also trips it.
+ *   A worktree file a check command runs by path (`./scripts/test.sh`, `./gradlew`, `bin/test`,
+ *   `bash x.sh`, see domain/check-scripts) is guarded too: editing it to `exit 0` would pass G1.
  *
  * Exports: checkGateConfig().
- * Depends on: @forge/core (globMatch, ProjectConfig, WorktreeDiff), domain/gate-rules, shared/paths. No IO.
+ * Depends on: @forge/core (globMatch, ProjectConfig, WorktreeDiff), domain/check-scripts, domain/gate-rules, shared/paths. No IO.
  */
 
 import { globMatch } from '@forge/core';
 import type { GateFinding, ProjectConfig, WorktreeDiff } from '@forge/core';
+import { checkScriptPaths } from '#/domain/check-scripts.js';
 import { resolveRules } from '#/domain/gate-rules.js';
 import { foldPath } from '#/shared/paths.js';
 import type { CheckOutcome, PatchFile } from '#/types/check.types.js';
@@ -121,8 +124,16 @@ export function checkGateConfig(
   ),
 ): CheckOutcome {
   const findings: GateFinding[] = [];
+  const scripts = checkScriptPaths(checks);
   for (const f of diff.files) {
     const name = baseName(f.path);
+    if (scripts.has(foldPath(f.path))) {
+      findings.push({
+        check: 'gate-config',
+        message: `${f.path}: script run by a project check was changed by the Worker (status ${f.status}); G1 would re-run the edited script`,
+      });
+    }
+
     if (rules.configGlobs.some((g) => globMatch(g, foldPath(f.path), true))) {
       findings.push({
         check: 'gate-config',

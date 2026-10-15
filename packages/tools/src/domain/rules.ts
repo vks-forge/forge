@@ -15,16 +15,17 @@
  *   is a denial, not "the cwd". Shell segments are also judged for the files their argv
  *   reads or writes (`cat .env`, `git diff --output=f`) and for the commands nested in
  *   `bash -c`, `cmd /c`, `powershell -Command` and `eval`: a floor hit anywhere inside is a
- *   deny, not just an ask. Every path, from a tool or an argv, also passes the data-home floor.
+ *   deny, not just an ask. Every path, from a tool or any word of an argv, passes the data-home floor.
  *
  * Exports: evaluateToolRules(), evaluateShell(), normalizePath() (re-exported).
- * Depends on: @forge/core (globMatch), domain/argv-paths, domain/cd-cwd, domain/command-candidates,
+ * Depends on: @forge/core (globMatch), domain/argv-home, domain/argv-paths, domain/cd-cwd, domain/command-candidates,
  *   domain/data-home-floor, domain/floor-argv, domain/nested-scripts, domain/tokenizer, schemas/grant, shared/path,
  *   shared/pattern, types/grants, types/rules, types/tokenizer. No IO.
  */
 
 import { globMatch } from '@forge/core';
 import type { CallRule, Effect } from '#/schemas/grant.js';
+import { argvDataHomeOutcome } from '#/domain/argv-home.js';
 import { argvReads, argvWrites, wildcardHitsFloor } from '#/domain/argv-paths.js';
 import { commandCandidates, commandName } from '#/domain/command-candidates.js';
 import { isCdToCwd } from '#/domain/cd-cwd.js';
@@ -177,6 +178,8 @@ function evaluateArgv(
   for (const argv of commandCandidates(seg.argv)) {
     const cmd = commandName(argv[0]);
     const rest = argv.slice(1);
+    const home = argvDataHomeOutcome(grant.dataHome, argv, cwd);
+    out = home === null ? out : worse(out, home);
     for (const p of argvReads(cmd, rest)) {
       out = worse(
         out,

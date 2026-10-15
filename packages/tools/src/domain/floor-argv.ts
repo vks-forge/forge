@@ -12,7 +12,7 @@
  *   and is untouched. The literal floors stay as a fallback (tool-system.md §5.0).
  *
  * Exports: floorViolation().
- * Depends on: domain/command-candidates, shared/path, types/tokenizer. No IO.
+ * Depends on: domain/command-candidates, domain/env-floor, domain/git-paths-floor, shared/path, types/tokenizer. No IO.
  */
 
 import {
@@ -20,6 +20,8 @@ import {
   commandCandidates,
   commandName,
 } from '#/domain/command-candidates.js';
+import { envViolation } from '#/domain/env-floor.js';
+import { gitPathViolation } from '#/domain/git-paths-floor.js';
 import { absolutePath, isInside, normalizePath } from '#/shared/path.js';
 import type { ShellSegment } from '#/types/tokenizer.types.js';
 
@@ -96,9 +98,14 @@ function isCatastrophicTarget(target: string, cwd?: string): boolean {
   return isInside(cwd, abs);
 }
 
-function gitViolation(args: readonly string[]): string | null {
+function gitViolation(args: readonly string[], cwd?: string): string | null {
   if (args.includes('push')) {
     return 'floor:argv:git-push';
+  }
+
+  const outside = gitPathViolation(args, cwd);
+  if (outside !== null) {
+    return outside;
   }
 
   for (const [i, a] of args.entries()) {
@@ -129,7 +136,7 @@ function commandViolation(
   const cmd = commandName(argv[0]);
   const args = argv.slice(1);
   if (cmd === 'git') {
-    return gitViolation(args);
+    return gitViolation(args, cwd);
   }
 
   if (
@@ -158,15 +165,20 @@ function commandViolation(
 
 /**
  * Returns a rule id (`floor:argv:<name>`) when the segment pushes, publishes, runs git with
- * config that executes programs, or recursively deletes a catastrophic target; otherwise
- * `null`.
+ * config that executes programs, points git outside the worktree, reads the environment, or
+ * recursively deletes a catastrophic target; otherwise `null`.
  */
 export function floorViolation(seg: ShellSegment, cwd?: string): string | null {
+  const env = envViolation(seg);
+  if (env !== null) {
+    return env;
+  }
+
   const candidates = commandCandidates(seg.argv);
   const runsGit = candidates.some((c) => commandName(c[0]) === 'git');
   if (runsGit) {
-    const env = [...seg.assignments, ...seg.argv.filter((t) => ASSIGNMENT.test(t))];
-    if (env.some((e) => RISKY_GIT_ENV.test(e))) {
+    const gitEnv = [...seg.assignments, ...seg.argv.filter((t) => ASSIGNMENT.test(t))];
+    if (gitEnv.some((e) => RISKY_GIT_ENV.test(e))) {
       return 'floor:argv:git-config';
     }
   }

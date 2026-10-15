@@ -48,10 +48,17 @@ const result = (id: string): RunEvent => ({
   is_error: false,
 });
 
-function listed(events: RunEvent[]): Promise<{ callId: string; name: string }[]> {
+function listed(
+  events: RunEvent[],
+  generation?: number,
+): Promise<{ callId: string; name: string }[]> {
+  const tx = {
+    runEvents: { listByRun: () => Promise.resolve(events) },
+    runs: { get: () => Promise.resolve({ id: 'run-1', generation }) },
+  };
+
   const storage = {
-    transaction: (fn: (tx: unknown) => unknown) =>
-      Promise.resolve(fn({ runEvents: { listByRun: () => Promise.resolve(events) } })),
+    transaction: (fn: (tx: unknown) => unknown) => Promise.resolve(fn(tx)),
   } as unknown as StorageAdapter;
 
   return createStorageToolCallLister(storage)('run-1').then((c) => [...c]);
@@ -78,7 +85,7 @@ describe('createStorageToolCallLister', () => {
       result('after'),
     ];
 
-    expect(await listed(events)).toEqual([
+    expect(await listed(events, 2)).toEqual([
       { callId: 'done', name: 'Read' },
       { callId: 'after', name: 'Read' },
     ]);
@@ -87,19 +94,19 @@ describe('createStorageToolCallLister', () => {
   it('still requires a call that has a result, even before a later liveness event', async () => {
     const events = [live(), call('ran'), result('ran'), live()];
 
-    expect(await listed(events)).toEqual([{ callId: 'ran', name: 'Read' }]);
+    expect(await listed(events, 2)).toEqual([{ callId: 'ran', name: 'Read' }]);
   });
 
   it('still requires a call left open after the last resume', async () => {
     const events = [live(), call('old'), live(), call('open', 'Edit')];
 
-    expect(await listed(events)).toEqual([{ callId: 'open', name: 'Edit' }]);
+    expect(await listed(events, 2)).toEqual([{ callId: 'open', name: 'Edit' }]);
   });
 
   it('requires a call whose result arrives at any point, even after a later liveness event', async () => {
     const events = [live(), call('late'), live(), result('late')];
 
-    expect(await listed(events)).toEqual([{ callId: 'late', name: 'Read' }]);
+    expect(await listed(events, 2)).toEqual([{ callId: 'late', name: 'Read' }]);
   });
 
   it('drops one call per interruption, over several resumes', async () => {
@@ -113,6 +120,37 @@ describe('createStorageToolCallLister', () => {
       result('keep'),
     ];
 
-    expect(await listed(events)).toEqual([{ callId: 'keep', name: 'Read' }]);
+    expect(await listed(events, 3)).toEqual([{ callId: 'keep', name: 'Read' }]);
   });
+
+  it('excuses nothing when the run never resumed, however many liveness events it holds', async () => {
+    const events = [live(), call('old', 'Glob'), live()];
+
+    expect(await listed(events, 1)).toEqual([{ callId: 'old', name: 'Glob' }]);
+    expect(await listed(events, undefined)).toEqual([{ callId: 'old', name: 'Glob' }]);
+  });
+
+  it('honours no more interruptions than the run has resumed', async () => {
+    const events = [live(), call('x1'), live(), call('x2'), live()];
+
+    expect(await listed(events, 2)).toEqual([{ callId: 'x2', name: 'Read' }]);
+  });
+
+  it.each(['Edit', 'Write', 'Bash', 'PowerShell', 'mcp__srv__do'])(
+    'does not excuse a cut-off %s call: it may have run, so its receipt is still owed',
+    async (tool) => {
+      const events = [live(), call('cut', tool), live()];
+
+      expect(await listed(events, 2)).toEqual([{ callId: 'cut', name: tool }]);
+    },
+  );
+
+  it.each(['Read', 'Glob', 'Grep', 'LS'])(
+    'still excuses a cut-off read-only %s call',
+    async (tool) => {
+      const events = [live(), call('cut', tool), live()];
+
+      expect(await listed(events, 2)).toEqual([]);
+    },
+  );
 });

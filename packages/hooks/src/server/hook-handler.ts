@@ -22,12 +22,14 @@
  *   secret; a call carrying the old generation's credentials is refused as `stale_generation`
  *   and the old token as `bad_token` (d-0092, d-0100). When liveness is required, a tool call
  *   from a run whose SessionStart never registered is denied: a harness that skipped one
- *   hook cannot be assumed to run the other (d-0033).
+ *   hook cannot be assumed to run the other (d-0033). The floors in `@forge/tools` are lexical,
+ *   so a path tool's arguments are also resolved on disk (junctions, symlinks, 8.3 names) and
+ *   judged a second time; either look denying denies (server/path-resolver).
  *
  * Exports: createHookHandler().
  * Depends on: @forge/core (isRunActive), @forge/tools (HookRequest and HookResponse wire
  *   schemas, makeDecisionReceipt, makeEffectReceipt, callResource, constantTimeEqual),
- *   server/tool-resolver, server/audit-gate, shared/args-hash, types/hook-handler.
+ *   server/tool-resolver, server/audit-gate, server/path-resolver, shared/args-hash, types/hook-handler.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -40,9 +42,16 @@ import {
   makeDecisionReceipt,
   makeEffectReceipt,
 } from '@forge/tools';
-import type { HookResponse, Receipt } from '@forge/tools';
+import type {
+  AdmitCall,
+  AdmitContext,
+  Decision,
+  HookResponse,
+  Receipt,
+} from '@forge/tools';
 import { effectStateFor, resolveToolId, toolDefinition } from '#/server/tool-resolver.js';
 import { createAuditGate, createMemoryAudit } from '#/server/audit-gate.js';
+import { physicalView } from '#/server/path-resolver.js';
 import { argsHash, resultHash } from '#/shared/args-hash.js';
 import type {
   FailClosedCode,
@@ -57,6 +66,8 @@ const failed = (code: FailClosedCode): HookResponse => ({
   receipt_hash: '',
 });
 
+const SEVERITY = { allow: 0, ask: 1, deny: 2 } as const;
+
 const lastHash = (r: readonly Receipt[]): string => r.at(-1)?.hash ?? '';
 
 /** Builds the pure parts of the handler around the injected dependencies. */
@@ -65,6 +76,26 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
   const now = (): string => deps.clock().toISOString();
 
   const audit = createAuditGate(deps.audit ?? createMemoryAudit().sink, deps.clock);
+
+  /**
+   * The lexical call and its physical twin (junctions, symlinks and short names resolved) both
+   * go through the one `admit()`; the stricter verdict stands (M8: the floors are lexical).
+   */
+  function admitBothViews(ctx: AdmitContext, call: AdmitCall): Decision {
+    const lexical = deps.admit(ctx, call);
+    const view = physicalView(ctx, call);
+    if (view.kind === 'none') {
+      return lexical;
+    }
+
+    // A path that cannot be resolved safely is judged as an empty path: `invalid_resource`.
+    const physical =
+      view.kind === 'refuse'
+        ? deps.admit(ctx, { ...call, input: { ...call.input, file_path: '', path: '' } })
+        : deps.admit(view.ctx, view.call);
+
+    return SEVERITY[physical.decision] > SEVERITY[lexical.decision] ? physical : lexical;
+  }
 
   async function preToolUse(
     run: Run,
@@ -87,7 +118,7 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
       input,
     } as const;
 
-    const decision = deps.admit(ctx, call);
+    const decision = admitBothViews(ctx, call);
     const def = toolDefinition(ctx, toolId);
     const [receipt] = await deps.receipts.append(run.id, (view) => [
       makeDecisionReceipt(

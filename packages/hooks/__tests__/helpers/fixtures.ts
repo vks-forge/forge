@@ -11,7 +11,7 @@
  */
 
 import { createMemoryReceiptLog, createMemoryStorage, openSqlite } from '@forge/db';
-import { ToolDefinition, effectiveGrant } from '@forge/tools';
+import { ToolDefinition, admit as realAdmit, effectiveGrant } from '@forge/tools';
 import type { AdmitCall, AdmitContext, Decision } from '@forge/tools';
 import type { Run } from '@forge/core';
 import { createHookHandler } from '#/index.js';
@@ -64,7 +64,7 @@ const def = (id: string, risk: string, native: string | string[]) =>
     support: { 'claude-code': { native, mechanism: 'allow-flag', enforced: 'hook' } },
   });
 
-const ctx = (): AdmitContext => ({
+const ctx = (dataHome = '/forge-home', cwd?: string): AdmitContext => ({
   lane: 'standard',
   harness: 'claude-code',
   catalogue: {
@@ -73,12 +73,16 @@ const ctx = (): AdmitContext => ({
     tools: new Map([
       ['shell', def('shell', 'exec', ['Bash', 'PowerShell'])],
       ['read', def('read', 'read', 'Read')],
+      ['write', def('write', 'write-cwd', 'Write')],
     ]),
   },
   grant: effectiveGrant('standard', undefined, undefined, [], {
-    dataHome: '/forge-home',
+    dataHome,
   }),
-  liveSchemaHashes: {},
+  liveSchemaHashes: Object.fromEntries(
+    ['shell', 'read', 'write'].map((id) => [id, `sha256:${'a'.repeat(64)}`]),
+  ),
+  ...(cwd === undefined ? {} : { cwd }),
 });
 
 /** Stub policy: denies any call whose command contains "deny"; records what it saw. */
@@ -93,6 +97,8 @@ export function makeEnv(
     credentials?: () => Promise<RunCredentials | null>;
     /** Replaces the run row's fields (generation, status). */
     run?: Partial<Run>;
+    /** Judge calls with the real `admit()` over this data home and worktree, not the stub. */
+    real?: { dataHome: string; cwd: string };
   } = {},
 ) {
   // Memory by default; `sqlitePath` runs the same handler over the durable SQLite backend.
@@ -109,14 +115,21 @@ export function makeEnv(
       over.credentials ??
       (async (id) =>
         id === RUN_ID ? { token: TOKEN, secret: SECRET, generation: 1 } : null),
-    admitContext: async () => ctx(),
+    admitContext: async () =>
+      over.real ? ctx(over.real.dataHome, over.real.cwd) : ctx(),
     clock: over.clock ?? (() => new Date(Date.UTC(2026, 9, 13, 0, 0, tick++))),
     ...(over.audit ? { audit: over.audit } : {}),
     ...(over.requireLiveness ? { requireLiveness: true } : {}),
     onLiveness: async (id) => {
       liveness.push(id);
     },
-    admit: (_c, call): Decision => {
+    admit: (c, call): Decision => {
+      if (over.real) {
+        admitted.push(call);
+
+        return realAdmit(c, call);
+      }
+
       if (over.throwOnAdmit) {
         throw new Error('admit exploded');
       }
@@ -143,7 +156,7 @@ export function makeEnv(
       ticket_id: 'T-1',
       harness: 'claude-code',
       driver_version: '0',
-      cwd: '/w',
+      cwd: over.real?.cwd ?? '/w',
       lane: 'standard',
       started_at: '2026-10-13T00:00:00.000Z',
       status: 'running',
