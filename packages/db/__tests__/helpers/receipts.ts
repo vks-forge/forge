@@ -7,17 +7,20 @@
  *   dropped on the way through the database. Hand-rolled rows would pass while a real
  *   chain broke.
  *
- * Exports: RECEIPT_SECRET, appendDecision(), appendEffect().
+ * Exports: RECEIPT_SECRET, RESUME_SECRET, appendDecision(), appendEffect(), appendResumed().
  * Depends on: @forge/tools. No IO.
  */
 
 import type { Decision, Receipt } from '@forge/tools';
-import { makeDecisionReceipt, makeEffectReceipt } from '@forge/tools';
+import { makeDecisionReceipt, makeEffectReceipt, makeResumedReceipt } from '@forge/tools';
 import type { ReceiptLog } from '@forge/tools';
 import { T0 } from '#tests/helpers/fixtures.js';
 
 // @forge/tools refuses HMAC keys under 32 bytes.
 export const RECEIPT_SECRET = 'run-secret-for-tests-0123456789abcdef';
+
+/** The second generation's secret (a resumed run signs under a new one, d-0100). */
+export const RESUME_SECRET = 'second-generation-secret-0123456789abcdef';
 
 const DECISION: Decision = {
   decision: 'allow',
@@ -30,12 +33,28 @@ const DECISION: Decision = {
   tool: 'shell',
 };
 
+/** Starts the next secret generation: a `resumed` receipt linked to the chain tail, signed with `secret`. */
+export function appendResumed(
+  log: ReceiptLog,
+  runId: string,
+  secret: string = RESUME_SECRET,
+): Promise<readonly Receipt[]> {
+  return log.append(runId, (view) => [
+    makeResumedReceipt(
+      { run_id: runId, generation: view.generation + 1, ts: T0 },
+      view.last,
+      secret,
+    ),
+  ]);
+}
+
 /** Appends one decision receipt with `seq` taken from the chain tail, as the hook does. */
 export function appendDecision(
   log: ReceiptLog,
   runId: string,
   id: string,
   decision: Decision = DECISION,
+  secret: string = RECEIPT_SECRET,
 ): Promise<readonly Receipt[]> {
   return log.append(runId, (view) => [
     makeDecisionReceipt(
@@ -53,7 +72,7 @@ export function appendDecision(
         ts: T0,
       },
       view.last,
-      RECEIPT_SECRET,
+      secret,
     ),
   ]);
 }
@@ -63,6 +82,7 @@ export function appendEffect(
   log: ReceiptLog,
   runId: string,
   decisionId: string,
+  secret: string = RECEIPT_SECRET,
 ): Promise<readonly Receipt[]> {
   return log.append(runId, (view) => {
     const d = view.openDecision(decisionId);
@@ -83,7 +103,7 @@ export function appendEffect(
           ts: T0,
         },
         view.last,
-        RECEIPT_SECRET,
+        secret,
       ),
     ];
   });

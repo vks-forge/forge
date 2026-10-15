@@ -21,6 +21,7 @@
  */
 
 import { createJsonLogger } from '@forge/engine';
+import { createDpapiSecretStore } from '@forge/secrets';
 import { verifyChain } from '@forge/tools';
 import type { DecisionReceipt } from '@forge/tools';
 import { describe, expect, it } from 'vitest';
@@ -40,6 +41,7 @@ import {
 } from '#tests/helpers/probe-artefacts.js';
 import type { Diagnosis } from '#tests/helpers/probe-artefacts.js';
 import { PROBES_ENABLED, SKIP_REASON, probeDir } from '#tests/helpers/probe-env.js';
+import { createRecordingSecrets } from '#tests/helpers/recording-secrets.js';
 import { bearer, readInstallToken } from '#tests/helpers/install-token.js';
 
 const probe = it.skipIf(!PROBES_ENABLED);
@@ -69,7 +71,17 @@ describe('probe 8: Express ticket end to end on the real Claude harness', () => 
       );
 
       const write = createJsonLogger((line) => log.push(line), 'debug');
-      const server = await assembleServer(loaded, createClaudePorts(loaded, write));
+      // The real DPAPI store, wrapped to remember what was written: run secrets are deleted
+      // when the run is over, and the probe verifies the chain afterwards.
+      const secrets = createRecordingSecrets(
+        createDpapiSecretStore({ dir: loaded.layout.data.secretsDir }),
+      );
+
+      const server = await assembleServer(loaded, {
+        ...createClaudePorts(loaded, write),
+        secrets,
+      });
+
       const address = await server.start();
 
       // First sight of an installed build (Claude Code updates itself): the compatibility
@@ -154,7 +166,7 @@ describe('probe 8: Express ticket end to end on the real Claude harness', () => 
         );
 
         const calls = events.flatMap((e) => (e.type === 'tool_call' ? [e] : []));
-        const secret = server.runSecrets.secret(runId);
+        const secret = secrets.secretOf(runId, 1);
 
         expect(diagnosis.gateResults.at(-1)).toMatchObject({
           gate: 'G1',

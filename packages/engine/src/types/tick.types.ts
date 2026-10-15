@@ -7,7 +7,8 @@
  *   and keeps hand-written types in one place.
  *
  * Exports: EventSpec, TicketFields, TicketPlan, MoveResult, WakeInput, WakeOutcome,
- *   DispatchKind, Candidate, DispatchPlan, WakeView, ScheduleView, StepReject, TickConfig, RewakeCap.
+ *   DispatchKind, Candidate, DispatchPlan, WakeView, ScheduleView, StepReject, TickConfig, RewakeCap,
+ *   SettleOptions, RunRequestInput.
  * Depends on: @forge/core (TicketEvent, Ticket, WakeKind, WakeRequest, StepError),
  *   types/pick-next. Types only.
  */
@@ -15,6 +16,7 @@
 import type {
   ForgeConfig,
   ProjectConfigView,
+  RunStatus,
   StepError,
   Ticket,
   TicketEvent,
@@ -113,3 +115,26 @@ export interface TickConfig {
 
 /** The hourly re-wake cap of the engine settings. */
 export type RewakeCap = ForgeConfig['engine']['rewake_cap'];
+
+/** Overrides for runs that end by the Director's own decision rather than a driver result. */
+export interface SettleOptions {
+  /** The stored status instead of the one the result implies (a given-up resume is `settled`). */
+  readonly status?: RunStatus;
+  /** The retry wake's reason instead of the error family. */
+  readonly retryReason?: string;
+}
+
+/** What differs between one run's start request and another's; the rest comes from the settings. */
+export interface RunRequestInput {
+  readonly runId: string;
+  readonly ticket: Ticket;
+  readonly cwd: string;
+  readonly prompt: string;
+  readonly promptHash: string;
+  /** The run's bearer token; the app registers it with a new secret before the harness starts. */
+  readonly token: string;
+  /** The harness session to continue (a resume after an answer or a restart). */
+  readonly resume?: string;
+  /** Secret generation: absent for a first start, the run's new generation on a restart resume. */
+  readonly generation?: number;
+}

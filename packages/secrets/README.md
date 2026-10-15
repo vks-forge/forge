@@ -27,7 +27,7 @@ Public API from `src/index.ts`:
 - `createMemorySecretStore()` returns a `SecretStore` backed by a `Map`, with defensive copies in and out.
 
 Names are namespaced paths matching the core `SecretName` schema: segments `[a-z0-9][a-z0-9._-]*` joined by
-`/` (`github/<connection>/key`, `harness/<id>/api-key`, `harness/<id>/oauth-token`, `run/<runId>/secret`;
+`/` (`github/<connection>/key`, `harness/<id>/api-key`, `harness/<id>/oauth-token`, `run/<runId>/secret-g<generation>`, one per run secret generation, deleted when the run is over, d-0100;
 a flat `github-app-key` is one segment). `..`, absolute paths, backslashes, empty segments, uppercase,
 Windows device names (`nul`, `com1`), trailing dots and the adapter suffixes `.dpapi` / `.tmp` throw
 `InvalidInputError` before a path is built. `list` prefixes follow `SecretNamePrefix` (whole segments plus an

@@ -13,8 +13,9 @@
 import { createMemoryReceiptLog, createMemoryStorage, openSqlite } from '@forge/db';
 import { ToolDefinition, effectiveGrant } from '@forge/tools';
 import type { AdmitCall, AdmitContext, Decision } from '@forge/tools';
+import type { Run } from '@forge/core';
 import { createHookHandler } from '#/index.js';
-import type { HookAudit } from '#/index.js';
+import type { HookAudit, RunCredentials } from '#/index.js';
 
 export const SECRET = 'run-secret-0123456789abcdef-0123456789';
 export const TOKEN = 'bearer-7f3a91c2';
@@ -88,6 +89,10 @@ export function makeEnv(
     audit?: HookAudit;
     clock?: () => Date;
     requireLiveness?: boolean;
+    /** Replaces the fixed generation-1 credentials, to test resumes. */
+    credentials?: () => Promise<RunCredentials | null>;
+    /** Replaces the run row's fields (generation, status). */
+    run?: Partial<Run>;
   } = {},
 ) {
   // Memory by default; `sqlitePath` runs the same handler over the durable SQLite backend.
@@ -100,7 +105,10 @@ export function makeEnv(
   const handler = createHookHandler({
     db,
     receipts,
-    credentials: async (id) => (id === RUN_ID ? { token: TOKEN, secret: SECRET } : null),
+    credentials:
+      over.credentials ??
+      (async (id) =>
+        id === RUN_ID ? { token: TOKEN, secret: SECRET, generation: 1 } : null),
     admitContext: async () => ctx(),
     clock: over.clock ?? (() => new Date(Date.UTC(2026, 9, 13, 0, 0, tick++))),
     ...(over.audit ? { audit: over.audit } : {}),
@@ -140,6 +148,7 @@ export function makeEnv(
       started_at: '2026-10-13T00:00:00.000Z',
       status: 'running',
       owner: 'server-1',
+      ...over.run,
     }),
   );
 

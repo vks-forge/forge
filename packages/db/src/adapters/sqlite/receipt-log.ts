@@ -1,5 +1,6 @@
 /**
- * SQLite ReceiptLog: the per-run hash chain in `tool_decisions` and `tool_effects`.
+ * SQLite ReceiptLog: the per-run hash chain in `tool_decisions`, `tool_effects` and
+ * `receipt_resumes`.
  *
  * Why: the gates trust a Worker's tool receipts only if the chain survives the Forge
  *   server restarting and many hook posts landing at once. This is the durable log
@@ -9,7 +10,7 @@
  *   writes, queue instead of interleaving: `seq` and `prev_hash` stay correct and the
  *   chain cannot fork. If `build` throws or any receipt is rejected (wrong run, reused
  *   id, effect without its decision) the transaction rolls back and no half-written
- *   pair exists. Only receipts live here: the per-run HMAC secret is never persisted,
+ *   pair exists. Only receipts live here: the per-run HMAC secret is never in the database,
  *   so reading the database file does not let a Worker forge a receipt
  *   (tool-system.md §10, verification-plane.md §2).
  *
@@ -25,9 +26,11 @@ import { runImmediate } from '#/adapters/sqlite/immediate-tx.js';
 import {
   DECISION_COLUMNS,
   EFFECT_COLUMNS,
+  RESUMED_COLUMNS,
   decisionFromRow,
   effectFromRow,
   insertReceipt,
+  resumedFromRow,
 } from '#/adapters/sqlite/receipt-rows.js';
 import type { Mutex } from '#/types/mutex.types.js';
 import type { SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
@@ -44,8 +47,10 @@ function chainHead(
     `SELECT MAX(m) AS head FROM (
        SELECT MAX(chain_seq) AS m FROM tool_decisions WHERE run_id = ?
        UNION ALL
-       SELECT MAX(chain_seq) AS m FROM tool_effects WHERE run_id = ?)`,
-    [runId, runId],
+       SELECT MAX(chain_seq) AS m FROM tool_effects WHERE run_id = ?
+       UNION ALL
+       SELECT MAX(chain_seq) AS m FROM receipt_resumes WHERE run_id = ?)`,
+    [runId, runId, runId],
   );
 
   const head = row?.head ?? 0;
@@ -67,7 +72,26 @@ function chainHead(
     [runId, head],
   );
 
-  return { head, last: e ? effectFromRow(e) : null };
+  if (e) {
+    return { head, last: effectFromRow(e) };
+  }
+
+  const r = driver.get(
+    `SELECT ${RESUMED_COLUMNS} FROM receipt_resumes WHERE run_id = ? AND chain_seq = ?`,
+    [runId, head],
+  );
+
+  return { head, last: r ? resumedFromRow(r) : null };
+}
+
+/** Secret generation the run's chain is in: 1, or the latest `resumed` receipt's. */
+function currentGeneration(driver: SqlDriver, runId: string): number {
+  const row = driver.get<{ g: number | null }>(
+    'SELECT MAX(generation) AS g FROM receipt_resumes WHERE run_id = ?',
+    [runId],
+  );
+
+  return row?.g ?? 1;
 }
 
 function viewOf(driver: SqlDriver, runId: string, last: Receipt | null): ChainView {
@@ -82,6 +106,7 @@ function viewOf(driver: SqlDriver, runId: string, last: Receipt | null): ChainVi
   return {
     last,
     lastSeq: seq?.s ?? 0,
+    generation: currentGeneration(driver, runId),
     openDecision: (id) =>
       decision(
         driver.get(`SELECT ${DECISION_COLUMNS} ${OPEN_DECISION} AND d.id = ?`, [
@@ -100,7 +125,28 @@ function viewOf(driver: SqlDriver, runId: string, last: Receipt | null): ChainVi
 }
 
 /** Throws unless `r` may be stored in `runId`'s chain given what is already stored. */
-function assertBelongs(driver: SqlDriver, runId: string, r: Receipt): void {
+function assertBelongs(
+  driver: SqlDriver,
+  runId: string,
+  generation: number,
+  r: Receipt,
+): void {
+  if (r.kind === 'resumed') {
+    if (r.run_id !== runId) {
+      throw new InvalidInputError(
+        `resumed receipt belongs to run ${r.run_id}, not ${runId}`,
+      );
+    }
+
+    if (r.generation !== generation + 1) {
+      throw new InvalidInputError(
+        `run ${runId} is in generation ${generation}; a resume must start ${generation + 1}, not ${r.generation}`,
+      );
+    }
+
+    return;
+  }
+
   if (r.kind === 'decision') {
     if (r.run_id !== runId) {
       throw new InvalidInputError(
@@ -135,9 +181,14 @@ export function createSqliteReceiptLog(driver: SqlDriver, mutex: Mutex): Receipt
           const { head, last } = chainHead(driver, runId);
           const built = build(viewOf(driver, runId, last)).map((r) => Receipt.parse(r));
           let position = head;
+          let generation = currentGeneration(driver, runId);
           for (const r of built) {
-            assertBelongs(driver, runId, r);
-            insertReceipt(driver, runId, ++position, r);
+            assertBelongs(driver, runId, generation, r);
+            if (r.kind === 'resumed') {
+              generation = r.generation;
+            }
+
+            insertReceipt(driver, runId, ++position, generation, r);
           }
 
           return built;
@@ -161,7 +212,16 @@ export function createSqliteReceiptLog(driver: SqlDriver, mutex: Mutex): Receipt
           )
           .map((row) => ({ at: Number(row['chain_seq']), r: effectFromRow(row) }));
 
-        return [...decisions, ...effects].sort((a, b) => a.at - b.at).map((x) => x.r);
+        const resumes = driver
+          .all(
+            `SELECT ${RESUMED_COLUMNS} FROM receipt_resumes WHERE run_id = ? AND chain_seq > 0`,
+            [runId],
+          )
+          .map((row) => ({ at: Number(row['chain_seq']), r: resumedFromRow(row) }));
+
+        return [...decisions, ...effects, ...resumes]
+          .sort((a, b) => a.at - b.at)
+          .map((x) => x.r);
       }),
   };
 }

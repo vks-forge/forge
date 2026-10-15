@@ -10,6 +10,8 @@
  *   byte-for-byte as the HMAC'd receipts that were built (verification-plane.md §2,
  *   tool-system.md §10).
  *
+ * The `resumed` receipt cases (d-0100) are in receipt-log-resume.contract.ts and run inside this suite.
+ *
  * Exports: describeReceiptLogContract().
  * Depends on: vitest, @forge/tools, helpers/receipts. IO only through the log under test.
  */
@@ -17,6 +19,7 @@
 import { verifyChain } from '@forge/tools';
 import type { DecisionReceipt, EffectReceipt, ReceiptLog } from '@forge/tools';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describeResumedReceipts } from '#tests/contract/receipt-log-resume.contract.js';
 import { RECEIPT_SECRET, appendDecision, appendEffect } from '#tests/helpers/receipts.js';
 
 /** What the contract needs from a backend: the log and a way to release it. */
@@ -224,5 +227,7 @@ export function describeReceiptLogContract(
       expect(verifyChain(r2, RECEIPT_SECRET).ok).toBe(true);
       expect(await log.list('r3')).toEqual([]);
     });
+
+    describeResumedReceipts(() => log);
   });
 }

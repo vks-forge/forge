@@ -4,7 +4,7 @@
  * Why: G1 judges a Worker from evidence the Worker cannot forge (the receipt chain, the
  *   git diff, a re-run of the project's own commands). Every source of that evidence and
  *   every side effect (spawning a process, the clock, the environment, the per-run
- *   secret held in server memory, d-0054) is injected, so the gate is tested with
+ *   secrets kept in the SecretStore for the life of the run, d-0100) is injected, so the gate is tested with
  *   in-memory fakes and the server decides where the real ones come from.
  *
  * Exports: ToolCallRef, CommandRequest, CommandResult, RunCommand, G1Deps, G1CoreDeps.
@@ -49,8 +49,12 @@ export interface G1Deps {
    * and the receipt chain that is verified stays the run's own.
    */
   readonly earlierRunIds?: (run: Run) => Promise<readonly string[]>;
-  /** The run's receipt secret, or null when the server no longer holds it. */
-  readonly runSecret: (runId: string) => HmacKey | null;
+  /**
+   * The receipt secret of one generation of a run (1, plus one per resume after a restart),
+   * or null when it is gone. G1 asks for every generation the run reached and fails when any
+   * is missing (d-0100).
+   */
+  readonly runSecrets: (runId: string, generation: number) => Promise<HmacKey | null>;
   /** Parent environment; only an allowlist of it reaches project commands (shared/env). */
   readonly env: Readonly<Record<string, string | undefined>>;
   /** Extra variable names to pass from `env` to project commands (default: none). */

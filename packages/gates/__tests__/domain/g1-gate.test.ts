@@ -44,7 +44,7 @@ function deps(over: Partial<G1Deps> = {}): G1Deps {
         { callId: 'c1', name: 'Edit' },
         { callId: 'c2', name: 'Bash' },
       ]),
-    runSecret: () => SECRET,
+    runSecrets: () => Promise.resolve(SECRET),
     env: {},
     runCommand: () => Promise.resolve({ exitCode: 0, timedOut: false, output: '' }),
     now: () => new Date('2026-01-01T00:00:00Z'),
@@ -225,14 +225,16 @@ describe('createG1Gate', () => {
     expect(verdict.status).toBe('passed');
   });
 
-  it('fails with a restart finding when the run secret is gone, so rework re-runs the ticket', async () => {
-    const verdict = await createG1Gate(deps({ runSecret: () => null })).run(ctx());
+  it('fails with an unverifiable finding when the run secret is gone, so rework re-runs the ticket', async () => {
+    const verdict = await createG1Gate(
+      deps({ runSecrets: () => Promise.resolve(null) }),
+    ).run(ctx());
 
     expect(verdict.status).toBe('failed');
     expect(verdict.findings).toEqual([
       expect.objectContaining({
         check: 'chain',
-        message: expect.stringContaining('unverifiable after restart'),
+        message: expect.stringContaining('unverifiable'),
       }),
     ]);
 

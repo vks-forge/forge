@@ -20,6 +20,14 @@ import { InvalidInputError } from '@forge/core';
 import { Receipt } from '@forge/tools';
 import type { ChainView, DecisionReceipt, ReceiptLog } from '@forge/tools';
 
+/** Secret generation the chain is in: 1, or the latest `resumed` receipt's. */
+function generationOf(chain: readonly Receipt[]): number {
+  return chain.reduce(
+    (g, r) => (r.kind === 'resumed' ? Math.max(g, r.generation) : g),
+    1,
+  );
+}
+
 function viewOf(chain: readonly Receipt[]): ChainView {
   const decisions = chain.filter((r): r is DecisionReceipt => r.kind === 'decision');
   const done = new Set(
@@ -31,6 +39,7 @@ function viewOf(chain: readonly Receipt[]): ChainView {
   return {
     last: chain.at(-1) ?? null,
     lastSeq: decisions.reduce((max, d) => Math.max(max, d.seq), 0),
+    generation: generationOf(chain),
     openDecision: (id) => decisions.find((d) => d.id === id && open(d)) ?? null,
     latestOpenDecision: (tool) =>
       [...decisions].reverse().find((d) => d.tool === tool && open(d)) ?? null,
@@ -52,8 +61,17 @@ export function createMemoryReceiptLog(): ReceiptLog {
     );
 
     const own = new Set(chain.flatMap((r) => (r.kind === 'decision' ? [r.id] : [])));
+    let generation = generationOf(chain);
     for (const r of added) {
-      if (r.kind === 'decision') {
+      if (r.kind === 'resumed') {
+        if (r.run_id !== runId || r.generation !== generation + 1) {
+          throw new InvalidInputError(
+            `run ${runId} is in generation ${generation}; a resume must start ${generation + 1}`,
+          );
+        }
+
+        generation = r.generation;
+      } else if (r.kind === 'decision') {
         if (r.run_id !== runId) {
           throw new InvalidInputError(
             `receipt ${r.id} belongs to run ${r.run_id}, not ${runId}`,

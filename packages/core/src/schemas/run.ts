@@ -13,17 +13,19 @@
  *
  * Exports: Usage, UsageReport, SessionRef, Isolation, PermissionPolicy, ToolExposure,
  *   RunBudget, RunRequest, RunHandle, RunResultStatus, RunResult, InteractionKind,
- *   PermissionDecision, RunEvent, RunStatus, Run, SteerMode, DriverCapabilities, Sha256Hex,
- *   ErrorFamily (re-export).
- * Depends on: schemas/ticket, schemas/errors, schemas/config-override, zod. No IO.
+ *   PermissionDecision, RunEvent, RunStatus, Run, Sha256Hex, ErrorFamily, SteerMode and
+ *   DriverCapabilities (re-exports from steer-mode).
+ * Depends on: schemas/ticket, schemas/errors, schemas/steer-mode, schemas/config-override, zod. No IO.
  */
 
 import { z } from 'zod';
 import { ConfigVersionRef } from '#/schemas/config-override.js';
 import { ErrorFamily } from '#/schemas/errors.js';
+import { SteerMode } from '#/schemas/steer-mode.js';
 import { Lane } from './ticket.js';
 
 export { ErrorFamily };
+export { DriverCapabilities, SteerMode } from '#/schemas/steer-mode.js';
 
 /** Lowercase hex SHA-256 digest; the only form in which a run token is ever stored. */
 export const Sha256Hex = z.string().regex(/^[0-9a-f]{64}$/);
@@ -105,6 +107,8 @@ export const RunRequest = z.object({
   tools: ToolExposure.optional(),
   budget: RunBudget,
   resume: SessionRef.optional(),
+  /** Run secret generation (1 for a first start, +1 on each resume); the app registers that generation's secret. */
+  generation: z.number().int().positive().optional(),
   env: z.record(z.string(), z.string()),
   isolation: Isolation,
 });
@@ -155,10 +159,6 @@ export const RunResult = z
     { message: 'pauseReason and interactionId belong to status paused, and only to it' },
   );
 export type RunResult = z.infer<typeof RunResult>;
-
-/** How a message is delivered to a live run (director-core.md §8). */
-export const SteerMode = z.enum(['steer', 'follow_up', 'interrupt']);
-export type SteerMode = z.infer<typeof SteerMode>;
 
 const eventBase = { seq: z.number().int().nonnegative(), ts: Timestamp };
 
@@ -238,7 +238,10 @@ export type RunEvent = z.infer<typeof RunEvent>;
 /**
  * Persisted run status. `starting` (row created, harness not yet confirmed) and
  * `running` are the active states; `settling` and `settled` are the reconcile
- * hand-off after the harness stopped; the rest are terminal results.
+ * hand-off after the harness stopped; the rest are terminal results. `interrupted`
+ * is a run the server stopped under (shutdown) or lost (crash) that still has a
+ * harness session: it is neither active nor ended and is resumed on the next start
+ * (d-0092, `domain/run-lifecycle`).
  */
 export const RunStatus = z.enum([
   'starting',
@@ -251,13 +254,17 @@ export const RunStatus = z.enum([
   'timeout',
   'error',
   'cancelled',
+  'interrupted',
 ]);
 export type RunStatus = z.infer<typeof RunStatus>;
 
 /**
  * The persisted `runs` row (snake_case). `owner` is the Forge server instance that
- * started the run (d-0054: a restart makes every other owner's `running` run a crash).
- * A resumed run is a new row whose `retry_of` names the run it continues; a row with
+ * started the run (a restart finds every other owner's live run and resumes or crash-settles it, d-0092).
+ * A run that was interrupted by a restart is resumed on the same row: `generation`
+ * counts the run secret generations (1 until the first resume), `resumable_session` is
+ * the harness session the resume loads, `interrupted_at` is when it was stopped. A retry
+ * after a failure is a new row whose `retry_of` names the run it continues; a row with
  * `ended_at` is never reopened.
  */
 export const Run = z.object({
@@ -285,16 +292,9 @@ export const Run = z.object({
   /** Settings versions the run started under, `c<company>:p<project>` (d-0085); 0 means built-in defaults. */
   config_version: ConfigVersionRef.optional(),
   hook_registered_at: Timestamp.optional(),
+  /** Run secret generation; absent reads as 1. A resume after a restart adds 1 (d-0100). */
+  generation: z.number().int().positive().optional(),
+  resumable_session: SessionRef.optional(),
+  interrupted_at: Timestamp.optional(),
 });
 export type Run = z.infer<typeof Run>;
-
-/** Capabilities a driver declares up front, so the Director routes by what a harness can actually do instead of guessing from its name. */
-export const DriverCapabilities = z.object({
-  resume: z.boolean(),
-  steerModes: z.array(SteerMode),
-  nativeSandbox: z.boolean(),
-  reportsCost: z.boolean(),
-  structuredOutput: z.boolean(),
-  permissionRequests: z.boolean(),
-});
-export type DriverCapabilities = z.infer<typeof DriverCapabilities>;

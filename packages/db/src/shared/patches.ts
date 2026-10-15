@@ -17,11 +17,17 @@
  *   new run row).
  *
  * Exports: parseTicketPatch(), parseRunPatch(), parseInteractionPatch(), assertNotReopened(),
- *   buildSetClause().
+ *   assertInterruptMove(), buildSetClause().
  * Depends on: @forge/core, types/storage-driver.types. No IO.
  */
 
-import { Interaction, InvalidInputError, Run, Ticket } from '@forge/core';
+import {
+  Interaction,
+  InvalidInputError,
+  Run,
+  Ticket,
+  assertRunTransition,
+} from '@forge/core';
 import type { TicketPatch } from '@forge/core';
 import type { ColumnCodec, SqlValue } from '#/types/storage-driver.types.js';
 
@@ -79,6 +85,23 @@ export function assertNotReopened(
     throw new InvalidInputError(
       `run ${id} has ended and is never reopened; resume it as a new run with retry_of`,
     );
+  }
+}
+
+/**
+ * Throws InvalidInputError when `patch` moves run `id` into or out of `interrupted` along a
+ * path the core transition table does not allow (for example `interrupted` straight to
+ * `success`, which would skip the resume). Other moves are not policed here: only the engine
+ * writes them and the reconcile hand-off must stay permissive.
+ */
+export function assertInterruptMove(
+  id: string,
+  from: Run['status'],
+  patch: Partial<Omit<Run, 'id'>>,
+): void {
+  const to = patch.status;
+  if (to !== undefined && (from === 'interrupted' || to === 'interrupted')) {
+    assertRunTransition(id, from, to);
   }
 }
 

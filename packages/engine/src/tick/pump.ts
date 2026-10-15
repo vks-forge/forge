@@ -5,7 +5,8 @@
  *   result. The Director needs the stream stored (the control room and replay read it) and
  *   needs to know the run is alive: every event stamps `last_event_at`, which is the only
  *   thing the stall check looks at. Each event also asks for a tick so a finished run or a
- *   question is acted on in seconds, not at the next 30 s beat. One pump per live run; it
+ *   question is acted on in seconds, not at the next 30 s beat. The harness session is stored on
+ *   the run row the moment it is reported, so a restart can resume the run (d-0092). One pump per live run; it
  *   never decides anything, the tick settles the run once the pump says it is done.
  *
  * Exports: startPump(), pumpResult().
@@ -35,7 +36,12 @@ async function record(deps: EngineDeps, pump: Pump, event: RunEvent): Promise<vo
   try {
     await deps.storage.transaction(async (tx) => {
       await tx.runEvents.append(pump.runId, rest as NewRunEvent);
-      await tx.runs.update(pump.runId, { last_event_at: iso(deps.clock.now()) });
+      // The session is stored as soon as the harness reports it: a restart (or a crash that
+      // runs no shutdown) can only resume a run whose session survived in the database.
+      await tx.runs.update(pump.runId, {
+        last_event_at: iso(deps.clock.now()),
+        ...(event.type === 'session' ? { session_ref: event.session_ref } : {}),
+      });
     });
   } catch (e) {
     // A lost event is a hole in the replay, not a reason to kill the run.
@@ -50,11 +56,14 @@ export function startPump(
   runId: string,
   handle: RunHandle,
   driver: WorkerDriver,
+  opts: { readonly resumed?: boolean } = {},
 ): Pump {
   const pump: Pump = {
     runId,
     handle,
     driver,
+    resumed: opts.resumed ?? false,
+    events: 0,
     done: false,
     asks: new Map(),
     finished: Promise.resolve(),
@@ -63,6 +72,7 @@ export function startPump(
   pump.finished = (async () => {
     try {
       for await (const event of driver.events(handle)) {
+        pump.events++;
         await record(deps, pump, event);
         requestTick(deps, state);
       }

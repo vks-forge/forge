@@ -5,9 +5,14 @@
  *   database path for its MCP server and the server's URL for its hook, the run directory
  *   exists outside the worktree, and the token is registered with the credential registry
  *   the hook route reads. A request without a token must be refused, not given an empty one.
+ *   A resumed run (generation 2 or more, after a restart, d-0092) is registered under a new
+ *   secret and its receipt chain gets the `resumed` link first, so G1 can verify each
+ *   generation with its own secret (d-0100); a first start writes no link.
  *
- * Pins: run directory, MCP entry env, hook URL and token, registration, missing token refused.
- * Depends on: src/services/prepare-run, @forge/hooks (registry). IO: temp directory.
+ * Pins: run directory, MCP entry env, hook URL and token, registration, missing token refused,
+ *   the resumed link and the second secret on a resume, the new URL and token on a resume.
+ * Depends on: src/services/prepare-run, @forge/hooks (registry), @forge/db (memory receipts).
+ *   IO: temp directory.
  */
 
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
@@ -15,7 +20,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { InvalidInputError } from '@forge/core';
 import type { RunRequest } from '@forge/core';
+import { createMemoryReceiptLog } from '@forge/db';
 import { createRunSecretRegistry } from '@forge/hooks';
+import { createMemorySecretStore } from '@forge/secrets';
+import { verifyGenerations } from '@forge/tools';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createPrepareRun } from '#/services/prepare-run.js';
 
@@ -45,18 +53,22 @@ describe('createPrepareRun', () => {
     isolation: 'host',
   });
 
-  const make = () => {
-    const registry = createRunSecretRegistry();
+  const make = (url = 'http://127.0.0.1:4310') => {
+    const secrets = createMemorySecretStore();
+    const registry = createRunSecretRegistry({ store: secrets });
+    const receipts = createMemoryReceiptLog();
     const prepare = createPrepareRun({
       runsDir: join(dir, 'runs'),
       dbPath: join(dir, 'forge.db'),
       mcpEntry: join(dir, 'mcp.js'),
       nodePath: 'node',
       registry,
-      hookBaseUrl: () => 'http://127.0.0.1:4310',
+      receipts,
+      now: () => Date.parse('2026-10-14T00:00:00.000Z'),
+      hookBaseUrl: () => url,
     });
 
-    return { registry, prepare };
+    return { registry, receipts, secrets, prepare };
   };
 
   it('creates the run directory, registers the token and describes the MCP server', async () => {
@@ -89,5 +101,76 @@ describe('createPrepareRun', () => {
     const { prepare } = make();
 
     await expect(prepare(request({}))).rejects.toBeInstanceOf(InvalidInputError);
+  });
+
+  it('stores the first generation secret and writes no resumed link on a first start', async () => {
+    const { registry, receipts, secrets, prepare } = make();
+    await prepare(request({ FORGE_RUN_TOKEN: 'tok-1' }));
+
+    expect(await secrets.list('run/')).toEqual(['run/run-9/secret-g1']);
+    expect((await registry.credentials('run-9'))?.generation).toBe(1);
+    expect(await receipts.list('run-9')).toEqual([]);
+  });
+
+  it('on a resume registers generation 2 with the new token and links the chain', async () => {
+    const { registry, receipts, secrets, prepare } = make();
+    await prepare(request({ FORGE_RUN_TOKEN: 'tok-1' }));
+    const second = await prepare({
+      ...request({ FORGE_RUN_TOKEN: 'tok-2' }),
+      generation: 2,
+      resume: 'sess-1',
+    });
+
+    expect(second.hookToken).toBe('tok-2');
+    expect(await secrets.list('run/')).toEqual([
+      'run/run-9/secret-g1',
+      'run/run-9/secret-g2',
+    ]);
+
+    expect(await registry.credentials('run-9')).toMatchObject({
+      token: 'tok-2',
+      generation: 2,
+    });
+
+    const chain = await receipts.list('run-9');
+    expect(chain).toEqual([
+      expect.objectContaining({
+        kind: 'resumed',
+        run_id: 'run-9',
+        generation: 2,
+        ts: '2026-10-14T00:00:00.000Z',
+      }),
+    ]);
+
+    expect(verifyGenerations(chain, () => null)).toMatchObject({
+      ok: false,
+      error: { reason: 'missing_secret' },
+    });
+
+    const secret2 = await registry.secret('run-9', 2);
+    expect(secret2).not.toBeNull();
+    expect(verifyGenerations(chain, (g) => (g === 2 ? (secret2 ?? null) : null))).toEqual(
+      { ok: true, value: { receipts: 1, generations: 2 } },
+    );
+  });
+
+  it('hands a resume the server URL of the moment (the port may differ after a restart)', async () => {
+    const { prepare } = make('http://127.0.0.1:5555');
+    const prepared = await prepare({
+      ...request({ FORGE_RUN_TOKEN: 'tok-2' }),
+      generation: 2,
+      resume: 'sess-1',
+    });
+
+    expect(prepared.hookServerUrl).toBe('http://127.0.0.1:5555');
+  });
+
+  it('refuses a generation that was already registered', async () => {
+    const { prepare } = make();
+    await prepare(request({ FORGE_RUN_TOKEN: 'tok-1' }));
+
+    await expect(prepare(request({ FORGE_RUN_TOKEN: 'tok-1b' }))).rejects.toBeInstanceOf(
+      InvalidInputError,
+    );
   });
 });

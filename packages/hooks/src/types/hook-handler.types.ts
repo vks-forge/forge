@@ -32,15 +32,20 @@ export type FailClosedCode =
   | 'unknown_run'
   | 'no_credentials'
   | 'bad_token'
+  | 'stale_generation'
   | 'inactive_run'
   | 'no_liveness'
   | 'bad_request'
   | 'internal';
 
-/** What the Director holds for a run: the bearer token the hook sends and the HMAC secret. */
+/**
+ * What the Director holds for a run: the bearer token the hook sends, the HMAC secret and the
+ * secret generation they belong to (1, plus one per resume after a restart, d-0100).
+ */
 export interface RunCredentials {
   readonly token: string;
   readonly secret: HmacKey;
+  readonly generation: number;
 }
 
 /** One refused request on a real run. Never written to the signed receipt chain. */
@@ -61,8 +66,9 @@ export interface HookHandlerDeps {
   /** The single admission function from `@forge/tools`. */
   readonly admit: (ctx: AdmitContext, call: AdmitCall) => Decision;
   /**
-   * Token + HMAC secret for a run; null when the run has none (not started, revoked). The
-   * secret is held in server memory only; never read it back from the database.
+   * Token, HMAC secret and generation for a run; null when the run has none (not started,
+   * retired, or the server restarted and the run was not resumed yet). The token is held in
+   * server memory only and the secret in the SecretStore; never read them from the database.
    */
   readonly credentials: (runId: string) => Promise<RunCredentials | null>;
   /** Builds the run's effective grant and catalogue view; the handler never builds grants. */

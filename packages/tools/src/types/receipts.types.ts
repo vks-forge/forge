@@ -7,7 +7,8 @@
  *   skip a link, and the verifier can say precisely which row broke
  *   (tool-system.md §10).
  *
- * Exports: DecisionReceiptInput, EffectReceiptInput, ChainFailure, HmacKey.
+ * Exports: DecisionReceiptInput, EffectReceiptInput, ResumedReceiptInput, ChainFailure,
+ *   GenerationCheck, HmacKey.
  * Depends on: schemas/receipt, schemas/decision, schemas/tool-definition. No IO.
  */
 
@@ -40,7 +41,22 @@ export interface EffectReceiptInput {
   readonly ts: string;
 }
 
-/** Where and why `verifyChain` stopped. */
+/** What starts a new secret generation of a run's chain. */
+export interface ResumedReceiptInput {
+  readonly run_id: string;
+  /** The generation being started; at least 2. */
+  readonly generation: number;
+  readonly ts: string;
+}
+
+/** What a verified chain covered. */
+export interface GenerationCheck {
+  readonly receipts: number;
+  /** Secret generations seen: 1 plus the number of `resumed` receipts. */
+  readonly generations: number;
+}
+
+/** Where and why `verifyChain` / `verifyGenerations` stopped. */
 export interface ChainFailure {
   readonly index: number;
   readonly reason:
@@ -51,7 +67,11 @@ export interface ChainFailure {
     | 'orphan_effect'
     | 'duplicate_decision'
     | 'duplicate_effect'
-    | 'effect_not_allowed';
+    | 'effect_not_allowed'
+    /** No secret for the generation that signed this receipt (fail closed). */
+    | 'missing_secret'
+    /** A `resumed` receipt for a generation that is not the next one, or for another run. */
+    | 'resume_link';
 }
 
 /** Run secret: a string or raw bytes. */

@@ -70,7 +70,7 @@ export interface EngineDeps {
   /** Versioned settings in the database; read once at the start of every tick (d-0085). */
   readonly config: ConfigSource;
   readonly ids: IdSource;
-  /** This server instance; a `running` run owned by anyone else is a crash after a restart (d-0054). */
+  /** This server instance; a live run owned by anyone else was left by a restart or crash and is resumed or crash-settled (d-0092). */
   readonly owner: string;
   /**
    * SHA-256 of the effective tool catalogue a run on this harness is admitted under (the
@@ -123,6 +123,10 @@ export interface TickReport {
   readonly at: string;
   readonly firstTick: boolean;
   readonly crashed: string[];
+  /** Interrupted or lost runs the restart reconcile resumed from their harness session (d-0092). */
+  readonly resumed: string[];
+  /** Interrupted runs that could not be resumed; settled as a crash and retried as a new run. */
+  readonly resumeFailed: string[];
   readonly settled: SettledRun[];
   readonly triaged: { ticketId: string; lane: string; parked: boolean }[];
   readonly dispatched: {
@@ -152,6 +156,12 @@ export interface Engine {
   cancelTicket(ticketId: string): Promise<boolean>;
   /** Why the ticket has not started (`quota: claude-code until 14:20 UTC`, `cap: per-project 1/1`, `deps: PAY-231`), or null when nothing holds it back. Read-only. */
   explainWait(ticketId: string): Promise<string | null>;
+  /**
+   * Shutdown: marks a live run `interrupted` (its session, worktree, token and receipts are
+   * kept for the next start to resume, d-0092) and stops its harness. Unknown runs and runs
+   * whose result already arrived are left alone.
+   */
+  interruptRun(runId: string): Promise<void>;
   /** Ids of runs with a live pump in this process. */
   liveRunIds(): string[];
   /** Gate runs currently executing in the background (finished ones await the next tick). */

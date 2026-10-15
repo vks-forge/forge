@@ -7,7 +7,10 @@
  *   is its scan), and retry logic follows `retry_of` and `error_family`. A run that has an
  *   end time is never reopened: clearing `ended_at` or moving it back to `starting` /
  *   `running` is refused, because the end time and chain hash of the first attempt are
- *   evidence, and a resume is a new row (`retry_of`). Rows are re-parsed with the core `Run`
+ *   evidence; a retry after a failure is a new row (`retry_of`). A run interrupted by a
+ *   restart is the one exception to "one row per attempt": it is resumed on the same row,
+ *   `generation` counting the run secret generations, and the moves into and out of
+ *   `interrupted` follow the core run transition table. Rows are re-parsed with the core `Run`
  *   schema on read, so a half-written or drifted row cannot reach the retry logic
  *   (execution-plane.md §8).
  *
@@ -19,7 +22,12 @@ import { Run, UnknownForgeError } from '@forge/core';
 import type { RunRepository } from '@forge/core';
 import { parseStored } from '#/shared/db-errors.js';
 import { dropNulls, fromJson, toJson } from '#/shared/json.js';
-import { assertNotReopened, buildSetClause, parseRunPatch } from '#/shared/patches.js';
+import {
+  assertInterruptMove,
+  assertNotReopened,
+  buildSetClause,
+  parseRunPatch,
+} from '#/shared/patches.js';
 import type { ColumnCodec, SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
 
 const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
@@ -45,6 +53,9 @@ const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
   prompt_hash: { column: 'prompt_hash', clearable: true },
   config_version: { column: 'config_version', clearable: true },
   hook_registered_at: { column: 'hook_registered_at', clearable: true },
+  generation: { column: 'generation' },
+  resumable_session: { column: 'resumable_session', clearable: true },
+  interrupted_at: { column: 'interrupted_at', clearable: true },
 };
 
 function toRun(row: SqlRow): Run {
@@ -93,8 +104,9 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
       driver.run(
         `INSERT INTO runs (id, ticket_id, project, harness, driver_version, session_ref, cwd, lane,
            started_at, ended_at, status, usage_json, cost_usd, error_family, retry_of, owner,
-           pid, last_event_at, final_chain_hash, catalogue_hash, prompt_hash, config_version, hook_registered_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           pid, last_event_at, final_chain_hash, catalogue_hash, prompt_hash, config_version, hook_registered_at,
+           generation, resumable_session, interrupted_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           r.id,
           r.ticket_id,
@@ -119,14 +131,17 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
           r.prompt_hash ?? null,
           r.config_version ?? null,
           r.hook_registered_at ?? null,
+          r.generation ?? 1,
+          r.resumable_session ?? null,
+          r.interrupted_at ?? null,
         ],
       );
     },
 
     async update(id, patch) {
       const parsed = parseRunPatch(patch);
-      const current = driver.get<{ ended_at: string | null }>(
-        'SELECT ended_at FROM runs WHERE id = ?',
+      const current = driver.get<{ ended_at: string | null; status: Run['status'] }>(
+        'SELECT ended_at, status FROM runs WHERE id = ?',
         [id],
       );
 
@@ -135,6 +150,7 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
       }
 
       assertNotReopened(id, current.ended_at !== null, parsed);
+      assertInterruptMove(id, current.status, parsed);
       const { sql, params } = buildSetClause(COLUMNS, parsed);
       if (sql === '') {
         return;

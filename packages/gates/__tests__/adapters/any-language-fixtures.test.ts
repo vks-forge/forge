@@ -144,7 +144,7 @@ function gateRun(fixture: Fixture, root: string, s: Scenario, checks = CHECKS) {
           name: c.tool === 'shell' ? 'Bash' : 'Edit',
         })),
       ),
-    runSecret: () => SECRET,
+    runSecrets: () => Promise.resolve(SECRET),
     env: { PATH: process.env['PATH'], SystemRoot: process.env['SystemRoot'] },
     runCommand: runShellCommand,
     commandTimeoutMs: 30_000,

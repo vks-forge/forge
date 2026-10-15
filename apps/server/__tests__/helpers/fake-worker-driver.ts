@@ -8,7 +8,10 @@
  *   (helpers/harness-session): real hook posts, so the real hook handler writes the signed
  *   receipts; real edits in the worktree only when the hook allows them; the real Forge MCP
  *   server for `finish` and `ask_director`. The behaviour of each run is scripted: a good
- *   run, a run that plants a false claim, a run that asks a question.
+ *   run, a run that plants a false claim, a run that asks a question, and a run that can be
+ *   interrupted and resumed: it edits one file, reports its session and waits until the server
+ *   stops it; started again with `resume` it finishes the job, hooking in again under its new
+ *   token like a restored harness session would (d-0092).
  *
  * Exports: Behaviour, FakeWorker, createFakeWorker().
  * Depends on: @forge/core (WorkerDriver, RunEvent), helpers/channel, helpers/harness-session.
@@ -23,13 +26,15 @@ import type { DriverFactoryDeps, ForgeServer } from '#/types/server.types.js';
 import { createChannel } from '#tests/helpers/channel.js';
 import { createHarnessSession } from '#tests/helpers/harness-session.js';
 
-/** What one run does: write good code, plant a claim for a file it never touched, or ask a question. */
-export type Behaviour = 'good' | 'false_claim' | 'ask';
+/** What one run does: write good code, plant a claim for a file it never touched, ask a question, or work until stopped and finish when resumed. */
+export type Behaviour = 'good' | 'false_claim' | 'ask' | 'resumable';
 
 export interface FakeWorker {
   readonly driver: WorkerDriver;
   /** Run ids in start order. */
   readonly started: string[];
+  /** The requests the driver was started with, in order (a resume repeats the run id and carries `resume`). */
+  readonly requests: RunRequest[];
   /** Script errors; empty when every run went to plan. */
   readonly failures: string[];
 }
@@ -62,11 +67,15 @@ export function createFakeWorker(
   behaviours: readonly Behaviour[],
 ): FakeWorker {
   const started: string[] = [];
+  const requests: RunRequest[] = [];
   const failures: string[] = [];
   const live = new Map<
     string,
     { events: ReturnType<typeof createChannel<RunEvent>>; result: Promise<RunResult> }
   >();
+
+  /** Resolvers that end a waiting `resumable` run when the server stops it. */
+  const stops = new Map<string, () => void>();
 
   async function execute(
     req: RunRequest,
@@ -83,6 +92,9 @@ export function createFakeWorker(
 
     const session = `sess-${req.runId}`;
     await hook('SessionStart', {});
+    if (behaviour === 'resumable') {
+      emit({ type: 'session', session_ref: session });
+    }
 
     if (behaviour === 'ask') {
       const question = { question: 'Which module should hold add()?' };
@@ -107,18 +119,33 @@ export function createFakeWorker(
 
     const mathPath = join(req.cwd, 'src', 'math.js');
     const testPath = join(req.cwd, 'test', 'math.test.js');
-    await tool(
-      'Read',
-      { file_path: mathPath },
-      () => readFileSync(mathPath, 'utf8').length,
-    );
+    if (behaviour !== 'resumable' || req.resume === undefined) {
+      await tool(
+        'Read',
+        { file_path: mathPath },
+        () => readFileSync(mathPath, 'utf8').length,
+      );
 
-    const source = readFileSync(mathPath, 'utf8') + ADD;
-    await tool(
-      'Write',
-      { file_path: mathPath, content: source },
-      writeFile(mathPath, source),
-    );
+      const source = readFileSync(mathPath, 'utf8') + ADD;
+      await tool(
+        'Write',
+        { file_path: mathPath, content: source },
+        writeFile(mathPath, source),
+      );
+    }
+
+    if (behaviour === 'resumable' && req.resume === undefined) {
+      // Half done: wait here until the server stops the run (shutdown interrupts it).
+      await new Promise<void>((resolve) => stops.set(req.runId, resolve));
+
+      return {
+        status: 'cancelled',
+        session,
+        usage: USAGE,
+        costUsd: null,
+        filesTouched: [],
+      };
+    }
 
     const spec = readFileSync(testPath, 'utf8')
       .replace('import { subtract }', 'import { add, subtract }')
@@ -163,7 +190,7 @@ export function createFakeWorker(
   const driver: WorkerDriver = {
     id: 'claude-code',
     capabilities: () => ({
-      resume: false,
+      resume: behaviours.includes('resumable'),
       steerModes: [],
       nativeSandbox: false,
       reportsCost: false,
@@ -178,6 +205,7 @@ export function createFakeWorker(
         behaviours[Math.min(started.length, behaviours.length - 1)] ?? 'good';
 
       started.push(req.runId);
+      requests.push(req);
 
       const events = createChannel<RunEvent>();
       let seq = 0;
@@ -204,17 +232,18 @@ export function createFakeWorker(
       return { runId: req.runId, session: `sess-${req.runId}` };
     },
     async resume() {
-      throw new Error('the fake worker does not resume');
+      throw new Error('the fake worker resumes through start({ resume }), not resume()');
     },
     async steer() {
       throw new Error('the fake worker cannot be steered');
     },
-    async cancel() {
-      // Runs are short scripts; shutdown simply lets them finish.
+    async cancel(handle) {
+      // Runs are short scripts and simply finish; only a waiting `resumable` run is stopped.
+      stops.get(handle.runId)?.();
     },
     events: (handle) => known(handle.runId).events.iterate(),
     result: (handle) => known(handle.runId).result,
   };
 
-  return { driver, started, failures };
+  return { driver, started, requests, failures };
 }

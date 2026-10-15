@@ -65,7 +65,11 @@ async function ensureInteraction(
   });
 }
 
-/** Applies the ticket effect of `run` ending with `result` (family already resolved); inside `tx`. */
+/**
+ * Applies the ticket effect of `run` ending with `result` (family already resolved); inside
+ * `tx`. `retryReason` names the retry wake when the cause is not the family itself (an
+ * interrupted run that could not be resumed wakes with `resume_failed`).
+ */
 export async function applyOutcome(
   ctx: EngineCtx,
   tx: StorageTx,
@@ -73,6 +77,7 @@ export async function applyOutcome(
   result: RunResult,
   family: ErrorFamily | undefined,
   pump?: Pump,
+  retryReason?: string,
 ): Promise<void> {
   const ticket = await tx.tickets.get(run.ticket_id as Ticket['id']);
   if (!ticket || TERMINAL_STATUSES.includes(ticket.status) || pump?.cancelled) {
@@ -141,7 +146,7 @@ export async function applyOutcome(
     {
       ticketId: ticket.id,
       kind: 'retry',
-      reason: decision.family,
+      reason: retryReason ?? decision.family,
       key: run.id,
       notBefore: decision.notBefore,
     },

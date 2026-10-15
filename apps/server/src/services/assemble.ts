@@ -9,7 +9,10 @@
  *   worktrees, git host and gates) and the projects API adds more while the server runs.
  *   The Worker driver and the Director's model arrive as ports, so production passes the
  *   Claude adapters and the end-to-end test passes fakes through the same assembly, the same
- *   hook route, the same receipts and the same G1 gate. A failure while assembling closes the
+ *   hook route, the same receipts and the same G1 gate. It also wires what lets runs survive a
+ *   restart (d-0092): shutdown interrupts live runs instead of cancelling them, the first tick
+ *   resumes them, and run secrets live in the SecretStore until the run is over and are swept
+ *   at start and after every tick (d-0100). A failure while assembling closes the
  *   database again, so a bad config never leaves a locked file behind.
  *
  * Exports: assembleServer().
@@ -21,12 +24,10 @@
 import { createServer } from 'node:http';
 import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { InvalidInputError } from '@forge/core';
 import { openSqlite } from '@forge/db';
 import { createReceiptLookup, systemClock } from '@forge/drivers';
 import { createEngine, createIdSource, createOwnerId } from '@forge/engine';
 import { createFileReportStore } from '@forge/gates';
-import { createRunSecretRegistry } from '@forge/hooks';
 import { createDpapiSecretStore } from '@forge/secrets';
 import { buildRoutes } from '#/routes/routes.js';
 import { createAuth } from '#/services/auth/create-auth.js';
@@ -39,9 +40,9 @@ import { DEFAULT_HARNESS, createHarnessSource } from '#/services/harness-source.
 import { assertLoopbackBind, closeServer, listen } from '#/services/http/listen.js';
 import { createRouter } from '#/services/http/router.js';
 import { createLazySecretStore } from '#/services/lazy-secrets.js';
-import { createPrepareRun } from '#/services/prepare-run.js';
 import { composeProjectMemory } from '#/services/project-memory.js';
 import { createProjectRegistry } from '#/services/project-registry.js';
+import { createRunWiring } from '#/services/run-wiring.js';
 import { shutdownServer } from '#/services/shutdown.js';
 import { createTicker } from '#/services/ticker.js';
 import { createToolPolicy } from '#/services/tool-policy.js';
@@ -79,15 +80,26 @@ export async function assembleServer(
     });
 
     const owner = createOwnerId();
-    const registry = createRunSecretRegistry();
 
-    // The DPAPI store is only created when a GitHub key is first read or written, so a
-    // server with local projects only (or off Windows) never touches it.
+    // The DPAPI store is created on first use. Run secrets live in it for the life of each
+    // run (d-0100), so it is first touched when the first run starts; a server with no
+    // GitHub project and no run (or off Windows) never opens it.
     const secrets =
       ports.secrets ??
       createLazySecretStore(() =>
         createDpapiSecretStore({ dir: layout.data.secretsDir }),
       );
+
+    let address: ServerAddress | null = null;
+    const { registry, retirement, prepareRun } = createRunWiring({
+      layout,
+      storage,
+      receipts,
+      secrets,
+      now,
+      log,
+      address: () => address,
+    });
 
     const harness = createHarnessSource(storage);
 
@@ -106,24 +118,6 @@ export async function assembleServer(
 
     const dir = layout.data.memoryDir;
     const parts = await composeProjectMemory(dir, now, log, projects.slugs());
-
-    let address: ServerAddress | null = null;
-    const prepareRun = createPrepareRun({
-      runsDir: layout.data.runsDir,
-      dbPath: layout.data.dbPath,
-      mcpEntry: layout.mcpEntry,
-      nodePath: process.execPath,
-      registry,
-      hookBaseUrl: () => {
-        if (!address) {
-          throw new InvalidInputError(
-            'a run was prepared before the server was listening',
-          );
-        }
-
-        return address.url;
-      },
-    });
 
     const driver = ports.driver({
       prepareRun,
@@ -170,7 +164,12 @@ export async function assembleServer(
     await policy.catalogueHash();
 
     const ticker = createTicker({
-      tick: () => engine.tick(),
+      tick: async () => {
+        const report = await engine.tick();
+        await retirement.sweep();
+
+        return report;
+      },
       // Read once at start: the timer period is the one dial that needs a restart.
       intervalMs: (await config.company()).config.engine.tick_interval_ms,
       log,
@@ -259,6 +258,9 @@ export async function assembleServer(
 
         const port = await listen(http, settings.host, settings.port);
         address = { host: settings.host, port, url: `http://${settings.host}:${port}` };
+        // Before the first tick, which resumes interrupted runs: it removes what a crash left
+        // behind, and never touches a run that is alive or waiting for its resume.
+        await retirement.sweep();
         ticker.start();
         poller.start();
         log('info', 'server listening', { url: address.url, owner });
@@ -273,11 +275,8 @@ export async function assembleServer(
         ticker,
         stopPolling: () => poller.stop(),
         engine,
-        // A run keeps the driver that started it.
-        cancelRun: async (runId) => {
-          const run = await storage.transaction((tx) => tx.runs.get(runId));
-          await (run ? drivers.get(run.harness) : null)?.cancel({ runId });
-        },
+        // The engine marks the run interrupted and stops it on the driver that started it.
+        interruptRun: (runId) => engine.interruptRun(runId),
         storage,
         endStreams: () => streams.abort(),
         closeHttp: () => closeServer(http),

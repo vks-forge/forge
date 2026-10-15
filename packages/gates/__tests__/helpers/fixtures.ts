@@ -5,13 +5,14 @@
  *   with the tools package's own `makeDecisionReceipt`/`makeEffectReceipt` instead of
  *   hand-writing rows that would pass a looser check than production.
  *
- * Exports: SECRET, RUN_ID, ChainBuilder, chain(), diffOf(), context(), checksOf(), receiptLog().
+ * Exports: SECRET, RUN_ID, Segment, chain(), generationsChain(), diffOf(), context(), checksOf(),
+ *   receiptLog().
  * Depends on: @forge/core, @forge/tools.
  */
 
 import { ProjectConfig, Run, Ticket } from '@forge/core';
 import type { Claim, GateContext, WorktreeDiff, WorktreeDiffFile } from '@forge/core';
-import { makeDecisionReceipt, makeEffectReceipt } from '@forge/tools';
+import { makeDecisionReceipt, makeEffectReceipt, makeResumedReceipt } from '@forge/tools';
 import type { EffectReceiptInput, Receipt, ReceiptLog } from '@forge/tools';
 
 export const SECRET = 'run-secret-0123456789abcdef-0123456789';
@@ -27,10 +28,18 @@ type Call = {
   readonly state?: EffectReceiptInput['state'] | null;
 };
 
-/** Builds a valid chain: for each call a decision and (unless `state: null`) an effect. */
-export function chain(calls: readonly Call[], secret: string = SECRET): Receipt[] {
-  const out: Receipt[] = [];
-  let seq = 0;
+/**
+ * Builds a valid chain: for each call a decision and (unless `state: null`) an effect. With
+ * `base` it continues that chain (same `seq` counter, linked to its last receipt) and returns
+ * base plus the new receipts.
+ */
+export function chain(
+  calls: readonly Call[],
+  secret: string = SECRET,
+  base: readonly Receipt[] = [],
+): Receipt[] {
+  const out: Receipt[] = [...base];
+  let seq = base.filter((r) => r.kind === 'decision').length;
   for (const c of calls) {
     seq += 1;
     const decision = makeDecisionReceipt(
@@ -70,6 +79,30 @@ export function chain(calls: readonly Call[], secret: string = SECRET): Receipt[
   }
 
   return out;
+}
+
+/** One secret generation's worth of calls, signed with that generation's secret. */
+export type Segment = { readonly calls: readonly Call[]; readonly secret: string };
+
+/** A chain of several secret generations joined by `resumed` receipts (d-0100). */
+export function generationsChain(segments: readonly Segment[]): Receipt[] {
+  let rows: Receipt[] = [];
+  for (const [i, segment] of segments.entries()) {
+    if (i > 0) {
+      rows = [
+        ...rows,
+        makeResumedReceipt(
+          { run_id: RUN_ID, generation: i + 1, ts: TS },
+          rows.at(-1) ?? null,
+          segment.secret,
+        ),
+      ];
+    }
+
+    rows = chain(segment.calls, segment.secret, rows);
+  }
+
+  return rows;
 }
 
 export function diffOf(
@@ -117,6 +150,8 @@ export function context(
     ecosystems?: readonly string[];
     gateRules?: ProjectConfig['gate_rules'];
     worktreePath?: string;
+    /** The run row's secret generation (default: absent, read as 1). */
+    generation?: number;
   } = {},
 ): GateContext {
   return {
@@ -146,6 +181,7 @@ export function context(
       started_at: TS,
       status: 'settled',
       owner: 'srv',
+      ...(overrides.generation === undefined ? {} : { generation: overrides.generation }),
     }),
     project: ProjectConfig.parse({
       slug: 'forge',

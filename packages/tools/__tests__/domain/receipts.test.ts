@@ -7,17 +7,14 @@
  * covering it by the MAC would fail here.
  *
  * Pins: makeDecisionReceipt(), makeEffectReceipt(), verifyChain().
- * Depends on: domain/receipts, domain/admit, helpers/fixtures, fast-check, vitest. No IO.
+ * Depends on: domain/receipts, domain/receipt-verify, domain/admit, helpers/fixtures, fast-check, vitest. No IO.
  */
 
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { admit } from '#/domain/admit.js';
-import {
-  makeDecisionReceipt,
-  makeEffectReceipt,
-  verifyChain,
-} from '#/domain/receipts.js';
+import { verifyChain } from '#/domain/receipt-verify.js';
+import { makeDecisionReceipt, makeEffectReceipt } from '#/domain/receipts.js';
 import type { DecisionReceipt, Receipt } from '#/schemas/receipt.js';
 import { sha256Hex } from '#/shared/hmac.js';
 import { call, makeCtx } from '#tests/helpers/fixtures.js';

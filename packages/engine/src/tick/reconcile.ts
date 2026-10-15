@@ -2,14 +2,16 @@
  * Reconcile: bring recorded runs in line with what is actually alive.
  *
  * Why: the database says which runs exist; only this process knows which are really
- *   running. Three gaps open between the two. After a restart every run owned by the old
- *   server is dead, because its per-run secret lived in memory only (d-0054): they are
- *   crash-settled and retried, never left assigned to nothing. A run whose harness hangs
+ *   running. Two gaps open between the two while the server runs. A run whose harness hangs
  *   emits nothing, so a run silent for `stall_ms` is cancelled and settled as a stall. And
- *   a run whose stream has ended is settled here so its ticket moves on. All three end in
- *   the same `settleRun`, so retry and park rules apply uniformly.
+ *   a run whose stream has ended is settled here so its ticket moves on. Both end in the same
+ *   `settleRun`, so retry and park rules apply uniformly. A run the server itself interrupted
+ *   at shutdown is skipped: it belongs to the next start, which resumes it (`tick/restart`).
+ *   Runs left by an earlier server are handled there too. A resumed run whose harness fails
+ *   before reporting anything never got its session back: it is retried as a new run, not
+ *   counted as an ordinary failure.
  *
- * Exports: crashForeignRuns(), settleFinishedPumps(), cancelStalled().
+ * Exports: settleFinishedPumps(), cancelStalled().
  * Depends on: @forge/core (WorkerDriver port), tick/settle, tick/pump, domain/results.
  */
 
@@ -22,26 +24,10 @@ import type { EngineCtx } from '#/types/engine-state.types.js';
 /** Grace for a cancelled harness to report before the stall is settled without its result. */
 const CANCEL_GRACE_MS = 10_000;
 
-/** First tick only: runs owned by another server are dead; settle them as crashes (d-0054). */
-export async function crashForeignRuns(ctx: EngineCtx): Promise<void> {
-  const open = await ctx.deps.storage.transaction((tx) =>
-    tx.runs.listByStatus(['starting', 'running', 'settling']),
-  );
-
-  for (const run of open) {
-    if (run.owner === ctx.deps.owner) {
-      continue;
-    }
-
-    await settleRun(ctx, run, failureResult('crash'));
-    ctx.report.crashed.push(run.id);
-  }
-}
-
 /** Settles every pump whose stream and result are in. */
 export async function settleFinishedPumps(ctx: EngineCtx): Promise<void> {
   for (const pump of [...ctx.state.pumps.values()]) {
-    if (!pump.done) {
+    if (!pump.done || pump.interrupted) {
       continue;
     }
 
@@ -51,7 +37,25 @@ export async function settleFinishedPumps(ctx: EngineCtx): Promise<void> {
       continue;
     }
 
-    await settleRun(ctx, run, pumpResult(pump), pump);
+    const result = pumpResult(pump);
+    if (pump.resumed && pump.events === 0 && result.status === 'error') {
+      // The harness never gave the session back (no event, not even the session report):
+      // retry as a new run in the same worktree rather than as an ordinary failure.
+      const family = result.errorFamily;
+      const plain = family === undefined || family === 'unknown' || family === 'crash';
+      ctx.report.resumeFailed.push(run.id);
+      await settleRun(
+        ctx,
+        run,
+        plain ? { ...result, errorFamily: 'crash' } : result,
+        pump,
+        { status: 'settled', retryReason: 'resume_failed' },
+      );
+
+      continue;
+    }
+
+    await settleRun(ctx, run, result, pump);
   }
 }
 
@@ -59,7 +63,7 @@ export async function settleFinishedPumps(ctx: EngineCtx): Promise<void> {
 export async function cancelStalled(ctx: EngineCtx): Promise<void> {
   const { deps, state } = ctx;
   for (const pump of [...state.pumps.values()]) {
-    if (pump.done) {
+    if (pump.done || pump.interrupted) {
       continue;
     }
 

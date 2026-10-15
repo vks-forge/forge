@@ -8,7 +8,7 @@
  *   reordering any row is detectable. Field names mirror the db tables so rows persist
  *   without translation (tool-system.md §10, verification-plane.md §2).
  *
- * Exports: EffectState, DecisionReceipt, EffectReceipt, Receipt.
+ * Exports: EffectState, DecisionReceipt, EffectReceipt, ResumedReceipt, Receipt.
  * Depends on: schemas/decision, schemas/tool-definition, zod. No IO.
  */
 
@@ -73,5 +73,27 @@ export const EffectReceipt = z.object({
 });
 export type EffectReceipt = z.infer<typeof EffectReceipt>;
 
-export const Receipt = z.discriminatedUnion('kind', [DecisionReceipt, EffectReceipt]);
+/**
+ * The join between two run secret generations. A resumed run (d-0092) continues under a new
+ * secret (d-0100); this record starts the new generation's segment. It links to the last
+ * receipt of the earlier generation (`prev_hash`, null when that generation wrote none) and
+ * is signed with the NEW generation's secret, so the earlier segment cannot be extended or
+ * rewritten by the new process and the new segment cannot claim to be the old one.
+ */
+export const ResumedReceipt = z.object({
+  kind: z.literal('resumed'),
+  run_id: z.string().min(1),
+  /** The generation this record starts; at least 2. */
+  generation: z.number().int().min(2),
+  ts: Ts,
+  prev_hash: Hex64.nullable(),
+  hash: Hex64,
+});
+export type ResumedReceipt = z.infer<typeof ResumedReceipt>;
+
+export const Receipt = z.discriminatedUnion('kind', [
+  DecisionReceipt,
+  EffectReceipt,
+  ResumedReceipt,
+]);
 export type Receipt = z.infer<typeof Receipt>;

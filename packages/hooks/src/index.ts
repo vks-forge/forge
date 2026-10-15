@@ -7,13 +7,15 @@
  *   renderers live in the driver that owns the harness (d-0056). One surface keeps the
  *   server on the shared wire schemas in `@forge/tools`.
  *
- * Exports: everything from server/ and types/ (hook handler, run credential registry).
+ * Exports: everything from server/ and types/ (hook handler, run credential registry, the
+ *   `resumed` receipt link for a new secret generation).
  * Depends on: every module under src/. No IO on import.
  */
 
 export * from '#/server/audit-gate.js';
 export * from '#/server/hook-handler.js';
 export * from '#/server/liveness-recorder.js';
+export * from '#/server/resume-link.js';
 export * from '#/server/run-secrets.js';
 export type * from '#/types/hook-handler.types.js';
 export type * from '#/types/run-secrets.types.js';

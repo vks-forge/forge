@@ -76,8 +76,8 @@ G1 gate; git worktrees; GitHub App git host; DPAPI secrets; HTTP server with
 SSE. 3621 tests; live probes 1–9 pass, including a real Express ticket from
 intake to merge and a real GitHub PR round trip.
 
-**Not yet aligned with the product shape:** the code still assumes
-restart kills runs, no UI, no CI, not publishable. One server now serves many
+**Not yet aligned with the product shape:** no UI, not publishable. Runs now
+survive a restart: Forge resumes them from the saved harness session. One server now serves many
 projects (registered through the API, each with its own clone, worktrees, git
 host and ticket prefix) and settings live in the database. See
 `docs/design/product-shape-change-map.md`.
@@ -99,6 +99,7 @@ account (container isolation later, d-0005); the rework path has not run live.
 
 Newest first. One line per milestone.
 
+- 2026-10-15 — B9: runs survive a restart — interrupted runs resume with a new run secret; receipts verified across generations.
 - 2026-10-15 — B11: fair scheduling across projects — priority, per-project and per-harness limits, quota waits.
 - 2026-10-15 — B5: project checks by role for any language; gate rules per ecosystem.
 - 2026-10-15 — B10: project memory lives in the data folder as a private git repo per project; Director writer; memory API.

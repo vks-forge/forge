@@ -33,11 +33,28 @@ Public API from `src/index.ts`:
     sources never get here.
   - `answerInteraction(id, answer)`: CAS answer, queues the `response_wake`.
   - `cancelTicket(id)`: `cancelled` through `transition()`, cancels the live run, removes the worktree.
+  - `interruptRun(runId)`: shutdown path (`tick/interrupt.ts`). Marks a live run `interrupted`
+    with its harness session (`resumable_session`, from the `session_ref` the pump stores as the
+    harness reports it) and `interrupted_at`, flags its pump so no tick settles the stream that
+    ends because of the stop, then `driver.cancel`s the harness. Token, worktree and receipts are
+    kept; a run whose result already arrived is left to settle normally.
   - `explainWait(ticketId)`: why a ticket has not started, as one line (`quota: claude-code until 14:20 UTC`,
     `cap: per-project 1/1`, `deps: PAY-231`), or null; read-only, from the same decision dispatch makes.
   - `liveRunIds()`, `gateJobsInFlight()` (gate runs executing beside the tick).
-- Per tick: restart reconcile on the first tick (runs owned by another server are crash-settled,
-  tokens revoked, retry wake queued, d-0054); settle finished runs; cancel runs silent for
+- Per tick: restart reconcile on the first tick (`tick/restart.ts`, d-0092): a run lost without a
+  shutdown (foreign owner, still `starting` / `running` / `settling`) that had reported a session
+  is recorded as `interrupted`, one with none is crash-settled. Then, every tick, interrupted runs
+  are resumed within the scheduler's limits (`pickNext` with the global, per-project and
+  per-harness caps and any quota pause, d-0097; a run that does not fit stays `interrupted` and the
+  invariant sweep counts it as explained). A resume is done on the same row: generation + 1,
+  a new token (`runTokens.reissue`, the old hash dies), `hook_registered_at` cleared, then
+  `driver.start({ ...req, resume: session, generation })` with a continue prompt (`RESUME_PROMPT`).
+  A run that cannot be resumed (no session, a harness that cannot resume, worktree moved, ticket
+  ended, `start` throws, or the resumed harness ends before reporting anything) is settled
+  `interrupted -> settled` with error family `crash` and a `retry` wake with reason `resume_failed`,
+  so the ticket continues as a new run in the same worktree. A lost run with no session is
+  crash-settled as before (wake reason `crash`). The report lists `resumed`, `resumeFailed` and
+  `crashed`. Then settle finished runs (skipping interrupted pumps); cancel runs silent for
   `stall_ms` and settle them as `stall`; expire overdue questions (ticket to `blocked`); deliver
   steering replies (`steer_reply` step, then `run_inbox`, then `driver.steer`); triage `inbox`
   tickets (pre-check, `triage` step, lane rule); verify finished work (below); dispatch ready tickets (worktree, `dispatch_prompt`
@@ -119,7 +136,12 @@ Public API from `src/index.ts`:
   `transition()` and stored by CAS on `status_version` (`tick/ticket-moves.ts`). "Park for a human"
   is one `parked` event (reason becomes `blocked_reason`), not a status write and not a fake
   `dispatched` + `asked`. A property test pins it.
-- Resume is a new run (d-0055): a run with `ended_at` is never reopened; `retry_of` links the chain.
+- A retry is a new run (d-0055): a run with `ended_at` is never reopened; `retry_of` links the chain.
+  A run stopped by a restart is the exception (d-0092): it has no `ended_at`, and is resumed on its
+  own row, so one run id carries the whole conversation and its receipts, with `generation` counting
+  the secret generations (d-0100). `interrupted` moves only to `running` (resume) or `settled`
+  (give up); the table is `RUN_TRANSITIONS` in core. A resume that fails falls back to the retry
+  path above, keeping the worktree, rather than losing the ticket.
 - Failure policy by error family (`domain/failure-policy.ts`, config `engine.retry`):
   `auth`, `policy_denied`, `refusal`, `budget`, `invalid_input` never retry; `quota` is handled before the table (above;
   the table's own answer is a retry at the reset, or after `rate_limit.max_ms`); `rate_limit` waits for
@@ -175,8 +197,11 @@ Public API from `src/index.ts`:
 ## Limits
 
 - Process-local by design: live run pumps, step/dispatch holds and queued steering replies. After a
-  restart pumps are gone (runs are crash-settled) and holds reset. The requester's hint, type and
+  restart pumps are gone (interrupted runs are resumed with new pumps, d-0092) and holds reset. The requester's hint, type and
   title are read from the stored intake event (`intakeEvents.get`), so they survive a restart.
+- A run lost in a crash can only be resumed if the harness had reported its session (stored on the
+  run row as it arrives); one lost before that is crash-settled and retried. A Worker whose result
+  had arrived but was not yet settled when the server stopped is resumed too, and told to continue.
 - A running Worker keeps the limits it was started with (budget, stall time); a settings edit reaches runs started on the next tick. The stall scan itself uses the current `stall_ms`. Run rows predating migration 0010 have no `config_version`.
 - Ticket numbers come from listing every ticket id (no counter); fine at M0 scale.
 - The rotation cursor is process-local: after a restart the first dispatch starts at the first project by id. Priority

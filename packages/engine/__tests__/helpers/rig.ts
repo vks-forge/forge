@@ -91,6 +91,8 @@ function mergeReports(a: TickReport, b: TickReport): TickReport {
   return {
     ...a,
     crashed: [...a.crashed, ...b.crashed],
+    resumed: [...a.resumed, ...b.resumed],
+    resumeFailed: [...a.resumeFailed, ...b.resumeFailed],
     settled: [...a.settled, ...b.settled],
     triaged: [...a.triaged, ...b.triaged],
     dispatched: [...a.dispatched, ...b.dispatched],

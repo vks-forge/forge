@@ -58,6 +58,7 @@ export function makeRun(id = 'run-1', overrides: Partial<Run> = {}): Run {
     started_at: T0,
     status: 'running',
     owner: 'server-1',
+    generation: 1,
     ...overrides,
   };
 }

@@ -18,6 +18,7 @@ import { runStatusFor } from '#/domain/results.js';
 import { applyOutcome } from '#/tick/outcome.js';
 import { runtimeFor } from '#/tick/project-runtime.js';
 import type { EngineCtx, Pump } from '#/types/engine-state.types.js';
+import type { SettleOptions } from '#/types/tick.types.js';
 
 /** The family stored on the run row: the driver's, else implied by the status. */
 function resolveFamily(result: RunResult): ErrorFamily | undefined {
@@ -42,9 +43,16 @@ export async function settleRun(
   run: Run,
   result: RunResult,
   pump?: Pump,
+  opts: SettleOptions = {},
 ): Promise<void> {
   const { deps, state } = ctx;
-  await deps.storage.transaction((tx) => tx.runs.update(run.id, { status: 'settling' }));
+  // An interrupted run goes straight to its ending: `settling` is not on its way out of the
+  // interrupted state (core run transitions).
+  if (run.status !== 'interrupted') {
+    await deps.storage.transaction((tx) =>
+      tx.runs.update(run.id, { status: 'settling' }),
+    );
+  }
 
   let files = [...result.filesTouched];
   const baseSha = state.baseShas.get(run.id);
@@ -81,7 +89,7 @@ export async function settleRun(
   }
 
   const family = resolveFamily(result);
-  const status = runStatusFor(result);
+  const status = opts.status ?? runStatusFor(result);
   const session = result.session ?? pump?.handle.session ?? null;
   await deps.storage.transaction(async (tx) => {
     await tx.runs.update(run.id, {
@@ -95,7 +103,7 @@ export async function settleRun(
     });
 
     await tx.runTokens.revoke(run.id, ctx.nowIso);
-    await applyOutcome(ctx, tx, run, result, family, pump);
+    await applyOutcome(ctx, tx, run, result, family, pump, opts.retryReason);
   });
 
   state.pumps.delete(run.id);

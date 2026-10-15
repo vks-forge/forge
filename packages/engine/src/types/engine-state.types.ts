@@ -3,7 +3,8 @@
  *
  * Why: the database holds every fact the scheduler decides on, but a few things are
  *   deliberately process-local. A live run's pump (the loop draining the driver's event
- *   stream) cannot outlive the process, which is exactly the M0 restart rule (d-0054). A
+ *   stream) cannot outlive the process: on shutdown its run is marked interrupted and the next start
+ *   resumes it from the harness session with a new pump (d-0092). A
  *   "hold" stops a failing Director step or worktree from being re-spent on every 10 s
  *   tick. A queued steering reply waits for the next tick because the LLM call must not
  *   happen on the intake request path. Naming the shapes keeps the phases that share them
@@ -33,6 +34,12 @@ export interface Pump {
   stalled?: boolean;
   /** Set when a human cancelled the ticket; the settle must not retry. */
   cancelled?: boolean;
+  /** True for a run restarted from its harness session after a restart (d-0092). */
+  readonly resumed: boolean;
+  /** Events the stream has produced; a resumed run that ends with none never got its session back. */
+  events: number;
+  /** Set when the server is shutting down: the run is `interrupted` for a resume, never settled by this process. */
+  interrupted?: boolean;
   /** `ask` events seen on the stream, to rebuild an interaction the Worker side did not write. */
   readonly asks: Map<string, { kind: string; prompt: string }>;
   /** Resolves once the stream is drained and the result (or error) is in. */

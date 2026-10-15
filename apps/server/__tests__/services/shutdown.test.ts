@@ -2,13 +2,13 @@
  * Graceful shutdown: order, bounded waiting, and resilience to a failing step.
  *
  * Why: a stopped server must not leave Workers running or the database open under a write.
- *   The order is the contract: the tick stops first, live runs are cancelled by run id,
+ *   The order is the contract: the tick stops first, live runs are interrupted by run id (kept for a resume, never cancelled into a crash, d-0092),
  *   gate jobs get a bounded time to drain (a merge decided on a passed gate should survive a
  *   Ctrl-C, but a hung gate must not hold the process forever), and only then do the streams,
  *   the port and the database close. One failing step must not stop the rest.
  *
- * Pins: step order, cancel per live run, drain until zero jobs, give up at the grace
- *   deadline, continue after a failing cancel.
+ * Pins: step order, interrupt per live run, drain until zero jobs, give up at the grace
+ *   deadline, continue after a failing interrupt.
  * Depends on: src/services/shutdown. No IO.
  */
 
@@ -21,7 +21,7 @@ function rig(
   over: {
     live?: string[] | (() => string[]);
     jobs?: () => number;
-    cancel?: () => Promise<void>;
+    interrupt?: () => Promise<void>;
     stop?: () => Promise<void>;
   } = {},
 ) {
@@ -42,9 +42,9 @@ function rig(
       },
     },
     engine,
-    cancelRun: async (runId: string) => {
-      order.push(`cancel ${runId}`);
-      await over.cancel?.();
+    interruptRun: async (runId: string) => {
+      order.push(`interrupt ${runId}`);
+      await over.interrupt?.();
     },
     storage: { close: async () => void order.push('storage'), transaction: vi.fn() },
     endStreams: () => void order.push('streams'),
@@ -58,15 +58,15 @@ function rig(
 }
 
 describe('shutdownServer', () => {
-  it('stops the clock, cancels runs, then closes streams, port and database in order', async () => {
+  it('stops the clock, interrupts runs, then closes streams, port and database in order', async () => {
     const { parts, order } = rig({ live: ['run-1', 'run-2'] });
 
     await shutdownServer(parts);
 
     expect(order).toEqual([
       'ticker',
-      'cancel run-1',
-      'cancel run-2',
+      'interrupt run-1',
+      'interrupt run-2',
       'streams',
       'http',
       'storage',
@@ -95,10 +95,10 @@ describe('shutdownServer', () => {
     );
   });
 
-  it('keeps going when a cancel fails', async () => {
+  it('keeps going when an interrupt fails', async () => {
     const { parts, order, log } = rig({
       live: ['run-1'],
-      cancel: async () => {
+      interrupt: async () => {
         throw new Error('already gone');
       },
     });
@@ -108,12 +108,12 @@ describe('shutdownServer', () => {
     expect(order.at(-1)).toBe('storage');
     expect(log).toHaveBeenCalledWith(
       'warn',
-      'shutdown: cancel run-1 failed',
+      'shutdown: interrupt run-1 failed',
       expect.objectContaining({ error: 'Error: already gone' }),
     );
   });
 
-  it('cancels live runs while the tick is still running and gives up on a hung tick (H2)', async () => {
+  it('interrupts live runs while the tick is still running and gives up on a hung tick (H2)', async () => {
     const { parts, order, log } = rig({
       live: ['run-1'],
       stop: () => new Promise<void>(() => undefined),
@@ -121,7 +121,7 @@ describe('shutdownServer', () => {
 
     await shutdownServer({ ...parts, graceMs: 30 });
 
-    expect(order.indexOf('cancel run-1')).toBeGreaterThan(order.indexOf('ticker'));
+    expect(order.indexOf('interrupt run-1')).toBeGreaterThan(order.indexOf('ticker'));
     expect(order.slice(-3)).toEqual(['streams', 'http', 'storage']);
     expect(log).toHaveBeenCalledWith(
       'warn',
@@ -129,10 +129,10 @@ describe('shutdownServer', () => {
     );
   });
 
-  it('does not wait forever for a cancel that never settles', async () => {
+  it('does not wait forever for an interrupt that never settles', async () => {
     const { parts, order, log } = rig({
       live: ['run-1'],
-      cancel: () => new Promise<void>(() => undefined),
+      interrupt: () => new Promise<void>(() => undefined),
     });
 
     await shutdownServer({ ...parts, graceMs: 30 });
@@ -140,11 +140,11 @@ describe('shutdownServer', () => {
     expect(order.at(-1)).toBe('storage');
     expect(log).toHaveBeenCalledWith(
       'warn',
-      'shutdown: cancel did not finish within the grace window',
+      'shutdown: interrupt did not finish within the grace window',
     );
   });
 
-  it('cancels again the runs a tick started while shutdown waited for it', async () => {
+  it('interrupts again the runs a tick started while shutdown waited for it', async () => {
     let calls = 0;
     const { parts, order } = rig({
       live: () => (calls++ === 0 ? ['run-1'] : ['run-1', 'run-late']),
@@ -152,7 +152,7 @@ describe('shutdownServer', () => {
 
     await shutdownServer(parts);
 
-    expect(order).toContain('cancel run-late');
+    expect(order).toContain('interrupt run-late');
   });
 
   it('disposes the external ports before closing the database', async () => {

@@ -6,7 +6,10 @@
  * produced anything (`last_event_at`), which hashes it ran under, and which statuses it
  * has passed through. A resumed run must be a new row linked by `retry_of`, never the old
  * row reopened, or the evidence of the first attempt (its end time, its chain hash) would
- * be overwritten. These cases pin that on every backend (execution-plane.md §8, d-0054).
+ * be overwritten. A run the server stopped under is the one thing resumed on its own row:
+ * it goes `interrupted` (keeping its session and end-less state) and comes back `running`
+ * with the next secret generation, or is given up as `settled`; it can never jump straight
+ * to a result. These cases pin that on every backend (execution-plane.md §8, d-0092).
  *
  * Exports: describeRunLifecycleContract().
  * Depends on: vitest, @forge/core, helpers/fixtures. IO only through the adapter under test.
@@ -118,6 +121,102 @@ export function describeRunLifecycleContract(getDb: () => StorageAdapter): void 
         ['r1', 'success', undefined, T1],
         ['r2', 'running', 'r1', undefined],
       ]);
+    });
+
+    describe('interrupted runs (d-0092)', () => {
+      it('round-trips generation, resumable_session and interrupted_at; generation defaults to 1', async () => {
+        await tx(async (t) => {
+          await t.runs.insert(makeRun('r1'));
+          await t.runs.update('r1', {
+            status: 'interrupted',
+            resumable_session: 'sess-1',
+            interrupted_at: T1,
+          });
+        });
+
+        expect(await tx((t) => t.runs.get('r1'))).toMatchObject({
+          status: 'interrupted',
+          generation: 1,
+          resumable_session: 'sess-1',
+          interrupted_at: T1,
+        });
+      });
+
+      it('resumes on the same row: running again with the next generation and the markers cleared', async () => {
+        await tx(async (t) => {
+          await t.runs.insert(makeRun('r1'));
+          await t.runs.update('r1', { status: 'interrupted', interrupted_at: T1 });
+          await t.runs.update('r1', {
+            status: 'running',
+            generation: 2,
+            interrupted_at: undefined,
+            resumable_session: undefined,
+          });
+        });
+
+        const got = await tx((t) => t.runs.get('r1'));
+        expect(got).toMatchObject({ status: 'running', generation: 2 });
+        expect('interrupted_at' in (got ?? {})).toBe(false);
+        expect(got?.ended_at).toBeUndefined();
+      });
+
+      it('gives up as settled with an end time and an error family', async () => {
+        await tx(async (t) => {
+          await t.runs.insert(makeRun('r1'));
+          await t.runs.update('r1', { status: 'interrupted' });
+          await t.runs.update('r1', {
+            status: 'settled',
+            ended_at: T1,
+            error_family: 'crash',
+          });
+        });
+
+        expect(await tx((t) => t.runs.get('r1'))).toMatchObject({
+          status: 'settled',
+          ended_at: T1,
+          error_family: 'crash',
+        });
+      });
+
+      it.each(['success', 'error', 'settling', 'cancelled'] as const)(
+        'refuses interrupted -> %s',
+        async (status) => {
+          await tx(async (t) => {
+            await t.runs.insert(makeRun('r1'));
+            await t.runs.update('r1', { status: 'interrupted' });
+          });
+
+          const failure = await tx((t) => t.runs.update('r1', { status })).catch(
+            (e: unknown) => e,
+          );
+
+          expect(failure).toBeInstanceOf(InvalidInputError);
+          expect((await tx((t) => t.runs.get('r1')))?.status).toBe('interrupted');
+        },
+      );
+
+      it('refuses interrupting a run that already ended', async () => {
+        await tx((t) =>
+          t.runs.insert(makeRun('r1', { status: 'success', ended_at: T1 })),
+        );
+
+        const failure = await tx((t) =>
+          t.runs.update('r1', { status: 'interrupted' }),
+        ).catch((e: unknown) => e);
+
+        expect(failure).toBeInstanceOf(InvalidInputError);
+      });
+
+      it('interrupted runs are found by listByStatus for the restart scan', async () => {
+        await tx(async (t) => {
+          await t.runs.insert(makeRun('r1'));
+          await t.runs.insert(makeRun('r2'));
+          await t.runs.update('r2', { status: 'interrupted' });
+        });
+
+        const found = await tx((t) => t.runs.listByStatus(['interrupted']));
+        expect(found.map((r) => r.id)).toEqual(['r2']);
+      });
     });
 
     describe('a run with ended_at is never reopened', () => {

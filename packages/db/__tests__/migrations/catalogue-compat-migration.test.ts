@@ -32,7 +32,7 @@ describe('0013 catalogue-and-compat', () => {
 
     driver.run("INSERT INTO harnesses (id, kind) VALUES ('alpha', 'claude')");
 
-    expect(runMigrations(driver)).toContain(13);
+    expect(runMigrations(driver).at(-1)).toBe(MIGRATIONS.at(-1)?.id);
     const rows = driver.all<Record<string, unknown>>(
       'SELECT * FROM harnesses ORDER BY rowid',
     );

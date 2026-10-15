@@ -15,7 +15,8 @@
  *
  * Pins: ticket reaches `done`; the run row names its settings version and the settings API
  *   serves the project registered through POST /projects; the change is in the bare repo's main; G1 passed; every
- *   tool call has a decision receipt and the chain verifies; hook liveness was registered;
+ *   tool call has a decision receipt and the chain verifies; the run secret is deleted once the
+ *   ticket is done (d-0100); hook liveness was registered;
  *   SSE live delivery and resume from a cursor.
  * Depends on: helpers/e2e-rig. IO: git, SQLite, npm, a loopback socket.
  */
@@ -149,7 +150,7 @@ describe('express flow end to end', { timeout: 300_000 }, () => {
         .map((r) => r.id),
     );
 
-    const secret = rig.server.runSecrets.secret(run?.id ?? '');
+    const secret = rig.secrets.secretOf(run?.id ?? '', 1);
 
     expect(calls.map((c) => c.name)).toEqual([
       'Read',
@@ -162,6 +163,17 @@ describe('express flow end to end', { timeout: 300_000 }, () => {
     expect(calls.every((c) => decided.has(c.call_id))).toBe(true);
     expect(secret).not.toBeNull();
     expect(verifyChain(receipts, secret ?? '').ok).toBe(true);
+  });
+
+  it('deletes the run secret once the ticket has left the gates', async () => {
+    const remaining = await waitFor(
+      'the run secrets to be retired',
+      async () => ((await rig.secrets.list('run/')).length === 0 ? true : false),
+      30_000,
+    );
+
+    expect(remaining).toBe(true);
+    expect(await rig.server.runSecrets.secret(view.runs[0]?.id ?? '', 1)).toBeNull();
   });
 
   it('registered hook liveness before the first tool call', async () => {

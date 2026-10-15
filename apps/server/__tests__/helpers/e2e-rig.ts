@@ -9,13 +9,19 @@
  *   data home, read the way the CLI reads it. One rig keeps the scenarios about behaviour,
  *   not plumbing.
  *
- * Exports: E2eRig, startE2eRig(), intakeBody().
+ *   A restart is the same data home served by a second server: pass the first rig's fixture
+ *   and secrets store (the SecretStore holds the run secrets across it, d-0100) and the
+ *   project, already in the database, is not registered again.
+ *
+ * Exports: E2eRig, E2eOptions, startE2eRig(), intakeBody().
  * Depends on: src/config, src/services/assemble, helpers/fixture-repo, helpers/fake-worker-driver,
- *   helpers/install-token, helpers/scripted-llm. IO: git, SQLite, a loopback socket.
+ *   helpers/install-token, helpers/recording-secrets, helpers/scripted-llm.
+ *   IO: git, SQLite, a loopback socket.
  */
 
 import { loadSettings } from '#/config/load-settings.js';
 import { KNOWN_GOOD_BUILDS } from '@forge/drivers';
+import { createMemorySecretStore } from '@forge/secrets';
 import { assembleServer } from '#/services/assemble.js';
 import { bearer, readInstallToken } from '#tests/helpers/install-token.js';
 import type { ForgeServer, ServerAddress } from '#/types/server.types.js';
@@ -24,6 +30,8 @@ import { createFixtureRepo, fixtureProjectBody } from '#tests/helpers/fixture-re
 import type { FixtureRepo } from '#tests/helpers/fixture-repo.js';
 import { createFakeWorker } from '#tests/helpers/fake-worker-driver.js';
 import type { Behaviour, FakeWorker } from '#tests/helpers/fake-worker-driver.js';
+import { createRecordingSecrets } from '#tests/helpers/recording-secrets.js';
+import type { RecordingSecrets } from '#tests/helpers/recording-secrets.js';
 import { createScriptedDirector } from '#tests/helpers/scripted-llm.js';
 import type { ScriptedDirector } from '#tests/helpers/scripted-llm.js';
 
@@ -36,6 +44,8 @@ export interface E2eRig {
   readonly director: ScriptedDirector;
   /** Server log lines (`level message fields`), for failure diagnostics. */
   readonly logs: string[];
+  /** The run secret store, remembering every secret ever written to it (it is emptied as runs end). */
+  readonly secrets: RecordingSecrets;
   /** The install token the server created in the fixture's data home. */
   readonly token: string;
   /** `Authorization` header for requests made without `call`. */
@@ -48,6 +58,12 @@ export interface E2eRig {
     headers?: Record<string, string>,
   ): Promise<{ status: number; body: unknown }>;
   dispose(): Promise<void>;
+}
+
+/** Reuse a first rig's data home and secrets for a second server (a restart). */
+export interface E2eOptions {
+  readonly fixture?: FixtureRepo;
+  readonly secrets?: RecordingSecrets;
 }
 
 /** An intake event asking for the `add` function, unique per `key`. */
@@ -64,8 +80,13 @@ export function intakeBody(key: string): Record<string, unknown> {
 }
 
 /** `behaviours` script the fake Worker run by run (the last one repeats). */
-export async function startE2eRig(behaviours: readonly Behaviour[]): Promise<E2eRig> {
-  const fixture = createFixtureRepo();
+export async function startE2eRig(
+  behaviours: readonly Behaviour[],
+  options: E2eOptions = {},
+): Promise<E2eRig> {
+  const ownsFixture = options.fixture === undefined;
+  const fixture = options.fixture ?? createFixtureRepo();
+  const secrets = options.secrets ?? createRecordingSecrets(createMemorySecretStore());
   const director = createScriptedDirector();
   const logs: string[] = [];
   let worker: FakeWorker | undefined;
@@ -92,6 +113,7 @@ export async function startE2eRig(behaviours: readonly Behaviour[]): Promise<E2e
     };
 
     server = await assembleServer(settings, {
+      secrets,
       llm: director.llm,
       // The fake worker's harness is a build the release shipped as verified, so its native
       // tools are approved at start-up and nothing is checked (d-0088).
@@ -127,11 +149,14 @@ export async function startE2eRig(behaviours: readonly Behaviour[]): Promise<E2e
     };
 
     // The project is registered the way a user does it, never by touching the database.
-    const registered = await call('POST', '/projects', fixtureProjectBody(fixture));
-    if (registered.status !== 201) {
-      throw new Error(
-        `could not register the fixture project: ${JSON.stringify(registered.body)}`,
-      );
+    // A restarted server finds it already there.
+    if (ownsFixture) {
+      const registered = await call('POST', '/projects', fixtureProjectBody(fixture));
+      if (registered.status !== 201) {
+        throw new Error(
+          `could not register the fixture project: ${JSON.stringify(registered.body)}`,
+        );
+      }
     }
 
     return {
@@ -142,17 +167,23 @@ export async function startE2eRig(behaviours: readonly Behaviour[]): Promise<E2e
       worker: worker as FakeWorker,
       director,
       logs,
+      secrets,
       token,
       authHeaders: bearer(token),
       call,
       async dispose() {
         await live.stop();
-        fixture.dispose();
+        if (ownsFixture) {
+          fixture.dispose();
+        }
       },
     };
   } catch (error) {
     await server?.stop();
-    fixture.dispose();
+    if (ownsFixture) {
+      fixture.dispose();
+    }
+
     throw error;
   }
 }

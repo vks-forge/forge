@@ -67,7 +67,8 @@ export function createHarnessSession(
   return {
     hook,
     async tool(name, input, perform) {
-      const id = `toolu_${req.runId}_${++counter}`;
+      // The generation keeps ids unique across a resume, as a real harness's are.
+      const id = `toolu_${req.runId}_g${req.generation ?? 1}_${++counter}`;
       const base = { tool_name: name, tool_input: input, tool_use_id: id };
       const verdict = await hook('PreToolUse', base);
       emit({ type: 'tool_call', call_id: id, name, input });

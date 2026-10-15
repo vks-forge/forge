@@ -11,8 +11,10 @@
  *   resolves the user's installed `claude` and, for an API key or OAuth token harness,
  *   reads that credential from the SecretStore into this run's child env only; a missing
  *   install or credential fails the start before anything is spawned (d-0087). A run's handle is
- *   serialisable; the live state is kept in this process only, because a Forge restart
- *   kills in-flight runs (d-0054).
+ *   serialisable; the live state is kept in this process only. A Forge restart does not end
+ *   a run: the Director starts it again with `req.resume` (the saved session) and a new
+ *   `req.generation`, and `start` prepares it from scratch (new token, a hook config with the
+ *   new server URL and port, d-0092), so nothing about a resume needs the old process.
  *
  * Exports: createClaudeDriver(), CONTINUE_PROMPT.
  * Depends on: @forge/core (RunRequest, InvalidInputError, port types), run-supervisor,

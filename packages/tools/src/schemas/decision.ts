@@ -47,6 +47,7 @@ export const ReasonCode = z.enum([
   'fail_closed_unknown_run',
   'fail_closed_no_credentials',
   'fail_closed_bad_token',
+  'fail_closed_stale_generation',
   'fail_closed_bad_request',
   'fail_closed_inactive_run',
   'fail_closed_no_liveness',

@@ -26,7 +26,9 @@ export function findViolations(input: InvariantInput): Violation[] {
       const run =
         t.assignee_run_id === undefined ? undefined : input.runs.get(t.assignee_run_id);
 
-      const live = run !== undefined && isRunActive(run);
+      const live =
+        run !== undefined && (isRunActive(run) || run.status === 'interrupted');
+
       if (
         !live &&
         !input.pendingInteractionTickets.has(t.id) &&

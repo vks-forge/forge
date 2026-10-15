@@ -2,14 +2,15 @@
  * Scenario: server restart, wake idempotency, the re-wake cap and the invariant check.
  *
  * Why: these are the Director's guards against silent loss and runaway loops. After a
- *   restart every in-flight run is dead because its per-run secret lived only in memory
- *   (d-0054), so reconcile must crash-settle them, revoke their tokens and queue a retry
- *   instead of leaving tickets assigned to nothing. Wakes must be idempotent, a ticket may
+ *   restart every run the old server left behind is either resumed from its harness session
+ *   (resume-restart.test.ts, d-0092) or, with no session to resume from, dead: reconcile must
+ *   crash-settle it, revoke its token and queue a retry instead of leaving tickets assigned to
+ *   nothing. Wakes must be idempotent, a ticket may
  *   get at most 3 recovery wakes an hour, and a run that reported done is never re-woken
  *   (director-core.md §3). When the engine cannot explain why an open ticket is idle it
  *   must say so, not guess.
  *
- * Pins: restart crash-settles foreign runs, revokes tokens, queues a retry wake, and the
+ * Pins: restart crash-settles foreign runs that never reported a session, revokes tokens, queues a retry wake, and the
  *   new owner's retry is a new run with retry_of; own runs are untouched; duplicate wakes
  *   coalesce; the 4th recovery wake in an hour parks the ticket; a stray wake for a ticket
  *   whose run succeeded starts nothing; violations are returned, logged and left alone.
@@ -24,7 +25,7 @@ import { makeResult } from '#tests/helpers/scripted-driver.js';
 
 const FAR = '9999-12-31T23:59:59.999Z';
 
-describe('restart reconcile (d-0054)', () => {
+describe('restart reconcile of a run with no session', () => {
   it('crash-settles runs owned by a previous server, revokes tokens and retries under the new owner', async () => {
     const rig = await makeRig();
     const id = await rig.request('x');

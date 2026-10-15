@@ -66,7 +66,7 @@ export interface HarnessWiring {
 
 /** What the driver factory is given to build a WorkerDriver for this server. */
 export interface DriverFactoryDeps extends HarnessWiring {
-  /** Creates the run directory, registers the token and secret, returns the MCP entry and hook URL. */
+  /** Creates the run directory, registers the token and secret (and the resume link for a resumed run), returns the MCP entry and hook URL. */
   readonly prepareRun: (req: RunRequest) => Promise<PreparedRun>;
   /** Read access to the receipt chain the hook route writes. */
   readonly receipts: ReceiptLookup;
@@ -132,7 +132,7 @@ export interface Ticker {
 }
 
 export interface ForgeServer {
-  /** This instance's owner id; runs owned by another id are crashed at the first tick. */
+  /** This instance's owner id; runs owned by another id are resumed or crash-settled at the first tick. */
   readonly owner: string;
   readonly storage: StorageAdapter;
   readonly receipts: ReceiptLog;
@@ -166,8 +166,8 @@ export interface ShutdownParts {
   /** Stops the polling of polled ticket sources; absent in tests that have none. */
   readonly stopPolling?: () => Promise<void> | void;
   readonly engine: Engine;
-  /** Cancels one live run on the driver that started it. */
-  readonly cancelRun: (runId: string) => Promise<void>;
+  /** Marks one live run interrupted for the next start to resume, and stops its harness. */
+  readonly interruptRun: (runId: string) => Promise<void>;
   readonly storage: StorageAdapter;
   /** Ends open event streams so the port can close. */
   readonly endStreams: () => void;

@@ -79,6 +79,7 @@ beforeEach(async () => {
     answerInteraction: vi.fn(async () => true),
     cancelTicket: vi.fn(),
     explainWait: vi.fn(async () => null),
+    interruptRun: vi.fn(),
     liveRunIds: vi.fn(() => ['run-a', 'run-b']),
     gateJobsInFlight: vi.fn(() => 1),
   };

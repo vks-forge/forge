@@ -21,6 +21,7 @@ export * from '#/domain/data-home-floor.js';
 export * from '#/domain/floors.js';
 export * from '#/domain/grants.js';
 export * from '#/domain/lane-defaults.js';
+export * from '#/domain/receipt-verify.js';
 export * from '#/domain/receipts.js';
 export * from '#/domain/rules.js';
 export * from '#/domain/shell-allowlist.js';

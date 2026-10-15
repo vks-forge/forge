@@ -23,6 +23,8 @@ export interface ChainView {
   readonly last: Receipt | null;
   /** `seq` of the last decision, 0 for an empty chain. */
   readonly lastSeq: number;
+  /** Secret generation the chain is in: 1, plus one per `resumed` receipt (d-0100). */
+  readonly generation: number;
   /** Decision with this id that has no effect receipt yet. */
   openDecision(id: string): DecisionReceipt | null;
   /** Most recent decision for `tool` that has no effect receipt yet. */
@@ -39,6 +41,6 @@ export interface ReceiptLog {
     runId: string,
     build: (view: ChainView) => readonly Receipt[],
   ): Promise<readonly Receipt[]>;
-  /** The run's receipts in chain order (decisions and effects interleaved as written). */
+  /** The run's receipts in chain order (decisions, effects and `resumed` links as written). */
   list(runId: string): Promise<readonly Receipt[]>;
 }

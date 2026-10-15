@@ -8,14 +8,17 @@
  *   writes and reads symmetric: `finding_ids` is JSON text, `rule_id` is the matched
  *   rule, `resource` is what the call touched (NULL when none could be named),
  *   `parent_call_id` has no receipt field yet and stays NULL, and `chain_seq` is
- *   the position in the run's chain across both tables (tool-system.md §10).
+ *   the position in the run's chain across the three tables (tool-system.md §10). A `resumed`
+ *   receipt (the join between two run secret generations, d-0100) lives in `receipt_resumes`;
+ *   decisions and effects also record the `generation` they were written in, which is storage
+ *   metadata read from the chain position, not part of the MAC.
  *
- * Exports: insertReceipt(), decisionFromRow(), effectFromRow(), DECISION_COLUMNS,
- *   EFFECT_COLUMNS.
+ * Exports: insertReceipt(), decisionFromRow(), effectFromRow(), resumedFromRow(),
+ *   DECISION_COLUMNS, EFFECT_COLUMNS, RESUMED_COLUMNS.
  * Depends on: @forge/tools (receipt schemas), shared/json, types/storage-driver.types.
  */
 
-import { DecisionReceipt, EffectReceipt } from '@forge/tools';
+import { DecisionReceipt, EffectReceipt, ResumedReceipt } from '@forge/tools';
 import type { Receipt } from '@forge/tools';
 import { parseStored } from '#/shared/db-errors.js';
 import { fromJson, toJson } from '#/shared/json.js';
@@ -26,6 +29,8 @@ export const DECISION_COLUMNS =
 
 export const EFFECT_COLUMNS =
   'decision_id, run_id, chain_seq, state, result_hash, result_ref, duration_ms, cost_usd, checkpoint_ref, ts, prev_hash, hash';
+
+export const RESUMED_COLUMNS = 'run_id, generation, chain_seq, ts, prev_hash, hash';
 
 /** Rebuilds (and re-validates) a decision receipt from a `tool_decisions` row. */
 export function decisionFromRow(row: SqlRow): DecisionReceipt {
@@ -78,16 +83,45 @@ export function effectFromRow(row: SqlRow): EffectReceipt {
   );
 }
 
-/** Inserts one receipt at chain position `chainSeq` for `runId`; throws on any constraint. */
+/** Rebuilds (and re-validates) a `resumed` receipt from a `receipt_resumes` row. */
+export function resumedFromRow(row: SqlRow): ResumedReceipt {
+  return parseStored(
+    ResumedReceipt,
+    {
+      kind: 'resumed',
+      run_id: row['run_id'],
+      generation: row['generation'],
+      ts: row['ts'],
+      prev_hash: row['prev_hash'],
+      hash: row['hash'],
+    },
+    'resumed receipt',
+  );
+}
+
+/**
+ * Inserts one receipt at chain position `chainSeq` for `runId`, written in secret
+ * `generation`; throws on any constraint.
+ */
 export function insertReceipt(
   driver: SqlDriver,
   runId: string,
   chainSeq: number,
+  generation: number,
   r: Receipt,
 ): void {
+  if (r.kind === 'resumed') {
+    driver.run(
+      `INSERT INTO receipt_resumes (${RESUMED_COLUMNS}) VALUES (${placeholders(6)})`,
+      [r.run_id, r.generation, chainSeq, r.ts, r.prev_hash, r.hash],
+    );
+
+    return;
+  }
+
   if (r.kind === 'decision') {
     driver.run(
-      `INSERT INTO tool_decisions (${DECISION_COLUMNS}) VALUES (${placeholders(20)})`,
+      `INSERT INTO tool_decisions (${DECISION_COLUMNS}, generation) VALUES (${placeholders(21)})`,
       [
         r.id,
         runId,
@@ -109,6 +143,7 @@ export function insertReceipt(
         r.prev_hash,
         r.hash,
         chainSeq,
+        generation,
       ],
     );
 
@@ -116,7 +151,7 @@ export function insertReceipt(
   }
 
   driver.run(
-    `INSERT INTO tool_effects (${EFFECT_COLUMNS}) VALUES (${placeholders(12)})`,
+    `INSERT INTO tool_effects (${EFFECT_COLUMNS}, generation) VALUES (${placeholders(13)})`,
     [
       r.decision_id,
       runId,
@@ -130,6 +165,7 @@ export function insertReceipt(
       r.ts,
       r.prev_hash,
       r.hash,
+      generation,
     ],
   );
 }

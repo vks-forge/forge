@@ -1,13 +1,14 @@
 /**
- * Graceful shutdown: cancel live runs, bound every wait, close the doors.
+ * Graceful shutdown: interrupt live runs, bound every wait, close the doors.
  *
  * Why: a stopped server must not leave Workers running unobserved or the database open
  *   under a half-finished write, and Ctrl-C must never hang. The tick is asked to stop
  *   first (nothing new is scheduled) but is not awaited yet: a tick in flight may itself be
- *   waiting on a Worker run, so waiting for it before cancelling would deadlock shutdown.
- *   Live runs are cancelled through the driver (a restart kills runs anyway, d-0054; the
- *   next start's reconcile settles them as crashes). Only then does the tick get a bounded
- *   time to finish, and the runs it started in the meantime are cancelled too. Gate jobs
+ *   waiting on a Worker run, so waiting for it before stopping runs would deadlock shutdown.
+ *   Live runs are interrupted, not cancelled: each is marked `interrupted` with its harness
+ *   session and its harness is stopped, so the next start resumes it instead of crashing it
+ *   and the Worker keeps its worktree and conversation (d-0092). Only then does the tick get
+ *   a bounded time to finish, and the runs it started in the meantime are interrupted too. Gate jobs
  *   get what is left of the same grace window, because a merge decided on a passed gate
  *   should not be lost to a Ctrl-C, but a hung gate must not hold the process. Last, the
  *   HTTP port, the harness resources and the database close. Every step is best effort and
@@ -15,7 +16,7 @@
  *
  * Exports: shutdownServer().
  * Depends on: @forge/core (WorkerDriver, StorageAdapter), @forge/engine (Engine, Logger),
- *   types/server. IO: cancels processes, closes the socket and the database.
+ *   types/server. IO: stops processes, closes the socket and the database.
  */
 
 import type { ShutdownParts } from '#/types/server.types.js';
@@ -51,37 +52,37 @@ export async function shutdownServer(parts: ShutdownParts): Promise<void> {
     }
   };
 
-  const cancelled = new Set<string>();
-  const cancelLiveRuns = async (): Promise<void> => {
-    const live = engine.liveRunIds().filter((id) => !cancelled.has(id));
-    live.forEach((id) => cancelled.add(id));
+  const interrupted = new Set<string>();
+  const interruptLiveRuns = async (): Promise<void> => {
+    const live = engine.liveRunIds().filter((id) => !interrupted.has(id));
+    live.forEach((id) => interrupted.add(id));
     if (live.length === 0) {
       return;
     }
 
-    log('info', `shutdown: cancelling ${live.length} live run(s)`);
-    const cancels = Promise.all(
-      live.map((runId) => step(`cancel ${runId}`, () => parts.cancelRun(runId))),
+    log('info', `shutdown: interrupting ${live.length} live run(s) for a resume`);
+    const stops = Promise.all(
+      live.map((runId) => step(`interrupt ${runId}`, () => parts.interruptRun(runId))),
     );
 
-    if (!(await within(remaining(), cancels))) {
-      log('warn', 'shutdown: cancel did not finish within the grace window');
+    if (!(await within(remaining(), stops))) {
+      log('warn', 'shutdown: interrupt did not finish within the grace window');
     }
   };
 
-  // Polled sources stop first so no new event is ingested while runs are being cancelled.
+  // Polled sources stop first so no new event is ingested while runs are being interrupted.
   await step('stop trigger polling', () => parts.stopPolling?.());
 
-  // Not awaited yet: see the header on why the tick must not gate the cancels.
+  // Not awaited yet: see the header on why the tick must not gate the interrupts.
   const tickStopped = step('stop ticker', () => parts.ticker.stop());
-  await cancelLiveRuns();
+  await interruptLiveRuns();
 
   if (!(await within(remaining(), tickStopped))) {
     log('warn', 'shutdown: a tick is still running; closing anyway');
   }
 
   // A tick that was mid-dispatch may have started runs after the first sweep.
-  await cancelLiveRuns();
+  await interruptLiveRuns();
 
   while (engine.gateJobsInFlight() > 0 && Date.now() < deadline) {
     await sleep(100);

@@ -22,11 +22,9 @@ import { dispatchReady } from '#/tick/dispatch.js';
 import { explainWait } from '#/tick/explain.js';
 import { answerInteraction, expireInteractions } from '#/tick/interactions.js';
 import { ingest } from '#/tick/intake.js';
-import {
-  cancelStalled,
-  crashForeignRuns,
-  settleFinishedPumps,
-} from '#/tick/reconcile.js';
+import { interruptRun } from '#/tick/interrupt.js';
+import { cancelStalled, settleFinishedPumps } from '#/tick/reconcile.js';
+import { reconcileRestart, resumeInterrupted } from '#/tick/restart.js';
 import { deliverReplies } from '#/tick/steering.js';
 import { beginTick, endTick, requestTick } from '#/tick/tick-requests.js';
 import { moveTicket } from '#/tick/ticket-moves.js';
@@ -43,6 +41,8 @@ function emptyReport(nowIso: string, firstTick: boolean): TickReport {
     at: nowIso,
     firstTick,
     crashed: [],
+    resumed: [],
+    resumeFailed: [],
     settled: [],
     triaged: [],
     dispatched: [],
@@ -91,9 +91,11 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
 
   const ctx: EngineCtx = { deps, state, report, config, now, nowIso: iso(now) };
   if (state.firstTick) {
-    await phase(ctx, 'restart reconcile', crashForeignRuns);
+    await phase(ctx, 'restart reconcile', reconcileRestart);
     state.firstTick = false;
   }
+
+  await phase(ctx, 'resume interrupted runs', resumeInterrupted);
 
   await phase(ctx, 'settle runs', settleFinishedPumps);
   await phase(ctx, 'stall scan', cancelStalled);
@@ -174,6 +176,7 @@ export function createEngine(deps: EngineDeps): Engine {
       return true;
     },
     explainWait: (ticketId) => explainWait(deps, state, ticketId),
+    interruptRun: (runId) => interruptRun(deps, state, runId),
     liveRunIds: () => [...state.pumps.keys()],
     gateJobsInFlight: () =>
       [...state.gateJobs.values()].filter((j) => j.outcome === undefined).length,

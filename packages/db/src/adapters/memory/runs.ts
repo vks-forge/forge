@@ -22,7 +22,11 @@ import {
 } from '@forge/core';
 import type { RunEventRepository, RunInboxRepository, RunRepository } from '@forge/core';
 import { insertUnique, withoutUndefined } from '#/adapters/memory/rows.js';
-import { assertNotReopened, parseRunPatch } from '#/shared/patches.js';
+import {
+  assertInterruptMove,
+  assertNotReopened,
+  parseRunPatch,
+} from '#/shared/patches.js';
 import { normaliseRunEvent } from '#/shared/run-event.js';
 import type { MemoryState } from '#/types/memory-state.types.js';
 
@@ -45,7 +49,7 @@ export function memoryRuns(state: MemoryState): RunRepository {
     },
     async insert(run) {
       const r = Run.parse(run);
-      insertUnique(state.runs, r.id, r, 'run');
+      insertUnique(state.runs, r.id, { ...r, generation: r.generation ?? 1 }, 'run');
     },
     async update(id, patch) {
       const current = state.runs.get(id);
@@ -55,6 +59,7 @@ export function memoryRuns(state: MemoryState): RunRepository {
 
       const parsed = parseRunPatch(patch);
       assertNotReopened(id, current.ended_at !== undefined, parsed);
+      assertInterruptMove(id, current.status, parsed);
       state.runs.set(id, withoutUndefined(Run.parse({ ...current, ...parsed })));
     },
   };

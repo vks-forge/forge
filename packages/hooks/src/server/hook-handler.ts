@@ -17,7 +17,10 @@
  *   uses, so a gate matching a Worker's claim sees the string policy judged. A run that
  *   is no longer active (`isRunActive`: ended, settling, settled) gets no receipts at all,
  *   so a late or replayed post cannot extend a finished run's chain (d-0033,
- *   tool-system.md §10, verification-plane.md §2). When liveness is required, a tool call
+ *   tool-system.md §10, verification-plane.md §2). A run that was interrupted by a restart is
+ *   not active until its resume makes it `running` again under a new generation, token and
+ *   secret; a call carrying the old generation's credentials is refused as `stale_generation`
+ *   and the old token as `bad_token` (d-0092, d-0100). When liveness is required, a tool call
  *   from a run whose SessionStart never registered is denied: a harness that skipped one
  *   hook cannot be assumed to run the other (d-0033).
  *
@@ -191,6 +194,12 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
           await audit(run.id, 'bad_token').catch(() => undefined);
 
           return failed('bad_token');
+        }
+
+        // A resume bumps the run's generation and registers a new token; credentials of
+        // another generation belong to a Worker that has been replaced (d-0100).
+        if (creds.generation !== (run.generation ?? 1)) {
+          return failed('stale_generation');
         }
 
         // After the token, so only the run's own Worker learns that the run is over.

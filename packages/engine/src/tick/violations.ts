@@ -24,7 +24,10 @@ export async function checkInvariants(ctx: EngineCtx): Promise<void> {
     ];
 
     const runs = new Map(
-      (await tx.runs.listByStatus(['starting', 'running'])).map((r) => [r.id, r]),
+      (await tx.runs.listByStatus(['starting', 'running', 'interrupted'])).map((r) => [
+        r.id,
+        r,
+      ]),
     );
 
     const pending = await tx.interactions.listPending();

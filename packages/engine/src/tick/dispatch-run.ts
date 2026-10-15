@@ -19,7 +19,7 @@
  */
 
 import { DispatchPromptOutput, branchName } from '@forge/core';
-import type { Interaction, Run, RunRequest, Ticket, WorkerDriver } from '@forge/core';
+import type { Interaction, Run, Ticket, WorkerDriver } from '@forge/core';
 import { sha256Hex } from '@forge/tools';
 import { familyOf, failureResult } from '#/domain/results.js';
 import { renderWorkerContract, workerContract } from '#/domain/worker-contract.js';
@@ -28,6 +28,7 @@ import { parkForHarness } from '#/tick/dispatch-park.js';
 import { baseRefFor, driverFor, runtimeFor } from '#/tick/project-runtime.js';
 import { configVersionRef } from '#/tick/tick-config.js';
 import { startPump } from '#/tick/pump.js';
+import { buildRunRequest } from '#/tick/run-request.js';
 import { settleRun } from '#/tick/settle.js';
 import { moveTicket } from '#/tick/ticket-moves.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
@@ -205,34 +206,21 @@ async function tryStart(
 
   state.baseShas.set(runId, wt.baseSha);
 
-  const { forge } = ctx.config;
-  const b = forge.engine.run_budget;
   const resumeSession =
     // A session belongs to the harness that made it: a fallback harness starts fresh.
     c.kind === 'resume' && driver.capabilities().resume && previous?.harness === driver.id
       ? previous?.session_ref
       : undefined;
 
-  const req: RunRequest = {
+  const req = buildRunRequest(ctx, {
     runId,
-    projectId: ticket.project,
-    lane: ticket.lane,
-    promptHash,
-    mcpIdentity: deps.mcpIdentity ?? 'forge',
-    ticketId: ticket.id,
+    ticket,
     cwd: wt.path,
     prompt,
-    model: forge.models.worker[ticket.lane],
-    budget: {
-      maxTurns: b.max_turns,
-      maxUsd: b.max_usd,
-      stallMs: forge.engine.stall_ms,
-      turnMs: b.turn_ms,
-    },
+    promptHash,
+    token,
     ...(resumeSession ? { resume: resumeSession } : {}),
-    env: { FORGE_RUN_TOKEN: token, FORGE_TICKET: ticket.id },
-    isolation: 'host',
-  };
+  });
 
   let handle;
   try {
