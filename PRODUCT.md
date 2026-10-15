@@ -87,7 +87,7 @@ account, so code a Worker writes (a test, a script) can read Forge's data
 folder, including the install token and secrets. The tool policy floor
 guards tool arguments, not the operating system; real isolation (a separate
 low-privilege account, or WSL2/container) is the first item after the
-realignment (d-0117, d-0005). The rework path has not run live.
+realignment (d-0117, d-0005).
 
 ## Roadmap
 
@@ -104,6 +104,7 @@ realignment (d-0117, d-0005). The rework path has not run live.
 
 Newest first. One line per milestone.
 
+- 2026-10-15 — B13: live rework probe; pnpm probes runs single probes.
 - 2026-10-15 — B9: runs survive a restart — interrupted runs resume with a new run secret; receipts verified across generations.
 - 2026-10-15 — B11: fair scheduling across projects — priority, per-project and per-harness limits, quota waits.
 - 2026-10-15 — B5: project checks by role for any language; gate rules per ecosystem.

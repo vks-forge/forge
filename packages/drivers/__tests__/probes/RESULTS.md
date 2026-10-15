@@ -1,6 +1,6 @@
 # Slice 2 preflight probe results
 
-Run with `pnpm probes` (sets `FORGE_PROBES=1`). Host: Windows 11, Node 24.20, subscription auth,
+Run with `pnpm probes` (sets `FORGE_PROBES=1`, runs serially). `pnpm probes probe10` runs only the files whose path contains `probe10`; flags use the `--flag=value` form. Host: Windows 11, Node 24.20, subscription auth,
 `@agentclientprotocol/claude-agent-acp@0.89.1`, `@agentclientprotocol/sdk@1.8.0`.
 All 16 probe tests passed in the 2026-10-13 runs (probes 1-7; probe 8 lives in `apps/server` and is recorded below; after the two assertion updates noted under probes 1 and 5). Every child run strips `CLAUDECODE` and
 `CLAUDE_CODE_ENTRYPOINT` from its env.
@@ -265,6 +265,14 @@ Re-run after the fixes (HEAD 52a41f9 plus the working-tree changes, `pnpm build`
 shell line), the Worker called `mcp__forge__finish` once with `edited` claims for both files, `added_test` and `ran_tests`.
 Worker cost 0.24, 0.10 and 0.10 USD. The rework path (claims backed by an earlier run's receipts) is covered by unit tests,
 not exercised live, because no run needed a rework.
+
+## Probe 11: the rework path on the real Claude harness (server) - PASS (2026-10-15, B13)
+
+`apps/server/__tests__/probes/probe11-rework.test.ts`, `pnpm probes probe11`, 349 s, Worker cost 0.088 + 0.071 USD (Express lane, tiny repo). The project adds a `custom` check (`verify`) that runs a script beside the repository; the script reads the export it demands (`BATCH_LIMIT = 7`) from a file in the data home, so the ticket text cannot hint at it and the first attempt cannot pass.
+
+- Run 1 finished with claims; G1 failed on the `verify` check and its report named `BATCH_LIMIT = 7`. The ticket went back to `in_progress` with `rework_count` 1.
+- Run 2 (rework prompt carrying the gate findings) added `export const BATCH_LIMIT = 7`, claimed its edits, G1 passed, the ticket merged and is `done`; the bare remote's `main` holds the constant.
+- Two fixture lessons, both real behaviour of the product: (1) the first try ran the check as `npm test && node ...`; a compound command is denied on the unattended Express lane, so the Worker could not verify and parked the ticket with `report_blocked` after making the fix. A check the Worker is meant to run must be one plain command. (2) A check command naming the data home is refused by the floor, and G1's findings quote the check command, so the script sits beside the repository and only the expected value lives in the data home.
 
 ## Differences from the design docs
 

@@ -3,7 +3,7 @@
  *
  * Why: The probes spend subscription tokens, so they are skipped unless FORGE_PROBES=1. Operators need one portable command that opts in and propagates vitest's exit code, without adding a cross-platform env dependency. Live probes run the compiled hook client (`bin/hook.js` loads `dist/`), so a probe run on a cleaned tree fails in confusing ways (the hook never reaches the server); the script therefore runs an incremental `tsc -b` first unless `--no-build` is given. It launches vitest through `node` on its own JS entry (no `pnpm.cmd`, no shell), because Node refuses to spawn `.cmd` files without a shell on Windows (CVE-2024-27980) and a shell would re-parse the forwarded arguments.
  *
- * Exports: none (script). Usage: `pnpm probes [vitest args]`; `--dry` prints the commands and exits without spawning (and without spending anything); `--no-build` skips the `tsc -b` step.
+ * Exports: none (script). Usage: `pnpm probes [probe-name ...] [vitest flags]`. Positional arguments select probes: `pnpm probes probe10` runs only the files whose path contains `probe10`; no positional argument runs every file under `__tests__/probes`. Flags go to vitest and must use the `--flag=value` form (a bare word is a probe filter). Probes run serially (`--maxWorkers=1 --no-file-parallelism`) unless you pass your own value, because parallel live probes miss the 10 s hook deadline. `--dry` prints the commands and exits without spawning (and without spending anything); `--no-build` skips the `tsc -b` step.
  * Depends on: node:child_process, node:module, node:path, typescript and vitest (their bin files). IO: spawns tsc and vitest.
  */
 
@@ -24,11 +24,19 @@ const tscEntry = require.resolve('typescript/bin/tsc');
 const args = process.argv.slice(2);
 const dry = args.includes('--dry');
 const build = !args.includes('--no-build');
+const forwarded = args.filter((a) => a !== '--dry' && a !== '--no-build');
+const filters = forwarded.filter((a) => !a.startsWith('-'));
+const flags = forwarded.filter((a) => a.startsWith('-'));
+const ownParallelism = flags.some((a) =>
+  /^--(maxWorkers|no-file-parallelism|file-parallelism)/.test(a),
+);
+
 const vitestArgs = [
   vitestEntry,
   'run',
-  '__tests__/probes',
-  ...args.filter((a) => a !== '--dry' && a !== '--no-build'),
+  ...(filters.length > 0 ? filters : ['__tests__/probes']),
+  ...(ownParallelism ? [] : ['--maxWorkers=1', '--no-file-parallelism']),
+  ...flags,
 ];
 
 const tscArgs = [tscEntry, '-b'];
