@@ -14,3 +14,12 @@ tags: [engine, agents, pipelines, config, customization]
 Today the engine hard-wires triage → Worker → verify → merge; adding a role
 means editing `packages/engine`. Grill session with the user on 2026-10-14
 refines this before a brief is written; answers are recorded as decisions.
+
+Note 2026-10-15 (orchestrator, from the B14 docs pass): superseded parts - the
+file shape (`.forge/agents/<name>.yaml`, `.forge/pipelines/<lane>.yaml`) and any
+signing or tier-C handling of those files are replaced by d-0085 (database rows
+with immutable versions, UI-only editing, company defaults + per-project
+overrides; d-0085 also supersedes d-0065 and d-0068). "Engine as a generic stage
+runner over ports" stands; definitions arrive through the `ConfigSource` port.
+Still open: pipeline graph, handoffs, per-agent budgets, replay and canary
+(d-0066 to d-0081); the engine does not read pipelines yet.
