@@ -1,5 +1,5 @@
 /**
- * The sample tickets of the mock adapter, as plain seed rows.
+ * The sample tickets of the component tests, as plain seed rows.
  *
  * Why: the Board needs a ticket in every column and the Ticket page needs the interesting
  *   cases (a question waiting, a live run, a failed gate, a rework). These are plainly
@@ -7,10 +7,10 @@
  *   validated by core's schemas.
  *
  * Exports: SEEDS, ago().
- * Depends on: types/mock.types.
+ * Depends on: helpers/forge-data/ticket-data.types.
  */
 
-import type { TicketSeed } from '#tests/helpers/fake-tickets/types.js';
+import type { TicketSeed } from '#tests/helpers/forge-data/ticket-data.types.js';
 
 const NOW = Date.now();
 

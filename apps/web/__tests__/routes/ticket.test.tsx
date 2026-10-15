@@ -6,16 +6,15 @@
  * Why: this is where a person unblocks work. A question that is easy to miss, an answer that
  *   vanishes when the network blips, or a stream that dies silently would leave a Worker
  *   parked with nobody knowing.
- * Depends on: the fake ticket server via helpers/render-app, routes/ticket/*, components/thread/*.
+ * Depends on: the stubbed Forge server and scripted run streams via helpers/render-app,
+ *   routes/ticket/*, components/thread/*.
  */
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-import { ApiError } from '#/api/api-error.js';
+import { describe, expect, it } from 'vitest';
+import { json, networkDown, refusal } from '#tests/helpers/fetch-stub.js';
 import { renderApp } from '#tests/helpers/render-app.js';
-import type { ForgeApi } from '#/types/api.types.js';
-import type { RunEventWatchOptions } from '#/types/sse.types.js';
 
 const ticketPath = (id: string) => `/p/sample-service/tickets/${id}`;
 
@@ -134,13 +133,9 @@ describe('answering the Worker', () => {
 
   it('brings the question back with the typed answer when the server refuses', async () => {
     const user = userEvent.setup();
-    const answer = vi
-      .fn()
-      .mockRejectedValue(new ApiError('network', 'Cannot reach the Forge server.'));
-
-    renderApp({
+    const { forge } = renderApp({
       path: ticketPath('SVC-4'),
-      wrapApi: (api): ForgeApi => ({ ...api, interactions: { answer } }),
+      routes: { 'POST /interactions/:id/answer': networkDown },
     });
 
     await user.type(await screen.findByLabelText('Your answer'), 'Use UTC');
@@ -148,20 +143,18 @@ describe('answering the Worker', () => {
 
     expect(await screen.findByText(/Your answer was not sent/)).toBeInTheDocument();
     expect(await screen.findByLabelText('Your answer')).toHaveValue('Use UTC');
-    expect(answer).toHaveBeenCalledWith('int-svc-4', 'Use UTC');
+    expect(forge.stub.callsTo('POST /interactions/:id/answer')).toMatchObject([
+      { path: '/interactions/int-svc-4/answer', body: { answer: 'Use UTC' } },
+    ]);
   });
 
   it('explains a 409 instead of inviting a pointless retry', async () => {
     const user = userEvent.setup();
-    const answer = vi
-      .fn()
-      .mockRejectedValue(
-        new ApiError('http', 'not pending', { status: 409, code: 'not_pending' }),
-      );
-
     renderApp({
       path: ticketPath('SVC-4'),
-      wrapApi: (api): ForgeApi => ({ ...api, interactions: { answer } }),
+      routes: {
+        'POST /interactions/:id/answer': refusal(409, 'not_pending', 'not pending'),
+      },
     });
 
     await user.type(await screen.findByLabelText('Your answer'), 'x');
@@ -172,50 +165,34 @@ describe('answering the Worker', () => {
 });
 
 describe('a lost or noisy stream', () => {
-  function streamStub() {
-    const handlers: RunEventWatchOptions[] = [];
-    const close = vi.fn();
-    const wrap = (api: ForgeApi): ForgeApi => ({
-      ...api,
-      runEvents: {
-        watch: (options) => {
-          handlers.push(options as RunEventWatchOptions);
-
-          return { close };
-        },
-      },
-    });
-
-    return { handlers, close, wrap };
-  }
-
   it('says reconnecting, then live again, and offers Reconnect after a failure', async () => {
     const user = userEvent.setup();
-    const { handlers, wrap } = streamStub();
-    renderApp({ path: ticketPath('SVC-3'), wrapApi: wrap });
+    const { forge } = renderApp({ path: ticketPath('SVC-3') });
     await screen.findByRole('log', { name: 'Worker messages' });
-    await waitFor(() => expect(handlers).toHaveLength(1));
-    const first = handlers[0]!;
-
-    first.onConnection?.('open');
     expect(await screen.findByText('Live')).toBeInTheDocument();
+    const [first] = forge.streams.sources;
 
-    first.onConnection?.('reconnecting');
+    // The browser gives up, and Forge then refuses the new stream ticket.
+    forge.stub.use({ 'POST /auth/sse-ticket': refusal(403, 'forbidden') });
+    first!.drop();
     expect(await screen.findByText(/Connection lost, reconnecting/)).toBeInTheDocument();
 
-    first.onError(new ApiError('network', 'Lost the live connection to Forge.'));
-    await user.click(await screen.findByRole('button', { name: 'Reconnect' }));
+    const reconnect = await screen.findByRole('button', { name: 'Reconnect' });
+    forge.stub.use({
+      'POST /auth/sse-ticket': json({ ticket: 'fresh', expires_in_s: 60 }),
+    });
 
-    await waitFor(() => expect(handlers).toHaveLength(2));
+    await user.click(reconnect);
+
+    await waitFor(() => expect(forge.streams.sources).toHaveLength(2));
+    expect(await screen.findByText('Live')).toBeInTheDocument();
   });
 
   it('skips an unreadable message with a notice and keeps the stream', async () => {
-    const { handlers, wrap } = streamStub();
-    renderApp({ path: ticketPath('SVC-3'), wrapApi: wrap });
-    await waitFor(() => expect(handlers).toHaveLength(1));
+    const { forge } = renderApp({ path: ticketPath('SVC-3') });
+    expect(await screen.findByText('Live')).toBeInTheDocument();
 
-    handlers[0]!.onConnection?.('open');
-    handlers[0]!.onError(new ApiError('payload', 'bad frame'));
+    forge.streams.sources[0]!.emit('text', { not: 'a run event' });
 
     expect(
       await screen.findByText(/could not be read and was skipped/),
@@ -225,12 +202,11 @@ describe('a lost or noisy stream', () => {
   });
 
   it('closes the stream when the user leaves the page', async () => {
-    const { handlers, close, wrap } = streamStub();
-    const { unmount } = renderApp({ path: ticketPath('SVC-3'), wrapApi: wrap });
-    await waitFor(() => expect(handlers).toHaveLength(1));
+    const { forge, unmount } = renderApp({ path: ticketPath('SVC-3') });
+    await waitFor(() => expect(forge.streams.sources).toHaveLength(1));
 
     unmount();
 
-    expect(close).toHaveBeenCalled();
+    expect(forge.streams.sources[0]!.closed).toBe(true);
   });
 });

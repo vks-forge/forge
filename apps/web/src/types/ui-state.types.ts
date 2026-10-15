@@ -1,14 +1,18 @@
 /**
- * Shapes of the small UI preferences kept in `src/state/`.
+ * Shapes of the UI preferences and drafts kept in `src/state/`.
  *
- * Why: board and thread preferences are read by several components and will move to
- *   persisted stores (d-0122); naming their shape once keeps that swap behind the hooks.
+ * Why: these are the preferences and drafts that persist across reloads (d-0122). Naming each
+ *   store's shape once lets the schemas that guard storage and the hooks that read it agree
+ *   on exactly what is saved.
  *
- * Exports: BoardPrefs, ThreadPrefs.
- * Depends on: types/board.types. Types only.
+ * Exports: BoardPrefs, ThreadPrefs, ThemePrefs, ProjectPrefs, AnswerDrafts, MemoryPrefs,
+ *   AuthorPrefs.
+ * Depends on: types/board.types, types/memory.types, types/nav.types. Types only.
  */
 
 import type { BoardFilter } from '#/types/board.types.js';
+import type { MemoryTab } from '#/types/memory.types.js';
+import type { ThemeMode } from '#/types/nav.types.js';
 
 export interface BoardPrefs {
   /** Cards arrive in W6; until then only `tickets` can be chosen. */
@@ -21,4 +25,33 @@ export interface ThreadPrefs {
   readonly followLatest: boolean;
   /** Open every tool call instead of collapsing it to one line. */
   readonly expandTools: boolean;
+}
+
+export interface ThemePrefs {
+  readonly mode: ThemeMode;
+}
+
+/** The project the user last worked in; a slug, never project data. */
+export interface ProjectPrefs {
+  readonly slug: string | null;
+}
+
+/** Unsent answer text by question id; cleared when the answer is sent. */
+export interface AnswerDrafts {
+  readonly drafts: Readonly<Record<string, string>>;
+}
+
+/** Memory screen choices that outlive a reload; the search text is deliberately not kept. */
+export interface MemoryPrefs {
+  /** `null` until the user picks a tab, so the screen can open on Proposals when answers wait. */
+  readonly chosen: {
+    readonly tab: MemoryTab;
+    readonly tags: readonly string[];
+    readonly activeOnly: boolean;
+  } | null;
+}
+
+/** The name recorded on settings saves; a label for the audit trail, not an identity. */
+export interface AuthorPrefs {
+  readonly author: string;
 }

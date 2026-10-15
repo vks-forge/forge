@@ -5,15 +5,15 @@
  *
  * Why: the owner decides what binds the Director from this screen. A rejected approach under
  * Decisions, an answer that appears saved when it was not, or a 130-row list that freezes
- * scrolling are each a loss of trust or of flow. Run against the mock adapter, which answers
- * like the real writer (ids kept, 409 on a second answer).
- * Depends on: routes/memory, mock adapter (zero latency), renderScreens.
+ * scrolling are each a loss of trust or of flow. Run over the stubbed Forge server, which
+ * answers like the real writer (ids kept, 409 on a second answer).
+ * Depends on: routes/memory, the stubbed Forge server (helpers/fake-forge), renderScreens.
  */
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { ApiError } from '#/api/api-error.js';
+import { json, networkDown, refusal } from '#tests/helpers/fetch-stub.js';
 import { renderScreens } from '#tests/helpers/render-screens.js';
 
 const PATH = '/p/sample-service/memory';
@@ -125,19 +125,15 @@ describe('memory', () => {
 
   it('puts the list back and says why when the server refuses an answer', async () => {
     const user = userEvent.setup();
-    renderScreens(PATH, (api) => ({
-      ...api,
-      memory: {
-        ...api.memory,
-        answer: () =>
-          Promise.reject(
-            new ApiError('http', 'x-0003 is not a pending proposal', {
-              status: 409,
-              code: 'not_a_pending_proposal',
-            }),
-          ),
+    renderScreens(PATH, {
+      routes: {
+        'POST /projects/:slug/memory/proposals/:id/approve': refusal(
+          409,
+          'not_a_pending_proposal',
+          'x-0003 is not a pending proposal',
+        ),
       },
-    }));
+    });
 
     await ready();
 
@@ -184,21 +180,14 @@ describe('memory', () => {
   });
 
   it('shows an empty state and an error state', async () => {
-    const empty = renderScreens(PATH, (api) => ({
-      ...api,
-      memory: { ...api.memory, list: () => Promise.resolve([]) },
-    }));
+    const empty = renderScreens(PATH, {
+      routes: { 'GET /projects/:slug/memory': json({ records: [] }) },
+    });
 
     expect(await screen.findByText('No decisions yet')).toBeInTheDocument();
     empty.unmount();
 
-    renderScreens(PATH, (api) => ({
-      ...api,
-      memory: {
-        ...api.memory,
-        list: () => Promise.reject(new ApiError('network', 'down')),
-      },
-    }));
+    renderScreens(PATH, { routes: { 'GET /projects/:slug/memory': networkDown } });
 
     expect(await screen.findByText('Cannot reach Forge')).toBeInTheDocument();
   });

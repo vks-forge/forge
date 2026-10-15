@@ -1,8 +1,7 @@
 /**
  * Shapes for the memory screen: the API port and the filter the list applies.
  *
- * Why: the memory screen reads and answers proposals through one port so the http adapter and
- *   the fixtures behave the same, and the list filter (tab, text, tag, status) is data the
+ * Why: the memory screen reads and answers proposals through one port, and the list filter (tab, text, tag, status) is data the
  *   URL and the tests can both name.
  *
  * Exports: MemoryApi, MemoryTab, MemoryFilter, MemoryAnswer.

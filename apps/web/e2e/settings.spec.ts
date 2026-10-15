@@ -1,13 +1,12 @@
 /**
- * Pins: in a real browser the four Forge settings screens render, a harness page loads its
- * sections, a settings field can be edited to reveal the save form, and none of them scrolls
+ * Pins: in a real browser the four Forge settings screens render, an empty harness list offers setup, a settings field can be edited to reveal the save form, and none of them scrolls
  * sideways, at 375 px (phone) and 1280 px (desktop).
  *
  * Why: forms with long labels, a two-column section layout and dialogs are exactly what
  *   overflows or hides behind other layers on a phone, and jsdom has no layout to show it.
- *   Fixture data is forced by the Playwright config, so no Forge server is needed.
+ *   The data is a real Forge server on a temporary data home.
  * Exports: none (Playwright spec).
- * Depends on: @playwright/test, the built app served by `vite preview`.
+ * Depends on: @playwright/test, the real server behind `vite preview`.
  */
 
 import { expect, test } from '@playwright/test';
@@ -30,36 +29,37 @@ for (const size of SIZES) {
   test.describe(`settings ${size.name} ${size.width}px`, () => {
     test.use({ viewport: { width: size.width, height: size.height } });
 
-    test('harness list and detail', async ({ page }) => {
+    test('harness list and setup link', async ({ page }) => {
       await page.goto('/settings/harnesses');
 
       await expect(
         page.getByRole('heading', { name: 'Harnesses', level: 1 }),
       ).toBeVisible();
 
-      await page.getByRole('link', { name: /claude/ }).click();
-
-      await expect(page.getByRole('heading', { name: 'claude', level: 1 })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Test harness' })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Approve shell' })).toBeVisible();
+      // A fresh server has no harness registered: the list says so and offers the setup link.
+      await expect(page.getByText('No harness is set up yet')).toBeVisible();
       await expectNoSidewaysScroll(page);
       await page.screenshot({
         path: `dist/e2e/harness-${size.name}.png`,
         fullPage: true,
       });
 
-      await page.getByRole('button', { name: 'Approve shell' }).click();
-      await expect(page.getByRole('alertdialog')).toBeVisible();
+      await page.getByRole('link', { name: 'Set up Claude Code' }).click();
+
+      // The setup page of the default harness opens its sign-in form before anything is saved.
+      await expect(page.getByRole('heading', { name: 'claude', level: 1 })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Sign-in', level: 2 }),
+      ).toBeVisible();
+
       await expectNoSidewaysScroll(page);
-      await page.keyboard.press('Escape');
-      await expect(page.getByRole('alertdialog')).toBeHidden();
     });
 
     test('github connections', async ({ page }) => {
       await page.goto('/settings/github');
 
-      await expect(page.getByRole('list', { name: 'GitHub connections' })).toBeVisible();
-      await page.getByRole('button', { name: 'Add connection' }).click();
+      await expect(page.getByText('No GitHub connection yet')).toBeVisible();
+      await page.getByRole('button', { name: 'Add connection' }).first().click();
       await expect(page.getByLabel('Private key (.pem)')).toBeVisible();
       await expectNoSidewaysScroll(page);
       await page.screenshot({ path: `dist/e2e/github-${size.name}.png`, fullPage: true });
@@ -80,7 +80,7 @@ for (const size of SIZES) {
       await page.goto('/settings/general');
 
       await expect(page.getByRole('heading', { name: 'Data folder' })).toBeVisible();
-      await expect(page.getByRole('list', { name: 'Settings history' })).toBeVisible();
+      await expect(page.getByText('No version has been saved yet.')).toBeVisible();
       await expectNoSidewaysScroll(page);
     });
   });

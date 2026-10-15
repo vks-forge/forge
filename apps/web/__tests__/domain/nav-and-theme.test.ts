@@ -1,10 +1,10 @@
 /**
  * Pins: URLs are built per project and per Forge settings, switching project keeps the same
- * screen, and the theme choice parses defensively and cycles system, light, dark.
+ * screen, and the theme toggle cycles system, light, dark.
  *
- * Why: the project switcher promises "same screen, other project" (d-0104) and a corrupted
- *   stored theme must fall back to the OS instead of breaking first paint. Both rules are tiny
- *   and every screen depends on them.
+ * Why: the project switcher promises "same screen, other project" (d-0104) and the theme
+ *   toggle must always move to a different mode. Both rules are tiny and every screen
+ *   depends on them.
  * Depends on: src/domain/nav-entries, src/domain/theme-mode. No IO.
  */
 
@@ -16,7 +16,7 @@ import {
   settingsPath,
   swapProjectSlug,
 } from '#/domain/nav-entries.js';
-import { describeThemeMode, nextThemeMode, parseThemeMode } from '#/domain/theme-mode.js';
+import { describeThemeMode, nextThemeMode } from '#/domain/theme-mode.js';
 
 describe('nav entries', () => {
   it('builds project and settings URLs', () => {
@@ -44,15 +44,6 @@ describe('nav entries', () => {
 });
 
 describe('theme mode', () => {
-  it('accepts only the three known modes', () => {
-    expect(parseThemeMode('dark')).toBe('dark');
-    expect(parseThemeMode('light')).toBe('light');
-    expect(parseThemeMode('system')).toBe('system');
-    expect(parseThemeMode('purple')).toBe('system');
-    expect(parseThemeMode(null)).toBe('system');
-    expect(parseThemeMode(undefined)).toBe('system');
-  });
-
   it('cycles system, light, dark and back', () => {
     expect(nextThemeMode('system')).toBe('light');
     expect(nextThemeMode('light')).toBe('dark');

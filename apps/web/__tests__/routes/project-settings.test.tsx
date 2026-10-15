@@ -6,9 +6,9 @@
  * Why: this screen changes how Workers behave on a project. The failures that hurt are
  * quiet ones: an inherited value saved as an override, a save that silently overwrites
  * someone else's newer version, edits lost on a stray click, a project archived without a
- * warning. Each is pinned here against the mock adapter, which merges and compare-and-swaps
+ * warning. Each is pinned here over the stubbed Forge server, which merges and compare-and-swaps
  * like the server.
- * Depends on: routes/project-settings, mock adapter (zero latency), renderApp, renderScreens.
+ * Depends on: routes/project-settings, the stubbed Forge server, renderApp, renderScreens.
  */
 
 import { screen, waitFor, within } from '@testing-library/react';

@@ -2,15 +2,15 @@
  * The ForgeApi port: what the screens can ask the Forge server, independent of where answers
  * come from.
  *
- * Why: some endpoints exist today and some are still being built on the server (build plan
- *   W3b to W8). Screens are written once against this port; each resource is served by the
- *   `http` adapter (the real server) or the `mock` adapter (typed fixtures) as chosen in
- *   one table, and moves to `http` the day its endpoint lands, with no screen edit.
+ * Why: the app talks only to the real Forge server (d-0123). Screens are written once
+ *   against this one interface; the `http` adapter is its only implementation, and the
+ *   interface exists so a screen reads the API from context (and a test can hand it a
+ *   different one) instead of importing the adapter. Which endpoint a method hits is the
+ *   adapter's business, never the screen's.
  *
- * Exports: HttpOnlyApis, HttpOnlyName, TabledName, TicketsApi, InteractionsApi, RunEventsApi, IntakeApi, TicketListParams, ChatIntake,
- *   ForgeApi, ForgeApiAdapter, ResourceApis, ProjectsApi, ResourceName, AdapterKind,
- *   AdapterTable, RequestOptions, HttpClientOptions, MockScenario, MockOptions, ComposeOptions,
- *   JsonRequest, ApiContextValue, ApiErrorKind.
+ * Exports: TicketsApi, InteractionsApi, RunEventsApi, IntakeApi, TicketListParams, ChatIntake,
+ *   ForgeApi, ResourceApis, ProjectsApi, ResourceName, RequestOptions, HttpClientOptions,
+ *   JsonRequest, ApiErrorKind.
  * Depends on: @forge/core, schemas/projects, schemas/tickets, types/sse.types (types only).
  */
 
@@ -72,19 +72,8 @@ export interface IntakeApi {
   chat(input: ChatIntake, options?: RequestOptions): Promise<IngestReply>;
 }
 
-/**
- * Resources that exist only on the real server: no fixture twin, so no adapter-table line
- * (d-0123).
- */
-export interface HttpOnlyApis {
-  readonly stats: StatsApi;
-  readonly cost: CostApi;
-  readonly inbox: InboxApi;
-  readonly runs: RunsApi;
-}
-
-/** One entry per resource the UI reads. Add a resource here first, then to the adapters and the table. */
-export interface ResourceApis extends HttpOnlyApis {
+/** One entry per resource the UI reads. Add a resource here first, then to the http adapter. */
+export interface ResourceApis {
   readonly projects: ProjectsApi;
   readonly harnesses: HarnessesApi;
   readonly github: GithubApi;
@@ -95,25 +84,16 @@ export interface ResourceApis extends HttpOnlyApis {
   readonly interactions: InteractionsApi;
   readonly runEvents: RunEventsApi;
   readonly intake: IntakeApi;
+  readonly stats: StatsApi;
+  readonly cost: CostApi;
+  readonly inbox: InboxApi;
+  readonly runs: RunsApi;
 }
 
 export type ResourceName = keyof ResourceApis;
 
-export type HttpOnlyName = keyof HttpOnlyApis;
-
-/** Resources the adapter table chooses for; the http-only ones are always real. */
-export type TabledName = Exclude<ResourceName, HttpOnlyName>;
-
 /** The complete API a screen sees. */
 export type ForgeApi = Readonly<ResourceApis>;
-
-/** What one adapter can serve; it need not cover every resource. */
-export type ForgeApiAdapter = Partial<ResourceApis>;
-
-export type AdapterKind = 'http' | 'mock';
-
-/** Which adapter serves each resource. */
-export type AdapterTable = Readonly<Record<TabledName, AdapterKind>>;
 
 /** How the http adapter reaches the server; `fetch` is injectable for tests. */
 export interface HttpClientOptions {
@@ -122,36 +102,10 @@ export interface HttpClientOptions {
   readonly fetch?: typeof globalThis.fetch;
 }
 
-/** What the mock adapter pretends the server holds. */
-export type MockScenario = 'ok' | 'empty' | 'error';
-
-export interface MockOptions {
-  readonly scenario?: MockScenario;
-  /** Inclusive latency range in ms; `[0, 0]` makes tests instant. */
-  readonly latencyMs?: readonly [number, number];
-  /** Injectable for deterministic tests. */
-  readonly random?: () => number;
-}
-
-/** Inputs of `composeApi()`; all come from dev/test build flags, none from the user. */
-export interface ComposeOptions {
-  /** `'mock'` forces every resource to fixtures; anything else keeps the table. */
-  readonly forceApi?: string | undefined;
-  readonly mockScenario?: string | undefined;
-  readonly baseUrl?: string;
-  readonly fetch?: typeof globalThis.fetch;
-  readonly latencyMs?: readonly [number, number];
-}
-
 /** One JSON call to the server. */
 export interface JsonRequest extends RequestOptions {
   readonly method?: 'GET' | 'POST' | 'PUT' | 'PATCH';
   readonly body?: unknown;
-}
-
-export interface ApiContextValue {
-  readonly api: ForgeApi;
-  readonly usesFixtures: boolean;
 }
 
 /** `network`: no answer; `http`: the server said no; `payload`: the answer did not match its schema. */

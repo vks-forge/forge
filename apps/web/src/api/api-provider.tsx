@@ -1,50 +1,30 @@
 /**
- * React context that hands the composed ForgeApi to every screen.
+ * React context that hands the ForgeApi to every screen.
  *
- * Why: components must not import an adapter, or tests and the fixture build could not swap
- *   the data source. They ask the context for the API (and for which resources are currently
- *   served from fixtures, so the shell can say so honestly).
+ * Why: components must not import the http adapter directly, or a test could not give a screen
+ *   an API wired to a stubbed `fetch`. They ask the context for the API instead; `main.tsx`
+ *   puts the real adapter there.
  *
- * Exports: ApiProvider, useForgeApi(), useDataSources().
- * Depends on: react, api/adapter-table, types/api.types.
+ * Exports: ApiProvider, useForgeApi().
+ * Depends on: react, types/api.types.
  */
 
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
-import { sourcesOf } from '#/api/adapter-table.js';
-import type { AdapterTable, ApiContextValue, ForgeApi } from '#/types/api.types.js';
+import type { ForgeApi } from '#/types/api.types.js';
 
-const ApiContext = createContext<ApiContextValue | null>(null);
+const ApiContext = createContext<ForgeApi | null>(null);
 
-export function ApiProvider(props: {
-  api: ForgeApi;
-  table: AdapterTable;
-  children: ReactNode;
-}) {
-  const { api, table, children } = props;
-  const value = useMemo(
-    () => ({ api, usesFixtures: sourcesOf(table).includes('mock') }),
-    [api, table],
-  );
-
-  return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;
+export function ApiProvider(props: { api: ForgeApi; children: ReactNode }) {
+  return <ApiContext.Provider value={props.api}>{props.children}</ApiContext.Provider>;
 }
 
-function useApiContext(): ApiContextValue {
+/** The API for this app; screens call `useForgeApi().projects.list()` through TanStack Query. */
+export function useForgeApi(): ForgeApi {
   const value = useContext(ApiContext);
   if (value === null) {
     throw new Error('useForgeApi() must be used inside <ApiProvider>.');
   }
 
   return value;
-}
-
-/** The API for this app; screens call `useForgeApi().projects.list()` through TanStack Query. */
-export function useForgeApi(): ForgeApi {
-  return useApiContext().api;
-}
-
-/** True while any resource is served from fixtures instead of the Forge server. */
-export function useDataSources(): { usesFixtures: boolean } {
-  return { usesFixtures: useApiContext().usesFixtures };
 }

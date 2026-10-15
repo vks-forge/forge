@@ -1,5 +1,5 @@
 /**
- * Scripted run streams for the mock adapter, by run id.
+ * Scripted run streams for component tests, by run id.
  *
  * Why: the live thread has to be seen working: messages, tool calls with results, permission
  *   decisions and denials, a question, a failure. A run whose script ends with `finish` or
@@ -7,11 +7,11 @@
  *   Events are parsed with core's `RunEvent`, so a script cannot drift from the real shape.
  *
  * Exports: streamScripts().
- * Depends on: @forge/core (RunEvent), api/mock/ticket-seeds.
+ * Depends on: @forge/core (RunEvent), helpers/forge-data/ticket-seeds.
  */
 
 import { RunEvent } from '@forge/core';
-import { ago } from '#tests/helpers/fake-tickets/seeds.js';
+import { ago } from '#tests/helpers/forge-data/ticket-seeds.js';
 
 function script(events: readonly Record<string, unknown>[]): RunEvent[] {
   return events.map((event, index) =>

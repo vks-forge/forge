@@ -6,13 +6,13 @@
  * Why: the Board is the first screen a user opens each day. A ticket in the wrong column, a
  *   card that is not a link (d-0116), a filter with no way back, or a silent failure would
  *   each cost trust at a glance.
- * Depends on: the mock adapter via helpers/render-app, routes/board/*.
+ * Depends on: the stubbed Forge server via helpers/render-app, routes/board/*.
  */
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { ApiError } from '#/api/api-error.js';
+import { json, networkDown } from '#tests/helpers/fetch-stub.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
 const BOARD = '/p/sample-service/board';
@@ -85,13 +85,7 @@ describe('Board', () => {
   it('says so when the project has no tickets, with the way to start', async () => {
     renderApp({
       path: BOARD,
-      wrapApi: (api) => ({
-        ...api,
-        tickets: {
-          ...api.tickets,
-          list: () => Promise.resolve({ items: [], nextCursor: null }),
-        },
-      }),
+      routes: { 'GET /projects/:slug/tickets': json({ items: [], nextCursor: null }) },
     });
 
     expect(await screen.findByText('No tickets yet')).toBeInTheDocument();
@@ -99,16 +93,7 @@ describe('Board', () => {
   });
 
   it('explains a failure and offers to try again', async () => {
-    renderApp({
-      path: BOARD,
-      wrapApi: (api) => ({
-        ...api,
-        tickets: {
-          ...api.tickets,
-          list: () => Promise.reject(new ApiError('network', 'down')),
-        },
-      }),
-    });
+    renderApp({ path: BOARD, routes: { 'GET /projects/:slug/tickets': networkDown } });
 
     expect(await screen.findByText('Cannot reach Forge')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();

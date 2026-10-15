@@ -11,7 +11,7 @@
 import { render, screen } from '@testing-library/react';
 import { useReducedMotionConfig } from 'motion/react';
 import { describe, expect, it } from 'vitest';
-import { composeApi } from '#/api/compose-api.js';
+import { createHttpAdapter } from '#/api/http/http-adapter.js';
 import { createQueryClient } from '#/api/query-client.js';
 import { AppProviders } from '#/components/app-providers.js';
 
@@ -21,10 +21,10 @@ function Probe() {
 
 describe('no reduced-motion preference', () => {
   it('keeps full motion inside the real app providers', () => {
-    const { api, table } = composeApi({ forceApi: 'mock' });
+    const api = createHttpAdapter({ baseUrl: '/api' });
 
     render(
-      <AppProviders api={api} table={table} queryClient={createQueryClient()}>
+      <AppProviders api={api} queryClient={createQueryClient()}>
         <Probe />
       </AppProviders>,
     );

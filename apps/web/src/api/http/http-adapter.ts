@@ -1,11 +1,10 @@
 /**
- * The `http` adapter: resources that have a real endpoint on the Forge server.
+ * The `http` adapter: the one implementation of `ForgeApi`, talking to the Forge server.
  *
- * Why: this is the only module that knows endpoint paths (tickets, interactions, the run
- *   event stream and chat intake included). Moving a resource from the mock to
- *   the real server means adding its method here and flipping one line in the adapter table;
- *   no screen changes. Only resources whose endpoint exists today are served (`projects`
- *   from `GET /projects`); the table refuses to start if it points at a resource missing here.
+ * Why: this is the only module that knows endpoint paths (projects, settings, memory, tickets,
+ *   interactions, the run event stream and chat intake). The app has no second data source
+ *   (d-0123), so a new screen means a new server endpoint plus its method here; the
+ *   `ForgeApi` type makes the compiler refuse an adapter that forgets a resource.
  *
  * Exports: createHttpAdapter().
  * Depends on: @forge/core (TicketListPage), api/http/request-json, api/sse/watch-run-events,
@@ -21,11 +20,7 @@ import { TicketListPage } from '@forge/core';
 import { watchRunEvents } from '#/api/sse/watch-run-events.js';
 import { ProjectsResponse } from '#/schemas/projects.js';
 import { AnswerReply, IngestReply, TicketDetail } from '#/schemas/tickets.js';
-import type {
-  ForgeApiAdapter,
-  HttpClientOptions,
-  TicketListParams,
-} from '#/types/api.types.js';
+import type { ForgeApi, HttpClientOptions, TicketListParams } from '#/types/api.types.js';
 
 /** `?limit=&cursor=&state=a,b` for the ticket list; absent options add nothing. */
 function ticketQuery(params: TicketListParams): string {
@@ -47,7 +42,7 @@ function ticketQuery(params: TicketListParams): string {
   return text === '' ? '' : `?${text}`;
 }
 
-export function createHttpAdapter(client: HttpClientOptions): ForgeApiAdapter {
+export function createHttpAdapter(client: HttpClientOptions): ForgeApi {
   return {
     ...createSettingsHttp(client),
     ...createWorkHttp(client),

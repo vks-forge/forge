@@ -4,10 +4,10 @@
  * (desktop).
  *
  * Why: layout bugs (overflowing sidebar, a menu hidden behind the page, horizontal scroll at
- *   320 to 768 px) only exist with real layout. Fixture data is forced by the Playwright
- *   config, so this proves the frame works without a Forge server.
+ *   320 to 768 px) only exist with real layout. The data is a real Forge server on a
+ *   temporary data home.
  * Exports: none (Playwright spec).
- * Depends on: @playwright/test, the built app served by `vite preview`.
+ * Depends on: @playwright/test, the real server behind `vite preview`.
  */
 
 import { expect, test } from '@playwright/test';
@@ -42,8 +42,8 @@ for (const size of SIZES) {
         await expect(page.getByRole('dialog', { name: 'Navigation' })).toBeVisible();
       }
 
-      await expect(page.getByRole('link', { name: 'Board' })).toBeVisible();
-      await page.getByRole('link', { name: 'Board' }).click();
+      await expect(page.getByRole('link', { name: 'Board', exact: true })).toBeVisible();
+      await page.getByRole('link', { name: 'Board', exact: true }).click();
       await expect(page).toHaveURL(/\/p\/sample-service\/board$/);
 
       if (size.width < 768) {

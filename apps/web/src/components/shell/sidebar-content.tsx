@@ -4,12 +4,10 @@
  * Why: the sidebar is the app's table of contents and has one job order (d-0104): project
  *   switcher on top, the current project's screens in the middle, Forge-wide settings at the
  *   foot, kept apart because they are not about any one project. Desktop shows it as a
- *   column and phones as a drawer; sharing this body means the two can never drift. A
- *   "Fixture data" mark appears whenever any resource is served from samples, so nobody
- *   mistakes sample projects for their own work.
+ *   column and phones as a drawer; sharing this body means the two can never drift.
  *
  * Exports: SidebarContent.
- * Depends on: lucide-react, api/api-provider, api/use-projects, domain/nav-entries,
+ * Depends on: lucide-react, api/use-projects, domain/nav-entries,
  *   state/current-project, components/shell/*.
  */
 
@@ -29,7 +27,6 @@ import {
   SquareKanban,
   type LucideIcon,
 } from 'lucide-react';
-import { useDataSources } from '#/api/api-provider.js';
 import { useInboxCounts } from '#/api/use-inbox.js';
 import { useProjects } from '#/api/use-projects.js';
 import { NavLinkItem } from '#/components/shell/nav-link-item.js';
@@ -62,7 +59,6 @@ const ICONS: Readonly<Record<string, LucideIcon>> = {
 export function SidebarContent() {
   const projects = useProjects();
   const slug = useCurrentSlug(projects.data);
-  const { usesFixtures } = useDataSources();
   const inbox = useInboxCounts(slug ?? '');
 
   return (
@@ -113,17 +109,7 @@ export function SidebarContent() {
             icon={ICONS[entry.segment] ?? Settings}
           />
         ))}
-        <div className="mt-1 flex items-center justify-between">
-          {usesFixtures ? (
-            <span
-              className="ml-2.5 rounded-md border border-line px-1.5 font-data text-[0.68rem] text-muted"
-              title="Samples, not your projects"
-            >
-              Fixture data
-            </span>
-          ) : (
-            <span />
-          )}
+        <div className="mt-1 flex items-center justify-end">
           <ThemeToggle />
         </div>
       </nav>

@@ -1,5 +1,5 @@
 /**
- * Sample tickets with their runs, gate results and questions, for the mock adapter.
+ * Sample tickets with their runs, gate results and questions, for component tests.
  *
  * Why: the Board and the Ticket page need every state to be seen and tested: a ticket in each
  *   column, one that waits on the user with a real question, one with a run that is still
@@ -9,13 +9,16 @@
  *   from the server's shape; a drift fails at load, not in front of a user.
  *
  * Exports: buildSampleTickets().
- * Depends on: @forge/core (Ticket, Run, GateResult, Interaction), api/mock/ticket-seeds,
- *   types/mock.types.
+ * Depends on: @forge/core (Ticket, Run, GateResult, Interaction), helpers/forge-data/ticket-seeds,
+ *   helpers/forge-data/ticket-data.types.
  */
 
 import { GateResult, Interaction, Run, Ticket } from '@forge/core';
-import { SEEDS, ago } from '#tests/helpers/fake-tickets/seeds.js';
-import type { SampleTicket, TicketSeed } from '#tests/helpers/fake-tickets/types.js';
+import { SEEDS, ago } from '#tests/helpers/forge-data/ticket-seeds.js';
+import type {
+  SampleTicket,
+  TicketSeed,
+} from '#tests/helpers/forge-data/ticket-data.types.js';
 
 const PROJECT_SLUG: Readonly<Record<string, string>> = {
   'fixture-1': 'sample-service',

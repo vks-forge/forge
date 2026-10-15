@@ -2,8 +2,7 @@
  * `useRunThread()`: follows one run's events and folds them into thread items.
  *
  * Why: the Ticket page shows a Worker working, live. The hook opens the run's event stream
- *   through the API port (so tests and the fixture build use a scripted stream, production
- *   the real SSE), folds each event with `applyEvent` (replays after a reconnect are
+ *   through the API port (the http adapter's server-sent events), folds each event with `applyEvent` (replays after a reconnect are
  *   ignored), and reports honestly whether the thread is connecting, live, reconnecting,
  *   over or lost, because a quiet run and a dead connection look the same on screen. A frame
  *   the page cannot read is a notice, not the end of the thread. The stream is closed on

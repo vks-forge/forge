@@ -19,18 +19,17 @@ import type { ReactNode } from 'react';
 import { ApiProvider } from '#/api/api-provider.js';
 import { ThemeProvider } from '#/state/theme-provider.js';
 import { UnsavedChangesProvider } from '#/state/unsaved-changes.js';
-import type { AdapterTable, ForgeApi } from '#/types/api.types.js';
+import type { ForgeApi } from '#/types/api.types.js';
 
 export function AppProviders(props: {
   api: ForgeApi;
-  table: AdapterTable;
   queryClient: QueryClient;
   children: ReactNode;
 }) {
   return (
     <MotionConfig reducedMotion="user">
       <ThemeProvider>
-        <ApiProvider api={props.api} table={props.table}>
+        <ApiProvider api={props.api}>
           <QueryClientProvider client={props.queryClient}>
             <UnsavedChangesProvider>{props.children}</UnsavedChangesProvider>
           </QueryClientProvider>

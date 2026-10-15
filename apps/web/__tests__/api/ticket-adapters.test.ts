@@ -1,21 +1,21 @@
 /**
  * Pins: the http adapter calls the real ticket, interaction and intake endpoints with the
- * right paths and bodies and validates answers; the mock adapter behaves like the server
- * (paging, state filter, 404, one-time answers, dedupe, scripted stream); the stream helper
- * reports connection state so a quiet run is not mistaken for a dead one.
+ * right paths and bodies and validates answers; the stubbed Forge server the screen tests
+ * run on behaves like the server (paging, state filter, 404, one-time answers, dedupe, scripted
+ * stream); the stream helper reports connection state so a quiet run is not mistaken for a
+ * dead one.
  *
  * Why: the Board and Ticket page are written once against the port. If the http adapter built
- *   a wrong URL the Board would silently show nothing; if the mock drifted from the server
- *   (an answer accepted twice) tests and the fixture build would teach the UI the wrong
- *   thing.
- * Depends on: src/api/http/http-adapter, src/api/mock/mock-adapter, src/api/sse/watch-run-events.
+ *   a wrong URL the Board would silently show nothing; if the stubbed server drifted
+ *   from the real one (an answer accepted twice) every screen test would teach the UI the
+ *   wrong thing.
+ * Depends on: src/api/http/http-adapter, src/api/sse/watch-run-events, helpers/fake-forge.
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { ApiError } from '#/api/api-error.js';
 import { createHttpAdapter } from '#/api/http/http-adapter.js';
-import { fakeTicketsFor } from '#tests/helpers/fake-tickets/fake-scenario.js';
-import type { ForgeApiAdapter } from '#/types/api.types.js';
+import { installFakeForge } from '#tests/helpers/fake-forge/fake-forge.js';
+import type { Scenario } from '#tests/helpers/fake-forge/fake-forge.js';
 
 const summary = {
   id: 'SVC-1',
@@ -41,7 +41,7 @@ describe('http adapter: tickets', () => {
       .fn()
       .mockResolvedValue(Response.json({ items: [summary], nextCursor: 'c2' }));
 
-    const page = await adapter(fetch).tickets!.list({
+    const page = await adapter(fetch).tickets.list({
       slug: 'a b',
       limit: 50,
       cursor: 'c1',
@@ -56,7 +56,7 @@ describe('http adapter: tickets', () => {
 
   it('adds no query when nothing narrows the list, and rejects a bad item', async () => {
     const ok = vi.fn().mockResolvedValue(Response.json({ items: [], nextCursor: null }));
-    await adapter(ok).tickets!.list({ slug: 'alpha' });
+    await adapter(ok).tickets.list({ slug: 'alpha' });
     expect(ok.mock.calls[0]?.[0]).toBe('/api/projects/alpha/tickets');
 
     const bad = vi
@@ -65,7 +65,7 @@ describe('http adapter: tickets', () => {
         Response.json({ items: [{ ...summary, state: 'bogus' }], nextCursor: null }),
       );
 
-    await expect(adapter(bad).tickets!.list({ slug: 'alpha' })).rejects.toMatchObject({
+    await expect(adapter(bad).tickets.list({ slug: 'alpha' })).rejects.toMatchObject({
       kind: 'payload',
     });
   });
@@ -80,7 +80,7 @@ describe('http adapter: tickets', () => {
         ),
       );
 
-    await expect(adapter(fetch).tickets!.get('SVC-9')).rejects.toMatchObject({
+    await expect(adapter(fetch).tickets.get('SVC-9')).rejects.toMatchObject({
       status: 404,
       code: 'ticket_not_found',
     });
@@ -91,7 +91,7 @@ describe('http adapter: tickets', () => {
       .fn()
       .mockResolvedValue(Response.json({ id: 'i1', status: 'answered' }));
 
-    await adapter(fetch).interactions!.answer('i1', 'UTC');
+    await adapter(fetch).interactions.answer('i1', 'UTC');
 
     const [url, init] = fetch.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('/api/interactions/i1/answer');
@@ -106,7 +106,7 @@ describe('http adapter: tickets', () => {
         Response.json({ status: 'ticket_created', ticketId: 'SVC-2' }, { status: 202 }),
       );
 
-    const reply = await adapter(fetch).intake!.chat({
+    const reply = await adapter(fetch).intake.chat({
       projectId: 'p1',
       text: 'Do it',
       dedupeKey: 'k1',
@@ -124,12 +124,8 @@ describe('http adapter: tickets', () => {
   });
 });
 
-describe('fake ticket server (test helper)', () => {
-  const mock = fakeTicketsFor as (
-    scenario?: 'ok' | 'empty' | 'error',
-  ) => Required<
-    Pick<ForgeApiAdapter, 'tickets' | 'interactions' | 'runEvents' | 'intake'>
-  >;
+describe('stubbed Forge server (test helper) through the http adapter', () => {
+  const mock = (scenario: Scenario = 'ok') => installFakeForge({ scenario }).api;
 
   it('pages with an opaque cursor and filters by state', async () => {
     const { tickets } = mock();
@@ -168,7 +164,7 @@ describe('fake ticket server (test helper)', () => {
     await expect(tickets.get('SVC-999')).rejects.toMatchObject({ status: 404 });
     await expect(
       mock('error').tickets.list({ slug: 'sample-service' }),
-    ).rejects.toBeInstanceOf(ApiError);
+    ).rejects.toMatchObject({ kind: 'network' });
 
     expect((await mock('empty').tickets.list({ slug: 'sample-service' })).items).toEqual(
       [],
@@ -216,40 +212,35 @@ describe('fake ticket server (test helper)', () => {
   });
 
   it('plays a finished run and ends, and keeps a live run open', async () => {
-    vi.useFakeTimers();
-    try {
-      const { runEvents } = mock();
-      const finished: number[] = [];
-      const ends: string[] = [];
-      const states: string[] = [];
-      runEvents.watch({
-        runId: 'run-svc-1',
-        onEvent: (e) => finished.push(e.seq),
-        onEnd: (s) => ends.push(s),
-        onError: () => undefined,
-        onConnection: (s) => states.push(s),
-      });
+    const { runEvents } = mock();
+    const finished: number[] = [];
+    const ends: string[] = [];
+    const states: string[] = [];
+    const first = runEvents.watch({
+      runId: 'run-svc-1',
+      onEvent: (e) => finished.push(e.seq),
+      onEnd: (s) => ends.push(s),
+      onError: () => undefined,
+      onConnection: (s) => states.push(s),
+    });
 
-      const live: number[] = [];
-      const liveEnds: string[] = [];
-      const watch = runEvents.watch({
-        runId: 'run-svc-3',
-        onEvent: (e) => live.push(e.seq),
-        onEnd: (s) => liveEnds.push(s),
-        onError: () => undefined,
-      });
+    const live: number[] = [];
+    const liveEnds: string[] = [];
+    const watch = runEvents.watch({
+      runId: 'run-svc-3',
+      onEvent: (e) => live.push(e.seq),
+      onEnd: (s) => liveEnds.push(s),
+      onError: () => undefined,
+    });
 
-      await vi.advanceTimersByTimeAsync(50);
+    await vi.waitFor(() => expect(ends).toEqual(['success']));
+    await vi.waitFor(() => expect(live.length).toBeGreaterThan(3));
 
-      expect(finished.length).toBeGreaterThan(3);
-      expect(ends).toEqual(['success']);
-      expect(states).toEqual(['connecting', 'open']);
-      expect(live.length).toBeGreaterThan(3);
-      expect(liveEnds).toEqual([]);
+    expect(finished.length).toBeGreaterThan(3);
+    expect(states).toEqual(['connecting', 'open']);
+    expect(liveEnds).toEqual([]);
 
-      watch.close();
-    } finally {
-      vi.useRealTimers();
-    }
+    first.close();
+    watch.close();
   });
 });

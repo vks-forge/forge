@@ -21,7 +21,7 @@ import {
   RunListPage,
 } from '@forge/core';
 import { requestJson } from '#/api/http/request-json.js';
-import type { HttpClientOptions, HttpOnlyApis } from '#/types/api.types.js';
+import type { HttpClientOptions, ResourceApis } from '#/types/api.types.js';
 import type { QueryParams } from '#/types/work-api.types.js';
 
 const enc = encodeURIComponent;
@@ -45,7 +45,9 @@ function query(params: QueryParams): string {
   return text === '' ? '' : `?${text}`;
 }
 
-export function createWorkHttp(client: HttpClientOptions): HttpOnlyApis {
+export function createWorkHttp(
+  client: HttpClientOptions,
+): Pick<ResourceApis, 'stats' | 'cost' | 'inbox' | 'runs'> {
   const project = (slug: string, rest: string): string => `/projects/${enc(slug)}${rest}`;
 
   return {

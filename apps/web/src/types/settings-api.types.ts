@@ -3,8 +3,8 @@
  *
  * Why: the Harnesses, GitHub, Limits and General screens read and change things that matter
  *   (a login, a credential, a concurrency cap), so each call a screen can make is named here
- *   once. The http adapter maps them to the server routes and the mock adapter answers from
- *   stateful fixtures, so a screen is written once against these interfaces.
+ *   once. The http adapter maps them to the server routes, so a screen is written once against
+ *   these interfaces.
  *
  * Exports: HarnessesApi, GithubApi, SettingsApi, HarnessSetupBody, SecretBody, ConnectionBody,
  *   DecisionBody, SettingsSaveBody, ToolDecision, DraftSettings.

@@ -17,7 +17,7 @@ import { applyMarkToCounts, applyMarkToPages, undoOf } from '#/domain/inbox-mark
 import { runStatusView } from '#/domain/run-format.js';
 import { formatDuration, formatTokens, formatUsd } from '#/domain/stats-format.js';
 import { stageOf } from '#/domain/ticket-stage.js';
-import { createFetchStub } from '#tests/helpers/fetch-stub.js';
+import { stubFetch } from '#tests/helpers/fetch-stub.js';
 import { inboxItem } from '#tests/helpers/work-fixtures.js';
 
 describe('inbox marks', () => {
@@ -116,7 +116,7 @@ describe('inbox links', () => {
 });
 
 describe('work http adapter', () => {
-  const stub = createFetchStub({
+  const stub = stubFetch({
     'POST /projects/p%20q/inbox/ticket_review%3ASVC-5%2Fx/read': {
       body: inboxItem({ read: true }),
     },

@@ -1,21 +1,21 @@
 /**
- * Sample memory records for the mock adapter.
+ * Test data: sample project memory records.
  *
  * Why: the memory screen has four tabs, a supersede chain, pending proposals that change
  *   state when answered, and a list long enough to need windowing. None of that can be
  *   designed or tested against an empty store, so this seeds one of each: active, superseded
  *   (with its successor) and pinned decisions, rejected approaches with reasons, Director
- *   proposals under the 0.8 confidence cap, and 130 outcomes. Every record says it is a
- *   fixture in its source, rows are parsed with the real core schema, and nothing names a
- *   real repository.
+ *   proposals under the 0.8 confidence cap, and 130 outcomes. Every record says it is
+ *   sample data in its source, rows are parsed with the real core schema, and nothing names
+ *   a real repository.
  *
- * Exports: memoryFixtures().
+ * Exports: memoryData().
  * Depends on: @forge/core (MemoryRecordWithBody).
  */
 
 import { MemoryRecordWithBody } from '@forge/core';
 
-const FIXTURE = { type: 'fixture', ref: 'sample data for the mock adapter' };
+const FIXTURE = { type: 'fixture', ref: 'sample data for component tests' };
 
 function owner(row: Record<string, unknown>) {
   return {
@@ -149,12 +149,12 @@ function outcomes() {
       valid_from: `2026-09-${day}`,
       statement: `SVC-${n} merged after ${(n % 3) + 1} verification run${n % 3 === 0 ? 's' : ''}.`,
       tags: n % 5 === 0 ? ['rework'] : ['merged'],
-      body: 'Sample outcome generated for the mock adapter.',
+      body: 'Sample outcome generated for component tests.',
     };
   });
 }
 
-/** A fresh, mutable copy of the sample records: the mock edits them when a proposal is answered. */
-export function memoryFixtures(): MemoryRecordWithBody[] {
+/** A fresh, mutable copy of the sample records: the stubbed route edits them when a proposal is answered. */
+export function memoryData(): MemoryRecordWithBody[] {
   return [...BASE, ...outcomes()].map((row) => MemoryRecordWithBody.parse(row));
 }

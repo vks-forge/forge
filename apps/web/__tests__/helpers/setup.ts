@@ -4,8 +4,8 @@
  * Why: jsdom lacks a few browser APIs the UI relies on (media queries, pointer capture,
  *   ResizeObserver, scrollIntoView), and real spring animations would make every test wait on
  *   the clock. This file adds minimal stand-ins, makes motion finish instantly, and cleans the
- *   DOM and storage between tests so one test's theme or remembered project never leaks into
- *   the next.
+ *   DOM, storage, UI stores and stubbed globals between tests so one test's theme, remembered
+ *   project or stubbed server never leaks into the next.
  *
  * Exports: nothing (registers global hooks).
  * Depends on: vitest, @testing-library/react, @testing-library/jest-dom, motion/react,
@@ -15,8 +15,8 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, configure } from '@testing-library/react';
 import { MotionGlobalConfig } from 'motion/react';
-import { afterEach, beforeEach } from 'vitest';
-import { resetUiState } from '#/state/ui-store.js';
+import { afterEach, beforeEach, vi } from 'vitest';
+import { resetUiState } from '#/state/ui-store-registry.js';
 import { setMatchMedia } from '#tests/helpers/match-media.js';
 
 MotionGlobalConfig.skipAnimations = true;
@@ -44,4 +44,6 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   resetUiState();
+  // The stubbed server's `fetch` and `EventSource` belong to one test.
+  vi.unstubAllGlobals();
 });

@@ -11,6 +11,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { projectPrefsStore } from '#/state/current-project.js';
 import { locationOf, renderApp } from '#tests/helpers/render-app.js';
 
 describe('AppShell navigation', () => {
@@ -48,10 +49,12 @@ describe('AppShell navigation', () => {
     );
   });
 
-  it('marks fixture data honestly while a resource is served from samples', async () => {
+  it('never labels the server data as samples: the app has no fixture source (d-0123)', async () => {
     renderApp({ path: '/p/sample-service' });
 
-    expect(await screen.findByText('Fixture data')).toBeInTheDocument();
+    await screen.findByRole('navigation', { name: 'Project' });
+
+    expect(screen.queryByText('Fixture data')).not.toBeInTheDocument();
   });
 
   it('opens the first open project at `/` and skips archived ones', async () => {
@@ -60,8 +63,8 @@ describe('AppShell navigation', () => {
     await waitFor(() => expect(locationOf(router)).toBe('/p/sample-service'));
   });
 
-  it('opens the last project used this session at `/`', async () => {
-    sessionStorage.setItem('forge.project', 'sample-web');
+  it('opens the last project used, remembered across reloads, at `/`', async () => {
+    projectPrefsStore.setState({ slug: 'sample-web' });
     const { router } = renderApp({ path: '/' });
 
     await waitFor(() => expect(locationOf(router)).toBe('/p/sample-web'));

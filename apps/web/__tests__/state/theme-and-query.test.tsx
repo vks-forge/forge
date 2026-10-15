@@ -20,6 +20,7 @@ import {
   useUnsavedChanges,
   useUnsavedChangesState,
 } from '#/state/unsaved-changes.js';
+import { themePrefsStore } from '#/state/theme-provider.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
 function Form(props: { dirty: boolean }) {
@@ -40,7 +41,9 @@ describe('theme toggle', () => {
 
     await user.click(toggle);
     expect(document.documentElement).toHaveAttribute('data-theme', 'light');
-    expect(localStorage.getItem('forge.theme')).toBe('light');
+    expect(JSON.parse(localStorage.getItem('forge.ui.theme') ?? '{}').state).toEqual({
+      mode: 'light',
+    });
 
     await user.click(screen.getByRole('button', { name: /^Theme: light/ }));
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
@@ -50,7 +53,12 @@ describe('theme toggle', () => {
   });
 
   it('starts from the saved choice', async () => {
-    localStorage.setItem('forge.theme', 'dark');
+    localStorage.setItem(
+      'forge.ui.theme',
+      JSON.stringify({ state: { mode: 'dark' }, version: 1 }),
+    );
+
+    await themePrefsStore.persist.rehydrate();
     renderApp({ path: '/p/sample-service' });
 
     await screen.findByRole('button', { name: /^Theme: dark/ });

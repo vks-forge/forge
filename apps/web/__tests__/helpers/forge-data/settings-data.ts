@@ -1,12 +1,11 @@
 /**
- * Seeded fixtures for the settings mock: a sample harness, tool schemas, GitHub connection and
- * settings history.
+ * Test data for the Forge settings screens: a sample harness, tool schemas, GitHub connection
+ * and settings history.
  *
- * Why: the settings endpoints exist, so a release talks to the real server (d-0118); these
- *   fixtures serve only tests and the `VITE_FORGE_API=mock` browser smoke. They are plainly
- *   samples (`fixture-owner`, `sample-org`, hashes of repeated digits) so one can never be
- *   mistaken for the user's real harness or key. Rows are parsed with the real schemas so a
- *   fixture cannot drift from the server's shape.
+ * Why: the Harnesses, GitHub, Limits and General screens each need something to show and
+ *   something to change. These are plainly samples (`fixture-owner`, `sample-org`, hashes of
+ *   repeated digits). Rows are parsed with the real core schemas, so a drift between the
+ *   server's shape and this data fails loudly at import.
  *
  * Exports: harnessFixture(), reportFixture(), toolFixtures(), connectionFixtures(), historyFixtures().
  * Depends on: @forge/core, schemas/settings.

@@ -1,12 +1,12 @@
 /**
- * Sample saved settings for the mock adapter.
+ * Test data: sample saved project settings.
  *
  * Why: the screen must be seen with a project that has history (three versions by different
  *   authors, one overriding concurrency), one that never saved anything (version 0, all
  *   inherited) and a company override above both, otherwise the inherited-versus-overridden
  *   display and the history list have nothing to show. All values are plain samples.
  *
- * Exports: companyOverrideFixture, seedVersions().
+ * Exports: companyOverrideFixture, companyVersionsForProjects(), seedVersions().
  * Depends on: @forge/core (ConfigVersion type).
  */
 
@@ -89,4 +89,33 @@ export function seedVersions(slug: string): ConfigVersion[] {
   }
 
   return [];
+}
+
+/**
+ * The company's saved versions behind the project screens: version 2 holds the document the
+ * projects inherit from (`companyOverrideFixture`), so "Company limit: 2" is real server data.
+ */
+export function companyVersionsForProjects(): ConfigVersion[] {
+  return [
+    {
+      id: 1,
+      scope: 'company',
+      project: null,
+      version: 1,
+      doc: {} as never,
+      author: 'forge-onboarding',
+      reason: 'first start',
+      created_at: T0 - 30 * DAY,
+    },
+    {
+      id: 2,
+      scope: 'company',
+      project: null,
+      version: 2,
+      doc: companyOverrideFixture as never,
+      author: 'owner',
+      reason: 'two Workers per project',
+      created_at: T0 - 10 * DAY,
+    },
+  ];
 }

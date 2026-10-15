@@ -1,10 +1,10 @@
 /**
- * Shapes used by the mock adapter's ticket fixtures.
+ * Shapes used by the component tests' ticket fixtures.
  *
- * Why: the fixtures, the scripted run streams and the mock store share a few record shapes;
+ * Why: the fixtures, the scripted run streams and the test store share a few record shapes;
  *   keeping them here keeps the data files to data and the logic files to logic.
  *
- * Exports: SampleTicket, TicketSeed, FakeTicketHooks.
+ * Exports: SampleTicket, TicketSeed.
  * Depends on: @forge/core (types). Types only.
  */
 
@@ -36,12 +36,4 @@ export interface TicketSeed {
   readonly pr?: number;
   readonly blocked?: string;
   readonly run?: { id: string; status: Run['status']; harness?: string; cost?: number };
-}
-
-/** What the fake ticket store needs from the test that owns it. */
-export interface FakeTicketHooks {
-  readonly delay: (signal: AbortSignal | undefined) => Promise<void>;
-  readonly fail: () => void;
-  readonly streamDelayMs: number;
-  readonly empty: boolean;
 }

@@ -2,36 +2,32 @@
  * Theme provider: keeps the light, dark or system choice and applies it to the page.
  *
  * Why: the app follows the OS until the user picks a theme (d-0103 dark and light), and the
- *   pick must stick across reloads. The choice is written to `<html data-theme>` (the tokens
- *   in theme/tokens.css key off it; `system` removes the attribute so the media query rules)
- *   and to `localStorage`, which may be blocked in private modes and must never crash the app.
+ *   pick must stick across reloads. The choice lives in a persisted zustand store
+ *   (`forge.ui.theme`, d-0122), which reads synchronously at start so the first paint already
+ *   has the right theme. The provider writes it to `<html data-theme>` (the tokens in
+ *   theme/tokens.css key off it; `system` removes the attribute so the media query rules).
+ *   Blocked storage only means the choice lasts for this tab.
  *
- * Exports: ThemeProvider, useTheme().
- * Depends on: react, domain/theme-mode, types/state.types. IO: localStorage, <html>.
+ * Exports: ThemeProvider, useTheme(), themePrefsStore.
+ * Depends on: react, state/create-persisted-store, domain/theme-mode, schemas/ui-state,
+ *   types/nav.types, types/state.types, types/ui-state.types. IO: <html>.
  */
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { nextThemeMode, parseThemeMode, THEME_STORAGE_KEY } from '#/domain/theme-mode.js';
+import { nextThemeMode } from '#/domain/theme-mode.js';
+import { ThemePrefsSchema } from '#/schemas/ui-state.js';
+import { createPersistedStore } from '#/state/create-persisted-store.js';
 import type { ThemeMode } from '#/types/nav.types.js';
 import type { ThemeContextValue } from '#/types/state.types.js';
+import type { ThemePrefs } from '#/types/ui-state.types.js';
 
-const ThemeContext = createContext<ThemeContextValue | null>(null);
-
-function readStored(): ThemeMode {
-  try {
-    return parseThemeMode(localStorage.getItem(THEME_STORAGE_KEY));
-  } catch {
-    return 'system';
-  }
-}
+export const themePrefsStore = createPersistedStore<ThemePrefs>({
+  name: 'theme',
+  version: 1,
+  initial: { mode: 'system' },
+  schema: ThemePrefsSchema,
+});
 
 function apply(mode: ThemeMode): void {
   const root = document.documentElement;
@@ -42,31 +38,25 @@ function apply(mode: ThemeMode): void {
   }
 }
 
+function setMode(mode: ThemeMode): void {
+  themePrefsStore.setState({ mode });
+}
+
+function cycle(): void {
+  setMode(nextThemeMode(themePrefsStore.getState().mode));
+}
+
+/** Applies the stored theme to the page; the choice itself needs no provider. */
 export function ThemeProvider(props: { children: ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>(readStored);
+  const mode = themePrefsStore((p) => p.mode);
 
   useEffect(() => apply(mode), [mode]);
 
-  const setMode = useCallback((next: ThemeMode) => {
-    setModeState(next);
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, next);
-    } catch {
-      // The choice still applies for this session.
-    }
-  }, []);
-
-  const cycle = useCallback(() => setMode(nextThemeMode(mode)), [mode, setMode]);
-  const value = useMemo(() => ({ mode, setMode, cycle }), [mode, setMode, cycle]);
-
-  return <ThemeContext.Provider value={value}>{props.children}</ThemeContext.Provider>;
+  return props.children;
 }
 
 export function useTheme(): ThemeContextValue {
-  const value = useContext(ThemeContext);
-  if (value === null) {
-    throw new Error('useTheme() must be used inside <ThemeProvider>.');
-  }
+  const mode = themePrefsStore((p) => p.mode);
 
-  return value;
+  return { mode, setMode, cycle };
 }
