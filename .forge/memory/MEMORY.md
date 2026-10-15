@@ -36,6 +36,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0043 — Product name Forge; npm scope `@forge/*`, `ForgeError`
 - d-0044 — Config/runtime dir is `.forge/` (renamed from `.factory/`); rest of d-0039 carries over (supersedes d-0039)
 - d-0117 — Accepted risk: Workers run as the user account (floor is policy, not OS boundary); documented now, real isolation is first after the realignment
+- d-0118 — apps/web built per web-build-plan.md (W1–W8): real API where it exists, typed mock adapter otherwise, swapped when the backend lands
 - d-0116 — Tickets clickable everywhere on cards; Inbox page (Paperclip-style: needs action/unread/all/archived, read + archive, resurface); Home = project stats + graphs only
 - d-0115 — Issue flow approved (docs/design/issue-flow.md): triage → deep analysis → verified findings → typed verdict (floor only stricter) → policy layer acts; auto-ready needs all 9 checks
 - d-0114 — Issue analysis: new/updated issues auto; backlog newest-first within daily budget; Analyse now; cheap triage pass then deep analysis only where warranted
