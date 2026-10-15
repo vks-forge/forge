@@ -11,16 +11,16 @@
  *
  * Exports: CardPage.
  * Depends on: react, react-router, lucide-react, api/use-card, api/use-card-board, api/describe-error,
- *   components/status/state-panel, components/card/*, domain/nav-entries, routes/card/*,
+ *   components/status/state-panel, components/card/*, domain/nav-entries, routes/card/* (incl. close-dialog),
  *   state/use-online.
  */
 
 import { CircleAlert } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { ApiError } from '#/api/api-error.js';
 import { describeError } from '#/api/describe-error.js';
-import { useCardDetail } from '#/api/use-card.js';
+import { useCardDetail, usePatchCard } from '#/api/use-card.js';
 import { useCardTypes } from '#/api/use-card-board.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
@@ -28,6 +28,7 @@ import { projectPath } from '#/domain/nav-entries.js';
 import { CardChat } from '#/routes/card/card-chat.js';
 import { CardDetails } from '#/routes/card/card-details.js';
 import { CardHeader } from '#/routes/card/card-header.js';
+import { CloseDialog } from '#/routes/card/close-dialog.js';
 import { CARD_TABS, CardTabs } from '#/routes/card/card-tabs.js';
 import { CardTickets } from '#/routes/card/card-tickets.js';
 import { useOnline } from '#/state/use-online.js';
@@ -42,6 +43,9 @@ export function CardPage() {
   const [params, setParams] = useSearchParams();
   const query = useCardDetail(id);
   const types = useCardTypes();
+  const patch = usePatchCard(id);
+  const [closing, setClosing] = useState(false);
+  const [reason, setReason] = useState('');
   const online = useOnline();
   const card = query.data;
   const tab = tabOf(params.get('tab'));
@@ -90,7 +94,19 @@ export function CardPage() {
 
   return (
     <section className="grid gap-6">
-      <CardHeader card={card} types={types.data} />
+      <CardHeader
+        card={card}
+        types={types.data}
+        patch={patch}
+        onClose={() => setClosing(true)}
+      />
+      <CloseDialog
+        open={closing}
+        onOpenChange={setClosing}
+        reason={reason}
+        onReasonChange={setReason}
+        onConfirm={(text) => patch.mutate({ closed_reason: text })}
+      />
 
       {!online ? (
         <p role="status" className="rounded-xl bg-attn-soft p-3 text-sm">
@@ -132,7 +148,16 @@ export function CardPage() {
           }
         />
         <div id="card-panel" role="tabpanel" aria-labelledby={`card-tab-${tab}`}>
-          {tab === 'chat' ? <CardChat card={card} types={types.data} /> : null}
+          {tab === 'chat' ? (
+            <CardChat
+              card={card}
+              types={types.data}
+              onSuggestClose={(suggested) => {
+                setReason(suggested);
+                setClosing(true);
+              }}
+            />
+          ) : null}
           {tab === 'tickets' ? <CardTickets slug={slug} tickets={card.tickets} /> : null}
           {tab === 'details' ? <CardDetails card={card} /> : null}
         </div>

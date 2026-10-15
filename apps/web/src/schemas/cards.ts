@@ -3,15 +3,14 @@
  *
  * Why: the Board and the Card page show what the server says about requests (cards) and the
  *   Director's conversation about them. Rows come from core's own schemas so a column added
- *   there reaches the UI with no edit here. Two things are deliberately looser than core: a
+ *   there reaches the UI with no edit here. One thing is deliberately looser than core: a
  *   history event's `kind` is any string, because the card Director is still growing new
  *   event kinds (`director_action` and others) and an old UI must show an unknown kind as a
- *   neutral note instead of failing the whole history; and the card's `director` block (is the
- *   Director thinking or in error?) is optional and ignored when malformed, so a server that
- *   does not send it yet, or sends a state this UI does not know, never breaks the page.
+ *   neutral note instead of failing the whole history. The card's `director` status (idle,
+ *   thinking, error) is part of core's `CardDetail` and always present.
  *
  * Exports: CardListReply, CardDetailReply, CardTypesReply, CardHistoryEvent, CardHistoryPage,
- *   CardMessageReply, DirectorBlock (schemas and inferred types).
+ *   CardMessageReply (schemas and inferred types).
  * Depends on: @forge/core (CardSummary, CardDetail, CardType), zod.
  */
 
@@ -24,15 +23,8 @@ export const CardListReply = z.object({
 });
 export type CardListReply = z.infer<typeof CardListReply>;
 
-export const DirectorBlock = z.object({
-  state: z.enum(['idle', 'thinking', 'error']),
-  last_error: z.string().optional(),
-});
-export type DirectorBlock = z.infer<typeof DirectorBlock>;
-
-export const CardDetailReply = CardDetail.extend({
-  director: DirectorBlock.optional().catch(undefined),
-});
+/** `GET /cards/:id` and the `PATCH` answer: core's card with its `director` status. */
+export const CardDetailReply = CardDetail;
 export type CardDetailReply = z.infer<typeof CardDetailReply>;
 
 export const CardTypesReply = z.object({ types: z.array(CardType) });

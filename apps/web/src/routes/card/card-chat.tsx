@@ -3,8 +3,8 @@
  *
  * Why: a card is where the user and the Director talk a request through before and while
  *   Workers build it, so the page must make that exchange easy and never lose words. It shows
- *   the history (newest at the bottom, earlier messages behind "Show earlier messages", never
- *   a wall of everything), appends the user's message at once as "Sending…" and swaps it for
+ *   the newest history (newest at the bottom, earlier messages behind "Show earlier messages",
+ *   fetched a window at a time), appends the user's message at once as "Sending…" and swaps it for
  *   the server's copy, shows "The Director is thinking" while the card says so (or while a
  *   reply is plainly awaited), and shows the Director's failure in words. A refusal removes the
  *   unsent line and keeps the draft in the box. A closed card keeps its history readable but
@@ -22,7 +22,7 @@ import { ArrowDown } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { ApiError } from '#/api/api-error.js';
 import { describeError } from '#/api/describe-error.js';
-import { useCardEvents, useSendCardMessage } from '#/api/use-card.js';
+import { useCardEvents, useLoadOlderEvents, useSendCardMessage } from '#/api/use-card.js';
 import { ChatLineView } from '#/components/card/chat-line-view.js';
 import { labelOfType } from '#/components/card/card-type-icon.js';
 import { MessageComposer } from '#/components/card/message-composer.js';
@@ -32,8 +32,6 @@ import { transcriptOf } from '#/domain/card-chat.js';
 import { OWNER } from '#/domain/owner.js';
 import type { CardDetailReply } from '#/schemas/cards.js';
 import { cardDraftKey } from '#/state/message-draft.js';
-
-const SHOWN_STEP = 50;
 
 function refusalText(error: unknown): string {
   if (error instanceof ApiError && error.kind === 'http') {
@@ -54,12 +52,14 @@ function refusalText(error: unknown): string {
 export function CardChat(props: {
   card: CardDetailReply;
   types: readonly CardType[] | undefined;
+  /** Opens the close dialog with the Director's reason prefilled. */
+  onSuggestClose: (reason: string) => void;
 }) {
   const { card } = props;
   const history = useCardEvents(card.id);
   const send = useSendCardMessage(card.id);
   const [unsent, setUnsent] = useState<{ id: string; text: string; at: string }[]>([]);
-  const [shown, setShown] = useState(SHOWN_STEP);
+  const older = useLoadOlderEvents(card.id);
   const scroller = useRef<HTMLDivElement>(null);
   // A closed card with a question still pending sits in Needs you (d-0107) but is closed.
   const closed = card.closed_reason !== undefined;
@@ -70,8 +70,6 @@ export function CardChat(props: {
     [events, unsent, props.types],
   );
 
-  const visible = lines.slice(Math.max(0, lines.length - shown));
-  const hidden = lines.length - visible.length;
   const { stuck, unread, onScroll, jumpToLatest } = useStickToBottom(
     scroller,
     lines.length,
@@ -80,7 +78,7 @@ export function CardChat(props: {
   );
 
   const director = card.director;
-  const thinking = director?.state === 'thinking';
+  const thinking = director.state === 'thinking';
 
   const submit = (text: string, clear: () => void): void => {
     const pending = { id: crypto.randomUUID(), text, at: new Date().toISOString() };
@@ -117,18 +115,20 @@ export function CardChat(props: {
             tabIndex={0}
             className="grid h-[52dvh] content-start gap-3 overflow-y-auto rounded-xl border border-line bg-bg p-3"
           >
-            {hidden > 0 ? (
+            {history.data?.hasOlder ? (
               <button
                 type="button"
-                onClick={() => setShown((n) => n + SHOWN_STEP)}
-                className="min-h-9 justify-self-center rounded-lg px-3 text-sm text-signal hover:bg-hover"
+                onClick={() => older.mutate()}
+                disabled={older.isPending}
+                className="min-h-9 justify-self-center rounded-lg px-3 text-sm text-signal hover:bg-hover disabled:text-muted"
               >
-                Show earlier messages ({hidden})
+                {older.isPending ? 'Loading earlier messages…' : 'Show earlier messages'}
               </button>
             ) : null}
-            {history.data?.truncated ? (
-              <p className="text-center text-xs text-muted">
-                This card has a very long history; the newest events may not be shown yet.
+            {older.isError ? (
+              <p role="alert" className="text-center text-xs text-danger">
+                {describeError(older.error).title}. Earlier messages did not load; try
+                again.
               </p>
             ) : null}
             {lines.length === 0 ? (
@@ -136,8 +136,13 @@ export function CardChat(props: {
                 Nothing has been said yet. Tell the Director what you want from this card.
               </p>
             ) : (
-              visible.map((line) => (
-                <ChatLineView key={line.key} line={line} slug={card.project} />
+              lines.map((line) => (
+                <ChatLineView
+                  key={line.key}
+                  line={line}
+                  slug={card.project}
+                  onSuggestClose={closed ? undefined : props.onSuggestClose}
+                />
               ))
             )}
             {thinking ? (
@@ -149,7 +154,7 @@ export function CardChat(props: {
                 The Director is thinking…
               </p>
             ) : null}
-            {director?.state === 'error' ? (
+            {director.state === 'error' ? (
               <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm">
                 The Director hit a problem
                 {director.last_error ? `: ${director.last_error}` : '.'} Send another

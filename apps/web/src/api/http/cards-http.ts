@@ -56,7 +56,12 @@ export function createCardsHttp(client: HttpClientOptions): CardsApi {
     events: (id, params, options) =>
       requestJson(
         client,
-        `/cards/${enc(id)}/events${query({ cursor: params.cursor, limit: params.limit })}`,
+        `/cards/${enc(id)}/events${query({
+          after: params.after,
+          before: params.before,
+          order: params.order,
+          limit: params.limit,
+        })}`,
         CardHistoryPage,
         options,
       ),

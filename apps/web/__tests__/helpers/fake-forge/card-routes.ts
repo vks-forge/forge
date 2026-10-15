@@ -66,6 +66,7 @@ export function cardRoutes(options: { empty: boolean }): Routes {
     ...item.summary,
     tickets: [...item.tickets],
     pending_interactions: [...item.pending],
+    director: { state: 'idle' },
   });
 
   return {
@@ -110,14 +111,22 @@ export function cardRoutes(options: { empty: boolean }): Routes {
         return refusal(404, 'card_not_found', `No card ${id}.`);
       }
 
-      const all = events.get(id) ?? [];
-      const start = Number(query.get('cursor') ?? 0);
-      const end = start + Number(query.get('limit') ?? DEFAULT_PAGE);
+      // Same windows as the server: `after` and `before` bound the seq, `desc` is newest first.
+      const after = query.get('after');
+      const before = query.get('before');
+      const desc =
+        query.get('order') === 'desc' || (before !== null && query.get('order') === null);
 
-      return json({
-        items: all.slice(start, end),
-        nextCursor: end < all.length ? String(end) : null,
-      });
+      const limit = Number(query.get('limit') ?? DEFAULT_PAGE);
+      const inWindow = (events.get(id) ?? []).filter(
+        (e) =>
+          (after === null || (e['seq'] as number) > Number(after)) &&
+          (before === null || (e['seq'] as number) < Number(before)),
+      );
+
+      const ordered = desc ? [...inWindow].reverse() : inWindow;
+
+      return json({ items: ordered.slice(0, limit), nextCursor: null });
     },
 
     'PATCH /cards/:id': ({ params, body }) => {

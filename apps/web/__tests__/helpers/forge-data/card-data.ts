@@ -154,7 +154,10 @@ export const SAMPLE_EVENTS: Readonly<Record<string, readonly Record<string, unkn
         actor: { type: 'director', id: 'director' },
         payload: {
           text: 'Yes. I would retry three times with exponential backoff.',
-          actions_taken: ['Drafted a plan', { summary: 'Linked the sender module' }],
+          actions_taken: [
+            { action: 'create_ticket', result: 'done', summary: 'Drafted a plan' },
+            { action: 'change_type', result: 'refused', summary: 'Type change refused' },
+          ],
         },
       },
       {
@@ -162,23 +165,42 @@ export const SAMPLE_EVENTS: Readonly<Record<string, readonly Record<string, unkn
         kind: 'director_action',
         at: at(3),
         actor: { type: 'director', id: 'director' },
-        payload: { summary: 'Asked the planner for a cost estimate' },
+        payload: {
+          action: 'steer_run',
+          result: 'done',
+          summary: 'Asked the planner for a cost estimate',
+        },
       },
       {
         seq: 3,
+        kind: 'close_suggested',
+        at: at(2.5),
+        actor: { type: 'director', id: 'director' },
+        payload: { reason: 'The plan was folded into FG-C4' },
+      },
+      {
+        seq: 4,
         kind: 'future_kind_from_a_newer_server',
         at: at(2),
         actor: { type: 'system', id: 'forge' },
         payload: { text: 'A newer thing happened' },
       },
       {
-        seq: 4,
+        seq: 5,
         kind: 'another_unknown_kind',
         at: at(1),
         actor: { type: 'system', id: 'forge' },
         payload: { weird: [1, 2, 3] },
       },
     ],
+    // 120 notes, so the newest window is 50 and older ones load a window at a time.
+    'FG-C5': Array.from({ length: 120 }, (_, seq) => ({
+      seq,
+      kind: 'note',
+      at: at(120 - seq / 10),
+      actor: { type: 'system', id: 'forge' },
+      payload: { text: `Note number ${seq}` },
+    })),
     'FG-C4': [
       {
         seq: 0,

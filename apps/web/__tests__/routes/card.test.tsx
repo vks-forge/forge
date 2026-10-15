@@ -24,7 +24,12 @@ const card = (id: string) => `/p/sample-service/cards/${id}`;
 const detailOf = (n: number) => {
   const item = SAMPLE_CARDS[n - 1]!;
 
-  return { ...item.summary, tickets: [...item.tickets], pending_interactions: [] };
+  return {
+    ...item.summary,
+    tickets: [...item.tickets],
+    pending_interactions: [],
+    director: { state: 'idle' },
+  };
 };
 
 describe('Card page: header and history', () => {
@@ -53,7 +58,7 @@ describe('Card page: header and history', () => {
     ).toBeInTheDocument();
 
     expect(within(log).getByText('Drafted a plan')).toBeInTheDocument();
-    expect(within(log).getByText('Linked the sender module')).toBeInTheDocument();
+    expect(within(log).getByText('Type change refused')).toBeInTheDocument();
     expect(
       within(log).getByText('Asked the planner for a cost estimate'),
     ).toBeInTheDocument();
@@ -209,17 +214,5 @@ describe('Card page: chat', () => {
     });
 
     expect(await screen.findByText(/model quota exhausted/)).toBeInTheDocument();
-  });
-
-  it('ignores a director block it does not understand instead of failing the page', async () => {
-    renderApp({
-      path: card('FG-C2'),
-      routes: {
-        'GET /cards/:id': json({ ...detailOf(2), director: { state: 'dreaming' } }),
-      },
-    });
-
-    expect(await screen.findByLabelText('Message the Director')).toBeInTheDocument();
-    expect(screen.queryByText('The Director is thinking…')).not.toBeInTheDocument();
   });
 });

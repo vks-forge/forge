@@ -14,12 +14,42 @@
  *   domain/relative-time, types/cards-ui.types.
  */
 
-import { Check, Dot } from 'lucide-react';
+import { Check, Dot, X } from 'lucide-react';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
 import { clockTime } from '#/domain/relative-time.js';
-import type { ChatLine } from '#/types/cards-ui.types.js';
+import { Button } from '#/components/ui/button.js';
+import type { ChatAction, ChatLine } from '#/types/cards-ui.types.js';
 
-export function ChatLineView(props: { line: ChatLine; slug: string }) {
+/** "Done" or "Refused" in words with an icon, so the outcome is never only a colour. */
+function ActionText(props: { action: ChatAction }) {
+  const { action } = props;
+  const Icon = action.result === 'refused' ? X : Check;
+
+  return (
+    <>
+      {action.result ? (
+        <>
+          <Icon aria-hidden="true" className="size-3.5 shrink-0" />
+          <span
+            className={
+              action.result === 'refused' ? 'font-medium text-danger' : 'font-medium'
+            }
+          >
+            {action.result === 'refused' ? 'Refused' : 'Done'}
+          </span>
+        </>
+      ) : null}
+      <span className="min-w-0 break-words">{action.text}</span>
+    </>
+  );
+}
+
+export function ChatLineView(props: {
+  line: ChatLine;
+  slug: string;
+  /** Opens the close dialog with the reason; absent when the card is already closed. */
+  onSuggestClose?: ((reason: string) => void) | undefined;
+}) {
   const { line } = props;
 
   if (line.tone === 'note') {
@@ -27,10 +57,19 @@ export function ChatLineView(props: { line: ChatLine; slug: string }) {
       <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
         <Dot aria-hidden="true" className="size-4 shrink-0" />
         {line.ticketId ? <TicketLink id={line.ticketId} slug={props.slug} /> : null}
-        <span className="min-w-0 break-words">{line.text}</span>
+        {line.action ? (
+          <ActionText action={line.action} />
+        ) : (
+          <span className="min-w-0 break-words">{line.text}</span>
+        )}
         <time dateTime={line.at} className="font-data">
           {clockTime(line.at)}
         </time>
+        {line.closeReason !== undefined && props.onSuggestClose ? (
+          <Button onClick={() => props.onSuggestClose?.(line.closeReason ?? '')}>
+            Close card
+          </Button>
+        ) : null}
       </p>
     );
   }
@@ -60,8 +99,7 @@ export function ChatLineView(props: { line: ChatLine; slug: string }) {
         >
           {line.actions.map((action, index) => (
             <li key={index} className="flex items-center gap-1.5">
-              <Check aria-hidden="true" className="size-3.5 shrink-0" />
-              {action}
+              <ActionText action={action} />
             </li>
           ))}
         </ul>

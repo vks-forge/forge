@@ -17,7 +17,7 @@ import type { CardTypeName } from '@forge/core';
 import { TicketStatus } from '@forge/core';
 import { STATE_LABEL } from '#/domain/board-columns.js';
 import type { CardHistoryEvent } from '#/schemas/cards.js';
-import type { ChatLine } from '#/types/cards-ui.types.js';
+import type { ChatAction, ChatLine } from '#/types/cards-ui.types.js';
 
 const str = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim() !== '' ? value : undefined;
@@ -29,33 +29,32 @@ function stateWord(value: unknown): string {
   return parsed.success ? STATE_LABEL[parsed.data] : (str(value) ?? 'another state');
 }
 
-/** One action the Director took, as a short phrase, from a string or an object. */
-function actionLabel(action: unknown): string | undefined {
+/** One action the Director took, from an `ActionTaken` object (or, leniently, a string). */
+function actionOf(action: unknown): ChatAction | undefined {
   if (typeof action === 'string') {
-    return str(action);
+    const text = str(action);
+
+    return text === undefined ? undefined : { text };
   }
 
   if (action !== null && typeof action === 'object') {
     const record = action as Record<string, unknown>;
+    const text = str(record['summary']) ?? str(record['action']);
+    const result = record['result'];
 
-    return (
-      str(record['summary']) ??
-      str(record['description']) ??
-      str(record['text']) ??
-      str(record['action']) ??
-      str(record['name']) ??
-      str(record['kind'])
-    );
+    return text === undefined
+      ? undefined
+      : { text, ...(result === 'done' || result === 'refused' ? { result } : {}) };
   }
 
   return undefined;
 }
 
-function actionsOf(payload: Record<string, unknown>): readonly string[] {
+function actionsOf(payload: Record<string, unknown>): readonly ChatAction[] {
   const list = payload['actions_taken'];
 
   return Array.isArray(list)
-    ? list.map(actionLabel).filter((a): a is string => a !== undefined)
+    ? list.map(actionOf).filter((a): a is ChatAction => a !== undefined)
     : [];
 }
 
@@ -67,7 +66,12 @@ export function lineOf(
   typeLabel: (name: CardTypeName) => string = (name) => name,
 ): ChatLine {
   const { payload } = event;
-  const base = { key: `e${event.seq}`, at: event.at, actions: [] as readonly string[] };
+  const base = {
+    key: `e${event.seq}`,
+    at: event.at,
+    actions: [] as readonly ChatAction[],
+  };
+
   const note = (text: string, ticketId?: string): ChatLine => ({
     ...base,
     tone: 'note',
@@ -87,14 +91,29 @@ export function lineOf(
         text: str(payload['text']) ?? '(empty message)',
         actions: actionsOf(payload),
       };
-    case 'director_action':
-      return note(
-        str(payload['summary']) ??
-          str(payload['text']) ??
-          actionLabel(payload['action']) ??
-          'The Director took an action.',
-        ticketId,
-      );
+    case 'director_action': {
+      const action = actionOf(payload);
+
+      return {
+        ...base,
+        tone: 'note',
+        text: action?.text ?? 'The Director took an action.',
+        ...(action === undefined ? {} : { action }),
+        ...(ticketId === undefined ? {} : { ticketId }),
+      };
+    }
+
+    case 'close_suggested': {
+      const reason = str(payload['reason']);
+
+      return {
+        ...base,
+        tone: 'note',
+        text: `The Director suggests closing this card${reason ? `: ${reason}` : '.'}`,
+        ...(reason === undefined ? {} : { closeReason: reason }),
+      };
+    }
+
     case 'ticket_created':
       return note(`Ticket created: ${str(payload['title']) ?? 'untitled'}`, ticketId);
     case 'ticket_state': {

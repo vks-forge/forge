@@ -55,16 +55,41 @@ describe('card columns', () => {
 });
 
 describe('card chat lines', () => {
-  it('reads actions the Director took from strings and objects, skipping junk', () => {
+  it('reads actions the Director took with their outcome, skipping junk', () => {
     const line = lineOf(
       event(1, 'director_message', {
         text: 'Done',
-        actions_taken: ['Drafted a plan', { summary: 'Linked a module' }, 42, {}],
+        actions_taken: [
+          { action: 'create_ticket', result: 'done', summary: 'Created SVC-9' },
+          { action: 'change_type', result: 'refused', summary: 'Type not allowed' },
+          42,
+          {},
+        ],
       }),
     );
 
     expect(line.tone).toBe('director');
-    expect(line.actions).toEqual(['Drafted a plan', 'Linked a module']);
+    expect(line.actions).toEqual([
+      { text: 'Created SVC-9', result: 'done' },
+      { text: 'Type not allowed', result: 'refused' },
+    ]);
+  });
+
+  it('turns an action event and a close suggestion into lines that say what they are', () => {
+    expect(
+      lineOf(
+        event(1, 'director_action', {
+          action: 'steer_run',
+          result: 'refused',
+          summary: 'No live run',
+        }),
+      ),
+    ).toMatchObject({ action: { text: 'No live run', result: 'refused' } });
+
+    expect(lineOf(event(2, 'close_suggested', { reason: 'All done' }))).toMatchObject({
+      closeReason: 'All done',
+      text: 'The Director suggests closing this card: All done',
+    });
   });
 
   it('turns an unknown kind into a note and never throws on a bad payload', () => {

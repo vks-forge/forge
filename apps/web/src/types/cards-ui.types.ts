@@ -5,7 +5,7 @@
  *   those derived shapes keeps the pure functions that build them (domain/card-columns,
  *   domain/card-chat) and the components that draw them apart, so each is testable alone.
  *
- * Exports: CardColumnDef, CardFilter, ChatLine, CardTab.
+ * Exports: CardColumnDef, CardFilter, ChatAction, ChatLine, CardTab.
  * Depends on: @forge/core (types), types/board.types. Types only.
  */
 
@@ -27,6 +27,13 @@ export interface CardFilter {
   readonly query: string;
 }
 
+/** Something the Director did while answering: its summary and whether it went through. */
+export interface ChatAction {
+  readonly text: string;
+  /** Absent when the server did not say. */
+  readonly result?: 'done' | 'refused';
+}
+
 /** One line of the chat transcript, derived from a history event or an unsent message. */
 export interface ChatLine {
   readonly key: string;
@@ -35,7 +42,11 @@ export interface ChatLine {
   readonly tone: 'you' | 'director' | 'note';
   readonly text: string;
   /** Compact lines under a Director message: what it did. */
-  readonly actions: readonly string[];
+  readonly actions: readonly ChatAction[];
+  /** Set on a close suggestion: the reason the Director gave. */
+  readonly closeReason?: string;
+  /** Set on an action line (a `director_action` event). */
+  readonly action?: ChatAction;
   /** The ticket a note is about, so the line can link to it. */
   readonly ticketId?: string;
   /** True for a line the server has not confirmed yet. */

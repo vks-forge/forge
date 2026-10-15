@@ -28,22 +28,28 @@ export interface CardListParams {
   readonly limit?: number;
 }
 
+/** Windows of the history by `seq` (exclusive bounds); see `GET /cards/:id/events`. */
 export interface CardEventsParams {
-  readonly cursor?: string;
+  /** Events after this `seq`, oldest first: the poll. */
+  readonly after?: number;
+  /** Events before this `seq`, newest first: "load older". */
+  readonly before?: number;
+  /** `desc` with no bound is the newest page. */
+  readonly order?: 'asc' | 'desc';
   readonly limit?: number;
 }
 
-/** A card's whole history as the page holds it, oldest first. */
+/** The part of a card's history the page holds, oldest first, deduplicated by `seq`. */
 export interface CardHistory {
   readonly events: readonly CardHistoryEvent[];
-  /** True when the page cap stopped the walk before the newest events. */
-  readonly truncated: boolean;
+  /** True while events older than the oldest one held may exist. */
+  readonly hasOlder: boolean;
 }
 
 export interface CardsApi {
   list(params: CardListParams, options?: RequestOptions): Promise<CardListReply>;
   get(id: string, options?: RequestOptions): Promise<CardDetailReply>;
-  /** History oldest first; follow `nextCursor` for newer pages. */
+  /** One window of history; the order follows the params, items always carry `seq`. */
   events(
     id: string,
     params: CardEventsParams,

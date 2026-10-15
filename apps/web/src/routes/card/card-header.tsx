@@ -22,7 +22,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { ApiError } from '#/api/api-error.js';
 import { describeError } from '#/api/describe-error.js';
-import { usePatchCard } from '#/api/use-card.js';
+import type { usePatchCard } from '#/api/use-card.js';
 import { CardTypeIcon, labelOfType } from '#/components/card/card-type-icon.js';
 import { Button } from '#/components/ui/button.js';
 import { ConfirmDialog } from '#/components/ui/confirm-dialog.js';
@@ -51,12 +51,13 @@ function patchRefusal(error: unknown): string {
 export function CardHeader(props: {
   card: CardDetailReply;
   types: readonly CardType[] | undefined;
+  /** The page's patch mutation, shared with the close dialog it also owns. */
+  patch: ReturnType<typeof usePatchCard>;
+  /** Opens the close dialog (owned by the page so the chat can open it too). */
+  onClose: () => void;
 }) {
-  const { card, types } = props;
-  const patch = usePatchCard(card.id);
+  const { card, types, patch } = props;
   const [nextType, setNextType] = useState<CardTypeName | null>(null);
-  const [closing, setClosing] = useState(false);
-  const [reason, setReason] = useState('');
   const closed = card.closed_reason !== undefined;
   const needsYou = card.column === 'needs_you';
   const icon = types?.find((type) => type.name === card.type)?.icon;
@@ -116,7 +117,7 @@ export function CardHeader(props: {
         </div>
 
         {closed ? null : (
-          <Button variant="danger" onClick={() => setClosing(true)}>
+          <Button variant="danger" onClick={props.onClose}>
             Close card
           </Button>
         )}
@@ -152,34 +153,6 @@ export function CardHeader(props: {
           setNextType(null);
         }}
       />
-
-      <ConfirmDialog
-        open={closing}
-        onOpenChange={setClosing}
-        title="Close this card?"
-        description="A closed card takes no more messages and cannot be reopened from here. Its tickets keep running. The reason is recorded and shown to anyone who opens the card."
-        confirmLabel="Close card"
-        tone="danger"
-        confirmDisabled={reason.trim() === ''}
-        onConfirm={() => {
-          patch.mutate({ closed_reason: reason.trim() });
-          setClosing(false);
-        }}
-      >
-        <div className="grid gap-1.5">
-          <label htmlFor="close-reason" className="text-sm font-medium">
-            Reason (required)
-          </label>
-          <textarea
-            id="close-reason"
-            rows={3}
-            value={reason}
-            onChange={(event) => setReason(event.target.value)}
-            placeholder="Why is this card being closed?"
-            className={INPUT_CLASS}
-          />
-        </div>
-      </ConfirmDialog>
     </header>
   );
 }
