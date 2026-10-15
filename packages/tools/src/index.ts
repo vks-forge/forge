@@ -15,6 +15,7 @@
 export * from '#/domain/admit.js';
 export * from '#/domain/budgets.js';
 export * from '#/domain/call-resource.js';
+export * from '#/domain/check-exact-rules.js';
 export * from '#/domain/catalogue-seed.js';
 export * from '#/domain/catalogue.js';
 export * from '#/domain/data-home-floor.js';

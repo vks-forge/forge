@@ -8,14 +8,15 @@
  *   means (tool-system.md §5.2).
  *
  * Exports: evaluate(), worse().
- * Depends on: @forge/core (globMatch), schemas/grant, shared/pattern, types/grants, types/rules. No IO.
+ * Depends on: @forge/core (globMatch), schemas/grant, shared/path, shared/pattern, types/grants, types/rules. No IO.
  */
 
 import { globMatch } from '@forge/core';
 import type { CallRule, Effect } from '#/schemas/grant.js';
 import { commandMatch, literalPrefixLength, toolMatch } from '#/shared/pattern.js';
 import type { EffectiveGrant } from '#/types/grants.types.js';
-import type { MatchMode, RuleOutcome } from '#/types/rules.types.js';
+import { absolutePath } from '#/shared/path.js';
+import type { MatchMode, RuleOutcome, SegmentShape } from '#/types/rules.types.js';
 
 const SEVERITY: Record<Effect, number> = { allow: 0, ask: 1, deny: 2 };
 const REASON = { allow: 'rule_allow', ask: 'rule_ask', deny: 'rule_deny' } as const;
@@ -38,6 +39,20 @@ function matches(
   return toolMatch(pattern, text);
 }
 
+/** A `strict` rule applies only to a bare segment run from its own directory (Windows paths fold case). */
+function strictApplies(rule: CallRule, shape: SegmentShape | undefined): boolean {
+  if (rule.strict === undefined) {
+    return true;
+  }
+
+  return (
+    shape !== undefined &&
+    shape.clean &&
+    shape.cwd !== undefined &&
+    absolutePath(shape.cwd).toLowerCase() === absolutePath(rule.strict.cwd).toLowerCase()
+  );
+}
+
 /** Last match wins; for shell the longest literal prefix wins, ties going to the later rule. */
 function pick(
   rules: readonly CallRule[],
@@ -45,10 +60,15 @@ function pick(
   resource: string,
   mode: MatchMode,
   ignoreCase: boolean,
+  shape?: SegmentShape,
 ): { rule: CallRule; index: number } | null {
   let best: { rule: CallRule; index: number; len: number } | null = null;
   for (const [index, rule] of rules.entries()) {
-    if (rule.action !== action || !matches(rule.resource, resource, mode, ignoreCase)) {
+    if (
+      rule.action !== action ||
+      !strictApplies(rule, shape) ||
+      !matches(rule.resource, resource, mode, ignoreCase)
+    ) {
       continue;
     }
 
@@ -74,6 +94,7 @@ export function evaluate(
   resource: string,
   mode: MatchMode,
   ignoreCase: boolean,
+  shape?: SegmentShape,
 ): RuleOutcome {
   const denyHit = pick(
     grant.managed.filter((r) => r.effect === 'deny'),
@@ -89,7 +110,7 @@ export function evaluate(
 
   let out: RuleOutcome | null = null;
   for (const [i, layer] of grant.ruleLayers.entries()) {
-    const hit = pick(layer.rules, action, resource, mode, ignoreCase);
+    const hit = pick(layer.rules, action, resource, mode, ignoreCase, shape);
     if (hit) {
       const effect = hit.rule.effect;
       out = worse(out, { effect, reason: REASON[effect], rule: idOf(layer.name, hit) });

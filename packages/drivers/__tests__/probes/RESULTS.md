@@ -272,7 +272,7 @@ not exercised live, because no run needed a rework.
 
 - Run 1 finished with claims; G1 failed on the `verify` check and its report named `BATCH_LIMIT = 7`. The ticket went back to `in_progress` with `rework_count` 1.
 - Run 2 (rework prompt carrying the gate findings) added `export const BATCH_LIMIT = 7`, claimed its edits, G1 passed, the ticket merged and is `done`; the bare remote's `main` holds the constant.
-- Two fixture lessons, both real behaviour of the product: (1) the first try ran the check as `npm test && node ...`; a compound command is denied on the unattended Express lane, so the Worker could not verify and parked the ticket with `report_blocked` after making the fix. A check the Worker is meant to run must be one plain command. (2) A check command naming the data home is refused by the floor, and G1's findings quote the check command, so the script sits beside the repository and only the expected value lives in the data home.
+- Two fixture lessons, both real behaviour of the product: (1) the first try ran the check as `npm test && node ...`; a compound command is denied on the unattended Express lane, so the Worker could not verify and parked the ticket with `report_blocked` after making the fix. A check the Worker is meant to run must be one plain command. (Addressed since: an interpreter-led check such as `node scripts/x.mjs` is now an exact-match allow on Express; compound lines stay denied.) (2) A check command naming the data home is refused by the floor, and G1's findings quote the check command, so the script sits beside the repository and only the expected value lives in the data home.
 
 ## Differences from the design docs
 

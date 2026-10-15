@@ -163,7 +163,13 @@ function evaluateSegment(
     return { effect: 'deny', reason: 'managed_deny', rule: floor };
   }
 
-  let out = evaluate(grant, 'shell', seg.text, 'shell', ic);
+  const clean =
+    seg.assignments.length === 0 &&
+    seg.redirects.length === 0 &&
+    seg.flags.length === 0 &&
+    !seg.nested;
+
+  let out = evaluate(grant, 'shell', seg.text, 'shell', ic, { clean, cwd });
   if (seg.baseText !== seg.text) {
     // A path-qualified or `.exe` spelling must not dodge a deny or ask; it can never gain an allow.
     const alt = evaluate(grant, 'shell', seg.baseText, 'shell', ic);

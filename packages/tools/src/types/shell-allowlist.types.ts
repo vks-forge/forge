@@ -13,4 +13,8 @@
 export interface ShellAllowInput {
   readonly commands: readonly string[];
   readonly ecosystems: readonly string[];
+  /** The checks with their working directories; interpreter-led ones become exact rules. */
+  readonly checks?: readonly { readonly command: string; readonly cwd?: string }[];
+  /** The directory the run's shell calls start in; checks' `cwd` is relative to it. */
+  readonly runCwd?: string;
 }

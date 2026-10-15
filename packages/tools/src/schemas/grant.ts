@@ -17,13 +17,19 @@ import { z } from 'zod';
 export const Effect = z.enum(['allow', 'ask', 'deny']);
 export type Effect = z.infer<typeof Effect>;
 
-/** One call-time rule; `save` is the narrower pattern a remembered approval would store. */
+/** One call-time rule; `save` is the narrower pattern a remembered approval would store; `strict` narrows a lane rule to one exact situation. */
 export const CallRule = z.object({
   id: z.string().min(1).optional(),
   action: z.string().min(1),
   resource: z.string(),
   effect: Effect,
   save: z.string().optional(),
+  /**
+   * Lane-internal condition: the rule matches only a bare shell segment (no assignment,
+   * redirect, pipe, background or expansion) run from exactly `cwd`. Project, ticket and
+   * managed rules may not carry it (`assertValidRules`).
+   */
+  strict: z.object({ cwd: z.string().min(1) }).optional(),
 });
 export type CallRule = z.infer<typeof CallRule>;
 

@@ -14,7 +14,8 @@
  *   an unknown build has no approved rows at all, so every native tool is denied (fail
  *   closed). The project's `tool_grants` come from its effective settings; a malformed grant
  *   fails the call closed. Its checks and ecosystems shape the lane's shell allow-list, so a
- *   Worker can run its own project's tests and lint unattended in any language. Each run's grant carries the data home, so the floors deny a
+ *   Worker can run its own project's tests and lint unattended in any language (an interpreter-led
+ *   check such as `node scripts/lint.mjs` only as that exact text, from the run's cwd). Each run's grant carries the data home, so the floors deny a
  *   Worker everything in Forge's folder except its own worktree (d-0098).
  *
  * Exports: createToolPolicy().
@@ -83,6 +84,12 @@ export function createToolPolicy(deps: ToolPolicyDeps): ToolPolicy {
             ? {
                 commands: project.checks.map((c) => c.command),
                 ecosystems: project.ecosystems,
+                // Interpreter-led checks become exact rules, matched from the run's own cwd.
+                checks: project.checks.map((c) => ({
+                  command: c.command,
+                  ...(c.cwd === undefined ? {} : { cwd: c.cwd }),
+                })),
+                ...(run.cwd ? { runCwd: run.cwd } : {}),
               }
             : undefined,
         ),

@@ -47,13 +47,36 @@ export function assertNotBannedAlwaysAllow(rule: CallRule): void {
   }
 }
 
-/** Validates a rule list; `denyOnly` is used for the managed layer, which may never allow or ask. */
-export function assertValidRules(rules: readonly CallRule[], denyOnly = false): void {
+/**
+ * Validates a rule list; `denyOnly` is used for the managed layer, which may never allow or ask.
+ * `laneLayer` marks the rules Forge builds itself: only there may a `strict` rule exist, and it
+ * must be an exact shell allow (no wildcard), which is what lets it name an interpreter.
+ */
+export function assertValidRules(
+  rules: readonly CallRule[],
+  denyOnly = false,
+  laneLayer = false,
+): void {
   for (const r of rules) {
     if (denyOnly && r.effect !== 'deny') {
       throw new InvalidGrantError(
         `managed rules may only deny: ${r.action} ${r.resource}`,
       );
+    }
+
+    if (r.strict !== undefined) {
+      if (
+        !laneLayer ||
+        r.action !== 'shell' ||
+        r.effect !== 'allow' ||
+        /[*?]/.test(r.resource)
+      ) {
+        throw new InvalidGrantError(
+          `strict rules are built by the lane only, as exact shell allows: ${r.action} ${r.resource}`,
+        );
+      }
+
+      continue;
     }
 
     assertNotBannedAlwaysAllow(r);
@@ -92,7 +115,7 @@ export function effectiveGrant(
   const layers = [projectGrant, ticketGrant];
   // The shell allow-list follows the project's checks and ecosystems when they are given.
   const laneRules = shell ? laneRulesFor(lane, shell) : defaults.rules;
-  assertValidRules(laneRules);
+  assertValidRules(laneRules, false, true);
   assertValidRules(managed, true);
   for (const g of layers) {
     if (g) {

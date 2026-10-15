@@ -11,11 +11,12 @@
  *   them (tool-system.md §12).
  *
  * Exports: LANE_DEFAULTS, LANE_UNATTENDED, laneRulesFor().
- * Depends on: @forge/core (Lane), schemas/grant, types/grants, domain/floors, domain/shell-allowlist. No IO.
+ * Depends on: @forge/core (Lane), schemas/grant, types/grants, domain/check-exact-rules, domain/floors, domain/shell-allowlist. No IO.
  */
 
 import type { Lane } from '@forge/core';
 import type { CallRule, Effect } from '#/schemas/grant.js';
+import { exactCheckRules } from '#/domain/check-exact-rules.js';
 import { PROTECTED_PATHS } from '#/domain/floors.js';
 import { shellSafeRules } from '#/domain/shell-allowlist.js';
 import type { LaneDefaults } from '#/types/grants.types.js';
@@ -60,6 +61,13 @@ const INSTALL = [
   'uv pip install*',
 ];
 
+/** Express has no human watching: `ask` becomes `deny`. Standard and Full route asks to Needs-you. */
+export const LANE_UNATTENDED: Readonly<Record<Lane, boolean>> = {
+  express: true,
+  standard: false,
+  full: false,
+};
+
 const SENSITIVE_DIRS = ['migrations/**', '**/migrations/**', 'auth/**', '**/auth/**'];
 
 const rule = (action: string, resource: string, effect: Effect): CallRule => ({
@@ -78,6 +86,8 @@ export function laneRulesFor(lane: Lane, shell?: ShellAllowInput): CallRule[] {
   const rules: CallRule[] = [
     ...shellSafeRules(shell).map((r) => rule('shell', r, 'allow')),
     ...INSTALL.map((r) => rule('shell', r, install)),
+    // Interpreter-led checks only where nobody can answer an `ask`; elsewhere a human approves them.
+    ...(LANE_UNATTENDED[lane] ? exactCheckRules(shell) : []),
     ...['read', 'grep', 'glob', 'edit', 'write'].map((a) => rule(a, '**', 'allow')),
     ...[...CORE_TOOLS, ...READ_TOOLS.filter((t) => t.startsWith('mcp__'))].map((t) =>
       rule(t.split('__')[2] as string, '*', 'allow'),
@@ -134,11 +144,4 @@ export const LANE_DEFAULTS: Readonly<Record<Lane, LaneDefaults>> = {
     projectMcps: true,
     rules: laneRulesFor('full'),
   },
-};
-
-/** Express has no human watching: `ask` becomes `deny`. Standard and Full route asks to Needs-you. */
-export const LANE_UNATTENDED: Readonly<Record<Lane, boolean>> = {
-  express: true,
-  standard: false,
-  full: false,
 };
