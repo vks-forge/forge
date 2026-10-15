@@ -79,8 +79,12 @@ family, not the message.
   (`describeAdapterContract(makeAdapter)`). A new adapter passes the contract
   before it gets its own tests.
 - Property tests for the state machine and policy functions.
-- Gates at root: `pnpm test | lint | typecheck | format:check`. Nothing
-  merges with a gate red or skipped.
+- Gates (d-0119): locally, `pnpm check` (typecheck, lint, format check and
+  the tests related to the changed files, no coverage) must be green before
+  merge. The full suite with coverage (`pnpm test`) runs in CI after every
+  push to main; a red CI run is fixed forward before anything else merges.
+  Builders never run the full suite locally. Nothing merges with a gate red
+  or skipped.
 
 ## 9. Config over code
 
