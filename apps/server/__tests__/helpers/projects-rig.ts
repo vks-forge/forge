@@ -18,6 +18,7 @@ import { vi } from 'vitest';
 import { buildRoutes } from '#/routes/routes.js';
 import { createProjectRegistry } from '#/services/project-registry.js';
 import type { ProjectRegistry } from '#/types/project-registry.types.js';
+import type { RouteDeps } from '#/types/routes.types.js';
 import { stubHarnessDeps } from '#tests/helpers/harness-deps.js';
 import { startHttp } from '#tests/helpers/http-rig.js';
 import { inertRouteExtras } from '#tests/helpers/route-extras.js';
@@ -31,7 +32,10 @@ export interface ProjectsRig {
 }
 
 /** Worktrees of the registry's projects would go under `worktreesDir`; nothing is created there. */
-export async function startProjectsRig(worktreesDir: string): Promise<ProjectsRig> {
+export async function startProjectsRig(
+  worktreesDir: string,
+  memory: RouteDeps['memory'] = inertRouteExtras().memory,
+): Promise<ProjectsRig> {
   const storage = createMemoryStorage();
   const config = createMemoryConfigSource();
   const secrets = createMemorySecretStore();
@@ -52,6 +56,7 @@ export async function startProjectsRig(worktreesDir: string): Promise<ProjectsRi
       storage,
       config,
       projects: registry,
+      memory,
       ...stubHarnessDeps(),
       catalogue: extras.catalogue,
       compat: extras.compat,

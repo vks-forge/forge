@@ -13,7 +13,7 @@
  * Depends on: node:path, @forge/core (DataHomeLayout), types/entrypoints, types/settings. No IO.
  */
 
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import type { DataHomeLayout } from '@forge/core';
 import type { Entrypoints } from '#/types/entrypoints.types.js';
 import type { Layout } from '#/types/settings.types.js';
@@ -28,11 +28,9 @@ export function resolveLayout(
   entrypoints: Entrypoints,
 ): Layout {
   const base = resolve(configRoot);
-  const forgeDir = join(base, '.forge');
 
   return {
     configRoot: base,
-    memoryDir: join(forgeDir, 'memory'),
     data,
     mcpEntry: entrypoints.mcpEntry,
     hookJsPath: entrypoints.hookJsPath,

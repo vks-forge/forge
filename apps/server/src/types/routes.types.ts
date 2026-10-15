@@ -11,7 +11,12 @@
  *   @forge/hooks (HookHandler), types/auth, types/settings. Types only.
  */
 
-import type { ConfigSource, SecretStore, StorageAdapter } from '@forge/core';
+import type {
+  ConfigSource,
+  ProjectMemory,
+  SecretStore,
+  StorageAdapter,
+} from '@forge/core';
 import type { HarnessSetup, HarnessTestResult } from '@forge/drivers';
 import type { Engine } from '@forge/engine';
 import type { HookHandler } from '@forge/hooks';
@@ -33,6 +38,8 @@ export interface RouteDeps {
   readonly compat: HarnessCompat;
   /** Projects being served; the projects API adds to it and archives from it. */
   readonly projects: ProjectRegistry;
+  /** Each project's memory repository: the memory API reads it and applies approvals and rejections. */
+  readonly memory: ProjectMemory;
   /** The ticket sources `POST /intake` accepts events from. */
   readonly triggers: TriggerRegistry;
   readonly hooks: HookHandler;

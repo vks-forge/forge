@@ -14,7 +14,7 @@
  *
  * Exports: assembleServer().
  * Depends on: @forge/db, @forge/drivers (systemClock), @forge/engine, @forge/hooks,
- *   @forge/memory, @forge/secrets, @forge/tools, and the services/routes of this app.
+ *   @forge/secrets, @forge/tools, and the services/routes of this app.
  *   IO: opens SQLite, creates the data home, binds the port on `start()`.
  */
 
@@ -27,7 +27,6 @@ import { createReceiptLookup, systemClock } from '@forge/drivers';
 import { createEngine, createIdSource, createOwnerId } from '@forge/engine';
 import { createFileReportStore } from '@forge/gates';
 import { createRunSecretRegistry } from '@forge/hooks';
-import { createFileMemorySource } from '@forge/memory';
 import { createDpapiSecretStore } from '@forge/secrets';
 import { buildRoutes } from '#/routes/routes.js';
 import { createAuth } from '#/services/auth/create-auth.js';
@@ -41,6 +40,7 @@ import { assertLoopbackBind, closeServer, listen } from '#/services/http/listen.
 import { createRouter } from '#/services/http/router.js';
 import { createLazySecretStore } from '#/services/lazy-secrets.js';
 import { createPrepareRun } from '#/services/prepare-run.js';
+import { composeProjectMemory } from '#/services/project-memory.js';
 import { createProjectRegistry } from '#/services/project-registry.js';
 import { shutdownServer } from '#/services/shutdown.js';
 import { createTicker } from '#/services/ticker.js';
@@ -103,6 +103,9 @@ export async function assembleServer(
     });
 
     await projects.load();
+
+    const dir = layout.data.memoryDir;
+    const parts = await composeProjectMemory(dir, now, log, projects.slugs());
 
     let address: ServerAddress | null = null;
     const prepareRun = createPrepareRun({
@@ -177,9 +180,7 @@ export async function assembleServer(
       storage,
       drivers,
       llm,
-      memory: createFileMemorySource(layout.memoryDir, {
-        onSkip: (path, reason) => log('warn', 'memory record skipped', { path, reason }),
-      }),
+      memory: parts.source,
       receipts,
       reports: createFileReportStore(layout.data.home),
       project: (slug, view) => projects.runtime(slug, view),
@@ -218,6 +219,7 @@ export async function assembleServer(
         catalogue,
         compat,
         projects,
+        memory: parts.memory,
         triggers,
         hooks,
         secrets,

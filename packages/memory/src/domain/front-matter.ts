@@ -8,7 +8,7 @@
  *   rejects; without a lenient pass for the three fields the Director needs, such
  *   records would silently drop out of the constraint set.
  *
- * Exports: parseFrontMatter().
+ * Exports: parseFrontMatter(), bodyOf().
  * Depends on: yaml, types/memory-source-deps. Pure, no IO.
  */
 
@@ -47,6 +47,22 @@ function lenientParse(block: string): Record<string, string> | undefined {
   }
 
   return out.id !== undefined && out.statement !== undefined ? out : undefined;
+}
+
+/** The markdown after the closing `---` fence (empty when there is none), without the blank line after it. */
+export function bodyOf(text: string): string {
+  const src = text.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+  if (!src.startsWith('---\n')) {
+    return '';
+  }
+
+  const rest = src.slice(4);
+  const end = /^---[ \t]*$/m.exec(rest);
+  if (end === null) {
+    return '';
+  }
+
+  return rest.slice(end.index + end[0].length).replace(/^\n{1,2}/, '');
 }
 
 /** Parses the `---` fenced YAML block at the top of `text`; the markdown body is ignored. */

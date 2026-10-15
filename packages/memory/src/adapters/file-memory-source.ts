@@ -6,6 +6,8 @@
  *   turns them into the small read-only slice the engine needs. It fails closed: an
  *   unreadable, malformed or unapproved record is skipped and reported, never loaded as
  *   a constraint. `proposed/` and `outcomes/` are never read (memory-system.md, d-0007).
+ *   The root is the project memory folder in the data home; this repository's own
+ *   `.forge/memory` is the dev team's memory and is never read by the product (d-0086).
  *
  * Exports: createFileMemorySource().
  * Depends on: node:fs/promises, node:path, @forge/core (MemorySource types),
@@ -86,10 +88,9 @@ async function loadFolder(
 }
 
 /**
- * Creates a MemorySource reading `<rootDir>/<slug>/{decisions,rejected}/*.md`. While memory
- * is still flat in the factory repo, `<rootDir>/{decisions,rejected}` is used when no slug
- * folder exists. An unknown project, or a slug that is not `[a-z][a-z0-9-]*`, yields an
- * empty slice.
+ * Creates a MemorySource reading `<rootDir>/<slug>/{decisions,rejected}/*.md`, where
+ * `rootDir` is `<dataHome>/memory`. An unknown project, or a slug that is not
+ * `[a-z][a-z0-9-]*`, yields an empty slice.
  */
 export function createFileMemorySource(
   rootDir: string,
@@ -105,15 +106,8 @@ export function createFileMemorySource(
         return EMPTY;
       }
 
-      const slugDir = join(rootDir, projectSlug);
-      let base: string | null = null;
-      if (await isDir(slugDir)) {
-        base = slugDir;
-      } else if (await isDir(join(rootDir, 'decisions'))) {
-        base = rootDir;
-      }
-
-      if (base === null) {
+      const base = join(rootDir, projectSlug);
+      if (!(await isDir(base))) {
         return EMPTY;
       }
 

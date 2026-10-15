@@ -4,17 +4,16 @@
  * Why: the Director must obey active decisions and avoid rejected approaches, and must
  *   never treat superseded, proposed or malformed records as constraints. A slug from a
  *   chat must not be able to read outside the memory root. These tests pin that filter
- *   against temp trees and against the real repo memory so the format cannot drift.
+ *   against temp trees so the format cannot drift.
  *
  * Pins: status filter, proposed/outcomes never read, skip reporting, slug safety,
- *   slug-folder vs flat layout, id ordering, real-repo parse of every record.
+ *   slug-folder only (no flat fallback), id ordering.
  * Depends on: adapters/file-memory-source, @forge/core (MemorySource type).
  */
 
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import type { MemorySource } from '@forge/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createFileMemorySource } from '#/adapters/file-memory-source.js';
@@ -151,26 +150,9 @@ describe('createFileMemorySource', () => {
     expect(slice.decisions.map((d) => d.statement)).toEqual(['slug']);
   });
 
-  it('falls back to the flat layout when no slug folder exists', async () => {
+  it('does not read a flat layout: that is the dev team memory shape, not a project', async () => {
     await put(join(root, 'decisions'), 'd-0002.md', rec('d-0002', 'active', 'flat'));
     const slice = await createFileMemorySource(root).slice('forge');
-    expect(slice.decisions.map((d) => d.statement)).toEqual(['flat']);
-  });
-});
-
-describe('createFileMemorySource on the real repo memory', () => {
-  const repoMemory = fileURLToPath(new URL('../../../../.forge/memory', import.meta.url));
-
-  it('parses every real record and returns known active, not superseded, ones', async () => {
-    const real: { path: string; reason: string }[] = [];
-    const slice = await createFileMemorySource(repoMemory, {
-      onSkip: (path, reason) => real.push({ path, reason }),
-    }).slice('forge');
-
-    const ids = slice.decisions.map((d) => d.id);
-    expect(real).toEqual([]);
-    expect(ids).toEqual(expect.arrayContaining(['d-0058', 'd-0059', 'd-0060']));
-    expect(ids).not.toContain('d-0024');
-    expect(slice.rejected.map((r) => r.id)).toContain('r-0001');
+    expect(slice).toEqual({ decisions: [], rejected: [] });
   });
 });

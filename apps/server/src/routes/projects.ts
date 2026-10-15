@@ -142,6 +142,19 @@ async function create(
     throw new HttpError(400, 'project_not_servable', messageOf(error));
   }
 
+  // The project's private memory repository is created with the project; a machine
+  // without a usable git fails here, before anything is saved.
+  try {
+    await deps.memory.init(body.slug);
+  } catch (error) {
+    throw new HttpError(
+      500,
+      'memory_init_failed',
+      `could not create the project's memory repository: ${messageOf(error)}`,
+      { family: 'crash' },
+    );
+  }
+
   try {
     await deps.config.append({
       scope: 'project',

@@ -1,12 +1,12 @@
 /**
- * Inert project registry, catalogue, compatibility service, ticket issuer and shutdown hook for route tests that do not touch them.
+ * Inert project registry, memory, catalogue, compatibility service, ticket issuer and shutdown hook for route tests that do not touch them.
  *
  * Why: `RouteDeps` carries the project registry for the projects endpoints. Route tests about tickets, settings or run events must still
  *   build the whole dependency bag (it also carries the tool catalogue and the harness
  *   compatibility service); giving them inert ones keeps those tests about their own route
  *   instead of about wiring.
  *
- * Exports: inertRouteExtras().
+ * Exports: inertRouteExtras(), inertMemory.
  * Depends on: @forge/db (memory stores), services/auth/sse-tickets, services/harness-compat,
  *   types/routes. No IO.
  */
@@ -18,14 +18,38 @@ import { createChatTrigger } from '@forge/triggers';
 import { createTriggerRegistry } from '#/services/trigger-registry.js';
 import type { RouteDeps } from '#/types/routes.types.js';
 
+const inertWrite = (): Promise<never> =>
+  Promise.reject(new Error('inert memory has no writer'));
+
+/** Memory that holds nothing and refuses every write. */
+export const inertMemory: RouteDeps['memory'] = {
+  init: async () => undefined,
+  reader: { list: async () => [], get: async () => null },
+  writer: {
+    propose: inertWrite,
+    decide: inertWrite,
+    approve: inertWrite,
+    reject: inertWrite,
+    supersede: inertWrite,
+    appendOutcome: inertWrite,
+  },
+};
+
 /** A registry that serves nothing. */
 export function inertRouteExtras(): Pick<
   RouteDeps,
-  'projects' | 'catalogue' | 'compat' | 'triggers' | 'tickets' | 'requestShutdown'
+  | 'projects'
+  | 'catalogue'
+  | 'compat'
+  | 'triggers'
+  | 'tickets'
+  | 'requestShutdown'
+  | 'memory'
 > {
   const catalogue = createMemoryCatalogueStore();
 
   return {
+    memory: inertMemory,
     triggers: createTriggerRegistry([createChatTrigger()]),
     tickets: createSseTicketIssuer(() => Date.now()),
     requestShutdown: () => undefined,

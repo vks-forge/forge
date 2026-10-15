@@ -17,6 +17,7 @@ import { healthRoute } from '#/routes/health.js';
 import { githubConnectionRoutes } from '#/routes/github-connections.js';
 import { hookRoute } from '#/routes/hook.js';
 import { intakeRoute } from '#/routes/intake.js';
+import { memoryRoutes } from '#/routes/memory.js';
 import { projectsRoutes } from '#/routes/projects.js';
 import { runEventsRoute } from '#/routes/run-events.js';
 import { settingsRoutes } from '#/routes/settings.js';
@@ -37,6 +38,7 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ...settingsRoutes(deps),
     ...harnessRoutes(deps),
     ...projectsRoutes(deps),
+    ...memoryRoutes(deps),
     ...githubConnectionRoutes(deps),
   ];
 }

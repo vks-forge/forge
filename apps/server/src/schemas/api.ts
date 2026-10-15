@@ -8,7 +8,8 @@
  *   itself, so a second hand-written shape cannot drift from it.
  *
  * Exports: ToolDecisionBody, CataloguePutBody, AnswerBody, LastEventId, SettingsPutBody, HarnessPutBody, HarnessSecretBody, LiveQuery,
- *   ProjectCreateBody, ProjectPatchBody, ConnectionCreateBody, SseTicketBody.
+ *   ProjectCreateBody, ProjectPatchBody, MemoryApproveBody, MemoryRejectBody, ConnectionCreateBody,
+ *   SseTicketBody.
  * Depends on: @forge/core (HarnessAuthMode, HarnessKind, HarnessSecretKind, GitHostConfig, ProjectPrefix,
  *   ProjectCheck, GateRules), zod. No IO.
  */
@@ -177,6 +178,17 @@ export type ProjectCreateBody = z.infer<typeof ProjectCreateBody>;
 /** `PATCH /projects/:slug`: archiving is the only change a project row takes through the API. */
 export const ProjectPatchBody = z.object({ status: z.literal('archived') }).strict();
 export type ProjectPatchBody = z.infer<typeof ProjectPatchBody>;
+
+/** `POST /projects/:slug/memory/proposals/:id/approve`; `author` is who is answering, kept in the record. */
+export const MemoryApproveBody = z.object({ author: z.string().trim().min(1) }).strict();
+export type MemoryApproveBody = z.infer<typeof MemoryApproveBody>;
+
+/** `POST /projects/:slug/memory/proposals/:id/reject`; the reason becomes part of the rejected record. */
+export const MemoryRejectBody = z
+  .object({ author: z.string().trim().min(1), reason: z.string().trim().min(1) })
+  .strict();
+
+export type MemoryRejectBody = z.infer<typeof MemoryRejectBody>;
 
 /** `POST /github/connections`; `private_key_pem` goes to the secret store and is never echoed. */
 export const ConnectionCreateBody = z
