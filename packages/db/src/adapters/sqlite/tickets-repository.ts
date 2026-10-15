@@ -16,7 +16,13 @@
  */
 
 import { Ticket, TicketRelation } from '@forge/core';
-import type { TicketId, TicketPatch, TicketRepository, TicketStatus } from '@forge/core';
+import type {
+  TicketId,
+  TicketListFilter,
+  TicketPatch,
+  TicketRepository,
+  TicketStatus,
+} from '@forge/core';
 import { parseStored } from '#/shared/db-errors.js';
 import { dropNulls } from '#/shared/json.js';
 import { buildSetClause, parseTicketPatch } from '#/shared/patches.js';
@@ -80,6 +86,29 @@ export function createTicketRepository(driver: SqlDriver): TicketRepository {
     async listByStatus(status: TicketStatus) {
       return driver
         .all('SELECT * FROM tickets WHERE status = ? ORDER BY rowid', [status])
+        .map(toTicket);
+    },
+
+    async listByProject(project: string, filter: TicketListFilter) {
+      const where = ['project = ?'];
+      const params: (string | number)[] = [project];
+      const statuses = filter.statuses ?? [];
+      if (statuses.length > 0) {
+        where.push(`status IN (${statuses.map(() => '?').join(', ')})`);
+        params.push(...statuses);
+      }
+
+      if (filter.after) {
+        where.push('(updated_at < ? OR (updated_at = ? AND id < ?))');
+        params.push(filter.after.updated_at, filter.after.updated_at, filter.after.id);
+      }
+
+      return driver
+        .all(
+          `SELECT * FROM tickets WHERE ${where.join(' AND ')}
+           ORDER BY updated_at DESC, id DESC LIMIT ?`,
+          [...params, filter.limit],
+        )
         .map(toTicket);
     },
 

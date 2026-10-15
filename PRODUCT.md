@@ -104,6 +104,7 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-15 — W3b: ticket list per project for the board.
 - 2026-10-15 — C3 fixes: graceful stop waits for in-flight tool calls; resume phase isolated per run; atomic project slug.
 - 2026-10-15 — B13: live rework probe; pnpm probes runs single probes.
 - 2026-10-15 — B9: runs survive a restart — interrupted runs resume with a new run secret; receipts verified across generations.

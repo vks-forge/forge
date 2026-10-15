@@ -13,7 +13,7 @@
  *   interactions are listed (director-core.md §3, §7, §8).
  *
  * Each repository's cases live in their own file and are registered from here, so every
- *   backend runs them: tickets, transactions, runs, run events, run tokens, ticket
+ *   backend runs them: tickets (and the project ticket list), transactions, runs, run events, run tokens, ticket
  *   relations and the ticket fields derived from them, the run lifecycle, interaction answer/expire CAS, intake ids and ticket mapping, wake requests,
  *   the run inbox, gate results, projects and GitHub connections (ports batch C), the harness registry.
  *
@@ -36,6 +36,7 @@ import { describeRunEventsContract } from './run-events.contract.js';
 import { describeRunTokensContract } from './run-tokens.contract.js';
 import { describeRunsContract } from './runs.contract.js';
 import { describeTicketsContract } from './tickets.contract.js';
+import { describeTicketListContract } from './ticket-list.contract.js';
 import { describeTransactionsContract } from './transactions.contract.js';
 import { describeInteractionCasContract } from './interaction-cas.contract.js';
 import { describeIntakeEventsContract } from './intake-events.contract.js';
@@ -73,6 +74,7 @@ export function describeStorageContract(
     describeConnectionsContract(() => db);
     describeHarnessCompatContract(() => db);
     describeTicketsContract(() => db);
+    describeTicketListContract(() => db);
     describeTransactionsContract(() => db);
     describeRunsContract(() => db);
     describeRunEventsContract(() => db);

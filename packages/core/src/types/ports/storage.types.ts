@@ -40,6 +40,7 @@ import type { TicketRelation } from '#/schemas/ticket-relation.js';
 import type { Ticket, TicketRelationKind, TicketStatus } from '#/schemas/ticket.js';
 import type { NewWakeRequest, WakeKind, WakeRequest } from '#/schemas/wake-request.js';
 import type { NewRunEvent } from '#/types/run-event.types.js';
+import type { TicketListFilter } from '#/types/ticket-list.types.js';
 
 /**
  * Fields a CAS update may change; identity and creation time are immutable,
@@ -61,6 +62,11 @@ export type TicketPatch = Partial<
 export interface TicketRepository {
   get(id: TicketId): Promise<Ticket | null>;
   listByStatus(status: TicketStatus): Promise<Ticket[]>;
+  // One project's tickets, newest `updated_at` first with `id` descending as the tie-break,
+  // so the order is total and a page boundary never repeats or skips a ticket. `after` is the
+  // last row of the previous page (exclusive); `statuses` (any of) narrows when present and
+  // non-empty. At most `limit` tickets. `project` is the ticket's `project` column.
+  listByProject(project: string, filter: TicketListFilter): Promise<Ticket[]>;
   // Stores the ticket row. A `parent` or `blocked_by` on the ticket is recorded as relation
   // rows in the same transaction (`spawned_from` / `depends_on`), so a seeded ticket reads
   // back as written; from then on relations change only through `ticketRelations`.

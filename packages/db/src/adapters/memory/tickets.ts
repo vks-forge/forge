@@ -43,6 +43,27 @@ export function memoryTickets(state: MemoryState): TicketRepository {
     async listByStatus(status) {
       return [...state.tickets.values()].filter((t) => t.status === status).map(view);
     },
+    async listByProject(project, filter) {
+      const statuses = filter.statuses ?? [];
+      const { after } = filter;
+
+      return [...state.tickets.values()]
+        .filter((t) => t.project === project)
+        .filter((t) => statuses.length === 0 || statuses.includes(t.status))
+        .filter(
+          (t) =>
+            !after ||
+            t.updated_at < after.updated_at ||
+            (t.updated_at === after.updated_at && t.id < after.id),
+        )
+        .sort((a, b) =>
+          a.updated_at === b.updated_at
+            ? Number(b.id > a.id) - Number(b.id < a.id)
+            : Number(b.updated_at > a.updated_at) - Number(b.updated_at < a.updated_at),
+        )
+        .slice(0, filter.limit)
+        .map(view);
+    },
     async insert(ticket) {
       const t = Ticket.parse(ticket);
       const edges = [
