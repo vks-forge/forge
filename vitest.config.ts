@@ -35,6 +35,7 @@ const HEAVY = [
   'apps/server/__tests__/routes/memory*.test.ts',
   'apps/server/__tests__/e2e/**/*.test.ts',
   'apps/server/__tests__/routes/projects.test.ts',
+  'apps/server/__tests__/routes/project-inspect.test.ts',
   'apps/server/__tests__/routes/projects-archive.test.ts',
   'apps/server/__tests__/services/run-server.test.ts',
   'apps/server/__tests__/services/composition-parts.test.ts',

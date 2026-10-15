@@ -9,7 +9,7 @@
  *   longer validate. It is derived from core's `Project`, so a column added there reaches the
  *   UI with no edit here.
  *
- * Exports: ProjectView, ProjectsResponse (schemas and inferred types).
+ * Exports: ProjectView, ProjectsResponse, ProjectCreated (schemas and inferred types).
  * Depends on: @forge/core (Project), zod.
  */
 
@@ -26,3 +26,10 @@ export type ProjectView = z.infer<typeof ProjectView>;
 
 export const ProjectsResponse = z.object({ projects: z.array(ProjectView) });
 export type ProjectsResponse = z.infer<typeof ProjectsResponse>;
+
+/** `POST /projects` answer: the registered project and the number of its first settings version. */
+export const ProjectCreated = z.object({
+  project: ProjectView,
+  settings_version: z.number().int().positive(),
+});
+export type ProjectCreated = z.infer<typeof ProjectCreated>;

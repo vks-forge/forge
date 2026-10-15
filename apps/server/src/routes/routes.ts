@@ -21,11 +21,13 @@ import { hookRoute } from '#/routes/hook.js';
 import { intakeRoute } from '#/routes/intake.js';
 import { memoryRoutes } from '#/routes/memory.js';
 import { projectStatsRoutes } from '#/routes/project-stats.js';
+import { projectInspectRoutes } from '#/routes/project-inspect.js';
 import { projectsRoutes } from '#/routes/projects.js';
 import { runEventsRoute } from '#/routes/run-events.js';
 import { runSteerRoute } from '#/routes/run-steer.js';
 import { runsRoutes } from '#/routes/runs.js';
 import { settingsRoutes } from '#/routes/settings.js';
+import { systemRoutes } from '#/routes/system.js';
 import { ticketListRoute } from '#/routes/ticket-list.js';
 import { ticketRoute } from '#/routes/tickets.js';
 import type { Route } from '#/types/http.types.js';
@@ -46,7 +48,9 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ...adminRoutes(deps),
     ...settingsRoutes(deps),
     ...harnessRoutes(deps),
+    ...projectInspectRoutes(deps),
     ...projectsRoutes(deps),
+    ...systemRoutes(deps),
     ...memoryRoutes(deps),
     ...githubConnectionRoutes(deps),
     ...projectStatsRoutes(deps),

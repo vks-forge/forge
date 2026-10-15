@@ -104,6 +104,7 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-16 — W7: first-run wizard and new-project flow.
 - 2026-10-16 — W6b-1: cards — every intake becomes a card with a rolled-up board column and history.
 - 2026-10-16 — Web app runs on the real server API only (mock removed); UI preferences persist across reloads.
 - 2026-10-16 — W6b-2: message a running Worker directly (steer).

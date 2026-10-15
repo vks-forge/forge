@@ -18,6 +18,7 @@ import type { TicketListPage, TicketStatus } from '@forge/core';
 import type { ProjectView } from '#/schemas/projects.js';
 import type { GithubApi, HarnessesApi, SettingsApi } from '#/types/settings-api.types.js';
 import type { MemoryApi } from '#/types/memory.types.js';
+import type { OnboardingApi } from '#/types/onboarding.types.js';
 import type { ProjectSettingsApi } from '#/types/project-settings.types.js';
 import type { AnswerReply, IngestReply, TicketDetail } from '#/schemas/tickets.js';
 import type { CostApi, InboxApi, RunsApi, StatsApi } from '#/types/work-api.types.js';
@@ -88,6 +89,7 @@ export interface ResourceApis {
   readonly cost: CostApi;
   readonly inbox: InboxApi;
   readonly runs: RunsApi;
+  readonly onboarding: OnboardingApi;
 }
 
 export type ResourceName = keyof ResourceApis;

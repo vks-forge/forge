@@ -17,11 +17,10 @@
  *   deletes nothing. The list shows `config_error` for a project the engine skips.
  *
  * Exports: projectsRoutes().
- * Depends on: node:path, @forge/core, @forge/git (inspectRepository), schemas/api,
- *   services/http/*, services/path-guard, services/project-conflict, types/routes. IO: storage, settings, reads the clone through git.
+ * Depends on: @forge/core, @forge/git (inspectRepository), schemas/api,
+ *   services/http/*, services/project-folder, services/project-conflict, types/routes. IO: storage, settings, reads the clone through git.
  */
 
-import { isAbsolute } from 'node:path';
 import {
   BUILTIN_CONFIG,
   InvalidInputError,
@@ -35,7 +34,7 @@ import { readJson } from '#/services/http/body.js';
 import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
 import { appendFirstSettings } from '#/services/first-settings.js';
-import { insideForgeStorage } from '#/services/path-guard.js';
+import { assertProjectFolder } from '#/services/project-folder.js';
 import { projectConflict } from '#/services/project-conflict.js';
 import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
@@ -95,24 +94,7 @@ async function create(
   ctx: Parameters<Route['handle']>[0],
 ): Promise<void> {
   const body = await readJson(ctx.req, ProjectCreateBody);
-  if (!isAbsolute(body.local_path)) {
-    throw new HttpError(400, 'invalid_local_path', 'local_path must be an absolute path');
-  }
-
-  // Forge's own storage is never a project: its memory repositories and worktrees are what
-  // the Director and Workers write, so a project there would erase the floor between them.
-  const inside = insideForgeStorage(body.local_path, [
-    deps.dataHome.home,
-    deps.dataHome.worktreesDir,
-  ]);
-
-  if (inside !== null) {
-    throw new HttpError(
-      400,
-      'path_in_data_home',
-      "local_path is inside Forge's own data folder; register the repository clone instead",
-    );
-  }
+  assertProjectFolder(deps.dataHome, body.local_path);
 
   // A fast refusal before the slow work; the decision that counts is made again inside the
   // transaction that saves the row, because two requests can both pass this read.

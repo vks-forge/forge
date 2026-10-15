@@ -9,13 +9,13 @@
  *   error states live in the trigger and the menu, because this control is the first thing
  *   that depends on the server.
  *
- * Exports: ProjectSwitcher.
+ * Exports: ProjectSwitcher. The menu ends with "Add project" (`/projects/new`).
  * Depends on: react, react-router, @radix-ui/react-dropdown-menu, motion/react, lucide-react,
  *   api/use-projects, domain/nav-entries, state/current-project, theme/motion.
  */
 
 import * as Menu from '@radix-ui/react-dropdown-menu';
-import { Check, ChevronsUpDown, CircleAlert, TriangleAlert } from 'lucide-react';
+import { Check, ChevronsUpDown, CircleAlert, Plus, TriangleAlert } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
@@ -91,11 +91,7 @@ function MenuBody(props: {
   }
 
   if (query.data.length === 0) {
-    return (
-      <p className="px-2 py-2 text-sm text-muted">
-        No projects yet. New projects arrive with the project wizard.
-      </p>
-    );
+    return <p className="px-2 py-2 text-sm text-muted">No projects yet.</p>;
   }
 
   return (
@@ -185,6 +181,14 @@ export function ProjectSwitcher() {
                 className="z-50 max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] min-w-[var(--radix-dropdown-menu-trigger-width)] max-w-[min(20rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-line bg-surface p-1.5 shadow-float"
               >
                 <MenuBody query={query} {...(slug ? { slug } : {})} onPick={pick} />
+                <Menu.Separator className="my-1 h-px bg-line" />
+                <Menu.Item
+                  className={`${ROW} font-medium`}
+                  onSelect={() => void navigate('/projects/new')}
+                >
+                  <Plus aria-hidden="true" className="size-4 text-muted" />
+                  Add project
+                </Menu.Item>
               </motion.div>
             </Menu.Content>
           </Menu.Portal>

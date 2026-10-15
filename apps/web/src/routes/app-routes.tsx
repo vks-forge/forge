@@ -8,7 +8,7 @@
  *   project (d-0104). Everything renders inside `AppShell`. Tests build their own router from
  *   these same routes plus extras, so what they exercise is what ships.
  *
- * Exports: appRoutes.
+ * Exports: appRoutes. `/welcome` (first-run wizard) sits outside the shell; `/projects/new` inside it.
  * Depends on: react-router, components/shell/app-shell, domain/nav-entries, routes/*.
  */
 
@@ -28,7 +28,9 @@ import { ProjectScope } from '#/routes/project-scope.js';
 import { RootRedirect } from '#/routes/root-redirect.js';
 import { RunsPage } from '#/routes/runs/runs-page.js';
 import { settingsRoutes } from '#/routes/settings/settings-routes.js';
+import { NewProjectPage } from '#/routes/projects/new-project-page.js';
 import { TicketPage } from '#/routes/ticket/ticket-page.js';
+import { WelcomePage } from '#/routes/welcome/welcome-page.js';
 
 /** Project screens that are built; any segment not listed here still shows its placeholder. */
 const PROJECT_SCREENS: Readonly<Record<string, ReactNode>> = {
@@ -46,6 +48,7 @@ export const appRoutes: RouteObject[] = [
     element: <AppShell />,
     children: [
       { index: true, element: <RootRedirect /> },
+      { path: 'projects/new', element: <NewProjectPage /> },
       {
         path: 'p/:slug',
         element: <ProjectScope />,
@@ -70,4 +73,7 @@ export const appRoutes: RouteObject[] = [
       { path: '*', element: <NotFound /> },
     ],
   },
+  // First run is full screen: no project exists yet, so no shell. Kept after the shell so
+  // tests that take `appRoutes[0]` as the shell still get it.
+  { path: '/welcome', element: <WelcomePage /> },
 ];

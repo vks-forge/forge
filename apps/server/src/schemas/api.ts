@@ -8,7 +8,7 @@
  *   itself, so a second hand-written shape cannot drift from it.
  *
  * Exports: ToolDecisionBody, CataloguePutBody, AnswerBody, LastEventId, SettingsPutBody, HarnessPutBody, HarnessSecretBody, LiveQuery,
- *   ProjectCreateBody, ProjectPatchBody, MemoryApproveBody, MemoryRejectBody, ConnectionCreateBody,
+ *   ProjectCreateBody, ProjectInspectBody, ProjectPatchBody, MemoryApproveBody, MemoryRejectBody, ConnectionCreateBody,
  *   SseTicketBody, ProofBody.
  * Depends on: @forge/core (HarnessAuthMode, HarnessKind, HarnessSecretKind, GitHostConfig, ProjectPrefix,
  *   ProjectCheck, GateRules), zod. No IO.
@@ -178,6 +178,12 @@ export const ProjectCreateBody = z
     }
   });
 export type ProjectCreateBody = z.infer<typeof ProjectCreateBody>;
+
+/** `POST /projects/inspect`: the folder to look at and, optionally, the base branch to check. */
+export const ProjectInspectBody = z
+  .object({ local_path: z.string().min(1), base_branch: z.string().min(1).optional() })
+  .strict();
+export type ProjectInspectBody = z.infer<typeof ProjectInspectBody>;
 
 /** `PATCH /projects/:slug`: archiving is the only change a project row takes through the API. */
 export const ProjectPatchBody = z.object({ status: z.literal('archived') }).strict();

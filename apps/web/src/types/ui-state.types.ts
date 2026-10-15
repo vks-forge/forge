@@ -6,7 +6,7 @@
  *   on exactly what is saved.
  *
  * Exports: BoardPrefs, ThreadPrefs, ThemePrefs, ProjectPrefs, AnswerDrafts, MemoryPrefs,
- *   AuthorPrefs.
+ *   AuthorPrefs, WelcomePrefs.
  * Depends on: types/board.types, types/memory.types, types/nav.types. Types only.
  */
 
@@ -49,6 +49,12 @@ export interface MemoryPrefs {
     readonly tags: readonly string[];
     readonly activeOnly: boolean;
   } | null;
+}
+
+/** Where the first-run wizard was and whether "Finish later" was chosen; no server data. */
+export interface WelcomePrefs {
+  readonly step: 'data' | 'harness' | 'github' | 'project' | null;
+  readonly dismissed: boolean;
 }
 
 /** The name recorded on settings saves; a label for the audit trail, not an identity. */

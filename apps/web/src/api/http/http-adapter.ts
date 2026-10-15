@@ -12,6 +12,7 @@
  */
 
 import { createMemoryHttp } from '#/api/http/memory-http.js';
+import { createOnboardingHttp } from '#/api/http/onboarding-http.js';
 import { createProjectSettingsHttp } from '#/api/http/project-settings-http.js';
 import { requestJson } from '#/api/http/request-json.js';
 import { createSettingsHttp } from '#/api/http/settings-http.js';
@@ -47,6 +48,7 @@ export function createHttpAdapter(client: HttpClientOptions): ForgeApi {
     ...createSettingsHttp(client),
     ...createWorkHttp(client),
     memory: createMemoryHttp(client),
+    onboarding: createOnboardingHttp(client),
     projectSettings: createProjectSettingsHttp(client),
     projects: {
       async list(options) {
