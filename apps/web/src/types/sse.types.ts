@@ -5,7 +5,7 @@
  *   options bag with injectable `fetch` and `EventSource` lets the helper be tested without a
  *   browser or a server.
  *
- * Exports: RunEventWatchOptions, RunEventWatch, EventSourceLike, EventSourceCtor.
+ * Exports: ConnectionState, RunEventWatchOptions, RunEventWatch, EventSourceLike, EventSourceCtor.
  * Depends on: @forge/core (RunEvent type), api/api-error (type).
  */
 
@@ -23,6 +23,9 @@ export interface EventSourceLike {
 
 export type EventSourceCtor = new (url: string) => EventSourceLike;
 
+/** `connecting`: asking for a ticket or opening the stream; `open`: streaming; `reconnecting`: the stream dropped and a retry is scheduled. */
+export type ConnectionState = 'connecting' | 'open' | 'reconnecting';
+
 export interface RunEventWatchOptions {
   readonly runId: string;
   /** Path prefix of the proxy or server, such as `/api`. */
@@ -31,6 +34,8 @@ export interface RunEventWatchOptions {
   /** The server's closing `end` event: the run is over and everything was sent. */
   readonly onEnd: (status: string) => void;
   readonly onError: (error: ApiError) => void;
+  /** Tells the page whether it is live, so a quiet run is not mistaken for a dead connection. */
+  readonly onConnection?: (state: ConnectionState) => void;
   readonly fetch?: typeof globalThis.fetch;
   readonly EventSource?: EventSourceCtor;
   /** Reconnects before giving up; default 5. */

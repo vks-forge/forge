@@ -7,6 +7,9 @@
  *   (code.md rule 9). Keeping the decision in one pure function makes it testable without a
  *   browser and keeps `main.tsx` free of logic.
  *
+ * Tickets, answers, intake and run streams have no fixtures (d-0123), so even a forced-mock
+ *   build keeps them on the real API; the smoke answers them in the browser.
+ *
  * Exports: composeApi().
  * Depends on: api/adapter-table, api/http/http-adapter, api/mock/mock-adapter, types/api.types.
  */
@@ -19,7 +22,16 @@ import type {
   ComposeOptions,
   ForgeApi,
   MockScenario,
+  ResourceName,
 } from '#/types/api.types.js';
+
+/** Resources with no fixtures (d-0123): even a fixture build asks the server (or the smoke's browser stub). */
+const HTTP_ONLY: readonly ResourceName[] = [
+  'tickets',
+  'interactions',
+  'runEvents',
+  'intake',
+];
 
 const SCENARIOS: readonly MockScenario[] = ['ok', 'empty', 'error'];
 
@@ -27,7 +39,15 @@ export function composeApi(options: ComposeOptions = {}): {
   readonly api: ForgeApi;
   readonly table: AdapterTable;
 } {
-  const table = options.forceApi === 'mock' ? forced('mock') : ADAPTER_TABLE;
+  const table = (
+    options.forceApi === 'mock'
+      ? {
+          ...forced('mock'),
+          ...Object.fromEntries(HTTP_ONLY.map((name) => [name, 'http'])),
+        }
+      : ADAPTER_TABLE
+  ) as AdapterTable;
+
   const scenario = SCENARIOS.find((s) => s === options.mockScenario) ?? 'ok';
   const api = createForgeApi(table, {
     http: createHttpAdapter({

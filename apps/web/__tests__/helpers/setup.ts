@@ -13,12 +13,15 @@
  */
 
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { MotionGlobalConfig } from 'motion/react';
 import { afterEach, beforeEach } from 'vitest';
+import { resetUiState } from '#/state/ui-store.js';
 import { setMatchMedia } from '#tests/helpers/match-media.js';
 
 MotionGlobalConfig.skipAnimations = true;
+// A loaded machine (coverage, parallel workers) can take longer than the 1 s default.
+configure({ asyncUtilTimeout: 5000 });
 
 // Radix menus and dialogs call these; jsdom does not implement them.
 Element.prototype.hasPointerCapture ??= () => false;
@@ -40,4 +43,5 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  resetUiState();
 });

@@ -7,16 +7,20 @@
  *   `http` adapter (the real server) or the `mock` adapter (typed fixtures) as chosen in
  *   one table, and moves to `http` the day its endpoint lands, with no screen edit.
  *
- * Exports: ForgeApi, ForgeApiAdapter, ResourceApis, ProjectsApi, ResourceName, AdapterKind,
+ * Exports: TicketsApi, InteractionsApi, RunEventsApi, IntakeApi, TicketListParams, ChatIntake,
+ *   ForgeApi, ForgeApiAdapter, ResourceApis, ProjectsApi, ResourceName, AdapterKind,
  *   AdapterTable, RequestOptions, HttpClientOptions, MockScenario, MockOptions, ComposeOptions,
  *   JsonRequest, ApiContextValue, ApiErrorKind.
- * Depends on: schemas/projects (type only).
+ * Depends on: @forge/core, schemas/projects, schemas/tickets, types/sse.types (types only).
  */
 
+import type { TicketListPage, TicketStatus } from '@forge/core';
 import type { ProjectView } from '#/schemas/projects.js';
 import type { GithubApi, HarnessesApi, SettingsApi } from '#/types/settings-api.types.js';
 import type { MemoryApi } from '#/types/memory.types.js';
 import type { ProjectSettingsApi } from '#/types/project-settings.types.js';
+import type { AnswerReply, IngestReply, TicketDetail } from '#/schemas/tickets.js';
+import type { RunEventWatch, RunEventWatchOptions } from '#/types/sse.types.js';
 
 /** Per-call options every method accepts so TanStack Query can cancel in-flight work. */
 export interface RequestOptions {
@@ -28,6 +32,45 @@ export interface ProjectsApi {
   list(options?: RequestOptions): Promise<readonly ProjectView[]>;
 }
 
+export interface TicketListParams {
+  readonly slug: string;
+  /** Only these states; all when absent. */
+  readonly state?: readonly TicketStatus[];
+  /** Opaque cursor from the previous page. */
+  readonly cursor?: string;
+  readonly limit?: number;
+}
+
+export interface TicketsApi {
+  /** One page of a project's tickets, newest change first. */
+  list(params: TicketListParams, options?: RequestOptions): Promise<TicketListPage>;
+  /** One ticket with its runs, gate results and pending questions. */
+  get(id: string, options?: RequestOptions): Promise<TicketDetail>;
+}
+
+export interface InteractionsApi {
+  /** Answers a pending question once; a second answer is refused with 409. */
+  answer(id: string, answer: unknown, options?: RequestOptions): Promise<AnswerReply>;
+}
+
+export interface RunEventsApi {
+  /** Follows one run's events live; see `watchRunEvents()`. */
+  watch(options: Omit<RunEventWatchOptions, 'baseUrl'>): RunEventWatch;
+}
+
+export interface ChatIntake {
+  /** The project's id (not its slug): intake is keyed by id. */
+  readonly projectId: string;
+  readonly text: string;
+  /** Same key on a retry, so a double click never files two tickets. */
+  readonly dedupeKey: string;
+}
+
+export interface IntakeApi {
+  /** Hands the Director a chat request; it becomes a ticket on the next tick. */
+  chat(input: ChatIntake, options?: RequestOptions): Promise<IngestReply>;
+}
+
 /** One entry per resource the UI reads. Add a resource here first, then to the adapters and the table. */
 export interface ResourceApis {
   readonly projects: ProjectsApi;
@@ -36,6 +79,10 @@ export interface ResourceApis {
   readonly settings: SettingsApi;
   readonly projectSettings: ProjectSettingsApi;
   readonly memory: MemoryApi;
+  readonly tickets: TicketsApi;
+  readonly interactions: InteractionsApi;
+  readonly runEvents: RunEventsApi;
+  readonly intake: IntakeApi;
 }
 
 export type ResourceName = keyof ResourceApis;

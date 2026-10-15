@@ -27,6 +27,8 @@ export function AppShell() {
   // The drawer is "open on this path": choosing a destination changes the path, which closes it
   // with no effect needed.
   const [openOn, setOpenOn] = useState<string | null>(null);
+  // The Board is a row of columns and needs more room than a reading column.
+  const wide = /^\/p\/[^/]+\/board\/?$/.test(pathname);
   const drawerOpen = openOn === pathname;
   const setDrawerOpen = (open: boolean): void => setOpenOn(open ? pathname : null);
 
@@ -61,7 +63,7 @@ export function AppShell() {
         <main
           id="main"
           tabIndex={-1}
-          className="mx-auto w-full min-w-0 max-w-[892px] flex-1 px-4 py-6 outline-none md:px-8 md:py-9"
+          className={`mx-auto w-full min-w-0 flex-1 px-4 py-6 outline-none md:px-8 md:py-9 ${wide ? 'max-w-[1480px]' : 'max-w-[892px]'}`}
         >
           <PageTransition />
         </main>

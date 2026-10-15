@@ -16,11 +16,12 @@ import { render } from '@testing-library/react';
 import type { RenderResult } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import type { NonIndexRouteObject, RouteObject } from 'react-router';
+import { fakeTicketsFor } from '#tests/helpers/fake-tickets/fake-scenario.js';
 import { composeApi } from '#/api/compose-api.js';
 import { AppProviders } from '#/components/app-providers.js';
 import { appRoutes } from '#/routes/app-routes.js';
 import { useUnsavedChanges } from '#/state/unsaved-changes.js';
-import type { MockScenario } from '#/types/api.types.js';
+import type { ForgeApi, MockScenario } from '#/types/api.types.js';
 
 /** A screen that always holds unsaved edits. */
 export function DirtyView() {
@@ -34,6 +35,8 @@ export function renderApp(
     path?: string;
     scenario?: MockScenario;
     extraRoutes?: RouteObject[];
+    /** Replace parts of the fixture API, for example to make one call fail. */
+    wrapApi?: (api: ForgeApi) => ForgeApi;
   } = {},
 ): RenderResult & { router: ReturnType<typeof createMemoryRouter> } {
   const { api, table } = composeApi({
@@ -47,10 +50,14 @@ export function renderApp(
     { ...shell, children: [...(options.extraRoutes ?? []), ...(shell.children ?? [])] },
   ];
 
+  // Tickets, answers, intake and run streams come from a test-only fake: the app has no
+  // fixture data for them (d-0123).
+  const withTickets = { ...api, ...fakeTicketsFor(options.scenario) } as ForgeApi;
+  const wrapped = options.wrapApi ? options.wrapApi(withTickets) : withTickets;
   const router = createMemoryRouter(routes, { initialEntries: [options.path ?? '/'] });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
-    <AppProviders api={api} table={table} queryClient={queryClient}>
+    <AppProviders api={wrapped} table={table} queryClient={queryClient}>
       <RouterProvider router={router} />
     </AppProviders>,
   );

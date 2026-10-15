@@ -29,6 +29,10 @@ export const ADAPTER_TABLE: AdapterTable = {
   settings: 'http',
   projectSettings: 'http',
   memory: 'http',
+  tickets: 'http',
+  interactions: 'http',
+  runEvents: 'http',
+  intake: 'http',
 };
 
 const RESOURCES = Object.keys(ADAPTER_TABLE) as ResourceName[];

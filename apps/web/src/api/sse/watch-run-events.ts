@@ -63,6 +63,7 @@ export function watchRunEvents(options: RunEventWatchOptions): RunEventWatch {
       return;
     }
 
+    options.onConnection?.('reconnecting');
     timer = setTimeout(() => void connect(), backoff(attempts));
   };
 
@@ -103,6 +104,7 @@ export function watchRunEvents(options: RunEventWatchOptions): RunEventWatch {
   };
 
   async function connect(): Promise<void> {
+    options.onConnection?.('connecting');
     try {
       const { ticket } = await requestJson(
         { baseUrl: options.baseUrl, ...(options.fetch ? { fetch: options.fetch } : {}) },
@@ -126,6 +128,7 @@ export function watchRunEvents(options: RunEventWatchOptions): RunEventWatch {
       next.addEventListener('end', onEnd);
       next.onopen = () => {
         attempts = 0;
+        options.onConnection?.('open');
       };
 
       next.onerror = (event) => {
