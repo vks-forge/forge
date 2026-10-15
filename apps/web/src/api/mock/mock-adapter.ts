@@ -13,6 +13,7 @@
 
 import { ApiError } from '#/api/api-error.js';
 import { projectFixtures } from '#/api/mock/fixtures.js';
+import { createSettingsMock } from '#/api/mock/settings-mock.js';
 import type { ForgeApiAdapter, MockOptions } from '#/types/api.types.js';
 
 const DEFAULT_LATENCY: readonly [number, number] = [150, 400];
@@ -45,6 +46,7 @@ export function createMockAdapter(options: MockOptions = {}): ForgeApiAdapter {
     wait(min + random() * (max - min), signal);
 
   return {
+    ...createSettingsMock(delay, scenario),
     projects: {
       async list(request) {
         await delay(request?.signal);

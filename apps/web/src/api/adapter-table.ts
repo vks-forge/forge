@@ -24,6 +24,9 @@ import type {
 /** Which adapter serves each resource. Flip a line to `'http'` when its server endpoint ships. */
 export const ADAPTER_TABLE: AdapterTable = {
   projects: 'http',
+  harnesses: 'http',
+  github: 'http',
+  settings: 'http',
 };
 
 const RESOURCES = Object.keys(ADAPTER_TABLE) as ResourceName[];

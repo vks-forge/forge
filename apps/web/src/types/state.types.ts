@@ -4,11 +4,20 @@
  * Why: both are React contexts consumed from many components; typing them once keeps the
  *   provider and its hooks honest about what a consumer may call.
  *
- * Exports: ThemeContextValue, PendingLeave, UnsavedChangesContextValue.
+ * Exports: ThemeContextValue, PendingLeave, UnsavedChangesContextValue, SubmitState.
  * Depends on: types/nav.types. Types only.
  */
 
 import type { ThemeMode } from '#/types/nav.types.js';
+
+/** What `useSubmit()` returns: the write, its state, and a way back to idle. */
+export interface SubmitState<Args extends unknown[], Result> {
+  readonly run: (...args: Args) => Promise<Result | undefined>;
+  readonly reset: () => void;
+  readonly status: 'idle' | 'pending' | 'success' | 'error';
+  readonly error: unknown;
+  readonly pending: boolean;
+}
 
 export interface ThemeContextValue {
   readonly mode: ThemeMode;

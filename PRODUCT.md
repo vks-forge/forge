@@ -104,6 +104,7 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-16 — W2: Forge settings screens (harnesses, GitHub, limits, general).
 - 2026-10-16 — CI green on Windows, macOS and Linux: paths compared after resolving short names and symlinks.
 - 2026-10-16 — C4 fixes: brace and glob expansion, provider drives and attached git `-c` no longer slip past the floors.
 - 2026-10-15 — W1: web app shell, theme, motion system, data layer.

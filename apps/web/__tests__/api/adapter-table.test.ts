@@ -14,7 +14,11 @@ import { ADAPTER_TABLE, createForgeApi, forced, sourcesOf } from '#/api/adapter-
 import { composeApi } from '#/api/compose-api.js';
 import type { ForgeApiAdapter } from '#/types/api.types.js';
 
+/** Every resource in the table gets an empty stub, so the test does not change when a resource is added. */
+const stubs = Object.fromEntries(Object.keys(ADAPTER_TABLE).map((name) => [name, {}]));
+
 const fakeProjects = (slug: string): ForgeApiAdapter => ({
+  ...stubs,
   projects: {
     list: () =>
       Promise.resolve([
@@ -37,23 +41,23 @@ describe('adapter table', () => {
   it('routes each resource to the adapter the table names', async () => {
     const adapters = { http: fakeProjects('from-http'), mock: fakeProjects('from-mock') };
 
-    const real = createForgeApi({ projects: 'http' }, adapters);
-    const sample = createForgeApi({ projects: 'mock' }, adapters);
+    const real = createForgeApi(forced('http'), adapters);
+    const sample = createForgeApi(forced('mock'), adapters);
 
     expect((await real.projects.list())[0]?.slug).toBe('from-http');
     expect((await sample.projects.list())[0]?.slug).toBe('from-mock');
   });
 
   it('refuses to start when the chosen adapter cannot serve a resource', () => {
-    expect(() => createForgeApi({ projects: 'http' }, { http: {}, mock: {} })).toThrow(
-      /does not serve 'projects'/,
+    expect(() => createForgeApi(forced('http'), { http: {}, mock: {} })).toThrow(
+      /does not serve/,
     );
   });
 
   it('forces every resource to one adapter and reports the sources in use', () => {
-    expect(forced('mock')).toEqual({ projects: 'mock' });
-    expect(sourcesOf(forced('mock'))).toEqual(['mock']);
-    expect(sourcesOf(ADAPTER_TABLE)).toEqual(['http']);
+    expect(Object.values(forced('mock')).every((kind) => kind === 'mock')).toBe(true);
+    expect(new Set(sourcesOf(forced('mock')))).toEqual(new Set(['mock']));
+    expect(new Set(sourcesOf(ADAPTER_TABLE))).toEqual(new Set(['http']));
   });
 });
 
@@ -64,7 +68,7 @@ describe('composeApi', () => {
 
     await api.projects.list();
 
-    expect(table).toEqual({ projects: 'http' });
+    expect(table).toEqual(ADAPTER_TABLE);
     expect(fetch).toHaveBeenCalledWith('/api/projects', expect.anything());
   });
 

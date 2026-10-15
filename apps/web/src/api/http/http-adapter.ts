@@ -11,11 +11,13 @@
  */
 
 import { requestJson } from '#/api/http/request-json.js';
+import { createSettingsHttp } from '#/api/http/settings-http.js';
 import { ProjectsResponse } from '#/schemas/projects.js';
 import type { ForgeApiAdapter, HttpClientOptions } from '#/types/api.types.js';
 
 export function createHttpAdapter(client: HttpClientOptions): ForgeApiAdapter {
   return {
+    ...createSettingsHttp(client),
     projects: {
       async list(options) {
         const body = await requestJson(client, '/projects', ProjectsResponse, options);

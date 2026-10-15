@@ -12,14 +12,14 @@
  * Depends on: react-router, components/shell/app-shell, domain/nav-entries, routes/*.
  */
 
-import { Navigate } from 'react-router';
 import type { RouteObject } from 'react-router';
 import { AppShell } from '#/components/shell/app-shell.js';
-import { PROJECT_NAV, SETTINGS_NAV } from '#/domain/nav-entries.js';
+import { PROJECT_NAV } from '#/domain/nav-entries.js';
 import { NotFound } from '#/routes/not-found.js';
 import { PlaceholderPage } from '#/routes/placeholder-page.js';
 import { ProjectScope } from '#/routes/project-scope.js';
 import { RootRedirect } from '#/routes/root-redirect.js';
+import { settingsRoutes } from '#/routes/settings/settings-routes.js';
 
 export const appRoutes: RouteObject[] = [
   {
@@ -41,13 +41,7 @@ export const appRoutes: RouteObject[] = [
       },
       {
         path: 'settings',
-        children: [
-          { index: true, element: <Navigate to="harnesses" replace /> },
-          ...SETTINGS_NAV.map((entry) => ({
-            path: entry.segment,
-            element: <PlaceholderPage entry={entry} />,
-          })),
-        ],
+        children: settingsRoutes,
       },
       { path: '*', element: <NotFound /> },
     ],
