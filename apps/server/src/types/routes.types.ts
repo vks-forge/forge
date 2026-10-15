@@ -57,6 +57,8 @@ export interface RouteDeps {
   readonly sessions: SessionStore;
   /** Answers a caller's challenge to show this server knows the install token (`POST /auth/proof`). */
   readonly prover: TokenProver;
+  /** True once graceful shutdown began; new Worker messages are refused then (`server_draining`). Absent reads as never draining (route tests). */
+  readonly isDraining?: () => boolean;
   /** Starts the graceful shutdown (`POST /admin/shutdown`); returns at once. */
   readonly requestShutdown: () => void;
   /** Where Forge keeps its own files; a project clone may not be inside them. */

@@ -49,6 +49,7 @@ export * from '#/schemas/memory-record.js';
 export * from '#/schemas/project-stats.js';
 export * from '#/schemas/project.js';
 export * from '#/schemas/run-inbox.js';
+export * from '#/schemas/run-inbox-events.js';
 export * from '#/schemas/run-list.js';
 export * from '#/schemas/run.js';
 export * from '#/schemas/stats-range.js';

@@ -28,6 +28,15 @@ describe('RunEvent kinds (batch C item 7)', () => {
       },
       { type: 'inbox_delivered', seq: 2, ts, inbox_seq: 0, mode: 'steer' },
       { type: 'session', seq: 3, ts, session_ref: 'sess-1' },
+      {
+        type: 'user_message',
+        seq: 5,
+        ts,
+        inbox_seq: 0,
+        mode: 'steer',
+        author: 'vikash',
+        text: 'use v2',
+      },
       { type: 'hook_liveness', seq: 4, ts, fingerprint: 'f'.repeat(16) },
     ];
 

@@ -8,7 +8,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { NewRunInboxMessage, RunInboxMessage } from '#/schemas/run-inbox.js';
+import {
+  NewRunInboxMessage,
+  RunInboxMessage,
+  STEER_MESSAGE_MAX,
+  SteerRunBody,
+} from '#/schemas/run-inbox.js';
 
 const ts = '2026-10-13T00:00:00.000Z';
 
@@ -33,5 +38,31 @@ describe('RunInboxMessage', () => {
       'run_id',
       'text',
     ]);
+  });
+});
+
+describe('SteerRunBody', () => {
+  const ok = { message: 'use the v2 API', author: 'vikash' };
+
+  it('accepts a message up to the limit and trims both fields', () => {
+    expect(SteerRunBody.parse({ message: '  hi ', author: ' me ' })).toEqual({
+      message: 'hi',
+      author: 'me',
+    });
+
+    expect(
+      SteerRunBody.safeParse({ ...ok, message: 'x'.repeat(STEER_MESSAGE_MAX) }).success,
+    ).toBe(true);
+  });
+
+  it('rejects empty, whitespace-only and over-long text, a missing author and extra keys', () => {
+    expect(SteerRunBody.safeParse({ ...ok, message: '   ' }).success).toBe(false);
+    expect(
+      SteerRunBody.safeParse({ ...ok, message: 'x'.repeat(STEER_MESSAGE_MAX + 1) })
+        .success,
+    ).toBe(false);
+
+    expect(SteerRunBody.safeParse({ message: 'hi' }).success).toBe(false);
+    expect(SteerRunBody.safeParse({ ...ok, mode: 'interrupt' }).success).toBe(false);
   });
 });

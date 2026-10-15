@@ -6,9 +6,11 @@
  *   driver is not ready or the server restarts. The inbox row is the durable queue:
  *   written once, numbered per run by storage, and marked delivered when a driver has
  *   actually handed it to the harness, which is also what the `inbox_delivered` run event
- *   points at (director-core.md §8).
+ *   points at (director-core.md §8). `SteerRunBody` is what a person sends to message a
+ *   running Worker directly (d-0109): bounded text and who sent it, so the audit trail on
+ *   the run names a sender.
  *
- * Exports: RunInboxMessage, NewRunInboxMessage.
+ * Exports: RunInboxMessage, NewRunInboxMessage, SteerRunBody, STEER_MESSAGE_MAX.
  * Depends on: schemas/run, zod. No IO.
  */
 
@@ -32,3 +34,13 @@ export const NewRunInboxMessage = RunInboxMessage.omit({
   delivered_at: true,
 });
 export type NewRunInboxMessage = z.infer<typeof NewRunInboxMessage>;
+
+/** Longest message a person may send a running Worker. */
+export const STEER_MESSAGE_MAX = 8000;
+
+/** Body of `POST /runs/:id/steer`; whitespace-only text is refused. */
+export const SteerRunBody = z.strictObject({
+  message: z.string().trim().min(1).max(STEER_MESSAGE_MAX),
+  author: z.string().trim().min(1).max(200),
+});
+export type SteerRunBody = z.infer<typeof SteerRunBody>;

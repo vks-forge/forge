@@ -9,7 +9,7 @@
  *   back so the app, the control room and tests can see what changed, which invariants
  *   broke and which Director steps were rejected, without scraping logs.
  *
- * Exports: LogLevel, Logger, IdSource, EngineDeps, IngestResult, TickReport, SettledRun,
+ * Exports: LogLevel, Logger, IdSource, EngineDeps, IngestResult, SteerRunResult, TickReport, SettledRun,
  *   Violation, RejectedStep, TickError, Engine.
  * Depends on: @forge/core (ports, schemas), @forge/tools (ReceiptLog). Types only.
  */
@@ -92,6 +92,14 @@ export type IngestResult =
   | { readonly status: 'answered'; readonly interactionId: string }
   | { readonly status: 'ignored'; readonly reason: string };
 
+/** What `steerRun` did with a person's message to a Worker. */
+export type SteerRunResult =
+  | { readonly status: 'delivered'; readonly inboxSeq: number }
+  /** The run has no live pump in this process (ended, interrupted, or owned by another server). */
+  | { readonly status: 'not_live' }
+  /** The run's driver does not declare the `steer` mode, or the live session refused it. */
+  | { readonly status: 'unsupported' };
+
 export interface SettledRun {
   readonly runId: string;
   readonly ticketId: string;
@@ -152,6 +160,13 @@ export interface Engine {
   ingest(event: IntakeEvent): Promise<IngestResult>;
   /** Answers a pending interaction (CAS) and queues the response wake. False when it was not pending. */
   answerInteraction(interactionId: string, answer: unknown): Promise<boolean>;
+  /**
+   * Delivers a person's message to a live Worker in `steer` mode (d-0109): stored in the run
+   * inbox and the run's event stream first, then handed to the driver, and marked delivered
+   * once the driver took it. No model call and no tick wait. A driver failure other than a
+   * refusal throws; the message then stays undelivered in the inbox.
+   */
+  steerRun(runId: string, message: string, author: string): Promise<SteerRunResult>;
   /** Cancels a ticket through `transition()` and stops its live run. False when the ticket is terminal or unknown. */
   cancelTicket(ticketId: string): Promise<boolean>;
   /** Why the ticket has not started (`quota: claude-code until 14:20 UTC`, `cap: per-project 1/1`, `deps: PAY-231`), or null when nothing holds it back. Read-only. */

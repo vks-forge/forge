@@ -15,13 +15,13 @@
  *   RunBudget, RunRequest, RunHandle, RunResultStatus, RunResult, InteractionKind,
  *   PermissionDecision, RunEvent, RunStatus, Run, Sha256Hex, ErrorFamily, SteerMode and
  *   DriverCapabilities (re-exports from steer-mode).
- * Depends on: schemas/ticket, schemas/errors, schemas/steer-mode, schemas/config-override, zod. No IO.
+ * Depends on: schemas/ticket, schemas/errors, schemas/steer-mode, schemas/run-inbox-events, schemas/config-override, zod. No IO.
  */
 
 import { z } from 'zod';
 import { ConfigVersionRef } from '#/schemas/config-override.js';
 import { ErrorFamily } from '#/schemas/errors.js';
-import { SteerMode } from '#/schemas/steer-mode.js';
+import { InboxDeliveredEvent, UserMessageEvent } from '#/schemas/run-inbox-events.js';
 import { Lane } from './ticket.js';
 
 export { ErrorFamily };
@@ -220,12 +220,8 @@ export const RunEvent = z.discriminatedUnion('type', [
     tool: z.string().min(1),
     decision: PermissionDecision,
   }),
-  z.object({
-    type: z.literal('inbox_delivered'),
-    ...eventBase,
-    inbox_seq: z.number().int().nonnegative(),
-    mode: SteerMode,
-  }),
+  InboxDeliveredEvent,
+  UserMessageEvent,
   z.object({ type: z.literal('session'), ...eventBase, session_ref: SessionRef }),
   z.object({
     type: z.literal('hook_liveness'),

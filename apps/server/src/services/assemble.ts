@@ -226,6 +226,7 @@ export async function assembleServer(
         tickets: auth.tickets,
         sessions: auth.sessions,
         prover: auth.prover,
+        isDraining: drain.isDraining,
         requestShutdown: () =>
           options.onShutdownRequested ? options.onShutdownRequested() : void stopServer(),
         dataHome: layout.data,

@@ -101,7 +101,7 @@ export function createFakeDriver(): {
 
       return { runId: handle.runId, session: f.session };
     },
-    async steer(handle, message, mode) {
+    async steer(handle, message, mode, inboxSeq) {
       const f = get(handle);
       if (mode !== 'follow_up') {
         throw new InvalidInputError(`mode ${mode} not declared`);
@@ -111,7 +111,7 @@ export function createFakeDriver(): {
         type: 'inbox_delivered',
         seq: f.seq++,
         ts: new Date(0).toISOString(),
-        inbox_seq: 0,
+        inbox_seq: inboxSeq ?? 0,
         mode,
       });
 

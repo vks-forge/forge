@@ -25,6 +25,7 @@ import { ingest } from '#/tick/intake.js';
 import { interruptRun } from '#/tick/interrupt.js';
 import { cancelStalled, settleFinishedPumps } from '#/tick/reconcile.js';
 import { reconcileRestart, resumeInterrupted } from '#/tick/restart.js';
+import { steerRun } from '#/tick/steer-run.js';
 import { deliverReplies } from '#/tick/steering.js';
 import { beginTick, endTick, requestTick } from '#/tick/tick-requests.js';
 import { moveTicket } from '#/tick/ticket-moves.js';
@@ -150,6 +151,7 @@ export function createEngine(deps: EngineDeps): Engine {
     requestTick: () => requestTick(deps, state),
     ingest: (event) => ingest(deps, state, event),
     answerInteraction: (id, answer) => answerInteraction(deps, state, id, answer),
+    steerRun: (runId, message, author) => steerRun(deps, state, runId, message, author),
     async cancelTicket(ticketId) {
       const nowIso = iso(deps.clock.now());
       const moved = await moveTicket(deps.storage, ticketId, nowIso, (t: Ticket) =>

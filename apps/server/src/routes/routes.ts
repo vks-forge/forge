@@ -22,6 +22,7 @@ import { memoryRoutes } from '#/routes/memory.js';
 import { projectStatsRoutes } from '#/routes/project-stats.js';
 import { projectsRoutes } from '#/routes/projects.js';
 import { runEventsRoute } from '#/routes/run-events.js';
+import { runSteerRoute } from '#/routes/run-steer.js';
 import { runsRoutes } from '#/routes/runs.js';
 import { settingsRoutes } from '#/routes/settings.js';
 import { ticketListRoute } from '#/routes/ticket-list.js';
@@ -36,6 +37,7 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ticketListRoute(deps),
     answerRoute(deps),
     runEventsRoute(deps),
+    runSteerRoute(deps),
     hookRoute(deps),
     healthRoute(deps),
     ...authRoutes(deps),

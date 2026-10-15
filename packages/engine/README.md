@@ -210,6 +210,7 @@ Public API from `src/index.ts`:
 
 ## Limits
 
+- `engine.steerRun(runId, message, author)` is the direct user-to-Worker message (d-0109): no model call, no tick wait, `steer` mode only. It writes the run inbox row and a `user_message` run event in one transaction, calls `driver.steer(handle, text, 'steer', inboxSeq)`, then marks the row delivered. Result: `delivered {inboxSeq}`, `not_live` (no live pump here, run not starting/running, or owned by another server) or `unsupported` (driver lacks `steer`, or the live session refused with `InvalidInputError`; the stored message stays undelivered). Any other driver failure throws and leaves the message undelivered. It never falls back to `follow_up`: that would change what the person asked for.
 - Process-local by design: live run pumps, step/dispatch holds and queued steering replies. After a
   restart pumps are gone (interrupted runs are resumed with new pumps, d-0092) and holds reset. The requester's hint, type and
   title are read from the stored intake event (`intakeEvents.get`), so they survive a restart.

@@ -158,6 +158,22 @@ export function describeWorkerDriverContract(
       }
     });
 
+    it('echoes the inbox sequence in inbox_delivered for each declared steer mode', async () => {
+      // A person's message is stored under an inbox seq before delivery; the thread pairs the
+      // `user_message` with this event, so a driver that drops or renumbers it breaks that.
+      for (const [i, mode] of h.driver.capabilities().steerModes.entries()) {
+        h.scriptHang();
+        const handle = await h.driver.start(h.request({ runId: `echo-${mode}` }));
+        await h.driver.steer(handle, `please ${mode}`, mode, 40 + i);
+        await h.driver.cancel(handle);
+        const delivered = (await drain(h.driver, handle.runId)).filter(
+          (e) => e.type === 'inbox_delivered',
+        );
+
+        expect(delivered.map((e) => [e.inbox_seq, e.mode])).toEqual([[40 + i, mode]]);
+      }
+    });
+
     it('rejects unknown handles instead of returning an empty answer', async () => {
       const ghost = { runId: 'no-such-run' };
       // Wrapped so a synchronous throw and a rejected promise both count as a rejection.
