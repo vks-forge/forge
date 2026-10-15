@@ -37,6 +37,8 @@ import { describeRunTokensContract } from './run-tokens.contract.js';
 import { describeRunsContract } from './runs.contract.js';
 import { describeTicketsContract } from './tickets.contract.js';
 import { describeTicketListContract } from './ticket-list.contract.js';
+import { describeRunListContract } from './run-list.contract.js';
+import { describeInboxStatesContract } from './inbox-states.contract.js';
 import { describeTransactionsContract } from './transactions.contract.js';
 import { describeInteractionCasContract } from './interaction-cas.contract.js';
 import { describeIntakeEventsContract } from './intake-events.contract.js';
@@ -75,6 +77,8 @@ export function describeStorageContract(
     describeHarnessCompatContract(() => db);
     describeTicketsContract(() => db);
     describeTicketListContract(() => db);
+    describeRunListContract(() => db);
+    describeInboxStatesContract(() => db);
     describeTransactionsContract(() => db);
     describeRunsContract(() => db);
     describeRunEventsContract(() => db);

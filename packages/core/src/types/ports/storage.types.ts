@@ -6,22 +6,18 @@
  *   work happens in a transaction, and ticket updates are compare-and-swap on
  *   `status_version`, so a Director tick and an API call racing on one ticket cannot
  *   both win and double-dispatch it. Intake inserts report duplicates so redeliveries
- *   are dropped, run events are append-only so the UI and replay have a trustworthy
- *   history whose `seq` is allocated by storage alone, run tokens are kept as hashes only
- *   so reading the database never yields a usable credential, and pending interactions are
- *   listable and answered by compare-and-swap so no parked ticket is lost and a human and a
- *   timeout cannot both resolve one. The work queues the engine tick reads (wake requests,
- *   run inbox, gate results, projects, ticket relations) sit behind the same transaction so
- *   one tick changes them atomically with the ticket. Behind a port, the backend (SQLite
- *   WAL by default) can change without touching the engine (director-core.md §2-§3, §7-§8,
- *   d-0023).
+ *   are dropped, run events are append-only with `seq` allocated by storage alone, run
+ *   tokens are kept as hashes only, and pending interactions are answered by
+ *   compare-and-swap so a human and a timeout cannot both resolve one. The work queues the
+ *   engine tick reads, and the read and archive marks of the Inbox, sit behind the same
+ *   transaction. Behind a port, the backend (SQLite WAL by default) can change without
+ *   touching the engine (director-core.md §2-§3, §7-§8, d-0023).
  *
  * Exports: TicketPatch, TicketRepository, TicketRelationRepository, RunRepository,
  *   RunEventRepository, RunInboxRepository, RunTokenRepository, IntakeEventRepository,
  *   InteractionRepository, WakeRequestRepository, GateResultRepository, ProjectRepository,
  *   HarnessRepository, HarnessStateRepository, GithubConnectionRepository, HarnessVersionRepository,
- *   HarnessToolSchemaRepository, StorageTx,
- *   StorageAdapter.
+ *   HarnessToolSchemaRepository, StorageTx, StorageAdapter.
  * Depends on: schemas/*, types/run-event.types. No IO (interfaces only).
  */
 
@@ -29,9 +25,15 @@ import type { TicketId } from '#/schemas/ids.js';
 import type { GateResult, NewGateResult } from '#/schemas/gate-result.js';
 import type { Harness } from '#/schemas/harness.js';
 import type { HarnessState } from '#/schemas/harness-state.js';
-import type { HarnessToolSchema, HarnessVersion } from '#/schemas/harness-compat.js';
+import type {
+  CompatStatus,
+  HarnessToolSchema,
+  HarnessVersion,
+  ToolSchemaStatus,
+} from '#/schemas/harness-compat.js';
 import type { IntakeEvent, StoredIntakeEvent } from '#/schemas/intake.js';
 import type { Interaction } from '#/schemas/interaction.js';
+import type { InboxStateRepository } from '#/types/ports/inbox-state.types.js';
 import type { GithubConnection } from '#/schemas/github-connection.js';
 import type { Project } from '#/schemas/project.js';
 import type { NewRunInboxMessage, RunInboxMessage } from '#/schemas/run-inbox.js';
@@ -40,6 +42,7 @@ import type { TicketRelation } from '#/schemas/ticket-relation.js';
 import type { Ticket, TicketRelationKind, TicketStatus } from '#/schemas/ticket.js';
 import type { NewWakeRequest, WakeKind, WakeRequest } from '#/schemas/wake-request.js';
 import type { NewRunEvent } from '#/types/run-event.types.js';
+import type { RunListFilter } from '#/types/run-list.types.js';
 import type { TicketListFilter } from '#/types/ticket-list.types.js';
 
 /**
@@ -62,21 +65,17 @@ export type TicketPatch = Partial<
 export interface TicketRepository {
   get(id: TicketId): Promise<Ticket | null>;
   listByStatus(status: TicketStatus): Promise<Ticket[]>;
-  // One project's tickets, newest `updated_at` first with `id` descending as the tie-break,
-  // so the order is total and a page boundary never repeats or skips a ticket. `after` is the
-  // last row of the previous page (exclusive); `statuses` (any of) narrows when present and
-  // non-empty. At most `limit` tickets. `project` is the ticket's `project` column.
+  // One project's tickets, newest `updated_at` first, `id` descending as tie-break (a total
+  // order). `after` is the previous page's last row (exclusive); non-empty `statuses` narrows.
   listByProject(project: string, filter: TicketListFilter): Promise<Ticket[]>;
-  // Stores the ticket row. A `parent` or `blocked_by` on the ticket is recorded as relation
-  // rows in the same transaction (`spawned_from` / `depends_on`), so a seeded ticket reads
-  // back as written; from then on relations change only through `ticketRelations`.
+  // Stores the ticket row. A `parent` or `blocked_by` is recorded as relation rows in the same
+  // transaction (`spawned_from` / `depends_on`); from then on relations change only through
+  // `ticketRelations`.
   insert(ticket: Ticket): Promise<void>;
-  // Applies `patch` only if the stored status_version equals expectedVersion, and sets
-  // status_version to expectedVersion + 1. A patch carrying `status_version` is refused
-  // (InvalidInputError): the version is storage's, not the caller's. A key present with
-  // value `undefined` clears an optional column (`blocked_reason`, `tier_actual`,
-  // `branch`, ...), so a patch built from `transition()` output leaves no stale value.
-  // false = stale writer lost (director-core.md §3).
+  // Applies `patch` only if status_version equals expectedVersion, then sets it to
+  // expectedVersion + 1. A patch carrying `status_version` is refused (InvalidInputError).
+  // A key present with value `undefined` clears an optional column, so a patch built from
+  // `transition()` output leaves no stale value. false = stale writer lost (director-core.md §3).
   updateTicketCas(
     id: TicketId,
     expectedVersion: number,
@@ -108,6 +107,9 @@ export interface RunRepository {
   listByTicket(ticketId: string): Promise<Run[]>;
   // Runs in any of the given statuses, oldest first (reconcile and the stall scan).
   listByStatus(statuses: readonly RunStatus[]): Promise<Run[]>;
+  // Newest `started_at` first, `id` descending as tie-break; `project` matches the run's ticket's
+  // project; `after` is the previous page's last row (exclusive). See `RunListFilter`.
+  list(filter: RunListFilter): Promise<Run[]>;
   insert(run: Run): Promise<void>;
   update(id: string, patch: Partial<Omit<Run, 'id'>>): Promise<void>;
 }
@@ -133,7 +135,6 @@ export interface RunTokenRepository {
   issue(runId: string, tokenSha256: string, issuedAt: string): Promise<void>;
   // The deliberate re-arm for a resumed run: replaces the hash and clears any revocation.
   reissue(runId: string, tokenSha256: string, issuedAt: string): Promise<void>;
-  // Deprecated alias of `issue` (same refusal of revoked runs); new code calls `issue`.
   put(runId: string, tokenSha256: string, issuedAt: string): Promise<void>;
   // The stored hash, or null when none was issued or it was revoked.
   getHash(runId: string): Promise<string | null>;
@@ -174,12 +175,10 @@ export interface InteractionRepository {
   listByTicket(ticketId: string): Promise<Interaction[]>;
   insert(interaction: Interaction): Promise<void>;
   update(id: string, patch: Partial<Omit<Interaction, 'id'>>): Promise<void>;
-  // Compare-and-swap: one UPDATE ... WHERE status = 'pending'. true only for the writer
-  // that moved a pending interaction to `answered`; a second answer, or an answer after a
-  // timeout or cancel, gets false and changes nothing.
+  // Compare-and-swap on `status = 'pending'`: true only for the writer that moved it to
+  // `answered`; a second answer, or one after a timeout or cancel, gets false.
   answer(id: string, answer: unknown, at: string): Promise<boolean>;
-  // Same CAS to `timed_out`, and only once `timeout_at <= at`, so a clock slip cannot
-  // expire a question early. false when not pending or not yet due.
+  // Same CAS to `timed_out`, only once `timeout_at <= at`. false when not pending or not due.
   expire(id: string, at: string): Promise<boolean>;
 }
 
@@ -240,7 +239,7 @@ export interface HarnessStateRepository {
   list(): Promise<HarnessState[]>;
 }
 
-/** The `github_connections` registry (d-0094): one GitHub App per org or account. Private keys live in the SecretStore, never here. */
+/** The `github_connections` registry (d-0094): one GitHub App per org or account. Keys live in the SecretStore. */
 export interface GithubConnectionRepository {
   get(id: string): Promise<GithubConnection | null>;
   // Insert or replace by id.
@@ -256,6 +255,8 @@ export interface GithubConnectionRepository {
 /** Per-build compatibility results of an installed harness (d-0088). */
 export interface HarnessVersionRepository {
   get(kind: string, version: string): Promise<HarnessVersion | null>;
+  // Every build whose check has the given result, in first-insert order.
+  listByCompat(compat: CompatStatus): Promise<HarnessVersion[]>;
   // Insert or replace by (kind, version).
   upsert(row: HarnessVersion): Promise<void>;
 }
@@ -265,6 +266,8 @@ export interface HarnessToolSchemaRepository {
   get(kind: string, version: string, tool: string): Promise<HarnessToolSchema | null>;
   // Every tool row of one build, in first-insert order.
   list(kind: string, version: string): Promise<HarnessToolSchema[]>;
+  // Every tool row of every build with the given decision, in first-insert order.
+  listByStatus(status: ToolSchemaStatus): Promise<HarnessToolSchema[]>;
   // Insert or replace by (kind, version, tool).
   upsert(row: HarnessToolSchema): Promise<void>;
 }
@@ -287,9 +290,10 @@ export interface StorageTx {
   readonly harnessVersions: HarnessVersionRepository;
   readonly harnessToolSchemas: HarnessToolSchemaRepository;
   readonly ticketRelations: TicketRelationRepository;
+  readonly inboxStates: InboxStateRepository;
 }
 
-/** Single-writer storage backend; every mutation happens inside `transaction` (director-core.md §2-§3). */
+/** Single-writer storage backend; every mutation happens inside `transaction`. */
 export interface StorageAdapter {
   transaction<T>(fn: (tx: StorageTx) => Promise<T>): Promise<T>;
   close(): Promise<void>;

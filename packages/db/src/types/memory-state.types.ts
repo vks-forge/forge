@@ -17,6 +17,7 @@ import type {
   HarnessState,
   GithubConnection,
   HarnessToolSchema,
+  InboxStateRow,
   HarnessVersion,
   Interaction,
   Project,
@@ -59,4 +60,6 @@ export interface MemoryState {
   harnessVersions: Map<string, HarnessVersion>;
   /** Keyed by `kind/version/tool`; insertion order is list order. */
   harnessToolSchemas: Map<string, HarnessToolSchema>;
+  /** Keyed by JSON of `[project, kind, item_id]`. */
+  inboxStates: Map<string, InboxStateRow>;
 }

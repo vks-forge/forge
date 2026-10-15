@@ -22,6 +22,7 @@ import { createSqliteCatalogueStore } from '#/adapters/sqlite/catalogue-store.js
 import { createSqliteConfigSource } from '#/adapters/sqlite/config-source.js';
 import { createGateResultRepository } from '#/adapters/sqlite/gate-results-repository.js';
 import { createGithubConnectionRepository } from '#/adapters/sqlite/github-connections-repository.js';
+import { createInboxStateRepository } from '#/adapters/sqlite/inbox-states-repository.js';
 import { createIntakeEventRepository } from '#/adapters/sqlite/intake-events-repository.js';
 import { createInteractionRepository } from '#/adapters/sqlite/interactions-repository.js';
 import { runImmediate } from '#/adapters/sqlite/immediate-tx.js';
@@ -73,6 +74,7 @@ export function createStorageOnDriver(
     harnessVersions: createHarnessVersionRepository(driver),
     harnessToolSchemas: createHarnessToolSchemaRepository(driver),
     ticketRelations: createTicketRelationRepository(driver),
+    inboxStates: createInboxStateRepository(driver),
   };
 
   return {

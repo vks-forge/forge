@@ -1,0 +1,225 @@
+/**
+ * Derives a project's inbox items from the rows that need or inform the owner.
+ *
+ * Why: the Inbox must never disagree with the board, so nothing is copied into an inbox
+ *   table: each item is read from its source on every request. A Worker's open question, a
+ *   ticket waiting for review or sign-off, a failed gate, an interrupted run, a harness out of
+ *   quota, a harness build or tool awaiting a decision and a memory proposal each become one
+ *   item whose `updated_at` is the source's own change time, which is what lets a mark expire
+ *   when the source moves (d-0116). Items that wait on a decision are `needs_action`; the
+ *   rest inform. Harness-level items (compat, tool approvals) block every project, so they
+ *   show in each; quota waits show only where open work is affected. Memory proposals and
+ *   tool approvals carry no timestamp, so they use the epoch and sort last.
+ *
+ * Exports: gatherInboxCandidates().
+ * Depends on: @forge/core (inbox rules, StorageTx, memory entries), services/collect-pages.
+ *   IO: reads storage.
+ */
+
+import { TERMINAL_STATUSES, inboxItemId } from '@forge/core';
+import type {
+  GateResult,
+  InboxCandidate,
+  MemoryListEntry,
+  Project,
+  StorageTx,
+  Ticket,
+} from '@forge/core';
+import { collectRuns, collectTickets } from '#/services/collect-pages.js';
+
+const EPOCH = '1970-01-01T00:00:00.000Z';
+const clip = (text: string, max = 140): string =>
+  text.length > max ? `${text.slice(0, max - 1)}…` : text;
+
+/** The question text of an interaction payload, when it carries one. */
+function promptOf(payload: unknown): string | undefined {
+  if (typeof payload !== 'object' || payload === null) {
+    return undefined;
+  }
+
+  const o = payload as Record<string, unknown>;
+  const text = [o['prompt'], o['question'], o['message'], o['reason']].find(
+    (v): v is string => typeof v === 'string' && v.trim() !== '',
+  );
+
+  return text === undefined ? undefined : clip(text.trim());
+}
+
+const ticketItems = (
+  tickets: readonly Ticket[],
+  pending: ReadonlySet<string>,
+  project: string,
+) =>
+  tickets.flatMap((t): InboxCandidate[] => {
+    const base = { project, ticket_id: t.id, updated_at: t.updated_at };
+    if (t.status === 'review') {
+      return [
+        {
+          ...base,
+          id: inboxItemId('ticket_review', t.id),
+          kind: 'ticket_review',
+          title: `Review: ${t.title}`,
+          needs_action: true,
+        },
+      ];
+    }
+
+    if (t.status === 'needs_signoff') {
+      return [
+        {
+          ...base,
+          id: inboxItemId('ticket_signoff', t.id),
+          kind: 'ticket_signoff',
+          title: `Sign-off needed: ${t.title}`,
+          needs_action: true,
+        },
+      ];
+    }
+
+    // A parked ticket with an open question is shown through the question itself.
+    return t.status === 'waiting_human' && !pending.has(t.id)
+      ? [
+          {
+            ...base,
+            id: inboxItemId('ticket_waiting', t.id),
+            kind: 'ticket_waiting',
+            title: `Waiting on you: ${t.title}`,
+            ...(t.blocked_reason === undefined ? {} : { detail: clip(t.blocked_reason) }),
+            needs_action: true,
+          },
+        ]
+      : [];
+  });
+
+/**
+ * Every item of `project` right now, unsorted and without read/archive marks.
+ * `proposals` are the project's memory entries (read by the caller, outside the transaction).
+ */
+export async function gatherInboxCandidates(
+  tx: StorageTx,
+  project: Project,
+  proposals: readonly MemoryListEntry[],
+  nowMs: number,
+): Promise<InboxCandidate[]> {
+  const slug = project.slug;
+  const nowIso = new Date(nowMs).toISOString();
+  const tickets = await collectTickets(tx, project.id);
+  const byId = new Map(tickets.map((t) => [t.id as string, t]));
+  const items: InboxCandidate[] = [];
+
+  const pending = new Set<string>();
+  for (const i of await tx.interactions.listPending()) {
+    const ticket = byId.get(i.ticket_id);
+    if (!ticket) {
+      continue;
+    }
+
+    pending.add(i.ticket_id);
+    items.push({
+      id: inboxItemId('question', i.id),
+      kind: 'question',
+      project: slug,
+      title: promptOf(i.payload) ?? `${i.kind.replace('_', ' ')} on ${ticket.id}`,
+      detail: ticket.title,
+      ticket_id: ticket.id,
+      ...(i.run_id === undefined ? {} : { run_id: i.run_id }),
+      needs_action: true,
+      updated_at: i.asked_at,
+    });
+  }
+
+  items.push(...ticketItems(tickets, pending, slug));
+
+  const open = tickets.filter((t) => !TERMINAL_STATUSES.includes(t.status));
+  for (const t of open) {
+    const latest = new Map<string, GateResult>();
+    for (const g of await tx.gateResults.listByTicket(t.id)) {
+      latest.set(g.gate, g);
+    }
+
+    for (const g of latest.values()) {
+      if (g.status === 'failed' || g.status === 'error') {
+        items.push({
+          id: inboxItemId('gate_failed', String(g.id)),
+          kind: 'gate_failed',
+          project: slug,
+          title: `Gate ${g.gate} ${g.status === 'error' ? 'errored' : 'failed'}: ${t.title}`,
+          ticket_id: t.id,
+          run_id: g.run_id,
+          needs_action: false,
+          updated_at: g.ended_at ?? g.started_at,
+        });
+      }
+    }
+  }
+
+  for (const r of await collectRuns(tx, {
+    project: project.id,
+    statuses: ['interrupted'],
+  })) {
+    items.push({
+      id: inboxItemId('run_interrupted', r.id),
+      kind: 'run_interrupted',
+      project: slug,
+      title: `Run interrupted on ${r.ticket_id}; it resumes on the next start`,
+      ticket_id: r.ticket_id,
+      run_id: r.id,
+      needs_action: false,
+      updated_at: r.interrupted_at ?? r.started_at,
+    });
+  }
+
+  if (open.length > 0) {
+    for (const s of await tx.harnessState.list()) {
+      if (s.paused_until > nowIso) {
+        items.push({
+          id: inboxItemId('quota_wait', s.harness_id),
+          kind: 'quota_wait',
+          project: slug,
+          title: `${s.harness_id} is out of quota until ${s.paused_until}`,
+          detail: s.reason,
+          needs_action: false,
+          updated_at: s.updated_at,
+        });
+      }
+    }
+  }
+
+  for (const v of await tx.harnessVersions.listByCompat('fail')) {
+    items.push({
+      id: inboxItemId('harness_compat', `${v.kind}/${v.version}`),
+      kind: 'harness_compat',
+      project: slug,
+      title: `${v.kind} ${v.version} failed its compatibility check`,
+      needs_action: true,
+      updated_at: v.checked_at ?? EPOCH,
+    });
+  }
+
+  for (const t of await tx.harnessToolSchemas.listByStatus('pending')) {
+    items.push({
+      id: inboxItemId('tool_approval', `${t.harness_kind}/${t.version}/${t.tool}`),
+      kind: 'tool_approval',
+      project: slug,
+      title: `Approve tool ${t.tool}`,
+      detail: `${t.harness_kind} ${t.version}`,
+      needs_action: true,
+      updated_at: t.decided_at ?? EPOCH,
+    });
+  }
+
+  for (const m of proposals) {
+    if (m.kind === 'proposal' && m.status === 'pending') {
+      items.push({
+        id: inboxItemId('memory_proposal', m.id),
+        kind: 'memory_proposal',
+        project: slug,
+        title: clip(m.statement),
+        needs_action: true,
+        updated_at: EPOCH,
+      });
+    }
+  }
+
+  return items;
+}

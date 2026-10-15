@@ -23,6 +23,11 @@ export function memoryHarnessVersions(state: MemoryState): HarnessVersionReposit
 
       return row ? structuredClone(row) : null;
     },
+    async listByCompat(compat) {
+      return [...state.harnessVersions.values()]
+        .filter((v) => v.compat === compat)
+        .map((v) => structuredClone(v));
+    },
     async upsert(row) {
       const parsed = HarnessVersion.parse(row);
       state.harnessVersions.set(versionKey(parsed.kind, parsed.version), parsed);
@@ -45,6 +50,11 @@ export function memoryHarnessToolSchemas(
     async list(kind, version) {
       return [...state.harnessToolSchemas.values()]
         .filter((r) => r.harness_kind === kind && r.version === version)
+        .map((r) => structuredClone(r));
+    },
+    async listByStatus(status) {
+      return [...state.harnessToolSchemas.values()]
+        .filter((r) => r.status === status)
         .map((r) => structuredClone(r));
     },
     async upsert(row) {

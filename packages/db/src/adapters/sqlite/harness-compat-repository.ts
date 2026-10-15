@@ -43,6 +43,12 @@ export function createHarnessVersionRepository(
       return row ? toVersion(row) : null;
     },
 
+    async listByCompat(compat) {
+      return driver
+        .all('SELECT * FROM harness_versions WHERE compat = ? ORDER BY rowid', [compat])
+        .map(toVersion);
+    },
+
     async upsert(row) {
       const v = HarnessVersion.parse(row);
       driver.run(
@@ -84,6 +90,14 @@ export function createHarnessToolSchemaRepository(
           'SELECT * FROM harness_tool_schemas WHERE harness_kind = ? AND version = ? ORDER BY rowid',
           [kind, version],
         )
+        .map(toSchema);
+    },
+
+    async listByStatus(status) {
+      return driver
+        .all('SELECT * FROM harness_tool_schemas WHERE status = ? ORDER BY rowid', [
+          status,
+        ])
         .map(toSchema);
     },
 

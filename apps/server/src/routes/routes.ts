@@ -14,12 +14,15 @@ import { authRoutes } from '#/routes/auth.js';
 import { harnessRoutes } from '#/routes/harnesses.js';
 import { answerRoute } from '#/routes/interactions.js';
 import { healthRoute } from '#/routes/health.js';
+import { inboxRoutes } from '#/routes/inbox.js';
 import { githubConnectionRoutes } from '#/routes/github-connections.js';
 import { hookRoute } from '#/routes/hook.js';
 import { intakeRoute } from '#/routes/intake.js';
 import { memoryRoutes } from '#/routes/memory.js';
+import { projectStatsRoutes } from '#/routes/project-stats.js';
 import { projectsRoutes } from '#/routes/projects.js';
 import { runEventsRoute } from '#/routes/run-events.js';
+import { runsRoutes } from '#/routes/runs.js';
 import { settingsRoutes } from '#/routes/settings.js';
 import { ticketListRoute } from '#/routes/ticket-list.js';
 import { ticketRoute } from '#/routes/tickets.js';
@@ -42,5 +45,8 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ...projectsRoutes(deps),
     ...memoryRoutes(deps),
     ...githubConnectionRoutes(deps),
+    ...projectStatsRoutes(deps),
+    ...inboxRoutes(deps),
+    ...runsRoutes(deps),
   ];
 }

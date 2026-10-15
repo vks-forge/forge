@@ -47,6 +47,31 @@ export function memoryRuns(state: MemoryState): RunRepository {
         .filter((r) => statuses.includes(r.status))
         .map((r) => structuredClone(r));
     },
+    async list(filter) {
+      const statuses = filter.statuses ?? [];
+      const { after } = filter;
+      const inProject = (r: Run): boolean =>
+        filter.project === undefined ||
+        state.tickets.get(r.ticket_id)?.project === filter.project;
+
+      return [...state.runs.values()]
+        .filter(inProject)
+        .filter((r) => statuses.length === 0 || statuses.includes(r.status))
+        .filter((r) => filter.since === undefined || r.started_at >= filter.since)
+        .filter(
+          (r) =>
+            !after ||
+            r.started_at < after.started_at ||
+            (r.started_at === after.started_at && r.id < after.id),
+        )
+        .sort((a, b) =>
+          a.started_at === b.started_at
+            ? Number(b.id > a.id) - Number(b.id < a.id)
+            : Number(b.started_at > a.started_at) - Number(b.started_at < a.started_at),
+        )
+        .slice(0, filter.limit)
+        .map((r) => structuredClone(r));
+    },
     async insert(run) {
       const r = Run.parse(run);
       insertUnique(state.runs, r.id, { ...r, generation: r.generation ?? 1 }, 'run');

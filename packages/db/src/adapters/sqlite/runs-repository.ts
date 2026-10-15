@@ -99,6 +99,39 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
         .map(toRun);
     },
 
+    async list(filter) {
+      const where: string[] = [];
+      const params: (string | number)[] = [];
+      if (filter.project !== undefined) {
+        where.push('ticket_id IN (SELECT id FROM tickets WHERE project = ?)');
+        params.push(filter.project);
+      }
+
+      const statuses = filter.statuses ?? [];
+      if (statuses.length > 0) {
+        where.push(`status IN (${statuses.map(() => '?').join(', ')})`);
+        params.push(...statuses);
+      }
+
+      if (filter.since !== undefined) {
+        where.push('started_at >= ?');
+        params.push(filter.since);
+      }
+
+      if (filter.after) {
+        where.push('(started_at < ? OR (started_at = ? AND id < ?))');
+        params.push(filter.after.started_at, filter.after.started_at, filter.after.id);
+      }
+
+      return driver
+        .all(
+          `SELECT * FROM runs ${where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''}
+           ORDER BY started_at DESC, id DESC LIMIT ?`,
+          [...params, filter.limit],
+        )
+        .map(toRun);
+    },
+
     async insert(run) {
       const r = Run.parse(run);
       driver.run(

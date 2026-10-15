@@ -104,6 +104,7 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-16 — W5b: stats, inbox, runs and cost API.
 - 2026-10-16 — W4: project settings and memory screens.
 - 2026-10-16 — W2: Forge settings screens (harnesses, GitHub, limits, general).
 - 2026-10-16 — CI green on Windows, macOS and Linux: paths compared after resolving short names and symlinks.
