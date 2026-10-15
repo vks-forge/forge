@@ -1,5 +1,19 @@
 # Brief — Claude WorkerDriver (m0-brief slice 2, item 3)
 
+> **Status (2026-10-15).** Brief for a built driver (`@forge/drivers`); kept as
+> history. Superseded since:
+>
+> - The pinned adapter with the SDK-bundled CLI and "do not set
+>   `CLAUDE_CODE_EXECUTABLE`" (d-0053, build 2.1.293): the driver runs the
+>   user's installed `claude`; the ACP adapter is pointed at it with
+>   `CLAUDE_CODE_EXECUTABLE` (d-0087, d-0101). Nothing is pinned; each new
+>   build gets a compatibility check and its native tool shapes need approval
+>   (d-0088, B7).
+> - Run files under `.forge/data/runs/<id>/`: `<dataHome>/runs/<id>/` (d-0098).
+> - "A run cannot outlive the process" (d-0054): runs resume after a restart
+>   (d-0092, d-0100). Credentials: the harness's auth mode adds one, the server
+>   env never does (d-0087).
+
 Status: approved to start 2026-10-13; revised after the 2026-10-13 review.
 Builds on d-0033, d-0035, d-0049, d-0052, d-0053, d-0054, d-0056. Probe facts:
 `packages/drivers/__tests__/probes/RESULTS.md`. Starts after review batches

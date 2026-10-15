@@ -1,5 +1,10 @@
 # Enhance pass — grill session of 2026-10-12 (d-0020..d-0030, x-0006, x-0007, x-0009)
 
+> **Status (2026-10-15).** Historical review of the 2026-10-12 grill; paths and
+> choices it cites (`.forge/` files, `profile: ts | generic`, pinned CLI,
+> restart kills runs) are superseded by d-0085, d-0095, d-0088 and d-0092. See
+> `docs/design/build-plan.md`.
+
 Skill: `.forge/skills/enhance-decisions/SKILL.md`. Reviewer: director (Claude), read-only.
 Inputs read: `MEMORY.md`, every active `decisions/*.md`, every `rejected/*.md`, all nine
 `docs/design/*.md`, `research/notes/{self-improvement,tool-system}/*.md` (steal lists and

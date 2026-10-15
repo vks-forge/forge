@@ -1,6 +1,25 @@
 # Tool system — catalogue, two gates, one chokepoint, receipts
 
 Status: proposed v2, 2026-10-12 (v1 same day; v2 after source reads of 13 systems)
+
+> **Status (2026-10-15).** The design below is built, with these changes
+> from the product shape (d-0085, d-0088, d-0090, d-0117; build plan B7, F1).
+> Where the body still says otherwise, this block wins.
+>
+> | Body says | Now |
+> |---|---|
+> | Signed catalogue in `.forge/tools/catalog.yaml`, verified from the main checkout's HEAD | The catalogue is a versioned document in the database (`@forge/tools` `CatalogueStore`): every change is a new immutable numbered version with author and reason, compare-and-swap on save, edited in Settings. Nothing is signed; the database lives in the data home, outside every worktree. `.forge/tools/catalog.yaml` in this repo is a readable mirror of the built-in seed, pinned equal by a test. |
+> | Grants in `.forge/tools/grants/*.yaml`, floors in `.forge/tools/floors.yaml` | Lane rules and floors are code (`LANE_DEFAULTS`, `FLOOR_RULES`) that no setting lifts. The project grant is `tool_grants` in the project's settings (database, versioned); ticket grants have no source yet. |
+> | Project MCP servers declared in `.forge/project.yaml`, signed | Project MCP servers are catalogue entries; no customer repo carries Forge files. |
+> | Native tools approved once by the catalogue | Native tool schemas belong to the installed harness build. Each build gets a compatibility check; a new or changed native tool shape is `pending` and `admit()` denies it (`schema_pending`, or `schema_denied`) until the owner approves it in Settings. An unknown build or tool is denied (d-0088). Each run records `catalogue_hash`, the catalogue with the approved native hashes applied. |
+> | Floors protect `.forge/**` policy files | Floors protect Forge's data home by absolute path, for every path tool and every word of every shell argv (and `--flag=value` values), plus git options that read outside the worktree, environment reads, credential files and `.git` edits. The hook resolves path-tool arguments on disk, so a junction in the worktree is caught. |
+> | Shell allow-list fixed to the JS toolchain | Built per project from its role-tagged checks and ecosystems (d-0095); an interpreter-led or wrapped command gets no allow rule. |
+>
+> Honest limit (d-0117): the floors are policy over tool arguments, not an OS
+> boundary. Code a Worker runs (tests, scripts, a build) runs as the Forge OS
+> user and can read the data home and the environment directly. Real isolation
+> (separate account or container) is the first item after the realignment.
+> Package notes: `packages/tools/README.md`.
 Depends on: [`execution-plane.md`](execution-plane.md) §3 (`ToolExposure`), §5 (Factory MCP), §5a (agent YAML `tools`), §6 (permissions); [`verification-plane.md`](verification-plane.md) §2 (receipts); [`memory-system.md`](memory-system.md) §7 (taint); [`self-improvement.md`](self-improvement.md) §2 (tool fields are Tier C).
 Evidence: source reads on 2026-10-12 of OpenClaw, Paperclip, OpenCode (v2 Effect core), Pi, Codex (Rust), Goose, ToolHive, Roo-Code, Cline (SDK), OpenHands SDK, Hermes Agent; reports with `file:line` cites in `research/notes/tool-system/`.
 
@@ -20,7 +39,7 @@ each and adds the parts nobody has (§14).
 
 ## 2. Verdict
 
-**One signed catalogue. Two gates (capability, then approval). One chokepoint.
+**One versioned catalogue. Two gates (capability, then approval). One chokepoint.
 Two receipts per call. Deny wins everywhere.**
 
 - Tools are first-class records with a canonical name, kind, provider,
@@ -47,7 +66,7 @@ tool, the catalogue says whether the tool exists for this run at all.
 | **harness-native** | read, edit, write, grep, glob, shell | the harness | PreToolUse / PostToolUse hook (Claude), app-server events (Codex), plugin (OpenCode), extension `tool_call` (Pi), ACP permission stream |
 | **factory-core** (MCP) | `get_ticket`, `list_comments`, `add_comment`, `ask_director`, `report_blocked`, `finish` | Factory MCP server, per-run token | server-side |
 | **factory-capability** (MCP) | `web_search` (SearXNG, pluggable backends), `web_fetch` (allow-listed, proxied, SSRF-guarded), `docs_lookup`, `code_graph` (graft), `memory_search` (Director only), `db_query_readonly` | Factory MCP server, each tool individually grantable | server-side |
-| **project** (MCP) | servers declared in `.forge/project.yaml`, signed | proxied through the factory MCP mux | server-side |
+| **project** (MCP) | servers added as catalogue entries (database, versioned) | proxied through the factory MCP mux | server-side |
 | **gate-only** | test runner, lint, typecheck, mutation, SAST | dispatcher, outside the Worker | `gate_results` |
 
 Gate-only tools are listed so nobody grants them to a Worker by accident: the
@@ -61,7 +80,7 @@ Taken from Codex (`ToolExecutor` spec + handler, exposure enum), Pi
 resources), Paperclip (schema hash, quarantine).
 
 ```yaml
-# .forge/tools/catalog.yaml  (signed; DB is an index)
+# catalogue entry (stored in the database as a versioned document; yaml shown for readability)
 - name: shell
   kind: harness-native
   risk: exec                     # read | write-cwd | exec | network | credential | destructive  (declared, not inferred)
@@ -120,8 +139,8 @@ IDs).
 
 ### 5.0 Floors (unbypassable)
 
-Hermes's pattern: a hardline list (`rm -rf /`, credential files, `.forge/**`
-policy files, `git push`, package publish, destructive DB statements) plus the
+Hermes's pattern: a hardline list (`rm -rf /`, credential files, Forge's data
+home, `git push`, package publish, destructive DB statements) plus the
 operator's deny globs, matched on **normalised and de-obfuscated** input
 (Unicode NFC, quote and escape stripping, `$(...)` expansion detection).
 Evaluated before lane, before agent YAML, before any hook, before "yolo", and
@@ -153,7 +172,7 @@ wall.
 OpenCode's rule triple with Codex's aggregation:
 
 ```yaml
-# .forge/tools/grants/lanes.yaml (excerpt)
+# lane rules (excerpt; built in, shown as yaml for readability)
 standard:
   - { action: shell, resource: "pnpm test*",   effect: allow }
   - { action: shell, resource: "pnpm add *",   effect: ask,   save: "pnpm add <pkg>" }
@@ -392,10 +411,10 @@ Director's fixed grant: `memory_search`, `code_graph`, `web_search`,
 
 | Change | Tier | Path |
 |---|---|---|
-| Add a tool to the catalogue | C | signed commit to `.forge/tools/catalog.yaml` |
-| Project grants a project MCP or widens a lane default | C | `.forge/tools/grants/<project>.yaml`, user signs |
-| Agent YAML `tools.allow/deny` | C | `execution-plane.md` §5a, `self-improvement.md` §2 |
-| Edit a floor or the banned-always list | C + typed confirmation | `.forge/tools/floors.yaml` |
+| Add a tool to the catalogue | C | new catalogue version in Settings (author + reason recorded) |
+| Project grants a project MCP or widens a lane default | C | project settings `tool_grants`, new settings version |
+| Agent spec `tools.allow/deny` (database, versioned) | C | `execution-plane.md` §5a, `self-improvement.md` §2 |
+| Edit a floor or the banned-always list | C + typed confirmation | not editable: floors are code (`FLOOR_RULES`) |
 | Narrowing anything | A | any reviewed commit |
 | `always(scope, ttl)` from an approval | session grant, expires | written by the engine with provenance; visible on Ticket |
 | Worker asks for a tool it does not have | never granted at runtime | `ask_director` → Needs-you → user edits grants → new run |
@@ -451,8 +470,8 @@ to M1 pending Windows verification (d-0038); approval with hash binding,
 timeout and unattended `deny` for Express; one admission function; Claude Code
 renderer; decision + effect receipts (HMAC, chained); checkpoint-before-mutate
 via the worktree manager; effective set stored per run and shown on the
-Ticket screen. Catalogue, grants and skill signatures are verified from the
-main checkout's HEAD, never from files inside the Worker's cwd.
+Ticket screen. The catalogue and grants are read from the database, never from
+files inside the Worker's cwd.
 
 Deferred to M1+: inspectors beyond pattern/AST and path normaliser, guardian
 reviewer, `web_fetch` proxy and credential broker, project MCPs and

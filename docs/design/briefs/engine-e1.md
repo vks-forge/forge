@@ -1,5 +1,19 @@
 # Brief — E1: engine, DirectorLLM, worktrees (slice 2, items 4–5)
 
+> **Status (2026-10-15).** Brief for a built package (`@forge/engine`); kept as
+> history. Superseded since:
+>
+> - Config from `.forge/config/forge.yaml`: limits and models are built-in
+>   defaults plus company and project overrides in the database, read through a
+>   `ConfigSource` port once per tick (d-0085, B1).
+> - Worktree `.worktrees/<id>` in the repo and one project per engine: worktrees
+>   are `<dataHome>/worktrees/<slug>/<id>` and the engine serves many projects
+>   through a registry (d-0098, d-0082, B3).
+> - Restart handling (d-0054, runs marked `crash` and re-queued): interrupted
+>   runs are resumed from their harness session with a new secret generation
+>   (d-0092, d-0100, B9).
+> - One global concurrency number: layered limits and a queue (d-0097).
+
 Status: approved 2026-10-13 ("go"). Decisions: d-0025, d-0032, d-0052,
 d-0054, d-0055, d-0058 (engine package), d-0059 (always worktree), d-0060
 (models). Design: `director-core.md` §2–§8, `execution-plane.md` §7–§8.

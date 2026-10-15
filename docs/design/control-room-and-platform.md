@@ -1,6 +1,34 @@
 # Control room, platform services, git policy
 
 Status: proposed, 2026-10-12
+
+> **Status (2026-10-15).** Sections 1, 2, 7 and 8 were written for one repo
+> on one machine. The installed product (d-0082 ... d-0099) changed them:
+>
+> - **Layout.** Forge is one installed program (`npm i -g vks-forge`, command
+>   `forge`, d-0099) and holds no files in customer repos. Everything it owns
+>   is in the data home, `%LOCALAPPDATA%\Forge` by default (d-0098): `forge.db`
+>   (settings, agents, catalogue, all versioned, d-0085), `secrets/` (DPAPI),
+>   `memory/<slug>/` (private git repo per project, d-0086), `worktrees/<slug>/<ticket>/`,
+>   `runs/<id>/`, `logs/`, `install-token`, `server.json`, `server.lock`, and
+>   `backups/` (reserved). The `.forge/` tree in §1 and the
+>   `<repo>\.worktrees\<ticket-id>` path in §7 are superseded.
+> - **Screens.** The screen table in §2 is replaced by
+>   [`ui-screen-map.md`](ui-screen-map.md) (d-0102, d-0104, d-0105, d-0116):
+>   project-scoped Home, cards and Board, Inbox, Issues, first-run wizard,
+>   company and project Settings. The issue flow is in
+>   [`issue-flow.md`](issue-flow.md).
+> - **Install token and daemon (B8, d-0092, d-0093).** The server binds
+>   127.0.0.1 only. On first start it creates `<dataHome>/install-token`
+>   (ACL cut to the current user on Windows); every route except `/health`
+>   and the per-run hook route needs it as a Bearer token; the browser's
+>   event streams use short-lived signed tickets. `forge start | status | stop`
+>   runs the server detached under a single-instance lock. Start on login and
+>   the tray are not built.
+> - **Restart.** A restart no longer kills runs: interrupted runs are resumed
+>   from their harness session with a fresh run secret generation (d-0092,
+>   d-0100).
+> - Package notes: `apps/server/README.md`, `apps/cli/README.md`.
 Depends on: [`v1-decisions.md`](v1-decisions.md), [`director-core.md`](director-core.md), [`execution-plane.md`](execution-plane.md)
 Evidence: repo and vendor-doc survey of 2026-10-12 (URLs in §9). Stars and
 activity as of that date; items marked unverified were not confirmed.
@@ -23,7 +51,8 @@ packages/
   gates/         G1–G6 runners, blast radius, canaries
   memory/        memory repo reader/writer, index, janitor
   db/            SQLite schema + migrations, raw portable SQL on a SqlDriver seam, no ORM (d-0047)
-.forge/        skills/ agents/ rules/ intent-tests/ memory/<project>/
+(no repo-side tree: skills, agents, rules and settings are database rows;
+ memory, worktrees and runs sit in the data home. See the status block.)
 ```
 
 ## 2. Control room UI
@@ -37,8 +66,9 @@ Vibe Kanban (sunsetting). Vikunja is the only tracker with rich typed
 relations and a SQLite single binary, but its Vue UI cannot be reused and it
 is AGPL; keep it as a reference for relation semantics only.
 
-Screens (each gets a Nielsen-10 pass before build; see the global CLAUDE.md
-rules):
+Screens: the installed product's screen list is `ui-screen-map.md`; the table
+below is the original 2026-10-12 proposal, kept for the information each
+screen must show (each gets a Nielsen-10 pass before build):
 
 | Screen | Purpose | Key elements |
 |---|---|---|
@@ -47,7 +77,7 @@ rules):
 | Ticket | one ticket | thread (assistant-ui), gate results strip, diff viewer, lane/tier history, memory slice that was injected, run list with cost |
 | Agents | who is running what | `claude agents`-style grouping: Needs input / Working / Completed; per-run usage |
 | Needs you | the human queue | interactions awaiting answer, Tier B reviews, Tier C sign-offs, janitor PRs, canary alerts; each with a timeout countdown |
-| Ledger | autonomy tiers | action class → tier → owner; promotion/demotion history as signed commits |
+| Ledger | autonomy tiers | action class → tier → owner; promotion/demotion history as attributed versions |
 | Cost | spend | per run → ticket → epic → project; proxy spend vs OTel estimate; budget alerts |
 | Memory | project memory | browse `decisions/`, `rejected/`, `playbook/`, `proposed/`; approve/dismiss proposals; janitor log |
 
@@ -136,8 +166,9 @@ record: approver, policy version, merge SHA, tier_actual  → outcomes/ + ledger
 Thin layer of our own, modelled on Claude Code's worktree behaviour and
 worktrunk's hooks:
 
-- One worktree per ticket at `<repo>\.worktrees\<ticket-id>` (d-0039, carried over by d-0044; the
-  earlier `D:\wt\<ticket-id>` is superseded), created and removed behind one
+- One worktree per ticket at `<dataHome>\worktrees\<project-slug>\<ticket-id>`
+  (d-0098, d-0059; the earlier `<repo>\.worktrees` and `D:\wt` paths are
+  superseded), created and removed behind one
   process-level mutex; `core.longpaths=true` set per repo, setup check warns
   when the host has `LongPathsEnabled=0`.
 - `git worktree lock` while a run is live; stale-lock sweep each tick;
@@ -147,9 +178,8 @@ worktrunk's hooks:
   worktree (`.env`, local config). Hooks: `create`, `pre-merge`, `post-merge`.
 - pnpm store on the same NTFS volume (or a ReFS Dev Drive) so installs
   hardlink; no copy-on-write on NTFS.
-- Add `.worktrees/`, `.forge/data/` and `.forge/memory/*/.index/` to ignore
-  lists before first dispatch; exclude `.worktrees/` from the graft indexer;
-  never run edits or git in the main checkout.
+- Worktrees sit outside the repo, so no ignore-list edit in the customer's
+  repo is needed; never run edits or git in the main checkout.
 
 ## 8. Secrets and egress on one Windows box
 

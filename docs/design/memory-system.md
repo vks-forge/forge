@@ -1,6 +1,40 @@
 # Director memory system — design spec
 
 Status: proposed, 2026-10-12
+
+> **Status (2026-10-15).** Where memory lives changed with the product shape;
+> the record schema, write rules, taint and janitor design below still stand.
+>
+> - **Location (d-0086).** A project's memory is a private git repository in
+>   Forge's data home, `<dataHome>/memory/<slug>/` (default
+>   `%LOCALAPPDATA%\Forge`), never inside the customer's repository. Nothing
+>   in a customer repo is read or written for memory. An optional one-way
+>   mirror of decisions to the user's repo as a pull request is allowed by
+>   d-0086 and is off by default; it is not built.
+> - **Writer (built, `@forge/memory`).** One Director-only writer; every call is
+>   one commit (`propose`, `decide`, `approve`, `reject`, `supersede`,
+>   `appendOutcome`). A crashed write is repaired before the next one. The
+>   owner answers proposals in the UI through the server's memory routes; no
+>   route lets anyone else create a record.
+> - **Reads are committed-only.** The engine's `MemorySource` reads the last
+>   commit (`git ls-tree` + `git cat-file`), never the working tree, so a write
+>   in flight cannot show a torn state. Only `decisions/` with `status: active`
+>   and `rejected/` reach prompts; `proposed/`, `outcomes/` and `MEMORY.md` do
+>   not.
+> - **Workers cannot reach it.** The data-home floor denies the folder by
+>   absolute path (`tool-system.md` status block). Floors are policy, not an
+>   OS boundary (d-0117).
+> - **This repository** (software-factory) keeps its own `.forge/memory/` as
+>   the dev team's memory, governed by `CLAUDE.md`. That folder is not the
+>   product's mechanism and the product never reads it.
+> - **Pending proposal x-0013** would move records into the database with
+>   search (exact lookup plus full-text relevance) and keep markdown as an
+>   export; it is not approved, and the git-repo layout below is what is built.
+> - **Not built yet:** the janitor, `playbook/`, the SQLite/FTS index, the
+>   pre-compaction flush, and the onboarding-chat seeding (d-0095). Treat §7
+>   onwards as design.
+>
+> Package notes: `packages/memory/README.md`.
 Depends on: [`v1-decisions.md`](v1-decisions.md)
 Evidence: source reads of OpenClaw (`extensions/memory-core`, `docs/concepts/memory*.md`,
 `docs/concepts/dreaming.md`) and Paperclip (`packages/db/src/schema/*`,
@@ -65,27 +99,27 @@ Why this and not a framework:
 
 ## 4. Storage layout
 
-One git repository per project, outside the product repo:
+One private git repository per project, in the Forge data home, outside every
+product repo (d-0086):
 
 ```
-.forge/
-  memory/
-    <project-slug>/              git repo, Director-only write, main protected
-      MEMORY.md                  index + pinned summary, always loaded, ≤ 200 lines / 25 KB
-      decisions/                 user decisions and constraints
-        d-0001-billing-grandfather.md
-        d-0002-reuse-hmac-helper.md
-      rejected/                  approaches rejected, with reason
-        r-0001-stripe-checkout-redirect.md
-      outcomes/                  append-only episodic log, one file per ticket run
-        2026-10/SF-142-3.md
-      playbook/                  procedural rules distilled from repeated outcomes
-        p-0001-migrations-need-backfill-ticket.md
-      proposed/                  agent-inferred, NOT loaded until promoted
-        x-0001-...
-      JANITOR.md                 human-readable log of every janitor pass, diffs linked
-      .index/
-        memory.sqlite            rebuildable: FTS5 over bodies + structured columns
+<dataHome>/memory/
+  <project-slug>/                git repo, Director-only write, main protected
+    MEMORY.md                    index + pinned summary, always loaded, ≤ 200 lines / 25 KB
+    decisions/                   user decisions and constraints
+      d-0001-billing-grandfather.md
+      d-0002-reuse-hmac-helper.md
+    rejected/                    approaches rejected, with reason
+      r-0001-stripe-checkout-redirect.md
+    outcomes/                    append-only episodic log
+      2026-10/o-0001-....md
+    playbook/                    (design, not built) procedural rules from repeated outcomes
+      p-0001-migrations-need-backfill-ticket.md
+    proposed/                    agent-inferred, NOT loaded until promoted
+      x-0001-...
+    JANITOR.md                   (design, not built) log of every janitor pass, diffs linked
+    .index/
+      memory.sqlite              (design, not built) rebuildable: FTS5 over bodies + structured columns
 ```
 
 Rules:
@@ -97,8 +131,9 @@ Rules:
 - `proposed/` is where the Director and the janitor put anything inferred.
 - `.index/` is gitignored.
 
-Project identity: the slug maps to the product repo's normalized git origin.
-Worktrees of the same repo share memory; forks do not (OpenClaw's rule).
+Project identity: the project slug is the key; the folder is
+`<dataHome>/memory/<slug>/`. All worktrees of a project share its memory
+(OpenClaw's rule); a second project on a fork has its own.
 
 ## 5. Record schema
 

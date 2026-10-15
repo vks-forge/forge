@@ -1,5 +1,19 @@
 # v1 scope review — keep / enhance / cut
 
+> **Status (2026-10-15).** Historical scope review for the walking skeleton
+> (approved as x-0006). The keep / enhance / cut reasoning stands for the
+> engine, gates and tools; these amendments are superseded:
+>
+> - Skills, agents and config as files under `.forge/` (d-0018's path,
+>   the `.forge/data/` run files of the section 4.6 amendment): database rows
+>   and the data home (d-0085, d-0098).
+> - "Gates by profile" (`profile: ts | generic`, d-0034): role-tagged checks
+>   and ecosystem gate rules (d-0095, B5).
+> - Scope assumptions "one user, one box, no team" and "one repo": the
+>   installed product serves one company with many projects and GitHub
+>   connections (d-0082, d-0094).
+> - Ledger-as-signed-commits: ledger changes are attributed settings versions.
+
 Status: proposed, 2026-10-12
 Reviewed: all six design docs, `.forge/memory/` records d-0001..d-0013, r-0001..r-0006, x-0001..x-0004.
 Lens: one user, one Windows 11 box, installed harnesses, no team. Goal is merged code with less human time than doing it by hand. Every component is judged by "what breaks if v1 ships without it" and "what evidence says it pays".

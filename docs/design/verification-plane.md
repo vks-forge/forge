@@ -1,6 +1,37 @@
 # Verification plane — gates G1–G6, blast radius, canaries
 
 Status: proposed, 2026-10-12
+
+> **Status (2026-10-15).** Only G1 is built (`@forge/gates`); G2 to G6, blast
+> radius and canaries remain design. What changed since this was written:
+>
+> - **No TS profile (d-0095, supersedes d-0034).** A project declares
+>   role-tagged `checks` (`test`, `lint`, `typecheck`, `build`, `format`,
+>   `custom`; each with command and optional `cwd`) and `ecosystems`, found at
+>   onboarding by detectors, CI-file reading and the Director, each command run
+>   once. Any language works. G1 runs every configured check in list order and
+>   never reports a role the project did not configure as passed or skipped.
+> - **Ecosystem gate rules (B5).** Test-file patterns, skip and ignore
+>   markers, assertion counting and gate-config guards are data per ecosystem
+>   (node, python, go, rust, jvm, dotnet, ruby, php, cmake) in
+>   `packages/gates/src/domain/ecosystems/`. Active ecosystems come from the
+>   project, else from the diff and check commands, else all. A project's
+>   `gate_rules` adds to or replaces them. The claim matcher accepts the
+>   command of any test-role check. A script a check runs by path is guarded
+>   against edits.
+> - **Receipts across generations (B9, d-0092, d-0100).** A run resumed after a
+>   server restart signs under a new secret generation; a `resumed` receipt
+>   links the segments. G1 verifies each generation under its own secret, which
+>   is stored encrypted for the run's life. A missing secret fails the gate
+>   (rework on a fresh run), never passes it. Claims also count receipts of the
+>   ticket's earlier runs for `edited` only.
+> - **Gate config lives in the database.** Anything the gates read as policy
+>   (rules, `gate_rules`, checks) is a versioned settings row, not a file in the
+>   customer's repo. `.forge/rules/` and `.forge/intent-tests/` below describe
+>   where G2 and G3 would keep their inputs: in the data home, outside every
+>   worktree, never in the customer repo.
+>
+> Package notes: `packages/gates/README.md`.
 Depends on: [`v1-decisions.md`](v1-decisions.md), [`execution-plane.md`](execution-plane.md), [`director-core.md`](director-core.md)
 Evidence: tool and paper survey of 2026-10-12 (URLs in §8). Star counts and
 activity as of that date.
@@ -29,13 +60,15 @@ Gates run in order; each is cheaper than the next; first failure returns the
 ticket to InProgress with the report attached (`director-core.md` §4). Express
 runs G1 + G3 only; Standard G1–G4; Full all.
 
-Language profile (d-0034): `project.yaml` declares `profile: ts | generic`.
-Under `generic`, the TS-bound checks report `skipped` with the reason shown
-on the Ticket screen, never `pass`: G1 test-diff patterns, G2 import/layer
-rules, BR `reach` via dependency-cruiser, G4 mutation (StrykerJS), and the ORM
-migration check. Language-neutral: lint/typecheck/test via `commands`,
-ast-grep, Semgrep, the claim matcher, the TDD-order check (d-0015), and path
-rules for `irreversibility` and `sensitivity`.
+Ecosystem coverage (d-0095, replaces the `profile: ts | generic` split of
+d-0034): a check whose tooling does not support the project's ecosystem reports
+`skipped` with the reason shown on the Ticket screen, never `pass`. G1's
+test-diff and gate-config rules are per-ecosystem data and cover nine
+ecosystems today. Still JS-centred and unbuilt: G2 import/layer rules, BR
+`reach` via dependency-cruiser, G4 mutation (StrykerJS), and the ORM migration
+check. Language-neutral: the project's role-tagged checks, ast-grep, Semgrep,
+the claim matcher, the TDD-order check (d-0015), and path rules for
+`irreversibility` and `sensitivity`.
 
 ## 2. G1 — Claims vs tool records
 
@@ -63,8 +96,9 @@ call into typed claims (`ran_tests`, `edited <path>`, `added_test <name>`,
 config. EvilGenie validated test-file-edit detection against human review and
 found Codex and Claude Code both hardcode and edit tests when pressured.
 
-**Lint and types.** Project `lint` and `typecheck` scripts, run in the
-worktree by the dispatcher, not by the Worker.
+**Project checks.** Every role-tagged check of the project (test, lint,
+typecheck, build, format, custom), run in the worktree by the dispatcher, not
+by the Worker.
 
 ## 3. G2 — Compiled rules, SAST, migration check
 
@@ -81,7 +115,7 @@ worktree by the dispatcher, not by the Worker.
   against `migrations/`; a model change without a migration, or a
   column-add on a populated table without a backfill marker, fails.
 - **ADR → rules pipeline:** `docs/adr/*.md` in the product repo; the Director's
-  `compile_rules` step proposes `.forge/rules/*.yaml` (dependency-cruiser +
+  `compile_rules` step proposes rules stored as versioned settings rows (dependency-cruiser +
   ast-grep rule bodies with the ADR id); accepting a rule is Tier C (named
   signer). Rules are the same list that drives lane triage's tier-C globs.
 
@@ -89,8 +123,8 @@ worktree by the dispatcher, not by the Worker.
 
 Written by the Director's `plan` step (or by a separate test-writer Worker on a
 different model) from the ticket's acceptance criteria *before* the
-implementing Worker starts. Stored under `.forge/intent-tests/<ticket>/`
-outside any path mounted into the Worker's worktree, copied in by the
+implementing Worker starts. Stored in the data home, outside any
+path mounted into the Worker's worktree, copied in by the
 dispatcher only at gate time, and never shown to the Worker.
 
 Hidden tests alone are not sufficient: EvilGenie found held-out tests gave

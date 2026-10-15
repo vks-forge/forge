@@ -1,12 +1,16 @@
 # Software Factory — design docs
 
-Read in this order.
+Read in this order. Docs written before 2026-10-14 carry a status block at
+the top saying what the installed-product decisions (d-0082 to d-0117)
+changed. For the current shape read `product-shape-change-map.md` and
+`build-plan.md` first, and the package READMEs under `packages/` and `apps/`
+for what is built.
 
 | Doc | What it decides |
 |---|---|
 | [`v1-decisions.md`](v1-decisions.md) | Scoping table: what v1 builds, what is deferred, governing rule, tiers, kanban columns |
 | [`director-core.md`](director-core.md) | Engine tick, state store, ticket state machine, LLM steps, lane triage rule, intake envelope, live steering, blocking questions |
-| [`execution-plane.md`](execution-plane.md) | Process lanes, `WorkerDriver` contract, per-harness drivers, skills/agents as files, context injection, permissions and isolation on Windows, resume matrix, run lifecycle, concurrency |
+| [`execution-plane.md`](execution-plane.md) | Process lanes, `WorkerDriver` contract, per-harness drivers, skills/agents as versioned database rows (see its status block), context injection, permissions and isolation on Windows, resume matrix, run lifecycle, concurrency |
 | [`verification-plane.md`](verification-plane.md) | Gates G1–G6 with chosen tools, blast-radius formula, ledger routing, canaries |
 | [`memory-system.md`](memory-system.md) | Per-project git memory: layout, record schema, write/read paths, janitor, safety, evaluation |
 | [`control-room-and-platform.md`](control-room-and-platform.md) | Monorepo layout, UI screens, live thread stack, observability, LLM gateway and per-run keys, git merge policy, worktree manager, secrets and egress |
@@ -14,6 +18,10 @@ Read in this order.
 | [`tool-system.md`](tool-system.md) | Tool catalogue, per-harness support matrix, factory-served capability tools (web search etc.), intersection grants per run, receipts, taint, who may change grants |
 | [`m0-brief.md`](m0-brief.md) | **Finalized build plan**: preconditions, repo layout, four slices with exits, preflight probes, M0.5 driver wave, day-one metrics |
 | [`reviews/2026-10-12-enhance-pass.md`](reviews/2026-10-12-enhance-pass.md) | Enhance-decisions pass over the grill session; keep / change / drop table, missed points, contradictions |
+| [`product-shape-change-map.md`](product-shape-change-map.md) | Product shape of 2026-10-14 (installed product, data home, config in the database, many projects) mapped to code and docs workstreams W1 to W20 |
+| [`build-plan.md`](build-plan.md) | Approved build batches B0 to B14 with acceptance per batch (d-0100) |
+| [`ui-screen-map.md`](ui-screen-map.md) | Approved control-room screen map (d-0102, d-0104 to d-0116); replaces the screen table in `control-room-and-platform.md` section 2 |
+| [`issue-flow.md`](issue-flow.md) | Issue and PR analysis flow: triage, deep analysis, verified findings, typed verdict, policy layer (d-0113 to d-0115) |
 | [`self-improvement.md`](self-improvement.md) | Skills, agents and Director prompts improve from outcomes: signals, `improve_skill` step, replay eval with Pareto acceptance, tiered promotion, monitor and rollback (d-0019) |
 
 Research base: `research/notes/final_report_ai-software-factory-architecture-58e4cc.md`

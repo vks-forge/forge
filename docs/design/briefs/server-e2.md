@@ -1,5 +1,21 @@
 # Brief — E2: server, gates, git host, end to end (slice 2, items 6 + exit)
 
+> **Status (2026-10-15).** Brief for a built app (`apps/server`) and G1; kept as
+> history. Superseded since:
+>
+> - Project checks by `profile: ts | generic` (d-0034): role-tagged checks and
+>   ecosystem gate rules (d-0095, B5).
+> - Config from `.forge/config/forge.yaml` and secrets under
+>   `.forge/data/secrets/`, runs under `.forge/data/runs/`: settings in the
+>   database, everything else in the data home (d-0085, d-0098, B0 to B2).
+> - Run token and HMAC secret held in memory, "restart kills runs anyway"
+>   (d-0054): the secret is stored encrypted for the life of the run and a
+>   restart resumes runs (d-0092, d-0100, B9).
+> - Loopback with no auth: loopback plus a per-install token on every route
+>   except health and the hook route (d-0093, B8).
+> - One project per server: many projects and GitHub connections (d-0082,
+>   d-0094).
+
 Status: approved 2026-10-13 ("finish the E2 autonomusly"). Decisions: d-0012, d-0033, d-0034,
 d-0036, d-0046, d-0052, d-0054, d-0055, d-0058, d-0059, d-0061 (node:http),
 d-0062 (GitHost + DPAPI). Design: `m0-brief.md` slice 2 exit,

@@ -1,6 +1,24 @@
 # Execution plane — harness-driven Workers and process lanes
 
 Status: proposed, 2026-10-12
+
+> **Status (2026-10-15).** Built for Claude Code only (`@forge/drivers`); the
+> other drivers, lanes above Express and WSL2/container isolation are design.
+> The product shape (d-0085 ... d-0101, d-0117) changed these parts of the body:
+>
+> | Body says | Now |
+> |---|---|
+> | Skills and agents are a signed `.forge/` tree in the repo (§5a) | Database rows in the data home, versioned, edited in the UI, outside every worktree (d-0085). No signing. Drivers still render them into each harness's layout per run. |
+> | Worktree at `.worktrees/<ticket-id>` in the repo (§6) | `<dataHome>/worktrees/<project-slug>/<ticket-id>`, outside the repo (d-0098, d-0059). The Worker's cwd is a worktree inside the data home, so the data-home floor excepts the run's own worktree. |
+> | Claude Code runs through a pinned adapter and the SDK-bundled CLI (§4) | The user's installed `claude` with its own login, an API key or a setup-token OAuth token, per harness in Settings (d-0087). The ACP adapter stays a bundled dependency but is pointed at the installed binary with `CLAUDE_CODE_EXECUTABLE` (d-0101); a missing install fails the run before spawn. Nothing is bundled or pinned. |
+> | Compatibility = the pin | Per-install compatibility check on each new `claude` build (about a minute, no cost), a shipped known-good list, and per-build approval of native tool shapes in Settings; a changed or unknown tool is denied until approved. A failed check pauses the harness. The build is re-read before every run; a changed build parks the ticket (`harness_changed:`) until approved (d-0088, B7). |
+> | Per-run files in `.forge/data/runs/<id>/` (§4) | `<dataHome>/runs/<id>/` (`hook.json`, `settings.json`, `mcp.json`, gate reports). |
+> | A restart kills every in-flight run (§8, d-0054) | A restart interrupts runs and the next start resumes each from its harness session with a new secret generation, else retries in the same worktree (d-0092, d-0100). d-0054 is superseded. |
+> | Concurrency 3 to 4 per provider (§9) | Layered limits: global 2, per project 1, per harness, a priority queue and quota waits with a reset time (d-0097). |
+>
+> Floors and Worker isolation are policy, not an OS boundary: a Worker's code
+> runs as the user's account (d-0117; `tool-system.md` status block).
+> Package notes: `packages/drivers/README.md`, `apps/server/README.md`.
 Depends on: [`v1-decisions.md`](v1-decisions.md), [`memory-system.md`](memory-system.md)
 Evidence: source read of Paperclip adapters (`packages/adapter-utils`,
 `packages/adapters/*`, `packages/mcp-server`, `packages/paperclip-runner`,
@@ -67,7 +85,7 @@ once per harness. The Director never calls a harness directly.
 interface WorkerDriver {
   readonly id: string;                           // "claude-code" | "codex" | "opencode" | "pi" | "acp" ...
   capabilities(): DriverCapabilities;            // declared, never inferred from the id (code.md rule 3)
-  preflight(): Promise<Preflight>;               // { ok, issues[], version? }: binary present, auth works, version pinned
+  preflight(): Promise<Preflight>;               // { ok, issues[], version? }: binary present, auth works, version read, checked per install (d-0088)
   start(req: RunRequest): Promise<RunHandle>;
   resume(handle: RunHandle): Promise<RunHandle>;
   steer(handle: RunHandle, message: string, mode: SteerMode): Promise<void>; // "steer" | "follow_up" | "interrupt"
@@ -90,7 +108,7 @@ interface RunRequest {
   // No AbortSignal: it is not serializable. Cancel through WorkerDriver.cancel(handle).
 }
 
-// Serializable, so a run can be re-attached after a restart (but see d-0054).
+// Serializable, so a run can be re-attached after a restart (d-0092).
 interface RunHandle {
   runId: string;
   session?: SessionRef;
@@ -123,7 +141,7 @@ from the harness output. The agent's own claim is checked against it at G1.
 
 | Order | Harness | Control interface | Why this order |
 |---|---|---|---|
-| 1 | **Claude Code** | ACP server `@agentclientprotocol/claude-agent-acp` (pinned; not the stale `@zed-industries/claude-code-acp`), one process per run, `loadSession` for continuity. Per-run `settings`, `settingSources: []`, `strictMcpConfig`, `mcpServers`, `allowedTools`, `disallowedTools`, `maxBudgetUsd`, `maxTurns` via `_meta.claudeCode.options`, files under `.forge/data/runs/<id>/`. `allowDangerouslySkipPermissions: false` on every `session/new` and `session/load`. Fallback: `claude -p --output-format stream-json` with the same `--settings` / `--setting-sources` / `--strict-mcp-config` flags, Express only until the permission-prompt bridge is verified (d-0035). | Works with the user's own login (d-0031). PreToolUse hooks from the per-run settings layer are the chokepoint and must carry `onFailure: "block"` + `timeout` (d-0033). SDK callback hooks and `canUseTool` do not cross JSON-RPC; settings-file hooks do. |
+| 1 | **Claude Code** | ACP server `@agentclientprotocol/claude-agent-acp` (bundled dependency, run against the user's installed `claude` via `CLAUDE_CODE_EXECUTABLE`, d-0101; not the stale `@zed-industries/claude-code-acp`), one process per run, `loadSession` for continuity. Per-run `settings`, `settingSources: []`, `strictMcpConfig`, `mcpServers`, `allowedTools`, `disallowedTools`, `maxBudgetUsd`, `maxTurns` via `_meta.claudeCode.options`, files under `<dataHome>/runs/<id>/`. `allowDangerouslySkipPermissions: false` on every `session/new` and `session/load`. Fallback: `claude -p --output-format stream-json` with the same `--settings` / `--setting-sources` / `--strict-mcp-config` flags, Express only until the permission-prompt bridge is verified (d-0035). | Works with the user's own login (d-0031). PreToolUse hooks from the per-run settings layer are the chokepoint and must carry `onFailure: "block"` + `timeout` (d-0033). SDK callback hooks and `canUseTool` do not cross JSON-RPC; settings-file hooks do. |
 | 2 | **Codex** | `codex app-server` (JSON-RPC over stdio) via `@openai/codex-sdk`. Fallback: `codex exec --json --sandbox workspace-write -C <dir> --output-schema s.json`. | `turn/steer` and `turn/interrupt` map directly to Director live chat; per-turn model/cwd/sandbox overrides; only harness with a documented native Windows sandbox. |
 | 3 | **OpenCode** | `opencode serve --port 4096 --hostname 127.0.0.1` + `@opencode-ai/sdk`. `POST /session`, `POST /session/:id/prompt_async`, `GET /global/event` (SSE), `POST /session/:id/abort`, `POST /session/:id/permissions/:id`. | Multi-provider models; `opencode.json` `permission` map with per-pattern `ask/allow/deny`; one warm server avoids MCP cold start. Multi-cwd on one server is unverified; run one server per worktree until confirmed. |
 | 4 | **Pi** | `pi --mode rpc` (JSONL), `promptAndWait()`, wait for `agent_settled`. One-shot: `pi --mode json -p --tools read,bash,edit,write,grep,find,ls --session <file.jsonl>`. | Lightweight, extensions in-process (`tool_call` handler can return `{block:true}` which is our gate hook). No built-in approval prompts, so isolation must come from §6. |
@@ -167,31 +185,27 @@ worktree plus the prompt bundle. `--settings` is additive, so excluding the
 sources is what keeps the user's own `~/.claude/settings.json` hooks out of
 the Worker.
 
-## 5a. Skills and agent definitions: files canonical, database as registry
+## 5a. Skills and agent definitions: database canonical, rendered per run
 
 Every harness has its own on-disk layout for skills and agents. We do not
-store per-harness copies and we do not store content in the database.
+store per-harness copies. The canonical form is one versioned row per skill
+and per agent in Forge's database in the data home (d-0085, supersedes the
+earlier signed `.forge/skills/` and `.forge/agents/*.yaml` tree). Customer
+repos hold no Forge files.
 
-**Canonical source** is one git tree, signed on commit:
-
-```
-.forge/
-  skills/
-    git-rebase/SKILL.md            Agent Skills standard: frontmatter + body + optional scripts/
-    db-migration/SKILL.md
-    stripe-integration/SKILL.md
-  agents/
-    worker-default.yaml            our own spec (no cross-harness standard exists)
-    worker-security.yaml
-    reviewer-critic.yaml
-```
-
-- **Skills** use the open Agent Skills format (`SKILL.md` with `name`,
+- **Where defined.** Company defaults plus per-project overrides, edited only
+  in the UI. Every change is an immutable numbered version with author, time
+  and reason; a run records the version it used, so rework and post-mortems
+  read the same definitions. Config sits outside every worktree, so a Worker
+  cannot change what shapes it, and file signing is dropped. Export and import
+  as files is a later UI feature, not a source of truth.
+- **Skills** keep the open Agent Skills shape (`SKILL.md` with `name`,
   `description`, optional `allowed-tools`, bundled `scripts/` and
   `references/`). Claude Code, Codex, Gemini CLI, OpenCode, Pi (`--skill <dir>`)
-  and Cursor read this format natively, so skills need no translation, only
-  placement.
-- **Agents** have no shared standard, so the canonical form is ours:
+  and Cursor read this format natively, so a skill needs placement, not
+  translation.
+- **Agents** have no shared standard, so the canonical form is ours, a settings
+  form plus a prose instructions field (shown as yaml for readability):
 
   ```yaml
   name: worker-security
@@ -204,6 +218,10 @@ store per-harness copies and we do not store content in the database.
     deny:  ["Bash(git push*)", "Bash(rm -rf*)", WebFetch]
   lanes: [standard, full]
   ```
+
+  The pipeline shape of agents (graphs, handoffs, budgets per agent) is the
+  d-0066 ... d-0081 family from the x-0011 grill; the engine does not read it
+  yet and x-0011 itself is still pending.
 
 **Rendering at dispatch.** Each `WorkerDriver` renders the agent spec and
 copies the allowed skills into the per-run location before `start()`:
@@ -221,24 +239,20 @@ per-run `HOME` is created empty and populated only with what the agent spec
 allows, so a Worker never inherits the host user's `~/.claude` skills, hooks,
 or MCP servers.
 
-**What the database holds** (registry, not content):
+**What the database holds:**
 
 ```
-skills_registry:  name, version, content_hash, signature, allowed_projects[], lanes[], deprecated_at
-agents_registry:  name, version, content_hash, signature, allowed_projects[], lanes[]
-skill_usage:      skill, ticket, harness, outcome, duration   ← feeds the FSM next-skill predictor
-render_cache:     (skill|agent, version, harness) → rendered path
+skills / agents:  name, version, body, author, reason, created_at, allowed_projects[], lanes[]
+skill_usage:      skill, ticket, harness, outcome, duration   (design: feeds the self-improvement loop)
 ```
 
-If the database is lost, the FSM statistics are lost; nothing about what a
-Worker can do changes. Signature is checked at dispatch against the git commit;
-an unsigned or modified skill does not render.
+The registry is the source, not an index, so it is part of what a backup
+(data-home snapshot, d-0098) must keep. A Worker cannot reach it.
 
 **Versioning.** A ticket pins the skill and agent versions it ran with in its
-`outcomes/` record, so rework and post-mortems use the same definitions.
-Promotion of a new skill version follows the ledger: Tier A for `references/`
-and prose edits, Tier C (named signer) for anything that changes
-`allowed-tools` or bundled scripts.
+outcome record. Promotion of a new version follows the ledger: Tier A for
+`references/` and prose edits, Tier C (the user approves in the UI) for
+anything that changes `allowed-tools` or bundled scripts.
 
 ## 6. Permission policy and isolation
 
@@ -274,7 +288,7 @@ Mechanisms per harness:
 
 Shared-resource rules for worktrees (they isolate files, not the machine):
 
-- One worktree per ticket under `.worktrees/<ticket-id>`; a `WorktreeCreate`
+- One worktree per ticket under `<dataHome>/worktrees/<project-slug>/<ticket-id>` (d-0098); a `WorktreeCreate`
   hook (Claude) or a dispatcher step copies `.env.example`-derived files and
   symlinks or installs `node_modules` per the project's `.worktreeinclude`.
 - Package caches are shared on purpose (speed); database/ports are not: each
@@ -332,10 +346,13 @@ stateDiagram-v2
   + first stack line) caps identical retries at 3, then escalates to the user.
 - **Refusals**: Claude returns a policy refusal as exit 0 with a normal-looking
   result; detect it from the result text, not the exit code.
-- **Restart (M0, d-0054)**: a server restart kills every in-flight run. The per-run
-  HMAC secret lives only in server memory, so a run cannot outlive the process; on
-  start, reconcile marks `running` runs this instance does not own as `crash`, revokes
-  their tokens and re-queues the ticket. A restart-survivable secret is deferred.
+- **Restart (d-0092, d-0100; supersedes d-0054)**: shutdown marks live runs
+  `interrupted` with their harness session and stops their harnesses. The run's
+  HMAC secret is stored encrypted in the SecretStore for the life of the run,
+  so the next start's first tick resumes each run from its harness session
+  with a fresh secret generation and a `resumed` receipt linking the chain
+  (G1 verifies each generation, `verification-plane.md` status block). A run
+  that cannot be resumed is retried as a new run in the same worktree.
 - **Settlement**: diff from git, `outcomes/` record, per-run token revoked,
   worktree kept until the ticket is Done or Cancelled, then removed.
 

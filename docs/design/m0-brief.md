@@ -1,5 +1,26 @@
 # M0 brief — walking skeleton
 
+> **Status (2026-10-15).** Historical build plan for the walking skeleton.
+> Superseded by the product-shape decisions and `build-plan.md` (B0 to B14):
+>
+> - `profile: ts | generic` and `project.yaml` (slice 1): replaced by
+>   role-tagged checks and ecosystems found at onboarding, held as versioned
+>   database settings (d-0095 supersedes d-0034; d-0085).
+> - `.forge/data/`, `.forge/memory/`, `.worktrees/` and the `.gitignore`
+>   entries for them (P2, P3, slices 1 to 2): the data home
+>   `%LOCALAPPDATA%\Forge` holds the database, secrets, per-project memory
+>   repos, runs and worktrees; customer repos hold no Forge files (d-0098,
+>   d-0086, d-0085).
+> - Signed catalogue verified from the main checkout (slice 1): a versioned
+>   catalogue in the database, no signing (d-0085, B7).
+> - Registering this repo as project `forge` through `project.yaml` (slice 4):
+>   done through the project API and onboarding flow instead (d-0083, d-0095).
+> - "Restart kills runs" (d-0054) and the pinned CLI (d-0053): resume after
+>   restart (d-0092, d-0100) and the user's installed harness with a per-install
+>   compatibility check (d-0087, d-0088, d-0101).
+> - The `forge new | doctor | run | answer` commands: not built; the UI is the
+>   control surface (d-0090).
+
 Status: finalized 2026-10-12 (d-0020..d-0039; grill + enhance pass)
 Exit criterion (d-0037): **one dogfood ticket on this repo goes Inbox → Done
 through the Claude driver with G1 green**, visible on the Board, with

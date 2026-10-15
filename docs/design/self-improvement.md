@@ -1,6 +1,33 @@
 # Self-improving skills and agents
 
 Status: proposed, 2026-10-12
+
+> **Status (2026-10-15).** Nothing in this loop is built; it stays a design.
+> Where it lives changed with the product shape (d-0085, d-0090):
+>
+> - Skills, agent definitions and pipelines are **not** files in the
+>   customer's repo (`.forge/skills/`, `.forge/agents/*.yaml`, a
+>   `skills/ACTIVE` pointer) and are **not signed**. They are rows in Forge's
+>   database in the data home, company defaults plus per-project overrides,
+>   edited only in the UI. Every change is an immutable numbered version with
+>   author, time and reason (the same `config_versions` mechanism that holds
+>   settings); runs record the version they used.
+> - "Signs" and "Tier C (user signs)" below mean: the user approves the change
+>   in the UI, which writes a new version attributed to them. There is no file
+>   signature. The registry tables in §4 become versioned rows; `content_hash`
+>   stays as an integrity and dedupe field, `signature` is dropped.
+> - The registry is the source, not an index over git. Promotion, rollback and
+>   the frozen run snapshot (§8, §10) work on version ids instead of git
+>   merges and `ACTIVE` pointers; `candidate_path` becomes a candidate version
+>   row. Config sits outside every worktree, so a Worker cannot edit what
+>   shapes it.
+> - Harness drivers still render skills and agent specs into each harness's
+>   native layout per run (`execution-plane.md` §5a).
+> - Pending proposals that touch this doc: x-0011 (agents and pipelines as
+>   config; its file-based parts are superseded by d-0085, the rest is the
+>   open grill), x-0012 (Director project context and code graph), x-0013
+>   (memory in the database with search). None is approved; do not treat them
+>   as constraints.
 Decision: d-0019 (user). Depends on: [`execution-plane.md`](execution-plane.md) §5a, [`memory-system.md`](memory-system.md) §6–§9, [`verification-plane.md`](verification-plane.md), [`v1-decisions.md`](v1-decisions.md) ledger tiers.
 Evidence: survey and papers in §12, read on 2026-10-12.
 
@@ -31,10 +58,10 @@ Three findings shape the design:
 
 ## 2. What can improve, and by whom
 
-| Component | File | Fields the loop may change | Fields that need Tier C (user signs) |
+| Component | Stored as | Fields the loop may change | Fields that need Tier C (user signs) |
 |---|---|---|---|
-| Skill | `.forge/skills/<name>/SKILL.md`, `references/` | body prose, `description`, `references/*` | `allowed-tools`, anything under `scripts/`, new skill creation |
-| Agent | `.forge/agents/<name>.yaml` | `system` prose, `skills[]` (only to add an already-approved skill) | `tools.allow/deny`, `lanes`, `model` |
+| Skill | database row (versioned): `SKILL.md` body, `references/` | body prose, `description`, `references/*` | `allowed-tools`, anything under `scripts/`, new skill creation |
+| Agent | database row (versioned): spec with `system`, `skills`, `tools` | `system` prose, `skills[]` (only to add an already-approved skill) | `tools.allow/deny`, `lanes`, `model` |
 | Director step prompt | `packages/core/prompts/<step>.md` | prose, few-shot examples | output schema, deterministic overrides |
 
 Out of scope for this loop: lane thresholds, blast-radius weights, gate
@@ -76,8 +103,8 @@ skill_evals         proposal, kind (static|replay), tickets_json, metrics_json, 
 ```
 
 The registry and `skill_usage` are the registry-only database from
-`execution-plane.md` §5a. Content stays in git; `candidate_path` points at a
-branch `improve/<name>/<proposal-id>`.
+`execution-plane.md` §5a. Content is versioned in the database (see status block);
+`candidate_path` points at a candidate version row, not a git branch.
 
 ## 5. The loop
 
@@ -89,7 +116,7 @@ stateDiagram-v2
   Attribute --> Reflect: component over threshold, not in cooldown
   Reflect --> Propose: improve_skill step emits diff + rationale
   Reflect --> Idle: step says no change
-  Propose --> StaticEval: branch + PR opened
+  Propose --> StaticEval: candidate version row opened
   StaticEval --> EvalFailed: lint / size / policy-widening
   StaticEval --> ReplayEval
   ReplayEval --> EvalFailed: regression on any metric
@@ -174,11 +201,11 @@ signal; it may be shown in the PR as colour.
   eval pass if the user has not objected in Needs-you. Tier C (tools,
   scripts, lanes, model, new skill): user signs in Needs-you; nothing else
   can promote it.
-- Promotion = merge to `main` of the skills repo, new `version`, new
-  signature, `parent_version` set. In-flight runs keep their snapshot.
+- Promotion = a new registry version with `parent_version` set (no git
+  merge, no signature). In-flight runs keep their snapshot.
 - Monitor the next 10 runs that load the new version. If the weighted signal
   rate is worse than the parent's trailing rate, roll back automatically
-  (re-point registry to parent, keep the version in git as `deprecated_at`),
+  (re-point registry to parent, keep the version row, marked `deprecated_at`),
   write an `outcomes/` entry, and put the component in a 30-day cooldown.
 - Every promotion and rollback is an `outcomes/` record and a line in
   `JANITOR.md`, so the memory system and this loop share one audit trail.
@@ -206,7 +233,7 @@ Same loop, different evals:
 | Poisoned signal (a Worker's text steers its own skill) | signals are mechanical (gate results, user steers, rework); Worker prose never enters `improve_skill`; untrusted-tainted runs excluded |
 | Fetched content laundered into a skill | step has no network; diff rejected if it contains URLs or content hashes seen in network tool results |
 | Runaway proposals | one open proposal per component, cooldowns, 25-run minimum between passes, budget cap per proposal |
-| Silent drift | every version signed and pinned in `outcomes/`; a run's HOME is built from a frozen snapshot; registry re-point is the only switch |
+| Silent drift | every version immutable and pinned in `outcomes/`; a run's HOME is built from a frozen snapshot; registry re-point is the only switch |
 | Eval gaming (candidate tuned to the k replay tickets) | replay set drawn fresh each proposal, stratified, half clean; monitor phase on live runs after promotion; rollback is automatic |
 | Skill supply chain (copied-in third-party skills) | imported skills enter as a Tier C proposal with their source URL recorded; never auto-promoted; the loop may later edit their prose under the same rules |
 | Borrowed authority between agents | agent YAML cannot grant a tool the project's policy does not allow; renderer intersects, never unions |
@@ -281,8 +308,8 @@ step names its strongest sources; §13 lists what this changes in §2–§11.
   pass^k. Confirmed MIT after the OpenAI acquisition.
 - **Own replay runner** (worktree manager + `WorkerDriver`): skills and
   agents must be evaluated inside the real harness; no vendor tool does this.
-- **git** as the registry, `.forge/skills/ACTIVE` pointer file or registry
-  row as the label.
+- **The versioned registry** (database) as the label for the active version;
+  git is not the registry (d-0085).
 - **GEPA** (MIT, Python; `gepa-ts` port exists but is unverified): optional
   candidate generator for step prompts; it still goes through steps 7–12.
 - **vitest** for static checks; Windows Task Scheduler for the nightly

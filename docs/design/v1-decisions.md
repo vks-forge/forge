@@ -41,5 +41,5 @@ merge), not by agents moving cards.
   irreversible data ops, accepting an ADR, wiring a trigger to a mutating
   workflow).
 
-Promotion up a tier is a signed commit by the class owner. Demotion on any
+Promotion up a tier is an approval by the class owner, recorded with author and reason (no file signing, d-0085). Demotion on any
 incident is automatic.
