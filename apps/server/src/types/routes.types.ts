@@ -19,6 +19,7 @@ import type { CatalogueStore } from '@forge/tools';
 import type { HarnessCompat } from '#/types/harness-compat.types.js';
 import type { ProjectRegistry } from '#/types/project-registry.types.js';
 import type { HttpTuning } from '#/types/settings.types.js';
+import type { TriggerRegistry } from '#/types/trigger.types.js';
 
 export interface RouteDeps {
   readonly engine: Engine;
@@ -31,6 +32,8 @@ export interface RouteDeps {
   readonly compat: HarnessCompat;
   /** Projects being served; the projects API adds to it and archives from it. */
   readonly projects: ProjectRegistry;
+  /** The ticket sources `POST /intake` accepts events from. */
+  readonly triggers: TriggerRegistry;
   readonly hooks: HookHandler;
   /** Holds harness API keys and OAuth tokens (`PUT /harnesses/:id/secret`) and GitHub App keys (`github/<connection>/key`); values are never read back out. */
   readonly secrets: SecretStore;

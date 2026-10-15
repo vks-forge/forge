@@ -69,6 +69,9 @@ export async function shutdownServer(parts: ShutdownParts): Promise<void> {
     }
   };
 
+  // Polled sources stop first so no new event is ingested while runs are being cancelled.
+  await step('stop trigger polling', () => parts.stopPolling?.());
+
   // Not awaited yet: see the header on why the tick must not gate the cancels.
   const tickStopped = step('stop ticker', () => parts.ticker.stop());
   await cancelLiveRuns();

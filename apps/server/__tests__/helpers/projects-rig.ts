@@ -55,6 +55,7 @@ export async function startProjectsRig(worktreesDir: string): Promise<ProjectsRi
       ...stubHarnessDeps(),
       catalogue: extras.catalogue,
       compat: extras.compat,
+      triggers: extras.triggers,
       secrets,
       hooks: { handle: vi.fn() },
       owner: 'srv-test',

@@ -12,13 +12,19 @@
 
 import { createMemoryCatalogueStore, createMemoryStorage } from '@forge/db';
 import { createHarnessCompat } from '#/services/harness-compat.js';
+import { createChatTrigger } from '@forge/triggers';
+import { createTriggerRegistry } from '#/services/trigger-registry.js';
 import type { RouteDeps } from '#/types/routes.types.js';
 
 /** A registry that serves nothing. */
-export function inertRouteExtras(): Pick<RouteDeps, 'projects' | 'catalogue' | 'compat'> {
+export function inertRouteExtras(): Pick<
+  RouteDeps,
+  'projects' | 'catalogue' | 'compat' | 'triggers'
+> {
   const catalogue = createMemoryCatalogueStore();
 
   return {
+    triggers: createTriggerRegistry([createChatTrigger()]),
     catalogue,
     compat: createHarnessCompat({
       storage: createMemoryStorage(),

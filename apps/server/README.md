@@ -10,6 +10,7 @@ Actors: the Director (the engine), Workers (Claude Code today, through the Claud
 
 ## What it does
 
+- Ticket sources: `POST /intake` reads the body's `source`, finds the registered `TriggerAdapter` for it (`services/trigger-registry.ts`; chat from `@forge/triggers` is always on, `ExternalPorts.triggers` adds others), lets that adapter validate the body into an `IntakeEvent`, then calls `engine.ingest`. A source nobody registered, or one that cannot be pushed to, is `400 unknown_trigger_source`; a body the adapter rejects is `400` with the zod issues; the answer stays `202` plus the engine's result. Polled adapters are called on an interval (`ExternalPorts.triggerPollMs`, default 60 s) by `services/trigger-poller.ts` with an in-memory cursor per adapter; the poller creates no timer when none is registered and stops first at shutdown.
 - `src/main.ts` (entry, no logic) calls `runServer`. `src/config/` is the only code that reads `process.env` and the data-home bootstrap file (`data-home.ts`; `entrypoints.ts` is the one resolver for the MCP server and the hook script; `paths.ts` keeps config paths in the checkout apart from data paths in the data home). `src/services/assemble.ts` is the composition root. `src/routes/` holds the endpoints, `src/services/http/` the in-repo router, body reader, SSE and bind guard.
 - Startup: validate env, resolve the data home (`FORGE_HOME`, else `forge-home.json`, else `%LOCALAPPDATA%\Forge`), open SQLite at `<dataHome>/forge.db` and run migrations (the server owns them), verify the signed tool catalogue (refuses to start if it does not verify), load the project registry (every non-archived project in the database gets its runtime, below), start the Worker driver's preflight (its harness build decides whether the native tool pins are trusted, below), build memory, the report store, the driver registry, the G1 gate per project (claims also count receipts of the ticket's earlier runs, so a rework run can claim edits a previous run made), the hook handler and the engine, then bind and start the tick.
 - Run preparation (`prepareRun`): the engine issues the run token (hash in the database); the app registers the same raw token with a fresh HMAC secret in memory, creates `<dataHome>/runs/<runId>/`, and returns the `forge` MCP entry (`node apps/mcp/dist/main.js` with `FORGE_RUN_ID`, `FORGE_RUN_TOKEN`, `FORGE_DB_PATH`) and the hook base URL. The Claude driver writes `hook.json`, `settings.json` and `mcp.json` there.
@@ -63,12 +64,15 @@ Public API: none; it is an app.
 
 ## Extending
 
+Add a ticket source as an adapter in `packages/triggers` and pass it in `ExternalPorts.triggers` (or add it to `services/triggers.ts`); the route and poller do not change.
+
 Add a route as `src/routes/<name>.ts` returning a `Route`, list it in `routes/routes.ts`, parse its body with a schema in `src/schemas/`. Add a harness by writing a driver package and a ports factory next to `claude-ports.ts`; `assemble.ts` does not change. New settings go in `src/schemas/env.ts` and `config/load-settings.ts`.
 
 ## Limits
 
 - No auth: safe only because it binds loopback and checks `Host`. A shared machine is out of scope (d-0036).
 - A project row from before B4 has no `local_path` and is not served (warning at start); there is no API to set it yet, so such a project is registered again. A GitHub-connection project needs its `installation_id` typed in: the server does not look it up yet. A connection cannot be edited or disabled through the API yet, and `onboarding` projects are not created by anything yet (they simply run nothing). Archiving is one way. Candidates of several projects are scheduled by ticket number, not round-robin; global slots are shared.
+- The polling cursor is in memory: after a restart a polled source is asked from the start and dedupe absorbs the repeats; no polled adapter exists yet (GitHub Issues is after release).
 - Only the Claude driver is registered; a project naming another harness parks its tickets.
 - Only the Express lane runs (engine limit); G1 is the only gate.
 - A restart kills in-flight runs and forgets all receipt secrets, so chains of earlier runs can no longer be verified and G1 fails them ("receipt chain unverifiable after restart") so the ticket is reworked on a fresh run.

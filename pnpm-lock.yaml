@@ -261,6 +261,9 @@ importers:
       '@forge/tools':
         specifier: workspace:*
         version: link:../../packages/tools
+      '@forge/triggers':
+        specifier: workspace:*
+        version: link:../../packages/triggers
       yaml:
         specifier: 2.9.1
         version: 2.9.1
@@ -454,6 +457,16 @@ importers:
       zod:
         specifier: 4.6.7
         version: 4.6.7
+    devDependencies:
+      '@types/node':
+        specifier: 26.6.5
+        version: 26.6.5
+
+  packages/triggers:
+    dependencies:
+      '@forge/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       '@types/node':
         specifier: 26.6.5

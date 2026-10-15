@@ -10,7 +10,7 @@
  *   `payload` is untrusted user or external text and is never forwarded to a Worker
  *   verbatim (director-core.md §7, d-0002).
  *
- * Exports: IntakeSource, IntakeKind, IntakeActor, IntakeEvent, StoredIntakeEvent,
+ * Exports: IntakeSource, IntakeKind, IntakeActor, IntakeAuthor, IntakeEvent, StoredIntakeEvent,
  *   intakeIdempotencyKey().
  * Depends on: zod. No IO.
  */
@@ -24,6 +24,7 @@ export const IntakeSource = z.enum([
   'cron',
   'telemetry',
   'bug_report',
+  'github_issue',
 ]);
 export type IntakeSource = z.infer<typeof IntakeSource>;
 
@@ -37,12 +38,23 @@ export const IntakeActor = z.object({
   id: z.string().min(1),
 });
 
+/**
+ * Who wrote the text, as the source knows it: a Forge user, or a GitHub login. The allow-list
+ * of who may file work from GitHub (d-0112) reads this; `actor` stays who caused the event.
+ */
+export const IntakeAuthor = z.object({
+  kind: z.enum(['user', 'github']),
+  login: z.string().min(1).optional(),
+});
+export type IntakeAuthor = z.infer<typeof IntakeAuthor>;
+
 /** A raw intake event; `payload` is quarantined and never forwarded verbatim. */
 export const IntakeEvent = z.object({
   source: IntakeSource,
   kind: IntakeKind,
   dedupe_key: z.string().min(1),
   actor: IntakeActor,
+  author: IntakeAuthor.optional(),
   project: z.string().min(1),
   // Raw and quarantined: never forwarded to a Worker verbatim.
   payload: z.unknown(),

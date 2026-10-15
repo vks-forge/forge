@@ -57,10 +57,13 @@ Where the design docs were silent, the simplest option was taken:
 - Inside the package use the `#/` alias (from `package.json` `imports`); tests also get `#tests/` for `__tests__/helpers`.
 - Tests: `pnpm test` at the root (vitest with coverage). Coverage floor is 70% lines on this package.
 
+- `TriggerAdapter` (`types/ports/trigger.types.ts`, types only): one ticket source. `id`, `source` (the `IntakeEvent.source` it owns), `capabilities()` (`{ push, poll }`), `normalise(raw)` (raw source payload to a validated `IntakeEvent` of its own source; deterministic, so a redelivery has the same dedupe key; throws a `ZodError` on junk, never a partial event) and, for polled sources, `poll(since)` (events at or after the cursor; overlap is fine because the engine dedupes). `IntakeEvent` also carries an optional `author` (`{ kind: 'user' | 'github', login? }`) for the GitHub allow-list (d-0112), and the `github_issue` source.
+
 ## Extending
 
 - A new harness implements `WorkerDriver` in `packages/drivers/src/adapters/<name>/`; a new database implements `StorageAdapter` in `packages/db/src/adapters/<name>/`. Both import only `@forge/core` and must pass the contract test. If an implementation needs a core change, fix the interface instead.
 - A new schema goes in `src/schemas/` with its `z.infer` alias beside it; hand-written types go in `src/types/` as `<name>.types.ts`; export from `src/index.ts`.
+- A new ticket source implements `TriggerAdapter` in `packages/triggers/src/adapters/<name>/` and passes `describeTriggerAdapterContract`; it needs no core change unless it needs a new `IntakeSource` value.
 - A new ticket event goes in `types/ticket-events.types.ts` and `domain/state-machine.ts`, with property tests.
 
 ## Limits
@@ -69,5 +72,6 @@ Where the design docs were silent, the simplest option was taken:
 - Core defines the `WorkerDriver` and `StorageAdapter` shapes but contains no implementation of either.
 - Core defines the `GitHost`, `SecretStore`, `Gate` and `WorktreeManager` shapes only; implementations live in `@forge/git`, `@forge/secrets` and `@forge/gates`.
 - A project override cannot clear an optional key (`remote`, `git_host`) back to unset, and project settings cannot override the company-wide `forge` dials; both need a null/tombstone convention not decided yet.
+- `IntakeEvent.author` is not stored yet (the `intake_events` table has no column; it arrives with the GitHub Issues adapter and its migration).
 - Gate selection and ledger routing by tier are not modelled here.
 - `GitHost.merge` pins the merge to a head sha, but whether the host can enforce that atomically is the adapter's business (GitHub: the `sha` field; local bare repo: a ref check under the PR lock).

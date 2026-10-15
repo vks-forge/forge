@@ -6,7 +6,7 @@
  *   events through, and a key not scoped to its source would let two sources suppress
  *   each other's events (d-0002, director-core.md §7).
  *
- * Pins: a chat event parses, unknown sources and empty dedupe keys are rejected,
+ * Pins: a chat event parses, github_issue and author are accepted, unknown sources and empty dedupe keys are rejected,
  *   idempotency key is `source:dedupe_key` (director-core.md §7).
  * Depends on: src/schemas/intake, vitest.
  */
@@ -36,6 +36,20 @@ describe('IntakeEvent', () => {
   it('accepts other sources in the enum but rejects unknown ones', () => {
     expect(IntakeEvent.safeParse({ ...ev, source: 'cron' }).success).toBe(true);
     expect(IntakeEvent.safeParse({ ...ev, source: 'fax' }).success).toBe(false);
+  });
+
+  it('accepts the github_issue source and an optional author for the allow-list', () => {
+    const parsed = IntakeEvent.parse({
+      ...ev,
+      source: 'github_issue',
+      author: { kind: 'github', login: 'octocat' },
+    });
+
+    expect(parsed.author).toEqual({ kind: 'github', login: 'octocat' });
+    expect(IntakeEvent.parse(ev).author).toBeUndefined();
+    expect(IntakeEvent.safeParse({ ...ev, author: { kind: 'robot' } }).success).toBe(
+      false,
+    );
   });
 
   it('rejects an empty dedupe key', () => {

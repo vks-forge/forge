@@ -28,7 +28,9 @@ Public API from `src/index.ts`:
     finished run.
   - `ingest(event)`: stores an intake event (deduped) and maps it: `new_request` to an `inbox`
     ticket (`<PROJECT>-<n>`), `reply` to the answer of the one pending question or to a queued
-    steering message for the live run.
+    steering message for the live run. The engine does not know ticket sources: which sources may
+    reach `ingest` is decided by the app's trigger registry (`apps/server`), so unregistered
+    sources never get here.
   - `answerInteraction(id, answer)`: CAS answer, queues the `response_wake`.
   - `cancelTicket(id)`: `cancelled` through `transition()`, cancels the live run, removes the worktree.
   - `liveRunIds()`, `gateJobsInFlight()` (gate runs executing beside the tick).

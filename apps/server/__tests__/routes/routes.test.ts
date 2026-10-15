@@ -123,6 +123,21 @@ describe('POST /intake', () => {
     expect(JSON.stringify(res.body)).toContain('source');
     expect(engine.ingest).not.toHaveBeenCalled();
   });
+
+  it('refuses a source nobody registered, even a valid enum value', async () => {
+    const res = await rig.json('POST', '/intake', { ...INTAKE, source: 'webhook' });
+
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(res.body)).toContain('source');
+    expect(engine.ingest).not.toHaveBeenCalled();
+  });
+
+  it('refuses a body with no source at all', async () => {
+    const res = await rig.json('POST', '/intake', { kind: 'new_request' });
+
+    expect(res.status).toBe(400);
+    expect(engine.ingest).not.toHaveBeenCalled();
+  });
 });
 
 describe('GET /tickets/:id', () => {

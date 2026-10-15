@@ -28,6 +28,8 @@
     { "path": "./packages/secrets" },
     { "path": "./packages/secrets/tsconfig.test.json" },
     { "path": "./packages/tools" },
-    { "path": "./packages/tools/tsconfig.test.json" }
+    { "path": "./packages/tools/tsconfig.test.json" },
+    { "path": "./packages/triggers" },
+    { "path": "./packages/triggers/tsconfig.test.json" }
   ]
 }

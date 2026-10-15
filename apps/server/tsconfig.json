@@ -18,6 +18,7 @@
     { "path": "../../packages/mcp" },
     { "path": "../../packages/memory" },
     { "path": "../../packages/secrets" },
-    { "path": "../../packages/tools" }
+    { "path": "../../packages/tools" },
+    { "path": "../../packages/triggers" }
   ]
 }

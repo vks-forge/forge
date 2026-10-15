@@ -47,6 +47,7 @@ import { createProjectRegistry } from '#/services/project-registry.js';
 import { shutdownServer } from '#/services/shutdown.js';
 import { createTicker } from '#/services/ticker.js';
 import { createToolPolicy } from '#/services/tool-policy.js';
+import { composeTriggers } from '#/services/triggers.js';
 import type { ExternalPorts, ForgeServer, ServerAddress } from '#/types/server.types.js';
 import type { ServerSettings } from '#/types/settings.types.js';
 
@@ -200,6 +201,13 @@ export async function assembleServer(
         }),
     });
 
+    const { registry: triggers, poller } = composeTriggers({
+      extra: ports.triggers,
+      ingest: (event) => engine.ingest(event),
+      pollMs: ports.triggerPollMs,
+      log,
+    });
+
     const streams = new AbortController();
     const router = createRouter(
       buildRoutes({
@@ -209,6 +217,7 @@ export async function assembleServer(
         catalogue,
         compat,
         projects,
+        triggers,
         hooks,
         secrets,
         harnessTest: (setup, live) =>
@@ -252,6 +261,7 @@ export async function assembleServer(
         const port = await listen(http, settings.host, settings.port);
         address = { host: settings.host, port, url: `http://${settings.host}:${port}` };
         ticker.start();
+        poller.start();
         log('info', 'server listening', { url: address.url, owner });
 
         return address;
@@ -259,6 +269,7 @@ export async function assembleServer(
       stop() {
         stopping ??= shutdownServer({
           ticker,
+          stopPolling: () => poller.stop(),
           engine,
           // A run keeps the driver that started it.
           cancelRun: async (runId) => {

@@ -21,6 +21,7 @@ import type {
   RunRequest,
   SecretStore,
   StorageAdapter,
+  TriggerAdapter,
   WorkerDriver,
   WorktreeManager,
 } from '@forge/core';
@@ -91,6 +92,10 @@ export interface ExternalPorts {
   /** The harness compatibility check; absent means no build is ever checked or known. */
   readonly compat?: CompatPort;
   readonly secrets?: SecretStore;
+  /** Ticket sources besides chat (which is always on); each must pass the TriggerAdapter contract. */
+  readonly triggers?: readonly TriggerAdapter[];
+  /** How often polled sources are asked; defaults to a minute. */
+  readonly triggerPollMs?: number;
   readonly clock?: Clock;
   readonly ids?: IdSource;
   readonly log?: Logger;
@@ -146,6 +151,8 @@ export interface GateDeps {
 /** What the shutdown sequence stops, in order. */
 export interface ShutdownParts {
   readonly ticker: Ticker;
+  /** Stops the polling of polled ticket sources; absent in tests that have none. */
+  readonly stopPolling?: () => Promise<void> | void;
   readonly engine: Engine;
   /** Cancels one live run on the driver that started it. */
   readonly cancelRun: (runId: string) => Promise<void>;
