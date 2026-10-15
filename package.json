@@ -20,7 +20,7 @@
     "typecheck": "tsc -b",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "build": "pnpm clean && tsc -b",
+    "build": "pnpm clean && tsc -b && pnpm --filter @forge/web build",
     "clean": "node scripts/clean.mjs"
   },
   "devDependencies": {
