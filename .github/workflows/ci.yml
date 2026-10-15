@@ -1,4 +1,6 @@
-# CI: the same four gates the repo requires locally (code.md rule 8), on every OS Forge ships for.
+# CI: the full suite with coverage (code.md rule 8, d-0119), on every OS Forge ships for.
+# Every push and PR runs Windows only, the main platform; Linux and macOS run once a day
+# (and on demand) because the org is on GitHub Free, where macOS minutes count about 10x (d-0120).
 # Live probes never run here: they skip themselves unless FORGE_PROBES=1, which is not set.
 name: ci
 
@@ -6,6 +8,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    # 17:30 UTC = 23:00 IST, end of the working day.
+    - cron: '30 17 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["windows-latest","macos-latest","ubuntu-latest"]' || '["windows-latest"]') }}
     steps:
       # Before checkout: Windows runners default to autocrlf=true, which would turn LF files
       # into CRLF and fail `prettier --check` and byte-exact test fixtures.
