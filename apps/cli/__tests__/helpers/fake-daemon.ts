@@ -1,12 +1,12 @@
 /**
  * A scripted machine for the daemon commands: files, processes, a clock and a fake server.
  *
- * Why: `forge start` waits up to 20 s and `forge stop` up to 35 s, and their interesting
+ * Why: `forge start` waits up to 60 s and `forge stop` up to 35 s, and their interesting
  *   cases (the server never answers, dies while starting, ignores the stop request) are
  *   exactly the ones a real process makes slow and flaky. In this world time only moves when
  *   the command sleeps, so each of those cases runs in microseconds and deterministically.
  *
- * Exports: FakeWorld, createFakeWorld(), comesUp(), joined(), TOKEN, RECORD, FILES.
+ * Exports: FakeWorld, createFakeWorld(), comesUp(), joined(), TOKEN, CODE, RECORD, FILES.
  * Depends on: @forge/core (layout, ServerRecord types), types/daemon. No IO.
  */
 
@@ -14,6 +14,9 @@ import type { ServerRecord } from '@forge/core';
 import type { DaemonPorts, HealthState, SpawnedServer } from '#/types/daemon.types.js';
 
 export const TOKEN = 'A'.repeat(43);
+
+/** The one-time code the fake server hands out. */
+export const CODE = 'one-time-code_123';
 
 const HOME = 'C:\\Forge';
 
@@ -34,6 +37,13 @@ export interface FakeWorld {
   /** The HTTP status each port answers to a shutdown request (absent: unreachable). */
   readonly shutdownStatus: Map<number, number>;
   readonly shutdownCalls: { port: number; token: string }[];
+  /** What `POST /auth/open-code` answers per port (absent: 200 with `CODE`). */
+  readonly openCodeStatus: Map<number, number>;
+  readonly openCodeCalls: { port: number; token: string }[];
+  /** URLs handed to the browser opener. */
+  readonly opened: string[];
+  /** When set, the browser opener rejects. */
+  failBrowser: boolean;
   readonly spawned: SpawnedServer[];
   /** What the next spawned server does; receives the world and the new pid. */
   onSpawn: (world: FakeWorld, pid: number) => void;
@@ -66,6 +76,10 @@ export function createFakeWorld(
     healthByPort: new Map(),
     shutdownStatus: new Map(),
     shutdownCalls: [],
+    openCodeStatus: new Map(),
+    openCodeCalls: [],
+    opened: [],
+    failBrowser: false,
     spawned: [],
     log: '',
     clock: startAt,
@@ -103,6 +117,19 @@ export function createFakeWorld(
         world.onShutdown(world, port);
 
         return status;
+      },
+      requestOpenCode: async (port, token) => {
+        world.openCodeCalls.push({ port, token });
+        const status = world.openCodeStatus.get(port) ?? 200;
+
+        return status === 200 ? { status, code: CODE } : { status };
+      },
+      openBrowser: async (url) => {
+        if (world.failBrowser) {
+          throw new Error('no browser');
+        }
+
+        world.opened.push(url);
       },
       spawnServer: async () => {
         nextPid += 1;

@@ -13,7 +13,7 @@
  *
  * Exports: createNodeDaemonPorts(), defaultServerEntry().
  * Depends on: node:child_process, node:fs, node:fs/promises, node:path, node:url, @forge/core,
- *   services/data-home, types/daemon. IO: spawns the server, HTTP to loopback, log file.
+ *   services/{data-home,open-browser}, types/daemon. IO: spawns the server, HTTP to loopback, log file.
  */
 
 import { spawn } from 'node:child_process';
@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 import { ForgeError } from '@forge/core';
 import type { DataHomeLayout } from '@forge/core';
 import { loadDataHome, nodeDataHomeIo } from '#/services/data-home.js';
+import { openBrowser } from '#/services/open-browser.js';
 import type { DaemonPorts, HealthState, Output } from '#/types/daemon.types.js';
 
 const HTTP_TIMEOUT_MS = 2_000;
@@ -61,6 +62,27 @@ async function shutdown(port: number, token: string): Promise<number> {
   return res.status;
 }
 
+async function requestOpenCode(
+  port: number,
+  token: string,
+): Promise<{ status: number; code?: string }> {
+  const res = await fetch(`http://127.0.0.1:${port}/auth/open-code`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
+  });
+
+  if (res.status !== 200) {
+    return { status: res.status };
+  }
+
+  const body = (await res.json().catch(() => null)) as { code?: unknown } | null;
+
+  return typeof body?.code === 'string'
+    ? { status: 200, code: body.code }
+    : { status: 200 };
+}
+
 async function readLogFrom(path: string, offset: number): Promise<string> {
   try {
     const handle = await open(path, 'r');
@@ -92,6 +114,8 @@ export function createNodeDaemonPorts(
     readText: nodeDataHomeIo.readText,
     health,
     shutdown,
+    requestOpenCode,
+    openBrowser,
     async spawnServer() {
       if (!existsSync(entry)) {
         throw new ForgeError(

@@ -69,6 +69,7 @@ export async function startProjectsRig(
       compat: extras.compat,
       triggers: extras.triggers,
       tickets: extras.tickets,
+      sessions: extras.sessions,
       requestShutdown: extras.requestShutdown,
       secrets,
       dataHome: { home: dirname(worktreesDir), worktreesDir },

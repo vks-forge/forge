@@ -1,12 +1,13 @@
 /**
- * Tests for locating the per-run MCP server and the hook script.
+ * Tests for locating the per-run MCP server, the hook script and the built web UI.
  *
  * Why: a wrong path here shows up only as a Worker with no tools or a hook that never fires.
  *   The paths must follow the installed packages, not a count of `../` from a source file, so
  *   the same answer comes out whether the caller runs from `src/`, from `dist/`, or from a
  *   bundle a level deeper.
  *
- * Pins: the answer is the same from src and dist and from a nested folder, the MCP entry is
+ * Pins: the web root follows the package layout (not the working directory) and is absent until
+ *   built; the answer is the same from src and dist and from a nested folder, the MCP entry is
  *   the sibling app's built main.js, and the hook script is the one in the real
  *   `@forge/drivers` package.
  * Depends on: src/config/entrypoints, node:fs, node:path, node:url. IO: stats real files.
@@ -16,7 +17,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { resolveEntrypoints } from '#/config/entrypoints.js';
+import { resolveEntrypoints, resolveWebRoot } from '#/config/entrypoints.js';
 
 const APP = fileURLToPath(new URL('../../', import.meta.url));
 const at = (...parts: string[]): string => pathToFileURL(join(APP, ...parts)).href;
@@ -44,5 +45,24 @@ describe('resolveEntrypoints', () => {
     expect(() => resolveEntrypoints(import.meta.url, () => false)).toThrow(
       /no package\.json/,
     );
+  });
+});
+
+describe('resolveWebRoot', () => {
+  it('is the sibling web app build, from src and from dist', () => {
+    const expected = join(APP, '..', 'web', 'dist', 'web');
+    const exists = (path: string): boolean =>
+      path === join(APP, 'package.json') || path.endsWith('index.html');
+
+    const fromSrc = resolveWebRoot(at('src', 'services', 'x.ts'), exists);
+    const fromDist = resolveWebRoot(at('dist', 'services', 'x.js'), exists);
+
+    expect([fromSrc, fromDist].map((p) => p && join(p))).toEqual([expected, expected]);
+  });
+
+  it('is absent while the UI is not built', () => {
+    const exists = (path: string): boolean => path === join(APP, 'package.json');
+
+    expect(resolveWebRoot(import.meta.url, exists)).toBeUndefined();
   });
 });

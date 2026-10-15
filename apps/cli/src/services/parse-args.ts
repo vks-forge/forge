@@ -14,7 +14,8 @@ import { InvalidInputError } from '@forge/core';
 import type { Command } from '#/types/cli.types.js';
 
 export const USAGE = `Usage:
-  forge start                       run Forge in the background (prints its URL)
+  forge start [--no-open]           run Forge in the background and open it in the browser
+  forge open [--no-open]            print (and open) a fresh one-time sign-in link
   forge status                      is Forge running; pid, port, uptime, version
   forge stop                        shut the background server down cleanly
   forge secret wrap <name> <file>   encrypt <file> with Windows DPAPI as secret <name>
@@ -36,7 +37,10 @@ export function parseCommand(argv: readonly string[]): Command {
       args: [...argv],
       allowPositionals: true,
       strict: true,
-      options: { help: { type: 'boolean', short: 'h' } },
+      options: {
+        help: { type: 'boolean', short: 'h' },
+        'no-open': { type: 'boolean' },
+      },
     });
   } catch (cause) {
     throw new InvalidInputError((cause as Error).message, { cause });
@@ -47,8 +51,17 @@ export function parseCommand(argv: readonly string[]): Command {
     return { kind: 'help' };
   }
 
-  if (group === 'start' || group === 'status' || group === 'stop') {
+  const noOpen = parsed.values['no-open'] === true;
+  if (group === 'start' || group === 'open') {
     if (action !== undefined) {
+      throw new InvalidInputError(`usage: forge ${group} [--no-open]`);
+    }
+
+    return { kind: group, open: !noOpen };
+  }
+
+  if (group === 'status' || group === 'stop') {
+    if (action !== undefined || noOpen) {
       throw new InvalidInputError(`usage: forge ${group}`);
     }
 

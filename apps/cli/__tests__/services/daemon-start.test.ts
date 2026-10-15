@@ -66,7 +66,7 @@ describe('forge start', () => {
     world.record({ ...RECORD, pid: 1 });
     world.healthByPort.set(RECORD.port, 'ok');
 
-    const code = await startServer(world.ports, 2_000);
+    const code = await startServer(world.ports, { timeoutMs: 2_000 });
 
     expect(code).toBe(1);
     expect(joined(world.err)).toContain('did not answer on /health within 2 s');
@@ -120,7 +120,7 @@ describe('forge start', () => {
   it('times out when the server never answers and leaves it running', async () => {
     const world = createFakeWorld();
 
-    const code = await startServer(world.ports, 20_000);
+    const code = await startServer(world.ports, { timeoutMs: 20_000 });
 
     expect(code).toBe(1);
     expect(joined(world.err)).toContain('did not answer on /health within 20 s');

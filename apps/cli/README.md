@@ -1,6 +1,6 @@
 # @forge/cli
 
-The `forge` command-line client: runs Forge in the background (`forge start | status | stop`) and encrypts secrets (`forge secret wrap`); the rest of the planned commands are not built.
+The `forge` command-line client: runs Forge in the background (`forge start | status | stop | open`) and encrypts secrets (`forge secret wrap`); the rest of the planned commands are not built.
 
 ## Why it exists
 
@@ -8,7 +8,8 @@ Some setup must happen before the server can run, and must not travel through it
 
 ## What it does
 
-- `forge start`: if `<dataHome>/server.json` names a live process whose port answers `GET /health` as Forge (`{service:'forge'}`), prints its URL and exits 0 without spawning. Otherwise spawns the built server (`apps/server/dist/main.js`, or `FORGE_SERVER_ENTRY`) detached (`detached`, `windowsHide`, stdout and stderr appended to `<dataHome>/logs/server.log`), waits up to 20 s until the new process has written `server.json` and answers `/health`, and prints `Forge is running at http://127.0.0.1:<port> (pid N)` and the log path. If the process dies while starting (port taken, bad config, another server holds the lock) it prints the last lines the server wrote during this start and exits 1; there is no automatic port change (the port is `FORGE_PORT`, default 4310). A recorded process that is alive but silent is reported and not started over. It prints the URL only; opening the browser with the install token is part of the control room (D-2).
+- `forge start`: if `<dataHome>/server.json` names a live process whose port answers `GET /health` as Forge (`{service:'forge'}`), prints its URL and exits 0 without spawning. Otherwise spawns the built server (`apps/server/dist/main.js`, or `FORGE_SERVER_ENTRY`) detached (`detached`, `windowsHide`, stdout and stderr appended to `<dataHome>/logs/server.log`), waits up to 60 s (a cold start takes about 22 s on a loaded machine) until the new process has written `server.json` and answers `/health`, printing a progress line every 5 s and looking once more at the deadline before it reports failure, and prints `Forge is running at http://127.0.0.1:<port> (pid N)` and the log path. It then opens the browser on a one-time sign-in link (`--no-open` skips that; a browser that cannot launch only prints a warning). The same happens when a server is already running. If the process dies while starting (port taken, bad config, another server holds the lock) it prints the last lines the server wrote during this start and exits 1; there is no automatic port change (the port is `FORGE_PORT`, default 4310). A recorded process that is alive but silent is reported and not started over.
+- `forge open [--no-open]`: needs a running server; reads the install token from the data home, asks `POST /auth/open-code` for a code and prints `http://127.0.0.1:<port>/auth/open?code=...` (valid once, for one minute) and opens it in the default browser (`rundll32`/`open`/`xdg-open`, no shell). The token is never printed and never put in the URL.
 - `forge status`: running or not, with url, pid, uptime and version from `server.json` and `/health`. Exit 0 running, 3 not running (also for a stale record or a silent process, which it describes).
 - `forge stop`: sends `POST /admin/shutdown` with the install token to the recorded port (only when that port answered `/health` as Forge) and waits up to 35 s for the process to end; exit 0 when it ended or nothing was running, 1 when the token is refused, the server drops the request or is still alive after the wait (it is never killed).
 - API calls from the CLI read the install token from `<dataHome>/install-token`, the user-only file the server created on its first start; it is never printed.
@@ -44,6 +45,6 @@ Add a command by extending `Command` in `src/types/cli.types.ts`, parsing it in 
 
 ## Limits
 
-- `forge new`, `doctor`, `run` and `answer` are not implemented. No browser open and no install-token hand-off to the UI yet (D-2, with the control room); no start on login and no tray (d-0092); `forge start` does not pass options, set `FORGE_PORT` and friends in the environment. A second terminal's `forge start` racing the first can briefly spawn two processes; the server's lock lets only one live and the loser's log says so.
+- `forge new`, `doctor`, `run` and `answer` are not implemented. A link printed on a shared terminal is a credential for one minute; no start on login and no tray (d-0092); `forge start` does not pass options, set `FORGE_PORT` and friends in the environment. A second terminal's `forge start` racing the first can briefly spawn two processes; the server's lock lets only one live and the loser's log says so.
 - `secret wrap` works only on Windows, and does not delete the plaintext for you by design.
 - No `secret list` or `secret delete`; the SecretStore port has only `get` and `put`.

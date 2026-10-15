@@ -6,20 +6,23 @@
  *   starts the production router on `127.0.0.1:0` so each test asserts what a client sees.
  *   The router is built with the production guard around `TEST_INSTALL_TOKEN`, and every
  *   helper sends that token unless the test passes its own `authorization` header (an empty
- *   string sends none that parses).
+ *   string sends none that parses). The router's Host policy is pinned to the rig's own port,
+ *   as in production. `raw()` sends exactly the headers given (cookies, `Origin`, a forged
+ *   `Host`) which `fetch` will not, and returns them unparsed.
  *
- * Exports: HttpRig, startHttp().
- * Depends on: node:http, src/services/auth, src/services/http/router, src/services/http/listen,
+ * Exports: HttpRig, RawResponse, startHttp().
+ * Depends on: node:http, src/services/auth, src/services/http/{host-policy,router,listen},
  *   helpers/install-token. IO: a loopback socket.
  */
 
 import { createServer, request } from 'node:http';
 import { createAuthGuard } from '#/services/auth/guard.js';
 import { createSseTicketIssuer } from '#/services/auth/sse-tickets.js';
+import { createHostPolicy } from '#/services/http/host-policy.js';
 import { closeServer, listen } from '#/services/http/listen.js';
 import { createRouter } from '#/services/http/router.js';
 import type { AuthGuard } from '#/types/auth.types.js';
-import type { Route } from '#/types/http.types.js';
+import type { Route, RouterOptions } from '#/types/http.types.js';
 import { TEST_INSTALL_TOKEN, bearer } from '#tests/helpers/install-token.js';
 
 export interface HttpRig {
@@ -44,7 +47,20 @@ export interface HttpRig {
     declaredBytes: number,
     headers?: Record<string, string>,
   ): Promise<number>;
+  /** One request with exactly these headers (no token is added); body is sent as given. */
+  raw(
+    method: string,
+    path: string,
+    headers?: Record<string, string>,
+    body?: string,
+  ): Promise<RawResponse>;
   close(): Promise<void>;
+}
+
+export interface RawResponse {
+  readonly status: number;
+  readonly headers: Record<string, string | string[] | undefined>;
+  readonly text: string;
 }
 
 /** `guard` replaces the default (test token, real clock) for tests that drive ticket expiry. */
@@ -54,13 +70,20 @@ export async function startHttp(
     TEST_INSTALL_TOKEN,
     createSseTicketIssuer(() => Date.now()),
   ),
+  options: RouterOptions = {},
 ): Promise<HttpRig> {
-  const router = createRouter(routes, guard);
+  const bound: { port?: number } = {};
+  const router = createRouter(routes, guard, {
+    host: createHostPolicy(() => bound.port),
+    ...options,
+  });
+
   const server = createServer((req, res) => {
     void router.dispatch(req, res);
   });
 
   const port = await listen(server, '127.0.0.1', 0);
+  bound.port = port;
   const url = `http://127.0.0.1:${port}`;
 
   return {
@@ -117,6 +140,33 @@ export async function startHttp(
         });
 
         req.flushHeaders();
+      });
+    },
+    raw(method, path, headers = {}, body) {
+      return new Promise<RawResponse>((resolve, reject) => {
+        const req = request(
+          {
+            host: '127.0.0.1',
+            port,
+            method,
+            path,
+            headers: { host: `127.0.0.1:${port}`, ...headers },
+          },
+          (res) => {
+            const chunks: Buffer[] = [];
+            res.on('data', (chunk: Buffer) => chunks.push(chunk));
+            res.on('end', () =>
+              resolve({
+                status: res.statusCode ?? 0,
+                headers: res.headers,
+                text: Buffer.concat(chunks).toString('utf8'),
+              }),
+            );
+          },
+        );
+
+        req.on('error', reject);
+        req.end(body);
       });
     },
     close: () => closeServer(server, 200),

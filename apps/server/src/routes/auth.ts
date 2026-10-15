@@ -1,22 +1,45 @@
 /**
- * `POST /auth/sse-ticket`: a 60-second ticket to watch one run's event stream.
+ * `/auth/*`: SSE tickets, the one-time sign-in code, the browser session and logout.
  *
- * Why: the control room's `EventSource` cannot send an `Authorization` header. The page
- *   (which holds the install token) asks here, with the token, for a ticket bound to one run
- *   id and puts only the ticket in the stream URL, so the token never lands in a URL, the
- *   browser history or a log line. The ticket is useless for any other run and for any other
- *   route.
+ * Why: the control room runs in a browser tab, and anything a page script can read, an
+ *   extension or an injected script can read too, so the page never holds the install token.
+ *   Instead `forge start` / `forge open` ask `POST /auth/open-code` (install token only) for a
+ *   60-second single-use code and open `/auth/open?code=...` in the browser; that route spends
+ *   the code, sets an `HttpOnly` session cookie and redirects to `/`, so the code leaves the
+ *   address bar at once. `POST /auth/logout` drops the session and clears the cookie. The
+ *   page's `EventSource` cannot send headers either, so `POST /auth/sse-ticket` (token or
+ *   session) hands out a ticket bound to one run id for the stream URL; it is useless for any
+ *   other run and any other route. A code that fails gets a plain page, not JSON, because a
+ *   person reads it, and it says what to do next.
  *
  * Exports: authRoutes().
- * Depends on: schemas/api, services/http/body, services/http/respond, types/routes.
- *   IO: reads the request body.
+ * Depends on: schemas/api, services/auth/cookies, services/http/{body,respond}, types/routes.
+ *   IO: reads the request body, writes the response.
  */
 
 import { SseTicketBody } from '#/schemas/api.js';
+import {
+  clearedSessionCookie,
+  sessionCookie,
+  sessionIdOf,
+} from '#/services/auth/cookies.js';
 import { readJson } from '#/services/http/body.js';
 import { sendJson } from '#/services/http/respond.js';
 import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
+
+const NO_STORE = {
+  'cache-control': 'no-store',
+  'referrer-policy': 'no-referrer',
+  'x-content-type-options': 'nosniff',
+} as const;
+
+const EXPIRED_PAGE = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Forge</title></head>
+<body style="font-family:system-ui,sans-serif;max-width:32rem;margin:4rem auto;padding:0 1rem">
+<h1>This sign-in link has expired</h1>
+<p>Links work once and only for a minute. Run <code>forge open</code> in a terminal to get a fresh one.</p>
+</body></html>`;
 
 export function authRoutes(deps: RouteDeps): Route[] {
   return [
@@ -28,6 +51,61 @@ export function authRoutes(deps: RouteDeps): Route[] {
         const { ticket, expiresInSeconds } = deps.tickets.issue(runId);
 
         sendJson(res, 200, { ticket, expires_in_s: expiresInSeconds });
+      },
+    },
+    {
+      method: 'POST',
+      path: '/auth/open-code',
+      // The token only: a browser session must not be able to mint more sign-ins.
+      access: 'bearer',
+      async handle({ res }) {
+        const { code, expiresInSeconds } = deps.sessions.issueCode();
+
+        sendJson(res, 200, { code, expires_in_s: expiresInSeconds });
+      },
+    },
+    {
+      method: 'GET',
+      path: '/auth/open',
+      // Open because the code is the credential; the handler checks it.
+      access: 'open',
+      async handle({ res, url }) {
+        const sessionId = deps.sessions.redeemCode(url.searchParams.get('code') ?? '');
+        if (sessionId === undefined) {
+          res.writeHead(401, {
+            ...NO_STORE,
+            'content-type': 'text/html; charset=utf-8',
+            'content-security-policy':
+              "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'",
+            'content-length': Buffer.byteLength(EXPIRED_PAGE),
+          });
+
+          res.end(EXPIRED_PAGE);
+
+          return;
+        }
+
+        // Always `/`: the code carries no destination, so there is nothing to redirect elsewhere.
+        res.writeHead(302, {
+          ...NO_STORE,
+          location: '/',
+          'set-cookie': sessionCookie(sessionId, deps.sessions.cookieMaxAgeSeconds),
+        });
+
+        res.end();
+      },
+    },
+    {
+      method: 'POST',
+      path: '/auth/logout',
+      async handle({ req, res }) {
+        const sessionId = sessionIdOf(req.headers.cookie);
+        if (sessionId !== undefined) {
+          deps.sessions.revoke(sessionId);
+        }
+
+        res.writeHead(204, { ...NO_STORE, 'set-cookie': clearedSessionCookie() });
+        res.end();
       },
     },
   ];

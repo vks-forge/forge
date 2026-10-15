@@ -103,6 +103,11 @@ export interface ExternalPorts {
   readonly log?: Logger;
   /** Narrows a file to the current user; absent means icacls on Windows, chmod elsewhere (tests pass a fake). */
   readonly restrictFile?: RestrictFile;
+  /**
+   * Folder of the built web UI to serve at `/`. Absent means look next to this app
+   * (`apps/web/dist/web`); `null` means serve no UI (tests).
+   */
+  readonly webRoot?: string | null;
   /** Releases what these ports hold; called once at the end of shutdown. */
   readonly dispose?: () => Promise<void> | void;
 }

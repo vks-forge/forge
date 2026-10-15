@@ -26,7 +26,7 @@ export function describeError(error: unknown): { title: string; detail: string }
       return {
         title: 'Forge did not accept this session',
         detail:
-          'Restart Forge so it writes a fresh credential, reload this page, and try again.',
+          'Your session ended or Forge restarted. Run `forge open` in a terminal for a fresh link, then try again.',
       };
     }
 

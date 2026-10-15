@@ -1,5 +1,5 @@
 /**
- * Builds the authentication parts of the server: the install token, the guard, the tickets.
+ * Builds the authentication parts of the server: the install token, the guard, the tickets, the sessions.
  *
  * Why: the assembly must end up with exactly one answer to "who may call the API", built
  *   before the first socket opens. Reading (or creating) the token file, wiring the guard and
@@ -15,6 +15,7 @@ import type { Logger } from '@forge/engine';
 import { createAuthGuard } from '#/services/auth/guard.js';
 import { ensureInstallToken } from '#/services/auth/install-token.js';
 import { nodeRestrictFile } from '#/services/auth/restrict-file.js';
+import { createSessionStore } from '#/services/auth/sessions.js';
 import { createSseTicketIssuer } from '#/services/auth/sse-tickets.js';
 import type { Auth, RestrictFile } from '#/types/auth.types.js';
 
@@ -31,6 +32,7 @@ export async function createAuth(options: {
   });
 
   const tickets = createSseTicketIssuer(options.now);
+  const sessions = createSessionStore(options.now);
 
-  return { guard: createAuthGuard(token, tickets), tickets };
+  return { guard: createAuthGuard(token, tickets, sessions), tickets, sessions };
 }

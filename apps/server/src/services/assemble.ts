@@ -21,7 +21,6 @@
  *   IO: opens SQLite, creates the data home, binds the port on `start()`.
  */
 
-import { createServer } from 'node:http';
 import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { openSqlite } from '@forge/db';
@@ -29,7 +28,6 @@ import { createReceiptLookup, systemClock } from '@forge/drivers';
 import { createEngine, createIdSource, createOwnerId } from '@forge/engine';
 import { createFileReportStore } from '@forge/gates';
 import { createDpapiSecretStore } from '@forge/secrets';
-import { buildRoutes } from '#/routes/routes.js';
 import { createAuth } from '#/services/auth/create-auth.js';
 import { createDriverRegistry } from '#/services/driver-registry.js';
 import { createGates } from '#/services/gates.js';
@@ -37,8 +35,8 @@ import { createHooks } from '#/services/hook-wiring.js';
 import { harnessTestFor } from '#/services/harness-test-route.js';
 import { composeHarnessGuard } from '#/services/harness-guard.js';
 import { createHarnessSource } from '#/services/harness-source.js';
+import { createApiServer } from '#/services/http/create-api-server.js';
 import { assertLoopbackBind, closeServer, listen } from '#/services/http/listen.js';
-import { createRouter } from '#/services/http/router.js';
 import { createLazySecretStore } from '#/services/lazy-secrets.js';
 import { composeProjectMemory } from '#/services/project-memory.js';
 import { withKnownProjects } from '#/services/known-project-config.js';
@@ -212,8 +210,8 @@ export async function assembleServer(
     });
 
     const streams = new AbortController();
-    const router = createRouter(
-      buildRoutes({
+    const http = createApiServer(
+      {
         engine,
         storage,
         config,
@@ -226,6 +224,7 @@ export async function assembleServer(
         secrets,
         harnessTest: harnessTestFor(ports.harnessTest, secrets),
         tickets: auth.tickets,
+        sessions: auth.sessions,
         requestShutdown: () =>
           options.onShutdownRequested ? options.onShutdownRequested() : void stopServer(),
         dataHome: layout.data,
@@ -234,13 +233,10 @@ export async function assembleServer(
         now,
         http: settings.http,
         shutdown: streams.signal,
-      }),
-      auth.guard,
+      },
+      auth,
+      { webRoot: ports.webRoot, port: () => address?.port, log },
     );
-
-    const http = createServer((req, res) => {
-      void router.dispatch(req, res);
-    });
 
     let stopping: Promise<void> | null = null;
 

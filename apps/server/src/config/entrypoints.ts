@@ -10,7 +10,7 @@
  *   `mcp` app, and the hook is found through the `@forge/drivers` package that ships it,
  *   using the normal node_modules lookup so it works built or not.
  *
- * Exports: resolveEntrypoints().
+ * Exports: resolveEntrypoints(), resolveWebRoot().
  * Depends on: node:fs, node:module, node:path, node:url, types/entrypoints.
  *   IO: stats package.json files.
  */
@@ -67,4 +67,20 @@ export function resolveEntrypoints(
     mcpEntry: join(dirname(appRoot), 'mcp', 'dist', 'main.js'),
     hookJsPath: join(drivers, 'bin', 'hook.js'),
   };
+}
+
+/**
+ * The built control room: `dist/web` of the sibling `web` app, found from the URL of the
+ * calling module the same way as the MCP entry (never from the working directory). Returns
+ * undefined unless its `index.html` exists, so a checkout that has not run `vite build`
+ * serves the API alone instead of a half-working UI.
+ */
+export function resolveWebRoot(
+  moduleUrl: string,
+  exists: (path: string) => boolean = existsSync,
+): string | undefined {
+  const appRoot = packageRoot(dirname(fileURLToPath(moduleUrl)), exists);
+  const root = join(dirname(appRoot), 'web', 'dist', 'web');
+
+  return exists(join(root, 'index.html')) ? root : undefined;
 }

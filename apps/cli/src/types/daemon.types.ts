@@ -54,6 +54,13 @@ export interface DaemonPorts extends Output {
   readonly health: (port: number) => Promise<HealthState>;
   /** `POST /admin/shutdown` with the token; resolves with the HTTP status, rejects when unreachable. */
   readonly shutdown: (port: number, token: string) => Promise<number>;
+  /** `POST /auth/open-code` with the token; the one-time sign-in code, or the refusing status. */
+  readonly requestOpenCode: (
+    port: number,
+    token: string,
+  ) => Promise<{ readonly status: number; readonly code?: string }>;
+  /** Opens `url` in the user's default browser; rejects when it cannot. */
+  readonly openBrowser: (url: string) => Promise<void>;
   /** Starts the built server detached, its output going to `<dataHome>/logs/server.log`. */
   readonly spawnServer: () => Promise<SpawnedServer>;
   /** The server log from `offset` on. */

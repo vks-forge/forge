@@ -3,38 +3,65 @@
  *
  * Why: the API is a few dozen routes, which does not justify a framework dependency (d-0061).
  *   The router matches method and path, decodes path parameters, rejects a request whose
- *   Host header is not loopback (a browser page on a rebinding DNS name could otherwise
- *   reach a service that is bound to 127.0.0.1), asks the auth guard before any handler
- *   runs (a route needs the install token unless it declares itself `open`; the guard is a
- *   required argument so a router cannot be built without one, and unknown paths also answer
- *   401 to a caller without the token so the route table is not probed anonymously), answers
- *   404 for unknown paths and 405 with an `Allow` header for a known path with the wrong
- *   method, and turns anything a handler throws into the safe error response.
+ *   Host header does not name this server (a browser page on a rebinding DNS name, or on
+ *   another local port, could otherwise reach a service that is bound to 127.0.0.1), asks
+ *   the auth guard before any handler runs (a route needs the install token or a session
+ *   unless it declares itself `open`; the guard is a required argument so a router cannot be
+ *   built without one, and unknown paths also answer 401 to a caller without credentials so
+ *   the route table is not probed anonymously), answers 404 for unknown paths and 405 with
+ *   an `Allow` header for a known path with the wrong method, and turns anything a handler
+ *   throws into the safe error response. A request that is signed in only by the browser's
+ *   cookie and changes state must also carry an `Origin` equal to the server's own (CSRF).
+ *   The API answers under `/api/*` (the browser's view; the prefix is stripped) and at the
+ *   bare paths (the CLI, the hooks, the tests). When the built UI is mounted it owns `/`:
+ *   its files, and a browser navigation (GET, `Accept: text/html`, no `Authorization`) to any
+ *   path that is not under `/api` gets `index.html`, so a deep link such as `/tickets/FX-1`
+ *   shows the app rather than the JSON of the API route with the same name.
  *
  * Exports: createRouter(), isLoopbackHost().
- * Depends on: services/http/http-errors, services/http/respond, types/auth, types/http.
+ * Depends on: services/http/{host-policy,http-errors,respond}, types/auth, types/http.
  *   No IO of its own.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import {
+  createHostPolicy,
+  isLoopbackHost,
+  sameOrigin,
+} from '#/services/http/host-policy.js';
 import { HttpError } from '#/services/http/http-errors.js';
 import { sendError } from '#/services/http/respond.js';
 import type { AuthGuard } from '#/types/auth.types.js';
-import type { Route, Router } from '#/types/http.types.js';
+import type { Route, Router, RouterOptions } from '#/types/http.types.js';
 
-const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
+export { isLoopbackHost };
 
-/** True when a `Host` header names a loopback address (any port). */
-export function isLoopbackHost(header: string | undefined): boolean {
-  if (!header) {
-    return false;
+const API_PREFIX = '/api';
+const STATE_CHANGING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/** `/api/x` is `/x`; `/apix` is not under the prefix. Undefined for a path outside it. */
+function stripApiPrefix(pathname: string): string | undefined {
+  if (pathname === API_PREFIX) {
+    return '/';
   }
 
-  const host = header.startsWith('[')
-    ? header.slice(0, header.indexOf(']') + 1)
-    : header.split(':')[0];
+  return pathname.startsWith(`${API_PREFIX}/`)
+    ? pathname.slice(API_PREFIX.length)
+    : undefined;
+}
 
-  return LOOPBACK_HOSTS.has((host ?? '').toLowerCase());
+/** A browser asking for a page: no credentials of its own and HTML is what it wants. */
+function isNavigation(req: IncomingMessage): boolean {
+  return (
+    (req.method === 'GET' || req.method === 'HEAD') &&
+    req.headers.authorization === undefined &&
+    (req.headers.accept ?? '').includes('text/html')
+  );
+}
+
+/** A client-side route has no file extension; a missing `/x.js` must stay a 404. */
+function looksLikePage(pathname: string): boolean {
+  return !(pathname.split('/').pop() ?? '').includes('.');
 }
 
 function matchPath(pattern: string, path: string): Record<string, string> | null {
@@ -66,16 +93,35 @@ function matchPath(pattern: string, path: string): Record<string, string> | null
 }
 
 /** Builds a router over a fixed route table. */
-export function createRouter(routes: readonly Route[], guard: AuthGuard): Router {
+export function createRouter(
+  routes: readonly Route[],
+  guard: AuthGuard,
+  options: RouterOptions = {},
+): Router {
+  const hostPolicy = options.host ?? createHostPolicy();
+  const { ui } = options;
+
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    if (!isLoopbackHost(req.headers.host)) {
-      throw new HttpError(403, 'bad_host', 'host header must be a loopback address', {
-        family: 'policy_denied',
-      });
+    if (!hostPolicy.allows(req.headers.host)) {
+      throw new HttpError(
+        403,
+        'bad_host',
+        'host header must name this server on a loopback address',
+        { family: 'policy_denied' },
+      );
     }
 
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+    const apiPath = stripApiPrefix(url.pathname);
+    const pathname = apiPath ?? url.pathname;
+    const pages = apiPath === undefined ? ui : undefined;
+
+    if (pages && (await pages.serveFile(req, res, url.pathname))) {
+      return;
+    }
+
     const authorization = req.headers.authorization;
+    const cookie = req.headers.cookie;
     const unauthorized = (): HttpError => {
       res.setHeader('www-authenticate', 'Bearer');
 
@@ -84,21 +130,41 @@ export function createRouter(routes: readonly Route[], guard: AuthGuard): Router
 
     const allowed: string[] = [];
     for (const route of routes) {
-      const params = matchPath(route.path, url.pathname);
+      const params = matchPath(route.path, pathname);
       if (!params) {
         continue;
       }
 
       if (route.method === req.method) {
-        const permitted = guard.allows({
+        // A page URL that shares a name with an API route (`/tickets/FX-1`) is the page.
+        if (pages && route.access !== 'open' && isNavigation(req)) {
+          await pages.serveIndex(req, res);
+
+          return;
+        }
+
+        const method = guard.authenticate({
           access: route.access ?? 'token',
           authorization,
           ticket: url.searchParams.get('ticket'),
           runId: params['id'],
+          cookie,
         });
 
-        if (!permitted) {
+        if (method === undefined) {
           throw unauthorized();
+        }
+
+        // The browser attaches the cookie by itself, so only a request that came from our
+        // own page may change state with it. Bearer callers set their header deliberately.
+        if (
+          method === 'session' &&
+          STATE_CHANGING.has(req.method ?? '') &&
+          !sameOrigin(req.headers.origin, req.headers.host)
+        ) {
+          throw new HttpError(403, 'bad_origin', 'origin does not match this server', {
+            family: 'policy_denied',
+          });
         }
 
         await route.handle({ req, res, params, url });
@@ -109,11 +175,18 @@ export function createRouter(routes: readonly Route[], guard: AuthGuard): Router
       allowed.push(route.method);
     }
 
+    if (pages && isNavigation(req) && looksLikePage(pathname)) {
+      await pages.serveIndex(req, res);
+
+      return;
+    }
+
     const known = guard.allows({
       access: 'token',
       authorization,
       ticket: null,
       runId: undefined,
+      cookie,
     });
 
     if (!known) {

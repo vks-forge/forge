@@ -9,10 +9,11 @@
  *
  * Exports: runCli().
  * Depends on: @forge/core (ForgeError, InvalidInputError), services/{parse-args,secret-wrap},
- *   services/daemon/{start-server,server-status,stop-server}, types/cli. IO: through the injected ports only.
+ *   services/daemon/{open-ui,start-server,server-status,stop-server}, types/cli. IO: through the injected ports only.
  */
 
 import { ForgeError, InvalidInputError } from '@forge/core';
+import { openUi } from '#/services/daemon/open-ui.js';
 import { serverStatus } from '#/services/daemon/server-status.js';
 import { startServer } from '#/services/daemon/start-server.js';
 import { stopServer } from '#/services/daemon/stop-server.js';
@@ -31,7 +32,11 @@ export async function runCli(argv: readonly string[], deps: CliDeps): Promise<nu
     }
 
     if (command.kind === 'start') {
-      return await startServer(deps.daemon);
+      return await startServer(deps.daemon, { open: command.open });
+    }
+
+    if (command.kind === 'open') {
+      return await openUi(deps.daemon, command.open);
     }
 
     if (command.kind === 'status') {

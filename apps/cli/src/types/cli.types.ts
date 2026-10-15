@@ -17,7 +17,8 @@ import type { DaemonPorts } from '#/types/daemon.types.js';
 export type Command =
   | { readonly kind: 'help' }
   | { readonly kind: 'secret-wrap'; readonly name: string; readonly file: string }
-  | { readonly kind: 'start' }
+  | { readonly kind: 'start'; readonly open: boolean }
+  | { readonly kind: 'open'; readonly open: boolean }
   | { readonly kind: 'status' }
   | { readonly kind: 'stop' };
 

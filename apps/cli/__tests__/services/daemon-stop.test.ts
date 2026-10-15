@@ -123,8 +123,20 @@ describe('forge stop', () => {
 });
 
 describe('command line', () => {
-  it.each(['start', 'status', 'stop'])('parses %s', (word) => {
+  it.each(['status', 'stop'])('parses %s', (word) => {
     expect(parseCommand([word])).toEqual({ kind: word });
+  });
+
+  it.each(['start', 'open'])(
+    'parses %s, which opens the browser unless told not to',
+    (word) => {
+      expect(parseCommand([word])).toEqual({ kind: word, open: true });
+      expect(parseCommand([word, '--no-open'])).toEqual({ kind: word, open: false });
+    },
+  );
+
+  it('refuses --no-open on commands that open nothing', () => {
+    expect(() => parseCommand(['stop', '--no-open'])).toThrow(/usage: forge stop/);
   });
 
   it('refuses extra words after start', () => {

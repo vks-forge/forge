@@ -7,11 +7,12 @@
  *   instead of about wiring.
  *
  * Exports: inertRouteExtras(), inertMemory.
- * Depends on: @forge/db (memory stores), services/auth/sse-tickets, services/harness-compat,
+ * Depends on: @forge/db (memory stores), services/auth/{sessions,sse-tickets}, services/harness-compat,
  *   types/routes. No IO.
  */
 
 import { createMemoryCatalogueStore, createMemoryStorage } from '@forge/db';
+import { createSessionStore } from '#/services/auth/sessions.js';
 import { createSseTicketIssuer } from '#/services/auth/sse-tickets.js';
 import { createHarnessCompat } from '#/services/harness-compat.js';
 import { createChatTrigger } from '@forge/triggers';
@@ -43,6 +44,7 @@ export function inertRouteExtras(): Pick<
   | 'compat'
   | 'triggers'
   | 'tickets'
+  | 'sessions'
   | 'requestShutdown'
   | 'memory'
   | 'dataHome'
@@ -54,6 +56,7 @@ export function inertRouteExtras(): Pick<
     dataHome: { home: '/forge-test-home', worktreesDir: '/forge-test-home/worktrees' },
     triggers: createTriggerRegistry([createChatTrigger()]),
     tickets: createSseTicketIssuer(() => Date.now()),
+    sessions: createSessionStore(() => Date.now()),
     requestShutdown: () => undefined,
     catalogue,
     compat: createHarnessCompat({

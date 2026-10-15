@@ -104,6 +104,7 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-16 — W7b: forge start serves the UI and signs the browser in with a one-time link.
 - 2026-10-16 — Fast local gates: pnpm check runs tests related to the change; full suite in CI.
 - 2026-10-16 — W3: Board tickets view and Ticket page with the live Worker thread.
 - 2026-10-16 — W5b: stats, inbox, runs and cost API.

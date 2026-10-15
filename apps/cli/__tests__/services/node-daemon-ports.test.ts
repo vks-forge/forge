@@ -78,9 +78,9 @@ describe('the daemon commands against a real child process', () => {
   it('starts detached, is found, is not started twice, and stops cleanly', async () => {
     const ports = portsFor();
 
-    const first = await startServer(ports);
+    const first = await startServer(ports, { open: false });
     const started = await readServerRecord(ports);
-    const again = await startServer(ports);
+    const again = await startServer(ports, { open: false });
     const status = await serverStatus(ports);
 
     expect(first).toBe(0);
@@ -106,7 +106,7 @@ describe('the daemon commands against a real child process', () => {
   it('shows the child`s own words when it dies while starting', async () => {
     const ports = portsFor({ FAKE_SERVER_MODE: 'fail' });
 
-    const code = await startServer(ports);
+    const code = await startServer(ports, { open: false });
 
     expect(code).toBe(1);
     expect(err.join('')).toContain('already in use by another program');
@@ -115,7 +115,7 @@ describe('the daemon commands against a real child process', () => {
 
   it('does not show an earlier start`s log lines', async () => {
     const ports = portsFor({ FAKE_SERVER_MODE: 'fail' });
-    await startServer(ports);
+    await startServer(ports, { open: false });
     err.length = 0;
     writeFileSync(
       join(home, 'logs', 'server.log'),
@@ -125,7 +125,7 @@ describe('the daemon commands against a real child process', () => {
       },
     );
 
-    await startServer(ports);
+    await startServer(ports, { open: false });
 
     expect(err.join('')).not.toContain('earlier history');
     expect(err.join('')).toContain('already in use');
@@ -134,7 +134,10 @@ describe('the daemon commands against a real child process', () => {
   it('reports a server that is not built before spawning anything', async () => {
     const ports = portsFor({ FORGE_SERVER_ENTRY: join(home, 'nope', 'main.js') });
 
-    await expect(startServer(ports)).rejects.toThrow(/not built.*pnpm build/);
+    await expect(startServer(ports, { open: false })).rejects.toThrow(
+      /not built.*pnpm build/,
+    );
+
     expect(existsSync(join(home, 'logs'))).toBe(false);
   });
 });
