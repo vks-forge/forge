@@ -3,22 +3,33 @@
  *
  * Why: users, webhooks and cron all reach the Director as intake events (director-core.md
  *   §7). Events are stored first and deduped on (source, dedupe_key), so a redelivered
- *   webhook never makes a second ticket. A new request becomes an `inbox` ticket in the
- *   same transaction that records the event, with the next `<PROJECT>-<n>` id; the model
+ *   webhook never makes a second ticket. A new request first becomes a card, the record of
+ *   the intake (d-0105), with a `user_message` event; then, when the card's type starts
+ *   tickets at intake (the registry says so, d-0106), an `inbox` ticket linked to the card,
+ *   all in the same transaction that records the event, with the next `<PROJECT>-<n>` id.
+ *   A Discussion or Plan card makes no ticket yet. An unknown card type, or a source the
+ *   type does not accept, is ignored (fail closed) and makes nothing; the model
  *   call (triage) is deliberately NOT here, so intake stays fast and a model outage never
  *   loses a request. A reply either answers the one question a parked ticket is waiting
  *   on, or is queued to steer the ticket's live run on the next tick.
  *
  * Exports: ingest().
  * Depends on: @forge/core (schemas, makeTicketId), domain/ticket-numbers, domain/titles,
- *   tick/interactions, tick/tick-requests. Reads and writes storage.
+ *   tick/card-log, tick/interactions, tick/tick-requests. Reads and writes storage.
  */
 
-import { NewRequestPayload, ReplyPayload, TicketStatus, makeTicketId } from '@forge/core';
-import type { IntakeEvent, StorageTx, Ticket } from '@forge/core';
+import {
+  NewRequestPayload,
+  ReplyPayload,
+  TicketStatus,
+  makeCardId,
+  makeTicketId,
+} from '@forge/core';
+import type { CardActor, IntakeEvent, StorageTx, Ticket } from '@forge/core';
 import { nextTicketNumber } from '#/domain/ticket-numbers.js';
 import { deriveTitle } from '#/domain/titles.js';
 import { iso } from '#/shared/time.js';
+import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
 import { answerPending } from '#/tick/interactions.js';
 import { requestTick } from '#/tick/tick-requests.js';
 import type { EngineState } from '#/types/engine-state.types.js';
@@ -30,6 +41,15 @@ async function allTicketIds(tx: StorageTx): Promise<string[]> {
   );
 
   return lists.flat().map((t) => t.id);
+}
+
+/** Who the card names as its creator: the GitHub login when the text came from GitHub, else the intake actor. */
+function cardActor(event: IntakeEvent): CardActor {
+  if (event.author?.kind === 'github' && event.author.login) {
+    return { type: 'github', id: event.author.login };
+  }
+
+  return { type: event.actor.type, id: event.actor.id };
 }
 
 /** Stores the event (deduped) and maps it; unknown projects and malformed payloads are ignored. */
@@ -60,16 +80,60 @@ export async function ingest(
       }
 
       const p = payload.data;
+      const typeName = p.card_type ?? 'issue';
+      const cardType = await tx.cardTypes.get(typeName);
+      if (!cardType) {
+        return { status: 'ignored', reason: `unknown card type ${typeName}` };
+      }
+
+      if (!cardType.allowed_sources.includes(event.source)) {
+        return {
+          status: 'ignored',
+          reason: `card type ${typeName} does not accept ${event.source}`,
+        };
+      }
+
+      const now = iso(deps.clock.now());
+      const creator = cardActor(event);
+      const title = p.title ?? deriveTitle(p.text);
+      const cardId = makeCardId(
+        project.prefix,
+        await tx.cards.nextNumber(project.prefix),
+      );
+
+      await tx.cards.insert({
+        id: cardId,
+        project: project.id,
+        type: typeName,
+        title,
+        summary: p.text,
+        source: { kind: event.source, ref: event.dedupe_key },
+        created_by: creator,
+        created_at: now,
+        updated_at: now,
+      });
+
+      await logCardEvent(tx, cardId, {
+        kind: 'user_message',
+        at: now,
+        actor: creator,
+        payload: { text: p.text },
+      });
+
+      if (!cardType.tickets_on_intake) {
+        return { status: 'card_created', cardId };
+      }
+
       const id = makeTicketId(
         project.prefix,
         nextTicketNumber(await allTicketIds(tx), project.prefix),
       );
 
-      const now = iso(deps.clock.now());
       const ticket: Ticket = {
         id,
         project: project.id,
-        title: p.title ?? deriveTitle(p.text),
+        card_id: cardId,
+        title,
         body: p.text,
         type: p.type ?? 'chore',
         lane: 'express',
@@ -87,7 +151,14 @@ export async function ingest(
       await tx.tickets.insert(ticket);
       await tx.intakeEvents.markTicket(stored.id, id);
 
-      return { status: 'ticket_created', ticketId: id };
+      await logCardEvent(tx, cardId, {
+        kind: 'ticket_created',
+        at: now,
+        actor: ENGINE_ACTOR,
+        payload: { ticket_id: id, title },
+      });
+
+      return { status: 'ticket_created', ticketId: id, cardId };
     }
 
     if (event.kind === 'reply') {

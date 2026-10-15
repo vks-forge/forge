@@ -16,7 +16,7 @@
  */
 
 import { z } from 'zod';
-import { TicketId } from '#/schemas/ids.js';
+import { CardId, TicketId } from '#/schemas/ids.js';
 
 /** Process lane, lightest to heaviest (execution-plane.md §2). */
 export const Lane = z.enum(['express', 'standard', 'full']);
@@ -75,7 +75,7 @@ const Timestamp = z.iso.datetime();
  * `parent` and `blocked_by` are derived on read from `ticket_relations`, the single
  * source of truth for relations (see TicketRelation); they are not columns and not
  * patchable. The engine-owned nullable fields (`assignee_run_id`, `branch`, `worktree`,
- * `checkout_run_id`, `epic_id`, `created_by_intake`, `pr_number`, `pr_url`, `parked_from`) are absent until the engine sets
+ * `checkout_run_id`, `epic_id`, `card_id`, `created_by_intake`, `pr_number`, `pr_url`, `parked_from`) are absent until the engine sets
  * them and can be cleared with an explicit `undefined` in a patch.
  */
 export const Ticket = z.object({
@@ -100,6 +100,8 @@ export const Ticket = z.object({
   worktree: z.string().min(1).optional(),
   checkout_run_id: z.string().min(1).optional(),
   epic_id: TicketId.optional(),
+  /** The card (intake record) the ticket belongs to; set when the ticket is created and never changed (d-0105). */
+  card_id: CardId.optional(),
   created_by_intake: z.number().int().positive().optional(),
   pr_number: z.number().int().positive().optional(),
   pr_url: z.string().min(1).optional(),

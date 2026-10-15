@@ -43,6 +43,9 @@ export function memoryTickets(state: MemoryState): TicketRepository {
     async listByStatus(status) {
       return [...state.tickets.values()].filter((t) => t.status === status).map(view);
     },
+    async listByCard(cardId) {
+      return [...state.tickets.values()].filter((t) => t.card_id === cardId).map(view);
+    },
     async listByProject(project, filter) {
       const statuses = filter.statuses ?? [];
       const { after } = filter;

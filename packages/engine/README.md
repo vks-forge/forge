@@ -26,8 +26,12 @@ Public API from `src/index.ts`:
     `engine.tick_interval_ms` (30 s) and whenever `deps.onTickRequested` fires.
   - `requestTick()`: coalesced "tick soon" request; also made by intake, every run event and every
     finished run.
-  - `ingest(event)`: stores an intake event (deduped) and maps it: `new_request` to an `inbox`
-    ticket (`<PROJECT>-<n>`), `reply` to the answer of the one pending question or to a queued
+  - `ingest(event)`: stores an intake event (deduped) and maps it: `new_request` to a card
+    (`<PROJECT>-C<n>`, type from the payload's `card_type`, default `issue`, checked against the
+    card type registry and its allowed sources; unknown or refused is `ignored`) with a
+    `user_message` event, then, when the type starts tickets at intake, to an `inbox` ticket
+    (`<PROJECT>-<n>`) linked by `card_id` with a `ticket_created` event (a Discussion or Plan makes
+    the card only: `card_created`), `reply` to the answer of the one pending question or to a queued
     steering message for the live run. The engine does not know ticket sources: which sources may
     reach `ingest` is decided by the app's trigger registry (`apps/server`), so unregistered
     sources never get here.
@@ -219,6 +223,7 @@ Public API from `src/index.ts`:
   had arrived but was not yet settled when the server stopped is resumed too, and told to continue.
 - A running Worker keeps the limits it was started with (budget, stall time); a settings edit reaches runs started on the next tick. The stall scan itself uses the current `stall_ms`. Run rows predating migration 0010 have no `config_version`.
 - Ticket numbers come from listing every ticket id (no counter); fine at M0 scale.
+- Card history is written by `tick/card-log.ts` inside the transaction of the change it describes: `ticket_state` from `moveTicketTx` (the one ticket door), `interaction_opened` when a pause is applied, `interaction_answered` when an answer wins. Steering and Director messages are not logged yet (no card chat); a ticket without a `card_id` is skipped, not failed.
 - The rotation cursor is process-local: after a restart the first dispatch starts at the first project by id. Priority
   is set directly on the ticket row (no API to change it yet). A wait reason is computed on request and not stored.
 - A project with no git host has a runtime (worktrees, base) but its tickets wait in Verifying: there is nowhere to publish.

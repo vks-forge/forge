@@ -13,11 +13,19 @@
  *   assembles them and owns the transaction. Nothing persists, so it is not a production
  *   backend.
  *
+ * Cards, their history and the card type registry (seeded with the built-in types) live here too.
+ *
  * Exports: createMemoryStorage().
  * Depends on: adapters/memory/*, shared/db-errors, shared/mutex, types/memory-state. No IO.
  */
 
+import { BUILTIN_CARD_TYPES } from '@forge/core';
 import type { StorageAdapter, StorageTx } from '@forge/core';
+import {
+  memoryCardEvents,
+  memoryCardTypes,
+  memoryCards,
+} from '#/adapters/memory/cards.js';
 import {
   memoryIntakeEvents,
   memoryInteractions,
@@ -62,6 +70,10 @@ const emptyState = (): MemoryState => ({
   harnessVersions: new Map(),
   harnessToolSchemas: new Map(),
   inboxStates: new Map(),
+  cards: new Map(),
+  cardEvents: new Map(),
+  // Same rows migration 0019 seeds, so a fresh memory store routes intake like a fresh database.
+  cardTypes: new Map(BUILTIN_CARD_TYPES.map((t) => [t.name, structuredClone(t)])),
 });
 
 function buildTx(state: MemoryState): StorageTx {
@@ -83,6 +95,9 @@ function buildTx(state: MemoryState): StorageTx {
     harnessVersions: memoryHarnessVersions(state),
     harnessToolSchemas: memoryHarnessToolSchemas(state),
     inboxStates: memoryInboxStates(state),
+    cards: memoryCards(state),
+    cardEvents: memoryCardEvents(state),
+    cardTypes: memoryCardTypes(state),
   };
 }
 

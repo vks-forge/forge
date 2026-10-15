@@ -17,6 +17,7 @@
 
 import { Ticket, TicketRelation } from '@forge/core';
 import type {
+  CardId,
   TicketId,
   TicketListFilter,
   TicketPatch,
@@ -89,6 +90,12 @@ export function createTicketRepository(driver: SqlDriver): TicketRepository {
         .map(toTicket);
     },
 
+    async listByCard(cardId: CardId) {
+      return driver
+        .all('SELECT * FROM tickets WHERE card_id = ? ORDER BY rowid', [cardId])
+        .map(toTicket);
+    },
+
     async listByProject(project: string, filter: TicketListFilter) {
       const where = ['project = ?'];
       const params: (string | number)[] = [project];
@@ -127,15 +134,16 @@ export function createTicketRepository(driver: SqlDriver): TicketRepository {
       ].map((e) => TicketRelation.parse({ ...e, created_at: t.created_at }));
 
       driver.run(
-        `INSERT INTO tickets (id, project, epic_id, title, body, type, lane, tier_predicted,
+        `INSERT INTO tickets (id, project, epic_id, card_id, title, body, type, lane, tier_predicted,
            tier_actual, status, status_version, rework_count, priority, blocked_reason, assignee_run_id,
            branch, worktree, checkout_run_id, created_by_intake, pr_number, pr_url, parked_from,
            created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           t.id,
           t.project,
           t.epic_id ?? null,
+          t.card_id ?? null,
           t.title,
           t.body,
           t.type,

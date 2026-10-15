@@ -8,7 +8,11 @@
  *   characters because ids become folder and branch names and the dev host runs with
  *   Windows long paths disabled (d-0021).
  *
- * Exports: PROJECT_PREFIX_PATTERN, TICKET_ID_PATTERN, ProjectPrefix, TicketId.
+ * Cards use `<PROJECT>-C<n>`: the `C` makes a card id impossible to read as a ticket id, so a
+ *   route or chat message that receives an id knows which record it names.
+ *
+ * Exports: PROJECT_PREFIX_PATTERN, TICKET_ID_PATTERN, CARD_ID_PATTERN, ProjectPrefix, TicketId,
+ *   CardId.
  * Depends on: zod. No IO.
  */
 
@@ -24,3 +28,9 @@ export const ProjectPrefix = z.string().regex(PROJECT_PREFIX_PATTERN);
 /** Branded schema for `<PROJECT>-<n>` ticket ids; `n` is positive with no leading zero. */
 export const TicketId = z.string().regex(TICKET_ID_PATTERN).brand<'TicketId'>();
 export type TicketId = z.infer<typeof TicketId>;
+
+/** `<PROJECT>-C<n>` with `n` positive and without a leading zero; never matches a ticket id. */
+export const CARD_ID_PATTERN = /^([A-Z][A-Z0-9]{0,9})-C([1-9][0-9]*)$/;
+/** Branded schema for `<PROJECT>-C<n>` card ids. */
+export const CardId = z.string().regex(CARD_ID_PATTERN).brand<'CardId'>();
+export type CardId = z.infer<typeof CardId>;

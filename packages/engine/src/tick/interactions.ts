@@ -9,11 +9,12 @@
  *   moves to Blocked with a reason the control room shows.
  *
  * Exports: answerInteraction(), answerPending(), expireInteractions().
- * Depends on: @forge/core (interaction port), tick/wakes, tick/ticket-moves, tick/tick-requests.
+ * Depends on: @forge/core (interaction port), tick/card-log, tick/wakes, tick/ticket-moves, tick/tick-requests.
  */
 
 import type { StorageTx, Ticket } from '@forge/core';
 import { iso } from '#/shared/time.js';
+import { logCardEvent } from '#/tick/card-log.js';
 import { requestTick } from '#/tick/tick-requests.js';
 import { moveTicketTx } from '#/tick/ticket-moves.js';
 import { requestWakeTx } from '#/tick/wakes.js';
@@ -32,6 +33,14 @@ async function answerIn(
   if (!won) {
     return false;
   }
+
+  const ticket = await tx.tickets.get(ticketId as Ticket['id']);
+  await logCardEvent(tx, ticket?.card_id, {
+    kind: 'interaction_answered',
+    at: iso(deps.clock.now()),
+    actor: { type: 'user', id: 'owner' },
+    payload: { ticket_id: ticketId, interaction_id: id },
+  });
 
   await requestWakeTx(tx, deps, {
     ticketId,

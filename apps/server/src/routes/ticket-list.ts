@@ -11,15 +11,16 @@
  *   stays readable.
  *
  * Exports: ticketListRoute().
- * Depends on: @forge/core (TicketListQuery, NEEDS_YOU_STATUSES), services/ticket-cursor,
+ * Depends on: @forge/core (TicketListQuery), services/ticket-cursor, services/ticket-summary,
  *   services/http/http-errors, services/http/respond, types/routes. IO: reads storage.
  */
 
-import { NEEDS_YOU_STATUSES, TicketListQuery } from '@forge/core';
-import type { Ticket, TicketListPage, TicketSummary } from '@forge/core';
+import { TicketListQuery } from '@forge/core';
+import type { TicketListPage, TicketSummary } from '@forge/core';
 import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
 import { decodeTicketCursor, encodeTicketCursor } from '#/services/ticket-cursor.js';
+import { summarizeTicket } from '#/services/ticket-summary.js';
 import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
 
@@ -28,33 +29,6 @@ function statesOf(params: URLSearchParams): string[] | undefined {
   const given = params.getAll('state');
 
   return given.length === 0 ? undefined : given.flatMap((v) => v.split(','));
-}
-
-function summarize(
-  ticket: Ticket,
-  slug: string,
-  runStatus: TicketSummary['run_status'],
-): TicketSummary {
-  return {
-    id: ticket.id,
-    title: ticket.title,
-    state: ticket.status,
-    lane: ticket.lane,
-    type: ticket.type,
-    tier_predicted: ticket.tier_predicted,
-    project: slug,
-    priority: ticket.priority,
-    rework_count: ticket.rework_count,
-    needs_you: NEEDS_YOU_STATUSES.includes(ticket.status),
-    ...(ticket.blocked_reason === undefined
-      ? {}
-      : { blocked_reason: ticket.blocked_reason }),
-    ...(ticket.assignee_run_id === undefined ? {} : { run_id: ticket.assignee_run_id }),
-    ...(runStatus === undefined ? {} : { run_status: runStatus }),
-    ...(ticket.pr_url === undefined ? {} : { pr_url: ticket.pr_url }),
-    created_at: ticket.created_at,
-    updated_at: ticket.updated_at,
-  };
 }
 
 export function ticketListRoute(deps: RouteDeps): Route {
@@ -105,7 +79,7 @@ export function ticketListRoute(deps: RouteDeps): Route {
             ? await tx.runs.get(ticket.assignee_run_id)
             : null;
 
-          items.push(summarize(ticket, slug, run?.status));
+          items.push(summarizeTicket(ticket, slug, run?.status));
         }
 
         const last = shown[shown.length - 1];

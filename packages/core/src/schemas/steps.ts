@@ -12,10 +12,11 @@
  *
  * Exports: STEP_NAMES, StepName, NewRequestPayload, TriageOutput, DispatchPromptOutput,
  *   SteerReplyOutput, ReplyPayload.
- * Depends on: schemas/ticket, zod. No IO.
+ * Depends on: schemas/card, schemas/ticket, zod. No IO.
  */
 
 import { z } from 'zod';
+import { CardTypeName } from '#/schemas/card.js';
 import { Lane, Tier, TicketType } from '#/schemas/ticket.js';
 
 /** The Director steps M0 runs; `clarify`, `plan`, `rework_brief`, `epic_summary` land later. */
@@ -28,6 +29,8 @@ export const NewRequestPayload = z.object({
   text: z.string().min(1),
   title: z.string().min(1).optional(),
   type: TicketType.optional(),
+  /** The card type to file this request under (d-0106); absent means `issue`. A name the registry does not know is refused. */
+  card_type: CardTypeName.optional(),
   hint: z.enum(['quick', 'full']).optional(),
 });
 export type NewRequestPayload = z.infer<typeof NewRequestPayload>;

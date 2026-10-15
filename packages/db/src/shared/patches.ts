@@ -35,6 +35,7 @@ import type { ColumnCodec, SqlValue } from '#/types/storage-driver.types.js';
 const TicketPatchSchema = Ticket.omit({
   id: true,
   project: true,
+  card_id: true,
   created_at: true,
   parent: true,
   blocked_by: true,

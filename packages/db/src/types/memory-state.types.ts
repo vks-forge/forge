@@ -12,6 +12,9 @@
  */
 
 import type {
+  Card,
+  CardEvent,
+  CardType,
   GateResult,
   Harness,
   HarnessState,
@@ -62,4 +65,10 @@ export interface MemoryState {
   harnessToolSchemas: Map<string, HarnessToolSchema>;
   /** Keyed by JSON of `[project, kind, item_id]`. */
   inboxStates: Map<string, InboxStateRow>;
+  /** Cards keyed by id. */
+  cards: Map<string, Card>;
+  /** Card history per card, in seq order (the index is the seq). */
+  cardEvents: Map<string, CardEvent[]>;
+  /** Card type registry keyed by name; insertion order is list order. */
+  cardTypes: Map<string, CardType>;
 }

@@ -6,7 +6,7 @@
  *   patch: it forgets that a cleared optional field (`blocked_reason` after unblock,
  *   `tier_actual` after a failed gate, an `assignee_run_id` after the run ends) must
  *   reach the database as an explicit clear, so a stale column survives and a ticket later
- *   merges on an old gate pass; it copies `status_version`, which storage owns; or it
+ *   merges on an old gate pass; it copies `card_id`, which never changes; it copies `status_version`, which storage owns; or it
  *   copies `parent` / `blocked_by`, which are derived from `ticket_relations` and must
  *   only change through the relation repository. This function keeps the clears
  *   (present-but-undefined keys) and drops the immutable, storage-owned and derived fields.
@@ -23,6 +23,7 @@ export function toTicketPatch(next: Ticket): TicketPatch {
   const {
     id: _id,
     project: _project,
+    card_id: _card,
     created_at: _created,
     status_version: _v,
     parent: _parent,
@@ -30,7 +31,7 @@ export function toTicketPatch(next: Ticket): TicketPatch {
     ...rest
   } = next;
 
-  void [_id, _project, _created, _v, _parent, _blockedBy];
+  void [_id, _project, _card, _created, _v, _parent, _blockedBy];
 
   return {
     ...rest,

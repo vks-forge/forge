@@ -11,6 +11,7 @@
 
 import { adminRoutes } from '#/routes/admin.js';
 import { authRoutes } from '#/routes/auth.js';
+import { cardRoutes } from '#/routes/cards.js';
 import { harnessRoutes } from '#/routes/harnesses.js';
 import { answerRoute } from '#/routes/interactions.js';
 import { healthRoute } from '#/routes/health.js';
@@ -35,6 +36,7 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     intakeRoute(deps),
     ticketRoute(deps),
     ticketListRoute(deps),
+    ...cardRoutes(deps),
     answerRoute(deps),
     runEventsRoute(deps),
     runSteerRoute(deps),

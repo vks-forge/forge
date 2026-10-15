@@ -13,26 +13,31 @@
  *   transaction. Behind a port, the backend (SQLite WAL by default) can change without
  *   touching the engine (director-core.md §2-§3, §7-§8, d-0023).
  *
+ * Cards, their history and the type registry (ports/card.types) and the harness registries
+ * (ports/harness-registry.types) join the same transaction.
+ *
  * Exports: TicketPatch, TicketRepository, TicketRelationRepository, RunRepository,
  *   RunEventRepository, RunInboxRepository, RunTokenRepository, IntakeEventRepository,
  *   InteractionRepository, WakeRequestRepository, GateResultRepository, ProjectRepository,
- *   HarnessRepository, HarnessStateRepository, GithubConnectionRepository, HarnessVersionRepository,
- *   HarnessToolSchemaRepository, StorageTx, StorageAdapter.
+ *   GithubConnectionRepository, StorageTx, StorageAdapter.
  * Depends on: schemas/*, types/run-event.types. No IO (interfaces only).
  */
 
-import type { TicketId } from '#/schemas/ids.js';
+import type { CardId, TicketId } from '#/schemas/ids.js';
 import type { GateResult, NewGateResult } from '#/schemas/gate-result.js';
-import type { Harness } from '#/schemas/harness.js';
-import type { HarnessState } from '#/schemas/harness-state.js';
-import type {
-  CompatStatus,
-  HarnessToolSchema,
-  HarnessVersion,
-  ToolSchemaStatus,
-} from '#/schemas/harness-compat.js';
 import type { IntakeEvent, StoredIntakeEvent } from '#/schemas/intake.js';
 import type { Interaction } from '#/schemas/interaction.js';
+import type {
+  HarnessRepository,
+  HarnessStateRepository,
+  HarnessToolSchemaRepository,
+  HarnessVersionRepository,
+} from '#/types/ports/harness-registry.types.js';
+import type {
+  CardEventRepository,
+  CardRepository,
+  CardTypeRepository,
+} from '#/types/ports/card.types.js';
 import type { InboxStateRepository } from '#/types/ports/inbox-state.types.js';
 import type { GithubConnection } from '#/schemas/github-connection.js';
 import type { Project } from '#/schemas/project.js';
@@ -53,7 +58,13 @@ import type { TicketListFilter } from '#/types/ticket-list.types.js';
 export type TicketPatch = Partial<
   Omit<
     Ticket,
-    'id' | 'project' | 'created_at' | 'status_version' | 'parent' | 'blocked_by'
+    | 'id'
+    | 'project'
+    | 'card_id'
+    | 'created_at'
+    | 'status_version'
+    | 'parent'
+    | 'blocked_by'
   >
 >;
 
@@ -65,6 +76,8 @@ export type TicketPatch = Partial<
 export interface TicketRepository {
   get(id: TicketId): Promise<Ticket | null>;
   listByStatus(status: TicketStatus): Promise<Ticket[]>;
+  // Every ticket of one card, oldest first (insertion order).
+  listByCard(cardId: CardId): Promise<Ticket[]>;
   // One project's tickets, newest `updated_at` first, `id` descending as tie-break (a total
   // order). `after` is the previous page's last row (exclusive); non-empty `statuses` narrows.
   listByProject(project: string, filter: TicketListFilter): Promise<Ticket[]>;
@@ -219,26 +232,6 @@ export interface ProjectRepository {
   list(): Promise<Project[]>;
 }
 
-/** The `harnesses` registry: installed harnesses and how each authenticates (d-0087). */
-export interface HarnessRepository {
-  get(id: string): Promise<Harness | null>;
-  // Insert or replace by id; the row keeps its place in `list`.
-  upsert(harness: Harness): Promise<void>;
-  // Every harness, in first-insert order.
-  list(): Promise<Harness[]>;
-}
-
-/** Which harnesses are parked until their quota resets (d-0097). */
-export interface HarnessStateRepository {
-  get(harnessId: string): Promise<HarnessState | null>;
-  // Insert or replace by harness id.
-  upsert(state: HarnessState): Promise<void>;
-  // Removes the row; false when the harness was not paused.
-  clear(harnessId: string): Promise<boolean>;
-  // Every row, ordered by harness id (expired rows included: the caller compares to `now`).
-  list(): Promise<HarnessState[]>;
-}
-
 /** The `github_connections` registry (d-0094): one GitHub App per org or account. Keys live in the SecretStore. */
 export interface GithubConnectionRepository {
   get(id: string): Promise<GithubConnection | null>;
@@ -250,26 +243,6 @@ export interface GithubConnectionRepository {
   delete(id: string): Promise<boolean>;
   // Oldest first.
   list(): Promise<GithubConnection[]>;
-}
-
-/** Per-build compatibility results of an installed harness (d-0088). */
-export interface HarnessVersionRepository {
-  get(kind: string, version: string): Promise<HarnessVersion | null>;
-  // Every build whose check has the given result, in first-insert order.
-  listByCompat(compat: CompatStatus): Promise<HarnessVersion[]>;
-  // Insert or replace by (kind, version).
-  upsert(row: HarnessVersion): Promise<void>;
-}
-
-/** Per-build native tool schemas and the owner's decision on each (d-0088). */
-export interface HarnessToolSchemaRepository {
-  get(kind: string, version: string, tool: string): Promise<HarnessToolSchema | null>;
-  // Every tool row of one build, in first-insert order.
-  list(kind: string, version: string): Promise<HarnessToolSchema[]>;
-  // Every tool row of every build with the given decision, in first-insert order.
-  listByStatus(status: ToolSchemaStatus): Promise<HarnessToolSchema[]>;
-  // Insert or replace by (kind, version, tool).
-  upsert(row: HarnessToolSchema): Promise<void>;
 }
 
 /** The repositories visible inside one transaction. */
@@ -291,6 +264,9 @@ export interface StorageTx {
   readonly harnessToolSchemas: HarnessToolSchemaRepository;
   readonly ticketRelations: TicketRelationRepository;
   readonly inboxStates: InboxStateRepository;
+  readonly cards: CardRepository;
+  readonly cardEvents: CardEventRepository;
+  readonly cardTypes: CardTypeRepository;
 }
 
 /** Single-writer storage backend; every mutation happens inside `transaction`. */

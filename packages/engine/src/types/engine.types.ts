@@ -86,7 +86,12 @@ export interface EngineDeps {
 
 /** What `ingest` did with an intake event. */
 export type IngestResult =
-  | { readonly status: 'ticket_created'; readonly ticketId: string }
+  | {
+      readonly status: 'ticket_created';
+      readonly ticketId: string;
+      readonly cardId: string;
+    }
+  | { readonly status: 'card_created'; readonly cardId: string }
   | { readonly status: 'duplicate' }
   | { readonly status: 'reply_queued'; readonly ticketId: string }
   | { readonly status: 'answered'; readonly interactionId: string }
@@ -156,7 +161,7 @@ export interface Engine {
   tick(): Promise<TickReport>;
   /** Asks for an immediate tick through `deps.onTickRequested`; calls coalesce. */
   requestTick(): void;
-  /** Stores an intake event (deduped) and maps it: new request -> inbox ticket, reply -> steering or an answer. */
+  /** Stores an intake event (deduped) and maps it: new request -> card (and an inbox ticket when its type starts tickets), reply -> steering or an answer. */
   ingest(event: IntakeEvent): Promise<IngestResult>;
   /** Answers a pending interaction (CAS) and queues the response wake. False when it was not pending. */
   answerInteraction(interactionId: string, answer: unknown): Promise<boolean>;

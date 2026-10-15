@@ -15,7 +15,7 @@
  */
 
 import { z } from 'zod';
-import { TicketId } from '#/schemas/ids.js';
+import { CardId, TicketId } from '#/schemas/ids.js';
 import { RunStatus } from '#/schemas/run.js';
 import { Lane, Tier, TicketStatus, TicketType } from '#/schemas/ticket.js';
 
@@ -38,6 +38,8 @@ export const TicketSummary = z.object({
   type: TicketType,
   tier_predicted: Tier,
   project: z.string().min(1),
+  /** The parent card, so a Board ticket card can link back to it (d-0105). */
+  card_id: CardId.optional(),
   priority: z.number().int(),
   rework_count: z.number().int().nonnegative(),
   needs_you: z.boolean(),

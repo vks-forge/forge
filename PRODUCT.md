@@ -79,7 +79,7 @@ intake to merge and a real GitHub PR round trip.
 **Not yet aligned with the product shape:** no UI, not publishable. Runs now
 survive a restart: Forge resumes them from the saved harness session. One server now serves many
 projects (registered through the API, each with its own clone, worktrees, git
-host and ticket prefix) and settings live in the database. See
+host and ticket prefix) and settings live in the database. Every request now becomes a card (the intake record) with a rolled-up board column and history; the card API exists, the card pages and card chat do not yet. See
 `docs/design/product-shape-change-map.md`.
 
 **Known limits:** Workers and project checks run as the user's own Windows
@@ -108,6 +108,7 @@ Newest first. One line per milestone.
 - 2026-10-16 — W6b-2: message a running Worker directly (steer).
 - 2026-10-16 — W7b review fixes: CSRF check covers every unsafe method, logout always clears, CLI checks the server proves the token before sending it.
 - 2026-10-16 — W5: project Home with stats graphs, Inbox, Runs and Cost screens.
+- 2026-10-16 — W6b-1: cards — every intake becomes a card with a rolled-up board column and history.
 - 2026-10-16 — W7b: forge start serves the UI and signs the browser in with a one-time link.
 - 2026-10-16 — Fast local gates: pnpm check runs tests related to the change; full suite in CI.
 - 2026-10-16 — W3: Board tickets view and Ticket page with the live Worker thread.

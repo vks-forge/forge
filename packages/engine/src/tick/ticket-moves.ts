@@ -7,10 +7,12 @@
  *   as a plan of events plus plain fields, and this file reads the ticket, runs the events
  *   in order, and stores the result with a compare-and-swap on `status_version`, so a
  *   racing writer loses instead of overwriting. "Park for a human" is also here: it is a
- *   `parked` event, never a direct status write.
+ *   `parked` event, never a direct status write. A status change is also written to the
+ *   ticket's card history in the same transaction, so the Card page's timeline follows the
+ *   one door rather than a second hook.
  *
  * Exports: moveTicketTx(), moveTicket(), parkPlan().
- * Depends on: @forge/core (transition, toTicketPatch), types/tick. No IO of its own.
+ * Depends on: @forge/core (transition, toTicketPatch), tick/card-log, types/tick. No IO of its own.
  */
 
 import { toTicketPatch, transition } from '@forge/core';
@@ -21,6 +23,7 @@ import type {
   TicketEvent,
   TicketId,
 } from '@forge/core';
+import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
 import type { EventSpec, MoveResult, TicketPlan } from '#/types/tick.types.js';
 
 /** Applies `plan(ticket)` inside an open transaction; `null` from the planner means "nothing to do". */
@@ -59,6 +62,20 @@ export async function moveTicketTx(
 
   if (!stored) {
     return { ok: false, reason: `${id}: stale status_version` };
+  }
+
+  if (next.status !== current.status) {
+    await logCardEvent(tx, current.card_id, {
+      kind: 'ticket_state',
+      at: nowIso,
+      actor: ENGINE_ACTOR,
+      payload: {
+        ticket_id: current.id,
+        from: current.status,
+        to: next.status,
+        ...(next.blocked_reason === undefined ? {} : { reason: next.blocked_reason }),
+      },
+    });
   }
 
   return { ok: true, ticket: { ...next, status_version: current.status_version + 1 } };

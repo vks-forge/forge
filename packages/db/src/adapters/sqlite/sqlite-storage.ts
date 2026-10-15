@@ -18,6 +18,9 @@
  */
 
 import type { StorageAdapter, StorageTx } from '@forge/core';
+import { createCardEventRepository } from '#/adapters/sqlite/card-events-repository.js';
+import { createCardRepository } from '#/adapters/sqlite/cards-repository.js';
+import { createCardTypeRepository } from '#/adapters/sqlite/card-types-repository.js';
 import { createSqliteCatalogueStore } from '#/adapters/sqlite/catalogue-store.js';
 import { createSqliteConfigSource } from '#/adapters/sqlite/config-source.js';
 import { createGateResultRepository } from '#/adapters/sqlite/gate-results-repository.js';
@@ -75,6 +78,9 @@ export function createStorageOnDriver(
     harnessToolSchemas: createHarnessToolSchemaRepository(driver),
     ticketRelations: createTicketRelationRepository(driver),
     inboxStates: createInboxStateRepository(driver),
+    cards: createCardRepository(driver),
+    cardEvents: createCardEventRepository(driver),
+    cardTypes: createCardTypeRepository(driver),
   };
 
   return {

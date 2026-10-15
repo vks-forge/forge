@@ -9,12 +9,20 @@
  *   storage, git and UI, and a malformed id from a user or a foreign branch becomes a
  *   value to handle rather than a crash inside the Director tick (d-0021).
  *
- * Exports: makeTicketId(), parseTicketId().
+ * Card ids (`FORGE-C4`) follow the same rule with a `C` before the number.
+ *
+ * Exports: makeTicketId(), parseTicketId(), makeCardId(), parseCardId().
  * Depends on: schemas/ids, shared/errors, shared/result, types/ids, types/result. No IO.
  */
 
 import { InvalidInputError } from '#/shared/errors.js';
-import { PROJECT_PREFIX_PATTERN, TICKET_ID_PATTERN, TicketId } from '#/schemas/ids.js';
+import {
+  CARD_ID_PATTERN,
+  CardId,
+  PROJECT_PREFIX_PATTERN,
+  TICKET_ID_PATTERN,
+  TicketId,
+} from '#/schemas/ids.js';
 import type { ParsedTicketId } from '#/types/ids.types.js';
 import { err, ok } from '#/shared/result.js';
 import type { Result } from '#/types/result.types.js';
@@ -40,6 +48,32 @@ export function parseTicketId(raw: string): Result<ParsedTicketId, string> {
   const n = Number(num);
   if (!Number.isSafeInteger(n)) {
     return err(`ticket number out of range: ${raw}`);
+  }
+
+  return ok({ project, n });
+}
+
+/** Builds a {@link CardId}; throws `InvalidInputError` on a bad prefix or number. */
+export function makeCardId(project: string, n: number): CardId {
+  if (!PROJECT_PREFIX_PATTERN.test(project) || !Number.isSafeInteger(n) || n < 1) {
+    throw new InvalidInputError(`invalid card id parts: ${project}, ${n}`);
+  }
+
+  return CardId.parse(`${project}-C${n}`);
+}
+
+/** Parses a raw string into its parts; returns an error result instead of throwing. */
+export function parseCardId(raw: string): Result<ParsedTicketId, string> {
+  const m = CARD_ID_PATTERN.exec(raw);
+  const project = m?.[1];
+  const num = m?.[2];
+  if (project === undefined || num === undefined) {
+    return err(`not a card id: ${raw}`);
+  }
+
+  const n = Number(num);
+  if (!Number.isSafeInteger(n)) {
+    return err(`card number out of range: ${raw}`);
   }
 
   return ok({ project, n });

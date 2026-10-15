@@ -1,0 +1,92 @@
+/**
+ * Card API schemas — list, detail, history and patch bodies for the card routes.
+ *
+ * Why: the Board lists cards in rolled-up columns, the Card page needs one card with its
+ *   tickets and open questions, and the history is read in pages oldest first. Defining
+ *   the query, the row shapes and the PATCH body next to the card means the server routes,
+ *   the storage port and the web client agree on the allowed columns, the page caps and
+ *   what a patch may change. A page never asks for the whole table. A patch changes only the
+ *   type or closes the card; the column is never patchable (d-0107).
+ *
+ * Exports: CARD_LIST_DEFAULT_LIMIT, CARD_LIST_MAX_LIMIT, CARD_EVENTS_DEFAULT_LIMIT,
+ *   CARD_EVENTS_MAX_LIMIT, CardSummary, CardListQuery, CardListPage, CardDetail,
+ *   CardEventsQuery, CardEventsPage, CardPatchBody.
+ * Depends on: schemas/card, schemas/card-event, schemas/interaction, schemas/ticket-summary, zod. No IO.
+ */
+
+import { z } from 'zod';
+import { Card, CardColumn, CardTypeName } from '#/schemas/card.js';
+import { CardEvent } from '#/schemas/card-event.js';
+import { Interaction } from '#/schemas/interaction.js';
+import { TicketSummary } from '#/schemas/ticket-summary.js';
+
+export const CARD_LIST_DEFAULT_LIMIT = 50;
+export const CARD_LIST_MAX_LIMIT = 200;
+
+/** One Board card: the row, the rolled-up column and ticket counts. `project` is the project slug. */
+export const CardSummary = Card.extend({
+  column: CardColumn,
+  ticket_count: z.number().int().nonnegative(),
+  tickets_done: z.number().int().nonnegative(),
+});
+export type CardSummary = z.infer<typeof CardSummary>;
+
+/** `GET /projects/:slug/cards` parameters; strings are coerced because they come from a URL. */
+export const CardListQuery = z.object({
+  column: CardColumn.optional(),
+  type: CardTypeName.optional(),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(CARD_LIST_MAX_LIMIT)
+    .default(CARD_LIST_DEFAULT_LIMIT),
+  cursor: z.string().min(1).optional(),
+});
+export type CardListQuery = z.infer<typeof CardListQuery>;
+
+export const CardListPage = z.object({
+  items: z.array(CardSummary),
+  nextCursor: z.string().min(1).nullable(),
+});
+export type CardListPage = z.infer<typeof CardListPage>;
+
+/** `GET /cards/:id`: the card, its rolled-up column, linked tickets and the questions waiting on the user. */
+export const CardDetail = CardSummary.extend({
+  tickets: z.array(TicketSummary),
+  pending_interactions: z.array(Interaction),
+});
+export type CardDetail = z.infer<typeof CardDetail>;
+
+export const CARD_EVENTS_DEFAULT_LIMIT = 50;
+export const CARD_EVENTS_MAX_LIMIT = 200;
+
+/** `GET /cards/:id/events` parameters. */
+export const CardEventsQuery = z.object({
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(CARD_EVENTS_MAX_LIMIT)
+    .default(CARD_EVENTS_DEFAULT_LIMIT),
+  cursor: z.string().min(1).optional(),
+});
+export type CardEventsQuery = z.infer<typeof CardEventsQuery>;
+
+/** One page of history, oldest first; `nextCursor` is null on the last page. */
+export const CardEventsPage = z.object({
+  items: z.array(CardEvent),
+  nextCursor: z.string().min(1).nullable(),
+});
+export type CardEventsPage = z.infer<typeof CardEventsPage>;
+
+/** `PATCH /cards/:id`: change the type, or close with a reason. At least one field. */
+export const CardPatchBody = z
+  .strictObject({
+    type: CardTypeName.optional(),
+    closed_reason: z.string().trim().min(1).optional(),
+  })
+  .refine((b) => b.type !== undefined || b.closed_reason !== undefined, {
+    message: 'give a type to change to, a closed_reason to close with, or both',
+  });
+export type CardPatchBody = z.infer<typeof CardPatchBody>;

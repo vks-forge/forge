@@ -12,7 +12,8 @@
  *   migrations/0007-ticket-parked-from, migrations/0008-gate-head-sha, migrations/0009-config-versions,
  *   migrations/0010-run-config-version, migrations/0011-many-projects, migrations/0012-harnesses. No IO.
  *   migrations/0010-run-config-version, migrations/0012-harnesses, migrations/0013-catalogue-and-compat,
- *   migrations/0016-scheduling, migrations/0017-run-resume, migrations/0018-inbox-states. No IO.
+ *   migrations/0016-scheduling, migrations/0017-run-resume, migrations/0018-inbox-states,
+ *   migrations/0019-cards. No IO.
  */
 
 import { MIGRATION_0001 } from '#/migrations/0001-state-tables.js';
@@ -31,6 +32,7 @@ import { MIGRATION_0013 } from '#/migrations/0013-catalogue-and-compat.js';
 import { MIGRATION_0016 } from '#/migrations/0016-scheduling.js';
 import { MIGRATION_0017 } from '#/migrations/0017-run-resume.js';
 import { MIGRATION_0018 } from '#/migrations/0018-inbox-states.js';
+import { MIGRATION_0019 } from '#/migrations/0019-cards.js';
 import type { Migration } from '#/types/migrations.types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -50,4 +52,5 @@ export const MIGRATIONS: readonly Migration[] = [
   MIGRATION_0016,
   MIGRATION_0017,
   MIGRATION_0018,
+  MIGRATION_0019,
 ];

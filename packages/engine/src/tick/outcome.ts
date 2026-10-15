@@ -21,6 +21,7 @@ import type { ErrorFamily, Run, RunResult, StorageTx, Ticket } from '@forge/core
 import { decideFailure } from '#/domain/failure-policy.js';
 import { iso } from '#/shared/time.js';
 import { parkHarnessForQuota, requestQuotaWake } from '#/tick/quota.js';
+import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
 import { moveTicketTx, parkPlan } from '#/tick/ticket-moves.js';
 import { requestWakeTx } from '#/tick/wakes.js';
 import type { EngineCtx, Pump } from '#/types/engine-state.types.js';
@@ -47,21 +48,34 @@ async function ensureInteraction(
   id: string,
   pump?: Pump,
 ): Promise<void> {
-  if (await tx.interactions.get(id)) {
-    return;
+  // The Worker's ask_director tool may have written the row already; either way the card's
+  // history records that a question opened, once per pause.
+  let row = await tx.interactions.get(id);
+  if (!row) {
+    const ask = pump?.asks.get(id);
+    const kind = InteractionKind.safeParse(ask?.kind);
+    row = {
+      id,
+      ticket_id: run.ticket_id,
+      run_id: run.id,
+      kind: kind.success ? kind.data : 'question',
+      payload: {
+        prompt: ask?.prompt ?? '(the Worker paused without a recorded question)',
+      },
+      status: 'pending',
+      asked_at: ctx.nowIso,
+      timeout_at: iso(ctx.now + ctx.config.forge.engine.interaction_timeout_ms),
+    };
+
+    await tx.interactions.insert(row);
   }
 
-  const ask = pump?.asks.get(id);
-  const kind = InteractionKind.safeParse(ask?.kind);
-  await tx.interactions.insert({
-    id,
-    ticket_id: run.ticket_id,
-    run_id: run.id,
-    kind: kind.success ? kind.data : 'question',
-    payload: { prompt: ask?.prompt ?? '(the Worker paused without a recorded question)' },
-    status: 'pending',
-    asked_at: ctx.nowIso,
-    timeout_at: iso(ctx.now + ctx.config.forge.engine.interaction_timeout_ms),
+  const ticket = await tx.tickets.get(run.ticket_id as Ticket['id']);
+  await logCardEvent(tx, ticket?.card_id, {
+    kind: 'interaction_opened',
+    at: ctx.nowIso,
+    actor: ENGINE_ACTOR,
+    payload: { ticket_id: run.ticket_id, interaction_id: id, interaction_kind: row.kind },
   });
 }
 
