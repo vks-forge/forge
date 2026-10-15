@@ -1,16 +1,24 @@
-# CI: the full suite with coverage (code.md rule 8, d-0119), on every OS Forge ships for.
-# Every push and PR runs Windows only, the main platform; Linux and macOS run once a day
-# (and on demand) because the org is on GitHub Free, where macOS minutes count about 10x (d-0120).
+# CI: the full suite with coverage (code.md rule 8, d-0119), on every OS Forge ships for,
+# paced to stay inside the GitHub Free Actions quota (Windows minutes count 2x, macOS 10x; d-0120):
+#   push / pull request (code changes only) -> Windows, the main platform
+#   daily at end of day                     -> Linux
+#   weekly, Sunday end of day               -> Linux and macOS
+#   manual run (workflow_dispatch)          -> all three, e.g. before a release
+# Docs-only changes (markdown, docs/, project memory) do not run CI.
 # Live probes never run here: they skip themselves unless FORGE_PROBES=1, which is not set.
 name: ci
 
 on:
   push:
     branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**', '.forge/memory/**']
   pull_request:
+    paths-ignore: ['**/*.md', 'docs/**', '.forge/memory/**']
   schedule:
-    # 17:30 UTC = 23:00 IST, end of the working day.
-    - cron: '30 17 * * *'
+    # 17:30 UTC = 23:00 IST, end of the working day. Monday-Saturday: Linux.
+    - cron: '30 17 * * 1-6'
+    # Sunday: Linux and macOS.
+    - cron: '30 17 * * 0'
   workflow_dispatch:
 
 permissions:
@@ -28,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["windows-latest","macos-latest","ubuntu-latest"]' || '["windows-latest"]') }}
+        os: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["windows-latest","macos-latest","ubuntu-latest"]' || github.event.schedule == '30 17 * * 0' && '["ubuntu-latest","macos-latest"]' || github.event_name == 'schedule' && '["ubuntu-latest"]' || '["windows-latest"]') }}
     steps:
       # Before checkout: Windows runners default to autocrlf=true, which would turn LF files
       # into CRLF and fail `prettier --check` and byte-exact test fixtures.
