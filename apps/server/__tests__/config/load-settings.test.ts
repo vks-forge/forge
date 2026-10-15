@@ -147,7 +147,14 @@ describe('loadSettings', () => {
 
   it('puts the database, runs and secrets in the data home named by FORGE_HOME', async () => {
     const home = join(root, 'forge-home');
-    const settings = await load({ FORGE_ROOT: root, FORGE_HOME: home }, 'ignored-cwd');
+    // The machine's own platform: the layout joins with that platform's separator, and `home`
+    // is a real path of this machine (a posix tmp dir is not a valid win32 FORGE_HOME).
+    const here: DataHomeIo = { ...machine(), platform: process.platform };
+    const settings = await load(
+      { FORGE_ROOT: root, FORGE_HOME: home },
+      'ignored-cwd',
+      here,
+    );
 
     expect(settings.layout.data.dbPath).toBe(join(home, 'forge.db'));
     expect(settings.layout.data.runsDir).toBe(join(home, 'runs'));

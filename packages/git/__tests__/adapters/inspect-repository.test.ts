@@ -9,7 +9,8 @@
  */
 
 import { execFile } from 'node:child_process';
-import { mkdir, mkdtemp, realpath, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { mkdir, mkdtemp, realpath, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -94,4 +95,33 @@ describe('inspectRepository', () => {
       /must not start with/,
     );
   });
+
+  it('accepts the clone root when the user names it through a symlink or junction', async () => {
+    const dir = await makeRepo();
+    const holder = trackTemp(
+      await realpath(await mkdtemp(join(tmpdir(), 'forge link '))),
+    );
+    const link = join(holder, 'clone-link');
+    await symlink(dir, link, 'junction');
+
+    const result = await inspectRepository({ path: link, baseBranch: 'main' });
+
+    expect(result).toMatchObject({ ok: true });
+  });
+
+  it.runIf(process.platform === 'win32')(
+    'accepts the clone root when the user names it by its 8.3 short name',
+    async () => {
+      const dir = await makeRepo();
+      const script = `(New-Object -ComObject Scripting.FileSystemObject).GetFolder('${dir}').ShortPath`;
+      const short = execFileSync('powershell', ['-NoProfile', '-Command', script], {
+        encoding: 'utf8',
+        windowsHide: true,
+      }).trim();
+
+      const result = await inspectRepository({ path: short, baseBranch: 'main' });
+
+      expect(result).toMatchObject({ ok: true });
+    },
+  );
 });

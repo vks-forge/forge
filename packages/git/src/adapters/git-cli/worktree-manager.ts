@@ -22,6 +22,7 @@ import type { Worktree, WorktreeDiffFile, WorktreeManager } from '@forge/core';
 import { createGitRunner } from '#/adapters/git-cli/run-git.js';
 import { parseNameStatus } from '#/domain/name-status.js';
 import { normalizePath, parseWorktreeList, samePath } from '#/domain/porcelain.js';
+import { canonicalPath } from '#/shared/canonical-path.js';
 import { assertSafeRefArg } from '#/domain/ref-check.js';
 import type { GitWorktreeManagerOptions } from '#/types/git-worktree.types.js';
 
@@ -63,7 +64,9 @@ export function createGitWorktreeManager(
       const path = normalizePath(resolve(worktreeRoot, ticketId));
       const trees = await list();
 
-      const here = trees.find((t) => samePath(t.path, path));
+      const here = trees.find((t) =>
+        samePath(canonicalPath(t.path), canonicalPath(path)),
+      );
       if (here) {
         if (here.branch !== branch) {
           const on = here.branch ?? 'a detached head';
