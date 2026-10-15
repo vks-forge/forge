@@ -90,7 +90,7 @@ describe('config is read through the ConfigSource each tick', () => {
     await rig.config.append({
       scope: 'project',
       project: 'forge',
-      doc: { commands: { test: 'make check' } },
+      doc: { checks: [{ name: 'test', role: 'test', command: 'make check' }] },
       author: 'test',
       reason: 'edit',
       expectedVersion: 0,
@@ -111,7 +111,7 @@ describe('config is read through the ConfigSource each tick', () => {
     await rig.config.append({
       scope: 'project',
       project: 'forge',
-      doc: { profile: 'ts' },
+      doc: { ecosystems: ['node'] },
       author: 'test',
       reason: 'edit',
       expectedVersion: 0,

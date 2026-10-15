@@ -111,7 +111,14 @@ describe('express flow end to end', { timeout: 300_000 }, () => {
 
     expect(got.body).toMatchObject({
       version: { company: 0, project: 1 },
-      config: { project: { profile: 'generic', commands: { test: 'npm test' } } },
+      config: {
+        project: {
+          checks: [
+            { name: 'lint', role: 'lint', command: 'node scripts/lint.mjs' },
+            { name: 'test', role: 'test', command: 'npm test' },
+          ],
+        },
+      },
     });
 
     expect(history.body).toMatchObject({

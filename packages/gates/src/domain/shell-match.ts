@@ -8,7 +8,7 @@
  *   runs no tests and does not count. Quoting is not parsed: a line the matcher cannot be
  *   sure of is rejected, which costs an honest Worker one rework, never a false pass.
  *
- * Exports: runsTestCommand().
+ * Exports: runsTestCommand(), runsAnyTestCommand().
  * Depends on: none. No IO.
  */
 
@@ -29,6 +29,11 @@ export function runsTestCommand(resource: string | null, testCommand: string): b
   }
 
   const wanted = squash(testCommand);
+  // An empty command matches everything by prefix; fail closed instead.
+  if (wanted === '') {
+    return false;
+  }
+
   // A test command that is itself a compound line is matched against the whole resource.
   const segments = SEPARATORS.test(wanted) ? [resource] : resource.split(SEPARATORS);
 
@@ -47,4 +52,12 @@ export function runsTestCommand(resource: string | null, testCommand: string): b
       .split(' ')
       .some((token) => INFO_ONLY.has(token));
   });
+}
+
+/** True when the shell resource runs at least one of the project's test-role check commands. */
+export function runsAnyTestCommand(
+  resource: string | null,
+  testCommands: readonly string[],
+): boolean {
+  return testCommands.some((command) => runsTestCommand(resource, command));
 }

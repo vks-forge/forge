@@ -17,6 +17,7 @@ export * from '#/domain/data-home.js';
 export * from '#/domain/builtin-config.js';
 export * from '#/domain/harness-secret.js';
 export * from '#/domain/ids.js';
+export * from '#/domain/legacy-project-doc.js';
 export * from '#/domain/merge-config.js';
 export * from '#/domain/lane-triage.js';
 export * from '#/domain/run-active.js';

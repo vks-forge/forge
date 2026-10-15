@@ -66,7 +66,7 @@ Public API from `src/index.ts`:
   (`company()` plus `project(slug)` for every registered project) and every phase reads that snapshot
   (`ctx.config`), never the source, so an edit saved between ticks applies to the next tick as a whole
   with no restart and never half-applies inside one. Company dials (limits, retries, models) come
-  from `ctx.config.forge`; project settings (commands, profile, git host, `tier_c_globs`) overlay the
+  from `ctx.config.forge`; project settings (checks, ecosystems, git host, `tier_c_globs`) overlay the
   `ProjectRuntime.config` the app built and drive triage, tier computation, the Worker contract and the gates.
   Each run row stores `config_version` (`c<company>:p<project>`). If the source cannot be read or a stored
   override no longer validates, the tick is skipped with a `load config` error in its report and nothing
@@ -82,7 +82,7 @@ Public API from `src/index.ts`:
 - One base branch per project (`tick/project-runtime.ts`): `git_host.base_branch` drives the worktree base, the
   diff base and the PR target; the runtime's `baseRef` only serves projects without a host. A runtime
   whose `config.slug` is another project is refused (logged as a tick error, nothing published).
-- The `dispatch_prompt` input carries `worker_contract` (`domain/worker-contract.ts`), and the same rules are appended to the returned prompt verbatim under `## Rules of this run` so a paraphrase cannot drop them: the cwd is already the worktree (never `cd`), one shell command per call (compound lines are denied unattended), the project's exact test command, and the Worker must end
+- The `dispatch_prompt` input carries `worker_contract` (`domain/worker-contract.ts`), and the same rules are appended to the returned prompt verbatim under `## Rules of this run` so a paraphrase cannot drop them: the cwd is already the worktree (never `cd`), one shell command per call (compound lines are denied unattended), the project's exact test command (or the several test-role commands, any of which counts), the other checks listed by role (lint, typecheck, build, ...; the gates re-run all of them), and the Worker must end
   with `finish` and a typed claim for every file it edited (G1 fails a finish without; a later `finish` replaces an earlier one), plus a rework
   note after a failed gate.
 - Pure rules, also exported: `decideLane`, `decideFailure`, `findViolations`, `nextTicketNumber`,

@@ -1,13 +1,16 @@
 /**
- * Project check tests — pin how lint/typecheck/test results become findings.
+ * Project check tests — pin how every configured check becomes findings.
  *
- * Why: the project's own commands are the final word on whether code works. A non-zero
- *   exit or timeout must fail, a command that cannot start must be `error` (not pass),
- *   a generic-profile repo must not be failed or passed by a TS-only check, and the
- *   Worker must never see Forge's secrets through the environment.
+ * Why: the project's own commands are the final word on whether code works, in any
+ *   language. A non-zero exit or timeout must fail, a command that cannot start must be
+ *   `error` (not pass), a role the project did not configure must be absent rather than
+ *   skipped or passed, a check that could not even start (empty command, cwd outside the
+ *   worktree) must fail closed, and the Worker must never see Forge's secrets through
+ *   the environment.
  *
- * Pins: ordering, all commands run after a failure, tail in the report, skipped
- *   typecheck under generic, spawn failure, timeout, FORGE_* scrubbed from env.
+ * Pins: list order, all roles run (build, format, custom), all checks run after a
+ *   failure, tail in the report, cwd handling, empty command, spawn failure, timeout,
+ *   FORGE_* scrubbed from env.
  * Depends on: domain/project-checks, shared/env, shared/tail.
  */
 
@@ -16,17 +19,17 @@ import { runProjectChecks } from '#/domain/project-checks.js';
 import { scrubEnv } from '#/shared/env.js';
 import { tail } from '#/shared/tail.js';
 import type { CommandRequest, CommandResult } from '#/types/g1-deps.types.js';
-import { context } from '#tests/helpers/fixtures.js';
+import { checksOf, context } from '#tests/helpers/fixtures.js';
 
 const ALL = { lint: 'L', typecheck: 'T', test: 'X' };
 
 function input(
   run: (r: CommandRequest) => Promise<CommandResult>,
-  profile: 'ts' | 'generic' = 'ts',
-  commands: Record<string, string> = ALL,
+  checks: ReturnType<typeof checksOf> = checksOf(ALL),
 ) {
   return {
-    project: context({ profile, commands }).project,
+    // Spread, not parsed: the gate must also hold when a bad check got past the schema.
+    project: { ...context().project, checks },
     cwd: '/wt',
     env: { PATH: '/bin', FORGE_RUN_TOKEN: 'secret', forge_x: 'y' },
     run,
@@ -79,9 +82,10 @@ describe('runProjectChecks', () => {
 FAIL src/a.test.ts expected 3 got 4`;
 
     const out = await runProjectChecks(
-      input(() => Promise.resolve({ exitCode: 1, timedOut: false, output: long }), 'ts', {
-        test: 'X',
-      }),
+      input(
+        () => Promise.resolve({ exitCode: 1, timedOut: false, output: long }),
+        checksOf({ test: 'X' }),
+      ),
     );
 
     const message = out.findings[0]?.message ?? '';
@@ -101,8 +105,7 @@ FAIL src/a.test.ts expected 3 got 4`;
 
           return ok();
         },
-        'ts',
-        { test: 'X' },
+        checksOf({ test: 'X' }),
       ),
       env: { PATH: '/bin', DATABASE_URL: 'sqlite::memory:' },
       passEnv: ['DATABASE_URL'],
@@ -113,29 +116,107 @@ FAIL src/a.test.ts expected 3 got 4`;
 
   it('fails on timeout', async () => {
     const out = await runProjectChecks(
-      input(() => Promise.resolve({ exitCode: null, timedOut: true, output: '' }), 'ts', {
-        test: 'X',
-      }),
+      input(
+        () => Promise.resolve({ exitCode: null, timedOut: true, output: '' }),
+        checksOf({ test: 'X' }),
+      ),
     );
 
     expect(out.status).toBe('failed');
     expect(out.findings[0]?.message).toContain('timed out');
   });
 
-  it('skips typecheck with a reason under profile generic', async () => {
+  it('runs every role in list order, build, format and custom included', async () => {
     const seen: string[] = [];
+    const checks = [
+      { name: 'compile', role: 'build' as const, command: 'B' },
+      { name: 'unit', role: 'test' as const, command: 'X' },
+      { name: 'fmt', role: 'format' as const, command: 'F' },
+      { name: 'audit', role: 'custom' as const, command: 'A' },
+    ];
 
     const out = await runProjectChecks(
       input((r) => {
         seen.push(r.command);
 
         return ok();
-      }, 'generic'),
+      }, checks),
     );
 
-    expect(seen).toEqual(['L', 'X']);
-    expect(out.details).toContain('typecheck: skipped');
+    expect(seen).toEqual(['B', 'X', 'F', 'A']);
     expect(out.status).toBe('passed');
+    expect(out.details).toContain('compile (build): passed');
+  });
+
+  it('has no entry for a role the project did not configure', async () => {
+    const out = await runProjectChecks(input(ok, checksOf({ test: 'X' })));
+
+    expect(out.details).not.toContain('typecheck');
+    expect(out.details).not.toContain('skipped');
+    expect(out.details).not.toContain('not configured');
+  });
+
+  it('names the failing check and its role in the finding', async () => {
+    const out = await runProjectChecks(
+      input(
+        () => Promise.resolve({ exitCode: 1, timedOut: false, output: 'boom' }),
+        [{ name: 'go-unit', role: 'test', command: 'go test ./...' }],
+      ),
+    );
+
+    expect(out.findings[0]).toMatchObject({ check: 'project:go-unit' });
+    expect(out.findings[0]?.message).toContain('test check `go test ./...` failed');
+  });
+
+  it('runs a check in its cwd under the worktree', async () => {
+    let req: CommandRequest | undefined;
+
+    await runProjectChecks(
+      input(
+        (r) => {
+          req = r;
+
+          return ok();
+        },
+        [{ name: 'web', role: 'test', command: 'X', cwd: 'web/app' }],
+      ),
+    );
+
+    expect(req?.cwd.replaceAll('\\', '/')).toMatch(/\/wt\/web\/app$/);
+  });
+
+  it('fails closed on a cwd outside the worktree without running anything', async () => {
+    const seen: string[] = [];
+    const checks = [{ name: 'x', role: 'test' as const, command: 'X', cwd: '../out' }];
+
+    const out = await runProjectChecks(
+      input((r) => {
+        seen.push(r.command);
+
+        return ok();
+      }, checks),
+    );
+
+    expect(seen).toEqual([]);
+    expect(out.status).toBe('failed');
+    expect(out.findings[0]?.message).toContain('outside the worktree');
+  });
+
+  it('fails closed on an empty command instead of passing it', async () => {
+    const seen: string[] = [];
+    const checks = [{ name: 'unit', role: 'test' as const, command: '   ' }];
+
+    const out = await runProjectChecks(
+      input((r) => {
+        seen.push(r.command);
+
+        return ok();
+      }, checks),
+    );
+
+    expect(seen).toEqual([]);
+    expect(out.status).toBe('failed');
+    expect(out.findings[0]?.message).toContain('command is empty');
   });
 
   it('reports error when a command cannot be spawned', async () => {
@@ -155,8 +236,7 @@ FAIL src/a.test.ts expected 3 got 4`;
 
           return ok();
         },
-        'ts',
-        { test: 'X' },
+        checksOf({ test: 'X' }),
       ),
     );
 

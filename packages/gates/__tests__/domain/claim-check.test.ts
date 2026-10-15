@@ -24,13 +24,13 @@ function run(
   calls: Parameters<typeof chain>[0],
   files: WorktreeDiffFile[] = [],
   patch = '',
-  testCommand: string | null = 'pnpm test',
+  testCommands: readonly string[] = ['pnpm test'],
 ) {
   return checkClaims(claims, {
     receipts: chain(calls),
     diff: diffOf(files, patch),
     patch: parsePatch(patch),
-    testCommand: testCommand ?? undefined,
+    testCommands,
     worktreePath: WT,
   });
 }
@@ -130,7 +130,7 @@ describe('checkClaims', () => {
       [{ id: 's', tool: 'shell', resource: 'pnpm test' }],
       [],
       '',
-      null,
+      [],
     );
 
     expect(failedRun.status).toBe('passed');

@@ -5,7 +5,7 @@
  *   G1 is the cheapest independent check and runs first in every lane: it matches the
  *   Worker's `finish` claims against HMAC-chained tool receipts and the git diff, proves
  *   the receipts are intact and complete, refuses test or config tampering, and re-runs
- *   lint, typecheck and tests itself. Any finding fails the gate and the report goes back
+ *   every configured check (tests, lint, typecheck, build, ...) itself. Any finding fails the gate and the report goes back
  *   to the Worker as the rework prompt. A check that could not run (missing run secret,
  *   spawn failure) makes the verdict `error`, never `passed`, so the engine retries or
  *   escalates instead of merging on missing evidence (verification-plane.md §2).
@@ -14,13 +14,14 @@
  *   before a rework say nothing about the reworked code, and the chain check is own-run only.
  *
  * Exports: buildG1Gate().
- * Depends on: @forge/core (Gate), @forge/tools (Receipt type), domain/*, types/g1-deps. No IO; every side effect is an injected dep.
+ * Depends on: @forge/core (Gate), @forge/tools (Receipt type), domain/* (gate-rules picks the ecosystem rules), types/g1-deps. No IO; every side effect is an injected dep.
  */
 
 import type { Gate, GateContext, GateFinding, GateVerdict } from '@forge/core';
 import { checkChain } from '#/domain/chain-check.js';
 import { checkClaims } from '#/domain/claim-check.js';
 import { checkGateConfig } from '#/domain/config-guard.js';
+import { resolveRules } from '#/domain/gate-rules.js';
 import { parsePatch } from '#/domain/patch.js';
 import { DEFAULT_COMMAND_TIMEOUT_MS, runProjectChecks } from '#/domain/project-checks.js';
 import { renderReport } from '#/domain/report.js';
@@ -63,6 +64,13 @@ export function buildG1Gate(deps: G1CoreDeps): Gate {
       ]);
 
       const patch = parsePatch(diff.patch);
+      const rules = resolveRules(
+        ctx.project,
+        diff.files.flatMap((f) =>
+          f.oldPath === undefined ? [f.path] : [f.path, f.oldPath],
+        ),
+      );
+
       const toolCalls = calls.filter((c) => !deps.ignoreToolCall?.(c));
       const outcomes: CheckOutcome[] = [
         checkChain(receipts, toolCalls, deps.runSecret(runId)),
@@ -71,11 +79,14 @@ export function buildG1Gate(deps: G1CoreDeps): Gate {
           earlierReceipts: earlier,
           diff,
           patch,
-          testCommand: ctx.project.commands.test,
+          testCommands: ctx.project.checks
+            .filter((c) => c.role === 'test')
+            .map((c) => c.command),
+          rules,
           worktreePath: ctx.worktreePath,
         }),
-        checkTestDiff(diff, patch),
-        checkGateConfig(diff, patch, ctx.project.commands),
+        checkTestDiff(diff, patch, rules),
+        checkGateConfig(diff, patch, ctx.project.checks, rules),
         await runProjectChecks({
           project: ctx.project,
           cwd: ctx.worktreePath,

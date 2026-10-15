@@ -42,10 +42,10 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
   },
 };
 
-/** What a project gets until it overrides: generic profile, no commands, the safe Tier C set. */
+/** What a project gets until it overrides: no checks (any role may be absent), no ecosystems (the gates detect them), the safe Tier C set. */
 export const BUILTIN_PROJECT_SETTINGS: ProjectSettings = {
-  profile: 'generic',
-  commands: {},
+  checks: [],
+  ecosystems: [],
   default_harness: 'claude-code',
   tier_c_globs: ['.forge/**', '.claude/**', '.github/**'],
 };

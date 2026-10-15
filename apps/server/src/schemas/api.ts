@@ -10,16 +10,16 @@
  * Exports: ToolDecisionBody, CataloguePutBody, AnswerBody, LastEventId, SettingsPutBody, HarnessPutBody, HarnessSecretBody, LiveQuery,
  *   ProjectCreateBody, ProjectPatchBody, ConnectionCreateBody, SseTicketBody.
  * Depends on: @forge/core (HarnessAuthMode, HarnessKind, HarnessSecretKind, GitHostConfig, ProjectPrefix,
- *   ProjectCommands, Profile), zod. No IO.
+ *   ProjectCheck, GateRules), zod. No IO.
  */
 
 import {
+  GateRules,
   GitHostConfig,
   HarnessAuthMode,
   HarnessKind,
   HarnessSecretKind,
-  Profile,
-  ProjectCommands,
+  ProjectCheck,
   ProjectPrefix,
 } from '@forge/core';
 import { z } from 'zod';
@@ -88,14 +88,29 @@ export const LiveQuery = z.enum(['1', 'true']);
 const Digits = z.string().regex(/^[0-9]+$/);
 const RepoFullName = z.string().regex(/^[^/\s]+\/[^/\s]+$/, 'must look like owner/name');
 
+/** Old-style `commands`, still accepted and converted to `checks` by the settings schema. */
+const LegacyCommands = z
+  .object({
+    test: z.string().min(1),
+    lint: z.string().min(1),
+    typecheck: z.string().min(1),
+    build: z.string().min(1),
+  })
+  .partial()
+  .strict();
+
 /**
  * Settings a new project may start with besides its git host: the same keys the settings
- * API accepts, so a project is usable (commands, harness) from its first version.
+ * API accepts, so a project is usable (checks, harness) from its first version. The old
+ * `profile` + `commands` pair is accepted too and converted (d-0095).
  */
 const StartingSettings = z
   .object({
-    profile: Profile,
-    commands: ProjectCommands,
+    checks: z.array(ProjectCheck),
+    ecosystems: z.array(z.string().min(1)),
+    gate_rules: GateRules,
+    profile: z.enum(['ts', 'generic']),
+    commands: LegacyCommands,
     default_harness: z.string().min(1),
     remote: z.string().min(1),
   })

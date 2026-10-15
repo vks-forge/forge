@@ -18,6 +18,7 @@ import type { G1Deps } from '#/types/g1-deps.types.js';
 import {
   SECRET,
   chain,
+  checksOf,
   context,
   diffOf,
   patchFor,
@@ -53,7 +54,7 @@ function deps(over: Partial<G1Deps> = {}): G1Deps {
 
 // The honest default: one edited file in the diff, covered by an `edited` claim.
 const ctx = (claims: readonly Claim[] = [{ kind: 'edited', path: 'src/a.ts' }]) =>
-  context({ claims, commands: { test: 'pnpm test', lint: 'pnpm lint' } });
+  context({ claims, checks: checksOf({ lint: 'pnpm lint', test: 'pnpm test' }) });
 
 describe('createG1Gate', () => {
   it('is named G1', () => {

@@ -10,18 +10,22 @@
  *
  * Exports: CompanyOverride, ProjectSettings, ProjectOverride, EffectiveConfig, ConfigVersionRef,
  *   ConfigScope, ConfigVersion, ConfigAppend (and their types).
- * Depends on: schemas/forge-config, schemas/project, shared/deep-partial, types/config.types,
+ * Depends on: domain/legacy-project-doc, schemas/forge-config, schemas/project, shared/deep-partial, types/config.types,
  *   zod. No IO.
  */
 
 import { z } from 'zod';
 import { ForgeConfig } from '#/schemas/forge-config.js';
-import { ProjectConfig } from '#/schemas/project.js';
+import {
+  legacyProjectDocProblem,
+  migrateLegacyProjectDoc,
+} from '#/domain/legacy-project-doc.js';
+import { ProjectConfigShape } from '#/schemas/project.js';
 import { deepPartial } from '#/shared/deep-partial.js';
 import type { DeepPartial } from '#/types/config.types.js';
 
-/** Settings that can differ per project: `ProjectConfig` without its identity (slug, prefix). */
-export const ProjectSettings = ProjectConfig.omit({ slug: true, prefix: true });
+/** Settings that can differ per project: `ProjectConfigShape` without its identity (slug, prefix). */
+export const ProjectSettings = ProjectConfigShape.omit({ slug: true, prefix: true });
 export type ProjectSettings = z.infer<typeof ProjectSettings>;
 
 /** Fully merged settings for one project: the company-wide dials plus the project's own. */
@@ -34,10 +38,19 @@ export const CompanyOverride = deepPartial(ForgeConfig) as unknown as z.ZodType<
 >;
 export type CompanyOverride = z.infer<typeof CompanyOverride>;
 
-/** Project override: any subset of `ProjectSettings`, strict. Identity is not overridable. */
-export const ProjectOverride = deepPartial(ProjectSettings) as unknown as z.ZodType<
-  DeepPartial<ProjectSettings>
->;
+/**
+ * Project override: any subset of `ProjectSettings`, strict. Identity is not overridable.
+ * A stored or submitted document in the old `profile` + `commands` form is converted to
+ * `checks` first (see `migrateLegacyProjectDoc`), so history is never rewritten.
+ */
+export const ProjectOverride = z.preprocess((value, ctx) => {
+  const problem = legacyProjectDocProblem(value);
+  if (problem !== null) {
+    ctx.issues.push({ code: 'custom', message: problem, input: value });
+  }
+
+  return migrateLegacyProjectDoc(value);
+}, deepPartial(ProjectSettings)) as unknown as z.ZodType<DeepPartial<ProjectSettings>>;
 export type ProjectOverride = z.infer<typeof ProjectOverride>;
 
 /** `c<company version>:p<project version>`, e.g. `c3:p1`; names the exact settings a run used. */

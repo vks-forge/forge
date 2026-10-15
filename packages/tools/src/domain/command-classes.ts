@@ -10,7 +10,7 @@
  *   did not was a floor bypass). This module is that single list (tool-system.md §5.2).
  *
  * Exports: INTERPRETERS, SHELL_INTERPRETERS, EVAL_FLAGS, EVAL_BUILTINS, WRAPPERS,
- *   LAUNCHER_PREFIXES, DYNAMIC_POWERSHELL, ALWAYS_ASK_COMMANDS, isEvalFlag(), isWrapper(), isInterpreter().
+ *   LAUNCHER_PREFIXES, DYNAMIC_POWERSHELL, ALWAYS_ASK_COMMANDS, isEvalFlag(), isWrapper(), isInterpreter(), isBannedAllowResource().
  * Depends on: No IO.
  */
 
@@ -129,6 +129,32 @@ export const ALWAYS_ASK_COMMANDS: readonly string[] = [
   ...WRAPPERS.keys(),
   ...LAUNCHER_PREFIXES,
 ];
+
+/** Collapses an allow resource to its command words, e.g. `Bash -c *` to `bash -c`. */
+function coreOf(resource: string): string {
+  return resource
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[\s*]+$/, '')
+    .trim();
+}
+
+/**
+ * True when an `allow` shell rule with this resource would permanently permit an
+ * interpreter, wrapper or launcher, a bare `git`, or any command via a leading wildcard.
+ * Narrow forms like `git status*` are fine.
+ */
+export function isBannedAllowResource(resource: string): boolean {
+  const c = coreOf(resource);
+  const first = c.split(' ')[0] ?? '';
+
+  return (
+    c === '' ||
+    /[*?]/.test(first) ||
+    c === 'git' ||
+    ALWAYS_ASK_COMMANDS.some((p) => c === p || c.startsWith(`${p} `))
+  );
+}
 
 /** True for an eval flag, including bundled short flags such as `-lc` and `-ec`. */
 export function isEvalFlag(arg: string): boolean {

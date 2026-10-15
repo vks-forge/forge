@@ -72,8 +72,10 @@ export function fixtureProjectBody(
     base_branch: 'main',
     git_host: { kind: 'local', remote_path: fixture.remote, base_branch: 'main' },
     settings: {
-      profile: 'generic',
-      commands: { test: 'npm test', lint: 'node scripts/lint.mjs' },
+      checks: [
+        { name: 'lint', role: 'lint', command: 'node scripts/lint.mjs' },
+        { name: 'test', role: 'test', command: 'npm test' },
+      ],
       default_harness: 'claude-code',
     },
     author: 'tester',

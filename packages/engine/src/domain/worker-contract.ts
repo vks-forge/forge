@@ -13,9 +13,10 @@
  *   attempt was rejected by the gates, not by a person, and what the gates found.
  *
  * Exports: workerContract(), renderWorkerContract().
- * Depends on: types/worker-contract. No IO.
+ * Depends on: @forge/core (ProjectCheck), types/worker-contract. No IO.
  */
 
+import type { ProjectCheck } from '@forge/core';
 import type { WorkerContract } from '#/types/worker-contract.types.js';
 
 const FINISH_RULES = [
@@ -26,24 +27,77 @@ const FINISH_RULES = [
   'Do not push or open pull requests; the Director publishes the branch after your run.',
 ] as const;
 
-function shellRules(testCommand: string | undefined): string[] {
+const ROLE_LABEL: Record<ProjectCheck['role'], string> = {
+  test: 'Tests',
+  lint: 'Lint',
+  typecheck: 'Typecheck',
+  build: 'Build',
+  format: 'Format',
+  custom: 'Check',
+};
+
+function quoted(check: ProjectCheck): string {
+  return check.cwd === undefined
+    ? `\`${check.command}\``
+    : `\`${check.command}\` (the gates run it in \`${check.cwd}\`)`;
+}
+
+/** The test line: one exact command, or the exact commands any of which counts as running the tests. */
+function testRule(tests: readonly ProjectCheck[]): string {
+  const [only] = tests;
+  if (only === undefined) {
+    return 'The project defines no test command: do not claim `ran_tests`.';
+  }
+
+  if (tests.length === 1) {
+    return `Run the project tests with exactly \`${only.command}\` as a single command (not through another wrapper); that is the command the gates match your \`ran_tests\` claim against.`;
+  }
+
+  const commands = tests.map((t) => `\`${t.command}\``).join(', ');
+
+  return `Run the project tests with one of these exact commands, each as a single command (not through another wrapper): ${commands}; the gates match your \`ran_tests\` claim against them.`;
+}
+
+/** The other checks by role; the gates re-run every one of them after the run. */
+function otherChecksRule(others: readonly ProjectCheck[]): string[] {
+  if (others.length === 0) {
+    return [];
+  }
+
+  const list = others
+    .map((c) => {
+      const label =
+        c.role === 'custom' ? `${ROLE_LABEL[c.role]} (${c.name})` : ROLE_LABEL[c.role];
+
+      return `${label}: ${quoted(c)}`;
+    })
+    .join('; ');
+
   return [
-    'Your working directory is already the ticket worktree. Never `cd` into it or anywhere else; run commands directly and use relative paths.',
-    'Run one shell command per call. Compound commands (`;`, `&&`, `||`, pipes) need an approval nobody can give in an unattended run and are denied. Prefer the Read, Glob, Grep and Edit tools over `cat`, `ls` and `sed`.',
-    testCommand === undefined
-      ? 'The project defines no test command: do not claim `ran_tests`.'
-      : `Run the project tests with exactly \`${testCommand}\` as a single command (not through another wrapper); that is the command the gates match your \`ran_tests\` claim against.`,
+    `The gates re-run these project checks after your run, so make them pass first. ${list}.`,
   ];
 }
 
-/** The contract for one run: the finish and shell rules, plus a rework note when the run follows a failed gate. */
+function shellRules(checks: readonly ProjectCheck[]): string[] {
+  return [
+    'Your working directory is already the ticket worktree. Never `cd` into it or anywhere else; run commands directly and use relative paths.',
+    'Run one shell command per call. Compound commands (`;`, `&&`, `||`, pipes) need an approval nobody can give in an unattended run and are denied. Prefer the Read, Glob, Grep and Edit tools over `cat`, `ls` and `sed`.',
+    testRule(checks.filter((c) => c.role === 'test')),
+    ...otherChecksRule(checks.filter((c) => c.role !== 'test')),
+  ];
+}
+
+/**
+ * The contract for one run: the finish and shell rules (the project's checks listed by
+ * role), plus a rework note when the run follows a failed gate.
+ */
 export function workerContract(opts: {
   readonly rework: boolean;
-  readonly testCommand?: string | undefined;
+  readonly checks?: readonly ProjectCheck[] | undefined;
 }): WorkerContract {
   const base = {
     finish_rules: FINISH_RULES,
-    shell_rules: shellRules(opts.testCommand),
+    shell_rules: shellRules(opts.checks ?? []),
   };
 
   return opts.rework

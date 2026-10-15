@@ -1,63 +1,34 @@
 /**
  * Gate-configuration guard — the Worker may not edit the rules it is judged by.
  *
- * Why: the project's lint, typecheck and test commands are the independent half of
+ * Why: the project's checks (test, lint, typecheck, ...) are the independent half of
  *   verification. If the Worker can loosen `eslint.config.js`, exclude files in
  *   `vitest.config.ts`, relax `tsconfig.json`, rewrite the `package.json` script a gate
  *   runs, hide hunks with `.gitattributes` or plant a `pnpm.cmd` the shell would run
  *   instead of the real tool, those checks pass without proving anything. Any such change
  *   is a finding; a human changes gate configuration, not the Worker.
  *
- * Rules: a changed path whose file name matches the test/lint/format/type configs
- *   (`vitest.config.*`, `vite.config.*`, `jest.config.*`, `eslint.config.*`, `.eslintrc*`,
- *   `tsconfig*.json`, `.prettierrc*`), their setup and ignore files, package-manager
- *   settings (`.npmrc`, `.yarnrc*`, `pnpm-workspace.yaml`, `.pnpmfile.cjs`), `.gitattributes`,
- *   Babel config, and build/test files of other stacks (`Makefile`, `justfile`,
- *   `pyproject.toml`, `setup.cfg`, `tox.ini`, `pytest.ini`, `conftest.py`); any added or
+ * Rules: a changed path whose file name matches the gate configuration of an active ecosystem
+ *   (node: `vitest.config.*`, `eslint.config.*`, `tsconfig*.json`, `.npmrc`, ...; python: `pyproject.toml`,
+ *   `pytest.ini`, `conftest.py`, ...; go: `.golangci.yml`; rust: `rustfmt.toml`, `clippy.toml`; jvm, dotnet,
+ *   ruby, php and cmake tool files; see domain/ecosystems), a project `gate_rules.config_globs` entry, or
+ *   a file that steers every stack (`.gitattributes`, `Makefile`, `justfile`); any added or
  *   modified `*.cmd|*.bat|*.exe|*.ps1|*.com` anywhere; or a changed `package.json` line
- *   defining a script named by a project command or its `pre`/`post` hook. The script name
+ *   defining a script named by a check command or its `pre`/`post` hook. The script name
  *   is parsed from the invocation (`pnpm -r test`, `pnpm --filter x run lint`), skipping
  *   flags and the values of value-taking flags. Scripts are matched by key on changed
  *   lines, not by parsing the full file, so a same-named key elsewhere also trips it.
  *
  * Exports: checkGateConfig().
- * Depends on: @forge/core (ProjectConfig, WorktreeDiff), shared/paths. No IO.
+ * Depends on: @forge/core (globMatch, ProjectConfig, WorktreeDiff), domain/gate-rules, shared/paths. No IO.
  */
 
+import { globMatch } from '@forge/core';
 import type { GateFinding, ProjectConfig, WorktreeDiff } from '@forge/core';
+import { resolveRules } from '#/domain/gate-rules.js';
 import { foldPath } from '#/shared/paths.js';
 import type { CheckOutcome, PatchFile } from '#/types/check.types.js';
-
-const CONFIG_NAME = new RegExp(
-  `^(${[
-    'vitest\\.config\\..+',
-    'vite\\.config\\..+',
-    'vitest\\.workspace\\..+',
-    'vitest\\.setup\\..+',
-    'jest\\.config\\..+',
-    'jest\\.setup\\..+',
-    'eslint\\.config\\..+',
-    '\\.eslintrc.*',
-    '\\.eslintignore',
-    'tsconfig.*\\.json',
-    '\\.prettierrc.*',
-    '\\.prettierignore',
-    'babel\\.config\\..+',
-    '\\.babelrc.*',
-    '\\.npmrc',
-    '\\.yarnrc.*',
-    'pnpm-workspace\\.yaml',
-    '\\.pnpmfile\\.cjs',
-    '\\.gitattributes',
-    'makefile',
-    'justfile',
-    'pyproject\\.toml',
-    'setup\\.cfg',
-    'tox\\.ini',
-    'pytest\\.ini',
-    'conftest\\.py',
-  ].join('|')})$`,
-);
+import type { ResolvedRules } from '#/types/ecosystem.types.js';
 
 /** Files a shell may execute by name; one planted in the tree could stand in for a tool. */
 const EXECUTABLE = /\.(cmd|bat|exe|ps1|com)$/;
@@ -95,10 +66,10 @@ function scriptOf(tokens: readonly string[], wTakesValue: boolean): string | nul
 }
 
 /** Script names a command string runs through a package manager, with pre/post hooks. */
-function referencedScripts(commands: ProjectConfig['commands']): Set<string> {
+function referencedScripts(checks: ProjectConfig['checks']): Set<string> {
   const names = new Set<string>();
-  for (const command of Object.values(commands)) {
-    for (const segment of (command ?? '').split(SEGMENT_SPLIT)) {
+  for (const { command } of checks) {
+    for (const segment of command.split(SEGMENT_SPLIT)) {
       const tokens = segment.trim().split(/\s+/);
       if (!PACKAGE_MANAGERS.has((tokens[0] ?? '').toLowerCase())) {
         continue;
@@ -143,12 +114,16 @@ function changedScripts(
 export function checkGateConfig(
   diff: WorktreeDiff,
   patch: readonly PatchFile[],
-  commands: ProjectConfig['commands'],
+  checks: ProjectConfig['checks'],
+  rules: ResolvedRules = resolveRules(
+    { ecosystems: [], checks, gate_rules: undefined },
+    diff.files.map((f) => f.path),
+  ),
 ): CheckOutcome {
   const findings: GateFinding[] = [];
   for (const f of diff.files) {
     const name = baseName(f.path);
-    if (CONFIG_NAME.test(name)) {
+    if (rules.configGlobs.some((g) => globMatch(g, foldPath(f.path), true))) {
       findings.push({
         check: 'gate-config',
         message: `${f.path}: gate configuration changed by the Worker (status ${f.status})`,
@@ -163,7 +138,7 @@ export function checkGateConfig(
     }
   }
 
-  for (const name of changedScripts(patch, referencedScripts(commands))) {
+  for (const name of changedScripts(patch, referencedScripts(checks))) {
     findings.push({
       check: 'gate-config',
       message: `package.json: script "${name}" used by a project check was changed`,

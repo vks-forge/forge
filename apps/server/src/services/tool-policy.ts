@@ -13,7 +13,8 @@
  *   build (d-0088); a new or changed one is `schema_pending` until the owner approves it, and
  *   an unknown build has no approved rows at all, so every native tool is denied (fail
  *   closed). The project's `tool_grants` come from its effective settings; a malformed grant
- *   fails the call closed. Each run's grant carries the data home, so the floors deny a
+ *   fails the call closed. Its checks and ecosystems shape the lane's shell allow-list, so a
+ *   Worker can run its own project's tests and lint unattended in any language. Each run's grant carries the data home, so the floors deny a
  *   Worker everything in Forge's folder except its own worktree (d-0098).
  *
  * Exports: createToolPolicy().
@@ -64,7 +65,8 @@ export function createToolPolicy(deps: ToolPolicyDeps): ToolPolicy {
     admitContext: async (run) => {
       const eff = await effective();
       const view = run.project ? await deps.config.project(run.project) : null;
-      const toolGrants = view?.config.project.tool_grants;
+      const project = view?.config.project;
+      const toolGrants = project?.tool_grants;
 
       return {
         lane: run.lane,
@@ -76,6 +78,13 @@ export function createToolPolicy(deps: ToolPolicyDeps): ToolPolicy {
           undefined,
           [],
           { dataHome: deps.dataHome },
+          // The Worker may run the project's own checks without asking, in any language.
+          project
+            ? {
+                commands: project.checks.map((c) => c.command),
+                ecosystems: project.ecosystems,
+              }
+            : undefined,
         ),
         liveSchemaHashes: { ...eff.liveSchemaHashes, ...(await forgeHashes) },
         schemaStatus: eff.schemaStatus,

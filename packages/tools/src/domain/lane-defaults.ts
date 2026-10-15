@@ -10,14 +10,16 @@
  *   asks to a human. These are the ceilings; project and ticket grants can only narrow
  *   them (tool-system.md §12).
  *
- * Exports: LANE_DEFAULTS, LANE_UNATTENDED.
- * Depends on: @forge/core (Lane), schemas/grant, types/grants, domain/floors. No IO.
+ * Exports: LANE_DEFAULTS, LANE_UNATTENDED, laneRulesFor().
+ * Depends on: @forge/core (Lane), schemas/grant, types/grants, domain/floors, domain/shell-allowlist. No IO.
  */
 
 import type { Lane } from '@forge/core';
 import type { CallRule, Effect } from '#/schemas/grant.js';
 import { PROTECTED_PATHS } from '#/domain/floors.js';
+import { shellSafeRules } from '#/domain/shell-allowlist.js';
 import type { LaneDefaults } from '#/types/grants.types.js';
+import type { ShellAllowInput } from '#/types/shell-allowlist.types.js';
 
 const READ_TOOLS = [
   'read',
@@ -37,49 +39,6 @@ const CORE_TOOLS = [
 
 const EXPRESS_TOOLS = [...READ_TOOLS, ...CORE_TOOLS, 'edit', 'write', 'shell'];
 const WEB_TOOLS = ['mcp__forge__web_search', 'mcp__forge__web_fetch'];
-
-/** Test, lint, typecheck and non-pushing git: allowed in every lane. */
-const SHELL_SAFE = [
-  'pnpm test*',
-  'pnpm lint*',
-  'pnpm typecheck*',
-  'pnpm format:check*',
-  'pnpm run test*',
-  'pnpm run lint*',
-  'pnpm run typecheck*',
-  'npm test*',
-  'npm run test*',
-  'npm run lint*',
-  'npm run typecheck*',
-  'yarn test*',
-  'yarn lint*',
-  'tsc*',
-  'eslint*',
-  'vitest*',
-  'prettier --check*',
-  'pytest*',
-  'ruff check*',
-  'cargo test*',
-  'cargo clippy*',
-  'cargo check*',
-  'go test*',
-  'go vet*',
-  'git status*',
-  'git diff*',
-  'git log*',
-  'git show*',
-  'git add*',
-  'git commit*',
-  'git branch*',
-  'git switch*',
-  'git restore*',
-  'git stash*',
-  'ls',
-  'ls *',
-  'pwd',
-  'Get-Location',
-  'Get-ChildItem*',
-];
 
 const INSTALL = [
   'pnpm add*',
@@ -109,11 +68,15 @@ const rule = (action: string, resource: string, effect: Effect): CallRule => ({
   effect,
 });
 
-function laneRules(lane: Lane): CallRule[] {
+/**
+ * The call rules of a lane. `shell` names the project (check commands, ecosystems) the shell
+ * allow-list is built from; without it every ecosystem applies.
+ */
+export function laneRulesFor(lane: Lane, shell?: ShellAllowInput): CallRule[] {
   const sensitive: Effect = lane === 'express' ? 'deny' : 'ask';
   const install: Effect = lane === 'express' ? 'deny' : 'ask';
   const rules: CallRule[] = [
-    ...SHELL_SAFE.map((r) => rule('shell', r, 'allow')),
+    ...shellSafeRules(shell).map((r) => rule('shell', r, 'allow')),
     ...INSTALL.map((r) => rule('shell', r, install)),
     ...['read', 'grep', 'glob', 'edit', 'write'].map((a) => rule(a, '**', 'allow')),
     ...[...CORE_TOOLS, ...READ_TOOLS.filter((t) => t.startsWith('mcp__'))].map((t) =>
@@ -155,21 +118,21 @@ export const LANE_DEFAULTS: Readonly<Record<Lane, LaneDefaults>> = {
     allow: EXPRESS_TOOLS,
     projectGated: [],
     projectMcps: false,
-    rules: laneRules('express'),
+    rules: laneRulesFor('express'),
   },
   standard: {
     ...base,
     allow: [...EXPRESS_TOOLS, ...WEB_TOOLS],
     projectGated: ['mcp__forge__db_query_readonly'],
     projectMcps: true,
-    rules: laneRules('standard'),
+    rules: laneRulesFor('standard'),
   },
   full: {
     ...base,
     allow: [...EXPRESS_TOOLS, ...WEB_TOOLS],
     projectGated: ['mcp__forge__db_query_readonly'],
     projectMcps: true,
-    rules: laneRules('full'),
+    rules: laneRulesFor('full'),
   },
 };
 

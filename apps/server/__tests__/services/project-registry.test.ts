@@ -207,7 +207,11 @@ describe('rebuild when the git host settings change', () => {
     await registry.load();
     const before = registry.runtime('alpha', await config.project('alpha'));
 
-    const view = await edit('alpha', { ...local('main'), commands: { test: 'make' } }, 1);
+    const view = await edit(
+      'alpha',
+      { ...local('main'), checks: [{ name: 'test', role: 'test', command: 'make' }] },
+      1,
+    );
 
     expect(registry.runtime('alpha', view)).toBe(before);
     expect(logs.some((l) => l.message.includes('rebuilt'))).toBe(false);

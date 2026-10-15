@@ -131,7 +131,7 @@ async function tryStart(ctx: EngineCtx, c: Candidate): Promise<boolean> {
   const slice = await deps.memory.slice(project.slug);
   const contract = workerContract({
     rework: c.kind === 'retry' && c.wake?.kind === 'continuation',
-    testCommand: runtime.config.commands.test,
+    checks: runtime.config.checks,
   });
 
   const drafted = await runStep(

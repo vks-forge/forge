@@ -186,7 +186,10 @@ describe('project settings', () => {
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       version: { company: 0, project: 0 },
-      config: { project: { profile: 'generic' }, forge: { engine: { global_slots: 3 } } },
+      config: {
+        project: { checks: [], ecosystems: [] },
+        forge: { engine: { global_slots: 3 } },
+      },
     });
   });
 
@@ -203,8 +206,40 @@ describe('project settings', () => {
     const got = await rig.json('GET', '/settings/projects/demo');
     expect(got.body).toMatchObject({
       version: { project: 1 },
-      config: { project: { profile: 'ts', commands: { test: 'pnpm test' } } },
+      config: {
+        project: {
+          checks: [{ name: 'test', role: 'test', command: 'pnpm test' }],
+          ecosystems: ['node'],
+        },
+      },
     });
+  });
+
+  it('saves checks and ecosystems in the new shape, with a cwd and several roles', async () => {
+    const doc = {
+      checks: [
+        { name: 'vet', role: 'lint', command: 'go vet ./...' },
+        { name: 'unit', role: 'test', command: 'go test ./...', cwd: 'svc' },
+      ],
+      ecosystems: ['go'],
+    };
+
+    const put = await rig.json('PUT', '/settings/projects/demo', {
+      doc,
+      expectedVersion: 0,
+      ...WHO,
+    });
+
+    const got = await rig.json('GET', '/settings/projects/demo');
+    const bad = await rig.json('PUT', '/settings/projects/demo', {
+      doc: { checks: [{ name: 'x', role: 'test', command: '' }] },
+      expectedVersion: 1,
+      ...WHO,
+    });
+
+    expect(put.status).toBe(200);
+    expect(got.body).toMatchObject({ config: { project: doc } });
+    expect(bad.status).toBe(400);
   });
 
   it('refuses a project trying to set its own slug and a stale version', async () => {

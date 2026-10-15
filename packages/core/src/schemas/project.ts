@@ -2,32 +2,94 @@
  * Project config schema — the validated form of `.forge/project.yaml`.
  *
  * Why: the factory must work on repos in any language without code changes, so what
- *   varies per repo (which commands run tests and lint, whether TypeScript-specific
- *   gates apply, which harness Workers use, where the remote is, which paths need a human) lives in
- *   `.forge/project.yaml`. Validating it at load, not when a gate first runs it, turns a
+ *   varies per repo (the checks to run and their roles, which ecosystems' gate rules
+ *   apply, which harness Workers use, where the remote is, which paths need a human) lives
+ *   in project settings. Validating it at load, not when a gate first runs it, turns a
  *   typo into an immediate readable startup error instead of a Worker or gate failing
  *   mid-ticket. `default_harness` is an opaque id because core must not know which
- *   harnesses exist; drivers are chosen by config (d-0034, d-0027).
+ *   harnesses exist; drivers are chosen by config (d-0095, d-0027).
  *
- * Exports: Profile, ProjectCommands, GitHostConfig, ToolGrantConfig, ProjectConfig, ProjectStatus, Project.
- * Depends on: schemas/ids, schemas/secret-name, zod. No IO.
+ * Exports: CheckRole, ProjectCheck, GateRules, GitHostConfig, ToolGrantConfig, ProjectConfigShape, ProjectConfig,
+ *   ProjectStatus, Project.
+ * Depends on: domain/legacy-project-doc, schemas/ids, schemas/secret-name, zod. No IO.
  */
 
 import { z } from 'zod';
+import {
+  legacyProjectDocProblem,
+  migrateLegacyProjectDoc,
+} from '#/domain/legacy-project-doc.js';
 import { ProjectPrefix } from '#/schemas/ids.js';
 import { SecretName } from '#/schemas/secret-name.js';
 
-/** `ts` enables TS-bound gate checks; `generic` skips them with a reason (d-0034). */
-export const Profile = z.enum(['ts', 'generic']);
-export type Profile = z.infer<typeof Profile>;
+/** What a check is for; gates and the Worker contract read the role, never the name. */
+export const CheckRole = z.enum([
+  'test',
+  'lint',
+  'typecheck',
+  'build',
+  'format',
+  'custom',
+]);
+export type CheckRole = z.infer<typeof CheckRole>;
 
-/** Shell commands the gates run for a target repo; each optional. */
-export const ProjectCommands = z.object({
-  test: z.string().min(1).optional(),
-  lint: z.string().min(1).optional(),
-  typecheck: z.string().min(1).optional(),
-  build: z.string().min(1).optional(),
+/** A working directory inside the worktree: relative, no `..` segment. */
+const RelativeDir = z
+  .string()
+  .min(1)
+  .refine(
+    (p) => !/^([a-z]:)?[\\/]/i.test(p) && !p.split(/[\\/]/).includes('..'),
+    'must be a relative path inside the repository',
+  );
+
+/**
+ * One named command the gates run in the project's worktree (d-0095). `command` is a shell
+ * line run as written; `cwd` is relative to the repository root.
+ */
+export const ProjectCheck = z.object({
+  name: z.string().min(1),
+  role: CheckRole,
+  command: z.string().trim().min(1),
+  cwd: RelativeDir.optional(),
 });
+export type ProjectCheck = z.infer<typeof ProjectCheck>;
+
+const Checks = z
+  .array(ProjectCheck)
+  .refine(
+    (list) => new Set(list.map((c) => c.name)).size === list.length,
+    'check names must be unique',
+  );
+
+const Glob = z.string().min(1);
+
+const RegexSource = z
+  .string()
+  .min(1)
+  .refine((p) => {
+    try {
+      new RegExp(p);
+
+      return true;
+    } catch {
+      return false;
+    }
+  }, 'must be a valid regular expression');
+
+/**
+ * Project edits to the per-ecosystem gate rules (config-guard files, test-file patterns,
+ * test-weakening markers). Lists add to the ecosystem data; `replace` makes them the only
+ * rules. `skip_patterns` are regular expressions matched against added test lines.
+ */
+export const GateRules = z
+  .object({
+    config_globs: z.array(Glob).default([]),
+    test_globs: z.array(Glob).default([]),
+    skip_patterns: z.array(RegexSource).default([]),
+    replace: z.boolean().default(false),
+  })
+  .strict();
+export type GateRules = z.infer<typeof GateRules>;
 
 /**
  * Where branches are pushed and PRs live (d-0062). `local` is a bare repo on disk; `github`
@@ -80,12 +142,15 @@ export const ToolGrantConfig = z.object({
 });
 export type ToolGrantConfig = z.infer<typeof ToolGrantConfig>;
 
-/** `project.yaml` (d-0034). `default_harness` is an opaque id: core never names harnesses. */
-export const ProjectConfig = z.object({
+/** The settings shape (d-0095). `default_harness` is an opaque id: core never names harnesses. */
+export const ProjectConfigShape = z.object({
   slug: z.string().regex(/^[a-z][a-z0-9-]*$/),
   prefix: ProjectPrefix,
-  profile: Profile,
-  commands: ProjectCommands.default({}),
+  /** Run in list order by G1; any role may be absent. */
+  checks: Checks.default([]),
+  /** `node`, `python`, `go`, ...; empty means the gates detect them from the diff. */
+  ecosystems: z.array(z.string().min(1)).default([]),
+  gate_rules: GateRules.optional(),
   default_harness: z.string().min(1),
   remote: z.string().min(1).optional(),
   git_host: GitHostConfig.optional(),
@@ -101,7 +166,20 @@ export const ProjectConfig = z.object({
   /** Project-wide tool grant (B7); absent means the lane defaults alone. */
   tool_grants: ToolGrantConfig.optional(),
 });
-export type ProjectConfig = z.infer<typeof ProjectConfig>;
+
+/**
+ * Settings as read from storage or a file. Documents written before checks existed
+ * (`profile` + `commands`) are converted first; see `migrateLegacyProjectDoc`.
+ */
+export const ProjectConfig = z.preprocess((value, ctx) => {
+  const problem = legacyProjectDocProblem(value);
+  if (problem !== null) {
+    ctx.issues.push({ code: 'custom', message: problem, input: value });
+  }
+
+  return migrateLegacyProjectDoc(value);
+}, ProjectConfigShape);
+export type ProjectConfig = z.infer<typeof ProjectConfigShape>;
 
 /** `onboarding`: registered, not yet checked; `ready`: tickets run; `archived`: kept for history, no new work. */
 export const ProjectStatus = z.enum(['onboarding', 'ready', 'archived']);

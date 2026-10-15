@@ -78,7 +78,10 @@ describe('POST /projects', () => {
       version: { project: 1 },
       config: {
         project: {
-          commands: { test: 'npm test' },
+          checks: [
+            { name: 'lint', role: 'lint', command: 'node scripts/lint.mjs' },
+            { name: 'test', role: 'test', command: 'npm test' },
+          ],
           git_host: { kind: 'local', base_branch: 'main' },
         },
       },

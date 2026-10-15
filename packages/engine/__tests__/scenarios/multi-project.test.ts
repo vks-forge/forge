@@ -104,7 +104,7 @@ describe('several projects in one engine', () => {
     await rig.config.append({
       scope: 'project',
       project: 'forge',
-      doc: { commands: { test: 'make check' } },
+      doc: { checks: [{ name: 'test', role: 'test', command: 'make check' }] },
       author: 'test',
       reason: 'edit',
       expectedVersion: 0,

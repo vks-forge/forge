@@ -13,6 +13,7 @@
 
 import type { GateFinding, GateStatus, ProjectConfig, WorktreeDiff } from '@forge/core';
 import type { DecisionReceipt, Receipt } from '@forge/tools';
+import type { ResolvedRules } from '#/types/ecosystem.types.js';
 import type { RunCommand } from '#/types/g1-deps.types.js';
 
 /** What one check concluded; `error` means the check could not run, never "passed". */
@@ -58,7 +59,10 @@ export interface ClaimEvidence {
   readonly earlierReceipts?: readonly Receipt[];
   readonly diff: WorktreeDiff;
   readonly patch: readonly PatchFile[];
-  readonly testCommand: string | undefined;
+  /** Commands of every test-role check; a shell receipt matching any of them backs `ran_tests`. */
+  readonly testCommands: readonly string[];
+  /** Resolved ecosystem rules (what a test file and a test declaration look like); all ecosystems when absent. */
+  readonly rules?: ResolvedRules;
   readonly worktreePath: string;
 }
 

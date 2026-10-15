@@ -17,29 +17,21 @@
  */
 
 import type { Lane } from '@forge/core';
-import { ALWAYS_ASK_COMMANDS } from '#/domain/command-classes.js';
+import { isBannedAllowResource } from '#/domain/command-classes.js';
 import { FLOOR_RULES } from '#/domain/floors.js';
-import { LANE_DEFAULTS } from '#/domain/lane-defaults.js';
+import { LANE_DEFAULTS, laneRulesFor } from '#/domain/lane-defaults.js';
 import { isProjectMcp } from '#/domain/tool-id.js';
 import { Grant } from '#/schemas/grant.js';
 import type { CallRule } from '#/schemas/grant.js';
 import { BannedAlwaysAllowError, InvalidGrantError } from '#/shared/errors.js';
 import { toolMatch } from '#/shared/pattern.js';
+import type { ShellAllowInput } from '#/types/shell-allowlist.types.js';
 import type {
   EffectiveGrant,
   FloorInputs,
   GrantVerdict,
   RuleLayer,
 } from '#/types/grants.types.js';
-
-/** Collapses an allow resource to its command words, e.g. `Bash -c *` to `bash -c`. */
-function core(resource: string): string {
-  return resource
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/[\s*]+$/, '')
-    .trim();
-}
 
 /**
  * Throws when an `allow` shell rule would permanently permit an interpreter, a wrapper, a
@@ -50,15 +42,7 @@ export function assertNotBannedAlwaysAllow(rule: CallRule): void {
     return;
   }
 
-  const c = core(rule.resource);
-  const first = c.split(' ')[0] ?? '';
-  const banned =
-    c === '' ||
-    /[*?]/.test(first) ||
-    c === 'git' ||
-    ALWAYS_ASK_COMMANDS.some((p) => c === p || c.startsWith(`${p} `));
-
-  if (banned) {
+  if (isBannedAllowResource(rule.resource)) {
     throw new BannedAlwaysAllowError(`${rule.action} ${rule.resource}`);
   }
 }
@@ -93,7 +77,8 @@ export function parseGrant(input: unknown): Grant {
  * intersect, `deny` lists union, rule layers are kept separate and combined by severity
  * at evaluation. `managed` adds operator deny-only rules after the built-in floors.
  * `floors.dataHome` names the folder the data-home floor protects; omitted, every path is
- * denied (fail closed).
+ * denied (fail closed). `shell` (the project's check commands and ecosystems) builds the lane's
+ * shell allow-list; omitted, every ecosystem's verify commands apply.
  */
 export function effectiveGrant(
   lane: Lane,
@@ -101,10 +86,13 @@ export function effectiveGrant(
   ticketGrant?: Grant,
   managed: readonly CallRule[] = [],
   floors?: FloorInputs,
+  shell?: ShellAllowInput,
 ): EffectiveGrant {
   const defaults = LANE_DEFAULTS[lane];
   const layers = [projectGrant, ticketGrant];
-  assertValidRules(defaults.rules);
+  // The shell allow-list follows the project's checks and ecosystems when they are given.
+  const laneRules = shell ? laneRulesFor(lane, shell) : defaults.rules;
+  assertValidRules(laneRules);
   assertValidRules(managed, true);
   for (const g of layers) {
     if (g) {
@@ -115,7 +103,7 @@ export function effectiveGrant(
   const projectAllow = projectGrant?.allow ?? [];
   const named = defaults.projectGated.filter((t) => projectAllow.includes(t));
   const ruleLayers: RuleLayer[] = [
-    { name: `lane:${lane}`, rules: defaults.rules },
+    { name: `lane:${lane}`, rules: laneRules },
     { name: 'project', rules: projectGrant?.rules ?? [] },
     { name: 'ticket', rules: ticketGrant?.rules ?? [] },
   ];

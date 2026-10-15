@@ -5,7 +5,7 @@
  *   with the tools package's own `makeDecisionReceipt`/`makeEffectReceipt` instead of
  *   hand-writing rows that would pass a looser check than production.
  *
- * Exports: SECRET, RUN_ID, ChainBuilder, chain(), diffOf(), context(), receiptLog().
+ * Exports: SECRET, RUN_ID, ChainBuilder, chain(), diffOf(), context(), checksOf(), receiptLog().
  * Depends on: @forge/core, @forge/tools.
  */
 
@@ -98,11 +98,24 @@ export function patchFor(
   ].join('\n');
 }
 
+/** Checks named after their role, in the order given: `checksOf({ lint: 'L', test: 'X' })`. */
+export function checksOf(
+  byRole: Partial<Record<ProjectConfig['checks'][number]['role'], string>>,
+): ProjectConfig['checks'] {
+  return Object.entries(byRole).map(([role, command]) => ({
+    name: role,
+    role: role as ProjectConfig['checks'][number]['role'],
+    command,
+  }));
+}
+
 export function context(
   overrides: {
     claims?: readonly Claim[];
-    commands?: ProjectConfig['commands'];
-    profile?: 'ts' | 'generic';
+    /** Run in list order. */
+    checks?: ProjectConfig['checks'];
+    ecosystems?: readonly string[];
+    gateRules?: ProjectConfig['gate_rules'];
     worktreePath?: string;
   } = {},
 ): GateContext {
@@ -136,8 +149,9 @@ export function context(
     project: ProjectConfig.parse({
       slug: 'forge',
       prefix: 'FGE',
-      profile: overrides.profile ?? 'ts',
-      commands: overrides.commands ?? {},
+      checks: overrides.checks ?? [],
+      ecosystems: overrides.ecosystems ?? [],
+      gate_rules: overrides.gateRules,
       default_harness: 'claude',
     }),
     worktreePath: overrides.worktreePath ?? '/wt',

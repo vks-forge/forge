@@ -13,9 +13,9 @@
 import { describe, expect, it } from 'vitest';
 import { checkGateConfig } from '#/domain/config-guard.js';
 import { parsePatch } from '#/domain/patch.js';
-import { diffOf, patchFor } from '#tests/helpers/fixtures.js';
+import { checksOf, diffOf, patchFor } from '#tests/helpers/fixtures.js';
 
-const COMMANDS = { test: 'pnpm test', lint: 'npm run lint:ci' };
+const COMMANDS = checksOf({ test: 'pnpm test', lint: 'npm run lint:ci' });
 
 function run(path: string, added: string[] = [], removed: string[] = []) {
   const patch = patchFor(path, added, removed);
@@ -114,7 +114,7 @@ describe('checkGateConfig', () => {
     const out = checkGateConfig(
       diffOf([{ status: 'M', path: 'package.json' }], ''),
       parsePatch(patchFor('package.json', [`    "${script}": "true"`])),
-      { test: command },
+      checksOf({ test: command }),
     );
 
     expect(out.status).toBe('failed');
@@ -124,7 +124,7 @@ describe('checkGateConfig', () => {
     const out = checkGateConfig(
       diffOf([{ status: 'M', path: 'package.json' }], ''),
       parsePatch(patchFor('package.json', ['    "filter": "x"', '    "-r": "x"'])),
-      { test: 'pnpm --filter x -r test' },
+      checksOf({ test: 'pnpm --filter x -r test' }),
     );
 
     expect(out.status).toBe('passed');

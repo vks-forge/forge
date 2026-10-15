@@ -16,21 +16,22 @@
  *   read P       allowed `read` decision on P with a `read_completed` effect.
  *   ran_tests    allowed `shell` decision with a completed effect (`mutation_committed`,
  *                or `uncertain` for a failed run, which still ran; the report says so)
- *                one of whose segments starts with `commands.test` (see shell-match).
- *   added_test N an added line of a test file declares a test (`it(`, `test(`, `describe(`)
- *                whose title contains N; comments and strings do not count.
+ *                one of whose segments starts with the command of ANY test-role check (see shell-match).
+ *   added_test N an added line of a test file declares a test (`it(`, `def test_`, `func Test`, `fn`, ...,
+ *                per active ecosystem) whose title or name contains N; comments and strings do not count.
  *
  * Coverage (no vacuous pass): a non-empty diff with no claims at all is a finding, and every
  * changed file other than lockfiles and deletions must be named by an `edited` claim.
  *
  * Exports: checkClaims().
- * Depends on: @forge/core (Claim), @forge/tools (Receipt), domain/{test-files,shell-match}, shared/paths. No IO.
+ * Depends on: @forge/core (Claim), @forge/tools (Receipt), domain/{test-files,shell-match,gate-rules}, shared/paths. No IO.
  */
 
 import type { Claim, GateFinding } from '@forge/core';
 import type { Receipt } from '@forge/tools';
-import { runsTestCommand } from '#/domain/shell-match.js';
-import { declaresTest, isTestFile } from '#/domain/test-files.js';
+import { ALL_RULES } from '#/domain/gate-rules.js';
+import { runsAnyTestCommand } from '#/domain/shell-match.js';
+import { declaresTest, isTestPatch } from '#/domain/test-files.js';
 import { foldPath } from '#/shared/paths.js';
 import type {
   AllowedCall as Allowed,
@@ -87,13 +88,13 @@ function unsupported(claim: Claim, why: string): GateFinding {
 }
 
 /** Allowed, completed shell calls whose command runs the project's test command. */
-function testRuns(calls: readonly Allowed[], testCommand: string): Allowed[] {
+function testRuns(calls: readonly Allowed[], testCommands: readonly string[]): Allowed[] {
   return calls.filter(
     (c) =>
       c.decision.tool === 'shell' &&
       c.state !== undefined &&
       SHELL_DONE.has(c.state) &&
-      runsTestCommand(c.decision.resource, testCommand),
+      runsAnyTestCommand(c.decision.resource, testCommands),
   );
 }
 
@@ -136,19 +137,21 @@ function judge(
         ? null
         : 'no allowed read receipt with a completed effect for that path';
     case 'ran_tests': {
-      if (ev.testCommand === undefined) {
+      if (ev.testCommands.length === 0) {
         return 'the project defines no test command to match a shell receipt against';
       }
 
-      return testRuns(calls, ev.testCommand).length > 0
+      return testRuns(calls, ev.testCommands).length > 0
         ? null
-        : `no allowed shell receipt running "${ev.testCommand}"`;
+        : `no allowed shell receipt running ${ev.testCommands.map((c) => `"${c}"`).join(' or ')}`;
     }
 
     case 'added_test': {
+      const rules = ev.rules ?? ALL_RULES;
       const found = ev.patch.some(
         (f) =>
-          isTestFile(f.path) && f.added.some((line) => declaresTest(line, claim.name)),
+          isTestPatch(f, rules) &&
+          f.added.some((line) => declaresTest(line, claim.name, rules)),
       );
 
       return found
@@ -214,8 +217,8 @@ export function checkClaims(claims: readonly Claim[], ev: ClaimEvidence): CheckO
 
   const notes: string[] = [];
   const claimedTests = claims.some((c) => c.kind === 'ran_tests');
-  if (claimedTests && ev.testCommand !== undefined) {
-    const runs = testRuns(calls, ev.testCommand);
+  if (claimedTests && ev.testCommands.length > 0) {
+    const runs = testRuns(calls, ev.testCommands);
     if (runs.length > 0 && runs.every((c) => c.state === 'uncertain')) {
       notes.push(
         'ran_tests counted from a shell run that failed or did not complete; the tests did run.',

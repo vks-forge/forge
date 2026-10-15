@@ -31,15 +31,15 @@ export async function makeVerifyRig(
   const rig = await makeRig(opts);
   const host = createFakeGitHost();
   const gate = createScriptedGate('G1');
-  // The engine takes project settings from the config source, so the ts profile and test
-  // command and the Tier C paths live there, not only on the runtime.
+  // The engine takes project settings from the config source, so the ecosystems and test
+  // check and the Tier C paths live there, not only on the runtime.
   await rig.config.append({
     scope: 'project',
     project: 'forge',
     doc: {
-      profile: 'ts',
+      ecosystems: ['node'],
       default_harness: 'scripted',
-      commands: { test: 'pnpm test' },
+      checks: [{ name: 'test', role: 'test', command: 'pnpm test' }],
       tier_c_globs: ['**/auth/**'],
     },
     author: 'test',
@@ -52,9 +52,9 @@ export async function makeVerifyRig(
     config: ProjectConfig.parse({
       slug: 'forge',
       prefix: 'FG',
-      profile: 'ts',
+      ecosystems: ['node'],
       default_harness: 'scripted',
-      commands: { test: 'pnpm test' },
+      checks: [{ name: 'test', role: 'test', command: 'pnpm test' }],
     }),
     gitHost: host,
     gates: [gate],
