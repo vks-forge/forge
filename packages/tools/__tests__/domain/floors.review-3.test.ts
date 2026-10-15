@@ -108,21 +108,23 @@ describe('C4-2: dot-leading globs can match ..', () => {
     expect(express(cmd).effect).not.toBe('allow');
   });
 
-  it.each([
-    'cat .*/.*/.*/install-token',
-    'ls .?/.?',
-    'ls .[.]/.[.]',
-    'ls x/.*',
-  ])('%s is flagged as expansion', (cmd) => {
-    expect(flagged(cmd)).toBe(true);
-  });
-
-  it.each(['ls *.ts', 'ls src/*.ts', 'ls ./src/*', 'ls .gitignore', 'ls "x/.*"', "ls '.*'"])(
-    '%s is not flagged as dot-glob',
+  it.each(['cat .*/.*/.*/install-token', 'ls .?/.?', 'ls .[.]/.[.]', 'ls x/.*'])(
+    '%s is flagged as expansion',
     (cmd) => {
-      expect(flagged(cmd)).toBe(false);
+      expect(flagged(cmd)).toBe(true);
     },
   );
+
+  it.each([
+    'ls *.ts',
+    'ls src/*.ts',
+    'ls ./src/*',
+    'ls .gitignore',
+    'ls "x/.*"',
+    "ls '.*'",
+  ])('%s is not flagged as dot-glob', (cmd) => {
+    expect(flagged(cmd)).toBe(false);
+  });
 
   it.each([
     String.raw`Get-ChildItem ..\*`,
