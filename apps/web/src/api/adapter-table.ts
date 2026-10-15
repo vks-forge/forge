@@ -27,6 +27,8 @@ export const ADAPTER_TABLE: AdapterTable = {
   harnesses: 'http',
   github: 'http',
   settings: 'http',
+  projectSettings: 'http',
+  memory: 'http',
 };
 
 const RESOURCES = Object.keys(ADAPTER_TABLE) as ResourceName[];

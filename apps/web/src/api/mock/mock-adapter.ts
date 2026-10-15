@@ -13,6 +13,8 @@
 
 import { ApiError } from '#/api/api-error.js';
 import { projectFixtures } from '#/api/mock/fixtures.js';
+import { createMemoryMock } from '#/api/mock/memory-mock.js';
+import { createProjectSettingsMock } from '#/api/mock/project-settings-mock.js';
 import { createSettingsMock } from '#/api/mock/settings-mock.js';
 import type { ForgeApiAdapter, MockOptions } from '#/types/api.types.js';
 
@@ -45,8 +47,17 @@ export function createMockAdapter(options: MockOptions = {}): ForgeApiAdapter {
   const delay = (signal: AbortSignal | undefined): Promise<void> =>
     wait(min + random() * (max - min), signal);
 
+  const archived = new Set<string>();
+  const context = {
+    scenario,
+    delay: (signal?: AbortSignal) => delay(signal),
+    archived,
+  };
+
   return {
     ...createSettingsMock(delay, scenario),
+    memory: createMemoryMock(context),
+    projectSettings: createProjectSettingsMock(context),
     projects: {
       async list(request) {
         await delay(request?.signal);
@@ -54,7 +65,11 @@ export function createMockAdapter(options: MockOptions = {}): ForgeApiAdapter {
           throw new ApiError('network', 'Cannot reach the Forge server (simulated).');
         }
 
-        return scenario === 'empty' ? [] : projectFixtures;
+        return scenario === 'empty'
+          ? []
+          : projectFixtures.map((p) =>
+              archived.has(p.slug) ? { ...p, status: 'archived' as const } : p,
+            );
       },
     },
   };

@@ -12,14 +12,23 @@
  * Depends on: react-router, components/shell/app-shell, domain/nav-entries, routes/*.
  */
 
+import type { ReactNode } from 'react';
 import type { RouteObject } from 'react-router';
 import { AppShell } from '#/components/shell/app-shell.js';
 import { PROJECT_NAV } from '#/domain/nav-entries.js';
+import { MemoryPage } from '#/routes/memory/memory-page.js';
 import { NotFound } from '#/routes/not-found.js';
 import { PlaceholderPage } from '#/routes/placeholder-page.js';
+import { ProjectSettingsPage } from '#/routes/project-settings/project-settings-page.js';
 import { ProjectScope } from '#/routes/project-scope.js';
 import { RootRedirect } from '#/routes/root-redirect.js';
 import { settingsRoutes } from '#/routes/settings/settings-routes.js';
+
+/** Project screens that are built; any segment not listed here still shows its placeholder. */
+const PROJECT_SCREENS: Readonly<Record<string, ReactNode>> = {
+  memory: <MemoryPage />,
+  settings: <ProjectSettingsPage />,
+};
 
 export const appRoutes: RouteObject[] = [
   {
@@ -35,7 +44,9 @@ export const appRoutes: RouteObject[] = [
             ? { index: true, element: <PlaceholderPage entry={entry} inProject /> }
             : {
                 path: entry.segment,
-                element: <PlaceholderPage entry={entry} inProject />,
+                element: PROJECT_SCREENS[entry.segment] ?? (
+                  <PlaceholderPage entry={entry} inProject />
+                ),
               },
         ),
       },

@@ -10,18 +10,20 @@ There is no company-wide Home (d-0104). The user always works inside one project
 
 ## What it does
 
-Built (batches W1 and W2, `docs/design/web-build-plan.md`):
+Built (batches W1, W2 and W4, `docs/design/web-build-plan.md`):
 
 - **Shell**: left sidebar (project switcher, project nav, Forge settings, theme toggle), a drawer on screens under 768 px, skip link, animated page transitions.
 - **Project switcher**: dropdown of open projects from `GET /projects`, `Ctrl+K` / `Cmd+K` opens it, switching keeps the same screen under the new project. Loading, empty and error states.
 - **Unsaved-changes guard**: any view calls `useUnsavedChanges(isDirty)`; while true, switching project or navigating shows an in-page "Keep editing / Discard changes" alert.
 - **Theme**: "Instrument" tokens (graphite, one cobalt signal, amber only for what needs the user), light and dark, system by default with a toggle, fonts self-hosted.
 - **Motion**: critically damped spring presets, shared-layout sidebar indicator, route transitions, `MotionConfig reducedMotion="user"`. Only `transform` and `opacity` animate.
-- **Data layer** (`src/api/`): the `ForgeApi` port with an `http` and a `mock` adapter, one table choosing between them per resource, a validated SSE helper `watchRunEvents()` (not used by a screen yet).
+- **Data layer** (`src/api/`): the `ForgeApi` port (projects, projectSettings, memory) with an `http` and a `mock` adapter, one table choosing between them per resource, a validated SSE helper `watchRunEvents()` (not used by a screen yet).
 - **Forge settings (W2)**, all on the real endpoints:
   - _Harnesses_ (`/settings/harnesses`, `/settings/harnesses/:id`): list with version, installed build, sign-in and status; per harness a sign-in form (signed-in account, API key, OAuth token), a write-only credential field, a test (optional paid live call), the compatibility check with live progress and a per-check result, and built-in tool approvals where every approve or deny goes through a confirm that records name and reason.
   - _GitHub_: connections list and an add form (App id and private key; the key is never shown). No one-click App creation (later).
   - _Limits_ and _General_: company settings as versioned, attributed saves. Edits are validated against core's `ForgeConfig` in the unit shown, saved as the previous override plus the change (so untouched settings keep following defaults), and a 409 offers "Reload latest" or "Keep my edits on top". History lists every version with what it changed.
+- **Project settings** (`/p/:slug/settings`, W4): read-only project facts; every overridable setting (checks by role, default harness, Workers at once, fallback harnesses, ecosystems, Tier C paths, remote) shown as inherited (with where it comes from) or overridden, a switch to clear an override; versioned save with a required reason; if a newer version exists (409 or a background refresh) saving pauses and the banner offers a diff and a reload, never an overwrite; history list with plain-words diffs; archive behind a confirm. Keys the screen does not edit (git host, gate rules, tool grants) are carried through a save unchanged.
+- **Memory** (`/p/:slug/memory`, W4): tabs Decisions, Rejected, Proposals, Outcomes with counts; text and tag filters; superseded decisions marked; a detail drawer (`?record=d-0003`) with source, author, dates and links along the supersede chain; Approve and Reject (reason required) behind a confirm, applied optimistically and rolled back on failure; the list windows past 100 rows.
 - **Placeholders** for the destinations later batches build.
 
 Routes: `/` redirects to a project; `/p/:slug` and `/p/:slug/{inbox,board,issues,chat,runs,memory,settings}`; `/settings/{harnesses,harnesses/:id,github,limits,general}`.
@@ -61,8 +63,10 @@ Public API: none; it is an app. Entry is `src/main.tsx`.
 
 ## Limits
 
-- Project destinations are still placeholders (Home and Runs W5, Board W3, Inbox W5, Chat W6, Issues W8, Memory and Project settings W4).
-- `projects`, `harnesses`, `github` and `settings` are wired to the real server; the sidebar has no Inbox badge yet (W5).
+- Project destinations still placeholders: Home and Runs W5, Board W3, Inbox W5, Chat W6, Issues W8.
+- Memory: the server's list omits outcomes and does not return `superseded_by`, so the Outcomes tab is empty against the real server and a superseded row links to its successor only in the drawer. A proposal answer cannot be undone (no API), so it is a confirm, not an undo window.
+- Project settings: project name, repository, branch, folder and prefix are read-only (the API only archives). Archiving cannot be undone from the UI. Author is the fixed name `owner` until accounts exist. Tab and filter choices are not remembered across reloads (view prefs move to a persisted store, d-0122).
+- `projects`, `harnesses`, `github`, `settings`, `projectSettings` and `memory` are wired to the real server; the sidebar has no Inbox badge yet (W5).
 - No production token hand-off: `forge start` does not yet serve this UI or give it a credential (W7). Until then only the dev proxy can reach the server.
 - The bundle is one 700 kB chunk (all of `@forge/core`'s schemas are included); code-splitting waits for the first heavy screen.
 - Archived projects are hidden from the switcher; there is no way to open one yet.

@@ -15,6 +15,8 @@
 
 import type { ProjectView } from '#/schemas/projects.js';
 import type { GithubApi, HarnessesApi, SettingsApi } from '#/types/settings-api.types.js';
+import type { MemoryApi } from '#/types/memory.types.js';
+import type { ProjectSettingsApi } from '#/types/project-settings.types.js';
 
 /** Per-call options every method accepts so TanStack Query can cancel in-flight work. */
 export interface RequestOptions {
@@ -32,6 +34,8 @@ export interface ResourceApis {
   readonly harnesses: HarnessesApi;
   readonly github: GithubApi;
   readonly settings: SettingsApi;
+  readonly projectSettings: ProjectSettingsApi;
+  readonly memory: MemoryApi;
 }
 
 export type ResourceName = keyof ResourceApis;
@@ -77,7 +81,7 @@ export interface ComposeOptions {
 
 /** One JSON call to the server. */
 export interface JsonRequest extends RequestOptions {
-  readonly method?: 'GET' | 'POST' | 'PUT';
+  readonly method?: 'GET' | 'POST' | 'PUT' | 'PATCH';
   readonly body?: unknown;
 }
 
