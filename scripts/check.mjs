@@ -11,8 +11,12 @@
  *   Tools are launched through `node` on their own JS entries (no `.cmd`, no shell): Node
  *   refuses to spawn `.cmd` files without a shell on Windows (CVE-2024-27980).
  *
- * Exports: none (script). Usage: `pnpm check [--no-tests] [--all] [--base=<ref>] [--dry]`.
- *   `--no-tests` stops after the format check; `--all` runs every test (still no coverage);
+ * Exports: none (script). Usage: `pnpm check [--no-tests] [--all] [--heavy] [--base=<ref>] [--dry]`.
+ *   Tests run in the `unit` and `web` vitest projects only; the `heavy` project (tests that
+ *   spawn git, node children or a server, minutes on Windows) runs in CI after push, and a
+ *   line says so. `--heavy` adds it locally.
+ *   `--no-tests` stops after the format check; `--all` runs every test of the selected
+ *   projects, not just related ones (still no coverage);
  *   `--base=<ref>` compares against that ref instead of the merge-base with `origin/main`
  *   (falls back to `HEAD` when `origin/main` does not exist); `--dry` prints the commands
  *   and exits without running or locking. Prints one line per step with its duration and a
@@ -41,9 +45,11 @@ const args = process.argv.slice(2);
 const dry = args.includes('--dry');
 const runTests = !args.includes('--no-tests');
 const all = args.includes('--all');
+const heavy = args.includes('--heavy');
 const baseFlag = args.find((a) => a.startsWith('--base='));
 const unknown = args.filter(
-  (a) => !['--dry', '--no-tests', '--all'].includes(a) && !a.startsWith('--base='),
+  (a) =>
+    !['--dry', '--no-tests', '--all', '--heavy'].includes(a) && !a.startsWith('--base='),
 );
 
 if (unknown.length > 0) {
@@ -98,6 +104,7 @@ if (runTests) {
       binEntry('vitest'),
       'run',
       '--passWithNoTests',
+      ...['unit', 'web', ...(heavy ? ['heavy'] : [])].map((p) => `--project=${p}`),
       ...(all ? [] : ['--changed', resolveBase()]),
     ],
   });
@@ -105,6 +112,12 @@ if (runTests) {
 
 const show = (argv) =>
   `${JSON.stringify(node)} ${argv.map((a) => JSON.stringify(a)).join(' ')}`;
+
+if (runTests && !heavy) {
+  console.log(
+    'check: heavy tests skipped (they run in CI after push; --heavy runs them here)',
+  );
+}
 
 if (dry) {
   for (const step of steps) {

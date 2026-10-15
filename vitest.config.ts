@@ -50,6 +50,13 @@ const WEB_INCLUDE = ['apps/web/__tests__/**/*.test.{ts,tsx}'];
 export default defineConfig({
   resolve: { conditions: ['development'] },
   test: {
+    // Vitest's default also lists `**/package.json/**`, so any package.json edit (a script, a
+    // version) reran the whole suite under `--changed`. Only config and setup files change how
+    // every test runs; the web setup file is named here so it stays a trigger.
+    forceRerunTriggers: [
+      '**/{vitest,vite}.config.*/**',
+      'apps/web/__tests__/helpers/setup.ts',
+    ],
     projects: [
       {
         extends: true,
