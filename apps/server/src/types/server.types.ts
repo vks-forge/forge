@@ -36,6 +36,7 @@ import type { Engine, IdSource, Logger } from '@forge/engine';
 import type { RunSecretRegistry } from '@forge/hooks';
 import type { AdmitContext, CatalogueStore, ReceiptLog } from '@forge/tools';
 import type { RestrictFile } from '#/types/auth.types.js';
+import type { Drain } from '#/types/drain.types.js';
 import type { CompatPort, HarnessCompat } from '#/types/harness-compat.types.js';
 import type { ProjectRegistry } from '#/types/project-registry.types.js';
 
@@ -174,6 +175,10 @@ export interface ShutdownParts {
   readonly closeHttp: () => Promise<void>;
   /** Releases what the external ports hold (temp directories); runs after the port closes. */
   readonly disposePorts?: (() => Promise<void> | void) | undefined;
+  /** Stops admitting tool calls and waits for in-flight ones before runs are interrupted; absent in tests that have none. */
+  readonly drain?: Drain;
+  /** The configured drain wait in ms (`engine.shutdown_drain_ms`), read when the stop begins. */
+  readonly drainMs?: () => Promise<number>;
   readonly graceMs: number;
   readonly log: Logger;
   /** Sleep between gate-job polls; injectable for tests. */

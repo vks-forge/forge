@@ -15,6 +15,7 @@
 export * from '#/server/audit-gate.js';
 export * from '#/server/hook-handler.js';
 export * from '#/server/liveness-recorder.js';
+export * from '#/server/open-calls.js';
 export * from '#/server/resume-link.js';
 export * from '#/server/run-secrets.js';
 export type * from '#/types/hook-handler.types.js';

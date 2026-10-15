@@ -14,28 +14,42 @@
  *   token like a restored harness session would (d-0092). `resumable_cut_write` is the same
  *   except the interruption lands inside its `Write`: the edit is on disk but the call's
  *   effect receipt is never posted, the way a process killed between the edit and its
- *   PostToolUse hook leaves it.
+ *   PostToolUse hook leaves it. `resumable_slow_write` has a slow `Write`: the edit lands, a
+ *   parallel `Read` is attempted part way through, and PostToolUse is posted about a second
+ *   after the edit, so a graceful stop has a call in flight to wait for.
  *
  *   A run the script has no line for (a second fresh `resumable*` run, e.g. the rework run after
  *   a failed gate) ends at once as an error recorded in `failures`, so a test fails with the
  *   reason instead of waiting for a Worker that would park forever.
  *
  * Exports: Behaviour, FakeWorker, createFakeWorker().
- * Depends on: @forge/core (WorkerDriver, RunEvent), helpers/channel, helpers/harness-session.
+ * Depends on: @forge/core (WorkerDriver, RunEvent), helpers/channel, helpers/harness-session,
+ *   helpers/scripted-writes.
  *   IO: edits files, HTTP to the server.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { RunEvent, RunRequest, RunResult, WorkerDriver } from '@forge/core';
 import type { PreparedRun } from '@forge/drivers';
 import type { DriverFactoryDeps, ForgeServer } from '#/types/server.types.js';
 import { createChannel } from '#tests/helpers/channel.js';
 import { createHarnessSession } from '#tests/helpers/harness-session.js';
+import {
+  CutOff,
+  cutWrite,
+  slowWrite,
+  writeFile,
+} from '#tests/helpers/scripted-writes.js';
 
 /** What one run does: write good code, plant a claim for a file it never touched, ask a question, or work until stopped and finish when resumed. */
 export type Behaviour =
-  'good' | 'false_claim' | 'ask' | 'resumable' | 'resumable_cut_write';
+  | 'good'
+  | 'false_claim'
+  | 'ask'
+  | 'resumable'
+  | 'resumable_cut_write'
+  | 'resumable_slow_write';
 
 export interface FakeWorker {
   readonly driver: WorkerDriver;
@@ -61,15 +75,11 @@ test('adds two numbers', () => {
 
 const USAGE = { in: 0, out: 0, cachedIn: 0, cacheWrite: 0 };
 
-/** Thrown inside a tool call the server's stop cut off; ends the run as cancelled, not as a script error. */
-class CutOff extends Error {}
-
-const writeFile = (path: string, content: string) => (): string => {
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, content);
-
-  return `wrote ${path}`;
-};
+const RESUMABLE: readonly Behaviour[] = [
+  'resumable',
+  'resumable_cut_write',
+  'resumable_slow_write',
+];
 
 /** Builds the driver; `getServer` is read lazily because the driver is made before the server exists. */
 export function createFakeWorker(
@@ -101,7 +111,7 @@ export function createFakeWorker(
       emit,
     );
 
-    const resumable = behaviour === 'resumable' || behaviour === 'resumable_cut_write';
+    const resumable = RESUMABLE.includes(behaviour);
     // The scenario is one run, started once and maybe resumed: any other fresh run is a retry.
     if (resumable && req.resume === undefined && started.some((id) => id !== req.runId)) {
       throw new Error(
@@ -155,14 +165,10 @@ export function createFakeWorker(
           'Write',
           { file_path: mathPath, content: source },
           behaviour === 'resumable_cut_write'
-            ? async () => {
-                // The edit lands, then the process dies before PostToolUse is posted.
-                edit();
-                await parked();
-
-                throw new CutOff('stopped inside Write');
-              }
-            : edit,
+            ? cutWrite(edit, parked)
+            : behaviour === 'resumable_slow_write'
+              ? slowWrite(edit, () => tool('Read', { file_path: testPath }, () => 'read'))
+              : edit,
         );
       } catch (error) {
         if (!(error instanceof CutOff)) {
@@ -235,7 +241,7 @@ export function createFakeWorker(
   const driver: WorkerDriver = {
     id: 'claude-code',
     capabilities: () => ({
-      resume: behaviours.some((b) => b === 'resumable' || b === 'resumable_cut_write'),
+      resume: behaviours.some((b) => RESUMABLE.includes(b)),
       steerModes: [],
       nativeSandbox: false,
       reportsCost: false,

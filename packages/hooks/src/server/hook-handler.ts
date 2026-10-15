@@ -24,7 +24,10 @@
  *   from a run whose SessionStart never registered is denied: a harness that skipped one
  *   hook cannot be assumed to run the other (d-0033). The floors in `@forge/tools` are lexical,
  *   so a path tool's arguments are also resolved on disk (junctions, symlinks, 8.3 names) and
- *   judged a second time; either look denying denies (server/path-resolver).
+ *   judged a second time; either look denying denies (server/path-resolver). While the server
+ *   drains for a graceful stop (`draining`), a new PreToolUse is refused as `server_draining`
+ *   (a signed deny receipt, since the harness reports the refused call), and PostToolUse still records the effect of calls allowed before, so a
+ *   stop never lands between an edit and its proof.
  *
  * Exports: createHookHandler().
  * Depends on: @forge/core (isRunActive), @forge/tools (HookRequest and HookResponse wire
@@ -64,6 +67,22 @@ const failed = (code: FailClosedCode): HookResponse => ({
   decision: 'deny',
   reason: `fail_closed_${code}`,
   receipt_hash: '',
+});
+
+/**
+ * The deny recorded for a call refused because the server is draining. `server_draining` is
+ * not a policy reason (`ReasonCode` in @forge/tools is the policy's closed set), so it is
+ * typed in here rather than judged by `admit()`.
+ */
+const drainDecision = (tool: string): Decision => ({
+  decision: 'deny',
+  reason: 'server_draining' as Decision['reason'],
+  enforced_by: 'forge_admit',
+  enforcement: null,
+  layer: 'hook',
+  matched_rule: null,
+  finding_ids: [],
+  tool,
 });
 
 const SEVERITY = { allow: 0, ask: 1, deny: 2 } as const;
@@ -118,7 +137,14 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
       input,
     } as const;
 
-    const decision = admitBothViews(ctx, call);
+    // Draining for a graceful stop: no new call starts, so the ones in flight can finish. The
+    // refusal is receipted like any denial: the harness reports the refused call and its
+    // error result, and G1 owes every reported call a decision receipt. The reason tells the
+    // harness the call can be made again after the resume.
+    const decision = deps.draining?.()
+      ? drainDecision(toolId)
+      : admitBothViews(ctx, call);
+
     const def = toolDefinition(ctx, toolId);
     const [receipt] = await deps.receipts.append(run.id, (view) => [
       makeDecisionReceipt(

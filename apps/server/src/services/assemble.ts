@@ -104,8 +104,7 @@ export async function assembleServer(
       now,
       log,
       address: () => address,
-      // Refuses a run on a harness build whose approvals were never loaded, and records the
-      // build on the run row. `compat` is built below, before any run can start.
+      // Refuses a run on a harness build with no loaded approvals and records the build.
       checkBuild: (runId) => buildCheck(runId),
     });
 
@@ -195,7 +194,7 @@ export async function assembleServer(
       log,
     });
 
-    const hooks = createHooks({
+    const { handler: hooks, drain } = createHooks({
       storage,
       receipts,
       registry,
@@ -262,8 +261,7 @@ export async function assembleServer(
 
         const port = await listen(http, settings.host, settings.port);
         address = { host: settings.host, port, url: `http://${settings.host}:${port}` };
-        // Before the first tick, which resumes interrupted runs: it removes what a crash left
-        // behind, and never touches a run that is alive or waiting for its resume.
+        // Before the first tick (it resumes runs): removes what a crash left, never a live run's.
         await retirement.sweep();
         ticker.start();
         poller.start();
@@ -285,6 +283,8 @@ export async function assembleServer(
         endStreams: () => streams.abort(),
         closeHttp: () => closeServer(http),
         disposePorts: ports.dispose,
+        drain,
+        drainMs: async () => (await config.company()).config.engine.shutdown_drain_ms,
         graceMs: settings.shutdownGraceMs,
         log,
       });

@@ -18,11 +18,13 @@
  *   other wake: they wait for the scheduler's global, per-project and per-harness limits, at
  *   the priority of their ticket and on the same rotation cursor as new starts. A start that
  *   fails before the chain's `resumed` link was written gives the generation back, so the
- *   chain stays 1, 2, 3 without a gap.
+ *   chain stays 1, 2, 3 without a gap. Each run is resumed on its own: a project whose runtime
+ *   cannot be built (or a store error) is reported as a tick error against that run, which stays
+ *   interrupted for the next tick, while every other run still resumes.
  *
- * Exports: reconcileRestart(), resumeInterrupted(), RESUME_PROMPT.
+ * Exports: reconcileRestart(), resumeInterrupted().
  * Depends on: @forge/core (TERMINAL_STATUSES, branchName), @forge/tools (sha256Hex), domain/results,
- *   tick/{project-runtime,pump,run-request,settle}, shared/time. IO only through the engine ports.
+ *   tick/{project-runtime,pump,resume-prompt,run-request,settle}, shared/time. IO only through the engine ports.
  */
 
 import { TERMINAL_STATUSES, branchName } from '@forge/core';
@@ -34,18 +36,12 @@ import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { baseRefFor, driverFor, runtimeFor } from '#/tick/project-runtime.js';
 import { startPump } from '#/tick/pump.js';
 import { generationLinked } from '#/tick/resume-chain.js';
+import { RESUME_PROMPT } from '#/tick/resume-prompt.js';
 import { buildRunRequest } from '#/tick/run-request.js';
 import { planDispatch } from '#/tick/schedule.js';
 import { settleRun } from '#/tick/settle.js';
 import { isUnservable } from '#/tick/tick-config.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
-
-/** What the resumed Worker is told: the session is back, check the worktree, do not start over. */
-export const RESUME_PROMPT =
-  'Forge was restarted while you were working, and your session has been restored. ' +
-  'Check the worktree (for example with `git status` and `git diff`) to see what is already ' +
-  'done, then continue the task from where you stopped. Do not start over, and finish as ' +
-  'you were asked to when the task is complete.';
 
 const msg = (e: unknown): string => String(e instanceof Error ? e.message : e);
 
@@ -271,14 +267,24 @@ export async function resumeInterrupted(ctx: EngineCtx): Promise<void> {
       continue;
     }
 
-    const why = await tryResume(ctx, run, session);
-    if (why === null) {
-      ctx.report.resumed.push(run.id);
-      deps.log?.('info', `run ${run.id} resumed from its session`, {
+    try {
+      const why = await tryResume(ctx, run, session);
+      if (why === null) {
+        ctx.report.resumed.push(run.id);
+        deps.log?.('info', `run ${run.id} resumed from its session`, {
+          ticket: run.ticket_id,
+        });
+      } else {
+        await giveUp(ctx, run, why);
+      }
+    } catch (e) {
+      // A throw here (a project runtime that cannot be rebuilt, a store error) belongs to this
+      // run alone. It stays `interrupted` and is tried again next tick; the other runs go on.
+      ctx.report.errors.push({ where: `resume ${run.id}`, message: msg(e) });
+      deps.log?.('error', `resume of ${run.id} failed; it stays interrupted`, {
         ticket: run.ticket_id,
+        error: msg(e),
       });
-    } else {
-      await giveUp(ctx, run, why);
     }
   }
 

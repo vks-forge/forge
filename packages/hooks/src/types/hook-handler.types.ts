@@ -84,6 +84,12 @@ export interface HookHandlerDeps {
    * either; with this on, an unregistered run gets `fail_closed_no_liveness`. Default off.
    */
   readonly requireLiveness?: boolean;
+  /**
+   * True while the server drains for a graceful stop: a new PreToolUse is answered `deny`
+   * with reason `server_draining` (receipted as a deny), so the calls already allowed can
+   * finish and record their effect before runs are interrupted. PostToolUse is unaffected.
+   */
+  readonly draining?: () => boolean;
   /** Called on a valid SessionStart so the engine can register run liveness (d-0033). */
   readonly onLiveness?: (
     runId: string,

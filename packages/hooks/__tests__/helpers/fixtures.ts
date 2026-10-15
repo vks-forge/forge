@@ -93,6 +93,8 @@ export function makeEnv(
     audit?: HookAudit;
     clock?: () => Date;
     requireLiveness?: boolean;
+    /** While true the server is shutting down and admits no new tool calls. */
+    draining?: () => boolean;
     /** Replaces the fixed generation-1 credentials, to test resumes. */
     credentials?: () => Promise<RunCredentials | null>;
     /** Replaces the run row's fields (generation, status). */
@@ -120,6 +122,7 @@ export function makeEnv(
     clock: over.clock ?? (() => new Date(Date.UTC(2026, 9, 13, 0, 0, tick++))),
     ...(over.audit ? { audit: over.audit } : {}),
     ...(over.requireLiveness ? { requireLiveness: true } : {}),
+    ...(over.draining ? { draining: over.draining } : {}),
     onLiveness: async (id) => {
       liveness.push(id);
     },

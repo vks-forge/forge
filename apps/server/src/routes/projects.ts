@@ -11,15 +11,17 @@
  *   only the Director writes cannot be inverted by naming the wrong folder. Once checked,
  *   the project's row and first settings version are written and the registry starts
  *   serving it, so tickets can run in it on the next tick with no restart; a failure part
- *   way removes the row so the same request can be sent again. Archiving stops new work but
+ *   way removes the row so the same request can be sent again. The slug, prefix and folder
+ *   are claimed inside the transaction that saves the row, so two requests racing for the same
+ *   one cannot both succeed. Archiving stops new work but
  *   deletes nothing. The list shows `config_error` for a project the engine skips.
  *
  * Exports: projectsRoutes().
  * Depends on: node:path, @forge/core, @forge/git (inspectRepository), schemas/api,
- *   services/http/*, services/path-guard, types/routes. IO: storage, settings, reads the clone through git.
+ *   services/http/*, services/path-guard, services/project-conflict, types/routes. IO: storage, settings, reads the clone through git.
  */
 
-import { isAbsolute, resolve } from 'node:path';
+import { isAbsolute } from 'node:path';
 import {
   BUILTIN_CONFIG,
   InvalidInputError,
@@ -34,6 +36,7 @@ import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
 import { appendFirstSettings } from '#/services/first-settings.js';
 import { insideForgeStorage } from '#/services/path-guard.js';
+import { projectConflict } from '#/services/project-conflict.js';
 import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
 
@@ -49,11 +52,6 @@ function view(project: Project, configError?: string) {
 
   return configError === undefined ? rest : { ...rest, config_error: configError };
 }
-
-const samePath = (a: string, b: string): boolean =>
-  process.platform === 'win32'
-    ? resolve(a).toLowerCase() === resolve(b).toLowerCase()
-    : resolve(a) === resolve(b);
 
 /** The `git_host` settings of a new project, from either way of naming it. */
 async function hostOf(
@@ -116,21 +114,15 @@ async function create(
     );
   }
 
-  const existing = await deps.storage.transaction((tx) => tx.projects.list());
-  if (existing.some((p) => p.slug === body.slug)) {
-    throw new HttpError(409, 'project_exists', `project ${body.slug} already exists`);
-  }
+  // A fast refusal before the slow work; the decision that counts is made again inside the
+  // transaction that saves the row, because two requests can both pass this read.
+  const early = projectConflict(
+    await deps.storage.transaction((tx) => tx.projects.list()),
+    body,
+  );
 
-  if (existing.some((p) => p.prefix === body.prefix)) {
-    throw new HttpError(
-      409,
-      'prefix_in_use',
-      `ticket prefix ${body.prefix} belongs to another project; ticket ids would collide`,
-    );
-  }
-
-  if (existing.some((p) => p.local_path && samePath(p.local_path, body.local_path))) {
-    throw new HttpError(409, 'path_in_use', 'another project already uses this folder');
+  if (early) {
+    throw early;
   }
 
   const { host, repoFullName } = await hostOf(deps, body);
@@ -166,26 +158,41 @@ async function create(
     throw new HttpError(400, 'project_not_servable', messageOf(error));
   }
 
-  // The project's private memory repository is created with the project; a machine
-  // without a usable git fails here, before anything is saved.
-  try {
-    await deps.memory.init(body.slug);
-  } catch (error) {
-    throw new HttpError(
-      500,
-      'memory_init_failed',
-      `could not create the project's memory repository: ${messageOf(error)}`,
-      { family: 'crash' },
-    );
+  // The row goes in first so every read of the project's settings sees a registered slug,
+  // and so the slug, prefix and folder are claimed before any slow side effect. The claim is
+  // one transaction (the check and the save cannot be split by another request); the loser of
+  // a race gets the same 409 as an ordinary duplicate. Settings are versioned append-only and
+  // cannot be removed, so a failure after the row is saved is undone by deleting the row: the
+  // slug, prefix and folder are free again, and the retry appends on top of whatever versions
+  // the slug already has.
+  const claimed = await deps.storage.transaction(async (tx) => {
+    const conflict = projectConflict(await tx.projects.list(), project);
+    if (!conflict) {
+      await tx.projects.upsert(project);
+    }
+
+    return conflict;
+  });
+
+  if (claimed) {
+    throw claimed;
   }
 
-  // The row goes in first so every read of the project's settings sees a registered slug.
-  // Settings are versioned append-only and cannot be removed, so a failure after the row is
-  // saved is undone by deleting the row: the slug, prefix and folder are free again, and the
-  // retry appends on top of whatever versions the slug already has.
-  await deps.storage.transaction((tx) => tx.projects.upsert(project));
   let version: number;
   try {
+    // The project's private memory repository is created with the project; a machine
+    // without a usable git fails here and nothing stays saved.
+    try {
+      await deps.memory.init(body.slug);
+    } catch (error) {
+      throw new HttpError(
+        500,
+        'memory_init_failed',
+        `could not create the project's memory repository: ${messageOf(error)}`,
+        { family: 'crash' },
+      );
+    }
+
     version = await appendFirstSettings(deps, body, doc);
     await deps.projects.register(project, await deps.config.project(body.slug));
   } catch (error) {

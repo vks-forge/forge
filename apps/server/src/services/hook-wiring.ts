@@ -4,19 +4,22 @@
  * Why: the hook route is the one policy door for Worker tool calls (`admit()`, signed
  *   receipts, liveness). Wiring its dependencies (run secrets, the effective catalogue,
  *   the liveness recorder that wakes the tick, the audit line for refused requests) is
- *   a self-contained step, kept apart so the composition root stays readable.
+ *   a self-contained step, kept apart so the composition root stays readable. It also makes
+ *   the shutdown drain, the one switch the handler reads and the shutdown sequence flips.
  *
  * Exports: createHooks().
  * Depends on: @forge/core, @forge/engine (Logger), @forge/hooks, @forge/tools (admit),
- *   services/tool-policy. No IO of its own.
+ *   services/drain, services/tool-policy. No IO of its own.
  */
 
 import type { StorageAdapter } from '@forge/core';
 import type { Logger } from '@forge/engine';
 import { createHookHandler, createLivenessRecorder } from '@forge/hooks';
-import type { RunSecretRegistry } from '@forge/hooks';
+import type { HookHandler, RunSecretRegistry } from '@forge/hooks';
 import { admit } from '@forge/tools';
 import type { ReceiptLog } from '@forge/tools';
+import { createDrain } from '#/services/drain.js';
+import type { Drain } from '#/types/drain.types.js';
 import type { ToolPolicy } from '#/types/server.types.js';
 
 export function createHooks(deps: {
@@ -27,10 +30,12 @@ export function createHooks(deps: {
   readonly now: () => number;
   readonly requestTick: () => void;
   readonly log: Logger;
-}): ReturnType<typeof createHookHandler> {
+}): { readonly handler: HookHandler; readonly drain: Drain } {
   const { storage, now } = deps;
+  // One switch for both sides: the handler refuses new calls while the shutdown waits.
+  const drain = createDrain({ receipts: deps.receipts });
 
-  return createHookHandler({
+  const handler = createHookHandler({
     db: storage,
     receipts: deps.receipts,
     admit,
@@ -38,6 +43,7 @@ export function createHooks(deps: {
     admitContext: deps.policy.admitContext,
     clock: () => new Date(now()),
     requireLiveness: true,
+    draining: drain.isDraining,
     onLiveness: createLivenessRecorder({
       storage,
       now: () => new Date(now()),
@@ -50,4 +56,6 @@ export function createHooks(deps: {
         suppressed: entry.suppressed,
       }),
   });
+
+  return { handler, drain };
 }

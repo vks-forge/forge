@@ -57,7 +57,7 @@ Public API from `src/index.ts`:
   rotation cursor as new starts and read the schedule without consuming wakes or pauses (dispatch does
   that once per tick). A start that fails before the app wrote the chain's `resumed` link gives the
   generation back (the receipt chain must read 1, 2, 3 without a gap for G1); a link that was written
-  keeps it. The report lists `resumed`, `resumeFailed` and `crashed`. Then settle finished runs (skipping interrupted pumps); cancel runs silent for
+  keeps it. Each run is resumed on its own: a throw while resuming one (a project runtime that cannot be built, a store error) is recorded as a tick error `resume <runId>` and logged, the run stays `interrupted` for the next tick, and the other runs still resume; runs of an unservable project are skipped before that. The continue prompt tells the Worker that a tool call refused as `server_draining` (the server was stopping) is to be made again. The report lists `resumed`, `resumeFailed` and `crashed`. Then settle finished runs (skipping interrupted pumps); cancel runs silent for
   `stall_ms` and settle them as `stall`; expire overdue questions (ticket to `blocked`); deliver
   steering replies (`steer_reply` step, then `run_inbox`, then `driver.steer`); triage `inbox`
   tickets (pre-check, `triage` step, lane rule); verify finished work (below); dispatch ready tickets (worktree, `dispatch_prompt`

@@ -34,8 +34,16 @@ export interface Stopped {
 export async function interruptAndRestart(
   behaviours: readonly Behaviour[],
   at: InterruptPoint,
-): Promise<{ first: E2eRig; second: E2eRig; runId: string; stopped: Stopped }> {
-  const first = await startE2eRig(behaviours);
+  options: { readonly drainMs?: number } = {},
+): Promise<{
+  first: E2eRig;
+  second: E2eRig;
+  runId: string;
+  stopped: Stopped;
+  /** How long the first server took to stop, drain included. */
+  stopMs: number;
+}> {
+  const first = await startE2eRig(behaviours, options);
   const intake = await first.call('POST', '/intake', intakeBody('resume-1'));
   if (intake.status !== 202) {
     throw new Error(`intake refused: ${intake.status}`);
@@ -51,7 +59,9 @@ export async function interruptAndRestart(
   });
 
   // The first server stops gracefully, the way `forge stop` does.
+  const stopBegan = Date.now();
   await first.server.stop();
+  const stopMs = Date.now() - stopBegan;
   const db = openSqlite(first.settings.layout.data.dbPath);
   let stopped: Stopped;
   try {
@@ -81,5 +91,5 @@ export async function interruptAndRestart(
     secrets: first.secrets,
   });
 
-  return { first, second, runId, stopped };
+  return { first, second, runId, stopped, stopMs };
 }

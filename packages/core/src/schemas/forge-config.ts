@@ -70,6 +70,8 @@ export const EngineConfig = z.object({
   quota_default_pause_ms: PosInt,
   /** Harnesses to try, in order, when a ticket's own harness is out of quota (d-0080); empty means wait. */
   harness_fallbacks: z.array(z.string().min(1)),
+  /** How long a graceful stop waits for tool calls already running to record their effect before runs are interrupted; 0 interrupts at once. Bounded by half the shutdown grace window. */
+  shutdown_drain_ms: z.number().int().nonnegative(),
 });
 export type EngineConfig = z.infer<typeof EngineConfig>;
 

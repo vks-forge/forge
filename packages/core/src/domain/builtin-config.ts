@@ -44,6 +44,7 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
     },
     quota_default_pause_ms: 3_600_000,
     harness_fallbacks: [],
+    shutdown_drain_ms: 10_000,
   },
 };
 

@@ -42,3 +42,4 @@ engine:
     unknown: { delay_ms: 30000, max_attempts: 1 }
   quota_default_pause_ms: 3600000 # harness wait after a quota error that names no reset time
   harness_fallbacks: [] # harnesses to try when a ticket's own is out of quota; empty = wait
+  shutdown_drain_ms: 10000 # graceful stop waits this long for running tool calls to record their effect, then interrupts runs (0 = at once)

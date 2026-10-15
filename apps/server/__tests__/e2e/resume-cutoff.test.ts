@@ -6,9 +6,11 @@
  *   claims it edited that file, and nothing signed says the edit happened. The restart excuse
  *   only covers read-only calls (storage-tool-calls.ts), so the claim is unsupported and G1
  *   must fail closed: merging code whose authorship cannot be shown is the failure G1 exists to
- *   stop. The scripted run parks inside its first `Write` (edit written, no effect receipt) and
- *   the test pins that G1 fails with exactly that finding, quickly, rather than the ticket
- *   hanging in rework.
+ *   stop. A graceful stop first drains (waits for the call to record its effect), but this
+ *   Write never completes, so the drain times out and the run is interrupted anyway: this is the
+ *   case the drain cannot save and it must stay closed. The scripted run parks inside its
+ *   first `Write` (edit written, no effect receipt) and the test pins that G1 fails with
+ *   exactly that finding, quickly, rather than the ticket hanging in rework.
  *
  * Pins: the chain still verifies and every tool call has its decision receipt; the only
  *   failed check is `claims`, with the unsupported `edited src/math.js` finding; the ticket
@@ -36,10 +38,13 @@ describe('a write cut off by a restart', { timeout: 200_000 }, () => {
 
   beforeAll(async () => {
     // Stop on the Write's `tool_call`: the script is inside the Write at that moment.
-    ({ first, second } = await interruptAndRestart(['resumable_cut_write'], {
-      type: 'tool_call',
-      count: 2,
-    }));
+    // The scripted Write never completes, so the drain (shortened here) times out and the stop
+    // goes on to interrupt the run: the case the drain cannot save.
+    ({ first, second } = await interruptAndRestart(
+      ['resumable_cut_write'],
+      { type: 'tool_call', count: 2 },
+      { drainMs: 300 },
+    ));
 
     gate = await waitFor(
       'G1 to fail',
@@ -67,6 +72,10 @@ describe('a write cut off by a restart', { timeout: 200_000 }, () => {
 
     expect(gate.report).not.toContain('has no decision receipt');
     expect(gate.report).toContain('### test: passed');
+  });
+
+  it('waited out the drain, then interrupted the run anyway', () => {
+    expect(first.logs.join(' ')).toContain('still had a tool call in flight');
   });
 
   it('did not merge the change', async () => {

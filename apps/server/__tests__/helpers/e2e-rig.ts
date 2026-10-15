@@ -64,6 +64,8 @@ export interface E2eRig {
 export interface E2eOptions {
   readonly fixture?: FixtureRepo;
   readonly secrets?: RecordingSecrets;
+  /** Saves `engine.shutdown_drain_ms` as a company setting before the first request (a restart keeps it). */
+  readonly drainMs?: number;
 }
 
 /** An intake event asking for the `add` function, unique per `key`. */
@@ -109,7 +111,7 @@ export async function startE2eRig(
     const settings: ServerSettings = {
       ...loaded,
       http: { ssePollMs: 25, sseHeartbeatMs: 15_000 },
-      shutdownGraceMs: 2_000,
+      shutdownGraceMs: 6_000,
     };
 
     server = await assembleServer(settings, {
@@ -156,6 +158,20 @@ export async function startE2eRig(
         throw new Error(
           `could not register the fixture project: ${JSON.stringify(registered.body)}`,
         );
+      }
+    }
+
+    if (options.drainMs !== undefined) {
+      const current = await call('GET', '/settings/company');
+      const saved = await call('PUT', '/settings/company', {
+        doc: { engine: { shutdown_drain_ms: options.drainMs } },
+        expectedVersion: (current.body as { version: number }).version,
+        author: 'e2e',
+        reason: 'shorter drain',
+      });
+
+      if (saved.status !== 200) {
+        throw new Error(`could not set the drain time: ${JSON.stringify(saved.body)}`);
       }
     }
 
