@@ -82,14 +82,19 @@ projects (registered through the API, each with its own clone, worktrees, git
 host and ticket prefix) and settings live in the database. See
 `docs/design/product-shape-change-map.md`.
 
-**Known limits:** project checks run Worker-written code as the user's own
-account (container isolation later, d-0005); the rework path has not run live.
+**Known limits:** Workers and project checks run as the user's own Windows
+account, so code a Worker writes (a test, a script) can read Forge's data
+folder, including the install token and secrets. The tool policy floor
+guards tool arguments, not the operating system; real isolation (a separate
+low-privilege account, or WSL2/container) is the first item after the
+realignment (d-0117, d-0005). The rework path has not run live.
 
 ## Roadmap
 
 | Step | What                                                                | Plan                        |
 | ---- | ------------------------------------------------------------------- | --------------------------- |
 | Now  | Realign the existing code (batches B0–B14)                          | `docs/design/build-plan.md` |
+| Next | Worker isolation: separate low-privilege account for Workers/checks | d-0117                      |
 | P2   | Onboarding: GitHub manifest flow, language detection, Director chat | change map W4, W5, W9       |
 | P3   | Control room UI: every setting and flow on screen                   | change map W12, W14, W15    |
 | P4   | First release on Windows as `vks-forge`                             | change map W16, W17, W20    |
