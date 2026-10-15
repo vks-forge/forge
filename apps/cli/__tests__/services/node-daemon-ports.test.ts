@@ -16,6 +16,7 @@
  *   processes, loopback sockets, temp files.
  */
 
+import { createHmac } from 'node:crypto';
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -184,6 +185,70 @@ describe('health classification', () => {
     expect(state.kind).toBe('unresponsive');
     expect(code).toBe(1);
     expect(err.join('')).not.toContain(TOKEN);
+  });
+});
+
+describe('proveToken', () => {
+  /** A server that answers the challenge with `proofFor(nonce)`. */
+  const answering = (proofFor: (nonce: string) => string, status = 200) =>
+    listening((req, res) => {
+      let raw = '';
+      req.on('data', (chunk: Buffer) => void (raw += chunk.toString()));
+      req.on('end', () => {
+        const { nonce } = JSON.parse(raw) as { nonce: string };
+        res.statusCode = status;
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({ proof: proofFor(nonce) }));
+      });
+    });
+
+  const hmac = (token: string, nonce: string): string =>
+    createHmac('sha256', token).update(nonce).digest('hex');
+
+  it('accepts a server that answers HMAC-SHA256(token, nonce)', async () => {
+    const port = await answering((nonce) => hmac(TOKEN, nonce));
+
+    expect(await portsFor().proveToken(port, TOKEN)).toBe(true);
+  });
+
+  it('refuses a server holding another token, a replayed proof and a malformed one', async () => {
+    const wrong = await answering((nonce) => hmac('another-token', nonce));
+    const replay = await answering(() => hmac(TOKEN, 'an earlier nonce'));
+    const junk = await answering(() => 'not hex at all');
+    const short = await answering((nonce) => hmac(TOKEN, nonce).slice(0, 10));
+    const ports = portsFor();
+
+    const results = await Promise.all(
+      [wrong, replay, junk, short].map((port) => ports.proveToken(port, TOKEN)),
+    );
+
+    expect(results).toEqual([false, false, false, false]);
+  });
+
+  it('refuses a good proof under an error status, a non-JSON program and a closed port', async () => {
+    const errored = await answering((nonce) => hmac(TOKEN, nonce), 500);
+    const html = await listening((_req, res) => res.end('<html></html>'));
+    const closed = await listening((_req, res) => res.end());
+    await new Promise((r) => servers.pop()?.close(r));
+    const ports = portsFor();
+
+    expect(await ports.proveToken(errored, TOKEN)).toBe(false);
+    expect(await ports.proveToken(html, TOKEN)).toBe(false);
+    expect(await ports.proveToken(closed, TOKEN)).toBe(false);
+  });
+
+  it('sends the nonce but never the token', async () => {
+    let seen = '';
+    const port = await listening((req, res) => {
+      seen = JSON.stringify(req.headers);
+      req.on('data', (chunk: Buffer) => void (seen += chunk.toString()));
+      req.on('end', () => res.end('{}'));
+    });
+
+    await portsFor().proveToken(port, TOKEN);
+
+    expect(seen).toContain('nonce');
+    expect(seen).not.toContain(TOKEN);
   });
 });
 

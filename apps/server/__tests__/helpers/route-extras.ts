@@ -12,6 +12,7 @@
  */
 
 import { createMemoryCatalogueStore, createMemoryStorage } from '@forge/db';
+import { createTokenProver } from '#/services/auth/proof.js';
 import { createSessionStore } from '#/services/auth/sessions.js';
 import { createSseTicketIssuer } from '#/services/auth/sse-tickets.js';
 import { createHarnessCompat } from '#/services/harness-compat.js';
@@ -45,6 +46,7 @@ export function inertRouteExtras(): Pick<
   | 'triggers'
   | 'tickets'
   | 'sessions'
+  | 'prover'
   | 'requestShutdown'
   | 'memory'
   | 'dataHome'
@@ -57,6 +59,7 @@ export function inertRouteExtras(): Pick<
     triggers: createTriggerRegistry([createChatTrigger()]),
     tickets: createSseTicketIssuer(() => Date.now()),
     sessions: createSessionStore(() => Date.now()),
+    prover: createTokenProver('inert-test-token'),
     requestShutdown: () => undefined,
     catalogue,
     compat: createHarnessCompat({

@@ -85,6 +85,18 @@ describe('forge open', () => {
     expect(world.openCodeCalls).toHaveLength(0);
   });
 
+  it('refuses to send the token to a port that cannot prove it holds it', async () => {
+    const world = running();
+    world.impostors.add(4310);
+
+    await expect(openUi(world.ports, true)).rejects.toThrow(
+      'something else is answering on port 4310; Forge is not running there',
+    );
+
+    expect(world.openCodeCalls).toHaveLength(0);
+    expect(world.opened).toEqual([]);
+  });
+
   it('rejects when the server refuses the token or answers an error', async () => {
     const refused = running();
     refused.openCodeStatus.set(4310, 401);

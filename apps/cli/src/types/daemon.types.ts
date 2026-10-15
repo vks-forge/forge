@@ -52,6 +52,11 @@ export interface DaemonPorts extends Output {
   readonly readText: (path: string) => Promise<string | undefined>;
   /** `GET http://127.0.0.1:<port>/health`, no token. */
   readonly health: (port: number) => Promise<HealthState>;
+  /**
+   * Challenges the server on `port` with a random nonce (`POST /auth/proof`) and says whether it
+   * answered `HMAC-SHA256(token, nonce)`. False for any other answer or none; the token is not sent.
+   */
+  readonly proveToken: (port: number, token: string) => Promise<boolean>;
   /** `POST /admin/shutdown` with the token; resolves with the HTTP status, rejects when unreachable. */
   readonly shutdown: (port: number, token: string) => Promise<number>;
   /** `POST /auth/open-code` with the token; the one-time sign-in code, or the refusing status. */

@@ -225,6 +225,7 @@ export async function assembleServer(
         harnessTest: harnessTestFor(ports.harnessTest, secrets),
         tickets: auth.tickets,
         sessions: auth.sessions,
+        prover: auth.prover,
         requestShutdown: () =>
           options.onShutdownRequested ? options.onShutdownRequested() : void stopServer(),
         dataHome: layout.data,

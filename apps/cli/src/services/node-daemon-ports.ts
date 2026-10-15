@@ -9,7 +9,8 @@
  *   the workspace, or at `FORGE_SERVER_ENTRY`. Health and stop talk to 127.0.0.1 only, with
  *   short timeouts, so a hung server cannot hang the CLI. `/health` is accepted as Forge's
  *   only when it says `service: forge`, so another program on the port is never mistaken
- *   for it or sent the install token.
+ *   for it or sent the install token. `/health` is open, so before the token is sent the server
+ *   must also answer a random challenge with `HMAC-SHA256(token, nonce)` (`proveToken`).
  *
  * Exports: createNodeDaemonPorts(), defaultServerEntry().
  * Depends on: node:child_process, node:fs, node:fs/promises, node:path, node:url, @forge/core,
@@ -17,6 +18,7 @@
  */
 
 import { spawn } from 'node:child_process';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { closeSync, existsSync, openSync } from 'node:fs';
 import { mkdir, open, stat } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -49,6 +51,31 @@ async function health(port: number): Promise<HealthState> {
   } catch (error) {
     // A reply that is not JSON is some other program; no reply at all is "nothing there".
     return error instanceof SyntaxError ? 'not_forge' : 'unreachable';
+  }
+}
+
+async function proveToken(port: number, token: string): Promise<boolean> {
+  const nonce = randomBytes(32).toString('hex');
+
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/auth/proof`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ nonce }),
+      signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
+    });
+
+    const body = (await res.json()) as { proof?: unknown };
+    if (res.status !== 200 || typeof body.proof !== 'string') {
+      return false;
+    }
+
+    const expected = createHmac('sha256', token).update(nonce).digest();
+    const given = Buffer.from(body.proof, 'hex');
+
+    return given.length === expected.length && timingSafeEqual(given, expected);
+  } catch {
+    return false;
   }
 }
 
@@ -113,6 +140,7 @@ export function createNodeDaemonPorts(
     layout: () => (layout ??= loadDataHome(env)),
     readText: nodeDataHomeIo.readText,
     health,
+    proveToken,
     shutdown,
     requestOpenCode,
     openBrowser,

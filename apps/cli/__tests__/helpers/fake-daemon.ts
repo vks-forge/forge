@@ -36,6 +36,8 @@ export interface FakeWorld {
   readonly healthByPort: Map<number, HealthState>;
   /** The HTTP status each port answers to a shutdown request (absent: unreachable). */
   readonly shutdownStatus: Map<number, number>;
+  /** Ports whose program cannot prove it holds the install token (an impostor). */
+  readonly impostors: Set<number>;
   readonly shutdownCalls: { port: number; token: string }[];
   /** What `POST /auth/open-code` answers per port (absent: 200 with `CODE`). */
   readonly openCodeStatus: Map<number, number>;
@@ -75,6 +77,7 @@ export function createFakeWorld(
     alive: new Set(),
     healthByPort: new Map(),
     shutdownStatus: new Map(),
+    impostors: new Set(),
     shutdownCalls: [],
     openCodeStatus: new Map(),
     openCodeCalls: [],
@@ -107,6 +110,7 @@ export function createFakeWorld(
       }),
       readText: async (path) => world.files.get(path),
       health: async (port) => world.healthByPort.get(port) ?? 'unreachable',
+      proveToken: async (port) => !world.impostors.has(port),
       shutdown: async (port, token) => {
         world.shutdownCalls.push({ port, token });
         const status = world.shutdownStatus.get(port);

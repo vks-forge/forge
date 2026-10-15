@@ -1,14 +1,16 @@
 /**
  * Which `Host` and `Origin` headers name this server.
  *
- * Why: the server listens on loopback only, but a browser page can still aim at it. A page on
- *   a hostile DNS name that was rebound to 127.0.0.1 sends `Host: evil.example`; a page served
- *   from another local port (another dev server, another app) sends the right name with the
- *   wrong port. Both are refused here: only a loopback name on this server's own port is
- *   answered. And because the browser attaches the session cookie by itself, a state-changing
- *   request that rides on it must prove it came from our own page: its `Origin` must be exactly
- *   the origin the request was addressed to (same scheme, name and port, which `SameSite`
- *   cannot promise because it ignores ports).
+ * Why: the server listens on loopback only, but a browser page can still aim at it. The Host
+ *   check stops DNS rebinding: a page on a hostile name that was rebound to 127.0.0.1 sends
+ *   `Host: evil.example`, which is refused; only a loopback name on this server's own port is
+ *   answered. It does not stop a page served from another local port (another dev server,
+ *   another app): that page addresses us, so its Host is ours. That case is stopped by the
+ *   `Origin` check plus the absence of any CORS header (the browser will not let the page read
+ *   a reply, and a write that rides the session cookie must carry an `Origin` exactly equal
+ *   to the origin the request was addressed to: same scheme, name and port, which `SameSite`
+ *   cannot promise because it ignores ports). A process that is not a browser can forge
+ *   both headers; they defend against pages, not against local programs.
  *
  * Exports: isLoopbackHost(), createHostPolicy(), sameOrigin().
  * Depends on: types/http. No IO.

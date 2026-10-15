@@ -70,6 +70,7 @@ export async function startProjectsRig(
       triggers: extras.triggers,
       tickets: extras.tickets,
       sessions: extras.sessions,
+      prover: extras.prover,
       requestShutdown: extras.requestShutdown,
       secrets,
       dataHome: { home: dirname(worktreesDir), worktreesDir },

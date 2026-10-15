@@ -22,7 +22,7 @@ import type { HarnessSetup, HarnessTestResult } from '@forge/drivers';
 import type { Engine } from '@forge/engine';
 import type { HookHandler } from '@forge/hooks';
 import type { CatalogueStore } from '@forge/tools';
-import type { SessionStore, SseTicketIssuer } from '#/types/auth.types.js';
+import type { SessionStore, SseTicketIssuer, TokenProver } from '#/types/auth.types.js';
 import type { HarnessCompat } from '#/types/harness-compat.types.js';
 import type { ProjectRegistry } from '#/types/project-registry.types.js';
 import type { HttpTuning } from '#/types/settings.types.js';
@@ -55,6 +55,8 @@ export interface RouteDeps {
   readonly tickets: SseTicketIssuer;
   /** Browser sessions and the one-time codes that start them (`/auth/open-code`, `/auth/open`). */
   readonly sessions: SessionStore;
+  /** Answers a caller's challenge to show this server knows the install token (`POST /auth/proof`). */
+  readonly prover: TokenProver;
   /** Starts the graceful shutdown (`POST /admin/shutdown`); returns at once. */
   readonly requestShutdown: () => void;
   /** Where Forge keeps its own files; a project clone may not be inside them. */

@@ -93,6 +93,19 @@ describe('forge stop', () => {
     expect(joined(world.err)).toContain('answered /health but not the stop request');
   });
 
+  it('does not send the token to a port that cannot prove it holds it', async () => {
+    const world = running();
+    world.impostors.add(RECORD.port);
+
+    const code = await stopServer(world.ports);
+
+    expect(code).toBe(1);
+    expect(world.shutdownCalls).toHaveLength(0);
+    expect(joined(world.err)).toContain(
+      `something else is answering on port ${RECORD.port}; Forge is not running there`,
+    );
+  });
+
   it('does not send the token to a port that does not answer as Forge', async () => {
     const world = running();
     world.healthByPort.set(RECORD.port, 'not_forge');

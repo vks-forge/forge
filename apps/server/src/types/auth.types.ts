@@ -7,7 +7,7 @@
  *   small and their tests about behaviour.
  *
  * Exports: RouteAccess, AuthMethod, AuthRequest, AuthGuard, SseTicketIssuer, SessionStore,
- *   SessionVerifier, SessionRecord, Auth, RestrictFile, InstanceLockIo, InstanceLock.
+ *   SessionVerifier, SessionRecord, TokenProver, Auth, RestrictFile, InstanceLockIo, InstanceLock.
  * Depends on: none. Types only.
  */
 
@@ -71,9 +71,16 @@ export interface SseTicketIssuer {
   verify(ticket: string, runId: string): boolean;
 }
 
+/** Shows knowledge of the install token without revealing it. */
+export interface TokenProver {
+  /** Lowercase hex `HMAC-SHA256(token, nonce)`. */
+  prove(nonce: string): string;
+}
+
 /** What the router and routes are built with: the access decision and the ticket issuer. */
 export interface Auth {
   readonly guard: AuthGuard;
+  readonly prover: TokenProver;
   readonly tickets: SseTicketIssuer;
   readonly sessions: SessionStore;
 }

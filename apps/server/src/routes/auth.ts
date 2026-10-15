@@ -6,7 +6,11 @@
  *   Instead `forge start` / `forge open` ask `POST /auth/open-code` (install token only) for a
  *   60-second single-use code and open `/auth/open?code=...` in the browser; that route spends
  *   the code, sets an `HttpOnly` session cookie and redirects to `/`, so the code leaves the
- *   address bar at once. `POST /auth/logout` drops the session and clears the cookie. The
+ *   address bar at once. `POST /auth/logout` is open: it always clears the cookie and drops
+ *   the session when one is valid, so a person whose session already expired can still get
+ *   rid of the dead cookie (the router still demands a same-origin `Origin` of a cookie
+ *   request). `POST /auth/proof` answers a challenge with an HMAC under the install token,
+ *   so the CLI can check a port is really this server before it sends the token. The
  *   page's `EventSource` cannot send headers either, so `POST /auth/sse-ticket` (token or
  *   session) hands out a ticket bound to one run id for the stream URL; it is useless for any
  *   other run and any other route. A code that fails gets a plain page, not JSON, because a
@@ -17,7 +21,7 @@
  *   IO: reads the request body, writes the response.
  */
 
-import { SseTicketBody } from '#/schemas/api.js';
+import { ProofBody, SseTicketBody } from '#/schemas/api.js';
 import {
   clearedSessionCookie,
   sessionCookie,
@@ -97,7 +101,22 @@ export function authRoutes(deps: RouteDeps): Route[] {
     },
     {
       method: 'POST',
+      path: '/auth/proof',
+      // Open because the caller has no credential yet; it learns nothing but an HMAC of its
+      // own nonce, and the token itself is never returned.
+      access: 'open',
+      async handle({ req, res }) {
+        const { nonce } = await readJson(req, ProofBody);
+
+        sendJson(res, 200, { proof: deps.prover.prove(nonce) });
+      },
+    },
+    {
+      method: 'POST',
       path: '/auth/logout',
+      // Open: an expired or unknown cookie must still be clearable. The router has already
+      // required a matching Origin when the request carries a session cookie.
+      access: 'open',
       async handle({ req, res }) {
         const sessionId = sessionIdOf(req.headers.cookie);
         if (sessionId !== undefined) {

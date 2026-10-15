@@ -104,6 +104,7 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-16 — W7b review fixes: CSRF check covers every unsafe method, logout always clears, CLI checks the server proves the token before sending it.
 - 2026-10-16 — W5: project Home with stats graphs, Inbox, Runs and Cost screens.
 - 2026-10-16 — W7b: forge start serves the UI and signs the browser in with a one-time link.
 - 2026-10-16 — Fast local gates: pnpm check runs tests related to the change; full suite in CI.

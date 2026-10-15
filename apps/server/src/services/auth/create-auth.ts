@@ -7,13 +7,14 @@
  *   token-file failure stops the server at start instead of leaving an open API.
  *
  * Exports: createAuth().
- * Depends on: services/auth/{guard,install-token,restrict-file,sse-tickets}, @forge/engine
+ * Depends on: services/auth/{guard,install-token,proof,restrict-file,sse-tickets}, @forge/engine
  *   (Logger type), types/auth. IO: the install token file.
  */
 
 import type { Logger } from '@forge/engine';
 import { createAuthGuard } from '#/services/auth/guard.js';
 import { ensureInstallToken } from '#/services/auth/install-token.js';
+import { createTokenProver } from '#/services/auth/proof.js';
 import { nodeRestrictFile } from '#/services/auth/restrict-file.js';
 import { createSessionStore } from '#/services/auth/sessions.js';
 import { createSseTicketIssuer } from '#/services/auth/sse-tickets.js';
@@ -34,5 +35,10 @@ export async function createAuth(options: {
   const tickets = createSseTicketIssuer(options.now);
   const sessions = createSessionStore(options.now);
 
-  return { guard: createAuthGuard(token, tickets, sessions), tickets, sessions };
+  return {
+    guard: createAuthGuard(token, tickets, sessions),
+    prover: createTokenProver(token),
+    tickets,
+    sessions,
+  };
 }

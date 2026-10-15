@@ -46,6 +46,14 @@ export async function stopServer(
 
   const token = await readInstallToken(ports);
 
+  if (!(await ports.proveToken(port, token))) {
+    ports.stderr(
+      `forge: something else is answering on port ${port}; Forge is not running there, so nothing was sent to it\n`,
+    );
+
+    return 1;
+  }
+
   let status: number;
   try {
     status = await ports.shutdown(port, token);

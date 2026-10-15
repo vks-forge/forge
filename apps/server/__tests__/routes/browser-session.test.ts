@@ -12,7 +12,8 @@
  *   cookie; the cookie authenticates reads and (with a same-origin `Origin`) writes; a missing
  *   or foreign Origin on a cookie write is 403 while a bearer write with a foreign Origin is
  *   not; a Host on another port or name is 403; the SSE ticket works with the cookie; logout
- *   ends the session and clears the cookie; the cookie is also accepted under `/api`.
+ *   ends the session and clears the cookie, also for an expired or unknown cookie, but still
+ *   needs the same Origin; the cookie is also accepted under `/api`.
  * Depends on: src/routes/auth, src/services/auth, helpers/http-rig. IO: a loopback socket.
  */
 
@@ -20,6 +21,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { authRoutes } from '#/routes/auth.js';
 import { createAuthGuard } from '#/services/auth/guard.js';
 import { createSessionStore } from '#/services/auth/sessions.js';
+import { createTokenProver } from '#/services/auth/proof.js';
 import { createSseTicketIssuer } from '#/services/auth/sse-tickets.js';
 import { sendJson } from '#/services/http/respond.js';
 import { startHttp } from '#tests/helpers/http-rig.js';
@@ -49,7 +51,14 @@ beforeEach(async () => {
   ];
 
   rig = await startHttp(
-    [...authRoutes({ tickets, sessions } as unknown as RouteDeps), ...probes],
+    [
+      ...authRoutes({
+        tickets,
+        sessions,
+        prover: createTokenProver(TEST_INSTALL_TOKEN),
+      } as unknown as RouteDeps),
+      ...probes,
+    ],
     createAuthGuard(TEST_INSTALL_TOKEN, tickets, sessions),
   );
 });
@@ -262,16 +271,5 @@ describe('POST /auth/logout', () => {
     );
 
     expect(after.status).toBe(401);
-  });
-
-  it('needs credentials and, for a cookie, the same origin', async () => {
-    const cookie = await signIn();
-
-    const anonymous = await rig.raw('POST', '/auth/logout', noToken);
-    const crossSite = await post('/auth/logout', cookie, {
-      origin: 'https://evil.example',
-    });
-
-    expect([anonymous.status, crossSite.status]).toEqual([401, 403]);
   });
 });

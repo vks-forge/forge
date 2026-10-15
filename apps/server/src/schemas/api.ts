@@ -9,7 +9,7 @@
  *
  * Exports: ToolDecisionBody, CataloguePutBody, AnswerBody, LastEventId, SettingsPutBody, HarnessPutBody, HarnessSecretBody, LiveQuery,
  *   ProjectCreateBody, ProjectPatchBody, MemoryApproveBody, MemoryRejectBody, ConnectionCreateBody,
- *   SseTicketBody.
+ *   SseTicketBody, ProofBody.
  * Depends on: @forge/core (HarnessAuthMode, HarnessKind, HarnessSecretKind, GitHostConfig, ProjectPrefix,
  *   ProjectCheck, GateRules), zod. No IO.
  */
@@ -37,6 +37,10 @@ export type AnswerBody = z.infer<typeof AnswerBody>;
 /** `POST /auth/sse-ticket`: the run the stream ticket is for. */
 export const SseTicketBody = z.strictObject({ run_id: z.string().min(1).max(200) });
 export type SseTicketBody = z.infer<typeof SseTicketBody>;
+
+/** `POST /auth/proof`: the caller's random challenge; the answer is an HMAC under the install token. */
+export const ProofBody = z.strictObject({ nonce: z.string().min(16).max(200) });
+export type ProofBody = z.infer<typeof ProofBody>;
 
 /** A non-negative integer sequence number, as sent in `Last-Event-ID` or `?after=`. */
 export const LastEventId = z.coerce.number().int().nonnegative();

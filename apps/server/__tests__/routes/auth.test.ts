@@ -9,7 +9,7 @@
  *   `EventSource`) must work for the run it was issued for, for 60 seconds, and for nothing else.
  *
  * Pins: 401 for no and wrong token on every protected route and on unknown paths; the open
- *   set is exactly /health, the hook route and /auth/open; the shutdown request fires after the 202; the
+ *   set is exactly /health, the hook route, /auth/open, /auth/proof and /auth/logout; the shutdown request fires after the 202; the
  *   ticket flow (valid, expired, wrong run, tampered, not usable on other routes).
  * Depends on: src/routes/routes, src/services/auth, helpers/http-rig. IO: a loopback socket.
  */
@@ -94,12 +94,13 @@ afterEach(async () => {
 const concrete = (path: string): string => path.replace(/:[a-z]+/g, 'x');
 
 describe('the install token', () => {
-  it('is required by every route except /health, the hook route and /auth/open', () => {
-    const open = routes
-      .filter((route) => route.access === 'open')
-      .map((route) => `${route.method} ${route.path}`);
+  it('is required by every route except /health, the hook route, /auth/open, /auth/proof and /auth/logout', () => {
+    const open = routes.filter((r) => r.access === 'open');
+    const names = open.map((r) => `${r.method} ${r.path}`).sort();
 
-    expect(open.sort()).toEqual(['GET /auth/open', 'GET /health', 'POST /runs/:id/hook']);
+    expect(names.join(', ')).toBe(
+      'GET /auth/open, GET /health, POST /auth/logout, POST /auth/proof, POST /runs/:id/hook',
+    );
   });
 
   it('answers a bare 401 on every protected route without a token', async () => {

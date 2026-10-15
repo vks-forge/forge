@@ -5,14 +5,15 @@
  *   `server.json`, `/health` and `/admin/shutdown`. To test the real spawn, log file,
  *   process-table and HTTP code without building the whole server, this script does just that
  *   contract: it listens on a free loopback port, publishes `server.json`, answers `/health`
- *   as Forge does, honours `POST /admin/shutdown` for the install token in the data home
+ *   as Forge does, answers `POST /auth/proof` with the HMAC the real server gives, honours `POST /admin/shutdown` for the install token in the data home
  *   (202, then removes the record and exits), and in `fail` mode prints the server's own
  *   "port in use" line and exits 1 like a server that lost the port.
  *
  * Exports: none (executable, started with `node`).
- * Depends on: node:http, node:fs, node:path. IO: loopback socket, files in FORGE_HOME.
+ * Depends on: node:crypto, node:http, node:fs, node:path. IO: loopback socket, files in FORGE_HOME.
  */
 
+import { createHmac } from 'node:crypto';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
@@ -38,6 +39,18 @@ const server = createServer((req, res) => {
 
   if (req.method === 'GET' && req.url === '/health') {
     json(200, { service: 'forge', status: 'ok' });
+
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/auth/proof') {
+    let raw = '';
+    req.on('data', (chunk: Buffer) => void (raw += chunk.toString()));
+    req.on('end', () => {
+      const { nonce } = JSON.parse(raw) as { nonce: string };
+
+      json(200, { proof: createHmac('sha256', token).update(nonce).digest('hex') });
+    });
 
     return;
   }

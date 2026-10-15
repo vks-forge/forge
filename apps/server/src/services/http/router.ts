@@ -3,15 +3,20 @@
  *
  * Why: the API is a few dozen routes, which does not justify a framework dependency (d-0061).
  *   The router matches method and path, decodes path parameters, rejects a request whose
- *   Host header does not name this server (a browser page on a rebinding DNS name, or on
- *   another local port, could otherwise reach a service that is bound to 127.0.0.1), asks
+ *   Host header does not name this server (a browser page on a rebinding DNS name could
+ *   otherwise reach a service that is bound to 127.0.0.1; a page on another local port sends
+ *   the right Host, so that case is the `Origin` check plus the absence of CORS headers), asks
  *   the auth guard before any handler runs (a route needs the install token or a session
  *   unless it declares itself `open`; the guard is a required argument so a router cannot be
  *   built without one, and unknown paths also answer 401 to a caller without credentials so
  *   the route table is not probed anonymously), answers 404 for unknown paths and 405 with
  *   an `Allow` header for a known path with the wrong method, and turns anything a handler
  *   throws into the safe error response. A request that is signed in only by the browser's
- *   cookie and changes state must also carry an `Origin` equal to the server's own (CSRF).
+ *   cookie must, unless its method is GET or HEAD, carry an `Origin` equal to the server's own
+ *   (CSRF). The check is by exemption, not by a list of unsafe methods, so OPTIONS or a method
+ *   added later is refused too; it runs before routing, so it also covers open routes (logout)
+ *   and unknown paths, and a valid bearer token skips it because a script sets that header
+ *   deliberately.
  *   The API answers under `/api/*` (the browser's view; the prefix is stripped) and at the
  *   bare paths (the CLI, the hooks, the tests). When the built UI is mounted it owns `/`:
  *   its files, and a browser navigation (GET, `Accept: text/html`, no `Authorization`) to any
@@ -19,11 +24,13 @@
  *   shows the app rather than the JSON of the API route with the same name.
  *
  * Exports: createRouter(), isLoopbackHost().
- * Depends on: services/http/{host-policy,http-errors,respond}, types/auth, types/http.
+ * Depends on: services/auth/cookies, services/http/{host-policy,http-errors,respond}, types/auth,
+ *   types/http.
  *   No IO of its own.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { sessionIdOf } from '#/services/auth/cookies.js';
 import {
   createHostPolicy,
   isLoopbackHost,
@@ -37,7 +44,8 @@ import type { Route, Router, RouterOptions } from '#/types/http.types.js';
 export { isLoopbackHost };
 
 const API_PREFIX = '/api';
-const STATE_CHANGING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+/** The only methods that cannot change state; every other method is treated as unsafe. */
+const SAFE_METHODS = new Set(['GET', 'HEAD']);
 
 /** `/api/x` is `/x`; `/apix` is not under the prefix. Undefined for a path outside it. */
 function stripApiPrefix(pathname: string): string | undefined {
@@ -122,6 +130,26 @@ export function createRouter(
 
     const authorization = req.headers.authorization;
     const cookie = req.headers.cookie;
+
+    // The browser attaches the cookie by itself, so a request that carries ours and is not
+    // GET or HEAD must come from our own page. Bearer callers set their header deliberately.
+    if (
+      !SAFE_METHODS.has(req.method ?? '') &&
+      sessionIdOf(cookie) !== undefined &&
+      !guard.allows({
+        access: 'bearer',
+        authorization,
+        ticket: null,
+        runId: undefined,
+        cookie: undefined,
+      }) &&
+      !sameOrigin(req.headers.origin, req.headers.host)
+    ) {
+      throw new HttpError(403, 'bad_origin', 'origin does not match this server', {
+        family: 'policy_denied',
+      });
+    }
+
     const unauthorized = (): HttpError => {
       res.setHeader('www-authenticate', 'Bearer');
 
@@ -153,18 +181,6 @@ export function createRouter(
 
         if (method === undefined) {
           throw unauthorized();
-        }
-
-        // The browser attaches the cookie by itself, so only a request that came from our
-        // own page may change state with it. Bearer callers set their header deliberately.
-        if (
-          method === 'session' &&
-          STATE_CHANGING.has(req.method ?? '') &&
-          !sameOrigin(req.headers.origin, req.headers.host)
-        ) {
-          throw new HttpError(403, 'bad_origin', 'origin does not match this server', {
-            family: 'policy_denied',
-          });
         }
 
         await route.handle({ req, res, params, url });

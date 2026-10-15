@@ -5,7 +5,8 @@
  *   before anything was written, so a handler that fails halfway never leaves a truncated
  *   JSON document. `Cache-Control: no-store` keeps ticket data out of caches, and no CORS
  *   header is ever set: the control room and CLI are same-origin or non-browser clients
- *   and a browser page on another origin must not be able to call the API (d-0061).
+ *   and a browser page on another origin must not be able to call the API (d-0061);
+ *   `Cross-Origin-Resource-Policy: same-origin` adds that a no-cors page cannot even embed a reply.
  *
  * Exports: sendJson(), sendError().
  * Depends on: node:http, services/http/http-errors. IO: writes the response.
@@ -26,6 +27,7 @@ export function sendJson(res: ServerResponse, status: number, body: unknown): vo
     'content-length': Buffer.byteLength(text),
     'cache-control': 'no-store',
     'x-content-type-options': 'nosniff',
+    'cross-origin-resource-policy': 'same-origin',
   });
 
   res.end(text);
