@@ -104,11 +104,11 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-16 — W6b-1: cards — every intake becomes a card with a rolled-up board column and history.
 - 2026-10-16 — Web app runs on the real server API only (mock removed); UI preferences persist across reloads.
 - 2026-10-16 — W6b-2: message a running Worker directly (steer).
 - 2026-10-16 — W7b review fixes: CSRF check covers every unsafe method, logout always clears, CLI checks the server proves the token before sending it.
 - 2026-10-16 — W5: project Home with stats graphs, Inbox, Runs and Cost screens.
-- 2026-10-16 — W6b-1: cards — every intake becomes a card with a rolled-up board column and history.
 - 2026-10-16 — W7b: forge start serves the UI and signs the browser in with a one-time link.
 - 2026-10-16 — Fast local gates: pnpm check runs tests related to the change; full suite in CI.
 - 2026-10-16 — W3: Board tickets view and Ticket page with the live Worker thread.

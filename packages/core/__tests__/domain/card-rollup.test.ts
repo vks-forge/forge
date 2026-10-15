@@ -6,7 +6,8 @@
  *   precedence hides a question the owner must answer, or marks unmerged work Done, and
  *   nothing else would catch it because no stored column exists to disagree.
  *
- * Pins: each column's rule, the precedence (Needs you over In progress over Done), closed
+ * Pins: each column's rule, the d-0107 precedence (Needs you, then Closed, then In progress,
+ *   then Done), closed
  *   as the one explicit state, discussion cards staying in Shaping, questions of other
  *   cards being ignored, and properties over any set of ticket statuses.
  * Depends on: src/domain/card-rollup, src/schemas/ticket, fast-check, vitest.
@@ -90,12 +91,24 @@ describe('rollupCardColumn', () => {
     expect(rollupCardColumn(open, tickets, [asked('SF-99')])).toBe('done');
   });
 
-  it('puts a closed card in closed whatever its tickets and questions say', () => {
+  it('puts a closed card in closed over its running or finished tickets', () => {
     const closed = { closed_reason: 'duplicate of SF-C3' };
 
-    expect(
-      rollupCardColumn(closed, [t(1, 'review'), t(2, 'in_progress')], [asked('SF-1')]),
-    ).toBe('closed');
+    expect(rollupCardColumn(closed, [t(1, 'in_progress'), t(2, 'done')], [])).toBe(
+      'closed',
+    );
+
+    expect(rollupCardColumn(closed, [], [])).toBe('closed');
+  });
+
+  it('keeps a closed card in needs_you while a question or review is waiting (d-0107)', () => {
+    const closed = { closed_reason: 'duplicate of SF-C3' };
+
+    expect(rollupCardColumn(closed, [t(1, 'in_progress')], [asked('SF-1')])).toBe(
+      'needs_you',
+    );
+
+    expect(rollupCardColumn(closed, [t(1, 'review')], [])).toBe('needs_you');
   });
 });
 
@@ -130,13 +143,28 @@ describe('rollupCardColumn: properties', () => {
     );
   });
 
-  it('is closed for every input when a reason is set, and never closed otherwise', () => {
+  it('is closed exactly when a reason is set and nothing waits on a person', () => {
+    const waits = (list: Ticket['status'][]) =>
+      list.some((s) => ['waiting_human', 'review', 'needs_signoff'].includes(s));
+
     fc.assert(
       fc.property(statuses, fc.boolean(), (list, isClosed) => {
         const card = isClosed ? { closed_reason: 'r' } : open;
         const column = rollupCardColumn(card, ticketsOf(list), []);
 
-        expect(column === 'closed').toBe(isClosed);
+        expect(column === 'closed').toBe(isClosed && !waits(list));
+      }),
+    );
+  });
+
+  it('puts a card in needs_you for any pending question, closed or not', () => {
+    fc.assert(
+      fc.property(statuses, fc.boolean(), (list, isClosed) => {
+        const card = isClosed ? { closed_reason: 'r' } : open;
+        const tickets = ticketsOf([...list, 'in_progress']);
+        const last = tickets[tickets.length - 1]!;
+
+        expect(rollupCardColumn(card, tickets, [asked(last.id)])).toBe('needs_you');
       }),
     );
   });

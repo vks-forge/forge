@@ -7,11 +7,12 @@
  *   pure function with a fixed precedence keeps the Board, the Card page, the label mirror
  *   on the source issue and "Needs you" in agreement.
  *
- * Precedence, first match wins:
- *   1. `closed_reason` set -> closed. Closing is a deliberate act on the card, not a derived
- *      fact, and a closed card must not light up Needs you for a question nobody will answer.
- *   2. Needs you: a pending question on one of its tickets, or a ticket waiting on a person
- *      (waiting_human, review, needs_signoff). Wins over everything else.
+ * Precedence, first match wins. d-0107: "Needs you wins over everything, then In progress":
+ *   1. Needs you: a pending question on one of its tickets, or a ticket waiting on a person
+ *      (waiting_human, review, needs_signoff). Wins over everything else, a closed card
+ *      included, so a question still pending on a closed card stays visible until it is
+ *      answered or cancelled.
+ *   2. Closed: `closed_reason` set.
  *   3. In progress: a ticket that is planned, running, gated or blocked on another ticket.
  *   4. Done: at least one ticket and every ticket not cancelled is done (merged).
  *   5. New: tickets exist and every ticket not cancelled is still in the inbox, untriaged.
@@ -44,10 +45,6 @@ export function rollupCardColumn(
   tickets: readonly RolledTicket[],
   pendingInteractions: readonly RolledInteraction[],
 ): CardColumn {
-  if (card.closed_reason !== undefined) {
-    return 'closed';
-  }
-
   const ids = new Set<string>(tickets.map((t) => t.id));
   const asked = pendingInteractions.some(
     (i) => i.status === 'pending' && ids.has(i.ticket_id),
@@ -55,6 +52,10 @@ export function rollupCardColumn(
 
   if (asked || tickets.some((t) => NEEDS_YOU_STATUSES.includes(t.status))) {
     return 'needs_you';
+  }
+
+  if (card.closed_reason !== undefined) {
+    return 'closed';
   }
 
   if (tickets.some((t) => RUNNING_STATUSES.includes(t.status))) {
