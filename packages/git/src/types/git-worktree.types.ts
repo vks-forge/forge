@@ -53,6 +53,8 @@ export interface GitResult {
 /** Per-call options for the git runner. */
 export interface GitRunOptions {
   readonly env?: Readonly<Record<string, string>>;
+  /** Kill git after this many milliseconds; a killed run is a CrashError. No limit when absent. */
+  readonly timeoutMs?: number;
 }
 
 /** Runs git in a directory. `run` throws CrashError on failure; `try` returns the exit code instead. */

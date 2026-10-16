@@ -13,16 +13,18 @@
  *   model outage) never crashes the tick: the card shows `error` with a plain note, the rows
  *   are completed, and the user's next message tries again. Spend is checked for a budget
  *   warning after each answer (d-0143). The phase runs before triage so a ticket the
- *   Director files is triaged in the same tick.
+ *   Director files is triaged in the same tick. Cards of a planned type in a planning phase
+ *   are not chatted with: their queued turns are planning turns and go to the planning flow
+ *   (tick/card-planning); only cards outside planning (and Discussion cards) use `card_chat`.
  *
  * Exports: runCardChats(), STALE_CLAIM_MS.
- * Depends on: @forge/core (CardChatOutput), steps/run-step, tick/card-budget,
+ * Depends on: @forge/core (CardChatOutput), steps/run-step, tick/card-budget, tick/card-planning,
  *   tick/card-chat-actions, tick/card-chat-context, tick/card-log, tick/card-notify.
  *   Reads and writes storage.
  */
 
 import { CardChatOutput } from '@forge/core';
-import type { ActionTaken, CardId, StorageTx } from '@forge/core';
+import type { ActionTaken, CardId, CardReplyQueueItem, StorageTx } from '@forge/core';
 import { iso } from '#/shared/time.js';
 import { rejectStep, runStep } from '#/steps/run-step.js';
 import { warnOnBudget } from '#/tick/card-budget.js';
@@ -30,6 +32,7 @@ import { CHAT_ACTOR, runChatAction } from '#/tick/card-chat-actions.js';
 import { loadChatContext } from '#/tick/card-chat-context.js';
 import { logCardEvent } from '#/tick/card-log.js';
 import { notifyCard } from '#/tick/card-notify.js';
+import { noteFailure, planningHandles, runPlanningTurn } from '#/tick/card-planning.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 
 /** A claim older than this was left by a process that died mid-answer; the row is answered again. */
@@ -116,25 +119,40 @@ export async function runCardChats(ctx: EngineCtx): Promise<void> {
     tx.cardReplyQueue.claim(ctx.nowIso, iso(ctx.now - STALE_CLAIM_MS)),
   );
 
-  // One model call per card however many messages queued up: the step reads the whole history.
-  const byCard = new Map<CardId, number[]>();
+  // One turn per card however many messages queued up: the step reads the whole history.
+  const byCard = new Map<CardId, CardReplyQueueItem[]>();
   for (const row of claimed) {
-    byCard.set(row.card_id, [...(byCard.get(row.card_id) ?? []), row.id]);
+    byCard.set(row.card_id, [...(byCard.get(row.card_id) ?? []), row]);
   }
 
-  for (const [id, rows] of byCard) {
+  for (const [id, items] of byCard) {
+    const rows = items.map((r) => r.id);
+    // A planning turn that failed leaves its rows claimed: they are taken again once stale.
+    let retry = false;
     pending.delete(id);
     busy.add(id);
     try {
-      await answerCard(ctx, id, rows);
+      if (await planningHandles(ctx, id)) {
+        retry = (await runPlanningTurn(ctx, id, items)) === 'retry';
+      } else {
+        await answerCard(ctx, id, rows);
+      }
     } catch (e) {
       const reason = e instanceof Error ? e.message : String(e);
       ctx.deps.log?.('error', `card chat ${id} failed`, { error: reason });
-      await failChat(ctx, id, rows, reason);
+      if (await planningHandles(ctx, id).catch(() => false)) {
+        retry = true;
+        await noteFailure(ctx, id, reason).catch(() => undefined);
+      } else {
+        await failChat(ctx, id, rows, reason);
+      }
     } finally {
       busy.delete(id);
       // Rows of a card that is closed or gone have no reply to wait for.
-      await ctx.deps.storage.transaction((tx) => completeRows(tx, rows, ctx.nowIso));
+      if (!retry) {
+        await ctx.deps.storage.transaction((tx) => completeRows(tx, rows, ctx.nowIso));
+      }
+
       await notifyCard(ctx.deps, id);
     }
   }

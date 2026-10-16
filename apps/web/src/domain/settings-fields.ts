@@ -127,7 +127,8 @@ export const GENERAL_GROUPS: readonly FieldGroup[] = [
   {
     id: 'director',
     title: 'Director',
-    description: 'How sure the Director must be, and how it retries and wakes.',
+    description:
+      'How sure the Director must be, and how it retries and wakes. Planning, models and the flow are on the Director page.',
     fields: [
       {
         kind: 'number',
@@ -150,16 +151,9 @@ export const GENERAL_GROUPS: readonly FieldGroup[] = [
   {
     id: 'models',
     title: 'Models',
-    description: 'Which model answers each Director step and each kind of Worker.',
+    description:
+      'Which model each kind of Worker uses. The Director’s models are on the Director page.',
     fields: [
-      { kind: 'text', path: 'models.director.triage', label: 'Director: triage' },
-      {
-        kind: 'text',
-        path: 'models.director.dispatch_prompt',
-        label: 'Director: write the Worker prompt',
-      },
-      { kind: 'text', path: 'models.director.steer_reply', label: 'Director: reply' },
-      { kind: 'text', path: 'models.director.card_chat', label: 'Director: card chat' },
       { kind: 'text', path: 'models.worker.express', label: 'Worker: express lane' },
       { kind: 'text', path: 'models.worker.standard', label: 'Worker: standard lane' },
       { kind: 'text', path: 'models.worker.full', label: 'Worker: full lane' },

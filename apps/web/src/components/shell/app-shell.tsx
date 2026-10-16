@@ -14,12 +14,13 @@
 
 import { Menu } from 'lucide-react';
 import { useState } from 'react';
-import { useLocation } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { PageTransition } from '#/components/motion/page-transition.js';
 import { LeaveGuard } from '#/components/shell/leave-guard.js';
 import { MobileDrawer } from '#/components/shell/mobile-drawer.js';
 import { SidebarContent } from '#/components/shell/sidebar-content.js';
 import { Tooltip } from '#/components/ui/tooltip.js';
+import { OVERVIEW_PATH } from '#/domain/nav-entries.js';
 import { useMediaQuery } from '#/state/use-media-query.js';
 
 export function AppShell() {
@@ -60,7 +61,9 @@ export function AppShell() {
                 <Menu aria-hidden="true" className="size-5" />
               </button>
             </Tooltip>
-            <span className="text-sm font-semibold tracking-tight">Forge</span>
+            <Link to={OVERVIEW_PATH} className="text-sm font-semibold tracking-tight">
+              Forge
+            </Link>
           </header>
         ) : null}
         <main

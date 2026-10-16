@@ -6,7 +6,8 @@
  *   over the stored phase, the card's tickets and the pending questions, never from a stored
  *   column, and `needs_you` is the overlay (the card's own flag or a waiting ticket), so the
  *   owner's answer is never hidden. `blocks` is the reverse view of the `depends_on` edges.
- *   One module reads those inputs and shapes the answer, so no route re-derives them.
+ *   The grill's open-point count and the newest plan version come from the card's planning
+ *   state. One module reads those inputs and shapes the answer, so no route re-derives them.
  *
  * Exports: viewCard(), summarizeCard(), cardDetail().
  * Depends on: @forge/core (rollupCardColumn, card schemas), services/ticket-summary,
@@ -41,6 +42,8 @@ export async function viewCard(
   const tickets = await tx.tickets.listByCard(card.id);
   const ids = new Set<string>(tickets.map((t) => t.id));
   const pending = allPending.filter((i) => ids.has(i.ticket_id));
+  const planning = await tx.cardPlanning.get(card.id);
+  const shaping = card.phase === 'grilling' || card.phase === 'verifying';
 
   return {
     card,
@@ -50,6 +53,8 @@ export async function viewCard(
     needsYou: cardNeedsYou(card, tickets, pending),
     dependsOn: relations.filter((r) => r.from === card.id).map((r) => r.to),
     blocks: relations.filter((r) => r.to === card.id).map((r) => r.from),
+    openPoints: shaping ? planning.grill.open_points : null,
+    planVersion: (await tx.cardPlanning.latestPlan(card.id))?.version ?? null,
   };
 }
 
@@ -64,6 +69,8 @@ export function summarizeCard(view: CardView, slug: string): CardSummary {
     blocks: [...view.blocks],
     ticket_count: view.tickets.length,
     tickets_done: view.tickets.filter((t) => t.status === 'done').length,
+    open_points: view.openPoints,
+    plan_version: view.planVersion,
   };
 }
 

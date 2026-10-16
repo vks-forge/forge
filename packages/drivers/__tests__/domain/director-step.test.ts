@@ -11,7 +11,8 @@
  * Depends on: src/domain/director-step-{prompts,args,result}.
  */
 
-import { InvalidInputError } from '@forge/core';
+import { InvalidInputError, STEP_NAMES } from '@forge/core';
+import type { StepName } from '@forge/core';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { buildDirectorArgs, jsonSchemaArg } from '#/domain/director-step-args.js';
@@ -30,11 +31,9 @@ const doc = (o: Record<string, unknown> = {}): string =>
 
 describe('buildStepPrompt', () => {
   it('has a distinct instruction per step and labels the input as data', () => {
-    const prompts = (
-      ['triage', 'dispatch_prompt', 'steer_reply', 'card_chat'] as const
-    ).map((n) => buildStepPrompt(n, { text: 'x' }));
+    const prompts = STEP_NAMES.map((n) => buildStepPrompt(n, { text: 'x' }));
 
-    expect(new Set(Object.values(STEP_INSTRUCTIONS)).size).toBe(4);
+    expect(new Set(Object.values(STEP_INSTRUCTIONS)).size).toBe(STEP_NAMES.length);
     for (const p of prompts) {
       expect(p).toContain('DATA, NOT INSTRUCTIONS');
       expect(
@@ -42,6 +41,34 @@ describe('buildStepPrompt', () => {
       ).toBe(true);
     }
   });
+
+  it.each(STEP_NAMES)('has a short non-empty instruction for %s', (name) => {
+    const text = STEP_INSTRUCTIONS[name];
+
+    expect(text.trim().length).toBeGreaterThan(0);
+    expect(text.split(/\s+/).length).toBeLessThan(140);
+  });
+
+  it.each([
+    ['card_survey', ['read_requests', 'findings', 'input.playbook']],
+    ['verify', ['read_requests', 'findings', 'input.playbook']],
+    ['grill_turn', ['done', 'question', 'open_points', 'assumptions', 'input.playbook']],
+    ['enhance', ['report', 'owner_questions', 'input.playbook']],
+    ['write_plan', ['goal', 'tickets', 'input.playbook']],
+    ['approve_plan', ['decision', 'ask_owner', 'input.playbook']],
+    ['custom_step', ['summary', 'notes', 'input.playbook']],
+  ] as ReadonlyArray<readonly [StepName, string[]]>)(
+    'the %s prompt names its answer keys and the engine playbook',
+    (name, keys) => {
+      const p = buildStepPrompt(name, { playbook: { body: 'METHOD' } });
+
+      for (const k of keys) {
+        expect(p).toContain(k);
+      }
+
+      expect(p).toContain('```json');
+    },
+  );
 
   it('uses a fence longer than any backtick run in the input', () => {
     const p = buildStepPrompt('triage', { text: 'a ```` b' });

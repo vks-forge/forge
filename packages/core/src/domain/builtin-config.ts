@@ -9,9 +9,10 @@
  *   default and every install that never overrode it picks it up.
  *
  * Exports: BUILTIN_FORGE_CONFIG, BUILTIN_PROJECT_SETTINGS, BUILTIN_CONFIG.
- * Depends on: schemas/config-override, schemas/forge-config. No IO.
+ * Depends on: domain/builtin-director, schemas/config-override, schemas/forge-config. No IO.
  */
 
+import { BUILTIN_DIRECTOR_CONFIG } from '#/domain/builtin-director.js';
 import type { EffectiveConfig, ProjectSettings } from '#/schemas/config-override.js';
 import type { ForgeConfig } from '#/schemas/forge-config.js';
 
@@ -23,6 +24,14 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
       dispatch_prompt: 'opus',
       steer_reply: 'opus',
       card_chat: 'opus',
+      // Planning steps (d-0150): the judging steps on opus, the quick turns on sonnet.
+      card_survey: 'opus',
+      grill_turn: 'sonnet',
+      verify: 'opus',
+      enhance: 'opus',
+      write_plan: 'opus',
+      approve_plan: 'opus',
+      custom_step: 'sonnet',
     },
     worker: { express: 'sonnet', standard: 'sonnet', full: 'sonnet' },
   },
@@ -51,6 +60,7 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
     harness_fallbacks: [],
     shutdown_drain_ms: 10_000,
   },
+  director: BUILTIN_DIRECTOR_CONFIG,
 };
 
 /** What a project gets until it overrides: no checks (any role may be absent), no ecosystems (the gates detect them), the safe Tier C set. */

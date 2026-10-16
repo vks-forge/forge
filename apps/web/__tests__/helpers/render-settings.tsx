@@ -12,6 +12,7 @@
  * Depends on: helpers/render-app.
  */
 
+import type { ConfigVersion } from '@forge/core';
 import type { createMemoryRouter } from 'react-router';
 import type { ForgeApi } from '#/types/api.types.js';
 import type { Scenario } from '#tests/helpers/fake-forge/fake-forge.js';
@@ -21,7 +22,12 @@ import type { Routes } from '#tests/helpers/fetch-stub.js';
 
 export function renderSettings(
   path: string,
-  options: { scenario?: Scenario; routes?: Routes } = {},
+  options: {
+    scenario?: Scenario;
+    routes?: Routes;
+    /** The company's saved versions, to open a screen over a customised or empty history. */
+    companyHistory?: readonly ConfigVersion[];
+  } = {},
 ): { api: ForgeApi; router: ReturnType<typeof createMemoryRouter>; forge: FakeForge } {
   const { forge, router } = renderApp({ path, ...options });
 

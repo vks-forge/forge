@@ -39,7 +39,10 @@ function harnessSegment(source: string | undefined): string | undefined {
 }
 
 /** The route an item opens, and what that route is called on the link. */
-export function inboxLink(slug: string, item: InboxItem): { to: string; label: string } {
+export function inboxLink(
+  slug: string,
+  item: Pick<InboxItem, 'id' | 'kind' | 'run_id' | 'ticket_id'>,
+): { to: string; label: string } {
   const source = parseInboxItemId(item.id)?.sourceId;
 
   if (item.kind === 'memory_proposal' && source) {

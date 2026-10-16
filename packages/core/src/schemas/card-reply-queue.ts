@@ -7,6 +7,8 @@
  *   naming the card event that caused it; the tick claims rows, answers, and completes them,
  *   and a claim that never completed (the process died mid-answer) goes stale and is taken
  *   again. Only new events are ever queued, so old cards are never auto-answered (d-0141).
+ *   The planning flow queues a turn for each owner action that lets it continue: a grill
+ *   answer or shortcut, Start planning, and Request changes.
  *
  * Exports: CARD_REPLY_REASONS, CardReplyReason, CardReplyQueueItem, NewCardReply.
  * Depends on: schemas/ids, zod. No IO.
@@ -15,7 +17,13 @@
 import { z } from 'zod';
 import { CardId } from '#/schemas/ids.js';
 
-export const CARD_REPLY_REASONS = ['card_created', 'user_message'] as const;
+export const CARD_REPLY_REASONS = [
+  'card_created',
+  'user_message',
+  'grill_answer',
+  'start_planning',
+  'plan_changes',
+] as const;
 export const CardReplyReason = z.enum(CARD_REPLY_REASONS);
 export type CardReplyReason = z.infer<typeof CardReplyReason>;
 

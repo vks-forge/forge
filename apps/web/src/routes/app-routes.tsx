@@ -26,7 +26,7 @@ import { NotFound } from '#/routes/not-found.js';
 import { PlaceholderPage } from '#/routes/placeholder-page.js';
 import { ProjectSettingsPage } from '#/routes/project-settings/project-settings-page.js';
 import { ProjectScope } from '#/routes/project-scope.js';
-import { RootRedirect } from '#/routes/root-redirect.js';
+import { OverviewPage } from '#/routes/overview/overview-page.js';
 import { RunsPage } from '#/routes/runs/runs-page.js';
 import { settingsRoutes } from '#/routes/settings/settings-routes.js';
 import { NewProjectPage } from '#/routes/projects/new-project-page.js';
@@ -48,7 +48,7 @@ export const appRoutes: RouteObject[] = [
     path: '/',
     element: <AppShell />,
     children: [
-      { index: true, element: <RootRedirect /> },
+      { index: true, element: <OverviewPage /> },
       { path: 'projects/new', element: <NewProjectPage /> },
       {
         path: 'p/:slug',

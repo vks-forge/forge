@@ -26,12 +26,14 @@ import type {
   ProjectEventSink,
   MemorySource,
   ProjectConfigView,
+  RepoReader,
   ReportStore,
   RunStatus,
   StepName,
   StorageAdapter,
 } from '@forge/core';
 import type { ReceiptLog } from '@forge/tools';
+import type { PlanningDoors } from '#/types/card-planning.types.js';
 import type {
   CreateCardInput,
   CreateCardResult,
@@ -62,6 +64,8 @@ export interface EngineDeps {
   readonly drivers: DriverRegistry;
   readonly llm: DirectorLLM;
   readonly memory: MemorySource;
+  /** Read-only view of a project's git-tracked files at HEAD, for the planning steps' reads (d-0131). */
+  readonly repoReader: RepoReader;
   readonly receipts: ReceiptLog;
   /** Where gate reports are saved; the returned reference goes on the `gate_results` row. */
   readonly reports: ReportStore;
@@ -173,7 +177,7 @@ export interface TickReport {
 }
 
 /** The Director engine: one writer, driven by the app's clock. */
-export interface Engine {
+export interface Engine extends PlanningDoors {
   /** Reconcile, refresh, dispatch. Single-flight: a call during a tick returns the running tick's report. */
   tick(): Promise<TickReport>;
   /** Asks for an immediate tick through `deps.onTickRequested`; calls coalesce. */

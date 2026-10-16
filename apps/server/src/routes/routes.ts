@@ -11,6 +11,7 @@
 
 import { adminRoutes } from '#/routes/admin.js';
 import { authRoutes } from '#/routes/auth.js';
+import { cardPlanRoutes } from '#/routes/card-plan.js';
 import { cardRoutes } from '#/routes/cards.js';
 import { folderPickRoute } from '#/routes/folder-pick.js';
 import { folderRoutes } from '#/routes/folders.js';
@@ -24,6 +25,7 @@ import { intakeRoute } from '#/routes/intake.js';
 import { memoryRoutes } from '#/routes/memory.js';
 import { projectEventsRoute } from '#/routes/project-events.js';
 import { projectStatsRoutes } from '#/routes/project-stats.js';
+import { statsOverviewRoutes } from '#/routes/stats-overview.js';
 import { projectInspectRoutes } from '#/routes/project-inspect.js';
 import { projectDeleteRoutes } from '#/routes/project-delete.js';
 import { projectsRoutes } from '#/routes/projects.js';
@@ -43,6 +45,7 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ticketRoute(deps),
     ticketListRoute(deps),
     ...cardRoutes(deps),
+    ...cardPlanRoutes(deps),
     answerRoute(deps),
     runEventsRoute(deps),
     projectEventsRoute(deps),
@@ -62,6 +65,7 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ...memoryRoutes(deps),
     ...githubConnectionRoutes(deps),
     ...projectStatsRoutes(deps),
+    ...statsOverviewRoutes(deps),
     ...inboxRoutes(deps),
     ...runsRoutes(deps),
   ];

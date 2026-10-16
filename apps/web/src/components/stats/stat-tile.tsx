@@ -19,9 +19,15 @@ export function StatTile(props: {
   value: string | null;
   /** Context: sample size, or why there is no data. */
   note: ReactNode;
+  /** Marks work that waits on the person (amber, as everywhere else in the app). */
+  attention?: boolean;
 }) {
   return (
-    <div className="grid content-start gap-1 rounded-xl border border-line bg-surface p-4">
+    <div
+      className={`grid content-start gap-1 rounded-xl border p-4 ${
+        props.attention ? 'border-attn bg-attn-soft' : 'border-line bg-surface'
+      }`}
+    >
       <dt className="text-xs font-medium text-muted">{props.label}</dt>
       <dd className="grid gap-1">
         <span

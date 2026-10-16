@@ -11,8 +11,14 @@
  *   a hard spend cap (flags in domain/director-step-args). The prompt goes on stdin inside
  *   a data fence because intake text is untrusted. The exit code is never read: a budget
  *   stop can exit 0 and a success can exit 1 (d-0057), so the printed document decides. A
- *   child that outlives `timeoutMs` is killed with its tree and reported as a stall, so one
- *   hung call cannot block the Director's tick.
+ *   child that outlives its timeout is killed with its tree and reported as a stall, so one
+ *   hung call cannot block the Director's tick. The timeout comes per step from config
+ *   (`opts.timeoutMs`), else the adapter's default. Planning steps stay tool-less with the
+ *   same isolation flags: file reads for the survey and verify steps are done engine-side
+ *   through `admit()` under the director grant and handed back as input on a second call
+ *   (d-0131, d-0141 item 4), so this adapter never gets a tool. The call's dollar cost is
+ *   handed to `opts.onCost` so the card can count Director spend (d-0143); a failing
+ *   callback never changes the step result.
  *
  * Exports: createClaudeDirectorLLM().
  * Depends on: @forge/core, adapters/claude/{process-tree,harness-resolver},
@@ -46,9 +52,9 @@ async function runChild(
   harness: ResolvedHarness,
   args: string[],
   prompt: string,
+  timeoutMs: number,
 ): Promise<RawRun> {
   const platform = deps.platform ?? process.platform;
-  const timeoutMs = deps.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   let child: ChildLike;
   try {
     child = deps.spawn(harness.binaryPath, args, {
@@ -168,7 +174,8 @@ export function createClaudeDirectorLLM(deps: ClaudeDirectorLLMDeps): DirectorLL
         );
       }
 
-      const raw = await runChild(deps, harness, args, prompt);
+      const timeoutMs = opts.timeoutMs ?? deps.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+      const raw = await runChild(deps, harness, args, prompt, timeoutMs);
       let error: StepError | undefined;
       if (raw.failure === 'timeout') {
         error = { kind: 'stall', message: raw.detail ?? 'claude timed out' };
@@ -182,7 +189,20 @@ export function createClaudeDirectorLLM(deps: ClaudeDirectorLLMDeps): DirectorLL
         return err(error);
       }
 
-      const result = interpretOutput(parseCliOutput(raw.stdout), schema, {
+      const output = parseCliOutput(raw.stdout);
+      const cost = output.result?.total_cost_usd;
+      if (cost !== undefined && opts.onCost) {
+        try {
+          opts.onCost(cost);
+        } catch (e) {
+          deps.log?.('warn', 'director onCost callback failed', {
+            step: name,
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+      }
+
+      const result = interpretOutput(output, schema, {
         nowMs: deps.clock.now(),
         backoffMs: deps.rateLimitBackoffMs ?? DEFAULT_BACKOFF_MS,
         tail: raw.tail,

@@ -17,6 +17,7 @@ import {
   InboxCounts,
   InboxItem,
   InboxPage,
+  OverviewStats,
   ProjectStats,
   RunDetail,
   RunListPage,
@@ -49,7 +50,7 @@ function query(params: QueryParams): string {
 
 export function createWorkHttp(
   client: HttpClientOptions,
-): Pick<ResourceApis, 'stats' | 'cost' | 'inbox' | 'runs'> {
+): Pick<ResourceApis, 'stats' | 'overview' | 'cost' | 'inbox' | 'runs'> {
   const project = (slug: string, rest: string): string => `/projects/${enc(slug)}${rest}`;
 
   return {
@@ -59,6 +60,21 @@ export function createWorkHttp(
           client,
           project(slug, `/stats${query({ range })}`),
           ProjectStats,
+          options,
+        ),
+    },
+    overview: {
+      get: (request, options) =>
+        requestJson(
+          client,
+          `/stats/overview${query({
+            range: request.range,
+            group: request.group,
+            projects:
+              request.projects.length === 0 ? undefined : request.projects.join(','),
+            archived: request.archived ? 1 : 0,
+          })}`,
+          OverviewStats,
           options,
         ),
     },

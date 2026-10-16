@@ -53,6 +53,8 @@ Public API from `src/index.ts`:
   patch headers); `changedFiles` passes the same `-c` flag. Names with a quote, tab or backslash are still quoted by git;
   the gates treat a header they cannot parse as a finding.
 
+- `createGitRepoReader({ gitBinary?, timeoutMs? })` returns a `RepoReader` (port in `@forge/core`): read-only views of the committed tree at HEAD for the Director's planning steps. Every call runs with `root` (the project folder, possibly a subfolder of the repository) as cwd, so results are relative to it. `headSha(root)`; `listTracked(root, glob?)` (regular files at HEAD, forward slashes, `globMatch` filter); `readAtHead(root, path, maxBytes)` returns `{ path, content, bytes, truncated }` with the cut made on a UTF-8 character boundary; `grepAtHead(root, pattern, glob?, maxHits)` is `git grep -E` on HEAD (no match gives `[]`, any other git failure a `CrashError`); `changedFiles(root, fromSha, toSha, paths)` is the subset of `git diff --name-only` that equals or lies under one of `paths`. A path that is empty, absolute, drive/UNC, holds control characters or `..`, is not in HEAD, is a directory, symlink, submodule or binary file, or a grep pattern that is empty, over 500 characters or holds control characters, raises `PolicyDeniedError`; a malformed sha raises `InvalidInputError`. Each git call has a timeout (default 30 s, `GitRunOptions.timeoutMs`).
+
 GitHost adapters (the port is in `@forge/core`):
 
 - `findPr(branch)` on both hosts returns the open PR whose head is `branch`, or null (closed and merged PRs are
@@ -101,6 +103,7 @@ Node and git on Windows. Any git failure becomes a `CrashError` with the stderr 
   `commit.gpgsign=false`: the tree is Worker-controlled, so its hooks must not run in Forge's
   process, and signing prompts must not hang a run. Author comes from `-c` and env both.
 - `-z` output everywhere, so file names with spaces or newlines are safe.
+- The RepoReader reads HEAD through `ls-tree`, `cat-file` and `grep ... HEAD`, never the working tree: untracked files, ignored secrets and uncommitted edits are invisible by construction, and what the Director sees is what a Worker's worktree starts from (d-0131). `GIT_LITERAL_PATHSPECS=1` makes `*` and `:(top)` in a model-chosen name plain characters; a grep pattern goes after `-e` so it can never be an option; shas must be hex. Binary files, symlinks and submodule entries are refused (a link could point outside the project; a binary only burns context). Rejected: `git ls-files` / reading the file from disk (sees staged-only and working-tree state).
 - Always a worktree, never a feature branch in the main checkout (d-0059, superseding d-0011).
 - The GitHub push token goes only through the child process environment: `GIT_CONFIG_COUNT=2`,
   `GIT_CONFIG_KEY_0=http.<gitBase>/.extraheader` (default `http.https://github.com/.extraheader`; for GitHub Enterprise Server the configured `gitBase`, normalised with a trailing slash),
@@ -120,6 +123,7 @@ Node and git on Windows. Any git failure becomes a `CrashError` with the stderr 
 - `git` >= 2.38 on PATH (`merge-tree --write-tree` for the local host; worktrees need 2.5); no environment
   variables read besides inheriting `process.env` for git itself. The GitHub host needs the App private key
   from a `SecretStore` (see `@forge/secrets`) and network access to api.github.com and github.com.
+- The RepoReader needs only the `git` binary and a repository with at least one commit.
 - No files under `.forge/`; the only file written outside worktrees is, for the local host, `<remotePath>/forge-prs/*.json`.
 - Tests: `pnpm test`, or `npx vitest run packages/git`. They create throwaway repos in the OS
   temp dir (names with a space) and need `git` to run. The GitHub host tests use a fake REST server on
@@ -154,4 +158,5 @@ Node and git on Windows. Any git failure becomes a `CrashError` with the stderr 
 - `create` assumes the base ref is a local ref or sha; it does not fetch.
 - Locked worktrees are not unlocked; a `remove` that cannot delete the directory raises.
 - `changedFiles` reports a rename as a delete plus an add; `diff` detects renames only for tracked paths.
+- RepoReader: `readAtHead` buffers the whole blob (git output is capped at 64 MB, larger files fail with `CrashError`) and decodes it as UTF-8, so a file in another encoding shows U+FFFD for bad bytes (its `bytes` size is exact). A repository with no commit fails `headSha` with `CrashError`. Submodules are not searched. `grepAtHead` filters by glob after git returns, so a very broad pattern still scans the whole folder.
 - The fake does not model baseSha history; it tracks changes against the initial commit only.

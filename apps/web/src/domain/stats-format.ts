@@ -20,6 +20,8 @@ const RANGE_WORDS: Readonly<Record<StatsRange, string>> = {
   '7d': 'last 7 days',
   '30d': 'last 30 days',
   '90d': 'last 90 days',
+  '12m': 'last 12 months',
+  all: 'all time',
 };
 
 export const rangeLabel = (range: StatsRange): string => RANGE_WORDS[range];

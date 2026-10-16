@@ -25,6 +25,8 @@ export class HttpError extends ForgeError {
   readonly issues?: readonly ErrorIssue[];
   /** The ids of a dependency loop, for `dependency_cycle` (a closed path: the first id is also the last). */
   readonly cycle?: readonly string[];
+  /** Extra facts a client acts on: the ticket `key` and its `dependents` of `ticket_has_dependents`. */
+  readonly details?: Readonly<{ key?: string; dependents?: readonly string[] }>;
 
   constructor(
     status: number,
@@ -34,6 +36,7 @@ export class HttpError extends ForgeError {
       family?: ErrorFamily;
       issues?: readonly ErrorIssue[];
       cycle?: readonly string[];
+      details?: Readonly<{ key?: string; dependents?: readonly string[] }>;
     } = {},
   ) {
     super(options.family ?? 'invalid_input', message);
@@ -45,6 +48,10 @@ export class HttpError extends ForgeError {
 
     if (options.cycle) {
       this.cycle = options.cycle;
+    }
+
+    if (options.details) {
+      this.details = options.details;
     }
   }
 
@@ -121,6 +128,7 @@ export function errorBody(error: unknown): ErrorBody {
         message: error.message,
         ...(error.issues ? { issues: error.issues } : {}),
         ...(error.cycle ? { cycle: error.cycle } : {}),
+        ...(error.details ?? {}),
       },
     };
   }

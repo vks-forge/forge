@@ -19,6 +19,7 @@ export * from '#/domain/check-exact-rules.js';
 export * from '#/domain/catalogue-seed.js';
 export * from '#/domain/catalogue.js';
 export * from '#/domain/data-home-floor.js';
+export * from '#/domain/director-grant.js';
 export * from '#/domain/floors.js';
 export * from '#/domain/grants.js';
 export * from '#/domain/lane-defaults.js';

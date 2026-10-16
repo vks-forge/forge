@@ -1,9 +1,10 @@
 /**
- * Pins: the shell shows the project and Forge navigation, `/` opens a project, and the project
- * switcher lists open projects, changes the project in place and keeps the same screen.
+ * Pins: the shell shows the project and Forge navigation, Overview is first in the Forge section
+ * and the logo leads to it, `/` opens the Overview (it no longer jumps into a project), and the
+ * project switcher lists open projects, changes the project in place and keeps the same screen.
  *
  * Why: the sidebar is how every other screen is reached (d-0104). If the nav lost an entry, if
- *   `/` landed on a company home, if the switcher offered an archived project or dropped the
+ *   `/` jumped into the last project instead of the cross-project Overview (d-0162), if the switcher offered an archived project or dropped the
  *   user on a different screen, every later batch would build on a broken frame.
  * Depends on: src/components/shell/*, src/routes/*, helpers/render-app. jsdom.
  */
@@ -41,7 +42,7 @@ describe('AppShell navigation', () => {
       within(forge)
         .getAllByRole('link')
         .map((l) => l.textContent),
-    ).toEqual(['Harnesses', 'GitHub', 'Limits', 'General']);
+    ).toEqual(['Harnesses', 'GitHub', 'Limits', 'Director', 'General']);
 
     expect(within(project).getByRole('link', { name: 'Home' })).toHaveAttribute(
       'aria-current',
@@ -57,17 +58,36 @@ describe('AppShell navigation', () => {
     expect(screen.queryByText('Fixture data')).not.toBeInTheDocument();
   });
 
-  it('opens the first open project at `/` and skips archived ones', async () => {
-    const { router } = renderApp({ path: '/' });
+  it('puts Overview first in the Forge section and makes the logo lead to it', async () => {
+    renderApp({ path: '/p/sample-service/board' });
 
-    await waitFor(() => expect(locationOf(router)).toBe('/p/sample-service'));
+    const forge = await screen.findByRole('navigation', { name: 'Forge' });
+    const overview = within(forge).getByRole('link', { name: 'Overview' });
+
+    expect(overview).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Forge' })).toHaveAttribute('href', '/');
   });
 
-  it('opens the last project used, remembered across reloads, at `/`', async () => {
+  it('opens the Overview at `/` and stays there, even with a project remembered', async () => {
     projectPrefsStore.setState({ slug: 'sample-web' });
     const { router } = renderApp({ path: '/' });
 
-    await waitFor(() => expect(locationOf(router)).toBe('/p/sample-web'));
+    expect(
+      await screen.findByRole('heading', { name: 'Overview', level: 1 }),
+    ).toBeInTheDocument();
+
+    expect(locationOf(router)).toBe('/');
+  });
+
+  it('still remembers the last project for the switcher while on the Overview', async () => {
+    projectPrefsStore.setState({ slug: 'sample-web' });
+    renderApp({ path: '/' });
+
+    await screen.findByRole('heading', { name: 'Overview', level: 1 });
+
+    expect(
+      await screen.findByRole('button', { name: 'Switch project' }),
+    ).toHaveTextContent('sample-web');
   });
 
   it('shows a placeholder naming the batch that will build the screen', async () => {
@@ -157,7 +177,7 @@ describe('ProjectSwitcher', () => {
     renderApp({ path: '/', scenario: 'error' });
 
     expect(
-      screen.getByRole('status', { name: 'Opening your project' }),
+      screen.getByRole('status', { name: 'Loading the overview' }),
     ).toBeInTheDocument();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Cannot reach Forge');

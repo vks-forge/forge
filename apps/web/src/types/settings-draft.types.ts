@@ -29,6 +29,10 @@ export interface CompanyDraft {
   readonly errors: FieldErrors;
   readonly setField: (path: string, value: unknown) => void;
   readonly setConfig: (next: ForgeConfig) => void;
+  /** Override keys staged for removal (Reset to default); they leave the saved document on save. */
+  readonly stagedResets: readonly string[];
+  /** Stage removing these override keys (dotted paths); replaces edits made so far. */
+  readonly stageReset: (paths: readonly string[]) => void;
   readonly discard: () => void;
   readonly save: SubmitState<[DecisionForm], ConfigVersion>;
   /** True when the last save lost to someone else's save. */

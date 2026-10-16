@@ -29,7 +29,8 @@ export const CARD_LIST_MAX_LIMIT = 200;
  * One Board card: the row, the rolled-up column and ticket counts. `project` is the project
  * slug. `needs_you` is the effective overlay (the card's own flag, or a ticket waiting on a
  * person), not the stored flag. `depends_on` lists the cards this one waits for, `blocks`
- * the cards waiting for it (the reverse view of the same edges).
+ * the cards waiting for it (the reverse view of the same edges). `open_points` and
+ * `plan_version` come from the card's planning state.
  */
 export const CardSummary = Card.extend({
   column: CardColumn,
@@ -37,6 +38,10 @@ export const CardSummary = Card.extend({
   blocks: z.array(CardId),
   ticket_count: z.number().int().nonnegative(),
   tickets_done: z.number().int().nonnegative(),
+  /** Points the Director still has open while it grills the card; null at any other time (d-0130). */
+  open_points: z.number().int().nonnegative().nullable().default(null),
+  /** The newest plan version of the card; null until a plan is written (d-0132). */
+  plan_version: z.number().int().positive().nullable().default(null),
 });
 export type CardSummary = z.infer<typeof CardSummary>;
 

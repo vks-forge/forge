@@ -30,6 +30,7 @@ export function createGitRunner(gitBinary: string): GitRunner {
           windowsHide: true,
           maxBuffer: MAX_BUFFER,
           encoding: 'utf8',
+          ...(opts?.timeoutMs === undefined ? {} : { timeout: opts.timeoutMs }),
           env: { ...process.env, ...opts?.env },
         },
         (error, stdout, stderr) => {

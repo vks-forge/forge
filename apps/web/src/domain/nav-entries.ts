@@ -4,15 +4,19 @@
  * Why: the sidebar, the router and the placeholder pages must agree on what exists and where.
  *   One list makes adding a screen a one-line change, and keeps project-scoped URLs
  *   (`/p/<slug>/...`) separate from Forge-wide settings (`/settings/...`), as d-0104 requires:
- *   no company Home, everything about Forge itself in its own area. Switching project keeps
+ *   no company-wide project Home, everything about Forge itself in its own area. The one
+ *   cross-project screen is the Overview at `/` (d-0162, amending d-0104). Switching project keeps
  *   the user on the same screen of the new project, so `swapProjectSlug()` rewrites only the
  *   slug.
  *
- * Exports: PROJECT_NAV, SETTINGS_NAV, projectPath(), settingsPath(), swapProjectSlug().
+ * Exports: OVERVIEW_PATH, PROJECT_NAV, SETTINGS_NAV, projectPath(), settingsPath(), swapProjectSlug().
  * Depends on: types/nav.types. No IO.
  */
 
 import type { NavEntry } from '#/types/nav.types.js';
+
+/** The cross-project Overview: `/`, first in the Forge section and where the logo leads (d-0162). */
+export const OVERVIEW_PATH = '/';
 
 export const PROJECT_NAV: readonly NavEntry[] = [
   { segment: '', label: 'Home', batch: 'W5', blurb: 'Project statistics and graphs.' },
@@ -84,6 +88,12 @@ export const SETTINGS_NAV: readonly NavEntry[] = [
     label: 'Limits',
     batch: 'W2',
     blurb: 'Global, per-project and per-harness limits.',
+  },
+  {
+    segment: 'director',
+    label: 'Director',
+    batch: 'W2',
+    blurb: 'Models per step, house rules and the planning flow.',
   },
   {
     segment: 'general',

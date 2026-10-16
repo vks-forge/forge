@@ -35,7 +35,11 @@ const yamlConfig = (): unknown =>
 
 describe('built-in defaults', () => {
   it('equal what .forge/config/forge.yaml parses to', () => {
-    expect(BUILTIN_FORGE_CONFIG).toEqual(ForgeConfig.parse(yamlConfig()));
+    const { director: _director, ...builtin } = BUILTIN_FORGE_CONFIG;
+    void _director;
+
+    // The `director` section is built in only (d-0150); the yaml carries models and engine.
+    expect(builtin).toEqual(ForgeConfig.omit({ director: true }).parse(yamlConfig()));
   });
 
   it('validate against the full effective schema', () => {

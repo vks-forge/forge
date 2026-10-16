@@ -23,13 +23,25 @@ export function dayOf(iso: string): string {
   return iso.slice(0, 10);
 }
 
-/** The window of `range` ending at `nowMs`, plus its UTC days oldest first. */
+/**
+ * The window of `range` ending at `nowMs`, plus its UTC days oldest first. `all` starts at the
+ * day of `earliestMs` (the first recorded activity) when given, else at the 365-day fallback.
+ */
 export function statsWindow(
   range: StatsRange,
   nowMs: number,
+  earliestMs?: number,
 ): StatsWindow & { readonly days: readonly string[] } {
-  const count = STATS_RANGE_DAYS[range];
   const todayStart = Math.floor(nowMs / DAY_MS) * DAY_MS;
+  const count =
+    range === 'all' && earliestMs !== undefined
+      ? Math.max(
+          1,
+          Math.round((todayStart - Math.floor(earliestMs / DAY_MS) * DAY_MS) / DAY_MS) +
+            1,
+        )
+      : STATS_RANGE_DAYS[range];
+
   const fromMs = todayStart - (count - 1) * DAY_MS;
   const days = Array.from({ length: count }, (_, i) =>
     new Date(fromMs + i * DAY_MS).toISOString().slice(0, 10),

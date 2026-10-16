@@ -32,6 +32,7 @@ import {
   validateDraft,
 } from '#/domain/settings-draft.js';
 import { ArchiveSection } from '#/routes/project-settings/archive-section.js';
+import { DirectorOverride } from '#/routes/project-settings/director-override.js';
 import { DeleteSection } from '#/routes/project-settings/delete-section.js';
 import { ConflictBanner } from '#/routes/project-settings/conflict-banner.js';
 import { HistoryPanel } from '#/routes/project-settings/history-panel.js';
@@ -159,6 +160,19 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
           snapshot={opened}
           draft={draft}
           issues={issues}
+          onChange={setDraft}
+          disabled={save.isPending}
+        />
+      </section>
+
+      <section aria-labelledby="director-heading" className="grid gap-3">
+        <h2 id="director-heading" className="text-base font-semibold">
+          Director for this project
+        </h2>
+        <DirectorOverride
+          snapshot={opened}
+          draft={draft}
+          issues={issues.filter((i) => i.field === 'director').map((i) => i.message)}
           onChange={setDraft}
           disabled={save.isPending}
         />

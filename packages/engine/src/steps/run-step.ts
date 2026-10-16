@@ -9,12 +9,14 @@
  *   failing model is not re-spent on every 10 s tick.
  *
  * Exports: runStep(), rejectStep(), isHeld(), hold().
- * Depends on: @forge/core (DirectorLLM port, StepName, StepError), types/engine-state. No IO of its own.
+ * Depends on: @forge/core (DirectorLLM port, StepName, StepError), types/engine-state, types/run-step.
+ *   No IO of its own.
  */
 
 import type { Result, StepError, StepName } from '@forge/core';
 import type { ZodType } from 'zod';
 import type { EngineCtx } from '#/types/engine-state.types.js';
+import type { StepExtras } from '#/types/run-step.types.js';
 
 /** One step call plus up to `engine.step_retries` retries on `invalid_output`. */
 export async function runStep<T>(
@@ -22,12 +24,15 @@ export async function runStep<T>(
   name: StepName,
   input: Record<string, unknown>,
   schema: ZodType<T>,
+  extras: StepExtras = {},
 ): Promise<Result<T, StepError>> {
   const { llm } = ctx.deps;
   const config = ctx.config.forge;
   const opts = {
     model: config.models.director[name],
     budgetUsd: config.engine.step_budget_usd,
+    ...(extras.timeoutMs === undefined ? {} : { timeoutMs: extras.timeoutMs }),
+    ...(extras.onCost === undefined ? {} : { onCost: extras.onCost }),
   };
 
   let result = await llm.step(name, input, schema, opts);

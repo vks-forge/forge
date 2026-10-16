@@ -11,7 +11,6 @@
  * Depends on: domain/config-path, components/settings/form-field, types/settings-fields.types.
  */
 
-import type { ForgeConfig } from '@forge/core';
 import { FormField, TextInput } from '#/components/settings/form-field.js';
 import { getAt } from '#/domain/config-path.js';
 import type { FieldErrors, FieldSpec } from '#/types/settings-fields.types.js';
@@ -23,7 +22,7 @@ const tidy = (n: number): number => Math.round(n * 1e6) / 1e6;
 
 function Field(props: {
   spec: FieldSpec;
-  config: ForgeConfig;
+  config: object;
   error: string | undefined;
   onChange: (path: string, value: unknown) => void;
 }) {
@@ -77,7 +76,7 @@ function Field(props: {
 
 export function ConfigFields(props: {
   fields: readonly FieldSpec[];
-  config: ForgeConfig;
+  config: object;
   errors: FieldErrors;
   onChange: (path: string, value: unknown) => void;
 }) {

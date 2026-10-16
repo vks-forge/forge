@@ -33,6 +33,10 @@ export interface StepError {
 export interface StepOptions {
   readonly model: string;
   readonly budgetUsd: number;
+  /** How long this call may run before it is killed and reported as a stall; the adapter's default when absent (d-0141 item 4). */
+  readonly timeoutMs?: number;
+  /** Called once with the dollars the call cost when the model reports it, so the card can count its Director spend (d-0143). */
+  readonly onCost?: (usd: number) => void;
 }
 
 /** What an implementation declares, so the engine never guesses from a name. */

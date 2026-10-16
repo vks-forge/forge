@@ -65,12 +65,19 @@ describe('NewRequestPayload / STEP_NAMES', () => {
     expect(NewRequestPayload.safeParse({ hint: 'quick' }).success).toBe(false);
   });
 
-  it('names exactly the four steps', () => {
+  it('names the four ticket steps and the seven card planning steps', () => {
     expect([...STEP_NAMES]).toEqual([
       'triage',
       'dispatch_prompt',
       'steer_reply',
       'card_chat',
+      'card_survey',
+      'grill_turn',
+      'verify',
+      'enhance',
+      'write_plan',
+      'approve_plan',
+      'custom_step',
     ]);
   });
 });

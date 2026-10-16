@@ -35,6 +35,8 @@ export type EventSpec = WithoutAt<TicketEvent>;
 export interface TicketFields {
   title?: string;
   type?: Ticket['type'];
+  /** Only a person's "run as Express" lowers a lane; the Director's own moves raise it (d-0141 item 9). */
+  lane?: Ticket['lane'];
   branch?: string | undefined;
   worktree?: string | undefined;
   assignee_run_id?: string | undefined;

@@ -24,4 +24,8 @@ export interface CardView {
   readonly dependsOn: readonly CardId[];
   /** Cards waiting for this one. */
   readonly blocks: readonly CardId[];
+  /** Points still open in the grill while the card is being shaped, else null. */
+  readonly openPoints: number | null;
+  /** The newest plan version, or null before a plan exists. */
+  readonly planVersion: number | null;
 }

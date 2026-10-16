@@ -1,8 +1,9 @@
 /**
  * SidebarContent: everything inside the sidebar, shared by the desktop column and the mobile drawer.
  *
- * Why: the sidebar is the app's table of contents and has one job order (d-0104): project
- *   switcher on top, the current project's screens in the middle, Forge-wide settings at the
+ * Why: the sidebar is the app's table of contents and has one job order (d-0104, d-0162): the
+ *   Forge name (a link to the Overview) and the Overview entry, project
+ *   switcher, the current project's screens in the middle, Forge-wide settings at the
  *   foot, kept apart because they are not about any one project. Desktop shows it as a
  *   column and phones as a drawer; sharing this body means the two can never drift.
  *
@@ -21,18 +22,21 @@ import {
   Gauge,
   House,
   Inbox,
+  LayoutDashboard,
   MessageSquare,
   Plug,
   Settings,
   SquareKanban,
   type LucideIcon,
 } from 'lucide-react';
+import { Link } from 'react-router';
 import { useInboxCounts } from '#/api/use-inbox.js';
 import { useProjects } from '#/api/use-projects.js';
 import { NavLinkItem } from '#/components/shell/nav-link-item.js';
 import { ProjectSwitcher } from '#/components/shell/project-switcher.js';
 import { ThemeToggle } from '#/components/shell/theme-toggle.js';
 import {
+  OVERVIEW_PATH,
   PROJECT_NAV,
   projectPath,
   SETTINGS_NAV,
@@ -64,7 +68,15 @@ export function SidebarContent() {
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 p-3">
       <div className="flex flex-col gap-3">
-        <span className="px-1 pt-1 text-sm font-semibold tracking-tight">Forge</span>
+        <Link
+          to={OVERVIEW_PATH}
+          className="w-fit rounded-md px-1 pt-1 text-sm font-semibold tracking-tight"
+        >
+          Forge
+        </Link>
+        <nav aria-label="Forge" className="flex flex-col gap-0.5">
+          <NavLinkItem to={OVERVIEW_PATH} label="Overview" icon={LayoutDashboard} exact />
+        </nav>
         <ProjectSwitcher />
       </div>
       <nav

@@ -1,5 +1,7 @@
 # Forge default config: model matrix (d-0060) and engine limits (director-core.md §2-§3).
 # Validated by ForgeConfig (packages/core/src/schemas/forge-config.ts) at load.
+# The `director` section (planning flow, playbooks, limits) is built in only
+# (packages/core/src/domain/builtin-director.ts) and edited through Settings.
 
 models:
   # Director LLM steps run on the logged-in harness subscription (d-0032).
@@ -8,6 +10,14 @@ models:
     dispatch_prompt: opus
     steer_reply: opus
     card_chat: opus
+    # Card planning steps (d-0150): judging steps on opus, quick turns on sonnet.
+    card_survey: opus
+    grill_turn: sonnet
+    verify: opus
+    enhance: opus
+    write_plan: opus
+    approve_plan: opus
+    custom_step: sonnet
   # Workers: sonnet in every lane until changed in Settings.
   worker:
     express: sonnet

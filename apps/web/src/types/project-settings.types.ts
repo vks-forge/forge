@@ -2,7 +2,7 @@
  * Shapes for the project-settings screen: what the API port serves, what the page edits.
  *
  * Why: the screen edits only part of a project's override document (checks, ecosystems,
- *   harness, concurrency, fallbacks, Tier C paths, remote) and must carry every other key
+ *   harness, concurrency, fallbacks, Tier C paths, remote, Director) and must carry every other key
  *   (git host, gate rules, tool grants) through a save untouched, or a save from this screen
  *   would silently delete settings made elsewhere. These types name the pieces: the
  *   snapshot a load returns, the editable draft, and the save request.
@@ -12,7 +12,12 @@
  * Depends on: @forge/core (types), schemas/project-settings, schemas/projects, types/api.types.
  */
 
-import type { ConfigVersion, ForgeConfig, ProjectCheck } from '@forge/core';
+import type {
+  ConfigVersion,
+  DirectorConfig,
+  ForgeConfig,
+  ProjectCheck,
+} from '@forge/core';
 import type { ProjectConfigResponse } from '#/schemas/project-settings.js';
 import type { ProjectView } from '#/schemas/projects.js';
 import type { RequestOptions } from '#/types/api.types.js';
@@ -57,7 +62,8 @@ export type FieldKey =
   | 'max_concurrent'
   | 'harness_fallbacks'
   | 'tier_c_globs'
-  | 'remote';
+  | 'remote'
+  | 'director';
 
 /** One field's edit state: whether the project overrides it, and the text or rows being edited. */
 export interface FieldDraft<T> {
@@ -74,6 +80,8 @@ export interface SettingsDraft {
   readonly harness_fallbacks: FieldDraft<string>;
   readonly tier_c_globs: FieldDraft<string>;
   readonly remote: FieldDraft<string>;
+  /** The project's partial Director settings: a key is present exactly when the project overrides it. */
+  readonly director: FieldDraft<Partial<DirectorConfig>>;
 }
 
 /** One top-level key that differs between two override documents. */
@@ -92,7 +100,7 @@ export interface SettingsIssue {
 
 /** How one text-like setting is labelled and edited. */
 export interface TextFieldSpec {
-  readonly key: Exclude<FieldKey, 'checks'>;
+  readonly key: Exclude<FieldKey, 'checks' | 'director'>;
   readonly label: string;
   readonly hint: string;
   /** Where the inherited value comes from, in words. */

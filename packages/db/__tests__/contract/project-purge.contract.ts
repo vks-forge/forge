@@ -5,8 +5,8 @@
  *   would show the old project's tickets, runs and cards under the new one; and it must
  *   never reach into another project, or deleting one repository would destroy a
  *   neighbour's history. Both backends are held to the same walk: tickets and what hangs
- *   off them, runs and their records, cards with their history, relations, queued replies and
- *   card questions, inbox marks, the project row.
+ *   off them, runs and their records, cards with their history, relations, queued replies,
+ *   plan versions and card questions, inbox marks, the project row.
  *
  * Exports: describeProjectPurgeContract().
  * Depends on: vitest, @forge/core, helpers/fixtures. IO only through the adapter under test.
@@ -90,6 +90,31 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
         T0,
       );
 
+      await t.cardPlanning.appendPlan({
+        card_id: cardId,
+        version: 1,
+        created_at: T0,
+        author: 'director',
+        config_version: 1,
+        base_sha: 'abc',
+        goal: 'g',
+        scope: [],
+        non_goals: [],
+        decisions: [],
+        assumptions: [],
+        verification: {
+          blast_radius: 'none',
+          files_read: [],
+          overlaps: [],
+          matching_decisions: [],
+          rejected_hits: [],
+          risks: [],
+        },
+        tickets: [],
+        card_links: [],
+        enhance_report: '',
+      });
+
       await t.cardReplyQueue.enqueue({
         card_id: cardId,
         event_id: 0,
@@ -135,6 +160,7 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
       peer: await t.cards.get(peerIdOf(slug)),
       cardRelations: await t.cardRelations.listFor(cardIdOf(slug)),
       cardReplies: await t.cardReplyQueue.listOpen(cardIdOf(slug)),
+      cardPlans: await t.cardPlanning.listPlans(cardIdOf(slug)),
       cardEvents: await t.cardEvents.list(cardIdOf(slug), { limit: 10 }),
       mark: await t.inboxStates.get(slug, 'question', 'i'),
     }));
@@ -163,6 +189,7 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
         peer: null,
         cardRelations: [],
         cardReplies: [],
+        cardPlans: [],
         cardEvents: [],
         mark: null,
       });
@@ -180,6 +207,7 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
       expect(before.events).toHaveLength(1);
       expect(before.cardRelations).toHaveLength(1);
       expect(before.cardReplies).toHaveLength(1);
+      expect(before.cardPlans).toHaveLength(1);
       expect(before.cardInteraction).not.toBeNull();
     });
 

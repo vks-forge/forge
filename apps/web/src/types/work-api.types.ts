@@ -6,7 +6,7 @@
  *   that showed invented runs or spend would be believed (d-0123). Response and query types
  *   come from `@forge/core`, so the UI and server cannot disagree about a field.
  *
- * Exports: QueryParams, StatsApi, CostApi, InboxApi, RunsApi, InboxMarkName, InboxListArgs,
+ * Exports: QueryParams, StatsApi, OverviewApi, CostApi, InboxApi, RunsApi, InboxMarkName, InboxListArgs,
  *   RunListArgs.
  * Depends on: @forge/core (types only), types/api.types.
  */
@@ -17,6 +17,7 @@ import type {
   InboxItem,
   InboxPage,
   InboxView,
+  OverviewStats,
   ProjectStats,
   RunDetail,
   RunListPage,
@@ -25,6 +26,7 @@ import type {
 } from '@forge/core';
 import type { SteerReply } from '#/schemas/tickets.js';
 import type { RequestOptions } from '#/types/api.types.js';
+import type { OverviewRequest } from '#/types/overview.types.js';
 
 /** Values of a URL query; an array repeats the key. */
 export type QueryParams = Record<string, string | number | readonly string[] | undefined>;
@@ -45,6 +47,10 @@ export interface RunListArgs {
 
 export interface StatsApi {
   get(slug: string, range: StatsRange, options?: RequestOptions): Promise<ProjectStats>;
+}
+
+export interface OverviewApi {
+  get(request: OverviewRequest, options?: RequestOptions): Promise<OverviewStats>;
 }
 
 export interface CostApi {

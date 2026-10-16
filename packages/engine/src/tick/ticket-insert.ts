@@ -51,13 +51,13 @@ export async function insertInboxTicket(
     status: 'inbox',
     status_version: 0,
     rework_count: 0,
-    priority: 0,
+    priority: input.priority ?? 0,
     ...(input.createdByIntake === undefined
       ? {}
       : { created_by_intake: input.createdByIntake }),
     created_at: input.at,
     updated_at: input.at,
-    blocked_by: [],
+    blocked_by: [...(input.blockedBy ?? [])] as Ticket['blocked_by'],
   };
 
   await tx.tickets.insert(ticket);

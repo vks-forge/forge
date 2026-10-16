@@ -35,6 +35,13 @@ New project flow (modal steps)
   Source (GitHub repo | from scratch) → Local folder → Detect → Verify run → Director chat
 ```
 
+Amended by d-0162: `/` is the cross-project **Overview** (KPI strip, needs
+attention, spend and activity charts, projects table, cost coverage; range,
+grouping, project filter and archived toggle in the URL, refreshed every 30 s).
+It replaces the redirect to the last project; the switcher still remembers it.
+A fresh install with no project opens the first-run wizard. "Overview" is first
+in the sidebar's Forge section and the logo links to it.
+
 Amended by d-0104: there is no company-wide Home. Home is project-scoped and
 opens on the first connected project; a project switcher at the top of the
 sidebar changes project in real time, with an in-page alert when the view has

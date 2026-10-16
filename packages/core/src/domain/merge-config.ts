@@ -62,8 +62,13 @@ export function mergeConfig(
 ): EffectiveConfig {
   const c = parseOr(CompanyOverride, company, 'company override');
   const p = parseOr(ProjectOverride, project, 'project override');
+  // The project's `director` overrides lay over the company's, so the engine reads one
+  // effective `forge.director` per project (d-0150); the partial itself stays on the project.
+  const companyForge = deepMerge(defaults.forge, c);
   const merged = {
-    forge: deepMerge(defaults.forge, c),
+    forge: isPlain(companyForge)
+      ? { ...companyForge, director: deepMerge(companyForge['director'], p.director) }
+      : companyForge,
     project: deepMerge(defaults.project, p),
   };
 

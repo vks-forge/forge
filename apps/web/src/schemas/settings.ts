@@ -13,13 +13,12 @@
  * Exports: HarnessView, HarnessesResponse, HarnessTestResult, SecretStored, CompatJob,
  *   CompatView, ToolsView, ConnectionsResponse, ConnectionReply, CompanyView, HistoryResponse,
  *   SecretForm, ConnectionForm, DecisionForm, SaveMetaForm (schemas and inferred types).
- * Depends on: @forge/core, zod.
+ * Depends on: @forge/core, schemas/director-config, zod.
  */
 
 import {
   CompatReport,
   ConfigVersion,
-  ForgeConfig,
   GithubConnection,
   Harness,
   HarnessSecretKind,
@@ -27,6 +26,7 @@ import {
   HarnessToolSchema,
 } from '@forge/core';
 import { z } from 'zod';
+import { CompanyConfigReply } from '#/schemas/director-config.js';
 
 /** `GET /harnesses` row: the stored harness plus whether each credential kind is stored (never the credential). */
 export const HarnessView = Harness.extend({
@@ -97,11 +97,11 @@ export type ConnectionsResponse = z.infer<typeof ConnectionsResponse>;
 export const ConnectionReply = z.object({ connection: GithubConnection });
 export type ConnectionReply = z.infer<typeof ConnectionReply>;
 
-/** `GET /settings/company`: the effective settings and the latest saved version (0 = built-ins). */
-export const CompanyView = z.object({
-  config: ForgeConfig,
-  version: z.number().int().nonnegative(),
-});
+/**
+ * `GET /settings/company`: the effective settings and the latest saved version (0 = built-ins).
+ * An older server without a `director` section is filled with stand-ins and flagged.
+ */
+export const CompanyView = CompanyConfigReply;
 export type CompanyView = z.infer<typeof CompanyView>;
 
 export const HistoryResponse = z.object({ versions: z.array(ConfigVersion) });

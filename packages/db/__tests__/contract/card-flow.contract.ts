@@ -6,14 +6,15 @@
  *   in one step, so a refused edge must leave the old set intact and an edge may never point
  *   at its own card or at a card that does not exist. The Director's owed replies must be
  *   claimed by exactly one caller, survive a restart, and be taken again only once a claim
- *   is stale (d-0134), or an owner's message is lost or answered twice. A question can name
+ *   is stale (d-0134), or an owner's message is lost or answered twice; the queue also accepts the
+ *   reasons planning adds (`grill_answer`, `start_planning`, `plan_changes`), or an answer is dropped. A question can name
  *   the card it belongs to.
  *
  * Exports: describeCardFlowContract().
  * Depends on: vitest, @forge/core, helpers/fixtures. IO only through the adapter under test.
  */
 
-import type { Card, CardId, StorageAdapter } from '@forge/core';
+import type { Card, CardId, CardReplyReason, StorageAdapter } from '@forge/core';
 import { describe, expect, it } from 'vitest';
 import { T0, makeInteraction } from '#tests/helpers/fixtures.js';
 
@@ -165,6 +166,21 @@ export function describeCardFlowContract(getDb: () => StorageAdapter): void {
         }),
       );
 
+    const enqueueWith = (
+      cardId: CardId,
+      event: number,
+      reason: CardReplyReason,
+      minute: number,
+    ) =>
+      tx((t) =>
+        t.cardReplyQueue.enqueue({
+          card_id: cardId,
+          event_id: event,
+          reason,
+          enqueued_at: at(minute),
+        }),
+      );
+
     it('numbers rows in order and reports them open until completed', async () => {
       await seedCards(2);
 
@@ -224,6 +240,19 @@ export function describeCardFlowContract(getDb: () => StorageAdapter): void {
 
       expect(claimed.map((r) => r.id)).toEqual([a.id, b.id]);
     });
+
+    it.each<CardReplyReason>(['grill_answer', 'start_planning', 'plan_changes'])(
+      'enqueues and claims a %s reply, the reasons planning adds',
+      async (reason) => {
+        await seedCards(1);
+
+        const row = await enqueueWith(id(1), 4, reason, 1);
+        const claimed = await tx((t) => t.cardReplyQueue.claim(at(10), at(0)));
+
+        expect(row.reason).toBe(reason);
+        expect(claimed.map((r) => [r.id, r.reason])).toEqual([[row.id, reason]]);
+      },
+    );
 
     it('keeps a queued row when the transaction that enqueued it rolls back', async () => {
       await seedCards(1);

@@ -1,0 +1,197 @@
+/**
+ * What the Director page says: step names, model choices, locked rules and number fields.
+ *
+ * Why: the Director page edits eleven per-step models, a handful of limits and a flow, and
+ *   shows the rules no setting can switch off. Each needs words an owner understands (what the
+ *   step is for, what a limit does when it is reached, why a rule is locked), kept as data so
+ *   a new Director step is a line here and the screens stay thin. The locked list is the set
+ *   of d-0150; each reason says what would go wrong if the rule could be edited. The budget
+ *   field says outright that it only warns, because the owner would otherwise assume a cap.
+ *
+ * Exports: STEP_INFO, MODEL_CHOICES, LOCKED_RULES, APPROVAL_ITEMS, DIRECTOR_FIELD_GROUPS,
+ *   DIRECTOR_FIELDS, effectiveDirector(), overriddenKeys(), describeFlow().
+ * Depends on: @forge/core (types), types/director-ui.types, types/settings-fields.types,
+ *   types/picker.types. Pure data.
+ */
+
+import type { DirectorConfig, FlowStep, StepName } from '@forge/core';
+import type { PickerItem } from '#/types/picker.types.js';
+import type { LockedRule, OverridableKey, StepInfo } from '#/types/director-ui.types.js';
+import type { FieldSpec } from '#/types/settings-fields.types.js';
+
+export const STEP_INFO: Readonly<Record<StepName, StepInfo>> = {
+  triage: { label: 'Triage', hint: 'Sorts a new request into a lane.' },
+  dispatch_prompt: {
+    label: 'Worker prompt',
+    hint: 'Writes the brief a Worker starts from.',
+  },
+  steer_reply: { label: 'Reply', hint: 'Answers when you steer a running ticket.' },
+  card_chat: { label: 'Card chat', hint: 'Talks with you on a card.' },
+  card_survey: {
+    label: 'Survey',
+    hint: 'Reads the repository before the first question.',
+  },
+  grill_turn: { label: 'Grill turn', hint: 'Asks the next question, with choices.' },
+  verify: { label: 'Verify', hint: 'Checks the plan against the code.' },
+  enhance: { label: 'Enhance', hint: 'Tightens the decisions you made.' },
+  write_plan: { label: 'Write plan', hint: 'Turns the decisions into tickets.' },
+  approve_plan: {
+    label: 'Approve plan',
+    hint: 'Decides whether a plan may start without you.',
+  },
+  custom_step: { label: 'Custom step', hint: 'Runs the steps you add to the flow.' },
+};
+
+/** Common models offered first; anything else is typed in. */
+export const MODEL_CHOICES: readonly PickerItem[] = [
+  { value: 'opus', label: 'Opus', description: 'Strongest; best for planning.' },
+  { value: 'sonnet', label: 'Sonnet', description: 'Faster and cheaper.' },
+  { value: 'haiku', label: 'Haiku', description: 'Quickest; for simple steps.' },
+  { value: 'custom', label: 'Other…', description: 'Type a model name.' },
+];
+
+export const LOCKED_RULES: readonly LockedRule[] = [
+  {
+    id: 'approval-floor',
+    title: 'The approval floor',
+    reason:
+      'A plan may only start by itself when fixed checks pass (no protected path, no overlap with other cards). If a setting could relax it, a bad plan could approve itself.',
+  },
+  {
+    id: 'tier-c',
+    title: 'Tier C needs you',
+    reason:
+      'Changes to Forge’s own policy files always wait for a person. Letting the Director sign them off would let it widen its own powers.',
+  },
+  {
+    id: 'tool-less-approval',
+    title: 'The approval step has no tools',
+    reason:
+      'It sees only the plan and the check results, never the repository text, so nothing read from the repo can talk it into approving.',
+  },
+  {
+    id: 'independent-check',
+    title: 'A writer is always followed by an independent check',
+    reason:
+      'Whoever wrote the work never marks it done. Removing the check would let a mistake pass unseen.',
+  },
+  {
+    id: 'one-door',
+    title: 'One merge door, one door per state change',
+    reason:
+      'Every merge and every ticket or card status change goes through a single checked path, so no shortcut can skip a rule.',
+  },
+  {
+    id: 'data-not-orders',
+    title: 'Web and repository text is data',
+    reason:
+      'Text the Director reads is never treated as an instruction, so a hostile page or file cannot steer it.',
+  },
+];
+
+export const APPROVAL_ITEMS: readonly PickerItem[] = [
+  {
+    value: 'director_or_user',
+    label: 'Director approves when the floor passes',
+    description: 'You are asked only when a check fails or the Director is unsure.',
+  },
+  {
+    value: 'always_ask',
+    label: 'Always ask me',
+    description: 'Every plan waits for your approval.',
+  },
+];
+
+const DIRECTOR_FIELD_LIST: Readonly<
+  Record<
+    Exclude<OverridableKey, 'flow' | 'house_rules' | 'approval_mode'>,
+    readonly FieldSpec[]
+  >
+> = {
+  grill: [
+    {
+      kind: 'number',
+      path: 'director.grill.max_questions_per_round',
+      label: 'Questions per round',
+      hint: 'Past this, the rest become stated assumptions.',
+    },
+    {
+      kind: 'number',
+      path: 'director.grill.max_rounds',
+      label: 'Rounds',
+      hint: 'The first round plus each time you request changes.',
+    },
+  ],
+  budget_warning_usd: [
+    {
+      kind: 'number',
+      path: 'director.budget_warning_usd',
+      label: 'Warn when a card has spent',
+      unit: 'USD',
+      step: 0.5,
+      hint: 'A warning only. Nothing is stopped or refused at this level.',
+    },
+  ],
+  read_caps: [
+    {
+      kind: 'number',
+      path: 'director.read_caps.max_files',
+      label: 'Files one step may read',
+    },
+    {
+      kind: 'number',
+      path: 'director.read_caps.max_bytes',
+      label: 'Bytes one step may read',
+      unit: 'KB',
+      scale: 1000,
+      hint: 'Reads stop at this total; the step works with what it has.',
+    },
+  ],
+  step_timeouts_ms: (Object.keys(STEP_INFO) as StepName[]).map((name): FieldSpec => ({
+    kind: 'number',
+    path: `director.step_timeouts_ms.${name}`,
+    label: `${STEP_INFO[name].label} may run up to`,
+    unit: 's',
+    scale: 1000,
+  })),
+};
+
+export const DIRECTOR_FIELDS = DIRECTOR_FIELD_LIST;
+
+/** Every numeric Director field, for the shared validation error wording. */
+export const DIRECTOR_FIELD_GROUPS: readonly FieldSpec[] =
+  Object.values(DIRECTOR_FIELD_LIST).flat();
+
+/** The company Director settings with a project's partial override laid on top (arrays and playbooks replace). */
+export function effectiveDirector(
+  company: DirectorConfig,
+  override: Partial<DirectorConfig> | undefined,
+): DirectorConfig {
+  const out: Record<string, unknown> = { ...company };
+  for (const [key, value] of Object.entries(override ?? {})) {
+    const base = out[key];
+    out[key] =
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      typeof base === 'object' &&
+      base !== null
+        ? { ...base, ...value }
+        : value;
+  }
+
+  return out as unknown as DirectorConfig;
+}
+
+/** The sections a project override changes. */
+export function overriddenKeys(override: Partial<DirectorConfig> | undefined): string[] {
+  return Object.keys(override ?? {});
+}
+
+/** The flow as a sentence for the inherited view: `Survey, Grill, ... (2 off)`. */
+export function describeFlow(flow: readonly FlowStep[]): string {
+  const on = flow.filter((s) => s.enabled).map((s) => s.label);
+  const off = flow.length - on.length;
+
+  return `${on.join(' → ')}${off > 0 ? ` (${off} switched off)` : ''}`;
+}

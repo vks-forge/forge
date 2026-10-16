@@ -11,15 +11,16 @@
  *
  * Exports: ProjectConfigResponse, CompanyConfigResponse, ConfigHistoryResponse, SavedVersion,
  *   ArchiveResponse, DeleteResponse (schemas and inferred types).
- * Depends on: @forge/core (EffectiveConfig, ForgeConfig, ConfigVersion), schemas/projects, zod.
+ * Depends on: @forge/core (ConfigVersion), schemas/director-config, schemas/projects, zod.
  */
 
-import { ConfigVersion, EffectiveConfig, ForgeConfig } from '@forge/core';
+import { ConfigVersion } from '@forge/core';
 import { z } from 'zod';
+import { CompanyConfigReply, EffectiveConfigReply } from '#/schemas/director-config.js';
 import { ProjectView } from '#/schemas/projects.js';
 
 export const ProjectConfigResponse = z.object({
-  config: EffectiveConfig,
+  config: EffectiveConfigReply,
   version: z.object({
     company: z.number().int().nonnegative(),
     project: z.number().int().nonnegative(),
@@ -28,10 +29,7 @@ export const ProjectConfigResponse = z.object({
 });
 export type ProjectConfigResponse = z.infer<typeof ProjectConfigResponse>;
 
-export const CompanyConfigResponse = z.object({
-  config: ForgeConfig,
-  version: z.number().int().nonnegative(),
-});
+export const CompanyConfigResponse = CompanyConfigReply;
 export type CompanyConfigResponse = z.infer<typeof CompanyConfigResponse>;
 
 export const ConfigHistoryResponse = z.object({ versions: z.array(ConfigVersion) });

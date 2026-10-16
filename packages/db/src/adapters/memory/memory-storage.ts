@@ -13,7 +13,7 @@
  *   assembles them and owns the transaction. Nothing persists, so it is not a production
  *   backend.
  *
- * Cards, their history, relations, the reply queue and the card type registry (seeded with the built-in types) live here too.
+ * Cards, their history, relations, the reply queue, planning state with plan versions and the card type registry (seeded with the built-in types) live here too.
  *
  * Exports: createMemoryStorage().
  * Depends on: adapters/memory/*, shared/db-errors, shared/mutex, types/memory-state. No IO.
@@ -30,6 +30,7 @@ import {
   memoryCardRelations,
   memoryCardReplyQueue,
 } from '#/adapters/memory/card-flow.js';
+import { memoryCardPlanning } from '#/adapters/memory/card-planning.js';
 import {
   memoryIntakeEvents,
   memoryInteractions,
@@ -79,6 +80,8 @@ const emptyState = (): MemoryState => ({
   cardRelations: [],
   cardReplies: [],
   cardReplySeq: 0,
+  cardPlanning: new Map(),
+  cardPlans: new Map(),
   // Same rows migration 0019 seeds, so a fresh memory store routes intake like a fresh database.
   cardTypes: new Map(BUILTIN_CARD_TYPES.map((t) => [t.name, structuredClone(t)])),
 });
@@ -107,6 +110,7 @@ function buildTx(state: MemoryState): StorageTx {
     cardTypes: memoryCardTypes(state),
     cardRelations: memoryCardRelations(state),
     cardReplyQueue: memoryCardReplyQueue(state),
+    cardPlanning: memoryCardPlanning(state),
   };
 }
 

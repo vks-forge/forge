@@ -11,11 +11,14 @@
  *
  * Exports: FIELD_KEYS, draftFromSnapshot(), inheritedOf(), docFromDraft(), isDirty(),
  *   validateDraft(), setOverridden(), parseLines(), SAFE_TIER_C.
- * Depends on: @forge/core (BUILTIN_PROJECT_SETTINGS), types/project-settings.types. No IO.
+ * Depends on: @forge/core (BUILTIN_PROJECT_SETTINGS), domain/director-override,
+ *   domain/director-settings, types/project-settings.types. No IO.
  */
 
 import { BUILTIN_PROJECT_SETTINGS } from '@forge/core';
 import type { ProjectCheck } from '@forge/core';
+import { directorDraftOf, directorIssues } from '#/domain/director-override.js';
+import { effectiveDirector } from '#/domain/director-settings.js';
 import type {
   FieldKey,
   SettingsDraft,
@@ -31,6 +34,7 @@ export const FIELD_KEYS: readonly FieldKey[] = [
   'harness_fallbacks',
   'tier_c_globs',
   'remote',
+  'director',
 ];
 
 /** The Tier C paths Forge protects by default; a list that drops them weakens the safeguard. */
@@ -68,6 +72,8 @@ export function inheritedOf(
       return lines(BUILTIN_PROJECT_SETTINGS.tier_c_globs);
     case 'remote':
       return '';
+    case 'director':
+      return {};
   }
 }
 
@@ -112,6 +118,7 @@ export function draftFromSnapshot(snapshot: SettingsSnapshot): SettingsDraft {
       inheritedOf(snapshot, 'tier_c_globs') as string,
     ),
     remote: field('remote', project.remote ?? '', ''),
+    director: directorDraftOf(own['director']),
   };
 }
 
@@ -154,6 +161,8 @@ function valueForDoc(key: FieldKey, draft: SettingsDraft): unknown {
       return parseLines(draft.tier_c_globs.value);
     case 'remote':
       return draft.remote.value.trim();
+    case 'director':
+      return draft.director.value;
   }
 }
 
@@ -244,6 +253,14 @@ export function validateDraft(
         message:
           'A working folder must be inside the repository (no leading slash, no “..”).',
       });
+    }
+  }
+
+  if (draft.director.overridden) {
+    const seen = effectiveDirector(snapshot.company.director, draft.director.value);
+
+    for (const message of directorIssues(seen, draft.director.value)) {
+      issues.push({ field: 'director', message });
     }
   }
 

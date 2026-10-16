@@ -113,6 +113,17 @@ export function describeDirectorLLMContract(
       }
     });
 
+    it('accepts per-call timeoutMs and onCost', async () => {
+      await h.script({ kind: 'valid', value: { answer: 'ok' } });
+      const r = await h.llm.step('dispatch_prompt', { text: 'hi' }, Answer, {
+        ...OPTS,
+        timeoutMs: 30_000,
+        onCost: () => undefined,
+      });
+
+      expect(r).toEqual({ ok: true, value: { answer: 'ok' } });
+    });
+
     it('does not throw for any scripted failure', async () => {
       for (const kind of ['rate_limit', 'auth', 'budget', 'refusal', 'crash'] as const) {
         await h.script({ kind });

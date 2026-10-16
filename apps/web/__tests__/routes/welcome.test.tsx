@@ -7,7 +7,7 @@
  * that `/` ignores, or a project step that creates before the folder was checked each lose
  * the person at the moment they are deciding whether Forge works. Each case runs the shipped
  * routes and the real http adapter against `stubFetch`.
- * Depends on: routes/welcome, routes/root-redirect, helpers/render-onboarding, helpers/fetch-stub.
+ * Depends on: routes/welcome, routes/overview, helpers/render-onboarding, helpers/fetch-stub.
  */
 
 import { screen, waitFor } from '@testing-library/react';
@@ -15,6 +15,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { json, refusal } from '#tests/helpers/fetch-stub.js';
 import { inspection, REPO_GIT } from '#tests/helpers/onboarding-fixtures.js';
+import { overviewBody } from '#tests/helpers/work-fixtures.js';
 import {
   projectReply,
   renderOnboarding,
@@ -71,9 +72,10 @@ describe('first run: when the wizard opens', () => {
     ).toBeInTheDocument();
   });
 
-  it('opens the project when setup is already complete', async () => {
+  it('opens the Overview when setup is already complete', async () => {
     const { router } = renderOnboarding('/', {
       'GET /projects': { body: { projects: [projectReply('my-app', 'MA')] } },
+      'GET /stats/overview': { body: overviewBody() },
       'GET /system': {
         body: {
           ...SYSTEM_FRESH,
@@ -82,7 +84,11 @@ describe('first run: when the wizard opens', () => {
       },
     });
 
-    await waitFor(() => expect(router.state.location.pathname).toBe('/p/my-app'));
+    expect(
+      await screen.findByRole('heading', { name: 'Overview', level: 1 }),
+    ).toBeInTheDocument();
+
+    expect(router.state.location.pathname).toBe('/');
   });
 
   it('stops sending the user back after "Finish later", and offers a way back in', async () => {

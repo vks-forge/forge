@@ -16,6 +16,7 @@ import type {
   CardEvent,
   CardRelation,
   CardReplyQueueItem,
+  CardPlanningState,
   CardType,
   GateResult,
   Harness,
@@ -23,6 +24,7 @@ import type {
   GithubConnection,
   HarnessToolSchema,
   InboxStateRow,
+  PlanVersion,
   HarnessVersion,
   Interaction,
   Project,
@@ -79,4 +81,8 @@ export interface MemoryState {
   cardReplies: CardReplyQueueItem[];
   /** Last reply id handed out (SQLite AUTOINCREMENT stand-in). */
   cardReplySeq: number;
+  /** Planning state per card id; a card with no entry reads as default. */
+  cardPlanning: Map<string, CardPlanningState>;
+  /** Plan versions per card id, in write order (reads sort by version). */
+  cardPlans: Map<string, PlanVersion[]>;
 }

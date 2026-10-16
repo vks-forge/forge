@@ -12,11 +12,11 @@
  *   hook route, the same receipts and the same G1 gate. It also wires what lets runs survive a
  *   restart (d-0092): shutdown interrupts live runs instead of cancelling them, the first tick
  *   resumes them, and run secrets live in the SecretStore until the run is over and are swept
- *   at start and after every tick (d-0100). A failure while assembling closes the
- *   database again, so a bad config never leaves a locked file behind.
+ *   at start and after every tick (d-0100). Planning reads the code via a git repo reader
+ *   (d-0131). A failed assembly closes the database again.
  *
  * Exports: assembleServer().
- * Depends on: @forge/db, @forge/drivers (systemClock), @forge/engine, @forge/hooks,
+ * Depends on: @forge/db, @forge/drivers (systemClock), @forge/engine, @forge/git, @forge/hooks,
  *   @forge/secrets, @forge/tools, and the services/routes of this app.
  *   IO: opens SQLite, creates the data home, binds the port on `start()`.
  */
@@ -27,6 +27,7 @@ import { openSqlite } from '@forge/db';
 import { createReceiptLookup, systemClock } from '@forge/drivers';
 import { createEngine, createIdSource, createOwnerId } from '@forge/engine';
 import { createFileReportStore } from '@forge/gates';
+import { createGitRepoReader } from '@forge/git';
 import { createDpapiSecretStore } from '@forge/secrets';
 import { createAuth } from '#/services/auth/create-auth.js';
 import { createFolderPicker } from '#/services/folder-picker/index.js';
@@ -89,16 +90,15 @@ export async function assembleServer(
 
     const owner = createOwnerId();
 
-    // The DPAPI store is created on first use. Run secrets live in it for the life of each
-    // run (d-0100), so it is first touched when the first run starts; a server with no
-    // GitHub project and no run (or off Windows) never opens it.
+    // The DPAPI store is created on first use (run secrets, d-0100): a server with no GitHub
+    // project and no run, or off Windows, never opens it.
     const secrets =
       ports.secrets ??
       createLazySecretStore(() =>
         createDpapiSecretStore({ dir: layout.data.secretsDir }),
       );
 
-    // Both are built below; a run cannot start before the server listens.
+    // Both are built below; no run starts before the server listens.
     let buildCheck: (runId: string) => Promise<void> = async () => undefined;
     let address: ServerAddress | null = null;
     const { registry, retirement, prepareRun } = createRunWiring({
@@ -112,8 +112,6 @@ export async function assembleServer(
       // Refuses a run on a harness build with no loaded approvals and records the build.
       checkBuild: (runId) => buildCheck(runId),
     });
-
-    const harness = createHarnessSource(storage);
 
     const projects = createProjectRegistry({
       storage,
@@ -141,7 +139,7 @@ export async function assembleServer(
         prepareRun,
         receipts: createReceiptLookup(receipts),
         log,
-        harness,
+        harness: createHarnessSource(storage),
         secrets,
       },
       log,
@@ -178,6 +176,7 @@ export async function assembleServer(
       drivers,
       llm,
       memory: parts.source,
+      repoReader: createGitRepoReader(),
       receipts,
       reports: createFileReportStore(layout.data.home),
       project: (slug, view) => projects.runtime(slug, view),

@@ -6,7 +6,7 @@
  *   comparing by path keeps every field a one-line descriptor instead of a hand-wired handler,
  *   and lets server validation errors (which name a path) land under the field they belong to.
  *
- * Exports: isPlain(), getAt(), setAt(), sameValue().
+ * Exports: isPlain(), getAt(), setAt(), omitAt(), sameValue().
  * Depends on: nothing. Pure.
  */
 
@@ -38,6 +38,31 @@ export function setAt<T>(root: T, path: string, value: unknown): T {
   const next = rest.length === 0 ? value : setAt(root[head], rest.join('.'), value);
 
   return { ...root, [head]: next } as T;
+}
+
+/** A copy of `root` without the key at `path`; objects along the path are copied, never mutated, and one left empty is dropped. */
+export function omitAt<T extends Record<string, unknown>>(root: T, path: string): T {
+  const [head, ...rest] = path.split('.');
+  if (head === undefined || !(head in root)) {
+    return root;
+  }
+
+  if (rest.length === 0) {
+    return Object.fromEntries(Object.entries(root).filter(([key]) => key !== head)) as T;
+  }
+
+  const inner = root[head];
+  if (!isPlain(inner)) {
+    return root;
+  }
+
+  const trimmed = omitAt(inner, rest.join('.'));
+  if (Object.keys(trimmed).length > 0) {
+    return { ...root, [head]: trimmed };
+  }
+
+  // A parent left empty by the removal goes too, so the saved document carries no `{}` husks.
+  return Object.fromEntries(Object.entries(root).filter(([key]) => key !== head)) as T;
 }
 
 /** Deep equality for settings values (plain objects, arrays, scalars; key order ignored). */

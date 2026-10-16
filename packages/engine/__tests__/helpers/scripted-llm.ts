@@ -8,7 +8,7 @@
  *   through the same port. It records every call so scenarios can assert on the input the
  *   engine built (memory slice, pre-check reasons, the validation error on a retry).
  *
- * Exports: ScriptedLLM, StepCall, createScriptedLLM().
+ * Exports: ScriptedLLM, StepCall, fail(), createScriptedLLM().
  * Depends on: @forge/core (DirectorLLM, StepError, schemas), zod. No IO.
  */
 
@@ -30,6 +30,10 @@ export interface ScriptedLLM {
   /** Queues answers for a step; each call consumes one, the last one repeats. Use `fail()` for a StepError. */
   script(name: StepName, ...answers: Scripted[]): void;
   callsTo(name: StepName): StepCall[];
+  /** Dollars each following call of `name` reports through `opts.onCost`; 0 reports nothing. */
+  cost(name: StepName, usd: number): void;
+  /** Runs `hook` while a call of `name` is in flight (before it answers): an owner acting during the model's turn. */
+  during(name: StepName, hook: () => Promise<unknown>): void;
 }
 
 const DEFAULTS: Record<StepName, Scripted> = {
@@ -45,6 +49,50 @@ const DEFAULTS: Record<StepName, Scripted> = {
   dispatch_prompt: { prompt: 'Do the ticket.' },
   steer_reply: { mode: 'steer', text: 'Please also update the docs.' },
   card_chat: { reply: 'Noted.', actions: [] },
+  card_survey: { findings: { summary: 'Empty repository.', predicted_lane: 'standard' } },
+  grill_turn: {
+    done: true,
+    done_reason: 'zero_question',
+    open_points: 0,
+    assumptions: [],
+  },
+  verify: {
+    findings: {
+      summary: 'Nothing in the way.',
+      blast_radius: 'small',
+      predicted_files: [],
+    },
+  },
+  enhance: {
+    summary: 'Nothing to add.',
+    report: '# Enhance\n\nKeep.',
+    assumptions: [],
+    owner_questions: [],
+  },
+  write_plan: {
+    summary: 'One ticket.',
+    goal: 'Do the card.',
+    scope: ['the card'],
+    non_goals: [],
+    assumptions: [],
+    risks: [],
+    tickets: [
+      {
+        key: 't1',
+        title: 'Do the card',
+        body: 'Do it.',
+        acceptance: ['it works'],
+        priority: 'normal',
+        depends_on: [],
+        lane: 'express',
+        size: 'S',
+        files: ['src/a.ts'],
+      },
+    ],
+    card_links: [],
+  },
+  approve_plan: { decision: 'approve', questions: [] },
+  custom_step: { summary: 'Done.', notes: [] },
 };
 
 /** Marks a scripted answer as a failure rather than a value. */
@@ -59,6 +107,8 @@ const isFail = (v: unknown): v is StepError & { __fail: true } =>
 export function createScriptedLLM(): ScriptedLLM {
   const calls: StepCall[] = [];
   const queues = new Map<StepName, Scripted[]>();
+  const costs = new Map<StepName, number>();
+  const hooks = new Map<StepName, () => Promise<unknown>>();
 
   const llm: DirectorLLM = {
     capabilities: () => ({ structuredOutput: true, reportsCost: true }),
@@ -69,6 +119,12 @@ export function createScriptedLLM(): ScriptedLLM {
       opts: StepOptions,
     ) {
       calls.push({ name, input: input as Record<string, unknown>, opts });
+      await hooks.get(name)?.();
+      const spend = costs.get(name) ?? 0;
+      if (spend > 0) {
+        opts.onCost?.(spend);
+      }
+
       const queue = queues.get(name);
       const head =
         queue && queue.length > 1 ? queue.shift() : (queue?.[0] ?? DEFAULTS[name]);
@@ -99,5 +155,7 @@ export function createScriptedLLM(): ScriptedLLM {
       queues.set(name, [...answers]);
     },
     callsTo: (name) => calls.filter((c) => c.name === name),
+    cost: (name, usd) => void costs.set(name, usd),
+    during: (name, hook) => void hooks.set(name, hook),
   };
 }

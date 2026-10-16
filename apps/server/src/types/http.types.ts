@@ -96,5 +96,8 @@ export interface ErrorBody {
     readonly issues?: readonly ErrorIssue[];
     /** Present on `dependency_cycle`: the loop as a closed path of card ids. */
     readonly cycle?: readonly string[];
+    /** Present on `ticket_has_dependents`: the ticket key and the keys that depend on it. */
+    readonly key?: string;
+    readonly dependents?: readonly string[];
   };
 }

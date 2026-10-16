@@ -19,6 +19,8 @@ import { buildRoutes } from '#/routes/routes.js';
 import { stubHarnessDeps } from '#tests/helpers/harness-deps.js';
 import { startHttp } from '#tests/helpers/http-rig.js';
 import type { HttpRig } from '#tests/helpers/http-rig.js';
+import { makeEngineMock } from '#tests/helpers/engine-mock.js';
+import type { EngineMock } from '#tests/helpers/engine-mock.js';
 import { inertRouteExtras } from '#tests/helpers/route-extras.js';
 
 const TICKET: Ticket = {
@@ -60,7 +62,7 @@ const INTAKE = {
 
 let rig: HttpRig;
 let storage: StorageAdapter;
-let engine: { [K in keyof Engine]: ReturnType<typeof vi.fn> };
+let engine: EngineMock;
 const hooks = { handle: vi.fn() };
 
 beforeEach(async () => {
@@ -70,23 +72,7 @@ beforeEach(async () => {
     await tx.interactions.insert(INTERACTION);
   });
 
-  engine = {
-    tick: vi.fn(),
-    requestTick: vi.fn(),
-    ingest: vi.fn(async () => ({ status: 'ticket_created', ticketId: 'FX-1' })),
-    answerInteraction: vi.fn(async () => true),
-    steerRun: vi.fn(),
-    postCardMessage: vi.fn(),
-    createCard: vi.fn(),
-    setCardRelations: vi.fn(),
-    cardDirector: vi.fn(() => ({ state: 'idle' })),
-    cancelTicket: vi.fn(),
-    explainWait: vi.fn(async () => null),
-    interruptRun: vi.fn(),
-    liveRunIds: vi.fn(() => ['run-a', 'run-b']),
-    unservableProjects: vi.fn(() => new Map()),
-    gateJobsInFlight: vi.fn(() => 1),
-  };
+  engine = makeEngineMock();
 
   hooks.handle.mockReset();
   hooks.handle.mockResolvedValue({ decision: 'allow', reason: 'ok', receipt_hash: '' });

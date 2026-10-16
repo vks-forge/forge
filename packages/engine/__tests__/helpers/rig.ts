@@ -32,6 +32,8 @@ import {
   createFakeWorktrees,
   createIds,
 } from '#tests/helpers/fakes.js';
+import { createFakeRepoReader } from '#tests/helpers/fake-repo-reader.js';
+import type { FakeRepoReader } from '#tests/helpers/fake-repo-reader.js';
 import { createScriptedDriver } from '#tests/helpers/scripted-driver.js';
 import { createScriptedLLM } from '#tests/helpers/scripted-llm.js';
 
@@ -41,6 +43,8 @@ export interface Rig {
   readonly llm: ReturnType<typeof createScriptedLLM>;
   readonly worktrees: ReturnType<typeof createFakeWorktrees>;
   readonly memory: ReturnType<typeof createFakeMemory>;
+  /** The project's tracked files at HEAD as the planning steps see them. */
+  readonly repo: FakeRepoReader;
   readonly receipts: ReturnType<typeof createFakeReceipts>;
   readonly reports: ReturnType<typeof createFakeReports>;
   /** What `deps.project` resolves for a slug with no entry in `runtimes`; null makes the project unknown to the app. */
@@ -139,6 +143,7 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
   const llm = createScriptedLLM();
   const worktrees = createFakeWorktrees();
   const memory = createFakeMemory();
+  const repo = createFakeRepoReader();
   const receipts = createFakeReceipts();
   const reports = createFakeReports();
   const runtime: { current: ProjectRuntime | null } = {
@@ -200,6 +205,7 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
     drivers,
     llm: llm.llm,
     memory,
+    repoReader: repo,
     receipts,
     reports,
     project: (slug) => runtimes.get(slug) ?? runtime.current,
@@ -228,6 +234,7 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
     llm,
     worktrees,
     memory,
+    repo,
     receipts,
     reports,
     runtime,

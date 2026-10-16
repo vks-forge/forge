@@ -11,7 +11,8 @@
  *
  * Exports: CheckRole, ProjectCheck, GateRules, GitHostConfig, ToolGrantConfig, ProjectConfigShape, ProjectConfig,
  *   ProjectStatus, Project.
- * Depends on: domain/legacy-project-doc, schemas/ids, schemas/secret-name, zod. No IO.
+ * Depends on: domain/legacy-project-doc, schemas/director-config, schemas/ids, schemas/secret-name,
+ *   shared/deep-partial, types/config.types, zod. No IO.
  */
 
 import { z } from 'zod';
@@ -19,8 +20,11 @@ import {
   legacyProjectDocProblem,
   migrateLegacyProjectDoc,
 } from '#/domain/legacy-project-doc.js';
+import { DirectorConfig } from '#/schemas/director-config.js';
 import { ProjectPrefix } from '#/schemas/ids.js';
 import { SecretName } from '#/schemas/secret-name.js';
+import { deepPartial } from '#/shared/deep-partial.js';
+import type { DeepPartial } from '#/types/config.types.js';
 
 /** What a check is for; gates and the Worker contract read the role, never the name. */
 export const CheckRole = z.enum([
@@ -147,6 +151,11 @@ export const ToolGrantConfig = z.object({
 });
 export type ToolGrantConfig = z.infer<typeof ToolGrantConfig>;
 
+/** A project's partial Director settings: every key optional, lists and playbook bodies replace whole. */
+const DirectorOverride = deepPartial(DirectorConfig) as unknown as z.ZodType<
+  DeepPartial<DirectorConfig>
+>;
+
 /** The settings shape (d-0095). `default_harness` is an opaque id: core never names harnesses. */
 export const ProjectConfigShape = z.object({
   slug: z.string().regex(/^[a-z][a-z0-9-]*$/),
@@ -174,6 +183,12 @@ export const ProjectConfigShape = z.object({
     .default(['.forge/**', '.claude/**', '.github/**']),
   /** Project-wide tool grant (B7); absent means the lane defaults alone. */
   tool_grants: ToolGrantConfig.optional(),
+  /**
+   * This project's overrides of the company's Director settings (flow, playbooks, house
+   * rules, limits); only the keys it names differ. `mergeConfig` lays them over the company
+   * `director` section, so the engine reads one effective `forge.director`.
+   */
+  director: DirectorOverride.optional(),
 });
 
 /**

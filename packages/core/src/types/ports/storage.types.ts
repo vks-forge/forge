@@ -13,7 +13,8 @@
  *   transaction. Behind a port, the backend (SQLite WAL by default) can change without
  *   touching the engine (director-core.md §2-§3, §7-§8, d-0023).
  *
- * Cards, their history and the type registry (ports/card.types) and the harness registries
+ * Cards, their history and the type registry (ports/card.types), card planning state and
+ * plan versions (ports/card-planning.types) and the harness registries
  * (ports/harness-registry.types) join the same transaction.
  *
  * Exports: TicketPatch, TicketRepository, TicketRelationRepository, RunRepository,
@@ -40,6 +41,7 @@ import type {
   CardRepository,
   CardTypeRepository,
 } from '#/types/ports/card.types.js';
+import type { CardPlanningRepository } from '#/types/ports/card-planning.types.js';
 import type { InboxStateRepository } from '#/types/ports/inbox-state.types.js';
 import type { GithubConnection } from '#/schemas/github-connection.js';
 import type { Project } from '#/schemas/project.js';
@@ -274,6 +276,7 @@ export interface StorageTx {
   readonly cardTypes: CardTypeRepository;
   readonly cardRelations: CardRelationRepository;
   readonly cardReplyQueue: CardReplyQueueRepository;
+  readonly cardPlanning: CardPlanningRepository;
 }
 
 /** Single-writer storage backend; every mutation happens inside `transaction`. */

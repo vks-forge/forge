@@ -10,12 +10,14 @@
  *   State lives per call of `settingsRoutes()`, so each test starts clean.
  *
  * Exports: settingsRoutes().
- * Depends on: @forge/core, helpers/fetch-stub, helpers/forge-data/settings-data,
+ * Depends on: @forge/core, helpers/fetch-stub, helpers/forge-data/director-data,
+ *   helpers/forge-data/settings-data,
  *   schemas/settings (types).
  */
 
-import { BUILTIN_FORGE_CONFIG, ConfigAppend, mergeCompany } from '@forge/core';
+import { ConfigAppend, mergeCompany } from '@forge/core';
 import type { ConfigVersion, GithubConnection, HarnessToolSchema } from '@forge/core';
+import { BUILTIN_FORGE_WITH_DIRECTOR } from '#tests/helpers/forge-data/director-data.js';
 import { json, refusal } from '#tests/helpers/fetch-stub.js';
 import type { Routes } from '#tests/helpers/fetch-stub.js';
 import {
@@ -240,7 +242,7 @@ export function settingsRoutes(options: {
 
     'GET /settings/company': () =>
       json({
-        config: mergeCompany(BUILTIN_FORGE_CONFIG, currentDoc()),
+        config: mergeCompany(BUILTIN_FORGE_WITH_DIRECTOR, currentDoc()),
         version: currentVersion(),
       }),
 

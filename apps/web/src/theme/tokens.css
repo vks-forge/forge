@@ -9,7 +9,7 @@
  *   picks one (data-theme on <html>), so the same values are written twice below.
  *
  * Exports: CSS variables --bg, --rail, --surface, --fg, --muted, --faint, --line, --hover,
- *   --signal*, --attn*, --good, --chart-bar, --scrim, --shadow, --font-ui, --font-data, and the
+ *   --signal*, --attn*, --good, --chart-bar, --series-1..6 (categorical chart colours), --scrim, --shadow, --font-ui, --font-data, and the
  *   Tailwind utilities generated from them (bg-bg, text-fg, border-line, font-data, ...).
  * Depends on: tailwindcss (@theme). Pairs with theme/motion.ts for the spring presets.
  */
@@ -33,6 +33,12 @@
   --danger: oklch(52% 0.18 27);
   --danger-soft: oklch(95% 0.03 27);
   --chart-bar: oklch(83% 0.03 262);
+  --series-1: oklch(55% 0.15 262);
+  --series-2: oklch(60% 0.11 205);
+  --series-3: oklch(58% 0.12 155);
+  --series-4: oklch(56% 0.14 300);
+  --series-5: oklch(60% 0.14 350);
+  --series-6: oklch(64% 0.12 110);
   --scrim: oklch(20% 0.02 255 / 0.32);
   --shadow: 0 12px 32px oklch(25% 0.03 255 / 0.12), 0 2px 6px oklch(25% 0.03 255 / 0.08);
   color-scheme: light;
@@ -58,6 +64,12 @@
     --danger: oklch(72% 0.15 27);
     --danger-soft: oklch(28% 0.06 27);
     --chart-bar: oklch(41% 0.045 262);
+    --series-1: oklch(72% 0.12 262);
+    --series-2: oklch(75% 0.1 205);
+    --series-3: oklch(74% 0.11 155);
+    --series-4: oklch(73% 0.12 300);
+    --series-5: oklch(74% 0.12 350);
+    --series-6: oklch(78% 0.11 110);
     --scrim: oklch(5% 0.01 255 / 0.55);
     --shadow: 0 16px 40px oklch(0% 0 0 / 0.45), 0 2px 8px oklch(0% 0 0 / 0.3);
     color-scheme: dark;
@@ -83,6 +95,12 @@
   --danger: oklch(72% 0.15 27);
   --danger-soft: oklch(28% 0.06 27);
   --chart-bar: oklch(41% 0.045 262);
+  --series-1: oklch(72% 0.12 262);
+  --series-2: oklch(75% 0.1 205);
+  --series-3: oklch(74% 0.11 155);
+  --series-4: oklch(73% 0.12 300);
+  --series-5: oklch(74% 0.12 350);
+  --series-6: oklch(78% 0.11 110);
   --scrim: oklch(5% 0.01 255 / 0.55);
   --shadow: 0 16px 40px oklch(0% 0 0 / 0.45), 0 2px 8px oklch(0% 0 0 / 0.3);
   color-scheme: dark;

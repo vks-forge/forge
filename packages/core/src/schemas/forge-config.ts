@@ -9,10 +9,11 @@
  *   file is the app's job (no IO here).
  *
  * Exports: ModelMatrix, RetryPolicy, EngineConfig, ForgeConfig.
- * Depends on: schemas/ticket, zod. No IO.
+ * Depends on: schemas/director-config, schemas/ticket, zod. No IO.
  */
 
 import { z } from 'zod';
+import { DirectorConfig } from '#/schemas/director-config.js';
 import { TicketStatus } from '#/schemas/ticket.js';
 
 const Model = z.string().min(1);
@@ -25,6 +26,13 @@ export const ModelMatrix = z.object({
     dispatch_prompt: Model,
     steer_reply: Model,
     card_chat: Model,
+    card_survey: Model,
+    grill_turn: Model,
+    verify: Model,
+    enhance: Model,
+    write_plan: Model,
+    approve_plan: Model,
+    custom_step: Model,
   }),
   worker: z.object({ express: Model, standard: Model, full: Model }),
 });
@@ -80,6 +88,10 @@ export const EngineConfig = z.object({
 });
 export type EngineConfig = z.infer<typeof EngineConfig>;
 
-/** The whole file. */
-export const ForgeConfig = z.object({ models: ModelMatrix, engine: EngineConfig });
+/** The whole file: the model matrix, the engine limits and the Director's planning settings (d-0150). */
+export const ForgeConfig = z.object({
+  models: ModelMatrix,
+  engine: EngineConfig,
+  director: DirectorConfig,
+});
 export type ForgeConfig = z.infer<typeof ForgeConfig>;

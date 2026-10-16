@@ -22,7 +22,13 @@ import type { OnboardingApi } from '#/types/onboarding.types.js';
 import type { ProjectSettingsApi } from '#/types/project-settings.types.js';
 import type { AnswerReply, IngestReply, TicketDetail } from '#/schemas/tickets.js';
 import type { CardsApi } from '#/types/cards-api.types.js';
-import type { CostApi, InboxApi, RunsApi, StatsApi } from '#/types/work-api.types.js';
+import type {
+  CostApi,
+  InboxApi,
+  OverviewApi,
+  RunsApi,
+  StatsApi,
+} from '#/types/work-api.types.js';
 import type {
   ProjectEventsWatch,
   ProjectEventsWatchOptions,
@@ -98,6 +104,7 @@ export interface ResourceApis {
   readonly projectEvents: ProjectEventsApi;
   readonly intake: IntakeApi;
   readonly stats: StatsApi;
+  readonly overview: OverviewApi;
   readonly cost: CostApi;
   readonly inbox: InboxApi;
   readonly runs: RunsApi;

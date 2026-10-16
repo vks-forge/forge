@@ -17,6 +17,9 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { EngineConfig, ForgeConfig, ModelMatrix } from '#/schemas/forge-config.js';
 
+/** The yaml carries the model matrix and engine limits; the `director` section is built in only (d-0150). */
+const YamlConfig = ForgeConfig.omit({ director: true });
+
 const defaultYaml = (): unknown =>
   parse(
     readFileSync(
@@ -27,17 +30,24 @@ const defaultYaml = (): unknown =>
 
 describe('default .forge/config/forge.yaml', () => {
   it('parses against ForgeConfig', () => {
-    const parsed = ForgeConfig.safeParse(defaultYaml());
+    const parsed = YamlConfig.safeParse(defaultYaml());
     expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
   });
 
-  it('matches d-0060: opus for every Director step, sonnet for every Worker lane', () => {
-    const { models } = ForgeConfig.parse(defaultYaml());
+  it('matches d-0060 and d-0150: opus for the judging Director steps, sonnet for the quick turns and every Worker lane', () => {
+    const { models } = YamlConfig.parse(defaultYaml());
     expect(models.director).toEqual({
       triage: 'opus',
       dispatch_prompt: 'opus',
       steer_reply: 'opus',
       card_chat: 'opus',
+      card_survey: 'opus',
+      grill_turn: 'sonnet',
+      verify: 'opus',
+      enhance: 'opus',
+      write_plan: 'opus',
+      approve_plan: 'opus',
+      custom_step: 'sonnet',
     });
 
     expect(models.worker).toEqual({
@@ -48,7 +58,7 @@ describe('default .forge/config/forge.yaml', () => {
   });
 
   it('ships the brief defaults: 30 s tick, 3 re-wakes per hour, one step retry', () => {
-    const { engine } = ForgeConfig.parse(defaultYaml());
+    const { engine } = YamlConfig.parse(defaultYaml());
     expect(engine.tick_interval_ms).toBe(30_000);
     expect(engine.rewake_cap).toEqual({ max: 3, window_ms: 3_600_000 });
     expect(engine.step_retries).toBe(1);
@@ -67,7 +77,7 @@ describe('ModelMatrix / EngineConfig', () => {
   });
 
   it('rejects a matrix with a missing Director step or an empty model', () => {
-    const { models } = ForgeConfig.parse(defaultYaml());
+    const { models } = YamlConfig.parse(defaultYaml());
     const { triage: _t, ...rest } = models.director;
     void _t;
     expect(ModelMatrix.safeParse({ ...models, director: rest }).success).toBe(false);

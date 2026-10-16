@@ -16,14 +16,25 @@
  *   records that spend crossed a fraction of the card's cap, once per threshold; it only
  *   informs the owner and never blocks anything (d-0143).
  *
- * Exports: CARD_EVENT_KINDS, CardEventKind, NewCardEvent, CardEvent.
- * Depends on: schemas/card, schemas/card-chat, schemas/ids, schemas/ticket, zod. No IO.
+ *   Planning adds the Director's work as events (d-0130, d-0132): a step starting and
+ *   finishing (with the files it read and the config version it ran under, as evidence),
+ *   each grill question and answer, the end of the grill, the plan being ready, approved or
+ *   sent back with changes, and `needs_you` with the actions the owner may take.
+ *
+ * Exports: CARD_EVENT_KINDS, CardEventKind, NEEDS_YOU_ACTIONS, NewCardEvent, CardEvent.
+ * Depends on: schemas/card, schemas/card-chat, schemas/grill, schemas/ids, schemas/ticket, zod. No IO.
  */
 
 import { z } from 'zod';
 import { CardActor, CardTypeName } from '#/schemas/card.js';
 import { ActionTaken } from '#/schemas/card-chat.js';
-import { CardId } from '#/schemas/ids.js';
+import {
+  FilesRead,
+  GrillAnswer,
+  GrillDoneReason,
+  GrillQuestion,
+} from '#/schemas/grill.js';
+import { CardId, TicketId } from '#/schemas/ids.js';
 import { TicketStatus } from '#/schemas/ticket.js';
 
 export const CARD_EVENT_KINDS = [
@@ -39,6 +50,15 @@ export const CARD_EVENT_KINDS = [
   'card_closed',
   'budget_warning',
   'note',
+  'step_started',
+  'step_finished',
+  'grill_question',
+  'grill_answer',
+  'grill_done',
+  'plan_ready',
+  'plan_approved',
+  'plan_changes_requested',
+  'needs_you',
 ] as const;
 export const CardEventKind = z.enum(CARD_EVENT_KINDS);
 export type CardEventKind = z.infer<typeof CardEventKind>;
@@ -52,6 +72,28 @@ const event = <K extends CardEventKind, P extends z.ZodType>(kind: K, payload: P
   });
 
 const text = z.object({ text: z.string().min(1) });
+
+/**
+ * The owner is asked to act: why, and which actions the card offers (no dead end, d-0135).
+ * `ticket_id` names the held ticket when the actions include `run_as_express`.
+ */
+export const NEEDS_YOU_ACTIONS = [
+  'answer',
+  'approve_plan',
+  'request_changes',
+  'start_planning',
+  'run_as_express',
+] as const;
+const NeedsYouPayload = z
+  .object({
+    reason: z.string().min(1),
+    actions: z.array(z.enum(NEEDS_YOU_ACTIONS)).min(1),
+    ticket_id: TicketId.optional(),
+  })
+  .refine((p) => !p.actions.includes('run_as_express') || p.ticket_id !== undefined, {
+    message: 'run_as_express needs the ticket it applies to',
+  });
+
 const ticket = z.object({ ticket_id: z.string().min(1) });
 
 /** A card event before storage has numbered it. */
@@ -88,6 +130,52 @@ export const NewCardEvent = z.discriminatedUnion('kind', [
     }),
   ),
   event('note', text),
+  event(
+    'step_started',
+    z.object({
+      step_id: z.string().min(1),
+      step_kind: z.string().min(1),
+      label: z.string(),
+    }),
+  ),
+  event(
+    'step_finished',
+    z.object({
+      step_id: z.string().min(1),
+      step_kind: z.string().min(1),
+      label: z.string(),
+      files_read: FilesRead,
+      config_version: z.number().int().nonnegative(),
+      summary: z.string(),
+    }),
+  ),
+  event('grill_question', GrillQuestion),
+  event('grill_answer', GrillAnswer),
+  event(
+    'grill_done',
+    z.object({ reason: GrillDoneReason, assumptions: z.array(z.string()) }),
+  ),
+  event(
+    'plan_ready',
+    z.object({
+      version: z.number().int().positive(),
+      ticket_count: z.number().int().nonnegative(),
+      auto_approve_eligible: z.boolean(),
+    }),
+  ),
+  event(
+    'plan_approved',
+    z.object({
+      version: z.number().int().positive(),
+      by: z.enum(['director', 'owner']),
+      ticket_ids: z.array(TicketId),
+    }),
+  ),
+  event(
+    'plan_changes_requested',
+    z.object({ version: z.number().int().positive(), comment: z.string().min(1) }),
+  ),
+  event('needs_you', NeedsYouPayload),
 ]);
 export type NewCardEvent = z.infer<typeof NewCardEvent>;
 

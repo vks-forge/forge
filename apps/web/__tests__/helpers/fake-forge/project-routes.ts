@@ -13,7 +13,8 @@
  * Depends on: @forge/core (mergeConfig), helpers/fetch-stub, helpers/forge-data/*.
  */
 
-import { BUILTIN_CONFIG, mergeConfig } from '@forge/core';
+import { mergeConfig } from '@forge/core';
+import { BUILTIN_WITH_DIRECTOR } from '#tests/helpers/forge-data/director-data.js';
 import type { ConfigVersion, ProjectOverride } from '@forge/core';
 import { json, refusal } from '#tests/helpers/fetch-stub.js';
 import type { Routes } from '#tests/helpers/fetch-stub.js';
@@ -92,7 +93,7 @@ export function projectRoutes(options: {
 
       return json({
         config: mergeConfig(
-          BUILTIN_CONFIG,
+          BUILTIN_WITH_DIRECTOR,
           companyDoc,
           latest?.doc as ProjectOverride | undefined,
         ),

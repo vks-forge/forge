@@ -36,6 +36,28 @@ const ANSWERS: Record<StepName, unknown> = {
   },
   steer_reply: { mode: 'none', text: '' },
   card_chat: { reply: 'Noted.', actions: [] },
+  // The e2e card is a fast-path card: planning steps never run, so these only complete the record.
+  card_survey: { findings: { summary: 'n/a' } },
+  grill_turn: {
+    done: true,
+    done_reason: 'zero_question',
+    open_points: 0,
+    assumptions: [],
+  },
+  verify: { findings: { summary: 'n/a', blast_radius: 'n/a' } },
+  enhance: { summary: 'n/a', report: 'n/a', assumptions: [], owner_questions: [] },
+  write_plan: {
+    summary: 'n/a',
+    goal: 'n/a',
+    scope: [],
+    non_goals: [],
+    assumptions: [],
+    risks: [],
+    tickets: [],
+    card_links: [],
+  },
+  approve_plan: { decision: 'approve', questions: [] },
+  custom_step: { summary: 'n/a', notes: [] },
 };
 
 export function createScriptedDirector(): ScriptedDirector {

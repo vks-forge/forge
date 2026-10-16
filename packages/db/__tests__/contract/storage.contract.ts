@@ -16,7 +16,7 @@
  *   backend runs them: tickets (and the project ticket list), transactions, runs, run events, run tokens, ticket
  *   relations and the ticket fields derived from them, the run lifecycle, interaction answer/expire CAS, intake ids and ticket mapping, wake requests,
  *   the run inbox, gate results, projects and GitHub connections (ports batch C), the harness registry, cards with their
- *   history and type registry.
+ *   history and type registry, card planning (flow snapshot, grill state, plan versions).
  *
  * Also pinned: optional columns can be cleared (a patch from `transition()` leaves no stale
  *   `blocked_reason` / `tier_actual`), the CAS owns `status_version`, a transaction
@@ -41,6 +41,7 @@ import { describeTicketListContract } from './ticket-list.contract.js';
 import { describeRunListContract } from './run-list.contract.js';
 import { describeCardsContract } from './cards.contract.js';
 import { describeCardFlowContract } from './card-flow.contract.js';
+import { describeCardPlanningContract } from './card-planning.contract.js';
 import { describeCardPhaseContract } from './card-phase.contract.js';
 import { describeInboxStatesContract } from './inbox-states.contract.js';
 import { describeTransactionsContract } from './transactions.contract.js';
@@ -88,6 +89,7 @@ export function describeStorageContract(
     describeCardsContract(() => db);
     describeCardPhaseContract(() => db);
     describeCardFlowContract(() => db);
+    describeCardPlanningContract(() => db);
     describeTransactionsContract(() => db);
     describeRunsContract(() => db);
     describeRunEventsContract(() => db);

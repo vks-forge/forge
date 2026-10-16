@@ -6,7 +6,7 @@
  *   A builder per shape lets a test say only what matters ("lead time is null") and keeps the
  *   rest valid, so a failure points at the behaviour under test and not at a malformed fixture.
  *
- * Exports: day(), statsBody(), costBody(), inboxItem(), runSummary(), runDetail(), ticketSummary(),
+ * Exports: day(), statsBody(), overviewBody(), costBody(), inboxItem(), runSummary(), runDetail(), ticketSummary(),
  *   PROJECTS_REPLY.
  * Depends on: @forge/core (types only). No IO.
  */
@@ -14,6 +14,7 @@
 import type {
   CostReport,
   InboxItem,
+  OverviewStats,
   ProjectStats,
   RunDetail,
   RunSummary,
@@ -201,6 +202,91 @@ export function ticketSummary(over: Partial<TicketSummary> = {}): TicketSummary 
     needs_you: false,
     created_at: '2026-10-10T09:00:00.000Z',
     updated_at: '2026-10-16T09:00:00.000Z',
+    ...over,
+  };
+}
+
+/** `GET /stats/overview` for two live projects over a week of days, one with spend and one waiting. */
+export function overviewBody(over: Partial<OverviewStats> = {}): OverviewStats {
+  const week = (f: (i: number) => number) => Array.from({ length: 7 }, (_, i) => f(i));
+
+  return {
+    range: '7d',
+    group: 'day',
+    from: '2026-10-10T00:00:00.000Z',
+    to: NOW,
+    buckets: week((i) => 10 + i).map((d) => `2026-10-${d}`),
+    projects_included: ['sample-service', 'sample-web'],
+    unknown: [],
+    kpis: {
+      spend_usd: 7.5,
+      spend_prev_usd: 5,
+      spend_this_month_usd: 21.25,
+      tickets_done: 4,
+      tickets_in_progress: 2,
+      waiting_on_you: 2,
+      workers_running: 1,
+      active_projects: 2,
+      g1_pass_rate: { hits: 3, total: 4, rate: 0.75 },
+    },
+    spend_by_project: [
+      { project: 'sample-service', values: week((i) => (i === 6 ? 4.5 : 0)) },
+      { project: 'sample-web', values: week((i) => (i === 5 ? 3 : 0)) },
+    ],
+    tickets_done: week((i) => (i === 6 ? 4 : 0)),
+    tickets_started: week((i) => (i % 2 === 0 ? 1 : 0)),
+    runs_passed: week((i) => (i === 6 ? 5 : 0)),
+    runs_failed: week((i) => (i === 5 ? 1 : 0)),
+    runs_interrupted: week(() => 0),
+    spend_by_project_total: [
+      { key: 'sample-service', usd: 4.5 },
+      { key: 'sample-web', usd: 3 },
+    ],
+    spend_by_harness: [
+      { key: 'claude', usd: 6 },
+      { key: 'codex', usd: 1.5 },
+    ],
+    spend_by_lane: [{ key: 'standard', usd: 7.5 }],
+    projects: [
+      {
+        slug: 'sample-service',
+        status: 'ready',
+        open_cards: 3,
+        tickets_in_progress: 1,
+        waiting_on_you: 1,
+        spend_usd: 4.5,
+        last_activity: '2026-10-16T10:00:00.000Z',
+        spark: week((i) => i % 3),
+      },
+      {
+        slug: 'sample-web',
+        status: 'ready',
+        open_cards: 1,
+        tickets_in_progress: 1,
+        waiting_on_you: 1,
+        spend_usd: 3,
+        last_activity: '2026-10-15T08:00:00.000Z',
+        spark: week(() => 0),
+      },
+    ],
+    attention: [
+      {
+        id: 'question:q-1',
+        kind: 'question',
+        project: 'sample-service',
+        title: 'Worker asks about migrations',
+        ticket_id: 'SVC-3',
+        updated_at: '2026-10-16T10:00:00.000Z',
+      },
+      {
+        id: 'tool_approval:claude/2.1.142/shell',
+        kind: 'tool_approval',
+        project: 'sample-web',
+        title: 'Approve tool shell',
+        updated_at: '2026-10-15T08:00:00.000Z',
+      },
+    ],
+    cost_coverage: { runs_total: 6, runs_with_cost: 5 },
     ...over,
   };
 }

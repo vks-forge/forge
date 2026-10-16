@@ -176,7 +176,11 @@ describe('card chat actions', () => {
     await rig.tick();
     await discussion(rig);
     await rig.engine.postCardMessage('FG-C2', 'steer the other card', 'vikash');
-    await rig.engine.ingest(intake({ payload: { text: 'Second request' } }));
+    // A fast-path card keeps card chat; a planned card talks to the planning flow instead.
+    await rig.engine.ingest(
+      intake({ payload: { text: 'Second request', card_type: 'pr_issue' } }),
+    );
+
     await rig.engine.postCardMessage('FG-C3', 'steer FG-1 and FG-9', 'vikash');
     rig.llm.script(
       'card_chat',

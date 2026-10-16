@@ -26,6 +26,12 @@ import { explainWait } from '#/tick/explain.js';
 import { answerInteraction, expireInteractions } from '#/tick/interactions.js';
 import { ingest } from '#/tick/intake.js';
 import { interruptRun } from '#/tick/interrupt.js';
+import { requestPlanChanges, startPlanning } from '#/tick/plan-actions.js';
+import { editPlanTickets } from '#/tick/plan-edit.js';
+import { cardPlan, cardPlans } from '#/tick/plan-reads.js';
+import { approvePlan, runAsExpress } from '#/tick/plan-to-tickets.js';
+import { answerGrill, grillShortcut } from '#/tick/planning-owner.js';
+import { sweepPlanning } from '#/tick/planning-sweep.js';
 import { cancelStalled, settleFinishedPumps } from '#/tick/reconcile.js';
 import { reconcileRestart, resumeInterrupted } from '#/tick/restart.js';
 import { steerRun } from '#/tick/steer-run.js';
@@ -115,6 +121,7 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
   await phase(ctx, 'stall scan', cancelStalled);
   await phase(ctx, 'expire interactions', expireInteractions);
   await phase(ctx, 'deliver replies', deliverReplies);
+  await phase(ctx, 'planning sweep', sweepPlanning);
   await phase(ctx, 'card chat', runCardChats);
   await phase(ctx, 'triage', triageInbox);
   await phase(ctx, 'verify', verifyReady);
@@ -157,6 +164,20 @@ export function createEngine(deps: EngineDeps): Engine {
     ingest: (event) => ingest(deps, state, event),
     createCard: (input) => createCard(deps, state, input),
     setCardRelations: (cardId, input) => setCardRelations(deps, cardId, input),
+    answerGrill: (cardId, input, author) =>
+      answerGrill(deps, state, cardId, input, author),
+    grillShortcut: (cardId, kind, author) =>
+      grillShortcut(deps, state, cardId, kind, author),
+    approvePlan: (cardId, version, author) =>
+      approvePlan(deps, state, cardId, version, author),
+    requestPlanChanges: (cardId, version, comment, author) =>
+      requestPlanChanges(deps, state, cardId, version, comment, author),
+    editPlanTickets: (cardId, version, input, author) =>
+      editPlanTickets(deps, state, cardId, version, input, author),
+    startPlanning: (cardId, author) => startPlanning(deps, state, cardId, author),
+    runAsExpress: (ticketId, author) => runAsExpress(deps, state, ticketId, author),
+    cardPlans: (cardId) => cardPlans(deps, cardId),
+    cardPlan: (cardId, version) => cardPlan(deps, cardId, version),
     answerInteraction: (id, answer) => answerInteraction(deps, state, id, answer),
     steerRun: (runId, message, author) => steerRun(deps, state, runId, message, author),
     postCardMessage: (cardId, text, author) =>

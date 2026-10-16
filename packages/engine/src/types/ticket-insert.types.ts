@@ -18,6 +18,10 @@ export interface NewInboxTicket {
   readonly body: string;
   readonly type: Ticket['type'];
   readonly lane?: Lane;
+  /** Queue priority as the integer tickets carry (urgent 3, high 2, normal 1, low 0 for planned work). */
+  readonly priority?: number;
+  /** Tickets this one waits for; each becomes a `depends_on` edge, so they must already exist. */
+  readonly blockedBy?: readonly string[];
   readonly createdByIntake?: number;
   readonly at: string;
   readonly actor: CardActor;

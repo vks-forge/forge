@@ -10,9 +10,10 @@
  *   latest, or lay my edits back on top of it. Unsaved edits also register with the shell's
  *   leave guard so navigating away asks first.
  *
- * Exports: useCompanyDraft().
+ * Exports: useCompanyDraft(). `stageReset()` queues override keys for removal on the next save
+ *   (the Director page's Reset to default).
  * Depends on: react, @tanstack/react-query, @forge/core (ForgeConfig), api/api-error,
- *   api/api-provider, api/use-settings-data, domain/*, state/unsaved-changes, state/use-submit.
+ *   api/api-provider, api/use-settings-data, domain/* (config-path, director-settings, settings-*), state/unsaved-changes, state/use-submit.
  */
 
 import { ForgeConfig } from '@forge/core';
@@ -26,7 +27,8 @@ import {
   useCompanyHistory,
   useCompanySettings,
 } from '#/api/use-settings-data.js';
-import { sameValue, setAt } from '#/domain/config-path.js';
+import { omitAt, sameValue, setAt } from '#/domain/config-path.js';
+import { DIRECTOR_FIELD_GROUPS } from '#/domain/director-settings.js';
 import { fieldErrors } from '#/domain/settings-errors.js';
 import { GENERAL_GROUPS, LIMIT_GROUPS } from '#/domain/settings-fields.js';
 import { applyPatch, configPatch, overrideAt } from '#/domain/settings-patch.js';
@@ -36,7 +38,11 @@ import { useSubmit } from '#/state/use-submit.js';
 import type { CompanyDraft } from '#/types/settings-draft.types.js';
 import type { DraftSettings } from '#/types/settings-api.types.js';
 
-const SPECS = [...LIMIT_GROUPS, ...GENERAL_GROUPS].flatMap((g) => g.fields);
+const SPECS = [
+  ...LIMIT_GROUPS.flatMap((g) => g.fields),
+  ...GENERAL_GROUPS.flatMap((g) => g.fields),
+  ...DIRECTOR_FIELD_GROUPS,
+];
 
 const staleHistory = (): ApiError =>
   new ApiError(
@@ -51,10 +57,14 @@ export function useCompanyDraft(): CompanyDraft {
   const company = useCompanySettings();
   const history = useCompanyHistory();
   const [edit, setEdit] = useState<DraftSettings | null>(null);
+  // Override keys the owner chose to clear (Reset to default); removed from the saved document on save.
+  const [resets, setResets] = useState<readonly string[]>([]);
 
   const loaded = company.data;
   const config = edit?.config ?? loaded?.config;
-  const dirty = edit !== null && !sameValue(edit.config, edit.base);
+  const dirty =
+    (edit !== null && !sameValue(edit.config, edit.base)) || resets.length > 0;
+
   useUnsavedChanges(dirty);
 
   const errors = useMemo(() => {
@@ -64,27 +74,31 @@ export function useCompanyDraft(): CompanyDraft {
   }, [config]);
 
   const save = useSubmit(async (meta: DecisionForm) => {
-    if (!edit || !history.data) {
+    const from = edit?.version ?? loaded?.version;
+    if (from === undefined || !history.data) {
       throw staleHistory();
     }
 
-    if (edit.version > 0 && !history.data.some((v) => v.version === edit.version)) {
+    if (from > 0 && !history.data.some((v) => v.version === from)) {
       throw staleHistory();
     }
 
-    const doc = applyPatch(
-      overrideAt(history.data, edit.version),
-      configPatch(edit.base, edit.config),
+    const patched = applyPatch(
+      overrideAt(history.data, from),
+      edit ? configPatch(edit.base, edit.config) : {},
     );
+
+    const doc = resets.reduce((acc, path) => omitAt(acc, path), patched);
 
     const saved = await api.settings.saveCompany({
       doc,
       author: meta.author,
       reason: meta.reason,
-      expectedVersion: edit.version,
+      expectedVersion: from,
     });
 
     setEdit(null);
+    setResets([]);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: COMPANY_KEY }),
       queryClient.invalidateQueries({ queryKey: COMPANY_HISTORY_KEY }),
@@ -125,8 +139,14 @@ export function useCompanyDraft(): CompanyDraft {
       }
     },
     setConfig: (next) => setEdit(startFrom(next)),
+    stagedResets: resets,
+    stageReset: (paths) => {
+      setEdit(null);
+      setResets(paths);
+    },
     discard: () => {
       setEdit(null);
+      setResets([]);
       save.reset();
     },
     save,
@@ -136,6 +156,7 @@ export function useCompanyDraft(): CompanyDraft {
       save.error.status === 409,
     reload: async () => {
       setEdit(null);
+      setResets([]);
       save.reset();
       await latest();
     },
