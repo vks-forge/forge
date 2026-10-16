@@ -7,19 +7,29 @@
  *   current view holds unsaved edits, the shell's leave guard asks first. `Ctrl+K` (or Cmd+K)
  *   opens the list from anywhere so keyboard users never need the pointer. Loading, empty and
  *   error states live in the trigger and the menu, because this control is the first thing
- *   that depends on the server.
+ *   that depends on the server. Archived projects are listed under the open ones in an
+ *   "Archived" section (hidden when empty); choosing one opens it read-only and each has an
+ *   Unarchive action (d-0157).
  *
  * Exports: ProjectSwitcher. The menu ends with "Add project" (`/projects/new`).
  * Depends on: react, react-router, @radix-ui/react-dropdown-menu, motion/react, lucide-react,
- *   api/use-projects, domain/nav-entries, state/current-project, theme/motion.
+ *   api/use-projects, components/shell/archived-projects, domain/nav-entries, state/current-project, theme/motion.
  */
 
 import * as Menu from '@radix-ui/react-dropdown-menu';
-import { Check, ChevronsUpDown, CircleAlert, Plus, TriangleAlert } from 'lucide-react';
+import {
+  Archive,
+  Check,
+  ChevronsUpDown,
+  CircleAlert,
+  Plus,
+  TriangleAlert,
+} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { useProjects } from '#/api/use-projects.js';
+import { archivedProjects, openProjects, useAllProjects } from '#/api/use-projects.js';
+import { ArchivedProjects } from '#/components/shell/archived-projects.js';
 import { swapProjectSlug } from '#/domain/nav-entries.js';
 import { useCurrentSlug } from '#/state/current-project.js';
 import { popVariants } from '#/theme/motion.js';
@@ -31,7 +41,10 @@ const SHORTCUT = /Mac|iPhone|iPad/.test(globalThis.navigator?.userAgent ?? '')
 const ROW =
   'flex min-h-9 cursor-default select-none items-center gap-2 rounded-md px-2 text-sm outline-none data-[highlighted]:bg-hover';
 
-function TriggerLabel(props: { query: ReturnType<typeof useProjects>; slug?: string }) {
+function TriggerLabel(props: {
+  query: ReturnType<typeof useAllProjects>;
+  slug?: string;
+}) {
   const { query, slug } = props;
   if (query.isPending) {
     return (
@@ -55,6 +68,9 @@ function TriggerLabel(props: { query: ReturnType<typeof useProjects>; slug?: str
 
   return (
     <>
+      {project.status === 'archived' ? (
+        <Archive aria-label="Archived" className="size-4 shrink-0 text-muted" />
+      ) : null}
       <span className="rounded-md border border-line bg-bg px-1.5 font-data text-[0.68rem] font-medium text-muted">
         {project.prefix}
       </span>
@@ -64,7 +80,7 @@ function TriggerLabel(props: { query: ReturnType<typeof useProjects>; slug?: str
 }
 
 function MenuBody(props: {
-  query: ReturnType<typeof useProjects>;
+  query: ReturnType<typeof useAllProjects>;
   slug?: string;
   onPick: (slug: string) => void;
 }) {
@@ -90,43 +106,55 @@ function MenuBody(props: {
     );
   }
 
-  if (query.data.length === 0) {
+  const open = openProjects(query.data);
+  const archived = archivedProjects(query.data);
+  if (open.length === 0 && archived.length === 0) {
     return <p className="px-2 py-2 text-sm text-muted">No projects yet.</p>;
   }
 
   return (
-    <Menu.RadioGroup {...(slug ? { value: slug } : {})} onValueChange={onPick}>
-      {query.data.map((project) => (
-        <Menu.RadioItem key={project.id} value={project.slug} className={ROW}>
-          <span className="w-4">
-            <Menu.ItemIndicator>
-              <Check aria-hidden="true" className="size-4 text-signal" />
-            </Menu.ItemIndicator>
-          </span>
-          <span className="rounded-md border border-line bg-bg px-1.5 font-data text-[0.68rem] font-medium text-muted">
-            {project.prefix}
-          </span>
-          <span className="min-w-0 flex-1 truncate">{project.slug}</span>
-          {project.config_error ? (
-            <TriangleAlert
-              aria-label="Settings need attention"
-              className="size-4 shrink-0 text-attn"
-            />
-          ) : null}
-          {project.status === 'onboarding' ? (
-            <span className="text-xs text-muted">setting up</span>
-          ) : null}
-        </Menu.RadioItem>
-      ))}
-    </Menu.RadioGroup>
+    <>
+      {open.length === 0 ? (
+        <p className="px-2 py-2 text-sm text-muted">No open projects.</p>
+      ) : null}
+      <Menu.RadioGroup
+        aria-label="Open projects"
+        {...(slug ? { value: slug } : {})}
+        onValueChange={onPick}
+      >
+        {open.map((project) => (
+          <Menu.RadioItem key={project.id} value={project.slug} className={ROW}>
+            <span className="w-4">
+              <Menu.ItemIndicator>
+                <Check aria-hidden="true" className="size-4 text-signal" />
+              </Menu.ItemIndicator>
+            </span>
+            <span className="rounded-md border border-line bg-bg px-1.5 font-data text-[0.68rem] font-medium text-muted">
+              {project.prefix}
+            </span>
+            <span className="min-w-0 flex-1 truncate">{project.slug}</span>
+            {project.config_error ? (
+              <TriangleAlert
+                aria-label="Settings need attention"
+                className="size-4 shrink-0 text-attn"
+              />
+            ) : null}
+            {project.status === 'onboarding' ? (
+              <span className="text-xs text-muted">setting up</span>
+            ) : null}
+          </Menu.RadioItem>
+        ))}
+      </Menu.RadioGroup>
+      <ArchivedProjects projects={archived} {...(slug ? { slug } : {})} onPick={onPick} />
+    </>
   );
 }
 
 export function ProjectSwitcher() {
-  const query = useProjects();
+  const query = useAllProjects();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const slug = useCurrentSlug(query.data);
+  const slug = useCurrentSlug(query.data ? openProjects(query.data) : undefined);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {

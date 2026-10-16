@@ -26,7 +26,7 @@ import type { usePatchCard } from '#/api/use-card.js';
 import { CardTypeIcon, labelOfType } from '#/components/card/card-type-icon.js';
 import { Button } from '#/components/ui/button.js';
 import { ConfirmDialog } from '#/components/ui/confirm-dialog.js';
-import { INPUT_CLASS } from '#/components/ui/field.js';
+import { Picker } from '#/components/ui/picker.js';
 import { COLUMN_LABEL } from '#/domain/card-columns.js';
 import { projectPath } from '#/domain/nav-entries.js';
 import { SOURCE_LABEL } from '#/routes/card/card-details.js';
@@ -62,7 +62,17 @@ export function CardHeader(props: {
   const [nextType, setNextType] = useState<CardTypeName | null>(null);
   const closed = card.closed_reason !== undefined;
   const needsYou = card.column === 'needs_you';
-  const icon = types?.find((type) => type.name === card.type)?.icon;
+  // A type the registry no longer lists stays visible as the current value.
+  const typeItems = [
+    ...(types?.some((type) => type.name === card.type)
+      ? []
+      : [{ value: card.type, label: card.type }]),
+    ...(types ?? []).map((type) => ({
+      value: type.name,
+      label: type.label,
+      icon: <CardTypeIcon icon={type.icon} />,
+    })),
+  ];
 
   return (
     <header className="grid gap-3">
@@ -97,24 +107,14 @@ export function CardHeader(props: {
             Type
           </label>
           <div className="flex items-center gap-2">
-            <CardTypeIcon icon={icon} />
-            <select
+            <Picker
               id="card-type"
+              className="min-w-40"
+              items={typeItems}
               value={card.type}
               disabled={closed || patch.isPending}
-              onChange={(event) => setNextType(event.target.value)}
-              className={`${INPUT_CLASS} w-auto min-w-36`}
-            >
-              {/* A type the registry no longer lists stays visible as the current value. */}
-              {types?.some((type) => type.name === card.type) ? null : (
-                <option value={card.type}>{card.type}</option>
-              )}
-              {(types ?? []).map((type) => (
-                <option key={type.name} value={type.name}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
+              onChange={(next) => setNextType(next as CardTypeName)}
+            />
           </div>
         </div>
 

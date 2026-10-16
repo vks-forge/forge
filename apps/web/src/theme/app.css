@@ -78,6 +78,19 @@
   }
 }
 
+/* The Picker popover rises in from its trigger; reduced motion collapses it below. */
+@keyframes picker-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

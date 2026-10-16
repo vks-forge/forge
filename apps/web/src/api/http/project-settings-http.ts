@@ -73,6 +73,16 @@ export function createProjectSettingsHttp(client: HttpClientOptions): ProjectSet
       return body.project;
     },
 
+    async unarchive(slug, options) {
+      const body = await requestJson(client, `/projects/${slug}`, ArchiveResponse, {
+        ...options,
+        method: 'PATCH',
+        body: { status: 'ready' },
+      });
+
+      return body.project;
+    },
+
     async remove(slug, confirm, options) {
       await requestJson(client, `/projects/${slug}`, DeleteResponse, {
         ...options,

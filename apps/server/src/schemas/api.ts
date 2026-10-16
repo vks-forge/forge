@@ -182,8 +182,10 @@ export const ProjectInspectBody = z
   .strict();
 export type ProjectInspectBody = z.infer<typeof ProjectInspectBody>;
 
-/** `PATCH /projects/:slug`: archiving is the only change a project row takes through the API. */
-export const ProjectPatchBody = z.object({ status: z.literal('archived') }).strict();
+/** `PATCH /projects/:slug`: archive (`archived`) or unarchive (`ready`) is the only change a project row takes through the API. */
+export const ProjectPatchBody = z
+  .object({ status: z.enum(['archived', 'ready']) })
+  .strict();
 export type ProjectPatchBody = z.infer<typeof ProjectPatchBody>;
 
 /** `DELETE /projects/:slug`: `confirm` must be the project's slug (the typed confirmation, checked again on the server). */

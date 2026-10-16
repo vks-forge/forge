@@ -14,6 +14,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { boardPrefsStore } from '#/state/board-prefs.js';
 import { json, networkDown } from '#tests/helpers/fetch-stub.js';
+import { choose } from '#tests/helpers/choose.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
 const BOARD = '/p/sample-service/board';
@@ -43,6 +44,12 @@ describe('Board, Tickets view', () => {
     const verifying = await column('Verifying');
     expect(verifying.getByText(/Rework ×1/)).toBeInTheDocument();
 
+    await userEvent
+      .setup()
+      .click(
+        await screen.findByRole('button', { name: /^Blocked and cancelled, 2 tickets/ }),
+      );
+
     const closed = await column('Blocked and cancelled');
     expect(closed.getByText('Blocked')).toBeInTheDocument();
     expect(closed.getByText('Cancelled')).toBeInTheDocument();
@@ -70,9 +77,29 @@ describe('Board, Tickets view', () => {
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(screen.getByText(/Stream large CSV/)).toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText('Lane'), 'full');
+    await choose(user, 'Lane', 'full');
     expect(screen.queryByText(/Stream large CSV/)).not.toBeInTheDocument();
     expect(screen.getByText(/Move sessions/)).toBeInTheDocument();
+  });
+
+  it('disables every request control on an archived project and says why', async () => {
+    renderApp({ path: '/p/sample-legacy/board' });
+
+    expect(await screen.findByLabelText('Ask the Director')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'New request' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Send to Director' })).toBeDisabled();
+    expect(
+      screen.getByText('This project is archived and takes no new work.'),
+    ).toBeInTheDocument();
+  });
+
+  it('disables "Write a request" on an archived project with nothing on its Board', async () => {
+    renderApp({
+      path: '/p/sample-legacy/board',
+      routes: { 'GET /projects/:slug/tickets': json({ items: [], nextCursor: null }) },
+    });
+
+    expect(await screen.findByRole('button', { name: 'Write a request' })).toBeDisabled();
   });
 
   it('says so when the project has no tickets, with the way to start', async () => {

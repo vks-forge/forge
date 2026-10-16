@@ -35,6 +35,7 @@ export function BoardColumnView(props: {
       count={tickets.length}
       noun="tickets"
       filtered={filtered}
+      {...(column.id === 'closed' ? { foldIn: 'tickets' } : {})}
     >
       <WindowedList
         items={tickets}

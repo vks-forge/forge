@@ -6,24 +6,28 @@
  *   while the list loads the user sees a skeleton, when Forge is unreachable they see why and
  *   a retry, and a mistyped or archived slug gets a clear "no such project" with a way back
  *   instead of an empty page. It also remembers the project so Forge settings and "back"
- *   return to it.
+ *   return to it. An archived project opens read-only (d-0157): a banner with Unarchive sits above
+ *   its screens and the controls that would start work read the archived flag from the context.
  *
  * Exports: ProjectScope.
  * Depends on: react, react-router, api/use-projects, api/describe-error,
- *   components/status/state-panel, domain/nav-entries, state/current-project.
+ *   components/status/state-panel, components/shell/archived-banner, domain/nav-entries,
+ *   state/current-project, state/project-archived.
  */
 
 import { useEffect } from 'react';
 import { Link, Outlet, useParams } from 'react-router';
 import { describeError } from '#/api/describe-error.js';
-import { useProjects } from '#/api/use-projects.js';
+import { archivedProjects, openProjects, useAllProjects } from '#/api/use-projects.js';
+import { ArchivedBanner } from '#/components/shell/archived-banner.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { projectPath } from '#/domain/nav-entries.js';
 import { rememberProject } from '#/state/current-project.js';
+import { ProjectArchivedContext } from '#/state/project-archived.js';
 
 export function ProjectScope() {
   const { slug = '' } = useParams();
-  const query = useProjects();
+  const query = useAllProjects();
   const known = query.data?.some((p) => p.slug === slug) ?? false;
 
   useEffect(() => {
@@ -51,7 +55,7 @@ export function ProjectScope() {
   }
 
   if (!known) {
-    const first = query.data[0];
+    const first = openProjects(query.data)[0];
 
     return (
       <StatePanel kind="empty" title={`There is no project named “${slug}”`}>
@@ -69,5 +73,12 @@ export function ProjectScope() {
     );
   }
 
-  return <Outlet />;
+  const archived = archivedProjects(query.data).some((p) => p.slug === slug);
+
+  return (
+    <ProjectArchivedContext.Provider value={archived}>
+      {archived ? <ArchivedBanner slug={slug} /> : null}
+      <Outlet />
+    </ProjectArchivedContext.Provider>
+  );
 }

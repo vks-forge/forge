@@ -42,7 +42,9 @@ describe('Card page: header and history', () => {
 
     expect(screen.getByText('Shaping')).toBeInTheDocument();
     expect(screen.getByText(/from Chat/)).toBeInTheDocument();
-    expect(await screen.findByLabelText('Type')).toHaveValue('plan');
+    expect(await screen.findByRole('combobox', { name: 'Type' })).toHaveTextContent(
+      'Plan',
+    );
   });
 
   it('renders speech, the Director’s actions, events and unknown kinds as notes', async () => {

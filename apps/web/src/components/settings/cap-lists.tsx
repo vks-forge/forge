@@ -11,7 +11,7 @@
  *
  * Exports: HarnessCaps, StateCaps, FallbackOrder.
  * Depends on: react, lucide-react, @forge/core (TicketStatus, types), components/settings/form-field,
- *   components/ui/button, components/ui/tooltip.
+ *   components/ui/button, components/ui/picker, components/ui/tooltip.
  */
 
 import { TicketStatus } from '@forge/core';
@@ -20,6 +20,7 @@ import { Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { FormField, TextInput } from '#/components/settings/form-field.js';
 import { Button } from '#/components/ui/button.js';
+import { Picker } from '#/components/ui/picker.js';
 import { Tooltip } from '#/components/ui/tooltip.js';
 import type {
   FieldErrors,
@@ -191,18 +192,13 @@ export function StateCaps(props: {
       {chosen ? (
         <div className="flex flex-wrap items-end gap-2">
           <FormField id="cap-state-new" label="Add a cap for a state">
-            <select
+            <Picker
               id="cap-state-new"
+              className="min-w-44"
+              items={free.map((s) => ({ value: s, label: s }))}
               value={chosen}
-              onChange={(e) => setPick(e.target.value)}
-              className="min-h-10 rounded-lg border border-line bg-surface px-3 text-sm"
-            >
-              {free.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+              onChange={setPick}
+            />
           </FormField>
           <Button onClick={() => props.onChange(BY_STATE, { ...caps, [chosen]: 1 })}>
             <Plus aria-hidden="true" className="size-4" />

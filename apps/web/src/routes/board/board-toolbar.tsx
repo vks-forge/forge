@@ -8,18 +8,29 @@
  *
  * Exports: BoardToolbar.
  * Depends on: react, @forge/core (schemas), domain/board-columns, state/board-prefs,
- *   routes/board/toolbar-field, components/ui/button.
+ *   routes/board/toolbar-field, components/ui/{button,picker}.
  */
 
 import { Lane, TicketStatus } from '@forge/core';
 import { Button } from '#/components/ui/button.js';
+import { Picker } from '#/components/ui/picker.js';
 import { isFilterActive, STATE_LABEL } from '#/domain/board-columns.js';
 import {
-  FILTER_CONTROL,
   SearchField,
+  ToolbarPicker,
   ToolbarShell,
 } from '#/routes/board/toolbar-field.js';
 import { useBoardPrefs } from '#/state/board-prefs.js';
+
+const LANE_ITEMS = [
+  { value: 'all', label: 'All lanes' },
+  ...Lane.options.map((lane) => ({ value: lane, label: lane })),
+];
+
+const STATE_ITEMS = [
+  { value: 'all', label: 'All states' },
+  ...TicketStatus.options.map((state) => ({ value: state, label: STATE_LABEL[state] })),
+];
 
 export function BoardToolbar(props: { shown: number; total: number; needsYou: number }) {
   const { filter, setFilter, resetFilter } = useBoardPrefs();
@@ -35,41 +46,23 @@ export function BoardToolbar(props: { shown: number; total: number; needsYou: nu
     >
       <SearchField value={filter.query} onChange={(query) => setFilter({ query })} />
 
-      <label className="grid gap-1 text-xs font-medium text-muted">
-        Lane
-        <select
+      <ToolbarPicker label="Lane" id="board-lane">
+        <Picker
+          aria-labelledby="board-lane-label"
+          items={LANE_ITEMS}
           value={filter.lane}
-          onChange={(event) =>
-            setFilter({ lane: event.target.value as typeof filter.lane })
-          }
-          className={FILTER_CONTROL}
-        >
-          <option value="all">All lanes</option>
-          {Lane.options.map((lane) => (
-            <option key={lane} value={lane}>
-              {lane}
-            </option>
-          ))}
-        </select>
-      </label>
+          onChange={(lane) => setFilter({ lane: lane as typeof filter.lane })}
+        />
+      </ToolbarPicker>
 
-      <label className="grid gap-1 text-xs font-medium text-muted">
-        State
-        <select
+      <ToolbarPicker label="State" id="board-state">
+        <Picker
+          aria-labelledby="board-state-label"
+          items={STATE_ITEMS}
           value={filter.state}
-          onChange={(event) =>
-            setFilter({ state: event.target.value as typeof filter.state })
-          }
-          className={FILTER_CONTROL}
-        >
-          <option value="all">All states</option>
-          {TicketStatus.options.map((state) => (
-            <option key={state} value={state}>
-              {STATE_LABEL[state]}
-            </option>
-          ))}
-        </select>
-      </label>
+          onChange={(state) => setFilter({ state: state as typeof filter.state })}
+        />
+      </ToolbarPicker>
 
       {isFilterActive(filter) ? (
         <Button onClick={resetFilter}>Clear filters</Button>

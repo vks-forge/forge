@@ -7,15 +7,19 @@
  *   text stays in the box until the parent says the send worked (`clear`), and a refusal is
  *   shown right under the box in plain words with the way forward. While a send is in flight
  *   the button is busy and a second send is blocked. Ctrl or Cmd + Enter sends. When messages
- *   cannot be sent at all (a closed card) the box is disabled and says why, never just greyed.
+ *   cannot be sent at all (a closed card, an archived project) the box is disabled and says why,
+ *   never just greyed.
  *
  * Exports: MessageComposer.
- * Depends on: react, components/ui/button, state/message-draft.
+ * Depends on: react, components/ui/button, state/message-draft, state/project-archived.
  */
 
 import type { ReactNode } from 'react';
 import { Button } from '#/components/ui/button.js';
 import { useMessageDraft } from '#/state/message-draft.js';
+import { useProjectArchived } from '#/state/project-archived.js';
+
+const ARCHIVED_REASON = 'This project is archived. Unarchive it to send messages.';
 
 export function MessageComposer(props: {
   id: string;
@@ -32,7 +36,9 @@ export function MessageComposer(props: {
   onSend: (text: string, clear: () => void) => void;
 }) {
   const { draft, setDraft, clearDraft } = useMessageDraft(props.draftKey);
-  const blocked = props.disabledReason !== undefined;
+  const archived = useProjectArchived();
+  const disabledReason = props.disabledReason ?? (archived ? ARCHIVED_REASON : undefined);
+  const blocked = disabledReason !== undefined;
   const send = (): void => {
     const text = draft.trim();
     if (text !== '' && !props.sending && !blocked) {
@@ -68,7 +74,7 @@ export function MessageComposer(props: {
         className="min-w-0 resize-y rounded-lg border border-line bg-surface p-2 text-sm disabled:cursor-not-allowed disabled:bg-hover disabled:text-muted"
       />
       <p id={`${props.id}-help`} className="text-xs text-muted">
-        {props.disabledReason ?? props.hint}
+        {disabledReason ?? props.hint}
       </p>
       {props.error ? (
         <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm">

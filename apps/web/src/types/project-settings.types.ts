@@ -41,8 +41,10 @@ export interface ProjectSettingsApi {
   get(slug: string, options?: RequestOptions): Promise<SettingsSnapshot>;
   /** Writes version `expectedVersion + 1`; a 409 `ApiError` (code `version_conflict`) means someone saved first. */
   save(request: SettingsSaveRequest, options?: RequestOptions): Promise<ConfigVersion>;
-  /** Archives the project: kept for history, takes no new work. There is no API to undo it. */
+  /** Archives the project: kept for history, takes no new work. `unarchive` brings it back. */
   archive(slug: string, options?: RequestOptions): Promise<ProjectView>;
+  /** Unarchives the project (status `ready`, served again); a 409 `project_not_servable` means its folder is gone and it stays archived. */
+  unarchive(slug: string, options?: RequestOptions): Promise<ProjectView>;
   /** Deletes the project from Forge (rows, memory, worktrees); `confirm` must be the slug. Never touches the user's folder. */
   remove(slug: string, confirm: string, options?: RequestOptions): Promise<void>;
 }

@@ -7,7 +7,7 @@
  *   on the user, an amber "N need you" so the most important fact is readable without
  *   scanning the columns. Amber appears only for that, never for decoration.
  *
- * Exports: ToolbarShell, SearchField, FILTER_CONTROL.
+ * Exports: ToolbarShell, ToolbarPicker, SearchField, FILTER_CONTROL.
  * Depends on: react, lucide-react.
  */
 
@@ -35,6 +35,16 @@ export function SearchField(props: { value: string; onChange: (value: string) =>
         />
       </span>
     </label>
+  );
+}
+
+/** A labelled Picker slot: the visible label names the dropdown through `aria-labelledby`. */
+export function ToolbarPicker(props: { label: string; id: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-1 text-xs font-medium text-muted">
+      <span id={`${props.id}-label`}>{props.label}</span>
+      <div className="w-44">{props.children}</div>
+    </div>
   );
 }
 

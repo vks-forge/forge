@@ -9,14 +9,18 @@
  *
  * Exports: BoardEmpty.
  * Depends on: react, lucide-react, routes/board/ask-director, routes/board/column-shell,
- *   components/ui/button, types/board.types.
+ *   routes/board/archived-reason, state/project-archived, components/ui/{button,tooltip},
+ *   types/board.types.
  */
 
 import { MessageSquarePlus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '#/components/ui/button.js';
+import { Tooltip } from '#/components/ui/tooltip.js';
 import { focusComposer } from '#/routes/board/ask-director.js';
+import { ARCHIVED_REASON } from '#/routes/board/archived-reason.js';
 import { TONE_DOT } from '#/routes/board/column-shell.js';
+import { useProjectArchived } from '#/state/project-archived.js';
 import type { ColumnTone } from '#/types/board.types.js';
 
 export function BoardEmpty(props: {
@@ -24,6 +28,8 @@ export function BoardEmpty(props: {
   children: ReactNode;
   columns: readonly { id: string; title: string; hint: string; tone: ColumnTone }[];
 }) {
+  const archived = useProjectArchived();
+
   return (
     <div role="status" className="grid gap-4">
       <div className="grid justify-items-start gap-3 rounded-2xl border border-line bg-surface p-6 md:p-8">
@@ -35,9 +41,14 @@ export function BoardEmpty(props: {
         </span>
         <h2 className="text-lg font-semibold tracking-tight">{props.title}</h2>
         <p className="max-w-prose text-sm text-muted">{props.children}</p>
-        <Button variant="primary" onClick={focusComposer}>
-          Write a request
-        </Button>
+        <Tooltip content={ARCHIVED_REASON} disabled={!archived}>
+          <span className="inline-flex">
+            <Button variant="primary" onClick={focusComposer} disabled={archived}>
+              Write a request
+            </Button>
+          </span>
+        </Tooltip>
+        {archived ? <p className="text-xs text-muted">{ARCHIVED_REASON}</p> : null}
       </div>
       <ul
         aria-label="Where work will appear"

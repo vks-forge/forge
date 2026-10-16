@@ -16,7 +16,7 @@
 import { useEffect } from 'react';
 import { useParams } from 'react-router';
 import { describeError } from '#/api/describe-error.js';
-import { useProjects } from '#/api/use-projects.js';
+import { useAllProjects } from '#/api/use-projects.js';
 import { useStats } from '#/api/use-stats.js';
 import { OfflineNotice } from '#/components/status/offline-notice.js';
 import { StatePanel } from '#/components/status/state-panel.js';
@@ -33,7 +33,7 @@ export function HomePage() {
   const { slug = '' } = useParams();
   const { range, setRange } = useStatsPrefs();
   const stats = useStats(slug, range);
-  const projects = useProjects();
+  const projects = useAllProjects();
   const project = projects.data?.find((p) => p.slug === slug);
 
   useEffect(() => {
@@ -86,7 +86,9 @@ export function HomePage() {
         {stats.data ? <StatsGrid stats={stats.data} /> : null}
       </section>
 
-      {project ? <AskDirector project={project} /> : null}
+      {project && project.status !== 'archived' ? (
+        <AskDirector project={project} />
+      ) : null}
     </section>
   );
 }

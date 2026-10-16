@@ -9,15 +9,16 @@
  *
  * Exports: CardToolbar.
  * Depends on: react, @forge/core (type), domain/card-columns, state/board-prefs,
- *   routes/board/toolbar-field, components/ui/button.
+ *   routes/board/toolbar-field, components/ui/{button,picker}.
  */
 
 import type { CardType } from '@forge/core';
 import { Button } from '#/components/ui/button.js';
+import { Picker } from '#/components/ui/picker.js';
 import { isCardFilterActive } from '#/domain/card-columns.js';
 import {
-  FILTER_CONTROL,
   SearchField,
+  ToolbarPicker,
   ToolbarShell,
 } from '#/routes/board/toolbar-field.js';
 import { useBoardPrefs } from '#/state/board-prefs.js';
@@ -30,6 +31,14 @@ export function CardToolbar(props: {
 }) {
   const { cardFilter, setCardFilter, resetCardFilter } = useBoardPrefs();
   const known = props.types?.some((type) => type.name === cardFilter.type) ?? false;
+  const typeItems = [
+    { value: 'all', label: 'All types' },
+    // A remembered type that the registry no longer lists stays selectable.
+    ...(cardFilter.type !== 'all' && !known
+      ? [{ value: cardFilter.type, label: cardFilter.type }]
+      : []),
+    ...(props.types ?? []).map((type) => ({ value: type.name, label: type.label })),
+  ];
 
   return (
     <ToolbarShell
@@ -45,25 +54,14 @@ export function CardToolbar(props: {
         onChange={(query) => setCardFilter({ query })}
       />
 
-      <label className="grid gap-1 text-xs font-medium text-muted">
-        Type
-        <select
+      <ToolbarPicker label="Type" id="board-type">
+        <Picker
+          aria-labelledby="board-type-label"
+          items={typeItems}
           value={cardFilter.type}
-          onChange={(event) => setCardFilter({ type: event.target.value })}
-          className={FILTER_CONTROL}
-        >
-          <option value="all">All types</option>
-          {/* A remembered type that the registry no longer lists stays selectable. */}
-          {cardFilter.type !== 'all' && !known ? (
-            <option value={cardFilter.type}>{cardFilter.type}</option>
-          ) : null}
-          {(props.types ?? []).map((type) => (
-            <option key={type.name} value={type.name}>
-              {type.label}
-            </option>
-          ))}
-        </select>
-      </label>
+          onChange={(type) => setCardFilter({ type })}
+        />
+      </ToolbarPicker>
 
       {isCardFilterActive(cardFilter) ? (
         <Button onClick={resetCardFilter}>Clear filters</Button>

@@ -25,6 +25,9 @@ import type { InboxMarkName } from '#/types/work-api.types.js';
 
 export const INBOX_ROW_HEIGHT = 84;
 
+/** Memory proposals carry no timestamp and arrive dated at the epoch; showing "Jan 1, 1970" would mislead. */
+const hasTime = (iso: string): boolean => Date.parse(iso) > 0;
+
 function IconButton(props: {
   label: string;
   onClick: () => void;
@@ -73,8 +76,9 @@ export function InboxRow(props: {
           </Link>
         </div>
         <p className="truncate text-xs text-muted">
-          {item.detail ? `${item.detail} · ` : ''}
-          {formatWhen(item.updated_at)}
+          {[item.detail, hasTime(item.updated_at) ? formatWhen(item.updated_at) : null]
+            .filter(Boolean)
+            .join(' · ')}
         </p>
       </div>
       {item.read ? (

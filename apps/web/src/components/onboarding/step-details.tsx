@@ -11,10 +11,11 @@
  *   history says who created it.
  *
  * Exports: StepDetails.
- * Depends on: components/ui/field, types/onboarding.types.
+ * Depends on: components/ui/{field,picker}, types/onboarding.types.
  */
 
 import { Field, INPUT_CLASS } from '#/components/ui/field.js';
+import { Picker } from '#/components/ui/picker.js';
 import type { ProjectWizard } from '#/types/onboarding.types.js';
 
 function describedBy(
@@ -92,24 +93,20 @@ export function StepDetails(props: { wizard: ProjectWizard }) {
         error={shown.base_branch}
       >
         {branches.length > 0 && inspection?.git.state !== 'none' ? (
-          <select
+          <Picker
             id="project-branch"
+            size="sm"
+            items={branches.map((branch) => ({ value: branch, label: branch }))}
             value={draft.baseBranch}
-            aria-invalid={shown.base_branch ? true : undefined}
+            error={shown.base_branch ? true : undefined}
             aria-describedby={describedBy(
               'project-branch',
               true,
               Boolean(shown.base_branch),
             )}
-            onChange={(event) => wizard.patch({ baseBranch: event.target.value })}
-            className={`${INPUT_CLASS} font-data text-xs`}
-          >
-            {branches.map((branch) => (
-              <option key={branch} value={branch}>
-                {branch}
-              </option>
-            ))}
-          </select>
+            onChange={(baseBranch) => wizard.patch({ baseBranch })}
+            className="font-data"
+          />
         ) : (
           <input
             id="project-branch"

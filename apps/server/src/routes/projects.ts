@@ -1,5 +1,5 @@
 /**
- * Projects API: list, register a project on any folder, archive.
+ * Projects API: list, register a project on any folder, archive and unarchive.
  *
  * Why: one Forge install works on many repositories (d-0082) and the UI is the only
  *   control surface (d-0090), so adding a project cannot mean editing files and restarting.
@@ -14,7 +14,8 @@
  *   way removes the row so the same request can be sent again. The slug, prefix and folder
  *   are claimed inside the transaction that saves the row, so two requests racing for the same
  *   one cannot both succeed. Archiving stops new work but
- *   deletes nothing (delete lives in routes/project-delete). The list shows `config_error` for a project the engine skips.
+ *   deletes nothing and can be undone (`PATCH {status:'ready'}`, services/project-status;
+ *   delete lives in routes/project-delete). The list shows `config_error` for a project the engine skips.
  *
  *   Any folder can be a project (d-0124). A folder with no git needs `git_setup` (snapshot
  *   commit or init only) and a folder inside a repository needs `scope` (repository top or
@@ -42,6 +43,7 @@ import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
 import { appendFirstSettings } from '#/services/first-settings.js';
 import { assertProjectFolder } from '#/services/project-folder.js';
+import { setProjectStatus } from '#/services/project-status.js';
 import { projectConflict } from '#/services/project-conflict.js';
 import { resolvePlacement, startRepository } from '#/services/project-placement.js';
 import { assertBaseBranch, hostOf } from '#/services/project-host.js';
@@ -206,24 +208,9 @@ export function projectsRoutes(deps: RouteDeps): Route[] {
       path: '/projects/:slug',
       async handle(ctx) {
         const slug = ctx.params['slug'] ?? '';
-        await readJson(ctx.req, ProjectPatchBody);
-        const updated = await deps.storage.transaction(async (tx) => {
-          const found = (await tx.projects.list()).find((p) => p.slug === slug);
-          if (!found) {
-            return null;
-          }
+        const { status } = await readJson(ctx.req, ProjectPatchBody);
+        const updated = await setProjectStatus(deps, slug, status);
 
-          const next: Project = { ...found, status: 'archived' };
-          await tx.projects.upsert(next);
-
-          return next;
-        });
-
-        if (!updated) {
-          throw new HttpError(404, 'project_not_found', `no project ${slug}`);
-        }
-
-        deps.projects.archive(slug);
         sendJson(ctx.res, 200, { project: view(updated) });
       },
     },

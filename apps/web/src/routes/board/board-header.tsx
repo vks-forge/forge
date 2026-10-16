@@ -9,12 +9,14 @@
  *
  * Exports: BoardHeader.
  * Depends on: react, lucide-react, routes/board/board-view-switch, routes/board/ask-director,
- *   components/ui/button, types/ui-state.types.
+ *   routes/board/archived-reason, components/ui/{button,tooltip}, types/ui-state.types.
  */
 
 import { LayoutDashboard, Plus } from 'lucide-react';
 import { Button } from '#/components/ui/button.js';
+import { Tooltip } from '#/components/ui/tooltip.js';
 import { focusComposer } from '#/routes/board/ask-director.js';
+import { ARCHIVED_REASON } from '#/routes/board/archived-reason.js';
 import { BoardViewSwitch } from '#/routes/board/board-view-switch.js';
 import type { BoardPrefs } from '#/types/ui-state.types.js';
 
@@ -28,8 +30,10 @@ const INTRO: Readonly<Record<BoardPrefs['view'], string>> = {
 export function BoardHeader(props: {
   slug: string;
   view: BoardPrefs['view'];
-  /** False while the project is unknown or archived: there is nowhere to write. */
+  /** False while the project is unknown: there is nowhere to write. */
   canCompose: boolean;
+  /** An archived project takes no new work: the button stays, disabled, with the reason. */
+  archived: boolean;
 }) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-4">
@@ -53,10 +57,14 @@ export function BoardHeader(props: {
       <div className="flex flex-wrap items-center gap-2">
         <BoardViewSwitch />
         {props.canCompose ? (
-          <Button onClick={focusComposer}>
-            <Plus aria-hidden="true" className="size-4" />
-            New request
-          </Button>
+          <Tooltip content={ARCHIVED_REASON} disabled={!props.archived}>
+            <span className="inline-flex">
+              <Button onClick={focusComposer} disabled={props.archived}>
+                <Plus aria-hidden="true" className="size-4" />
+                New request
+              </Button>
+            </span>
+          </Tooltip>
         ) : null}
       </div>
     </header>

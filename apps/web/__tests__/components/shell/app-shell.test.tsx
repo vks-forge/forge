@@ -104,7 +104,7 @@ describe('ProjectSwitcher', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Switch project' }));
     const menu = await screen.findByRole('menu');
-    const names = within(menu)
+    const names = within(within(menu).getByRole('group', { name: 'Open projects' }))
       .getAllByRole('menuitemradio')
       .map((item) => item.textContent);
 

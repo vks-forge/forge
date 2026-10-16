@@ -11,7 +11,8 @@
  *
  * Exports: AskDirector, focusComposer.
  * Depends on: react, lucide-react, api/use-tickets, api/describe-error, components/ui/button,
- *   components/ticket/ticket-link, schemas/projects (type).
+ *   components/ticket/ticket-link, routes/board/archived-reason, state/project-archived,
+ *   schemas/projects (type).
  */
 
 import { Sparkles } from 'lucide-react';
@@ -22,7 +23,9 @@ import { useChatIntake } from '#/api/use-tickets.js';
 import { Button } from '#/components/ui/button.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
 import { cardPath } from '#/domain/card-paths.js';
+import { ARCHIVED_REASON } from '#/routes/board/archived-reason.js';
 import type { ProjectView } from '#/schemas/projects.js';
+import { useProjectArchived } from '#/state/project-archived.js';
 
 const COMPOSER_ID = 'ask-director';
 
@@ -36,7 +39,7 @@ export function AskDirector(props: { project: ProjectView }) {
   // Reused for retries of the same message; replaced after it succeeds.
   const [key, setKey] = useState(() => crypto.randomUUID());
   const intake = useChatIntake();
-  const blocked = props.project.status === 'archived';
+  const blocked = useProjectArchived() || props.project.status === 'archived';
 
   const send = (): void => {
     const trimmed = text.trim();
@@ -101,7 +104,7 @@ export function AskDirector(props: { project: ProjectView }) {
       </div>
       <p className="text-xs text-muted">
         {blocked
-          ? 'This project is archived and takes no new work.'
+          ? ARCHIVED_REASON
           : 'Becomes a ticket on the Director’s next pass. Ctrl+Enter sends.'}
       </p>
       {failure ? (

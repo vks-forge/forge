@@ -8,12 +8,13 @@
  *   to where to add one, instead of showing an empty list.
  *
  * Exports: GitHubFields.
- * Depends on: react-router, api/use-settings-data, components/ui/field, types/onboarding.types.
+ * Depends on: react-router, api/use-settings-data, components/ui/{field,picker}, types/onboarding.types.
  */
 
 import { Link } from 'react-router';
 import { useGithubConnections } from '#/api/use-settings-data.js';
 import { Field, INPUT_CLASS } from '#/components/ui/field.js';
+import { Picker } from '#/components/ui/picker.js';
 import type { ProjectDraft, ProjectField } from '#/types/onboarding.types.js';
 
 export function GitHubFields(props: {
@@ -41,23 +42,16 @@ export function GitHubFields(props: {
           label="GitHub connection"
           error={errors.connection}
         >
-          <select
+          <Picker
             id="project-connection"
+            items={active.map((c) => ({ value: c.id, label: c.account }))}
             value={draft.connectionId}
-            aria-invalid={errors.connection ? true : undefined}
+            placeholder="Choose a connection"
+            loading={connections.isPending}
+            error={errors.connection ? true : undefined}
             aria-describedby={errors.connection ? 'project-connection-error' : undefined}
-            onChange={(event) => props.onChange({ connectionId: event.target.value })}
-            className={INPUT_CLASS}
-          >
-            <option value="">
-              {connections.isPending ? 'Loading connections' : 'Choose a connection'}
-            </option>
-            {active.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.account}
-              </option>
-            ))}
-          </select>
+            onChange={(connectionId) => props.onChange({ connectionId })}
+          />
         </Field>
       )}
       <Field

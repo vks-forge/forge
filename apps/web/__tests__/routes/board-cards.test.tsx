@@ -14,6 +14,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { storageKeyOf } from '#/state/create-persisted-store.js';
+import { choose } from '#tests/helpers/choose.js';
 import { json, networkDown } from '#tests/helpers/fetch-stub.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
@@ -52,9 +53,33 @@ describe('Board, Cards view', () => {
       (await column('Done')).getByText('Rename retries to maxRetries'),
     ).toBeInTheDocument();
 
+    const strip = await screen.findByRole('button', { name: /^Closed, 1 cards/ });
+
+    expect(strip).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Should we adopt pnpm?')).not.toBeInTheDocument();
+    await userEvent.setup().click(strip);
+
     expect(
       (await column('Closed')).getByText('Should we adopt pnpm?'),
     ).toBeInTheDocument();
+  });
+
+  it('folds Closed into a strip with its count and keeps it open once opened', async () => {
+    const user = userEvent.setup();
+    renderApp({ path: BOARD });
+
+    const strip = await screen.findByRole('button', { name: /^Closed, 1 cards/ });
+    expect(strip).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(strip);
+    expect(await screen.findByRole('region', { name: 'Closed' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Collapse Closed' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Collapse Closed' }));
+    expect(screen.getByRole('button', { name: /^Closed, 1 cards/ })).toBeInTheDocument();
   });
 
   it('shows the type label on a tile and links the whole tile to the Card page', async () => {
@@ -73,9 +98,10 @@ describe('Board, Cards view', () => {
     renderApp({ path: BOARD });
     await screen.findByText('Stream large CSV exports');
 
-    await user.selectOptions(screen.getByLabelText('Type'), 'discussion');
+    await choose(user, 'Type', 'Discussion');
 
     expect(screen.queryByText('Stream large CSV exports')).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: /^Closed, 1 cards/ }));
     expect(screen.getByText('Should we adopt pnpm?')).toBeInTheDocument();
     expect(screen.getByText('2 of 6 cards')).toBeInTheDocument();
 

@@ -54,6 +54,22 @@ function serverWith(items = [QUESTION, REVIEW]) {
 }
 
 describe('Inbox', () => {
+  it('shows no date for a memory proposal dated at the epoch, never Jan 1, 1970', async () => {
+    const proposal = inboxItem({
+      id: 'memory_proposal:x-0001',
+      kind: 'memory_proposal',
+      title: 'Proposed memory: prefer pnpm',
+      detail: 'A lesson learned',
+      updated_at: '1970-01-01T00:00:00.000Z',
+    });
+
+    renderWork(INBOX, serverWith([proposal]));
+
+    await screen.findByText('A lesson learned');
+
+    expect(screen.queryByText(/1970/)).toBeNull();
+  });
+
   it('lists items with a way to their source and counts on the tabs', async () => {
     renderWork(INBOX, serverWith());
 

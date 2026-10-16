@@ -23,7 +23,7 @@ import {
   useProjectSettings,
   useSaveSettings,
 } from '#/api/use-project-settings.js';
-import { useProjects } from '#/api/use-projects.js';
+import { useAllProjects } from '#/api/use-projects.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import {
   docFromDraft,
@@ -47,7 +47,7 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
   const { slug, latest } = props;
   const online = useOnline();
   const queryClient = useQueryClient();
-  const projects = useProjects();
+  const projects = useAllProjects();
   const save = useSaveSettings(slug);
   const notify = useNotify();
   // `opened` is the version the user started from; `latest` may move on under them.
@@ -165,7 +165,11 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
       </section>
 
       <HistoryPanel versions={latest.versions} />
-      <ArchiveSection slug={slug} disabled={!online} />
+      <ArchiveSection
+        slug={slug}
+        archived={project?.status === 'archived'}
+        disabled={!online}
+      />
       <DeleteSection slug={slug} localPath={project?.local_path} disabled={!online} />
 
       <SaveBar

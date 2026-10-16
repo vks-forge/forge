@@ -13,6 +13,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { choose } from '#tests/helpers/choose.js';
 import {
   BASE_ROUTES,
   chooseFolder,
@@ -219,7 +220,7 @@ describe('add project: git choices in the body', () => {
     expect(screen.queryByLabelText('GitHub connection')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('radio', { name: /Pull requests on GitHub/ }));
-    await user.selectOptions(await screen.findByLabelText('GitHub connection'), 'acme');
+    await choose(user, 'GitHub connection', /Acme/);
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
     await user.type(screen.getByLabelText('Installation id'), '99');
     await clickNext(user);

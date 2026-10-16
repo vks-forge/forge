@@ -6,7 +6,8 @@
  *   These routes keep a list of versions per project and merge them over the built-in
  *   defaults with core's own `mergeConfig`, so "inherited" and "overridden" mean here exactly
  *   what they mean on the server. A save with a stale `expectedVersion` fails with the same
- *   409 and code. Archiving marks the slug so the project list shows it archived; deleting does the same.
+ *   409 and code. Archiving marks the slug so the project list shows it archived, unarchiving (`status: ready`)
+ *   brings it back; deleting does the same.
  *
  * Exports: projectRoutes().
  * Depends on: @forge/core (mergeConfig), helpers/fetch-stub, helpers/forge-data/*.
@@ -26,6 +27,7 @@ export function projectRoutes(options: {
 }): Routes {
   const versions = new Map<string, ConfigVersion[]>();
   const archived = new Set<string>();
+  const unarchived = new Set<string>();
   const of = (slug: string): ConfigVersion[] => {
     const found = versions.get(slug) ?? seedVersions(slug);
     versions.set(slug, found);
@@ -42,6 +44,10 @@ export function projectRoutes(options: {
   const view = (slug: string) => {
     const row = project(slug)!;
 
+    if (unarchived.has(slug)) {
+      return { ...row, status: 'ready' as const };
+    }
+
     return archived.has(slug) ? { ...row, status: 'archived' as const } : row;
   };
 
@@ -49,13 +55,18 @@ export function projectRoutes(options: {
     'GET /projects': () =>
       json({ projects: options.empty ? [] : projectData.map((p) => view(p.slug)) }),
 
-    'PATCH /projects/:slug': ({ params }) => {
+    'PATCH /projects/:slug': ({ params, body }) => {
       const slug = params['slug']!;
       if (!project(slug)) {
         return unknown(slug);
       }
 
-      archived.add(slug);
+      if ((body as { status?: string } | undefined)?.status === 'ready') {
+        archived.delete(slug);
+        unarchived.add(slug);
+      } else {
+        archived.add(slug);
+      }
 
       return json({ project: view(slug) });
     },

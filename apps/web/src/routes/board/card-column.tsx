@@ -37,6 +37,7 @@ export function CardColumnView(props: {
       count={cards.length}
       noun="cards"
       filtered={filtered}
+      {...(column.id === 'closed' ? { foldIn: 'cards' } : {})}
     >
       <WindowedList
         items={cards}

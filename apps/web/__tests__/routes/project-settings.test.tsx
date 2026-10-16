@@ -175,7 +175,7 @@ describe('project settings', () => {
     expect(await screen.findByText('Discard unsaved changes?')).toBeInTheDocument();
   });
 
-  it('archives only after a confirm that names the project and says it is permanent', async () => {
+  it('archives only after a confirm that names the project and says it can be undone', async () => {
     const user = userEvent.setup();
     const { router } = renderScreens(PATH);
     await ready();
@@ -185,7 +185,7 @@ describe('project settings', () => {
       name: 'Archive sample-service?',
     });
 
-    expect(dialog).toHaveTextContent(/no way to bring it back/);
+    expect(dialog).toHaveTextContent(/you can unarchive it/);
     expect(router.state.location.pathname).toBe(PATH);
 
     await user.click(within(dialog).getByRole('button', { name: 'Archive project' }));

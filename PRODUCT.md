@@ -116,6 +116,8 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-16: Shared Picker replaces native selects; board columns fit the screen with a collapsible Closed strip.
+- 2026-10-16: Archived projects listed in the switcher with Unarchive; memory proposal dates fixed.
 - 2026-10-16: Shared Tooltip component on icon buttons (inbox actions, notifications, theme toggle, mobile navigation, capacity rows).
 - 2026-10-16: Inbox shows tool approvals and compat failures only for the installed harness build; dates no longer show 1970.
 - 2026-10-16: Delete project in project settings (typed confirm); removes Forge data, never the user's folder.

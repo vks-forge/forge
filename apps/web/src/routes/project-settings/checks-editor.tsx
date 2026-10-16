@@ -9,7 +9,7 @@
  *   control has a label that names its row, for keyboard and screen-reader users.
  *
  * Exports: ChecksEditor.
- * Depends on: react, lucide-react, @forge/core (CheckRole), components/ui/{button,field}.
+ * Depends on: react, lucide-react, @forge/core (CheckRole), components/ui/{button,field,picker}.
  */
 
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
@@ -17,6 +17,9 @@ import { CheckRole } from '@forge/core';
 import type { ProjectCheck } from '@forge/core';
 import { Button } from '#/components/ui/button.js';
 import { INPUT_CLASS } from '#/components/ui/field.js';
+import { Picker } from '#/components/ui/picker.js';
+
+const ROLE_ITEMS = CheckRole.options.map((role) => ({ value: role, label: role }));
 
 const ICON_BUTTON =
   'grid size-9 place-items-center rounded-lg text-muted transition-[background-color,transform] duration-150 hover:bg-hover active:translate-y-px disabled:opacity-40';
@@ -59,20 +62,12 @@ export function ChecksEditor(props: {
               onChange={(event) => patch(index, { name: event.target.value })}
               className={INPUT_CLASS}
             />
-            <select
-              aria-label={`Check ${n} role`}
+            <Picker
+              label={`Check ${n} role`}
+              items={ROLE_ITEMS}
               value={check.role}
-              onChange={(event) =>
-                patch(index, { role: event.target.value as ProjectCheck['role'] })
-              }
-              className={INPUT_CLASS}
-            >
-              {CheckRole.options.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
+              onChange={(role) => patch(index, { role: role as ProjectCheck['role'] })}
+            />
             <input
               aria-label={`Check ${n} command`}
               placeholder="Command, e.g. pnpm test"

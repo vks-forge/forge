@@ -11,7 +11,8 @@
  *   show in each, but only for the current build of each harness (the installed one, else the
  *   newest checked): an older build can no longer be acted on and would nag forever. A tool
  *   approval is dated by when Forge checked its build. Quota waits show only where open work
- *   is affected. Memory proposals carry no timestamp, so they use the epoch and sort last.
+ *   is affected. Memory proposals carry no timestamp, so they use the epoch and sort last
+ *   (the web shows no date for an epoch item).
  *
  * Exports: gatherInboxCandidates().
  * Depends on: @forge/core (inbox rules, StorageTx, memory entries), services/collect-pages,

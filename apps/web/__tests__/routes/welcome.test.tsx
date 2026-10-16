@@ -222,7 +222,7 @@ describe('first run: the first project', () => {
 
     expect(await screen.findByLabelText('Project name')).toHaveValue('my-app');
     expect(screen.getByLabelText('Ticket prefix')).toHaveValue('MA');
-    expect(screen.getByLabelText('Base branch')).toHaveValue('main');
+    expect(screen.getByLabelText('Base branch')).toHaveTextContent('main');
 
     await user.type(screen.getByLabelText('Your name'), 'Vikash');
     await user.click(screen.getByRole('button', { name: 'Next' }));

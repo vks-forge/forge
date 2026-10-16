@@ -12,6 +12,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { choose, chosen } from '#tests/helpers/choose.js';
 import { refusal } from '#tests/helpers/fetch-stub.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
@@ -22,7 +23,7 @@ describe('Card page: type and close', () => {
     const user = userEvent.setup();
     const { forge } = renderApp({ path: card('FG-C2') });
 
-    await user.selectOptions(await screen.findByLabelText('Type'), 'issue');
+    await choose(user, 'Type', 'Issue');
     const dialog = await screen.findByRole('alertdialog');
 
     expect(within(dialog).getByText('Change the type to Issue?')).toBeInTheDocument();
@@ -30,7 +31,7 @@ describe('Card page: type and close', () => {
 
     await user.click(within(dialog).getByRole('button', { name: 'Change type' }));
 
-    await waitFor(() => expect(screen.getByLabelText('Type')).toHaveValue('issue'));
+    await waitFor(() => expect(chosen('Type')).toBe('Issue'));
     expect(forge.stub.callsTo('PATCH /cards/:id')).toMatchObject([
       { path: '/cards/FG-C2', body: { type: 'issue' } },
     ]);
@@ -40,14 +41,14 @@ describe('Card page: type and close', () => {
     const user = userEvent.setup();
     const { forge } = renderApp({ path: card('FG-C2') });
 
-    await user.selectOptions(await screen.findByLabelText('Type'), 'issue');
+    await choose(user, 'Type', 'Issue');
     await user.click(
       within(await screen.findByRole('alertdialog')).getByRole('button', {
         name: 'Cancel',
       }),
     );
 
-    expect(screen.getByLabelText('Type')).toHaveValue('plan');
+    expect(chosen('Type')).toBe('Plan');
     expect(forge.stub.callsTo('PATCH /cards/:id')).toHaveLength(0);
   });
 
@@ -58,7 +59,7 @@ describe('Card page: type and close', () => {
       routes: { 'PATCH /cards/:id': refusal(409, 'card_type_source', 'source') },
     });
 
-    await user.selectOptions(await screen.findByLabelText('Type'), 'pr_issue');
+    await choose(user, 'Type', 'PR issue');
     await user.click(
       within(await screen.findByRole('alertdialog')).getByRole('button', {
         name: 'Change type',
@@ -69,7 +70,7 @@ describe('Card page: type and close', () => {
       await screen.findByText(/does not accept this card’s source/),
     ).toBeInTheDocument();
 
-    expect(screen.getByLabelText('Type')).toHaveValue('plan');
+    expect(chosen('Type')).toBe('Plan');
   });
 
   it('requires a reason to close, then shows it and disables the chat', async () => {
