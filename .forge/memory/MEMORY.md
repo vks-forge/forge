@@ -197,3 +197,4 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 
 - Older outcome pointers (2026-10-12 – 2026-10-14): `outcomes/ARCHIVE.md`
 - 2026-10-16 — Overnight: web app W2–W7 + W6 cards on the real API, mock removed, zustand, forge start serves UI; CI quota exhausted: `outcomes/2026-10/2026-10-16-web-app-overnight.md`
+- 2026-10-16 — Card-first Director flow grill (d-0127..d-0158, build on hold); delete/archive projects, Picker, board fit; CI fixed forward: `outcomes/2026-10/2026-10-16-card-flow-grill-and-ui.md`
