@@ -164,3 +164,4 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - 2026-10-12 — scope review + self-improvement research + tool-system reverse engineering: `outcomes/2026-10/2026-10-12-review-and-research-session.md`
 - 2026-10-14 — E2 done + pushed; pipelines-as-config grill (x-0011, d-0065..d-0081) paused: `outcomes/2026-10/2026-10-14-e2-done-and-pipelines-grill.md`
 - 2026-10-14 — Product shape grill (installed product, company, many repos; d-0082..d-0098): `outcomes/2026-10/2026-10-14-product-shape-grill.md`
+- 2026-10-16 — Overnight: web app W2–W7 + W6 cards on the real API, mock removed, zustand, forge start serves UI; CI quota exhausted: `outcomes/2026-10/2026-10-16-web-app-overnight.md`

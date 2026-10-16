@@ -67,20 +67,28 @@ Adapters: `db`, `drivers` (harnesses), `hooks`, `mcp`, `gates`, `git`,
 `memory`, `secrets`. Apps compose: `apps/server` (HTTP + SSE), `apps/cli`,
 `apps/mcp`, `apps/web` (UI shell, in progress). Rules: `.claude/rules/code.md`.
 
-## Status — 2026-10-14
+## Status — 2026-10-16
 
-**Built and verified (M0 slices 1–2, E2):** core schemas and state machine;
-SQLite storage; Claude Code driver over ACP with a CLI fallback; receipt
-hooks; tool policy; Director engine (triage, dispatch, settle, verify);
-G1 gate; git worktrees; GitHub App git host; DPAPI secrets; HTTP server with
-SSE. 3621 tests; live probes 1–9 pass, including a real Express ticket from
-intake to merge and a real GitHub PR round trip.
+**Built and verified:** core schemas and state machine; SQLite storage;
+Claude Code driver over ACP with a CLI fallback; receipt hooks; tool policy;
+Director engine (triage, dispatch, settle, verify); G1 gate; git worktrees;
+GitHub App git host; DPAPI secrets; HTTP server with SSE. Realignment B0–B14
+done: one server serves many projects, settings live in the database, runs
+survive a restart, fair scheduling across projects.
 
-**Not yet aligned with the product shape:** no UI, not publishable. Runs now
-survive a restart: Forge resumes them from the saved harness session. One server now serves many
-projects (registered through the API, each with its own clone, worktrees, git
-host and ticket prefix) and settings live in the database. Every request now becomes a card (the intake record) with a rolled-up board column and history; the card API exists, and the web Board shows cards in six columns with a Card page (header, type change, close with a reason, tickets, details) and a chat panel for the card's Director; the Director's side of that chat is still being built on the server. You can also message a running Worker from its ticket page. See
-`docs/design/product-shape-change-map.md`.
+**Web control room (on the real server API, no mock data):** `forge start`
+serves the UI and signs the browser in with a one-time link (the install token
+never reaches the page). First-run wizard and new-project flow; project Home
+with stats graphs; Inbox; Board with Cards and Tickets views; Card page with a
+chat to the card's Director (it can file tickets, steer Workers, change the
+card type, suggest closing); Ticket page with the live Worker thread, answers
+to questions and direct messages to a running Worker; Runs; Cost; Memory;
+project settings; Forge settings (harnesses, GitHub, limits, general). UI
+preferences persist across reloads.
+
+**Not yet:** GitHub Issues intake and the Issues page (P5); the card Director
+cannot yet pause, restart or re-plan tickets, and Plan cards wait for a
+plan-approval step; not packaged or published.
 
 **Known limits:** Workers and project checks run as the user's own Windows
 account, so code a Worker writes (a test, a script) can read Forge's data
@@ -93,8 +101,8 @@ realignment (d-0117, d-0005).
 
 | Step | What                                                                | Plan                        |
 | ---- | ------------------------------------------------------------------- | --------------------------- |
-| Now  | Realign the existing code (batches B0–B14)                          | `docs/design/build-plan.md` |
-| Next | Worker isolation: separate low-privilege account for Workers/checks | d-0117                      |
+| Done | Realign the existing code (batches B0–B14)                          | `docs/design/build-plan.md` |
+| Now  | Worker isolation: separate low-privilege account for Workers/checks | d-0117                      |
 | P2   | Onboarding: GitHub manifest flow, language detection, Director chat | change map W4, W5, W9       |
 | P3   | Control room UI: every setting and flow on screen                   | change map W12, W14, W15    |
 | P4   | First release on Windows as `vks-forge`                             | change map W16, W17, W20    |
@@ -104,6 +112,7 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-16 — Status: web control room runs end to end on the real server API (W2–W7, cards W6).
 - 2026-10-16 — W6c: chat with the card's Director; it can file tickets, steer Workers and change the card type.
 - 2026-10-16 — W6: Board Cards view, Card page with Director chat, and messaging a running Worker.
 - 2026-10-16 — W7: first-run wizard and new-project flow.
