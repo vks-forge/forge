@@ -10,7 +10,7 @@
  *   (director-core.md §3, verification-plane.md).
  *
  * Exports: memoryWakeRequests(), memoryGateResults(), memoryProjects().
- * Depends on: @forge/core, adapters/memory/rows, types/memory-state.types. No IO.
+ * Depends on: @forge/core, adapters/memory/project-purge, adapters/memory/rows, types/memory-state.types. No IO.
  */
 
 import {
@@ -26,6 +26,7 @@ import type {
   ProjectRepository,
   WakeRequestRepository,
 } from '@forge/core';
+import { purgeProjectState } from '#/adapters/memory/project-purge.js';
 import { insertUnique } from '#/adapters/memory/rows.js';
 import type { MemoryState } from '#/types/memory-state.types.js';
 
@@ -126,6 +127,9 @@ export function memoryProjects(state: MemoryState): ProjectRepository {
     },
     async delete(id) {
       return state.projects.delete(id);
+    },
+    async purge(slug) {
+      return purgeProjectState(state, slug);
     },
     async list() {
       return [...state.projects.values()].map((p) => structuredClone(p));

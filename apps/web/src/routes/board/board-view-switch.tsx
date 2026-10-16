@@ -11,11 +11,12 @@
  * Depends on: react, state/board-prefs.
  */
 
+import { Layers, ListChecks } from 'lucide-react';
 import { useBoardPrefs } from '#/state/board-prefs.js';
 
 const OPTIONS = [
-  { value: 'cards', label: 'Cards' },
-  { value: 'tickets', label: 'Tickets' },
+  { value: 'cards', label: 'Cards', icon: Layers },
+  { value: 'tickets', label: 'Tickets', icon: ListChecks },
 ] as const;
 
 export function BoardViewSwitch() {
@@ -25,10 +26,11 @@ export function BoardViewSwitch() {
     <div
       role="group"
       aria-label="Board view"
-      className="flex w-fit rounded-lg bg-hover p-0.5"
+      className="flex w-fit rounded-lg border border-line bg-rail p-0.5"
     >
       {OPTIONS.map((option) => {
         const on = view === option.value;
+        const Icon = option.icon;
 
         return (
           <button
@@ -36,12 +38,13 @@ export function BoardViewSwitch() {
             type="button"
             aria-pressed={on}
             onClick={() => setView(option.value)}
-            className={`min-h-9 rounded-md px-3 text-sm transition-[background-color,color] duration-150 ${
+            className={`inline-flex min-h-8 items-center gap-1.5 rounded-md px-3 text-sm transition-[background-color,color] duration-150 motion-reduce:transition-none ${
               on
-                ? 'bg-surface font-medium shadow-[0_1px_2px_oklch(25%_0.03_255/0.12)]'
+                ? 'bg-surface font-medium text-fg shadow-[0_1px_2px_oklch(25%_0.03_255/0.12)]'
                 : 'text-muted hover:text-fg'
             }`}
           >
+            <Icon aria-hidden="true" className="size-4" />
             {option.label}
           </button>
         );

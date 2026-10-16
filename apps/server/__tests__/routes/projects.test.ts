@@ -156,10 +156,10 @@ describe('POST /projects', () => {
   it.each([
     ['a relative path', { local_path: 'relative/dir' }, 400, 'invalid_local_path'],
     [
-      'a folder that is not a repository',
+      'a folder with no git and no git_setup',
       { local_path: 'ROOT_PARENT' },
       400,
-      'not_a_repository',
+      'git_setup_required',
     ],
     [
       'a base branch that does not exist',
@@ -191,12 +191,7 @@ describe('POST /projects', () => {
     await nothingSaved();
   });
 
-  it('needs exactly one way to name the git host', async () => {
-    const none = fixtureProjectBody(fixture);
-    delete none['git_host'];
-
-    expect((await rigs.rig.json('POST', '/projects', none)).status).toBe(400);
-
+  it('refuses two ways to name the git host', async () => {
     const both = fixtureProjectBody(fixture, {
       connection_id: 'acme',
       repo_full_name: 'a/b',

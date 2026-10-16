@@ -4,7 +4,7 @@
  * Why: tickets are the units Workers build. This view loads the project's tickets once, groups
  *   them into columns on the client (domain/board-columns) and keeps them fresh by polling and
  *   refetching on focus. Every state is designed: skeleton while loading, an explanation when
- *   the project has no tickets yet, an error with retry when Forge is unreachable, and, when
+ *   the project has no tickets yet (BoardEmpty, with the way to start), an error with retry when Forge is unreachable, and, when
  *   data is already on screen but a refresh fails or the browser is offline, a banner that
  *   says the columns may be stale rather than silently looking current.
  *
@@ -27,7 +27,9 @@ import {
   isFilterActive,
 } from '#/domain/board-columns.js';
 import { BoardColumnView } from '#/routes/board/board-column.js';
+import { BoardEmpty } from '#/routes/board/board-empty.js';
 import { BoardToolbar } from '#/routes/board/board-toolbar.js';
+import { ColumnScroller } from '#/routes/board/column-shell.js';
 import { useBoardPrefs } from '#/state/board-prefs.js';
 import { useNow } from '#/state/use-now.js';
 import { useOnline } from '#/state/use-online.js';
@@ -54,12 +56,17 @@ export function TicketsBoard(props: { slug: string }) {
           retrying={query.isFetching}
         />
       ) : tickets.length === 0 ? (
-        <StatePanel kind="empty" title="No tickets yet">
-          Tell the Director what you want above, and its tickets will appear here.
-        </StatePanel>
+        <BoardEmpty title="No tickets yet" columns={BOARD_COLUMNS}>
+          Tell the Director what you want in the box above, and the tickets it plans for
+          Workers will appear in these columns.
+        </BoardEmpty>
       ) : (
         <>
-          <BoardToolbar shown={visible.length} total={tickets.length} />
+          <BoardToolbar
+            shown={visible.length}
+            total={tickets.length}
+            needsYou={groups.needs_you.length}
+          />
 
           {!online ? (
             <p role="status" className="rounded-xl bg-attn-soft p-3 text-sm">
@@ -77,7 +84,7 @@ export function TicketsBoard(props: { slug: string }) {
           ) : null}
 
           <LayoutGroup id="board">
-            <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 md:-mx-8 md:px-8">
+            <ColumnScroller>
               {BOARD_COLUMNS.map((column) => (
                 <BoardColumnView
                   key={column.id}
@@ -87,7 +94,7 @@ export function TicketsBoard(props: { slug: string }) {
                   now={now}
                 />
               ))}
-            </div>
+            </ColumnScroller>
           </LayoutGroup>
 
           {query.hasNextPage ? (

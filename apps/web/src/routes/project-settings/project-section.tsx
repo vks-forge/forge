@@ -33,7 +33,11 @@ export function ProjectSection(props: {
   const host = props.snapshot.config.project.git_host;
   const repo =
     project.repo_full_name ??
-    (host?.kind === 'github' ? `${host.owner}/${host.repo}` : host?.remote_path);
+    (host?.kind === 'github'
+      ? `${host.owner}/${host.repo}`
+      : host?.kind === 'local'
+        ? host.remote_path
+        : undefined);
 
   return (
     <section aria-labelledby="project-heading" className="grid gap-3">

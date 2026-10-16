@@ -12,7 +12,8 @@
  *   Everything lives under the OS temp directory (or a directory the caller names) and is
  *   removed by `dispose()`.
  *
- * Exports: FixtureRepo, createFixtureRepo(), fixtureProjectBody(), git().
+ * Exports: FixtureRepo, createFixtureRepo(), createPlainFixture(), createSubfolderFixture(),
+ *   fixtureProjectBody(), git().
  * Depends on: node:child_process, node:fs, node:os, node:path. IO: creates directories and runs git.
  */
 
@@ -60,6 +61,73 @@ if (source.includes('debugger')) {
 }
 `;
 
+/** The node project the fixtures hold: a source file, its test and a lint script, needing no install. */
+function writeProjectFiles(dir: string): void {
+  mkdirSync(join(dir, 'src'), { recursive: true });
+  mkdirSync(join(dir, 'test'), { recursive: true });
+  mkdirSync(join(dir, 'scripts'), { recursive: true });
+
+  const pkg = {
+    name: 'fixture',
+    version: '1.0.0',
+    private: true,
+    type: 'module',
+    scripts: { test: 'node --test', lint: 'node scripts/lint.mjs' },
+  };
+
+  writeFileSync(join(dir, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`);
+  writeFileSync(join(dir, 'src', 'math.js'), SOURCE);
+  writeFileSync(join(dir, 'test', 'math.test.js'), TEST);
+  writeFileSync(join(dir, 'scripts', 'lint.mjs'), LINT);
+}
+
+/** Removes `paths` with retries; Windows may hold a handle for a moment after a child exits. */
+function removeAll(paths: readonly string[]): void {
+  for (const path of paths) {
+    try {
+      rmSync(path, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+    } catch (error) {
+      process.stderr.write(
+        `fixture cleanup: ${path} not removed yet (${(error as NodeJS.ErrnoException).code ?? 'unknown'})\n`,
+      );
+    }
+  }
+}
+
+/**
+ * The node project in a folder with no git at all (d-0124): register it with a `git_setup`.
+ * `remote` is unused (there is none).
+ */
+export function createPlainFixture(): FixtureRepo {
+  const root = trackTemp(mkdtempSync(join(tmpdir(), 'forge-plain-fixture-')));
+  const dataHome = trackTemp(`${root}-home`);
+  writeProjectFiles(root);
+
+  return { root, remote: '', dataHome, dispose: () => removeAll([root, dataHome]) };
+}
+
+/**
+ * A repository whose project is its `app/` subfolder: `README.md` and `other/` sit beside it
+ * and belong to someone else. `root` is the repository top; register `join(root, 'app')`.
+ */
+export function createSubfolderFixture(): FixtureRepo {
+  const root = trackTemp(mkdtempSync(join(tmpdir(), 'forge-sub-fixture-')));
+  const dataHome = trackTemp(`${root}-home`);
+  writeProjectFiles(join(root, 'app'));
+  mkdirSync(join(root, 'other'), { recursive: true });
+  writeFileSync(join(root, 'README.md'), 'not the project\n');
+  writeFileSync(join(root, 'other', 'notes.txt'), 'not the project either\n');
+  writeFileSync(join(root, '.gitignore'), 'node_modules/\n');
+  git(root, 'init', '-b', 'main');
+  git(root, 'config', 'user.name', 'Fixture');
+  git(root, 'config', 'user.email', 'fixture@localhost');
+  git(root, 'config', 'core.autocrlf', 'false');
+  git(root, 'add', '-A');
+  git(root, 'commit', '-m', 'fixture: initial commit');
+
+  return { root, remote: '', dataHome, dispose: () => removeAll([root, dataHome]) };
+}
+
 /** The `POST /projects` body that registers `fixture` as project `fixture` (prefix FX) with a local bare host. */
 export function fixtureProjectBody(
   fixture: FixtureRepo,
@@ -96,22 +164,7 @@ export function createFixtureRepo(dir?: string): FixtureRepo {
     trackTemp(dataHome);
   }
 
-  mkdirSync(join(root, 'src'), { recursive: true });
-  mkdirSync(join(root, 'test'), { recursive: true });
-  mkdirSync(join(root, 'scripts'), { recursive: true });
-
-  const pkg = {
-    name: 'fixture',
-    version: '1.0.0',
-    private: true,
-    type: 'module',
-    scripts: { test: 'node --test', lint: 'node scripts/lint.mjs' },
-  };
-
-  writeFileSync(join(root, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`);
-  writeFileSync(join(root, 'src', 'math.js'), SOURCE);
-  writeFileSync(join(root, 'test', 'math.test.js'), TEST);
-  writeFileSync(join(root, 'scripts', 'lint.mjs'), LINT);
+  writeProjectFiles(root);
   writeFileSync(join(root, '.gitignore'), 'node_modules/\n');
 
   git(root, 'init', '-b', 'main');
@@ -129,17 +182,6 @@ export function createFixtureRepo(dir?: string): FixtureRepo {
     root,
     remote,
     dataHome,
-    dispose() {
-      for (const path of [root, remote, dataHome]) {
-        try {
-          rmSync(path, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
-        } catch (error) {
-          // Windows may still hold a handle for a moment; the file-end cleanup tries again.
-          process.stderr.write(
-            `fixture cleanup: ${path} not removed yet (${(error as NodeJS.ErrnoException).code ?? 'unknown'})\n`,
-          );
-        }
-      }
-    },
+    dispose: () => removeAll([root, remote, dataHome]),
   };
 }

@@ -55,7 +55,11 @@ export function inertRouteExtras(): Pick<
 
   return {
     memory: inertMemory,
-    dataHome: { home: '/forge-test-home', worktreesDir: '/forge-test-home/worktrees' },
+    dataHome: {
+      home: '/forge-test-home',
+      memoryDir: '/forge-test-home/memory',
+      worktreesDir: '/forge-test-home/worktrees',
+    },
     triggers: createTriggerRegistry([createChatTrigger()]),
     tickets: createSseTicketIssuer(() => Date.now()),
     sessions: createSessionStore(() => Date.now()),

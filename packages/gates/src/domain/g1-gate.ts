@@ -4,7 +4,7 @@
  * Why: after a Worker finishes, the Director must not take its word for what it did.
  *   G1 is the cheapest independent check and runs first in every lane: it matches the
  *   Worker's `finish` claims against HMAC-chained tool receipts and the git diff, proves
- *   the receipts are intact and complete, refuses test or config tampering, and re-runs
+ *   the receipts are intact and complete, refuses test or config tampering and changes outside the project folder, and re-runs
  *   every configured check (tests, lint, typecheck, build, ...) itself. Any finding fails the gate and the report goes back
  *   to the Worker as the rework prompt. A check that could not run (missing run secret,
  *   spawn failure) makes the verdict `error`, never `passed`, so the engine retries or
@@ -27,6 +27,7 @@ import { checkGateConfig } from '#/domain/config-guard.js';
 import { resolveRules } from '#/domain/gate-rules.js';
 import { parsePatch } from '#/domain/patch.js';
 import { DEFAULT_COMMAND_TIMEOUT_MS, runProjectChecks } from '#/domain/project-checks.js';
+import { checkScope } from '#/domain/scope-check.js';
 import { renderReport } from '#/domain/report.js';
 import { checkTestDiff } from '#/domain/test-diff.js';
 import type { HmacKey, Receipt } from '@forge/tools';
@@ -112,6 +113,7 @@ export function buildG1Gate(deps: G1CoreDeps): Gate {
           rules,
           worktreePath: ctx.worktreePath,
         }),
+        checkScope(diff),
         checkTestDiff(diff, patch, rules),
         checkGateConfig(diff, patch, ctx.project.checks, rules),
         await runProjectChecks({

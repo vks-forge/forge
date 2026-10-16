@@ -5,7 +5,9 @@
  *   a failed gate to a run, a memory proposal to Memory, a quota wait to its harness. One
  *   function picks the target so every row, on Home and in the Inbox, leads to the same place,
  *   and a kind the UI does not know yet still opens something sensible (the ticket or run it
- *   names, else the Inbox itself) rather than a dead link.
+ *   names, else the Inbox itself) rather than a dead link. A tool approval or a compatibility
+ *   check opens the one harness it names, scrolled to the section where the owner decides
+ *   (`#tools`, `#compat`), so "Review tool" lands on the Approve button, not a generic list.
  *
  * Exports: INBOX_KIND_LABEL, inboxLink().
  * Depends on: @forge/core (parseInboxItemId, types), domain/nav-entries. Pure.
@@ -29,6 +31,13 @@ export const INBOX_KIND_LABEL: Readonly<Record<InboxKind, string>> = {
   memory_proposal: 'Memory proposal',
 };
 
+/** The harness kind named by a `<kind>/<version>[/<tool>]` source id, URI-encoded. */
+function harnessSegment(source: string | undefined): string | undefined {
+  const kind = source?.split('/')[0];
+
+  return kind ? encodeURIComponent(kind) : undefined;
+}
+
 /** The route an item opens, and what that route is called on the link. */
 export function inboxLink(slug: string, item: InboxItem): { to: string; label: string } {
   const source = parseInboxItemId(item.id)?.sourceId;
@@ -47,7 +56,17 @@ export function inboxLink(slug: string, item: InboxItem): { to: string; label: s
     };
   }
 
-  if (item.kind === 'harness_compat' || item.kind === 'tool_approval') {
+  if (item.kind === 'tool_approval' || item.kind === 'harness_compat') {
+    const kind = harnessSegment(source);
+    const tool = item.kind === 'tool_approval';
+
+    if (kind) {
+      return {
+        to: `${settingsPath(`harnesses/${kind}`)}#${tool ? 'tools' : 'compat'}`,
+        label: tool ? 'Review tool' : 'Open check',
+      };
+    }
+
     return { to: settingsPath('harnesses'), label: 'Open harnesses' };
   }
 

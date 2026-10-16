@@ -8,11 +8,12 @@
  *   screen only has to list its fields.
  *
  * Exports: CompanyScreen.
- * Depends on: react, api/describe-error, components/settings/*, components/status/state-panel,
+ * Depends on: react, lucide-react, api/describe-error, components/settings/*, components/status/state-panel,
  *   state/use-company-draft, types/settings-draft.types.
  */
 
 import type { ForgeConfig } from '@forge/core';
+import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { describeError } from '#/api/describe-error.js';
 import { SavePanel } from '#/components/settings/save-panel.js';
@@ -25,12 +26,13 @@ import type { CompanyDraft } from '#/types/settings-draft.types.js';
 export function CompanyScreen(props: {
   title: string;
   intro: string;
+  icon: LucideIcon;
   children: (draft: CompanyDraft, config: ForgeConfig) => ReactNode;
 }) {
   const draft = useCompanyDraft();
 
   return (
-    <SettingsPage title={props.title} intro={props.intro}>
+    <SettingsPage title={props.title} intro={props.intro} icon={props.icon}>
       {draft.status === 'loading' ? (
         <StatePanel kind="loading" label={`Loading ${props.title.toLowerCase()}`} />
       ) : null}

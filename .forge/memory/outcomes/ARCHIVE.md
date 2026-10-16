@@ -1,0 +1,4 @@
+- 2026-10-12 — hyperresearch run + design docs session: `outcomes/2026-10/2026-10-12-design-session.md`
+- 2026-10-12 — scope review + self-improvement research + tool-system reverse engineering: `outcomes/2026-10/2026-10-12-review-and-research-session.md`
+- 2026-10-14 — E2 done + pushed; pipelines-as-config grill (x-0011, d-0065..d-0081) paused: `outcomes/2026-10/2026-10-14-e2-done-and-pipelines-grill.md`
+- 2026-10-14 — Product shape grill (installed product, company, many repos; d-0082..d-0098): `outcomes/2026-10/2026-10-14-product-shape-grill.md`

@@ -8,7 +8,8 @@
  *   mutations held in component state, not cached, because they are the user's explicit
  *   actions on a typed folder.
  *
- * Exports: SYSTEM_KEY, useSystem(), useInspectFolder(), useCreateProject().
+ * Exports: SYSTEM_KEY, useSystem(), useFolderListing(), usePickFolder(), useCreateFolder(), useRevealFolder(),
+ *   useInspectFolder(), useCreateProject().
  * Depends on: @tanstack/react-query, api/api-provider, api/use-projects, types/onboarding.types.
  */
 
@@ -26,6 +27,49 @@ export function useSystem() {
     queryKey: SYSTEM_KEY,
     queryFn: ({ signal }) => api.onboarding.system({ signal }),
   });
+}
+
+/** Sub-folders of `path` (empty: the places to start from), read while the folder browser is open. */
+export function useFolderListing(path: string, enabled: boolean) {
+  const api = useForgeApi();
+
+  return useQuery({
+    queryKey: ['folders', path],
+    queryFn: ({ signal }) => api.onboarding.listFolders(path || undefined, { signal }),
+    enabled,
+    retry: false,
+    staleTime: 0,
+  });
+}
+
+/** Opens the system folder window; resolves when the person picks or closes it (can take minutes). */
+export function usePickFolder() {
+  const api = useForgeApi();
+
+  return useMutation({
+    mutationFn: (start: string) => api.onboarding.pickFolder(start || undefined),
+  });
+}
+
+/** Makes a folder in the browser, then refreshes the listing of its parent. */
+export function useCreateFolder() {
+  const api = useForgeApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: { parent: string; name: string }) =>
+      api.onboarding.createFolder(body),
+    async onSuccess() {
+      await queryClient.invalidateQueries({ queryKey: ['folders'] });
+    },
+  });
+}
+
+/** Shows a folder in the computer's file manager. */
+export function useRevealFolder() {
+  const api = useForgeApi();
+
+  return useMutation({ mutationFn: (path: string) => api.onboarding.revealFolder(path) });
 }
 
 export function useInspectFolder() {

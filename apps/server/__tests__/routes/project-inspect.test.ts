@@ -8,13 +8,15 @@
  *
  * Pins: a clone gives branches, current branch, node checks from package.json and a free
  *   suggestion; a taken slug/prefix is not suggested; each refusal (relative path, data home,
- *   not a folder, not a repository, subfolder, missing base branch, folder already a project,
- *   unknown key) has create's code; nothing is saved or served after an inspect.
+ *   not a folder, missing base branch, folder already a project, unknown key) has create's
+ *   code; nothing is saved or served after an inspect. Any folder inspects (d-0124): no git
+ *   gives state none and a snapshot count, a folder inside a repository gives the top and
+ *   subfolder with checks from the subfolder, an empty repository is accepted.
  * Depends on: helpers/fixture-repo, helpers/projects-rig, helpers/temp, src/routes.
  *   IO: real git repositories in the OS temp dir, in-memory storage.
  */
 
-import { mkdirSync, mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -119,23 +121,6 @@ describe('POST /projects/inspect', () => {
       400,
       'not_a_directory',
     ],
-    [
-      'a folder that is not a repository',
-      () => trackTemp(mkdtempSync(join(tmpdir(), 'forge-plain-'))),
-      400,
-      'not_a_repository',
-    ],
-    [
-      'a subfolder of a repository',
-      () => {
-        const sub = join(fixture.root, 'src');
-        mkdirSync(sub, { recursive: true });
-
-        return sub;
-      },
-      400,
-      'not_repository_root',
-    ],
   ])('refuses %s with the code create uses', async (_name, folder, status, code) => {
     const res = await inspect({ local_path: folder() });
 
@@ -171,5 +156,78 @@ describe('POST /projects/inspect', () => {
     );
 
     expect([401, 403]).toContain(res.status);
+  });
+});
+
+describe('POST /projects/inspect: any folder (d-0124)', () => {
+  it('reports a repository with its git facts and no snapshot', async () => {
+    const res = await inspect({ local_path: fixture.root });
+
+    expect(res.body).toMatchObject({
+      git: {
+        state: 'repo',
+        subfolder: null,
+        has_commits: true,
+        dirty: false,
+        remote: null,
+      },
+      snapshot: null,
+    });
+  });
+
+  it('reports a folder with no git: state none, a snapshot count, main as the base', async () => {
+    const dir = trackTemp(mkdtempSync(join(tmpdir(), 'forge-plain-')));
+    writeFileSync(
+      join(dir, 'package.json'),
+      '{"name":"p","scripts":{"test":"node t.js"}}\n',
+    );
+
+    mkdirSync(join(dir, 'node_modules'));
+    writeFileSync(join(dir, 'node_modules', 'x.js'), 'ignored');
+
+    const res = await inspect({ local_path: dir });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      base_branch: 'main',
+      current_branch: null,
+      branches: [],
+      ecosystems: ['node'],
+      git: { state: 'none', repo_root: null, has_commits: false },
+      snapshot: { files: 1, has_gitignore: false, truncated: false },
+    });
+  });
+
+  it('reports a folder inside a repository: the top, the subfolder, checks from the subfolder', async () => {
+    const sub = join(fixture.root, 'packages', 'web');
+    mkdirSync(sub, { recursive: true });
+    writeFileSync(join(sub, 'package.json'), '{"name":"web","scripts":{"lint":"x"}}\n');
+
+    const res = await inspect({ local_path: sub });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      current_branch: 'main',
+      branches: expect.arrayContaining(['main']),
+      git: { state: 'inside_repo', subfolder: 'packages/web', has_commits: true },
+      snapshot: null,
+    });
+
+    expect(
+      (res.body as { checks: { role: string }[] }).checks.map((c) => c.role),
+    ).toContain('lint');
+  });
+
+  it('accepts an empty repository: no commits yet is reported, not refused', async () => {
+    const dir = trackTemp(mkdtempSync(join(tmpdir(), 'forge-empty-')));
+    git(dir, 'init', '-b', 'trunk');
+
+    const res = await inspect({ local_path: dir });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      base_branch: 'trunk',
+      git: { state: 'repo', has_commits: false },
+    });
   });
 });

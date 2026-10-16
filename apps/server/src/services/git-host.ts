@@ -1,7 +1,9 @@
 /**
  * Picks the GitHost adapter a project's config names.
  *
- * Why: where branches are pushed and PRs live is per project (d-0062). `local` is a bare
+ * Why: where branches are pushed and PRs live is per project (d-0062). `local_repo` is the
+ *   project's own repository with no remote at all: verified work merges straight into its
+ *   base branch (d-0124). `local` is a bare
  *   repository on disk (offline work, the end-to-end fixture); `github` is a GitHub App
  *   installation whose private key sits in the secret store. A project that was added
  *   through a GitHub connection has no App id or key name of its own: they come from the
@@ -19,7 +21,11 @@
 import { resolve } from 'node:path';
 import { AuthError, InvalidInputError } from '@forge/core';
 import type { GitHost, GithubConnection, ProjectConfig, SecretStore } from '@forge/core';
-import { createGitHubAppGitHost, createLocalBareGitHost } from '@forge/git';
+import {
+  createGitHubAppGitHost,
+  createLocalBareGitHost,
+  createLocalRepoGitHost,
+} from '@forge/git';
 
 /** The key name used by a `github` host that names neither a key nor a connection. */
 const DEFAULT_KEY_SECRET = 'github-app-key';
@@ -46,6 +52,14 @@ export function createProjectGitHost(
   if (host.kind === 'local') {
     return createLocalBareGitHost({
       remotePath: resolve(deps.root, host.remote_path),
+      baseBranch: host.base_branch,
+      now: deps.now,
+    });
+  }
+
+  if (host.kind === 'local_repo') {
+    return createLocalRepoGitHost({
+      repoRoot: deps.root,
       baseBranch: host.base_branch,
       now: deps.now,
     });

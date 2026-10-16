@@ -108,7 +108,7 @@ export interface HttpClientOptions {
 
 /** One JSON call to the server. */
 export interface JsonRequest extends RequestOptions {
-  readonly method?: 'GET' | 'POST' | 'PUT' | 'PATCH';
+  readonly method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   readonly body?: unknown;
 }
 

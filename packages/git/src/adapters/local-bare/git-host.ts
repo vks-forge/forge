@@ -28,7 +28,7 @@ import { createPrStore } from '#/adapters/local-bare/pr-store.js';
 import { assertSafeRefArg } from '#/domain/ref-check.js';
 import type { PrRecord } from '#/schemas/pr-record.js';
 import { GitHostError } from '#/shared/host-errors.js';
-import type { LocalBareGitHostOptions } from '#/types/git-host.types.js';
+import type { BaseLanding, LocalBareGitHostOptions } from '#/types/git-host.types.js';
 
 const DEFAULT_AUTHOR = { name: 'Forge', email: 'forge@localhost' } as const;
 
@@ -41,6 +41,22 @@ export function createLocalBareGitHost(opts: LocalBareGitHostOptions): GitHost {
   const iso = (): string => new Date(opts.now()).toISOString();
   const urlOf = (n: number): string =>
     pathToFileURL(resolve(remote, 'forge-prs', `${n}.json`)).href;
+
+  /** The old value makes this a compare-and-swap: a base that moved meanwhile fails loudly. */
+  const landing: BaseLanding = opts.landing ?? {
+    async land({ base, baseSha, newSha }) {
+      const moved = await git.try(remote, [
+        'update-ref',
+        `refs/heads/${base}`,
+        newSha,
+        baseSha,
+      ]);
+
+      if (moved.code !== 0) {
+        throw new GitHostError('merge_refused', `${base} moved during the merge`);
+      }
+    },
+  };
 
   /** Commit a ref points to in the bare repo, or null when the ref does not exist. */
   const refSha = async (branch: string): Promise<string | null> => {
@@ -223,20 +239,7 @@ export function createLocalBareGitHost(opts: LocalBareGitHostOptions): GitHost {
           )
         ).trim();
 
-        // The old value makes this a compare-and-swap: a base that moved meanwhile fails loudly.
-        const moved = await git.try(remote, [
-          'update-ref',
-          `refs/heads/${rec.base}`,
-          sha,
-          base,
-        ]);
-
-        if (moved.code !== 0) {
-          throw new GitHostError(
-            'merge_refused',
-            `${rec.base} moved during the merge of PR ${n}`,
-          );
-        }
+        await landing.land({ base: rec.base, baseSha: base, newSha: sha });
 
         await store.save({
           ...rec,

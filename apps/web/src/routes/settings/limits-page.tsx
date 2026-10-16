@@ -11,6 +11,7 @@
  * Depends on: api/use-settings-data, components/settings/*, domain/settings-fields.
  */
 
+import { Gauge } from 'lucide-react';
 import { useHarnesses } from '#/api/use-settings-data.js';
 import {
   FallbackOrder,
@@ -31,6 +32,7 @@ export function LimitsPage() {
   return (
     <CompanyScreen
       title="Limits"
+      icon={Gauge}
       intro="Caps on parallel work, what happens when quota runs out, and how much a run may spend. Changes apply on the Director's next tick."
     >
       {(draft, config) => (

@@ -22,7 +22,7 @@ import { useSystem } from '#/api/use-onboarding.js';
 import { DataFolderStep } from '#/components/onboarding/data-folder-step.js';
 import { GitHubStep } from '#/components/onboarding/github-step.js';
 import { HarnessStep } from '#/components/onboarding/harness-step.js';
-import { ProjectForm } from '#/components/onboarding/project-form.js';
+import { ProjectStepInline } from '#/components/onboarding/project-step-inline.js';
 import { WizardFrame } from '#/components/onboarding/wizard-frame.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { Button } from '#/components/ui/button.js';
@@ -49,7 +49,7 @@ const COPY: Readonly<Record<WizardStepId, { title: string; intro: string }>> = {
   project: {
     title: 'Your first project',
     intro:
-      'Point Forge at a repository on this machine. It checks the folder first and creates nothing until you say so.',
+      'Choose a folder on this machine. Forge checks it first, helps with git if it needs it, and creates nothing until you say so.',
   },
 };
 
@@ -111,19 +111,14 @@ export function WelcomePage() {
         {step === 'harness' ? <HarnessStep /> : null}
         {step === 'github' ? <GitHubStep onSkip={() => prefs.setStep(next)} /> : null}
         {step === 'project' ? (
-          <ProjectForm
+          <ProjectStepInline
             folder={prefs.folder}
             onFolderChange={prefs.setFolder}
             onCreated={(project) => {
               prefs.setFolder('');
               void navigate(projectPath(project.slug));
             }}
-            secondary={
-              <Button onClick={() => prefs.setStep(back)}>
-                <ChevronLeft aria-hidden="true" className="size-4" />
-                Back
-              </Button>
-            }
+            onLeave={() => prefs.setStep(back)}
           />
         ) : (
           <div className="flex flex-wrap gap-2 border-t border-line pt-5">

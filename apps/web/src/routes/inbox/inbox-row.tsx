@@ -9,7 +9,7 @@
  *   bounce back.
  *
  * Exports: InboxRow, INBOX_ROW_HEIGHT.
- * Depends on: react-router, lucide-react, @forge/core (type), components/inbox/kind-chip,
+ * Depends on: react-router, lucide-react, @forge/core (type), components/inbox/kind-chip, components/ui/tooltip,
  *   domain/inbox-links, domain/format-time, types/work-api.types.
  */
 
@@ -18,6 +18,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { InboxItem } from '@forge/core';
 import { KindChip } from '#/components/inbox/kind-chip.js';
+import { Tooltip } from '#/components/ui/tooltip.js';
 import { formatWhen } from '#/domain/format-time.js';
 import { inboxLink } from '#/domain/inbox-links.js';
 import type { InboxMarkName } from '#/types/work-api.types.js';
@@ -31,16 +32,17 @@ function IconButton(props: {
   children: ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      aria-label={props.label}
-      title={props.label}
-      disabled={props.disabled}
-      onClick={props.onClick}
-      className="grid size-11 shrink-0 place-items-center rounded-lg text-muted transition-[background-color,color,transform] duration-150 hover:bg-hover hover:text-fg active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 sm:size-9"
-    >
-      {props.children}
-    </button>
+    <Tooltip content={props.label}>
+      <button
+        type="button"
+        aria-label={props.label}
+        disabled={props.disabled}
+        onClick={props.onClick}
+        className="grid size-11 shrink-0 place-items-center rounded-lg text-muted transition-[background-color,color,transform] duration-150 hover:bg-hover hover:text-fg active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 sm:size-9"
+      >
+        {props.children}
+      </button>
+    </Tooltip>
   );
 }
 

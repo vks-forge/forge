@@ -18,13 +18,18 @@
  *   steps/run-step, domain/worker-contract, tick/project-runtime, tick/dispatch-park, tick/pump, tick/settle, tick/ticket-moves, domain/results.
  */
 
-import { DispatchPromptOutput, HarnessChangedError, branchName } from '@forge/core';
-import type { Interaction, Run, Ticket, WorkerDriver } from '@forge/core';
+import {
+  DispatchPromptOutput,
+  HarnessChangedError,
+  InvalidInputError,
+  branchName,
+} from '@forge/core';
+import type { Interaction, Run, Ticket, Worktree, WorkerDriver } from '@forge/core';
 import { sha256Hex } from '@forge/tools';
 import { familyOf, failureResult } from '#/domain/results.js';
 import { renderWorkerContract, workerContract } from '#/domain/worker-contract.js';
 import { hold, rejectStep, runStep } from '#/steps/run-step.js';
-import { parkForHarness } from '#/tick/dispatch-park.js';
+import { parkDispatch, parkForHarness } from '#/tick/dispatch-park.js';
 import { baseRefFor, driverFor, runtimeFor } from '#/tick/project-runtime.js';
 import { configVersionRef } from '#/tick/tick-config.js';
 import { startPump } from '#/tick/pump.js';
@@ -134,11 +139,19 @@ async function tryStart(
   }
 
   const branch = ticket.branch ?? branchName(ticket.type, ticket.id, ticket.title);
-  const wt = await runtime.worktrees.create(
-    ticket.id,
-    branch,
-    baseRefFor(ctx, project.slug),
-  );
+  let wt: Worktree;
+  try {
+    wt = await runtime.worktrees.create(ticket.id, branch, baseRefFor(ctx, project.slug));
+  } catch (e) {
+    // Bad input a retry cannot fix (a repository with no commit yet): the user must act.
+    if (e instanceof InvalidInputError) {
+      await parkDispatch(ctx, ticket, e);
+
+      return false;
+    }
+
+    throw e;
+  }
 
   const slice = await deps.memory.slice(project.slug);
   const contract = workerContract({

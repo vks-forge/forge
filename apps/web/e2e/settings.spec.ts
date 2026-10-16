@@ -47,7 +47,10 @@ for (const size of SIZES) {
       await page.getByRole('link', { name: 'Set up Claude Code' }).click();
 
       // The setup page of the default harness opens its sign-in form before anything is saved.
-      await expect(page.getByRole('heading', { name: 'claude', level: 1 })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Claude Code', level: 1 }),
+      ).toBeVisible();
+
       await expect(
         page.getByRole('heading', { name: 'Sign-in', level: 2 }),
       ).toBeVisible();
@@ -60,6 +63,10 @@ for (const size of SIZES) {
 
       await expect(page.getByText('No GitHub connection yet')).toBeVisible();
       await page.getByRole('button', { name: 'Add connection' }).first().click();
+      await expect(
+        page.getByRole('dialog', { name: 'Add a GitHub connection' }),
+      ).toBeVisible();
+
       await expect(page.getByLabel('Private key (.pem)')).toBeVisible();
       await expectNoSidewaysScroll(page);
       await page.screenshot({ path: `dist/e2e/github-${size.name}.png`, fullPage: true });

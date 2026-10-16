@@ -116,7 +116,9 @@ describe('ProjectSwitcher', () => {
     await user.click(within(menu).getByRole('menuitemradio', { name: /sample-web/ }));
 
     await waitFor(() => expect(locationOf(router)).toBe('/p/sample-web/board'));
-    expect(await screen.findByText('sample-web', { selector: 'p' })).toBeInTheDocument();
+    expect(
+      await screen.findByText('sample-web', { selector: 'h1 + span' }),
+    ).toBeInTheDocument();
   });
 
   it('opens with Ctrl+K from anywhere', async () => {

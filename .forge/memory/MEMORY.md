@@ -42,6 +42,38 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0121 — (superseded by d-0125) CI paced for free quota: Windows per code push, docs-only skip, Linux daily EOD, Linux + macOS weekly Sunday, all three on demand
 - d-0125 — Repo public: CI runs Windows + macOS + Linux on every code push and PR; docs-only skip; schedules removed
 - d-0126 — MIT License; README opens with a bold "early development, not safe to use" warning
+- d-0127 — Delete project from project settings (confirm popup); removes Forge data, never the user folder
+- d-0128 — Card-first planning: "Create card" form (title, description, dependency links) replaces Ask the Director; draft card in Shaping hosts the grill; no tickets before approval
+- d-0129 — Create card in a popup; approved plan → tickets in the same card by priority + deps; cards link "depends on" and "blocks" both ways
+- d-0130 — Director auto-starts the grill in the card (one Q at a time, options + recommended, open-point count, stop rule); method from versioned Director playbooks + project rules injected as text
+- d-0131 — Director planning gets read-only Read/Grep/Glob in the project folder via admit(), reads logged as evidence; map onto the code graph later
+- d-0132 — Plan tab on the card (fixed structure, versioned v1/v2 with diff); card/ticket changes live over a per-project SSE stream with clean animation, polling only as fallback
+- d-0133 — Plan approval: Director auto-approves unless it truly needs the owner (then Needs you + questions); Always-ask setting; Approve / Request changes / light ticket edits; blocked cards wait
+- d-0134 — Chat-first card page; Director turns triggered + recorded; card phases via one door; durable reply queue; re-grill by user, Director or Request changes, only on what changed
+- d-0135 — Ticket needs-you: Director resolves first; typed escalations (question, decision, failure, setup, sign-off) with actions; one item in chat + ticket + Inbox; no dead ends
+- d-0136 — MVP ships full multi-agent pipelines for all lanes (generic stage runner, agents + pipelines as versioned UI config); Express-only park removed
+- d-0137 — MVP agents implementer / test-writer / reviewer / critic; default Express, Standard, Full pipelines; planned tickets carry their lane
+- d-0138 — Create card popup fields (title, description, type, priority, depends on, blocks, links), cycle check, opens card chat live; New card button replaces Ask the Director
+- d-0139 — Board columns Shaping / Needs you / Queued / In progress / Done (+ collapsed Closed); phase line, dependency chips, hover highlights chain; supersedes d-0107
+- d-0140 — Director runs an enhance-decisions playbook pass after the grill, before writing the plan; findings go to the user in card chat
+- d-0141 — Enhance report accepted: playbooks in config rows, Forge read tools via admit() (git-tracked, capped), deterministic auto-approve floor, Tier C human, phase column + backfill, slice order S1 → S2∥S3 → S4a → S5a → S5b+S4b → S5c → S5d
+- d-0142 — Approval decided after grill + enhance (d-0133/d-0141); d-0108 investigation becomes the verify step; supersedes d-0108
+- d-0143 — Cost is informational: card budget (runs + Director steps) warns and asks to acknowledge, never blocks or gates approval
+- d-0144 — Research port (web search/fetch) for Director + agents: between grill turns when needed and before writing the plan; cited evidence on the card; own step, untrusted content
+- d-0145 (superseded by d-0146) — Planning flow is a configurable, versioned stage flow per project (UI), same stage runner as ticket pipelines; invariants fixed
+- d-0146 — Planning flow = simple ordered step list (built-in kinds + custom steps, on/off, when, depth, instructions; locked write-plan + approve), own small runner, editable from S2; supersedes d-0145
+- d-0147 — Agents area in the UI: edit built-ins + Director settings, create unlimited own agents; all DB versioned config
+- d-0148 — Agent record fields: name, description, role, instructions, harness+model, tools (role-bounded), write scope, inputs/output, skills+memory, budget, scope; built-ins same form + reset
+- d-0149 — Company + project agents (override, disable, duplicate); Director assigns agents per ticket from the effective roster, reasons in the plan; hard limits + routing rules
+- d-0150 — Director settings page: models per step, harness, house rules, flow, approval mode, grill style, budget warning, limits editable; safety invariants locked + shown
+- d-0151 — Three lane pipelines per project (editable), routing rules add agents, Director adjusts a per-ticket copy with reasons; never edits the project pipeline, may propose
+- d-0152 — Lane pipeline list editor (agent, script gate, group, human sign-off; merge locked), routing rules, save-time validation, no loops; company defaults + reset
+- d-0153 — Agent "Runs on": connected harness with health, models from the driver (true harness default, custom id), fallback list, Test agent; Paperclip-based, fixes its gaps
+- d-0154 — One shared Picker (Radix Popover) replaces every native select; rich rows, search, groups, keyboard
+- d-0155 — New agent: from scratch, from a template gallery, or drafted by the Director from a description; review + Test before save; no import/export now
+- d-0156 — Build order S1 → S2∥S3 → S4a → S5a agents → S5b pipelines+Standard → S5c Full → S5d → S6; autonomous run, commit + push per slice
+- d-0157 — Archived projects listed under "Archived" in the switcher; Unarchive from switcher + project settings; archived opens read-only
+- d-0158 — Card-first flow build ON HOLD until the owner resumes; UI issues first
 - d-0122 — Web UI state in zustand + persist (localStorage), UI prefs/drafts only; server data stays in TanStack Query; never tokens/secrets
 - d-0123 — Web uses the real server API only: mock adapter/fixtures/switches removed; missing backends built with their screen; tests stub fetch in __tests__ only
 - d-0124 — Any folder can be a project: no git → Forge inits (snapshot commit default, or init only); no remote → verified work merges locally through the merge door; subfolder of a repo → use repo top (default) or scope to subfolder
@@ -53,8 +85,8 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0111 — Card↔issue sync: edits/comments into card chat, card chat private (Director posts public updates), column labels, Done closes issue, Closed needs confirm, GitHub close/reopen reflected
 - d-0110 — Ticket deps set by Director; start after upstream merged (or gated + stacked if safe); upstream change pauses dependents, Director decides; cross-card allowed; no cycles
 - d-0109 — Card chat = Director, ticket page = Worker live thread + direct steer; Director steers Workers (instruct, pause, stop, restart, new worker, re-plan) via engine doors, all recorded
-- d-0108 — Director investigates (code, all cards/tickets, memory) and decides run-now vs needs-approval with reasons, not a file count; escalation returns card to Needs you; per-project "always ask"
-- d-0107 — Board columns = card lifecycle: New, Shaping, Needs you, In progress, Done, Closed; rolled up from tickets (Needs you wins), never moved by hand
+- d-0108 (superseded by d-0142) — Director investigates (code, all cards/tickets, memory) and decides run-now vs needs-approval with reasons, not a file count; escalation returns card to Needs you; per-project "always ask"
+- d-0107 (superseded by d-0139) — Board columns = card lifecycle: New, Shaping, Needs you, In progress, Done, Closed; rolled up from tickets (Needs you wins), never moved by hand
 - d-0106 — Card types Discussion / Plan / Issue / PR issue; Director suggests, user changes, convertible; types are data in an extensible registry
 - d-0105 — Cards: every chat/GitHub issue = one card (typed); Director triage in the card makes linked tickets; Board = cards + tickets toggle; card page = chat panel + details + ticket timeline; card Director sees the whole project
 - d-0104 — No company Home: Home is project-scoped (first project), sidebar project switcher with unsaved-changes alert; Forge settings in a separate area; direction A Instrument, more distinct and calmer
@@ -163,8 +195,5 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 
 ## Outcomes
 
-- 2026-10-12 — hyperresearch run + design docs session: `outcomes/2026-10/2026-10-12-design-session.md`
-- 2026-10-12 — scope review + self-improvement research + tool-system reverse engineering: `outcomes/2026-10/2026-10-12-review-and-research-session.md`
-- 2026-10-14 — E2 done + pushed; pipelines-as-config grill (x-0011, d-0065..d-0081) paused: `outcomes/2026-10/2026-10-14-e2-done-and-pipelines-grill.md`
-- 2026-10-14 — Product shape grill (installed product, company, many repos; d-0082..d-0098): `outcomes/2026-10/2026-10-14-product-shape-grill.md`
+- Older outcome pointers (2026-10-12 – 2026-10-14): `outcomes/ARCHIVE.md`
 - 2026-10-16 — Overnight: web app W2–W7 + W6 cards on the real API, mock removed, zustand, forge start serves UI; CI quota exhausted: `outcomes/2026-10/2026-10-16-web-app-overnight.md`

@@ -102,6 +102,11 @@ export const GitHostConfig = z.discriminatedUnion('kind', [
     remote_path: z.string().min(1),
     base_branch: z.string().min(1).default('main'),
   }),
+  /** No remote: verified work merges into the base branch of the project's own repository (d-0124). */
+  z.object({
+    kind: z.literal('local_repo'),
+    base_branch: z.string().min(1).default('main'),
+  }),
   z.object({
     kind: z.literal('github'),
     owner: z.string().min(1),
@@ -204,6 +209,13 @@ export const Project = z.object({
   memory_repo: z.string().min(1).optional(),
   /** Absolute path of the project's local clone; Worker worktrees are cut from it. */
   local_path: z.string().min(1).optional(),
+  /**
+   * Top folder of the repository when the project is scoped to a subfolder of it (d-0124);
+   * absent when `local_path` is itself the repository top. Worktrees are cut from here.
+   */
+  repo_root: z.string().min(1).optional(),
+  /** Path of the project's folder from `repo_root`, forward slashes; set together with `repo_root`. */
+  subfolder: z.string().min(1).optional(),
   /** The GitHub connection (App) this project's repository is reached through, when it has one. */
   connection_id: z.string().min(1).optional(),
   /** `owner/name` of the GitHub repository, when the project has one. */

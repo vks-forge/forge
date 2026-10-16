@@ -16,5 +16,6 @@ export type GitHostReason =
   | 'not_found'
   | 'merge_refused'
   | 'merge_busy'
+  | 'dirty_tree'
   | 'invalid'
   | 'unavailable';

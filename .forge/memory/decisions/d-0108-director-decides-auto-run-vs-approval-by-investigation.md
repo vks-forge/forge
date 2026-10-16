@@ -5,9 +5,10 @@ statement: Whether a card's tickets start immediately or wait for the user's app
 source: { type: chat, ref: "2026-10-14 card grill Q4: \"ok. Express - its not about only 3-5 files, before user intraction directior should run in its own finding that if this can be done with user approval or not. there can be many work that is small but required changing in mutiple files. also while deciding this director should be able to find view all current tickets|cards etc to confirm his decisions validly\"" }
 author: user
 origin: owner
-status: active
+status: superseded
 valid_from: 2026-10-14
-superseded_by: null
+superseded_by: d-0142
+valid_to: 2026-10-16
 supersedes: null
 amends: [d-0006, d-0017, d-0025]
 tags: [director, triage, approval, cards, lanes]

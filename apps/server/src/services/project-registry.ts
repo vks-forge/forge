@@ -70,15 +70,18 @@ export function createProjectRegistry(deps: ProjectRegistryDeps): ProjectRegistr
       ...settings,
     });
 
+    // A project scoped to a subfolder is served from the repository's top (d-0124).
+    const repoRoot = project.repo_root ?? project.local_path;
     const worktrees = createGitWorktreeManager({
-      repoRoot: project.local_path,
+      repoRoot,
       worktreeRoot: join(deps.worktreesDir, project.slug),
+      ...(project.subfolder ? { subfolder: project.subfolder } : {}),
     });
 
     return {
       config,
       gitHost: createProjectGitHost(config, {
-        root: project.local_path,
+        root: repoRoot,
         secrets: deps.secrets,
         now: deps.now,
         connection,

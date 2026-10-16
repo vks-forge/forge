@@ -6,7 +6,7 @@
  *   These routes keep a list of versions per project and merge them over the built-in
  *   defaults with core's own `mergeConfig`, so "inherited" and "overridden" mean here exactly
  *   what they mean on the server. A save with a stale `expectedVersion` fails with the same
- *   409 and code. Archiving marks the slug so the project list shows it archived.
+ *   409 and code. Archiving marks the slug so the project list shows it archived; deleting does the same.
  *
  * Exports: projectRoutes().
  * Depends on: @forge/core (mergeConfig), helpers/fetch-stub, helpers/forge-data/*.
@@ -58,6 +58,17 @@ export function projectRoutes(options: {
       archived.add(slug);
 
       return json({ project: view(slug) });
+    },
+
+    'DELETE /projects/:slug': ({ params }) => {
+      const slug = params['slug']!;
+      if (!project(slug)) {
+        return unknown(slug);
+      }
+
+      archived.add(slug);
+
+      return json({ deleted: slug });
     },
 
     'GET /settings/projects/:slug': ({ params }) => {

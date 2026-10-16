@@ -31,6 +31,7 @@ import { CardHeader } from '#/routes/card/card-header.js';
 import { CloseDialog } from '#/routes/card/close-dialog.js';
 import { CARD_TABS, CardTabs } from '#/routes/card/card-tabs.js';
 import { CardTickets } from '#/routes/card/card-tickets.js';
+import { useNotify } from '#/state/notify/notify-context.js';
 import { useOnline } from '#/state/use-online.js';
 import type { CardTab } from '#/types/cards-ui.types.js';
 
@@ -44,6 +45,7 @@ export function CardPage() {
   const query = useCardDetail(id);
   const types = useCardTypes();
   const patch = usePatchCard(id);
+  const notify = useNotify();
   const [closing, setClosing] = useState(false);
   const [reason, setReason] = useState('');
   const online = useOnline();
@@ -105,7 +107,12 @@ export function CardPage() {
         onOpenChange={setClosing}
         reason={reason}
         onReasonChange={setReason}
-        onConfirm={(text) => patch.mutate({ closed_reason: text })}
+        onConfirm={(text) =>
+          patch.mutate(
+            { closed_reason: text },
+            { onSuccess: () => notify.success('Card closed') },
+          )
+        }
       />
 
       {!online ? (

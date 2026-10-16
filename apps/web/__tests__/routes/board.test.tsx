@@ -85,6 +85,21 @@ describe('Board, Tickets view', () => {
     expect(screen.getByLabelText('Ask the Director')).toBeInTheDocument();
   });
 
+  it('shows an empty project the columns it will fill and moves focus to the request box', async () => {
+    const user = userEvent.setup();
+    renderApp({
+      path: BOARD,
+      routes: { 'GET /projects/:slug/tickets': json({ items: [], nextCursor: null }) },
+    });
+
+    const preview = await screen.findByRole('list', { name: 'Where work will appear' });
+    expect(within(preview).getByText('Needs you')).toBeInTheDocument();
+    expect(within(preview).getAllByRole('listitem')).toHaveLength(6);
+
+    await user.click(screen.getByRole('button', { name: 'Write a request' }));
+    expect(screen.getByLabelText('Ask the Director')).toHaveFocus();
+  });
+
   it('explains a failure and offers to try again', async () => {
     renderApp({ path: BOARD, routes: { 'GET /projects/:slug/tickets': networkDown } });
 

@@ -23,8 +23,12 @@ credential must never reach a Worker, argv or a log. The `GitHost` adapters here
 Public API from `src/index.ts`:
 
 - `inspectRepository({ path, baseBranch, gitBinary? })` checks a folder before a project is registered on it (read-only: no fetch, no checkout): it must be a folder, the root of a git repository, and `baseBranch` (a branch or a ref such as `origin/main`) must resolve to a commit. It returns `{ ok: true, baseSha }` or `{ ok: false, code, message }` with `code` one of `not_a_directory`, `not_a_repository`, `not_repository_root`, `base_branch_missing`; the folder and git's reported root are compared by real path (Windows short names, symlinks and junctions expanded); a base branch git could read as an option throws `InvalidInputError`.
+- `inspectFolderGit({ path })` looks at any folder (d-0124): `state` `repo` (its own repository), `none` (no git) or `inside_repo` (a subfolder of one, with `repo_root` and `subfolder`), plus `has_commits`, `dirty` (tracked files changed) and the `remote` (origin, else the first; `github` parsed by `githubRepoOf`). Read-only.
+- `scanSnapshot({ path, limits? })` counts what a snapshot commit of a folder with no repository would take in, by asking git against a throwaway git dir (nothing is written to the folder); the standard ignore list applies when the folder has no `.gitignore`. Stops past 20k files or 1 GB (`truncated`).
+- `initLocalRepo({ path, branch, mode, limits? })` starts a repository in a folder with none: `snapshot` (size guard first, `.gitignore` written only when missing, commit "Initial snapshot (Forge)" as Forge via `-c` flags, so the user's git config is never written) or `init_only` (empty repository). Never inside another repository; a failed commit removes what it created. A snapshot above the guard throws `SnapshotTooLargeError`.
+- `createLocalRepoGitHost({ repoRoot, baseBranch, now })` is the `GitHost` for a project with no remote: same PR records and squash merge as the bare host, but `push` is a no-op and the merge lands in the user's repository. Base checked out with changed tracked files: `GitHostError` `dirty_tree` (invalid_input family, the ticket parks in "Needs you"); checked out and clean: `git merge --ff-only` there (git refuses to overwrite untracked files); not checked out: compare-and-swap `update-ref`. Never forces or resets the user's tree.
 - `listBranches({ path, limit?, gitBinary? })` returns `{ current, branches, truncated }`: the checked-out branch (null when detached) and up to `limit` (default 50) local branch names, alphabetical; read-only. The new-project form uses it to offer a base branch.
-- `createGitWorktreeManager({ repoRoot, worktreeRoot, gitBinary?, author? })` returns a `WorktreeManager`
+- `createGitWorktreeManager({ repoRoot, worktreeRoot, subfolder?, gitBinary?, author? })` returns a `WorktreeManager`
   (port in `@forge/core`). `gitBinary` defaults to `git`; `author` to `Forge <forge@localhost>`.
 - `create(ticketId, branch, baseRef)`: adds `<worktreeRoot>/<ticketId>` (the data home's `worktrees/<projectSlug>`, outside the checkout, d-0098) on a new
   `branch` and returns `{ path, baseSha }` with `baseSha` resolved before the add. Calling it
@@ -33,6 +37,7 @@ Public API from `src/index.ts`:
   directory in the way, or an unsafe ref raises `InvalidInputError`. If the branch exists but
   has no worktree (kept after `remove`), it is re-attached. Because trees sit outside the
   checkout, git never lists them as untracked and no ignore rule is written.
+- With `subfolder` (a project scoped to a folder inside a repository, d-0124) worktrees are of the whole repository, `create` returns `<worktree>/<subfolder>` (the Worker's cwd) and every method accepts that path or the root. `diff` and `changedFiles` report paths relative to the subfolder and edits outside it as `../x` (G1 refuses them); `commitAll`, `head` and `remove` work on the root. A base ref with no commit (init-only repository) raises `InvalidInputError` ("make a first commit").
 - `remove(path)`: `worktree remove --force` then `prune`; already gone is fine; branch kept.
 - `changedFiles(path, baseSha)`: sorted, unique, repo-relative forward-slash paths that differ
   from `baseSha` (committed, modified, deleted) plus untracked non-ignored files.
@@ -136,6 +141,7 @@ Node and git on Windows. Any git failure becomes a `CrashError` with the stderr 
 
 ## Limits
 
+- A snapshot commit does not look inside nested repositories in the folder (git records them as embedded repositories); the local repository host keeps its PR records under the repository's git folder (`forge-prs/`), and a repository whose branch is checked out in several worktrees is merged into the first one that holds it.
 - No fetch or submodule handling; the worktree manager never pushes (only a GitHost does).
 - The local host has no review, comments or branch protection; `mergeable` is only `merge-tree` conflict
   detection. Its PR numbering is serialised in-process, so run one server per remote path.

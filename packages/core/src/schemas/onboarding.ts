@@ -8,7 +8,8 @@
  *   means the server that builds these answers and the web app that reads them cannot drift.
  *   Neither answer carries a secret: no token, no key, no harness credential.
  *
- * Exports: FirstRunState, SystemInfo, ProjectInspection.
+ * Exports: FirstRunState, SystemInfo, GitState, GitInspection, SnapshotInspection, GitSetup,
+ *   ProjectScope, ProjectInspection.
  * Depends on: schemas/project (ProjectCheck), zod. No IO.
  */
 
@@ -39,6 +40,50 @@ export const SystemInfo = z.object({
 });
 export type SystemInfo = z.infer<typeof SystemInfo>;
 
+/** Where a folder stands with git: its own repository, no repository, or inside someone else's. */
+export const GitState = z.enum(['repo', 'none', 'inside_repo']);
+export type GitState = z.infer<typeof GitState>;
+
+/**
+ * What git says about the chosen folder (d-0124). `repo_root` is the top folder when the
+ * folder is a repository or sits inside one; `subfolder` is the folder's path from that top
+ * when it sits inside one. `remote` is `origin` (else the first remote) when there is one;
+ * `github` is set only when its URL names a GitHub repository.
+ */
+export const GitInspection = z.object({
+  state: GitState,
+  repo_root: z.string().min(1).nullable(),
+  subfolder: z.string().min(1).nullable(),
+  has_commits: z.boolean(),
+  dirty: z.boolean(),
+  remote: z
+    .object({
+      name: z.string().min(1),
+      url: z.string().min(1),
+      github: z.object({ owner: z.string().min(1), repo: z.string().min(1) }).nullable(),
+    })
+    .nullable(),
+});
+export type GitInspection = z.infer<typeof GitInspection>;
+
+/** What a snapshot commit of a folder with no repository would take in; counted, never read. */
+export const SnapshotInspection = z.object({
+  files: z.number().int().nonnegative(),
+  bytes: z.number().int().nonnegative(),
+  has_gitignore: z.boolean(),
+  /** True when counting stopped at the size guard: the real totals are larger. */
+  truncated: z.boolean(),
+});
+export type SnapshotInspection = z.infer<typeof SnapshotInspection>;
+
+/** `POST /projects` `git_setup`: how Forge starts a repository in a folder that has none. */
+export const GitSetup = z.object({ mode: z.enum(['snapshot', 'init_only']) }).strict();
+export type GitSetup = z.infer<typeof GitSetup>;
+
+/** `POST /projects` `scope`: use the repository's top folder, or only the chosen subfolder. */
+export const ProjectScope = z.object({ mode: z.enum(['root', 'subfolder']) }).strict();
+export type ProjectScope = z.infer<typeof ProjectScope>;
+
 /** `POST /projects/inspect`: what a folder looks like as a project, nothing created. */
 export const ProjectInspection = z.object({
   local_path: z.string().min(1),
@@ -56,5 +101,8 @@ export const ProjectInspection = z.object({
   /** A slug and ticket prefix no registered project uses. */
   suggested_slug: z.string().min(1),
   suggested_prefix: z.string().min(1),
+  git: GitInspection,
+  /** Set when `git.state` is `none`: what a snapshot commit would include. */
+  snapshot: SnapshotInspection.nullable(),
 });
 export type ProjectInspection = z.infer<typeof ProjectInspection>;

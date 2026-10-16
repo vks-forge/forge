@@ -73,5 +73,24 @@ describe('GitHub connections', () => {
 
     expect(screen.queryByLabelText('Private key (.pem)')).not.toBeInTheDocument();
     expect(document.body.textContent).not.toContain('SECRETBYTES');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('opens Add connection in a dialog that a backdrop click does not close', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderSettings('/settings/github');
+    await user.click(await screen.findByRole('button', { name: 'Add connection' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Add a GitHub connection' });
+    await user.type(screen.getByLabelText('GitHub account or organisation'), 'acme');
+    await user.click(document.body);
+
+    expect(dialog).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(
+      await screen.findByRole('alertdialog', { name: 'Discard this connection?' }),
+    ).toBeVisible();
   });
 });

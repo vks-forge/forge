@@ -23,7 +23,7 @@ export function ActiveIndicator() {
       layoutId={NAV_INDICATOR_ID}
       transition={springs.snappy}
       aria-hidden="true"
-      className="absolute inset-0 -z-0 rounded-lg bg-hover"
+      className="absolute inset-0 -z-0 rounded-lg bg-hover before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-signal"
     />
   );
 }

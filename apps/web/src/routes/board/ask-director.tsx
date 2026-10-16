@@ -6,13 +6,15 @@
  *   Director's next tick, so the box confirms with a link to the new ticket (d-0116) rather
  *   than pretending it appeared instantly. The same dedupe key is kept until the request
  *   succeeds, so a double click or a retry after a dropped connection never files two tickets.
- *   Ctrl or Cmd + Enter sends.
+ *   Ctrl or Cmd + Enter sends. `focusComposer()` lets the header and the empty Board send the
+ *   user straight into the box.
  *
- * Exports: AskDirector.
- * Depends on: react, api/use-tickets, api/describe-error, components/ui/button,
+ * Exports: AskDirector, focusComposer.
+ * Depends on: react, lucide-react, api/use-tickets, api/describe-error, components/ui/button,
  *   components/ticket/ticket-link, schemas/projects (type).
  */
 
+import { Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { describeError } from '#/api/describe-error.js';
@@ -21,6 +23,13 @@ import { Button } from '#/components/ui/button.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
 import { cardPath } from '#/domain/card-paths.js';
 import type { ProjectView } from '#/schemas/projects.js';
+
+const COMPOSER_ID = 'ask-director';
+
+/** Moves focus to the composer, so "New request" and the empty Board land the user in it. */
+export function focusComposer(): void {
+  document.getElementById(COMPOSER_ID)?.focus();
+}
 
 export function AskDirector(props: { project: ProjectView }) {
   const [text, setText] = useState('');
@@ -53,18 +62,21 @@ export function AskDirector(props: { project: ProjectView }) {
 
   return (
     <form
-      className="grid gap-2 rounded-2xl border border-line bg-surface p-3"
+      className="grid gap-3 rounded-2xl border border-line bg-surface p-4 focus-within:border-faint"
       onSubmit={(event) => {
         event.preventDefault();
         send();
       }}
     >
-      <label htmlFor="ask-director" className="text-sm font-medium">
-        Ask the Director
-      </label>
+      <div className="flex items-center gap-2">
+        <Sparkles aria-hidden="true" className="size-4 text-signal" />
+        <label htmlFor={COMPOSER_ID} className="text-sm font-semibold">
+          Ask the Director
+        </label>
+      </div>
       <div className="flex flex-wrap items-end gap-2">
         <textarea
-          id="ask-director"
+          id={COMPOSER_ID}
           rows={2}
           value={text}
           disabled={blocked}
@@ -76,7 +88,7 @@ export function AskDirector(props: { project: ProjectView }) {
               send();
             }
           }}
-          className="min-h-16 min-w-0 flex-1 resize-y rounded-lg border border-line bg-bg p-2 text-sm"
+          className="min-h-16 min-w-0 flex-1 resize-y rounded-lg border border-line bg-bg p-2.5 text-sm placeholder:text-faint disabled:opacity-60"
         />
         <Button
           type="submit"

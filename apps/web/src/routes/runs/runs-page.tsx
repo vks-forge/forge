@@ -79,7 +79,7 @@ export function RunsPage() {
   const live = runs.filter(isLive).length;
 
   return (
-    <section className="grid max-w-4xl gap-4">
+    <section className="grid gap-4">
       <header className="grid gap-1">
         <p className="font-data text-xs text-muted">{slug}</p>
         <h1 className="text-2xl font-semibold tracking-tight">Runs</h1>

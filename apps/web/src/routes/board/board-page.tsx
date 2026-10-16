@@ -3,9 +3,10 @@
  *
  * Why: the Board is where a user sees all the project's work and what needs them. Cards (the
  *   requests the user and the Director talk about) are the default view; Tickets (what Workers
- *   build) is one click away, and the choice is remembered. The Ask the Director box is common
- *   to both, since a request starts as a card either way. Each view owns its own loading,
- *   empty and error states, so only the visible view polls the server.
+ *   build) is one click away, and the choice is remembered. The header (title, view switch,
+ *   New request) and the Ask the Director box are common to both, since a request starts as a
+ *   card either way. Each view owns its own loading, empty and error states, so only the
+ *   visible view polls the server.
  *
  * Exports: BoardPage.
  * Depends on: react, react-router, api/use-projects, state/board-prefs, routes/board/*.
@@ -15,7 +16,7 @@ import { useEffect } from 'react';
 import { useParams } from 'react-router';
 import { useProjects } from '#/api/use-projects.js';
 import { AskDirector } from '#/routes/board/ask-director.js';
-import { BoardViewSwitch } from '#/routes/board/board-view-switch.js';
+import { BoardHeader } from '#/routes/board/board-header.js';
 import { CardsBoard } from '#/routes/board/cards-board.js';
 import { TicketsBoard } from '#/routes/board/tickets-board.js';
 import { useBoardPrefs } from '#/state/board-prefs.js';
@@ -31,15 +32,14 @@ export function BoardPage() {
   }, [slug]);
 
   return (
-    <section className="grid gap-5">
-      <div className="grid gap-1">
-        <p className="font-data text-xs text-muted">{slug}</p>
-        <h1 className="text-2xl font-semibold tracking-tight">Board</h1>
-      </div>
+    <section className="grid gap-6 pb-12">
+      <BoardHeader
+        slug={slug}
+        view={view}
+        canCompose={project !== undefined && project.status !== 'archived'}
+      />
 
       {project ? <AskDirector project={project} /> : null}
-
-      <BoardViewSwitch />
 
       {view === 'cards' ? <CardsBoard slug={slug} /> : <TicketsBoard slug={slug} />}
     </section>

@@ -13,7 +13,8 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { refusal } from '#tests/helpers/fetch-stub.js';
+import { json, refusal } from '#tests/helpers/fetch-stub.js';
+import { inspection, REPO_GIT } from '#tests/helpers/onboarding-fixtures.js';
 import {
   projectReply,
   renderOnboarding,
@@ -24,17 +25,13 @@ const NO_PROJECTS = { 'GET /projects': { body: { projects: [] } } };
 const NO_HARNESSES = { 'GET /harnesses': { body: { harnesses: [], paused: [] } } };
 const NO_CONNECTIONS = { 'GET /github/connections': { body: { connections: [] } } };
 
-const INSPECTION = {
+const INSPECTION = inspection({
   local_path: '/home/me/my-app',
-  current_branch: 'main',
-  base_branch: 'main',
   branches: ['develop', 'main'],
-  branches_truncated: false,
-  ecosystems: ['node'],
-  checks: [{ name: 'test', role: 'test', command: 'npm run test' }],
   suggested_slug: 'my-app',
   suggested_prefix: 'MA',
-};
+  git: { ...REPO_GIT, repo_root: '/home/me/my-app' },
+});
 
 describe('first run: when the wizard opens', () => {
   it('sends a fresh install from / to the first step, naming the data folder', async () => {
@@ -183,6 +180,7 @@ describe('first run: the first project', () => {
         },
       },
       ...NO_CONNECTIONS,
+      'POST /fs/pick-folder': json({ status: 'picked', path: '/home/me/my-app' }),
       ...extra,
       'POST /projects': () => {
         projects = [projectReply('my-app', 'MA')];
@@ -203,28 +201,35 @@ describe('first run: the first project', () => {
     return { user, ...rendered };
   }
 
-  it('checks the folder with Enter, shows what it found, then creates and opens the project', async () => {
+  it('has no folder text box, checks the picked folder, and creates and opens the project', async () => {
     const { user, router, calls } = await toProjectStep({
       'POST /projects/inspect': { body: INSPECTION },
     });
 
-    expect(screen.queryByLabelText('Project name')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Repository folder')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
 
-    await user.type(screen.getByLabelText('Repository folder'), '/home/me/my-app{Enter}');
+    await user.click(screen.getByRole('button', { name: /Choose a folder/ }));
 
-    expect(await screen.findByText('This folder can be a project')).toBeInTheDocument();
+    expect(await screen.findByText(/This folder can be a project/)).toBeInTheDocument();
     expect(calls.filter((c) => c.path === '/projects/inspect')[0]?.body).toEqual({
       local_path: '/home/me/my-app',
     });
 
-    expect(screen.getByLabelText('Project name')).toHaveValue('my-app');
+    await user.keyboard('{Enter}');
+    await screen.findByRole('heading', { name: 'Git setup' });
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    expect(await screen.findByLabelText('Project name')).toHaveValue('my-app');
     expect(screen.getByLabelText('Ticket prefix')).toHaveValue('MA');
     expect(screen.getByLabelText('Base branch')).toHaveValue('main');
-    expect(screen.getByLabelText('Check 1 command')).toHaveValue('npm run test');
 
-    await user.type(screen.getByLabelText('Remote repository'), '../my-app.git');
     await user.type(screen.getByLabelText('Your name'), 'Vikash');
-    await user.click(screen.getByRole('button', { name: 'Create project' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByLabelText('Check 1 command')).toHaveValue('npm run test');
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(await screen.findByRole('button', { name: 'Create project' }));
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/p/my-app'));
     expect(
@@ -234,67 +239,45 @@ describe('first run: the first project', () => {
       prefix: 'MA',
       local_path: '/home/me/my-app',
       base_branch: 'main',
-      git_host: { kind: 'local', remote_path: '../my-app.git', base_branch: 'main' },
       settings: { checks: [{ name: 'test', role: 'test', command: 'npm run test' }] },
       author: 'Vikash',
       reason: 'project created in the web app',
     });
   });
 
-  it('refuses a folder inside a repository next to the box, with what to do', async () => {
+  it('refuses a folder Forge cannot use next to the folder, with what to do', async () => {
     const { user } = await toProjectStep({
-      'POST /projects/inspect': refusal(
-        400,
-        'not_repository_root',
-        'x is inside a repository whose root is y',
-      ),
+      'POST /projects/inspect': refusal(400, 'path_in_data_home', 'inside data home'),
     });
 
-    await user.type(
-      screen.getByLabelText('Repository folder'),
-      '/home/me/my-app/src{Enter}',
-    );
+    await user.click(screen.getByRole('button', { name: /Choose a folder/ }));
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('inside a repository');
-    expect(alert).toHaveTextContent('Choose the top folder of the repository');
-    expect(screen.getByLabelText('Repository folder')).toHaveAttribute(
-      'aria-invalid',
-      'true',
-    );
-
-    expect(screen.queryByLabelText('Project name')).not.toBeInTheDocument();
+    expect(alert).toHaveTextContent("inside Forge's own data folder");
+    expect(alert).toHaveTextContent('Choose one of your own folders');
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
   });
 
-  it('hides the details again when the folder is edited after the check', async () => {
-    const { user } = await toProjectStep({
-      'POST /projects/inspect': { body: INSPECTION },
-    });
-
-    await user.type(screen.getByLabelText('Repository folder'), '/home/me/my-app{Enter}');
-    await screen.findByLabelText('Project name');
-
-    await user.type(screen.getByLabelText('Repository folder'), 'x');
-
-    await waitFor(() =>
-      expect(screen.queryByLabelText('Project name')).not.toBeInTheDocument(),
-    );
-  });
-
-  it('catches a missing name before sending anything', async () => {
+  it('keeps the chosen folder across Back and checks it again on return', async () => {
     const { user, calls } = await toProjectStep({
       'POST /projects/inspect': { body: INSPECTION },
     });
 
-    await user.type(screen.getByLabelText('Repository folder'), '/home/me/my-app{Enter}');
-    await screen.findByLabelText('Project name');
-    await user.type(screen.getByLabelText('Remote repository'), '../my-app.git');
-    await user.click(screen.getByRole('button', { name: 'Create project' }));
+    await user.click(screen.getByRole('button', { name: /Choose a folder/ }));
+    await screen.findByText(/This folder can be a project/);
+
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    await screen.findByRole('heading', { name: 'Connect GitHub', level: 1 });
+    await user.click(
+      await screen.findByRole('button', { name: /Skip: use local git only/ }),
+    );
 
     expect(
-      await screen.findByText(/Say who is creating the project/),
+      await screen.findByLabelText('Chosen folder /home/me/my-app'),
     ).toBeInTheDocument();
 
-    expect(calls.some((c) => c.method === 'POST' && c.path === '/projects')).toBe(false);
+    expect(await screen.findByText(/This folder can be a project/)).toBeInTheDocument();
+    expect(calls.filter((c) => c.path === '/projects/inspect')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
   });
 });

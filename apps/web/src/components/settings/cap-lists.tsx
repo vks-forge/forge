@@ -11,7 +11,7 @@
  *
  * Exports: HarnessCaps, StateCaps, FallbackOrder.
  * Depends on: react, lucide-react, @forge/core (TicketStatus, types), components/settings/form-field,
- *   components/ui/button.
+ *   components/ui/button, components/ui/tooltip.
  */
 
 import { TicketStatus } from '@forge/core';
@@ -20,6 +20,7 @@ import { Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { FormField, TextInput } from '#/components/settings/form-field.js';
 import { Button } from '#/components/ui/button.js';
+import { Tooltip } from '#/components/ui/tooltip.js';
 import type {
   FieldErrors,
   FieldSetter as Setter,
@@ -56,14 +57,16 @@ function CapRow(props: {
           onChange={(e) => props.onChange(toCap(e.target.value))}
         />
         {props.onRemove ? (
-          <button
-            type="button"
-            aria-label={`Remove ${props.label}`}
-            onClick={props.onRemove}
-            className="grid size-10 place-items-center rounded-lg text-muted transition-[background-color,transform] duration-150 hover:bg-hover active:translate-y-px"
-          >
-            <X aria-hidden="true" className="size-4" />
-          </button>
+          <Tooltip content={`Remove ${props.label}`}>
+            <button
+              type="button"
+              aria-label={`Remove ${props.label}`}
+              onClick={props.onRemove}
+              className="grid size-10 place-items-center rounded-lg text-muted transition-[background-color,transform] duration-150 hover:bg-hover active:translate-y-px"
+            >
+              <X aria-hidden="true" className="size-4" />
+            </button>
+          </Tooltip>
         ) : (
           <span className="size-10" />
         )}

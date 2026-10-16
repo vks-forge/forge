@@ -12,6 +12,8 @@
 import { adminRoutes } from '#/routes/admin.js';
 import { authRoutes } from '#/routes/auth.js';
 import { cardRoutes } from '#/routes/cards.js';
+import { folderPickRoute } from '#/routes/folder-pick.js';
+import { folderRoutes } from '#/routes/folders.js';
 import { harnessRoutes } from '#/routes/harnesses.js';
 import { answerRoute } from '#/routes/interactions.js';
 import { healthRoute } from '#/routes/health.js';
@@ -22,6 +24,7 @@ import { intakeRoute } from '#/routes/intake.js';
 import { memoryRoutes } from '#/routes/memory.js';
 import { projectStatsRoutes } from '#/routes/project-stats.js';
 import { projectInspectRoutes } from '#/routes/project-inspect.js';
+import { projectDeleteRoutes } from '#/routes/project-delete.js';
 import { projectsRoutes } from '#/routes/projects.js';
 import { runEventsRoute } from '#/routes/run-events.js';
 import { runSteerRoute } from '#/routes/run-steer.js';
@@ -48,8 +51,11 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ...adminRoutes(deps),
     ...settingsRoutes(deps),
     ...harnessRoutes(deps),
+    ...folderRoutes(deps),
+    folderPickRoute(deps),
     ...projectInspectRoutes(deps),
     ...projectsRoutes(deps),
+    ...projectDeleteRoutes(deps),
     ...systemRoutes(deps),
     ...memoryRoutes(deps),
     ...githubConnectionRoutes(deps),

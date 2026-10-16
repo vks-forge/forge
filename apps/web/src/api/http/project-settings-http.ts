@@ -16,6 +16,7 @@ import {
   ArchiveResponse,
   CompanyConfigResponse,
   ConfigHistoryResponse,
+  DeleteResponse,
   ProjectConfigResponse,
   SavedVersion,
 } from '#/schemas/project-settings.js';
@@ -70,6 +71,14 @@ export function createProjectSettingsHttp(client: HttpClientOptions): ProjectSet
       });
 
       return body.project;
+    },
+
+    async remove(slug, confirm, options) {
+      await requestJson(client, `/projects/${slug}`, DeleteResponse, {
+        ...options,
+        method: 'DELETE',
+        body: { confirm },
+      });
     },
   };
 }

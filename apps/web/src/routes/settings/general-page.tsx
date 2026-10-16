@@ -11,6 +11,7 @@
  * Depends on: components/settings/*, domain/settings-fields.
  */
 
+import { Folder } from 'lucide-react';
 import { CompanyScreen } from '#/components/settings/company-screen.js';
 import { ConfigFields } from '#/components/settings/config-fields.js';
 import { SettingsSection } from '#/components/settings/settings-page.js';
@@ -20,6 +21,7 @@ export function GeneralPage() {
   return (
     <CompanyScreen
       title="General"
+      icon={Folder}
       intro="How Forge paces itself and which models it uses. Changes apply on the Director's next tick."
     >
       {(draft, config) => (

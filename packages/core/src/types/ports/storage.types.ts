@@ -229,6 +229,9 @@ export interface ProjectRepository {
   upsert(project: Project): Promise<void>;
   // Remove the row (undoing a registration that did not complete); false when there was none.
   delete(id: string): Promise<boolean>;
+  // Remove the project and everything it owns (tickets, runs and their records, cards, inbox
+  // marks) in the caller's transaction; settings history stays. False when the slug is unknown.
+  purge(slug: string): Promise<boolean>;
   list(): Promise<Project[]>;
 }
 

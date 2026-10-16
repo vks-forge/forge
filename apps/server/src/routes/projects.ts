@@ -1,5 +1,5 @@
 /**
- * Projects API: list, register an existing local clone, archive.
+ * Projects API: list, register a project on any folder, archive.
  *
  * Why: one Forge install works on many repositories (d-0082) and the UI is the only
  *   control surface (d-0090), so adding a project cannot mean editing files and restarting.
@@ -14,11 +14,19 @@
  *   way removes the row so the same request can be sent again. The slug, prefix and folder
  *   are claimed inside the transaction that saves the row, so two requests racing for the same
  *   one cannot both succeed. Archiving stops new work but
- *   deletes nothing. The list shows `config_error` for a project the engine skips.
+ *   deletes nothing (delete lives in routes/project-delete). The list shows `config_error` for a project the engine skips.
+ *
+ *   Any folder can be a project (d-0124). A folder with no git needs `git_setup` (snapshot
+ *   commit or init only) and a folder inside a repository needs `scope` (repository top or
+ *   only that subfolder); both are refused with a plain 400 when missing, before anything is
+ *   written. Without a `git_host` or GitHub connection the project has no remote and merges
+ *   locally into its own repository. Starting the repository is the last step before the
+ *   project is registered, so a refused request never changes the user's folder.
  *
  * Exports: projectsRoutes().
- * Depends on: @forge/core, @forge/git (inspectRepository), schemas/api,
- *   services/http/*, services/project-folder, services/project-conflict, types/routes. IO: storage, settings, reads the clone through git.
+ * Depends on: @forge/core, @forge/git (inspectRepository, listBranches), schemas/api,
+ *   services/http/*, services/project-folder, services/project-conflict, services/project-placement,
+ *   services/project-inspect, types/routes. IO: storage, settings, reads the clone through git.
  */
 
 import {
@@ -27,8 +35,7 @@ import {
   ProjectOverride,
   mergeConfig,
 } from '@forge/core';
-import type { GitHostConfig, Project } from '@forge/core';
-import { inspectRepository } from '@forge/git';
+import type { Project } from '@forge/core';
 import { ProjectCreateBody, ProjectPatchBody } from '#/schemas/api.js';
 import { readJson } from '#/services/http/body.js';
 import { HttpError } from '#/services/http/http-errors.js';
@@ -36,6 +43,8 @@ import { sendJson } from '#/services/http/respond.js';
 import { appendFirstSettings } from '#/services/first-settings.js';
 import { assertProjectFolder } from '#/services/project-folder.js';
 import { projectConflict } from '#/services/project-conflict.js';
+import { resolvePlacement, startRepository } from '#/services/project-placement.js';
+import { assertBaseBranch, hostOf } from '#/services/project-host.js';
 import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
 
@@ -52,70 +61,27 @@ function view(project: Project, configError?: string) {
   return configError === undefined ? rest : { ...rest, config_error: configError };
 }
 
-/** The `git_host` settings of a new project, from either way of naming it. */
-async function hostOf(
-  deps: RouteDeps,
-  body: ProjectCreateBody,
-): Promise<{ host: GitHostConfig; repoFullName?: string }> {
-  if (body.git_host) {
-    const host = body.base_branch
-      ? { ...body.git_host, base_branch: body.base_branch }
-      : body.git_host;
-
-    return { host };
-  }
-
-  const id = body.connection_id ?? '';
-  const connection = await deps.storage.transaction((tx) => tx.githubConnections.get(id));
-  if (!connection) {
-    throw new HttpError(404, 'connection_not_found', `no GitHub connection ${id}`);
-  }
-
-  if (connection.status !== 'active') {
-    throw new HttpError(409, 'connection_disabled', `connection ${id} is disabled`);
-  }
-
-  const [owner = '', repo = ''] = (body.repo_full_name ?? '').split('/');
-
-  return {
-    repoFullName: `${owner}/${repo}`,
-    host: {
-      kind: 'github',
-      owner,
-      repo,
-      base_branch: body.base_branch ?? 'main',
-      installation_id: body.installation_id ?? '',
-    },
-  };
-}
-
 async function create(
   deps: RouteDeps,
   ctx: Parameters<Route['handle']>[0],
 ): Promise<void> {
   const body = await readJson(ctx.req, ProjectCreateBody);
   assertProjectFolder(deps.dataHome, body.local_path);
+  const placement = await resolvePlacement(body);
 
   // A fast refusal before the slow work; the decision that counts is made again inside the
   // transaction that saves the row, because two requests can both pass this read.
   const early = projectConflict(
     await deps.storage.transaction((tx) => tx.projects.list()),
-    body,
+    { ...body, local_path: placement.localPath },
   );
 
   if (early) {
     throw early;
   }
 
-  const { host, repoFullName } = await hostOf(deps, body);
-  const inspected = await inspectRepository({
-    path: body.local_path,
-    baseBranch: host.base_branch,
-  });
-
-  if (!inspected.ok) {
-    throw new HttpError(400, inspected.code, inspected.message);
-  }
+  const { host, repoFullName } = await hostOf(deps, body, placement);
+  await assertBaseBranch(placement, host.base_branch);
 
   const { doc, settings } = settingsOf({ ...body.settings, git_host: host });
 
@@ -123,7 +89,9 @@ async function create(
     id: body.slug,
     slug: body.slug,
     prefix: body.prefix,
-    local_path: body.local_path,
+    local_path: placement.localPath,
+    ...(placement.repoRoot ? { repo_root: placement.repoRoot } : {}),
+    ...(placement.subfolder ? { subfolder: placement.subfolder } : {}),
     ...(body.connection_id ? { connection_id: body.connection_id } : {}),
     ...(repoFullName ? { repo_full_name: repoFullName } : {}),
     status: 'ready',
@@ -162,6 +130,13 @@ async function create(
 
   let version: number;
   try {
+    // Last before anything else is built: the user's folder is only touched once every
+    // check above has passed and the project's slug, prefix and folder are ours.
+    await startRepository(placement, host.base_branch);
+    if (placement.setup?.mode === 'snapshot') {
+      await assertBaseBranch({ ...placement, setup: null }, host.base_branch);
+    }
+
     // The project's private memory repository is created with the project; a machine
     // without a usable git fails here and nothing stays saved.
     try {

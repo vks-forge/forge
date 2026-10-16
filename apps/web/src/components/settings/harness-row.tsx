@@ -5,25 +5,22 @@
  *   me?". Each row answers it in one glance: the harness, its last-tested version, the build
  *   actually installed now (read live, so an update is visible before it breaks a run), how it
  *   signs in, and a status pill. A paused harness (out of quota) shows why and until when.
- *   The whole row is one link to its detail page, a target large enough for a thumb.
+ *   The whole row is one link to its detail page, a target large enough for a thumb, and
+ *   it uses the shared settings row so it lines up with every other list in this area.
  *
  * Exports: HarnessRow.
- * Depends on: react-router, lucide-react, api/use-settings-data, components/settings/status-pill,
- *   domain/format-time, schemas/settings.
+ * Depends on: react-router, lucide-react, api/use-settings-data, components/settings/settings-box, components/settings/status-pill,
+ *   domain/format-time, domain/harness-labels, schemas/settings.
  */
 
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Cpu } from 'lucide-react';
 import { Link } from 'react-router';
 import { useCompat } from '#/api/use-settings-data.js';
+import { SettingsRow } from '#/components/settings/settings-box.js';
 import { StatusPill } from '#/components/settings/status-pill.js';
 import { formatWhen } from '#/domain/format-time.js';
+import { harnessName, MODE_WORDS } from '#/domain/harness-labels.js';
 import type { HarnessView } from '#/schemas/settings.js';
-
-const MODE_WORDS = {
-  login: 'Signed-in account',
-  api_key: 'API key',
-  oauth_token: 'OAuth token',
-} as const;
 
 function Status(props: { harness: HarnessView }) {
   const { harness } = props;
@@ -49,40 +46,40 @@ export function HarnessRow(props: { harness: HarnessView }) {
   const secretMissing =
     harness.auth_mode !== 'login' && !harness.secrets[harness.auth_mode];
 
-  const facts: [string, string][] = [
-    ['Tested version', harness.version ?? 'Not tested'],
-    ['Installed build', installed ?? (compat.isPending ? 'Reading…' : 'Not found')],
-    ['Sign-in', MODE_WORDS[harness.auth_mode]],
-  ];
+  const meta = [
+    `Tested ${harness.version ?? 'not yet'}`,
+    `Installed ${installed ?? (compat.isPending ? 'reading…' : 'not found')}`,
+    MODE_WORDS[harness.auth_mode],
+  ].join(' · ');
+
+  const pausedNote = `${harness.pause_reason ?? harness.status_note ?? 'Out of quota.'}${
+    harness.paused_until ? ` Resumes ${formatWhen(harness.paused_until)}.` : ''
+  }`;
 
   return (
     <li>
       <Link
         to={`/settings/harnesses/${harness.id}`}
-        className="grid gap-3 rounded-xl border border-line bg-surface p-4 transition-[background-color,border-color,transform] duration-150 hover:border-faint hover:bg-hover active:translate-y-px"
+        className="block transition-[background-color,transform] duration-150 hover:bg-hover active:translate-y-px"
       >
-        <span className="flex flex-wrap items-center gap-2">
-          <span className="text-base font-semibold">{harness.id}</span>
-          <Status harness={harness} />
-          {secretMissing ? (
-            <StatusPill tone="attn">No credential stored</StatusPill>
-          ) : null}
-          <ChevronRight aria-hidden="true" className="ml-auto size-4 text-faint" />
-        </span>
-        <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
-          {facts.map(([label, value]) => (
-            <div key={label} className="grid gap-0.5">
-              <dt className="text-xs text-faint">{label}</dt>
-              <dd className="font-data text-xs break-all">{value}</dd>
-            </div>
-          ))}
-        </dl>
-        {harness.status === 'paused' ? (
-          <p className="text-sm text-muted">
-            {harness.pause_reason ?? harness.status_note ?? 'Out of quota.'}
-            {harness.paused_until ? ` Resumes ${formatWhen(harness.paused_until)}.` : ''}
-          </p>
-        ) : null}
+        <SettingsRow
+          icon={Cpu}
+          name={
+            <>
+              <span>{harnessName(harness.id)}</span>
+              <span className="rounded-md bg-hover px-1.5 font-data text-xs font-normal text-muted">
+                {harness.id}
+              </span>
+              <Status harness={harness} />
+              {secretMissing ? (
+                <StatusPill tone="attn">No credential stored</StatusPill>
+              ) : null}
+            </>
+          }
+          meta={meta}
+          note={harness.status === 'paused' ? pausedNote : undefined}
+          trailing={<ChevronRight aria-hidden="true" className="size-4 text-faint" />}
+        />
       </Link>
     </li>
   );

@@ -3,14 +3,15 @@
  *
  * Why: `POST /projects` and the dry-run `POST /projects/inspect` must refuse a bad folder
  *   with the same code and the same words, or the new-project form would show "looks fine"
- *   for a folder the save then rejects. Keeping the two checks (an absolute path, and not
+ *   for a folder the save then rejects. Keeping the checks (an absolute path to an existing folder, and not
  *   inside Forge's own data folder, where the Director's memory and Worker worktrees live)
  *   in one function is what makes inspect a true preview of create (code.md rule 6).
  *
  * Exports: assertProjectFolder().
- * Depends on: node:path, services/http/http-errors, services/path-guard.
+ * Depends on: node:fs, node:path, services/http/http-errors, services/path-guard.
  */
 
+import { statSync } from 'node:fs';
 import { isAbsolute } from 'node:path';
 import { HttpError } from '#/services/http/http-errors.js';
 import { insideForgeStorage } from '#/services/path-guard.js';
@@ -30,7 +31,18 @@ export function assertProjectFolder(
     throw new HttpError(
       400,
       'path_in_data_home',
-      "local_path is inside Forge's own data folder; register the repository clone instead",
+      "local_path is inside Forge's own data folder; choose the folder of your own project instead",
     );
+  }
+
+  let isDirectory = false;
+  try {
+    isDirectory = statSync(localPath).isDirectory();
+  } catch {
+    isDirectory = false;
+  }
+
+  if (!isDirectory) {
+    throw new HttpError(400, 'not_a_directory', `${localPath} is not a folder`);
   }
 }

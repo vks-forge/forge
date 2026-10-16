@@ -29,22 +29,17 @@ const BY_CODE: Readonly<Record<string, ExplainProblem>> = {
   path_in_data_home: () => ({
     field: 'local_path',
     message: "That folder is inside Forge's own data folder.",
-    fix: 'Choose your own clone of the repository, somewhere outside the folder shown in step 1.',
+    fix: 'Choose one of your own folders, somewhere outside the folder shown in the first-run steps.',
   }),
   not_a_directory: () => ({
     field: 'local_path',
     message: 'No folder exists at that path.',
-    fix: 'Check the spelling, or clone the repository first and then paste the folder it created.',
+    fix: 'Choose the folder again with Browse.',
   }),
-  not_a_repository: () => ({
-    field: 'local_path',
-    message: 'That folder is not a git repository.',
-    fix: 'Choose the folder that contains a .git folder, or run `git init` in it first.',
-  }),
-  not_repository_root: () => ({
-    field: 'local_path',
-    message: 'That folder is inside a repository, not its top.',
-    fix: 'Choose the top folder of the repository, the one that contains .git.',
+  snapshot_too_large: ({ message }) => ({
+    field: 'form',
+    message: 'This folder is too large for a first snapshot.',
+    fix: `Add a .gitignore for build output and dependencies, or choose Init only on the Git step. ${message}`,
   }),
   base_branch_missing: ({ message }) => ({
     field: 'base_branch',
@@ -68,7 +63,7 @@ const BY_CODE: Readonly<Record<string, ExplainProblem>> = {
   path_in_use: () => ({
     field: 'local_path',
     message: 'Another project already uses this folder.',
-    fix: 'Open that project from the switcher, or choose a different clone.',
+    fix: 'Open that project from the switcher, or choose a different folder.',
   }),
   connection_not_found: () => ({
     field: 'connection',
@@ -88,9 +83,9 @@ const BY_CODE: Readonly<Record<string, ExplainProblem>> = {
   project_not_servable: ({ host, message }) =>
     host === 'local'
       ? {
-          field: 'remote_path',
-          message: 'Forge could not use that remote folder.',
-          fix: `Check the remote path (a bare repository, or a path relative to your clone). ${message}`,
+          field: 'form',
+          message: 'Forge could not set up this project.',
+          fix: `Check the folder and its git repository, then try again. ${message}`,
         }
       : {
           field: 'repo',

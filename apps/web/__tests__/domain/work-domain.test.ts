@@ -113,6 +113,37 @@ describe('inbox links', () => {
       inboxLink('p', inboxItem({ id: 'quota_wait:claude', kind: 'quota_wait' })).to,
     ).toBe('/settings/harnesses/claude');
   });
+
+  it('opens the harness section where a tool or a compatibility check is decided', () => {
+    const tool = inboxLink(
+      'p',
+      inboxItem({ id: 'tool_approval:claude/2.1.142/shell', kind: 'tool_approval' }),
+    );
+
+    const compat = inboxLink(
+      'p',
+      inboxItem({ id: 'harness_compat:claude/2.1.142', kind: 'harness_compat' }),
+    );
+
+    expect(tool).toEqual({
+      to: '/settings/harnesses/claude#tools',
+      label: 'Review tool',
+    });
+
+    expect(compat).toEqual({
+      to: '/settings/harnesses/claude#compat',
+      label: 'Open check',
+    });
+  });
+
+  it('falls back to the harness list when the item names no harness', () => {
+    const link = inboxLink(
+      'p',
+      inboxItem({ id: 'tool_approval', kind: 'tool_approval' }),
+    );
+
+    expect(link).toEqual({ to: '/settings/harnesses', label: 'Open harnesses' });
+  });
 });
 
 describe('work http adapter', () => {

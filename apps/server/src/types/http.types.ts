@@ -15,7 +15,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Logger } from '@forge/engine';
 import type { RouteAccess } from '#/types/auth.types.js';
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 /** Everything a handler may read about the request. */
 export interface RouteContext {

@@ -10,7 +10,7 @@
  *   field added there reaches the UI with no edit here.
  *
  * Exports: ProjectConfigResponse, CompanyConfigResponse, ConfigHistoryResponse, SavedVersion,
- *   ArchiveResponse (schemas and inferred types).
+ *   ArchiveResponse, DeleteResponse (schemas and inferred types).
  * Depends on: @forge/core (EffectiveConfig, ForgeConfig, ConfigVersion), schemas/projects, zod.
  */
 
@@ -42,3 +42,10 @@ export type SavedVersion = z.infer<typeof SavedVersion>;
 
 export const ArchiveResponse = z.object({ project: ProjectView });
 export type ArchiveResponse = z.infer<typeof ArchiveResponse>;
+
+/** `DELETE /projects/:slug`: the slug that went; `leftovers` lists Forge folders that stayed locked. */
+export const DeleteResponse = z.object({
+  deleted: z.string(),
+  leftovers: z.array(z.string()).optional(),
+});
+export type DeleteResponse = z.infer<typeof DeleteResponse>;

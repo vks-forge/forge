@@ -41,7 +41,7 @@ export function HomePage() {
   }, []);
 
   return (
-    <section className="grid max-w-5xl gap-6">
+    <section className="grid gap-6">
       <header className="grid gap-1">
         <p className="font-data text-xs text-muted">{slug}</p>
         <h1 className="text-2xl font-semibold tracking-tight">Home</h1>

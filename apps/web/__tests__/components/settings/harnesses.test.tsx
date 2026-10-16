@@ -87,7 +87,11 @@ describe('harness detail: credential', () => {
     await user.click(await screen.findByRole('button', { name: 'Test harness' }));
 
     expect(await screen.findByText('The harness works')).toBeInTheDocument();
-    expect(screen.getByText('Signed-in account', { selector: 'dd' })).toBeInTheDocument();
+    const result = screen.getByText('The harness works').closest('[role="status"]');
+
+    expect(
+      within(result as HTMLElement).getByText('Signed-in account', { selector: 'dd' }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -107,7 +111,9 @@ describe('harness detail: compatibility', () => {
       }),
     ).toBeVisible();
 
-    expect(screen.getByText('Compatible')).toBeVisible();
+    expect(
+      within(document.getElementById('compat') as HTMLElement).getByText('Compatible'),
+    ).toBeVisible();
   });
 });
 
@@ -157,5 +163,83 @@ describe('harness detail: tool approvals', () => {
 
     expect(await screen.findByText(/Approved by Vik/)).toBeVisible();
     expect(screen.queryByText(/need your decision/)).not.toBeInTheDocument();
+  });
+
+  it('approves every pending tool with one confirm, one request per tool', async () => {
+    const user = userEvent.setup();
+    const pending = (tool: string, digit: string) => ({
+      harness_kind: 'claude',
+      version: '2.1.142',
+      tool,
+      schema_hash: `sha256:${digit.repeat(64)}`,
+      status: 'pending',
+    });
+
+    const { forge } = renderSettings('/settings/harnesses/claude', {
+      routes: {
+        'GET /harnesses/:id/tools': {
+          body: {
+            version: '2.1.142',
+            tools: [pending('shell', 'a'), pending('write', 'b'), pending('grep', 'c')],
+          },
+        },
+        'POST /harnesses/:id/tools/:tool/:decision': ({ params }) => ({
+          body: {
+            ...pending(params['tool']!, 'a'),
+            status: 'approved',
+            decided_by: 'Vik',
+            decided_at: '2026-10-16T10:00:00.000Z',
+            decision_reason: 'Reviewed the update',
+          },
+        }),
+      },
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Approve all (3)' }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveTextContent('Approve 3 tools?');
+    expect(dialog).toHaveTextContent('grep, shell, write');
+
+    await user.type(within(dialog).getByLabelText('Your name'), 'Vik');
+    await user.type(within(dialog).getByLabelText('Reason'), 'Reviewed the update');
+    await user.click(within(dialog).getByRole('button', { name: 'Approve 3 tools' }));
+
+    await waitFor(() =>
+      expect(
+        forge.stub.callsTo('POST /harnesses/:id/tools/:tool/:decision'),
+      ).toHaveLength(3),
+    );
+
+    const paths = forge.stub
+      .callsTo('POST /harnesses/:id/tools/:tool/:decision')
+      .map((c) => c.path);
+
+    expect(paths).toEqual([
+      '/harnesses/claude/tools/grep/approve',
+      '/harnesses/claude/tools/shell/approve',
+      '/harnesses/claude/tools/write/approve',
+    ]);
+  });
+
+  it('offers no Approve all for a single pending tool', async () => {
+    renderSettings('/settings/harnesses/claude');
+
+    await screen.findByRole('button', { name: 'Approve shell' });
+
+    expect(screen.queryByRole('button', { name: /Approve all/ })).not.toBeInTheDocument();
+  });
+
+  it('mirrors the running check into a live notification that ends as a verdict', async () => {
+    const user = userEvent.setup();
+    renderSettings('/settings/harnesses/claude');
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Run compatibility check' }),
+    );
+
+    expect(await screen.findByText('Checking Claude Code')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Claude Code is compatible', undefined, { timeout: 5000 }),
+    ).toBeInTheDocument();
   });
 });

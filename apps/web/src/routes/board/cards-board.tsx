@@ -26,8 +26,10 @@ import {
   groupCards,
   isCardFilterActive,
 } from '#/domain/card-columns.js';
+import { BoardEmpty } from '#/routes/board/board-empty.js';
 import { CardColumnView } from '#/routes/board/card-column.js';
 import { CardToolbar } from '#/routes/board/card-toolbar.js';
+import { ColumnScroller } from '#/routes/board/column-shell.js';
 import { useBoardPrefs } from '#/state/board-prefs.js';
 import { useNow } from '#/state/use-now.js';
 import { useOnline } from '#/state/use-online.js';
@@ -59,16 +61,22 @@ export function CardsBoard(props: { slug: string }) {
 
   if (cards.length === 0) {
     return (
-      <StatePanel kind="empty" title="No cards yet">
-        Tell the Director what you want above. Each request becomes a card you can talk
-        through with it.
-      </StatePanel>
+      <BoardEmpty title="No cards yet" columns={CARD_BOARD_COLUMNS}>
+        Tell the Director what you want in the box above. Each request becomes a card you
+        can talk through with it, and the card moves across these columns as work gets
+        done.
+      </BoardEmpty>
     );
   }
 
   return (
     <>
-      <CardToolbar shown={visible.length} total={cards.length} types={types.data} />
+      <CardToolbar
+        shown={visible.length}
+        total={cards.length}
+        needsYou={groups.needs_you.length}
+        types={types.data}
+      />
 
       {!online ? (
         <p role="status" className="rounded-xl bg-attn-soft p-3 text-sm">
@@ -86,7 +94,7 @@ export function CardsBoard(props: { slug: string }) {
       ) : null}
 
       <LayoutGroup id="card-board">
-        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 md:-mx-8 md:px-8">
+        <ColumnScroller>
           {CARD_BOARD_COLUMNS.map((column) => (
             <CardColumnView
               key={column.id}
@@ -97,7 +105,7 @@ export function CardsBoard(props: { slug: string }) {
               now={now}
             />
           ))}
-        </div>
+        </ColumnScroller>
       </LayoutGroup>
 
       {query.hasNextPage ? (

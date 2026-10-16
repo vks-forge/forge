@@ -23,6 +23,7 @@ import type { Engine } from '@forge/engine';
 import type { HookHandler } from '@forge/hooks';
 import type { CatalogueStore } from '@forge/tools';
 import type { SessionStore, SseTicketIssuer, TokenProver } from '#/types/auth.types.js';
+import type { FolderPicker, FolderRevealer } from '#/types/folder-picker.types.js';
 import type { HarnessCompat } from '#/types/harness-compat.types.js';
 import type { ProjectRegistry } from '#/types/project-registry.types.js';
 import type { HttpTuning } from '#/types/settings.types.js';
@@ -59,10 +60,14 @@ export interface RouteDeps {
   readonly prover: TokenProver;
   /** True once graceful shutdown began; new Worker messages are refused then (`server_draining`). Absent reads as never draining (route tests). */
   readonly isDraining?: () => boolean;
+  /** Opens the system folder window behind `POST /fs/pick-folder`; absent (route tests) reads as unavailable. */
+  readonly folderPicker?: FolderPicker;
+  /** Shows a folder in the file manager behind `POST /fs/reveal`; absent (route tests) reads as unavailable. */
+  readonly folderRevealer?: FolderRevealer;
   /** Starts the graceful shutdown (`POST /admin/shutdown`); returns at once. */
   readonly requestShutdown: () => void;
   /** Where Forge keeps its own files; a project clone may not be inside them. */
-  readonly dataHome: Pick<DataHomeLayout, 'home' | 'worktreesDir'>;
+  readonly dataHome: Pick<DataHomeLayout, 'home' | 'memoryDir' | 'worktreesDir'>;
   readonly owner: string;
   /** Epoch ms when the server started, for `/health` uptime. */
   readonly startedAt: number;

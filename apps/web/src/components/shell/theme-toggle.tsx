@@ -7,10 +7,11 @@
  *   press does ("Theme: system. Switch to light."), so the state is never colour or icon alone.
  *
  * Exports: ThemeToggle.
- * Depends on: lucide-react, domain/theme-mode, state/theme-provider.
+ * Depends on: lucide-react, components/ui/tooltip, domain/theme-mode, state/theme-provider.
  */
 
 import { Monitor, Moon, Sun } from 'lucide-react';
+import { Tooltip } from '#/components/ui/tooltip.js';
 import { describeThemeMode } from '#/domain/theme-mode.js';
 import { useTheme } from '#/state/theme-provider.js';
 
@@ -21,14 +22,15 @@ export function ThemeToggle() {
   const Icon = ICONS[mode];
 
   return (
-    <button
-      type="button"
-      onClick={cycle}
-      aria-label={describeThemeMode(mode)}
-      title={describeThemeMode(mode)}
-      className="grid size-9 place-items-center rounded-lg text-muted transition-[color,background-color,transform] duration-150 hover:bg-hover hover:text-fg active:translate-y-px"
-    >
-      <Icon aria-hidden="true" className="size-4" />
-    </button>
+    <Tooltip content={describeThemeMode(mode)}>
+      <button
+        type="button"
+        onClick={cycle}
+        aria-label={describeThemeMode(mode)}
+        className="grid size-9 place-items-center rounded-lg text-muted transition-[color,background-color,transform] duration-150 hover:bg-hover hover:text-fg active:translate-y-px"
+      >
+        <Icon aria-hidden="true" className="size-4" />
+      </button>
+    </Tooltip>
   );
 }

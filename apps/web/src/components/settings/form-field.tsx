@@ -26,7 +26,7 @@ export function FormField(props: {
   children: ReactNode;
 }) {
   return (
-    <div className="grid gap-1.5">
+    <div className="grid w-full max-w-xl gap-1.5">
       <label htmlFor={props.id} className="text-sm font-medium">
         {props.label}
       </label>

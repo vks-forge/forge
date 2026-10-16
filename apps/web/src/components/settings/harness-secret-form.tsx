@@ -21,10 +21,12 @@ import { describeError } from '#/api/describe-error.js';
 import { HARNESSES_KEY } from '#/api/use-settings-data.js';
 import { FormField, Notice, TextInput } from '#/components/settings/form-field.js';
 import { StatusPill } from '#/components/settings/status-pill.js';
+import { FormFooter } from '#/components/settings/settings-card.js';
 import { Button } from '#/components/ui/button.js';
 import { SecretForm } from '#/schemas/settings.js';
 import type { HarnessView } from '#/schemas/settings.js';
 import { useUnsavedChanges } from '#/state/unsaved-changes.js';
+import { useNotify } from '#/state/notify/notify-context.js';
 import { useSubmit } from '#/state/use-submit.js';
 
 const KIND_WORDS = {
@@ -40,6 +42,7 @@ export function HarnessSecretForm(props: { harness: HarnessView }) {
   const [problem, setProblem] = useState<string | undefined>(undefined);
   useUnsavedChanges(value !== '');
 
+  const notify = useNotify();
   const mode = harness.auth_mode;
   const submit = useSubmit(async (secret: string, kind: 'api_key' | 'oauth_token') => {
     await api.harnesses.putSecret(harness.id, { kind, value: secret });
@@ -73,6 +76,9 @@ export function HarnessSecretForm(props: { harness: HarnessView }) {
     const result = await submit.run(parsed.data.value, mode);
     if (result) {
       setValue('');
+      notify.success(`${words.noun} stored`, {
+        description: 'It is hidden for good. Run the test to check it works.',
+      });
     }
   };
 
@@ -118,12 +124,7 @@ export function HarnessSecretForm(props: { harness: HarnessView }) {
           {describeError(submit.error).detail}
         </Notice>
       ) : null}
-      {submit.status === 'success' ? (
-        <Notice tone="good" title={`${words.noun} stored`}>
-          It is hidden for good. Run the test to check it works.
-        </Notice>
-      ) : null}
-      <div>
+      <FormFooter help="Write-only: Forge stores it and never shows it again.">
         <Button
           type="submit"
           variant="primary"
@@ -132,7 +133,7 @@ export function HarnessSecretForm(props: { harness: HarnessView }) {
         >
           {stored ? `Replace ${words.noun}` : `Store ${words.noun}`}
         </Button>
-      </div>
+      </FormFooter>
     </form>
   );
 }

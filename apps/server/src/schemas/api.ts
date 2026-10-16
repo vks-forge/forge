@@ -8,7 +8,7 @@
  *   itself, so a second hand-written shape cannot drift from it.
  *
  * Exports: ToolDecisionBody, CataloguePutBody, AnswerBody, LastEventId, SettingsPutBody, HarnessPutBody, HarnessSecretBody, LiveQuery,
- *   ProjectCreateBody, ProjectInspectBody, ProjectPatchBody, MemoryApproveBody, MemoryRejectBody, ConnectionCreateBody,
+ *   ProjectCreateBody, ProjectInspectBody, ProjectPatchBody, ProjectDeleteBody, MemoryApproveBody, MemoryRejectBody, ConnectionCreateBody,
  *   SseTicketBody, ProofBody.
  * Depends on: @forge/core (HarnessAuthMode, HarnessKind, HarnessSecretKind, GitHostConfig, ProjectPrefix,
  *   ProjectCheck, GateRules), zod. No IO.
@@ -17,11 +17,13 @@
 import {
   GateRules,
   GitHostConfig,
+  GitSetup,
   HarnessAuthMode,
   HarnessKind,
   HarnessSecretKind,
   ProjectCheck,
   ProjectPrefix,
+  ProjectScope,
 } from '@forge/core';
 import { z } from 'zod';
 
@@ -124,8 +126,8 @@ const StartingSettings = z
 
 /**
  * `POST /projects`. The git host is either given in full (`git_host`) or reached through a
- * GitHub connection (`connection_id` + `repo_full_name` + `installation_id`); never both,
- * never neither. `base_branch`, when given, overrides the host's own.
+ * GitHub connection (`connection_id` + `repo_full_name` + `installation_id`); never both.
+ * Neither means no remote: the project merges locally into its own repository (d-0124). `base_branch`, when given, overrides the host's own.
  */
 export const ProjectCreateBody = z
   .object({
@@ -137,6 +139,10 @@ export const ProjectCreateBody = z
     connection_id: z.string().min(1).optional(),
     repo_full_name: RepoFullName.optional(),
     installation_id: Digits.optional(),
+    /** How to start a repository when the folder has none; required then (d-0124). */
+    git_setup: GitSetup.optional(),
+    /** Repository top or just the subfolder, when the folder sits inside a repository; required then. */
+    scope: ProjectScope.optional(),
     settings: StartingSettings.optional(),
     author: z.string().min(1),
     reason: z.string().min(1).default('project created'),
@@ -153,15 +159,6 @@ export const ProjectCreateBody = z
         code: 'custom',
         path: ['git_host'],
         message: 'give either git_host or connection_id with repo_full_name, not both',
-      });
-    }
-
-    if (!body.git_host && !viaConnection) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['git_host'],
-        message:
-          'give git_host, or connection_id with repo_full_name and installation_id',
       });
     }
 
@@ -188,6 +185,10 @@ export type ProjectInspectBody = z.infer<typeof ProjectInspectBody>;
 /** `PATCH /projects/:slug`: archiving is the only change a project row takes through the API. */
 export const ProjectPatchBody = z.object({ status: z.literal('archived') }).strict();
 export type ProjectPatchBody = z.infer<typeof ProjectPatchBody>;
+
+/** `DELETE /projects/:slug`: `confirm` must be the project's slug (the typed confirmation, checked again on the server). */
+export const ProjectDeleteBody = z.object({ confirm: z.string() }).strict();
+export type ProjectDeleteBody = z.infer<typeof ProjectDeleteBody>;
 
 /** `POST /projects/:slug/memory/proposals/:id/approve`; `author` is who is answering, kept in the record. */
 export const MemoryApproveBody = z.object({ author: z.string().trim().min(1) }).strict();

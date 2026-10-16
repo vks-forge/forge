@@ -8,11 +8,14 @@
  *   item whose `updated_at` is the source's own change time, which is what lets a mark expire
  *   when the source moves (d-0116). Items that wait on a decision are `needs_action`; the
  *   rest inform. Harness-level items (compat, tool approvals) block every project, so they
- *   show in each; quota waits show only where open work is affected. Memory proposals and
- *   tool approvals carry no timestamp, so they use the epoch and sort last.
+ *   show in each, but only for the current build of each harness (the installed one, else the
+ *   newest checked): an older build can no longer be acted on and would nag forever. A tool
+ *   approval is dated by when Forge checked its build. Quota waits show only where open work
+ *   is affected. Memory proposals carry no timestamp, so they use the epoch and sort last.
  *
  * Exports: gatherInboxCandidates().
- * Depends on: @forge/core (inbox rules, StorageTx, memory entries), services/collect-pages.
+ * Depends on: @forge/core (inbox rules, StorageTx, memory entries), services/collect-pages,
+ *   services/current-harness-build.
  *   IO: reads storage.
  */
 
@@ -26,6 +29,7 @@ import type {
   Ticket,
 } from '@forge/core';
 import { collectRuns, collectTickets } from '#/services/collect-pages.js';
+import { currentHarnessBuilds } from '#/services/current-harness-build.js';
 
 const EPOCH = '1970-01-01T00:00:00.000Z';
 const clip = (text: string, max = 140): string =>
@@ -94,12 +98,14 @@ const ticketItems = (
 /**
  * Every item of `project` right now, unsorted and without read/archive marks.
  * `proposals` are the project's memory entries (read by the caller, outside the transaction).
+ * `installedVersion` is the compat service's installed build of a harness kind, if known.
  */
 export async function gatherInboxCandidates(
   tx: StorageTx,
   project: Project,
   proposals: readonly MemoryListEntry[],
   nowMs: number,
+  installedVersion: (kind: string) => string | null,
 ): Promise<InboxCandidate[]> {
   const slug = project.slug;
   const nowIso = new Date(nowMs).toISOString();
@@ -185,7 +191,13 @@ export async function gatherInboxCandidates(
     }
   }
 
+  const builds = await currentHarnessBuilds(tx, installedVersion);
+
   for (const v of await tx.harnessVersions.listByCompat('fail')) {
+    if (!builds.isCurrent(v.kind, v.version)) {
+      continue;
+    }
+
     items.push({
       id: inboxItemId('harness_compat', `${v.kind}/${v.version}`),
       kind: 'harness_compat',
@@ -197,6 +209,10 @@ export async function gatherInboxCandidates(
   }
 
   for (const t of await tx.harnessToolSchemas.listByStatus('pending')) {
+    if (!builds.isCurrent(t.harness_kind, t.version)) {
+      continue;
+    }
+
     items.push({
       id: inboxItemId('tool_approval', `${t.harness_kind}/${t.version}/${t.tool}`),
       kind: 'tool_approval',
@@ -204,7 +220,7 @@ export async function gatherInboxCandidates(
       title: `Approve tool ${t.tool}`,
       detail: `${t.harness_kind} ${t.version}`,
       needs_action: true,
-      updated_at: t.decided_at ?? EPOCH,
+      updated_at: t.decided_at ?? builds.checkedAt(t.harness_kind, t.version) ?? EPOCH,
     });
   }
 

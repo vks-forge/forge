@@ -82,7 +82,7 @@ export function ConfigFields(props: {
   onChange: (path: string, value: unknown) => void;
 }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2">
+    <div className="grid max-w-3xl gap-5 sm:grid-cols-2">
       {props.fields.map((spec) => (
         <Field
           key={spec.path}

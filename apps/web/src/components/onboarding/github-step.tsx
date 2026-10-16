@@ -26,6 +26,7 @@ import { Button } from '#/components/ui/button.js';
 export function GitHubStep(props: { onSkip: () => void }) {
   const connections = useGithubConnections();
   const [adding, setAdding] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [added, setAdded] = useState(false);
 
   if (connections.isPending) {
@@ -76,31 +77,31 @@ export function GitHubStep(props: { onSkip: () => void }) {
           The project step can now use this account's repositories.
         </Notice>
       ) : null}
-      {adding ? (
-        <ConnectionForm
-          onCancel={() => setAdding(false)}
-          onDone={() => {
-            setAdding(false);
-            setAdded(true);
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={connections.data.length === 0 ? 'primary' : 'quiet'}
+          onClick={() => {
+            setAdded(false);
+            setAttempt((n) => n + 1);
+            setAdding(true);
           }}
-        />
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={connections.data.length === 0 ? 'primary' : 'quiet'}
-            onClick={() => {
-              setAdded(false);
-              setAdding(true);
-            }}
-          >
-            <Plus aria-hidden="true" className="size-4" />
-            Add a GitHub connection
-          </Button>
-          {connections.data.length === 0 ? (
-            <Button onClick={props.onSkip}>Skip: use local git only</Button>
-          ) : null}
-        </div>
-      )}
+        >
+          <Plus aria-hidden="true" className="size-4" />
+          Add a GitHub connection
+        </Button>
+        {connections.data.length === 0 ? (
+          <Button onClick={props.onSkip}>Skip: use local git only</Button>
+        ) : null}
+      </div>
+      <ConnectionForm
+        key={attempt}
+        open={adding}
+        onClose={() => setAdding(false)}
+        onDone={() => {
+          setAdding(false);
+          setAdded(true);
+        }}
+      />
       <p className="max-w-prose text-sm text-muted">
         You can add or change connections any time under Forge settings, GitHub.
       </p>

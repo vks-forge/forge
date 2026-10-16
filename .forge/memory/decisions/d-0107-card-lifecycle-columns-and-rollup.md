@@ -5,9 +5,10 @@ statement: Board columns follow the card lifecycle, not its type (type is an ico
 source: { type: chat, ref: "2026-10-14 card grill Q3: user \"approved\" (lifecycle columns + roll-up rules as proposed)" }
 author: user
 origin: owner
-status: active
+status: superseded
 valid_from: 2026-10-14
-superseded_by: null
+superseded_by: d-0139
+valid_to: 2026-10-16
 supersedes: null
 tags: [cards, board, lifecycle, ui]
 pinned: false

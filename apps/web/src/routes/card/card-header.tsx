@@ -30,6 +30,7 @@ import { INPUT_CLASS } from '#/components/ui/field.js';
 import { COLUMN_LABEL } from '#/domain/card-columns.js';
 import { projectPath } from '#/domain/nav-entries.js';
 import { SOURCE_LABEL } from '#/routes/card/card-details.js';
+import { useNotify } from '#/state/notify/notify-context.js';
 import type { CardDetailReply } from '#/schemas/cards.js';
 
 function patchRefusal(error: unknown): string {
@@ -57,6 +58,7 @@ export function CardHeader(props: {
   onClose: () => void;
 }) {
   const { card, types, patch } = props;
+  const notify = useNotify();
   const [nextType, setNextType] = useState<CardTypeName | null>(null);
   const closed = card.closed_reason !== undefined;
   const needsYou = card.column === 'needs_you';
@@ -147,7 +149,10 @@ export function CardHeader(props: {
         confirmLabel="Change type"
         onConfirm={() => {
           if (nextType !== null) {
-            patch.mutate({ type: nextType });
+            patch.mutate(
+              { type: nextType },
+              { onSuccess: () => notify.success('Card type changed') },
+            );
           }
 
           setNextType(null);

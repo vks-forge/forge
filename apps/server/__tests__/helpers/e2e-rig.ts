@@ -64,6 +64,12 @@ export interface E2eRig {
 export interface E2eOptions {
   readonly fixture?: FixtureRepo;
   readonly secrets?: RecordingSecrets;
+  /**
+   * `POST /projects` body that registers the project, for a `fixture` the caller made itself
+   * (a folder with no git, a subfolder of a repository). Without it only a fixture the rig
+   * made is registered, with `fixtureProjectBody`.
+   */
+  readonly register?: (fixture: FixtureRepo) => Record<string, unknown>;
   /** Saves `engine.shutdown_drain_ms` as a company setting before the first request (a restart keeps it). */
   readonly drainMs?: number;
 }
@@ -152,8 +158,13 @@ export async function startE2eRig(
 
     // The project is registered the way a user does it, never by touching the database.
     // A restarted server finds it already there.
-    if (ownsFixture) {
-      const registered = await call('POST', '/projects', fixtureProjectBody(fixture));
+    if (ownsFixture || options.register) {
+      const registered = await call(
+        'POST',
+        '/projects',
+        options.register ? options.register(fixture) : fixtureProjectBody(fixture),
+      );
+
       if (registered.status !== 201) {
         throw new Error(
           `could not register the fixture project: ${JSON.stringify(registered.body)}`,

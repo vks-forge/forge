@@ -29,7 +29,8 @@ import { createEngine, createIdSource, createOwnerId } from '@forge/engine';
 import { createFileReportStore } from '@forge/gates';
 import { createDpapiSecretStore } from '@forge/secrets';
 import { createAuth } from '#/services/auth/create-auth.js';
-import { createDriverRegistry } from '#/services/driver-registry.js';
+import { createFolderPicker } from '#/services/folder-picker/index.js';
+import { createFolderRevealer } from '#/services/folder-reveal.js';
 import { createGates } from '#/services/gates.js';
 import { createHooks } from '#/services/hook-wiring.js';
 import { harnessTestFor } from '#/services/harness-test-route.js';
@@ -43,6 +44,7 @@ import { withKnownProjects } from '#/services/known-project-config.js';
 import { createProjectRegistry } from '#/services/project-registry.js';
 import { createRunWiring } from '#/services/run-wiring.js';
 import { shutdownServer } from '#/services/shutdown.js';
+import { composeWorker } from '#/services/worker-wiring.js';
 import { createTicker } from '#/services/ticker.js';
 import { composeTriggers } from '#/services/triggers.js';
 import type {
@@ -128,26 +130,17 @@ export async function assembleServer(
       projects.slugs(),
     );
 
-    const driver = ports.driver({
-      prepareRun,
-      receipts: createReceiptLookup(receipts),
+    const { driver, llm, drivers } = await composeWorker(
+      ports,
+      {
+        prepareRun,
+        receipts: createReceiptLookup(receipts),
+        log,
+        harness,
+        secrets,
+      },
       log,
-      harness,
-      secrets,
-    });
-
-    const llm =
-      typeof ports.llm === 'function' ? ports.llm({ harness, secrets }) : ports.llm;
-
-    const preflight = await driver.preflight();
-    if (!preflight.ok) {
-      log('warn', 'worker driver preflight reported issues', {
-        issues: preflight.issues,
-      });
-    }
-
-    // One harness is installed today; the registry is where the next one is added.
-    const drivers = createDriverRegistry([driver]);
+    );
 
     const { compat, policy, checkBuild } = await composeHarnessGuard({
       storage,
@@ -227,6 +220,8 @@ export async function assembleServer(
         sessions: auth.sessions,
         prover: auth.prover,
         isDraining: drain.isDraining,
+        folderPicker: createFolderPicker(),
+        folderRevealer: createFolderRevealer(),
         requestShutdown: () =>
           options.onShutdownRequested ? options.onShutdownRequested() : void stopServer(),
         dataHome: layout.data,

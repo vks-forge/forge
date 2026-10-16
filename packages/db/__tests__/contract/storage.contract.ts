@@ -50,6 +50,7 @@ import { describeWakeRequestsContract } from './wake-requests.contract.js';
 import { describeHarnessCompatContract } from './harness-compat.contract.js';
 import { describeHarnessStateContract } from './harness-state.contract.js';
 import { describeHarnessesContract } from './harnesses.contract.js';
+import { describeProjectPurgeContract } from './project-purge.contract.js';
 import { describeWorkQueuesContract } from './work-queues.contract.js';
 
 /** Register the shared contract; `makeAdapter` must return a fresh, empty adapter each call. */
@@ -73,6 +74,7 @@ export function describeStorageContract(
     describeIntakeEventsContract(() => db);
     describeWakeRequestsContract(() => db);
     describeWorkQueuesContract(() => db);
+    describeProjectPurgeContract(() => db);
     describeHarnessesContract(() => db);
     describeHarnessStateContract(() => db);
     describeConnectionsContract(() => db);

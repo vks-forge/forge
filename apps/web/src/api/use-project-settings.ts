@@ -1,13 +1,13 @@
 /**
- * Project settings as TanStack Query: one read, one versioned save, one archive.
+ * Project settings as TanStack Query: one read, one versioned save, one archive, one delete.
  *
  * Why: the settings screen, its history list and its conflict banner must all describe the
  *   same server state. One query key holds the snapshot (settings, versions, company
  *   inheritance); a successful save or a 409 refetches it, so the screen always compares the
  *   user's draft with what the server holds now. Archiving also refreshes the project list
- *   so the switcher stops offering the project.
+ *   so the switcher stops offering the project; deleting does the same.
  *
- * Exports: useProjectSettings(), useSaveSettings(), useArchiveProject(), settingsKey().
+ * Exports: useProjectSettings(), useSaveSettings(), useArchiveProject(), useDeleteProject(), settingsKey().
  * Depends on: @tanstack/react-query, api/api-provider, api/use-projects, types/*.
  */
 
@@ -45,6 +45,17 @@ export function useArchiveProject(slug: string) {
 
   return useMutation({
     mutationFn: () => api.projectSettings.archive(slug),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: PROJECTS_KEY }),
+  });
+}
+
+/** Deletes the project from Forge; `confirm` is the typed slug. Success refreshes the project list. */
+export function useDeleteProject(slug: string) {
+  const api = useForgeApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (confirm: string) => api.projectSettings.remove(slug, confirm),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: PROJECTS_KEY }),
   });
 }

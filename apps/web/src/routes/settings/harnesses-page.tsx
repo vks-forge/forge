@@ -11,10 +11,12 @@
  *   components/status/state-panel, components/ui/button.
  */
 
+import { Cpu } from 'lucide-react';
 import { Link } from 'react-router';
 import { describeError } from '#/api/describe-error.js';
 import { useHarnesses } from '#/api/use-settings-data.js';
 import { HarnessRow } from '#/components/settings/harness-row.js';
+import { BoxEmpty, SettingsBox } from '#/components/settings/settings-box.js';
 import { SettingsPage } from '#/components/settings/settings-page.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 
@@ -24,41 +26,51 @@ export function HarnessesPage() {
   return (
     <SettingsPage
       title="Harnesses"
+      icon={Cpu}
       intro="The command-line tools Forge runs Workers and the Director on. Pick how each signs in, check it works, and approve changes to its built-in tools."
     >
-      {harnesses.isPending ? (
-        <StatePanel kind="loading" label="Loading harnesses" />
-      ) : null}
-      {harnesses.isError ? (
-        <StatePanel
-          kind="error"
-          title={describeError(harnesses.error).title}
-          detail={describeError(harnesses.error).detail}
-          onRetry={() => void harnesses.refetch()}
-          retrying={harnesses.isFetching}
-        />
-      ) : null}
-      {harnesses.isSuccess && harnesses.data.harnesses.length === 0 ? (
-        <StatePanel kind="empty" title="No harness is set up yet">
-          <p>
-            Forge needs one to run Workers.{' '}
-            <Link
-              className="font-medium text-signal underline underline-offset-2"
-              to="/settings/harnesses/claude"
-            >
-              Set up Claude Code
-            </Link>
-            .
-          </p>
-        </StatePanel>
-      ) : null}
-      {harnesses.isSuccess && harnesses.data.harnesses.length > 0 ? (
-        <ul aria-label="Harnesses" className="grid gap-3">
-          {harnesses.data.harnesses.map((harness) => (
-            <HarnessRow key={harness.id} harness={harness} />
-          ))}
-        </ul>
-      ) : null}
+      <SettingsBox
+        title="Registered harnesses"
+        count={harnesses.isSuccess ? harnesses.data.harnesses.length : undefined}
+      >
+        {harnesses.isPending ? (
+          <div className="p-4">
+            <StatePanel kind="loading" label="Loading harnesses" />
+          </div>
+        ) : null}
+        {harnesses.isError ? (
+          <div className="p-4">
+            <StatePanel
+              kind="error"
+              title={describeError(harnesses.error).title}
+              detail={describeError(harnesses.error).detail}
+              onRetry={() => void harnesses.refetch()}
+              retrying={harnesses.isFetching}
+            />
+          </div>
+        ) : null}
+        {harnesses.isSuccess && harnesses.data.harnesses.length === 0 ? (
+          <BoxEmpty title="No harness is set up yet">
+            <p>
+              Forge needs one to run Workers.{' '}
+              <Link
+                className="font-medium text-signal underline underline-offset-2"
+                to="/settings/harnesses/claude"
+              >
+                Set up Claude Code
+              </Link>
+              .
+            </p>
+          </BoxEmpty>
+        ) : null}
+        {harnesses.isSuccess && harnesses.data.harnesses.length > 0 ? (
+          <ul aria-label="Harnesses" className="divide-y divide-line">
+            {harnesses.data.harnesses.map((harness) => (
+              <HarnessRow key={harness.id} harness={harness} />
+            ))}
+          </ul>
+        ) : null}
+      </SettingsBox>
       {harnesses.isSuccess
         ? harnesses.data.paused
             .filter((p) => !harnesses.data.harnesses.some((h) => h.id === p.harness_id))

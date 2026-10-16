@@ -43,6 +43,8 @@ export interface ProjectSettingsApi {
   save(request: SettingsSaveRequest, options?: RequestOptions): Promise<ConfigVersion>;
   /** Archives the project: kept for history, takes no new work. There is no API to undo it. */
   archive(slug: string, options?: RequestOptions): Promise<ProjectView>;
+  /** Deletes the project from Forge (rows, memory, worktrees); `confirm` must be the slug. Never touches the user's folder. */
+  remove(slug: string, confirm: string, options?: RequestOptions): Promise<void>;
 }
 
 /** The overridable settings the screen edits. */

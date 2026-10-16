@@ -12,7 +12,7 @@
  *   column mapping and chain persistence across reopen, WAL journal mode, reopen durability,
  *   idempotent re-migration on reopen, connection pragmas, a second connection waiting
  *   on busy_timeout.
- * Also pins backend failures mapped to typed ForgeErrors (busy -> stall, corrupt row ->
+ * Also pins project purge clearing the project's run receipts, backend failures mapped to typed ForgeErrors (busy -> stall, corrupt row ->
  *   unknown with cause) and receipts.append re-entered from a storage transaction.
  * Depends on: contract/storage.contract, src/index, better-sqlite3.
  */
@@ -155,6 +155,28 @@ describe('sqlite receipt log specifics', () => {
       issued_at: '2026-10-13T00:00:00.000Z',
       revoked_at: null,
     });
+  });
+});
+
+describe('sqlite project purge specifics', () => {
+  it('removes a purged project run receipts and keeps the other project receipts', async () => {
+    const path = nextPath();
+    const { storage, receipts } = openSqlite(path);
+    await storage.transaction(async (tx) => {
+      await tx.tickets.insert(makeTicket(1, { project: 'gone' }));
+      await tx.runs.insert(makeRun('r-gone', { ticket_id: 'SF-1', project: 'gone' }));
+      await tx.tickets.insert(makeTicket(2, { project: 'kept' }));
+      await tx.runs.insert(makeRun('r-kept', { ticket_id: 'SF-2', project: 'kept' }));
+    });
+
+    await appendDecision(receipts, 'r-gone', 'c1');
+    await appendEffect(receipts, 'r-gone', 'c1');
+    await appendDecision(receipts, 'r-kept', 'c2');
+    await storage.transaction((tx) => tx.projects.purge('gone'));
+
+    expect(await receipts.list('r-gone')).toEqual([]);
+    expect(await receipts.list('r-kept')).toHaveLength(1);
+    await storage.close();
   });
 });
 

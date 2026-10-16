@@ -5,12 +5,22 @@
  *   runner, key reader). Naming them once keeps the adapter files short and lets tests
  *   swap the network, the git process and the key source without touching adapter code.
  *
- * Exports: LocalBareGitHostOptions, GitHubAppGitHostOptions, GitHubAppGitHost.
+ * Exports: BaseLanding, LocalBareGitHostOptions, LocalRepoGitHostOptions, GitHubAppGitHostOptions, GitHubAppGitHost.
  * Depends on: types/git-worktree. Types only.
  */
 
 import type { GitHost } from '@forge/core';
 import type { GitAuthor, GitRunner } from '#/types/git-worktree.types.js';
+
+/** How a merged commit becomes the new tip of the base branch; the host's default is a compare-and-swap `update-ref`. */
+export interface BaseLanding {
+  /** Moves `base` from `baseSha` to `newSha`, or throws a `GitHostError` and leaves `base` untouched. */
+  land(args: {
+    readonly base: string;
+    readonly baseSha: string;
+    readonly newSha: string;
+  }): Promise<void>;
+}
 
 export interface LocalBareGitHostOptions {
   /** Path of the bare repository that plays the remote. */
@@ -21,6 +31,20 @@ export interface LocalBareGitHostOptions {
   readonly now: () => number;
   readonly gitBinary?: string;
   /** Git process seam; defaults to the real binary named by `gitBinary`. */
+  readonly git?: GitRunner;
+  /** Identity on merge commits; defaults to Forge <forge@localhost>. */
+  readonly author?: GitAuthor;
+  /** Replaces the default way the base branch moves; used when the base is checked out in a working tree. */
+  readonly landing?: BaseLanding;
+}
+
+export interface LocalRepoGitHostOptions {
+  /** Top folder of the project's own repository. */
+  readonly repoRoot: string;
+  /** Branch verified work merges into. */
+  readonly baseBranch: string;
+  readonly now: () => number;
+  readonly gitBinary?: string;
   readonly git?: GitRunner;
   /** Identity on merge commits; defaults to Forge <forge@localhost>. */
   readonly author?: GitAuthor;

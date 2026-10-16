@@ -11,12 +11,13 @@
  *   with the core `Project` schema on read (director-core.md §3).
  *
  * Exports: createProjectRepository().
- * Depends on: @forge/core, shared/db-errors, shared/json, types/storage-driver.types.
+ * Depends on: @forge/core, adapters/sqlite/project-purge, shared/db-errors, shared/json, types/storage-driver.types.
  */
 
 import { Project } from '@forge/core';
 import type { ProjectRepository } from '@forge/core';
 import { parseStored } from '#/shared/db-errors.js';
+import { purgeProject } from '#/adapters/sqlite/project-purge.js';
 import { dropNulls, fromJson, toJson } from '#/shared/json.js';
 import type { SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
 
@@ -48,14 +49,15 @@ export function createProjectRepository(driver: SqlDriver): ProjectRepository {
       const p = Project.parse(project);
       driver.run(
         `INSERT INTO projects (id, slug, prefix, repo_origin, memory_repo, harness_defaults_json, tier_c_globs_json,
-           local_path, connection_id, repo_full_name, status, ecosystems_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           local_path, connection_id, repo_full_name, status, ecosystems_json, repo_root, subfolder)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (id) DO UPDATE SET slug = excluded.slug, prefix = excluded.prefix,
            repo_origin = excluded.repo_origin, memory_repo = excluded.memory_repo,
            harness_defaults_json = excluded.harness_defaults_json,
            tier_c_globs_json = excluded.tier_c_globs_json, local_path = excluded.local_path,
            connection_id = excluded.connection_id, repo_full_name = excluded.repo_full_name,
-           status = excluded.status, ecosystems_json = excluded.ecosystems_json`,
+           status = excluded.status, ecosystems_json = excluded.ecosystems_json,
+           repo_root = excluded.repo_root, subfolder = excluded.subfolder`,
         [
           p.id,
           p.slug,
@@ -69,12 +71,18 @@ export function createProjectRepository(driver: SqlDriver): ProjectRepository {
           p.repo_full_name ?? null,
           p.status,
           toJson(p.ecosystems),
+          p.repo_root ?? null,
+          p.subfolder ?? null,
         ],
       );
     },
 
     async delete(id) {
       return driver.run('DELETE FROM projects WHERE id = ?', [id]).changes > 0;
+    },
+
+    async purge(slug) {
+      return purgeProject(driver, slug);
     },
 
     async list() {

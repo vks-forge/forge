@@ -22,6 +22,8 @@ const FAMILY: Record<GitHostReason, ErrorFamily> = {
   merge_refused: 'policy_denied',
   // Backoff family: the same merge is expected to work once the branch stops moving.
   merge_busy: 'rate_limit',
+  // The user's own checked-out branch has uncommitted work: a human must commit or stash it.
+  dirty_tree: 'invalid_input',
   invalid: 'invalid_input',
   unavailable: 'crash',
 };

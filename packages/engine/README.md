@@ -147,6 +147,8 @@ Public API from `src/index.ts`:
 - Run settle records status, usage, cost, error family, the files git says changed, the receipt
   chain's last hash and revokes the token; the worktree is kept for the PR step.
 
+Dispatch parks a ticket (WaitingHuman, "Needs you") when the worktree manager raises `InvalidInputError`, for example a project whose repository has no commit yet (init-only, d-0124); releasing it after the user's first commit dispatches normally.
+
 ## Why this approach
 
 - Inner ring (d-0058): imports `@forge/core` and `@forge/tools` only; every effect is a port. The

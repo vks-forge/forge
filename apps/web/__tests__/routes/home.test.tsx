@@ -73,6 +73,40 @@ describe('Home', () => {
     expect(screen.getByRole('link', { name: /Open Inbox \(1\)/ })).toBeInTheDocument();
   });
 
+  it('names the action on a tool-approval row and opens the harness tools section', async () => {
+    renderWork(HOME, {
+      ...routes(),
+      'GET /projects/sample-service/inbox': {
+        body: {
+          items: [
+            inboxItem({
+              id: 'tool_approval:claude/2.1.142/shell',
+              kind: 'tool_approval',
+              title: 'Approve tool shell',
+              ticket_id: undefined as never,
+            }),
+          ],
+          nextCursor: null,
+        },
+      },
+    });
+
+    const waiting = await screen.findByRole('list', { name: 'Waiting on you' });
+    const row = within(waiting).getByRole('listitem');
+    const title = within(row).getByRole('link', {
+      name: 'Review tool: Approve tool shell',
+    });
+
+    expect(title).toHaveAttribute('href', '/settings/harnesses/claude#tools');
+    expect(row).toHaveTextContent('Review tool');
+    expect(row.querySelector('a[aria-hidden="true"]')).toHaveAttribute(
+      'href',
+      '/settings/harnesses/claude#tools',
+    );
+
+    expect(within(row).getAllByRole('link')).toHaveLength(1);
+  });
+
   it('shows a figure the server could not compute as No data, and a real zero as 0%', async () => {
     renderWork(
       HOME,

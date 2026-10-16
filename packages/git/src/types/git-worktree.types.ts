@@ -24,6 +24,12 @@ export interface GitWorktreeManagerOptions {
    * `worktrees/<projectSlug>`), so the user's own folder never shows Forge worktrees (d-0098).
    */
   readonly worktreeRoot: string;
+  /**
+   * Path of the project's folder inside `repoRoot`, forward slashes, when the project is
+   * scoped to a subfolder (d-0124). Worktrees are of the whole repository; the path handed
+   * out (the Worker's cwd) is this folder inside the worktree.
+   */
+  readonly subfolder?: string;
   /** Git executable; defaults to `git` on PATH. */
   readonly gitBinary?: string;
   /** Commit author and committer; defaults to Forge <forge@localhost>. */

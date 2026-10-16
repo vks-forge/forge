@@ -37,6 +37,9 @@ Which ecosystems' rules apply (`domain/gate-rules.ts`): the project's `ecosystem
 - The environment is an allowlist (`PATH`, `PATHEXT`, `SystemRoot`, `ComSpec`, `TEMP`, `HOME`, `USERPROFILE`, `APPDATA`, ... see `shared/env.ts`) plus `G1Deps.passEnv`; `CI=1` and `NoDefaultCurrentDirectoryInExePath=1` are forced. `ANTHROPIC_API_KEY`, `GH_TOKEN` and `FORGE_*` never reach the child.
 - The command's first token is resolved to an absolute executable through PATH and PATHEXT only, never the cwd, and refused (the check is `error`) if it is not found or lies inside the worktree. cmd.exe would otherwise run a Worker-committed `pnpm.cmd` from the cwd.
 
+G1 also fails any change outside the project folder (`scope` check): the worktree manager reports such
+paths as `../x` for a project scoped to a subfolder of a repository (d-0124).
+
 ## Why this approach
 
 - Evidence over assertion: claims are matched to HMAC-chained receipts and git's own diff; nothing the Worker writes is trusted.

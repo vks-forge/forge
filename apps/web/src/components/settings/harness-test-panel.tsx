@@ -21,8 +21,11 @@ import { describeError } from '#/api/describe-error.js';
 import { HARNESSES_KEY } from '#/api/use-settings-data.js';
 import { Reveal } from '#/components/motion/reveal.js';
 import { Notice } from '#/components/settings/form-field.js';
+import { FormFooter } from '#/components/settings/settings-card.js';
 import { Button } from '#/components/ui/button.js';
 import type { HarnessTestResult } from '#/schemas/settings.js';
+import { useNotify } from '#/state/notify/notify-context.js';
+import { harnessName } from '#/domain/harness-labels.js';
 import { useSubmit } from '#/state/use-submit.js';
 
 const ACCOUNT_WORDS: Readonly<Record<string, string>> = {
@@ -67,6 +70,7 @@ function Result(props: { result: HarnessTestResult }) {
 export function HarnessTestPanel(props: { id: string }) {
   const api = useForgeApi();
   const queryClient = useQueryClient();
+  const notify = useNotify();
   const [live, setLive] = useState(false);
   const submit = useSubmit(async (withLiveCall: boolean) => {
     const result = await api.harnesses.test(props.id, withLiveCall);
@@ -79,32 +83,55 @@ export function HarnessTestPanel(props: { id: string }) {
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Button
-          status={submit.pending ? 'loading' : 'idle'}
-          onClick={() => {
-            setResult(null);
-            void submit.run(live).then((r) => setResult(r ?? null));
-          }}
-        >
-          Test harness
-        </Button>
-        <label className="flex min-h-9 items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={live}
-            onChange={(e) => setLive(e.target.checked)}
-            className="size-4 accent-[var(--signal)]"
-          />
-          Also make one real model call (costs a little)
-        </label>
-      </div>
       <Reveal show={submit.status === 'error'}>
         <Notice tone="error" title="The test could not run">
           {describeError(submit.error).detail}
         </Notice>
       </Reveal>
       <Reveal show={result !== null}>{result ? <Result result={result} /> : null}</Reveal>
+      {result === null && submit.status !== 'error' ? (
+        <p className="text-sm text-muted">
+          No test has been run in this session. Run one to see the build, the executable
+          and how it signed in.
+        </p>
+      ) : null}
+      <FormFooter
+        help={
+          <label className="flex min-h-9 items-center gap-2">
+            <input
+              type="checkbox"
+              checked={live}
+              onChange={(e) => setLive(e.target.checked)}
+              className="size-4 accent-[var(--signal)]"
+            />
+            Also make one real model call (costs a little)
+          </label>
+        }
+      >
+        <Button
+          variant="primary"
+          status={submit.pending ? 'loading' : 'idle'}
+          onClick={() => {
+            setResult(null);
+            void submit.run(live).then((r) => {
+              setResult(r ?? null);
+              if (r) {
+                const name = harnessName(props.id);
+
+                if (r.ok) {
+                  notify.success(`${name} passed the test`);
+                } else {
+                  notify.warning(`${name} did not pass the test`, {
+                    description: r.error,
+                  });
+                }
+              }
+            });
+          }}
+        >
+          Test harness
+        </Button>
+      </FormFooter>
     </div>
   );
 }

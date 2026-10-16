@@ -17,11 +17,13 @@ import { describeError } from '#/api/describe-error.js';
 import { useArchiveProject } from '#/api/use-project-settings.js';
 import { Button } from '#/components/ui/button.js';
 import { ConfirmDialog } from '#/components/ui/confirm-dialog.js';
+import { useNotify } from '#/state/notify/notify-context.js';
 
 export function ArchiveSection(props: { slug: string; disabled: boolean }) {
   const [open, setOpen] = useState(false);
   const archive = useArchiveProject(props.slug);
   const navigate = useNavigate();
+  const notify = useNotify();
 
   return (
     <section aria-labelledby="archive-heading" className="grid gap-3">
@@ -55,7 +57,12 @@ export function ArchiveSection(props: { slug: string; disabled: boolean }) {
         confirmLabel="Archive project"
         tone="danger"
         onConfirm={() =>
-          archive.mutate(undefined, { onSuccess: () => void navigate('/') })
+          archive.mutate(undefined, {
+            onSuccess: () => {
+              notify.success('Project archived', { description: props.slug });
+              void navigate('/');
+            },
+          })
         }
       />
     </section>

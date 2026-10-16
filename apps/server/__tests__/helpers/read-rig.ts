@@ -27,6 +27,8 @@ export interface ReadRig {
   readonly storage: StorageAdapter;
   /** What the memory reader lists for any project; change it per test. */
   proposals: MemoryListEntry[];
+  /** Installed harness builds by harness id, as the compat service reports them. */
+  readonly installed: Record<string, string>;
   close(): Promise<void>;
 }
 
@@ -83,6 +85,8 @@ export async function startReadRig(): Promise<ReadRig> {
   });
 
   const state = { proposals: [] as MemoryListEntry[] };
+  const installed: Record<string, string> = {};
+  const extras = inertRouteExtras();
   const rig = await startHttp(
     buildRoutes({
       ...stubHarnessDeps(),
@@ -92,7 +96,11 @@ export async function startReadRig(): Promise<ReadRig> {
       } as unknown as Engine,
       storage,
       config: createMemoryConfigSource(),
-      ...inertRouteExtras(),
+      ...extras,
+      compat: {
+        ...extras.compat,
+        installedVersion: (id: string) => installed[id] ?? null,
+      },
       memory: {
         ...inertMemory,
         reader: { list: async () => state.proposals, get: async () => null },
@@ -109,6 +117,7 @@ export async function startReadRig(): Promise<ReadRig> {
   return {
     rig,
     storage,
+    installed,
     get proposals() {
       return state.proposals;
     },

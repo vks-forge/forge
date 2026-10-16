@@ -49,7 +49,10 @@ export function inboxRoutes(deps: RouteDeps): Route[] {
 
     return deps.storage.transaction(async (tx) => {
       const project = await findProject(tx, slug);
-      const candidates = await gatherInboxCandidates(tx, project, memory, nowMs);
+      const candidates = await gatherInboxCandidates(tx, project, memory, nowMs, (kind) =>
+        deps.compat.installedVersion(kind),
+      );
+
       const marks = await tx.inboxStates.listByProject(project.id);
       let items = applyInboxMarks(candidates, marks);
       let marked: InboxItem | undefined;

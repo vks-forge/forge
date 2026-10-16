@@ -93,7 +93,7 @@ export function CostPage() {
   const none = report.runs_total === 0;
 
   return (
-    <section className="grid max-w-5xl gap-4">
+    <section className="grid gap-4">
       <header className="grid gap-1">
         <p className="font-data text-xs text-muted">{slug}</p>
         <h1 className="text-2xl font-semibold tracking-tight">Cost</h1>

@@ -11,7 +11,7 @@
  *
  * Exports: SavePanel.
  * Depends on: react, components/motion/reveal, components/settings/form-field,
- *   components/ui/button, api/describe-error, schemas/settings, state/use-author-prefs,
+ *   components/settings/settings-card, components/ui/button, api/describe-error, schemas/settings, state/use-author-prefs,
  *   types/settings-draft.types.
  */
 
@@ -19,18 +19,20 @@ import { useState } from 'react';
 import { describeError } from '#/api/describe-error.js';
 import { Reveal } from '#/components/motion/reveal.js';
 import { FormField, Notice, TextInput } from '#/components/settings/form-field.js';
+import { FormFooter } from '#/components/settings/settings-card.js';
 import { Button } from '#/components/ui/button.js';
 import { DecisionForm } from '#/schemas/settings.js';
+import { useNotify } from '#/state/notify/notify-context.js';
 import { useAuthorPrefs } from '#/state/use-author-prefs.js';
 import type { CompanyDraft } from '#/types/settings-draft.types.js';
 
 export function SavePanel(props: { draft: CompanyDraft }) {
   const { draft } = props;
+  const notify = useNotify();
   const [author, setAuthor] = useAuthorPrefs();
   const [reason, setReason] = useState('');
   const [problems, setProblems] = useState<Record<string, string>>({});
   const invalid = Object.keys(draft.errors).length;
-  const saved = draft.save.status === 'success' && !draft.dirty;
 
   const submit = async (): Promise<void> => {
     const parsed = DecisionForm.safeParse({ author, reason });
@@ -47,6 +49,9 @@ export function SavePanel(props: { draft: CompanyDraft }) {
     setProblems({});
     if (await draft.save.run(parsed.data)) {
       setReason('');
+      notify.success('Saved as a new version', {
+        description: 'The Director picks it up on its next tick; no restart is needed.',
+      });
     }
   };
 
@@ -72,25 +77,23 @@ export function SavePanel(props: { draft: CompanyDraft }) {
           {describeError(draft.save.error).detail}
         </Notice>
       </Reveal>
-      <Reveal show={saved}>
-        <Notice tone="good" title="Saved as a new version">
-          The Director picks it up on its next tick; no restart is needed.
-        </Notice>
-      </Reveal>
       {draft.dirty ? (
         <form
           aria-label="Save settings"
-          className="grid gap-4 rounded-xl border border-line bg-surface p-4"
+          className="grid gap-4 overflow-hidden rounded-xl border border-line bg-surface p-5 md:p-6"
           onSubmit={(event) => {
             event.preventDefault();
             void submit();
           }}
         >
-          <p className="text-sm text-muted">
-            Saving creates version {draft.version + 1}. Version {draft.version} stays in
-            the history.
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-1">
+            <h2 className="text-base font-semibold tracking-tight">Save your changes</h2>
+            <p className="text-sm text-muted">
+              Saving creates version {draft.version + 1}. Version {draft.version} stays in
+              the history.
+            </p>
+          </div>
+          <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
             <FormField id="save-author" label="Your name" error={problems['author']}>
               <TextInput
                 id="save-author"
@@ -113,12 +116,21 @@ export function SavePanel(props: { draft: CompanyDraft }) {
               />
             </FormField>
           </div>
-          {invalid > 0 ? (
-            <p role="status" className="text-sm text-danger">
-              Fix {invalid} field{invalid === 1 ? '' : 's'} marked above before saving.
-            </p>
-          ) : null}
-          <div className="flex flex-wrap gap-2">
+          <FormFooter
+            help={
+              invalid > 0 ? (
+                <span role="status" className="text-danger">
+                  Fix {invalid} field{invalid === 1 ? '' : 's'} marked above before
+                  saving.
+                </span>
+              ) : (
+                'The Director picks it up on its next tick.'
+              )
+            }
+          >
+            <Button onClick={draft.discard} disabled={draft.save.pending}>
+              Discard edits
+            </Button>
             <Button
               type="submit"
               variant="primary"
@@ -127,10 +139,7 @@ export function SavePanel(props: { draft: CompanyDraft }) {
             >
               Save as version {draft.version + 1}
             </Button>
-            <Button onClick={draft.discard} disabled={draft.save.pending}>
-              Discard edits
-            </Button>
-          </div>
+          </FormFooter>
         </form>
       ) : null}
     </div>

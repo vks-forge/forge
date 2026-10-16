@@ -43,8 +43,50 @@ describe('ProjectInspection', () => {
       checks: [{ name: 'test', role: 'test', command: 'npm run test' }],
       suggested_slug: 'r',
       suggested_prefix: 'R',
+      git: {
+        state: 'repo',
+        repo_root: '/r',
+        subfolder: null,
+        has_commits: true,
+        dirty: false,
+        remote: null,
+      },
+      snapshot: null,
     });
 
     expect(parsed.success).toBe(true);
+  });
+
+  it('accepts a folder with no git and its snapshot count, and refuses one without git facts', () => {
+    const base = {
+      local_path: '/p',
+      current_branch: null,
+      base_branch: 'main',
+      branches: [],
+      branches_truncated: false,
+      ecosystems: [],
+      checks: [],
+      suggested_slug: 'p',
+      suggested_prefix: 'P',
+    };
+
+    const none = {
+      state: 'none',
+      repo_root: null,
+      subfolder: null,
+      has_commits: false,
+      dirty: false,
+      remote: null,
+    };
+
+    expect(
+      ProjectInspection.safeParse({
+        ...base,
+        git: none,
+        snapshot: { files: 3, bytes: 30, has_gitignore: false, truncated: false },
+      }).success,
+    ).toBe(true);
+
+    expect(ProjectInspection.safeParse(base).success).toBe(false);
   });
 });

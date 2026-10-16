@@ -27,6 +27,7 @@ import { MEMORY_ROW_HEIGHT, MemoryRow } from '#/routes/memory/memory-row.js';
 import { MemoryTabs, TAB_LABELS } from '#/routes/memory/memory-tabs.js';
 import { MemoryToolbar } from '#/routes/memory/memory-toolbar.js';
 import { RecordDrawer } from '#/routes/memory/record-drawer.js';
+import { useNotify } from '#/state/notify/notify-context.js';
 import { useMemoryPrefs } from '#/state/use-memory-prefs.js';
 import { useOnline } from '#/state/use-online.js';
 
@@ -52,7 +53,7 @@ export function MemoryPage() {
 
   const [approving, setApproving] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const notify = useNotify();
   const recordId = params.get('record');
 
   useEffect(() => {
@@ -78,14 +79,15 @@ export function MemoryPage() {
     id === null ? null : (entries.find((e) => e.id === id)?.statement ?? id);
 
   function send(body: Parameters<typeof answer.mutate>[0]): void {
-    setNotice(null);
     answer.mutate(body, {
       onSuccess: () =>
-        setNotice(
-          body.verdict === 'approve'
-            ? `${body.id} approved. It is now a decision.`
-            : `${body.id} rejected and recorded.`,
-        ),
+        body.verdict === 'approve'
+          ? notify.success(`${body.id} approved`, {
+              description: 'It is now a decision.',
+            })
+          : notify.success(`${body.id} rejected`, {
+              description: 'The rejection is recorded.',
+            }),
     });
   }
 
@@ -111,7 +113,7 @@ export function MemoryPage() {
   const tabTotal = counts[filter.tab];
 
   return (
-    <section className="grid max-w-4xl gap-4">
+    <section className="grid gap-4">
       <header className="grid gap-1">
         <p className="font-data text-xs text-muted">{slug}</p>
         <h1 className="text-2xl font-semibold tracking-tight">Memory</h1>
@@ -146,10 +148,6 @@ export function MemoryPage() {
           </Button>
         </div>
       ) : null}
-
-      <p role="status" className="min-h-5 text-sm text-good">
-        {notice}
-      </p>
 
       <MemoryTabs
         tab={filter.tab}

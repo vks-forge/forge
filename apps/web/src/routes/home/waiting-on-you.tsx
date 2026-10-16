@@ -4,7 +4,8 @@
  * Why: Home must say "here is what is waiting on you" without sending the owner to the Inbox
  *   first. It shows the newest five items that need action, each linking to its source, and a
  *   link to the whole Inbox with the true count, so a long queue is visible as long and not
- *   cut off silently. An empty queue is a statement ("Nothing waits on you"), not blank space.
+ *   cut off silently. Each row ends in its action in words ("Review tool", "Open ticket") so the
+ *   next step is visible, not guessed from the title. An empty queue is a statement ("Nothing waits on you"), not blank space.
  *   It has its own loading and error states so a failing inbox never blanks the stats beside it.
  *
  * Exports: WaitingOnYou, WAITING_LIMIT.
@@ -74,6 +75,16 @@ export function WaitingOnYou(props: { slug: string }) {
                   className="min-w-0 truncate text-sm hover:underline"
                 >
                   {item.title}
+                </Link>
+                {/* Same target as the title link; hidden from keyboard and screen readers so
+                    the row keeps one tab stop and one announcement. */}
+                <Link
+                  to={link.to}
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  className="ml-auto shrink-0 text-xs font-medium whitespace-nowrap text-signal hover:underline"
+                >
+                  {link.label}
                 </Link>
               </li>
             );

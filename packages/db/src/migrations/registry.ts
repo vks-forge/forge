@@ -33,6 +33,7 @@ import { MIGRATION_0016 } from '#/migrations/0016-scheduling.js';
 import { MIGRATION_0017 } from '#/migrations/0017-run-resume.js';
 import { MIGRATION_0018 } from '#/migrations/0018-inbox-states.js';
 import { MIGRATION_0019 } from '#/migrations/0019-cards.js';
+import { MIGRATION_0020 } from '#/migrations/0020-project-scope.js';
 import type { Migration } from '#/types/migrations.types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -53,4 +54,5 @@ export const MIGRATIONS: readonly Migration[] = [
   MIGRATION_0017,
   MIGRATION_0018,
   MIGRATION_0019,
+  MIGRATION_0020,
 ];

@@ -10,7 +10,7 @@
  *   helpers/http-rig. IO: a loopback socket.
  */
 
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { createMemoryConfigSource, createMemoryStorage } from '@forge/db';
 import type { ConfigSource, StorageAdapter } from '@forge/core';
 import type { Engine } from '@forge/engine';
@@ -38,6 +38,8 @@ export interface ProjectsRig {
 export async function startProjectsRig(
   worktreesDir: string,
   memory: RouteDeps['memory'] = inertRouteExtras().memory,
+  folderPicker?: RouteDeps['folderPicker'],
+  folderRevealer?: RouteDeps['folderRevealer'],
 ): Promise<ProjectsRig> {
   const storage = createMemoryStorage();
   const unservable = new Map<string, string>();
@@ -73,7 +75,13 @@ export async function startProjectsRig(
       prover: extras.prover,
       requestShutdown: extras.requestShutdown,
       secrets,
-      dataHome: { home: dirname(worktreesDir), worktreesDir },
+      ...(folderPicker ? { folderPicker } : {}),
+      ...(folderRevealer ? { folderRevealer } : {}),
+      dataHome: {
+        home: dirname(worktreesDir),
+        memoryDir: join(dirname(worktreesDir), 'memory'),
+        worktreesDir,
+      },
       hooks: { handle: vi.fn() },
       owner: 'srv-test',
       startedAt: 0,

@@ -10,7 +10,7 @@
  *
  * Exports: HarnessSetupForm.
  * Depends on: react, @tanstack/react-query, @forge/core (HarnessAuthMode), api/api-provider,
- *   api/use-settings-data, components/settings/form-field, components/ui/button,
+ *   api/use-settings-data, components/settings/form-field, components/settings/settings-card, components/ui/button,
  *   state/unsaved-changes, state/use-submit, api/describe-error.
  */
 
@@ -21,9 +21,11 @@ import { useForgeApi } from '#/api/api-provider.js';
 import { describeError } from '#/api/describe-error.js';
 import { HARNESSES_KEY } from '#/api/use-settings-data.js';
 import { FormField, Notice, TextInput } from '#/components/settings/form-field.js';
+import { FormFooter } from '#/components/settings/settings-card.js';
 import { Button } from '#/components/ui/button.js';
 import type { HarnessView } from '#/schemas/settings.js';
 import { useUnsavedChanges } from '#/state/unsaved-changes.js';
+import { useNotify } from '#/state/notify/notify-context.js';
 import { useSubmit } from '#/state/use-submit.js';
 
 const MODES: readonly { value: HarnessAuthMode; label: string; help: string }[] = [
@@ -49,6 +51,7 @@ export function HarnessSetupForm(props: {
   harness: HarnessView | undefined;
 }) {
   const api = useForgeApi();
+  const notify = useNotify();
   const queryClient = useQueryClient();
   const saved = {
     auth_mode: props.harness?.auth_mode ?? 'login',
@@ -71,6 +74,8 @@ export function HarnessSetupForm(props: {
     });
 
     await queryClient.invalidateQueries({ queryKey: HARNESSES_KEY });
+
+    return true;
   });
 
   return (
@@ -78,10 +83,17 @@ export function HarnessSetupForm(props: {
       className="grid gap-5"
       onSubmit={(event) => {
         event.preventDefault();
-        void submit.run();
+        void submit.run().then((ok) => {
+          if (ok) {
+            notify.success('Saved', {
+              description:
+                'The last test result was cleared. Run the test again to check these settings.',
+            });
+          }
+        });
       }}
     >
-      <fieldset className="grid gap-2">
+      <fieldset className="grid max-w-xl gap-2">
         <legend className="mb-1 text-sm font-medium">How it signs in</legend>
         {MODES.map((option) => (
           <label
@@ -129,12 +141,7 @@ export function HarnessSetupForm(props: {
           {describeError(submit.error).detail}
         </Notice>
       ) : null}
-      {submit.status === 'success' ? (
-        <Notice tone="good" title="Saved">
-          The last test result was cleared. Run the test again to check these settings.
-        </Notice>
-      ) : null}
-      <div>
+      <FormFooter help="Changes apply to the next run and clear the last test result.">
         <Button
           type="submit"
           variant="primary"
@@ -145,7 +152,7 @@ export function HarnessSetupForm(props: {
         >
           {props.harness ? 'Save sign-in settings' : `Register ${props.id}`}
         </Button>
-      </div>
+      </FormFooter>
     </form>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * ProjectSettingsPage: a project's facts, its overrides of company settings, history, archive.
+ * ProjectSettingsPage: a project's facts, its overrides of company settings, history, archive, delete.
  *
  * Why: how Workers behave on a project (which checks gate a ticket, which harness runs, how
  *   many at once) is data the owner edits here, never a file (d-0085, d-0090). The page keeps
@@ -32,11 +32,13 @@ import {
   validateDraft,
 } from '#/domain/settings-draft.js';
 import { ArchiveSection } from '#/routes/project-settings/archive-section.js';
+import { DeleteSection } from '#/routes/project-settings/delete-section.js';
 import { ConflictBanner } from '#/routes/project-settings/conflict-banner.js';
 import { HistoryPanel } from '#/routes/project-settings/history-panel.js';
 import { ProjectSection } from '#/routes/project-settings/project-section.js';
 import { SaveBar } from '#/routes/project-settings/save-bar.js';
 import { SettingsForm } from '#/routes/project-settings/settings-form.js';
+import { useNotify } from '#/state/notify/notify-context.js';
 import { useOnline } from '#/state/use-online.js';
 import { useUnsavedChanges } from '#/state/unsaved-changes.js';
 import type { SettingsDraft, SettingsSnapshot } from '#/types/project-settings.types.js';
@@ -47,6 +49,7 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
   const queryClient = useQueryClient();
   const projects = useProjects();
   const save = useSaveSettings(slug);
+  const notify = useNotify();
   // `opened` is the version the user started from; `latest` may move on under them.
   const [opened, setOpened] = useState<SettingsSnapshot>(latest);
   const [draft, setDraft] = useState<SettingsDraft>(() => draftFromSnapshot(latest));
@@ -98,13 +101,17 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
           setSaved(
             `Saved as version ${version.version}. Workers use it from the next tick.`,
           );
+
+          notify.success('Project settings saved', {
+            description: `Version ${version.version}. Workers use it from the next tick.`,
+          });
         },
       },
     );
   };
 
   return (
-    <div className="grid max-w-3xl gap-6">
+    <div className="grid max-w-4xl gap-6">
       <header className="grid gap-1">
         <p className="font-data text-xs text-muted">{slug}</p>
         <h1 className="text-2xl font-semibold tracking-tight">Project settings</h1>
@@ -159,6 +166,7 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
 
       <HistoryPanel versions={latest.versions} />
       <ArchiveSection slug={slug} disabled={!online} />
+      <DeleteSection slug={slug} localPath={project?.local_path} disabled={!online} />
 
       <SaveBar
         version={opened.version.project}

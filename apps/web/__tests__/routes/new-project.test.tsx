@@ -1,183 +1,177 @@
 /**
- * Pins: "Add project" for later projects: the switcher entry, the page inside the shell, a
- * GitHub-hosted create, and each server refusal shown beside its field.
+ * Pins: "Add project" as a large step-by-step dialog: reachable from the switcher, no folder
+ * text box, each step validated before Next, the git choices sent in the body, refusals sent back
+ * to the step that shows the field, and closing that never throws work away by accident.
  *
- * Why: after setup, adding a second repository is the common path. It must be reachable from
- * the switcher, use the same careful check-then-create order as the first run, send the
- * connection (not a host) when GitHub is chosen, and turn a taken prefix or name into advice
- * beside the box that is wrong instead of a bare error.
+ * Why: after setup, adding a second project is the common path, and it now works on any folder,
+ * with or without git (d-0124). The dialog must ask one thing at a time, never let Next pass an
+ * invalid step, send exactly the git setup or scope the folder needs (and never a host the folder
+ * does not have), turn a taken prefix into advice beside the box that is wrong, and keep a
+ * half-made choice safe from a stray click on the dimmed page.
  * Depends on: routes/projects/new-project-page, components/shell/project-switcher,
- *   helpers/render-onboarding, helpers/fetch-stub.
+ *   helpers/render-onboarding, helpers/onboarding-fixtures, helpers/fetch-stub.
  */
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { refusal } from '#tests/helpers/fetch-stub.js';
-import { projectReply, renderOnboarding } from '#tests/helpers/render-onboarding.js';
+import {
+  BASE_ROUTES,
+  chooseFolder,
+  clickNext,
+  CREATED,
+} from '#tests/helpers/onboarding-fixtures.js';
+import { renderOnboarding } from '#tests/helpers/render-onboarding.js';
 
-const COMPLETE = {
-  service: 'forge',
-  version: '0.0.0',
-  data_home: '/forge',
-  first_run: { complete: true, project_count: 1, harness_ok: true },
-};
+const ROUTES = { ...BASE_ROUTES, ...CREATED };
 
-const INSPECTION = {
-  local_path: '/code/billing',
-  current_branch: 'main',
-  base_branch: 'main',
-  branches: ['main'],
-  branches_truncated: false,
-  ecosystems: [],
-  checks: [],
-  suggested_slug: 'billing',
-  suggested_prefix: 'BIL',
-};
-
-const BASE = {
-  'GET /projects': { body: { projects: [projectReply('forge', 'FG')] } },
-  'GET /system': { body: COMPLETE },
-  'POST /projects/inspect': { body: INSPECTION },
-};
-
-const CONNECTIONS = {
-  'GET /github/connections': {
-    body: {
-      connections: [
-        {
-          id: 'acme',
-          account: 'Acme Inc',
-          app_id: '4242',
-          key_secret_name: 'github/acme/key',
-          status: 'active',
-          created_at: '2026-10-14T00:00:00.000Z',
-        },
-      ],
-    },
-  },
-};
-
-async function checked(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(
-    await screen.findByLabelText('Repository folder'),
-    '/code/billing{Enter}',
-  );
-
-  await screen.findByLabelText('Project name');
-}
-
-describe('add project', () => {
-  it('opens from the project switcher', async () => {
+describe('add project: the dialog', () => {
+  it('opens from the project switcher as a dialog, with no folder text box', async () => {
     const user = userEvent.setup();
-    const { router } = renderOnboarding('/p/forge', { ...BASE });
+    const { router } = renderOnboarding('/p/forge', { ...ROUTES });
 
     await user.click(await screen.findByRole('button', { name: 'Switch project' }));
     await user.click(await screen.findByRole('menuitem', { name: 'Add project' }));
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/projects/new'));
+    const dialog = await screen.findByRole('dialog', { name: 'Add project' });
+
     expect(
-      await screen.findByRole('heading', { name: 'Add project', level: 1 }),
+      within(dialog).getByRole('heading', { name: 'Choose a folder' }),
+    ).toBeInTheDocument();
+
+    expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Repository folder')).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Next' })).toBeDisabled();
+  });
+
+  it('numbers the steps and marks the current one', async () => {
+    renderOnboarding('/projects/new', { ...ROUTES });
+
+    const steps = await screen.findByRole('navigation', { name: 'Add project steps' });
+
+    expect(within(steps).getAllByRole('listitem')).toHaveLength(5);
+    expect(within(steps).getByRole('button', { name: /Folder/ })).toHaveAttribute(
+      'aria-current',
+      'step',
+    );
+  });
+
+  it('asks before discarding a chosen folder, and stays open until the person decides', async () => {
+    const user = userEvent.setup();
+    const { router } = renderOnboarding('/projects/new', { ...ROUTES });
+
+    await chooseFolder(user);
+    await user.keyboard('{Escape}');
+
+    expect(
+      await screen.findByRole('alertdialog', { name: 'Discard this new project?' }),
+    ).toBeInTheDocument();
+
+    expect(router.state.location.pathname).toBe('/projects/new');
+    expect(
+      screen.getByRole('dialog', { name: 'Add project', hidden: true }),
     ).toBeInTheDocument();
   });
 
-  it('creates a GitHub project with the connection, not a host, and opens it', async () => {
+  it('closes at once when nothing was chosen', async () => {
     const user = userEvent.setup();
-    const { router, calls } = renderOnboarding('/projects/new', {
-      ...BASE,
-      ...CONNECTIONS,
-      'POST /projects': {
-        status: 201,
-        body: { project: projectReply('billing', 'BIL'), settings_version: 1 },
-      },
-    });
+    const { router } = renderOnboarding('/projects/new', { ...ROUTES });
 
-    await checked(user);
-    await user.click(screen.getByRole('radio', { name: /GitHub/ }));
-    await user.selectOptions(await screen.findByLabelText('GitHub connection'), 'acme');
-    await user.type(screen.getByLabelText('Repository'), 'acme/billing');
-    await user.type(screen.getByLabelText('Installation id'), '99');
-    await user.type(screen.getByLabelText('Your name'), 'Vikash');
-    await user.click(screen.getByRole('button', { name: 'Create project' }));
+    await user.click(await screen.findByRole('button', { name: 'Cancel' }));
 
-    await waitFor(() => expect(router.state.location.pathname).toBe('/p/billing'));
-    const body = calls.find((c) => c.method === 'POST' && c.path === '/projects')?.body;
-    expect(body).toMatchObject({
-      slug: 'billing',
-      connection_id: 'acme',
-      repo_full_name: 'acme/billing',
-      installation_id: '99',
-    });
-
-    expect(body).not.toHaveProperty('git_host');
+    await waitFor(() => expect(router.state.location.pathname).not.toBe('/projects/new'));
   });
+});
 
-  it.each([
-    [
-      'prefix_in_use',
-      409,
-      'Another project already uses that ticket prefix',
-      'project-prefix',
-    ],
-    ['project_exists', 409, 'A project with that name already exists', 'project-slug'],
-    ['base_branch_missing', 400, 'That branch does not exist', 'project-branch'],
-    [
-      'project_not_servable',
-      400,
-      'Forge could not use that remote folder',
-      'project-remote',
-    ],
-  ])('shows %s beside its own field with a fix', async (code, status, words, fieldId) => {
+describe('add project: step validation', () => {
+  it('keeps Next off until the folder is checked, and says so when Forge cannot use it', async () => {
     const user = userEvent.setup();
     renderOnboarding('/projects/new', {
-      ...BASE,
-      'POST /projects': refusal(status, code, 'server words'),
+      ...ROUTES,
+      'POST /projects/inspect': refusal(400, 'path_in_data_home', 'inside data home'),
     });
 
-    await checked(user);
-    await user.type(screen.getByLabelText('Remote repository'), '../billing.git');
-    await user.type(screen.getByLabelText('Your name'), 'Vikash');
-    await user.click(screen.getByRole('button', { name: 'Create project' }));
+    await user.click(await screen.findByRole('button', { name: /Choose a folder/ }));
 
-    const error = await screen.findByText(new RegExp(words));
-    expect(error).toHaveAttribute('id', `${fieldId}-error`);
-    expect(document.getElementById(fieldId)).toHaveAttribute('aria-invalid', 'true');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "inside Forge's own data folder",
+    );
+
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
   });
 
-  it('shows a refusal that belongs to the folder under the folder box', async () => {
+  it('catches a prefix another project uses while typing and blocks Next', async () => {
     const user = userEvent.setup();
-    renderOnboarding('/projects/new', {
-      ...BASE,
-      'POST /projects': refusal(409, 'path_in_use', 'dup'),
-    });
+    renderOnboarding('/projects/new', { ...ROUTES });
 
-    await checked(user);
-    await user.type(screen.getByLabelText('Remote repository'), '../billing.git');
-    await user.type(screen.getByLabelText('Your name'), 'Vikash');
-    await user.click(screen.getByRole('button', { name: 'Create project' }));
+    await chooseFolder(user);
+    await clickNext(user);
+    await clickNext(user);
 
-    const alert = await screen.findByText(/Another project already uses this folder/);
-    expect(
-      within(alert.parentElement as HTMLElement).getByText(/Open that project/),
-    ).toBeTruthy();
-  });
-
-  it('explains that GitHub needs a connection when there is none', async () => {
-    const user = userEvent.setup();
-    renderOnboarding('/projects/new', {
-      ...BASE,
-      'GET /github/connections': { body: { connections: [] } },
-    });
-
-    await checked(user);
-    await user.click(screen.getByRole('radio', { name: /GitHub/ }));
+    const prefix = await screen.findByLabelText('Ticket prefix');
+    await user.clear(prefix);
+    await user.type(prefix, 'fg');
 
     expect(
-      await screen.findByText(/no active GitHub connection yet/),
+      await screen.findByText(/Another project already uses that ticket prefix/),
+    ).toHaveAttribute('id', 'project-prefix-error');
+
+    expect(prefix).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+
+    await user.clear(prefix);
+    await user.type(prefix, 'bil');
+
+    await user.type(screen.getByLabelText('Your name'), 'V');
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+  });
+
+  it('asks for the name before leaving the details, and does not open covered in errors', async () => {
+    const user = userEvent.setup();
+    renderOnboarding('/projects/new', { ...ROUTES });
+
+    await chooseFolder(user);
+    await clickNext(user);
+    await clickNext(user);
+
+    expect(await screen.findByLabelText('Project name')).toHaveValue('billing');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+
+    await user.type(screen.getByLabelText('Your name'), 'x{Backspace}');
+
+    expect(
+      await screen.findByText(/Say who is creating the project/),
     ).toBeInTheDocument();
+  });
 
-    expect(
-      screen.getByRole('link', { name: 'Add one in Forge settings' }),
-    ).toHaveAttribute('href', '/settings/github');
+  it('moves on with Enter when the step is valid', async () => {
+    const user = userEvent.setup();
+    renderOnboarding('/projects/new', { ...ROUTES });
+
+    await chooseFolder(user);
+    await user.keyboard('{Enter}');
+
+    expect(await screen.findByRole('heading', { name: 'Git setup' })).toBeInTheDocument();
+  });
+
+  it('goes back to an earlier step from the stepper, keeping what was typed', async () => {
+    const user = userEvent.setup();
+    renderOnboarding('/projects/new', { ...ROUTES });
+
+    await chooseFolder(user);
+    await clickNext(user);
+    await clickNext(user);
+    const name = await screen.findByLabelText('Project name');
+    await user.clear(name);
+    await user.type(name, 'renamed');
+
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    await screen.findByRole('heading', { name: 'Git setup' });
+    await clickNext(user);
+
+    expect(await screen.findByLabelText('Project name')).toHaveValue('renamed');
   });
 });

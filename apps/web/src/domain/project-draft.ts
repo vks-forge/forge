@@ -3,11 +3,14 @@
  *
  * Why: the server is the authority and re-checks every body, but a typo caught beside its box
  *   costs nothing while one found after a round trip costs a click and a wait. These rules
- *   mirror the server's body (slug and prefix patterns, one way to name the git host) so the
- *   form can point at the field. Prefilling from the folder check means the common case is
- *   accepting what Forge found. Pure functions, no IO.
+ *   mirror the server's body (slug and prefix patterns, the git choices the folder needs) so
+ *   the form can point at the field, and a name or prefix another project already uses is
+ *   caught while typing. Prefilling from the folder check means the common case is accepting
+ *   what Forge found. Folder, git and scope choices are derived from what git said about the
+ *   folder, never typed. Pure functions, no IO.
  *
- * Exports: draftFromInspection(), validateDraft(), buildCreateRequest(), EMPTY_DRAFT, SLUG_PATTERN.
+ * Exports: draftFromInspection(), validateDraft(), buildCreateRequest(), repoFullName(), EMPTY_DRAFT,
+ *   SLUG_PATTERN.
  * Depends on: @forge/core (PROJECT_PREFIX_PATTERN), types/onboarding.types.
  */
 
@@ -17,6 +20,7 @@ import type {
   ProjectCreateRequest,
   ProjectDraft,
   ProjectField,
+  TakenNames,
 } from '#/types/onboarding.types.js';
 
 export const SLUG_PATTERN = /^[a-z][a-z0-9-]*$/;
@@ -26,24 +30,39 @@ export const EMPTY_DRAFT: ProjectDraft = {
   prefix: '',
   baseBranch: '',
   host: 'local',
-  remotePath: '',
+  gitSetup: 'snapshot',
+  scope: 'root',
   connectionId: '',
   repo: '',
   installationId: '',
   checks: [],
 };
 
-/** The draft Forge suggests for a folder it just inspected; host choices keep what the user had. */
+/** `owner/name` of the remote's GitHub repository, or '' when the folder has none. */
+export function repoFullName(inspection: ProjectInspection | null): string {
+  const github = inspection?.git.remote?.github;
+
+  return github ? `${github.owner}/${github.repo}` : '';
+}
+
+/** The draft Forge suggests for a folder it just inspected; the GitHub choice keeps what the user had. */
 export function draftFromInspection(
   inspection: ProjectInspection,
   previous: ProjectDraft = EMPTY_DRAFT,
 ): ProjectDraft {
+  const github = inspection.git.remote?.github ?? null;
+
   return {
     ...previous,
     slug: inspection.suggested_slug,
     prefix: inspection.suggested_prefix,
     baseBranch: inspection.base_branch,
     checks: inspection.checks,
+    gitSetup: 'snapshot',
+    scope: 'root',
+    // GitHub only makes sense when the folder's remote is a GitHub repository.
+    host: github ? previous.host : 'local',
+    repo: github ? `${github.owner}/${github.repo}` : '',
   };
 }
 
@@ -51,6 +70,7 @@ export function draftFromInspection(
 export function validateDraft(
   draft: ProjectDraft,
   author: string,
+  taken?: TakenNames,
 ): Partial<Record<ProjectField, string>> {
   const problems: Partial<Record<ProjectField, string>> = {};
 
@@ -63,13 +83,17 @@ export function validateDraft(
     problems.prefix = 'Use 1 to 10 capital letters or digits, starting with a letter.';
   }
 
-  if (draft.baseBranch.trim() === '') {
-    problems.base_branch = 'Choose the branch tickets are cut from and merged into.';
+  if (problems.slug === undefined && taken?.slugs.has(draft.slug)) {
+    problems.slug = 'A project with that name already exists. Add a number or a word.';
   }
 
-  if (draft.host === 'local' && draft.remotePath.trim() === '') {
-    problems.remote_path =
-      'Enter the bare repository Forge merges into (a path relative to your clone also works).';
+  if (problems.prefix === undefined && taken?.prefixes.has(draft.prefix)) {
+    problems.prefix =
+      'Another project already uses that ticket prefix; ticket ids would clash.';
+  }
+
+  if (draft.baseBranch.trim() === '') {
+    problems.base_branch = 'Choose the branch tickets are cut from and merged into.';
   }
 
   if (draft.host === 'github') {
@@ -101,16 +125,22 @@ export function validateDraft(
   return problems;
 }
 
-/** The strict `POST /projects` body for a validated draft. */
+/** The strict `POST /projects` body for a validated draft and the inspection of its folder. */
 export function buildCreateRequest(
   folder: string,
   draft: ProjectDraft,
   author: string,
+  inspection: ProjectInspection,
 ): ProjectCreateRequest {
+  const { git } = inspection;
+  const root =
+    git.state === 'inside_repo' && draft.scope === 'root' ? git.repo_root : null;
+
   const base = {
     slug: draft.slug,
     prefix: draft.prefix,
-    local_path: folder.trim(),
+    // Choosing the repository's top folder registers that folder, never a nested path.
+    local_path: (root ?? folder).trim(),
     base_branch: draft.baseBranch.trim(),
     settings: {
       checks: draft.checks.map((c) => ({
@@ -123,6 +153,8 @@ export function buildCreateRequest(
     },
     author: author.trim(),
     reason: 'project created in the web app',
+    ...(git.state === 'none' ? { git_setup: { mode: draft.gitSetup } } : {}),
+    ...(git.state === 'inside_repo' ? { scope: { mode: draft.scope } } : {}),
   };
 
   if (draft.host === 'github') {
@@ -134,12 +166,6 @@ export function buildCreateRequest(
     };
   }
 
-  return {
-    ...base,
-    git_host: {
-      kind: 'local',
-      remote_path: draft.remotePath.trim(),
-      base_branch: draft.baseBranch.trim(),
-    },
-  };
+  // No GitHub: verified work merges locally into the base branch (d-0124), so no host is named.
+  return base;
 }

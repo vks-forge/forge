@@ -33,8 +33,12 @@ come later (d-0082).
 2. First run: pick the data folder (`%LOCALAPPDATA%\Forge`, d-0098), check
    installed harnesses and their logins (d-0087), connect GitHub — Forge
    creates a GitHub App in your org with one click (d-0084).
-3. Create a project: pick a repo from GitHub or start from scratch, choose a
-   local folder (d-0083). Forge detects the languages and commands, runs them
+3. Create a project: choose any local folder (d-0083, d-0124). With git it is
+   used as is; with no git Forge says git is needed and starts a local repository
+   (snapshot commit of the files, or init only); inside a larger repository you
+   pick the repository top or only the subfolder. A GitHub remote is optional:
+   without one verified work merges locally into the base branch (a dirty
+   checked-out branch waits for you). Forge detects the languages and commands, runs them
    once, then the Director asks a few onboarding questions (d-0095).
 4. Ask for work in the project chat (later: GitHub Issues, d-0096). The
    Director triages it into a ticket with a lane (Express / Standard / Full).
@@ -112,6 +116,15 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-16: Shared Tooltip component on icon buttons (inbox actions, notifications, theme toggle, mobile navigation, capacity rows).
+- 2026-10-16: Inbox shows tool approvals and compat failures only for the installed harness build; dates no longer show 1970.
+- 2026-10-16: Delete project in project settings (typed confirm); removes Forge data, never the user's folder.
+- 2026-10-16 — Board page redesigned: clearer header, columns, cards and empty state.
+- 2026-10-16 — Add project is a large step-by-step dialog (Folder, Git, Details, Checks, Review) with no folder text box; the folder browser can sort by name or date, make folders and offers a right-click menu; works on any folder, with or without git (d-0124, web).
+- 2026-10-16 — Any folder is a project (d-0124, backend): git state inspection, local repository setup (snapshot or init only), subfolder scope, and local merge for projects with no remote, end to end with the agents.
+- 2026-10-16 — Notifications: one bottom-centre notification system for every action (success, error, undo), with live progress cards for long-running jobs.
+- 2026-10-16 — Forge settings redesigned: hero header (breadcrumb, status badge, facts strip), sticky section tabs, section cards with footer actions, bordered lists; Add connection opens in a modal that ignores backdrop clicks.
+- 2026-10-16 — New project: Browse… opens the system folder window (Explorer, Finder, zenity/kdialog); in-app browser as fallback.
 - 2026-10-16 — Status: web control room runs end to end on the real server API (W2–W7, cards W6).
 - 2026-10-16 — W6c: chat with the card's Director; it can file tickets, steer Workers and change the card type.
 - 2026-10-16 — W6: Board Cards view, Card page with Director chat, and messaging a running Worker.
@@ -129,6 +142,7 @@ Newest first. One line per milestone.
 - 2026-10-16 — W2: Forge settings screens (harnesses, GitHub, limits, general).
 - 2026-10-16 — CI green on Windows, macOS and Linux: paths compared after resolving short names and symlinks.
 - 2026-10-16 — C4 fixes: brace and glob expansion, provider drives and attached git `-c` no longer slip past the floors.
+- 2026-10-16 — Home/Inbox tool-approval items now open the harness's Built-in tools section; Approve all for pending tools.
 - 2026-10-15 — W1: web app shell, theme, motion system, data layer.
 - 2026-10-15 — W3b: ticket list per project for the board.
 - 2026-10-15 — C3 fixes: graceful stop waits for in-flight tool calls; resume phase isolated per run; atomic project slug.

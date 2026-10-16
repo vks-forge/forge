@@ -132,7 +132,8 @@ describe('git cli worktree manager specifics', { timeout: 30_000 }, () => {
     const { manager } = await makeManager(repoRoot);
 
     await expect(manager.create(tid(1), 'feat/a', 'nope')).rejects.toMatchObject({
-      errorFamily: 'crash',
+      errorFamily: 'invalid_input',
+      message: expect.stringMatching(/does not exist/),
     });
   }, 30_000); // real git is slow on Windows
 

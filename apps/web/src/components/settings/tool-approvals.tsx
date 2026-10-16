@@ -9,9 +9,9 @@
  *   earlier decision can be reversed from its row. Nothing is applied before the server
  *   accepts it, because an approval is an audited, security-relevant act.
  *
- * Exports: ToolApprovals.
+ * Exports: ToolApprovals (with ToolApproveAll for deciding every pending tool at once).
  * Depends on: react, @tanstack/react-query, @forge/core (type), api/api-provider,
- *   api/describe-error, api/use-settings-data, components/settings/*, components/ui/button,
+ *   api/describe-error, api/use-settings-data, components/settings/*, tool-approve-all, components/ui/button,
  *   domain/format-time, schemas/settings, state/use-submit.
  */
 
@@ -23,6 +23,7 @@ import { describeError } from '#/api/describe-error.js';
 import { toolsKey, useTools } from '#/api/use-settings-data.js';
 import { DecisionDialog } from '#/components/settings/decision-dialog.js';
 import { Notice } from '#/components/settings/form-field.js';
+import { ToolApproveAll } from '#/components/settings/tool-approve-all.js';
 import { StatusPill } from '#/components/settings/status-pill.js';
 import { Button } from '#/components/ui/button.js';
 import { formatWhen } from '#/domain/format-time.js';
@@ -142,6 +143,10 @@ export function ToolApprovals(props: { id: string }) {
         >
           Workers cannot use these until you approve them. Changed tools have a new schema
           since the last approval.
+          <ToolApproveAll
+            id={id}
+            pending={rows.filter((r) => r.status === 'pending').map((r) => r.tool)}
+          />
         </Notice>
       ) : null}
       <ul aria-label="Built-in tools">

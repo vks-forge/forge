@@ -1,65 +1,80 @@
 /**
- * NewProjectPage: "Add project" at `/projects/new`, inside the app shell.
+ * NewProjectPage: "Add project" at `/projects/new`, a large step-by-step dialog over the app shell.
  *
- * Why: after setup, more repositories join the same Forge. This is the first-run wizard's
- *   last step as an ordinary page: the same form and the same checks, with the sidebar still
- *   there so the user keeps their bearings. Cancel (or Esc) returns to where they came from
- *   and warns first when a folder has been typed, since the form holds work. Creating the
- *   project switches to its Home, but only after the page has told the shell it no longer
- *   holds unsaved work; navigating in the same instant would be stopped by the shell's own
- *   "discard changes?" guard on a form that was just saved.
+ * Why: adding a project is a short guided task (choose a folder, see what git says, name it,
+ *   review the checks, create), not a place to live, so it is a dialog, not a page. The route
+ *   stays so the project switcher, the empty-state link and a pasted address all open it.
+ *   Closing (Cancel, the close button or Esc) returns to where the person came from, or to the
+ *   start when the address was opened directly, and asks "Discard?" first once a folder has
+ *   been chosen, because the choices are work; clicking the dimmed page behind never closes it.
+ *   Creating the project says so with a notification and opens the project's Home.
  *
  * Exports: NewProjectPage.
- * Depends on: react, react-router, components/onboarding/project-form, components/ui/button,
- *   domain/nav-entries, state/unsaved-changes.
+ * Depends on: react, react-router, components/onboarding/{project-stepper,project-wizard-view},
+ *   components/ui/modal, domain/nav-entries, state/{notify/notify-context,use-project-wizard}.
  */
 
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
-import { ProjectForm } from '#/components/onboarding/project-form.js';
-import { Button } from '#/components/ui/button.js';
+import { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router';
+import { ProjectStepper } from '#/components/onboarding/project-stepper.js';
+import {
+  ProjectWizardBody,
+  ProjectWizardNav,
+} from '#/components/onboarding/project-wizard-view.js';
+import { Modal } from '#/components/ui/modal.js';
 import { projectPath } from '#/domain/nav-entries.js';
-import { useUnsavedChanges, useUnsavedChangesState } from '#/state/unsaved-changes.js';
+import { useNotify } from '#/state/notify/notify-context.js';
+import { useProjectWizard } from '#/state/use-project-wizard.js';
 
 export function NewProjectPage() {
   const navigate = useNavigate();
-  const [folder, setFolder] = useState('');
-  const [createdSlug, setCreatedSlug] = useState<string | null>(null);
-  const { dirty } = useUnsavedChangesState();
-  useUnsavedChanges(folder.trim() !== '' && createdSlug === null);
+  const location = useLocation();
+  const notify = useNotify();
+
+  const wizard = useProjectWizard({
+    onCreated(project) {
+      notify.success(`Project ${project.slug} created`, {
+        description: 'It is ready for its first ticket.',
+        action: {
+          label: 'View',
+          onClick: () => void navigate(projectPath(project.slug)),
+        },
+      });
+
+      void navigate(projectPath(project.slug), { replace: true });
+    },
+  });
 
   useEffect(() => {
     document.title = 'Add project · Forge';
   }, []);
 
-  useEffect(() => {
-    if (createdSlug !== null && !dirty) {
-      void navigate(projectPath(createdSlug));
+  const close = (): void => {
+    // `default` is the first entry of the session: nothing to go back to.
+    if (location.key === 'default') {
+      void navigate('/');
+    } else {
+      void navigate(-1);
     }
-  }, [createdSlug, dirty, navigate]);
+  };
 
   return (
-    <section
-      className="grid max-w-3xl gap-6 pb-16"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && !event.defaultPrevented) {
-          void navigate(-1);
-        }
-      }}
+    <Modal
+      open
+      size="large"
+      title="Add project"
+      description="Choose a folder and Forge sets the rest up with you. Nothing is created until the last step."
+      onClose={close}
+      dirty={wizard.dirty}
+      busy={wizard.creating}
+      discardTitle="Discard this new project?"
+      discardDescription="The folder you chose and what you entered will be lost. Nothing has been created."
+      subheader={
+        <ProjectStepper step={wizard.step} onGo={wizard.goTo} locked={wizard.creating} />
+      }
+      primary={<ProjectWizardNav wizard={wizard} />}
     >
-      <header className="grid gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Add project</h1>
-        <p className="max-w-prose text-muted">
-          Point Forge at a repository on this machine. It checks the folder first and
-          creates nothing until you press Create.
-        </p>
-      </header>
-      <ProjectForm
-        folder={folder}
-        onFolderChange={setFolder}
-        onCreated={(project) => setCreatedSlug(project.slug)}
-        secondary={<Button onClick={() => void navigate(-1)}>Cancel</Button>}
-      />
-    </section>
+      <ProjectWizardBody wizard={wizard} />
+    </Modal>
   );
 }
