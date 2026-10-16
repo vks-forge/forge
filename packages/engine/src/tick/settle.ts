@@ -10,11 +10,12 @@
  *   with an open ticket. The worktree is kept for the PR step; it goes on Done or Cancelled.
  *
  * Exports: settleRun().
- * Depends on: @forge/core, domain/results, tick/outcome, shared/time. Reads git and receipts via ports.
+ * Depends on: @forge/core, domain/results, tick/card-budget, tick/outcome, shared/time. Reads git and receipts via ports.
  */
 
 import type { ErrorFamily, Run, RunResult, TicketId } from '@forge/core';
 import { runStatusFor } from '#/domain/results.js';
+import { warnOnBudget } from '#/tick/card-budget.js';
 import { applyOutcome } from '#/tick/outcome.js';
 import { runtimeFor } from '#/tick/project-runtime.js';
 import type { EngineCtx, Pump } from '#/types/engine-state.types.js';
@@ -113,6 +114,10 @@ export async function settleRun(
       opts.retryReason,
       opts.parkReason,
     );
+
+    // The run's cost is now on its row: a card crossing its budget cap is warned, never stopped (d-0143).
+    const ticket = await tx.tickets.get(run.ticket_id as TicketId);
+    await warnOnBudget(tx, ticket?.card_id, ctx.nowIso);
   });
 
   state.pumps.delete(run.id);

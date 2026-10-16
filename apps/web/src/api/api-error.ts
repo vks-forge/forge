@@ -33,11 +33,13 @@ export class ApiError extends ForgeError {
   readonly kind: ApiErrorKind;
   readonly status: number | undefined;
   readonly code: string | undefined;
+  /** The server's whole refusal body, for extras such as a dependency cycle; never trusted. */
+  readonly body: unknown;
 
   constructor(
     kind: ApiErrorKind,
     message: string,
-    details: { status?: number; code?: string; cause?: unknown } = {},
+    details: { status?: number; code?: string; cause?: unknown; body?: unknown } = {},
   ) {
     super(
       details.status === undefined ? 'unknown' : errorFamilyOfStatus(details.status),
@@ -48,5 +50,6 @@ export class ApiError extends ForgeError {
     this.kind = kind;
     this.status = details.status;
     this.code = details.code;
+    this.body = details.body;
   }
 }

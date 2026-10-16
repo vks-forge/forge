@@ -2,21 +2,18 @@
  * BoardHeader: the title block at the top of the Board.
  *
  * Why: the first screenful of the Board must say where you are (this project's Board), what
- *   the current view shows, and what you can do (switch view, start a request). It uses the
+ *   the current view shows, and what you can do (switch view, start a card). It uses the
  *   same hero shape as the settings pages (icon tile, title, mono id chip, one line, actions
  *   on the same row) so the app reads as one product. The view switch lives here, above every
  *   loading, empty and error state, so the way to the other view never disappears with data.
  *
  * Exports: BoardHeader.
- * Depends on: react, lucide-react, routes/board/board-view-switch, routes/board/ask-director,
- *   routes/board/archived-reason, components/ui/{button,tooltip}, types/ui-state.types.
+ * Depends on: lucide-react, routes/board/board-view-switch, components/cards/new-card-button,
+ *   types/ui-state.types.
  */
 
-import { LayoutDashboard, Plus } from 'lucide-react';
-import { Button } from '#/components/ui/button.js';
-import { Tooltip } from '#/components/ui/tooltip.js';
-import { focusComposer } from '#/routes/board/ask-director.js';
-import { ARCHIVED_REASON } from '#/routes/board/archived-reason.js';
+import { LayoutDashboard } from 'lucide-react';
+import { NewCardButton } from '#/components/cards/new-card-button.js';
 import { BoardViewSwitch } from '#/routes/board/board-view-switch.js';
 import type { BoardPrefs } from '#/types/ui-state.types.js';
 
@@ -27,14 +24,7 @@ const INTRO: Readonly<Record<BoardPrefs['view'], string>> = {
     'The units of work Workers build, grouped by where they are. Needs you holds everything waiting on a person.',
 };
 
-export function BoardHeader(props: {
-  slug: string;
-  view: BoardPrefs['view'];
-  /** False while the project is unknown: there is nowhere to write. */
-  canCompose: boolean;
-  /** An archived project takes no new work: the button stays, disabled, with the reason. */
-  archived: boolean;
-}) {
+export function BoardHeader(props: { slug: string; view: BoardPrefs['view'] }) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div className="flex min-w-0 items-start gap-4">
@@ -56,16 +46,7 @@ export function BoardHeader(props: {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <BoardViewSwitch />
-        {props.canCompose ? (
-          <Tooltip content={ARCHIVED_REASON} disabled={!props.archived}>
-            <span className="inline-flex">
-              <Button onClick={focusComposer} disabled={props.archived}>
-                <Plus aria-hidden="true" className="size-4" />
-                New request
-              </Button>
-            </span>
-          </Tooltip>
-        ) : null}
+        <NewCardButton slug={props.slug} variant="primary" />
       </div>
     </header>
   );

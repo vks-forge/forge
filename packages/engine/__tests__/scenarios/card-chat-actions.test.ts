@@ -7,10 +7,10 @@
  *   crash. It may suggest closing a card but never close it (d-0112).
  *
  * Pins: create_ticket (linked, numbered, triaged the same tick, `director_action` and
- *   `actions_taken`); a Discussion refuses it, or converts then files in order; retype
+ *   `actions_taken`); a Discussion refuses it; retype
  *   refusals; steer_run through `steerRun` with the Director as author, refused for a ticket
  *   of another card, without a live Worker, or unknown; suggest_close records and never
- *   closes; the budget cap stops new tickets.
+ *   closes. The phase gate and the budget warning are pinned in card-chat-phase.
  * Depends on: helpers/card-chat, helpers/rig, helpers/scripted-llm, @forge/core, vitest.
  */
 
@@ -83,11 +83,11 @@ describe('card chat actions', () => {
     });
   });
 
-  it('retypes a Discussion then files a ticket in the same reply, in order', async () => {
+  it('retypes a Discussion in order, then refuses the ticket while the card is still being planned', async () => {
     const rig = await makeRig();
     await discussion(rig);
     rig.llm.script('card_chat', {
-      reply: 'Converted and filed.',
+      reply: 'Converted.',
       actions: [
         { kind: 'change_type', type: 'issue' },
         { kind: 'create_ticket', title: 'Switch to pnpm', body: 'Do it.' },
@@ -98,13 +98,13 @@ describe('card chat actions', () => {
     await rig.tick();
 
     expect((await card(rig))?.type).toBe('issue');
-    expect((await kinds(rig)).filter((k) => k !== 'ticket_state')).toEqual([
+    expect(await rig.storage.transaction((tx) => tx.tickets.listByCard(C1))).toEqual([]);
+    expect(await kinds(rig)).toEqual([
       'user_message',
       'user_message',
       'type_changed',
       'director_action',
-      'ticket_created',
-      'director_action',
+      'note',
       'director_message',
     ]);
 
@@ -112,6 +112,11 @@ describe('card chat actions', () => {
     expect(changed).toMatchObject({
       actor: { type: 'director', id: 'card-chat' },
       payload: { from: 'discussion', to: 'issue' },
+    });
+
+    const refusal = (await history(rig)).find((e) => e.kind === 'note');
+    expect(refusal?.payload).toEqual({
+      text: expect.stringContaining('tickets are created when the plan is approved'),
     });
   });
 
@@ -221,26 +226,5 @@ describe('card chat actions', () => {
 
     expect((await card(rig))?.closed_reason).toBeUndefined();
     expect(events.some((e) => e.kind === 'card_closed')).toBe(false);
-  });
-
-  it('refuses to file more tickets once the card has reached its budget cap', async () => {
-    const rig = await makeRig();
-    await rig.request('Fix it');
-    await rig.storage.transaction((tx) =>
-      tx.cards.update(C1, { budget_cap_usd: 0, updated_at: '2026-10-16T00:00:00.000Z' }),
-    );
-
-    rig.llm.script('card_chat', {
-      reply: 'Filing.',
-      actions: [{ kind: 'create_ticket', title: 'More', body: 'More work' }],
-    });
-
-    await say(rig);
-    await rig.tick();
-
-    const tickets = await rig.storage.transaction((tx) => tx.tickets.listByCard(C1));
-    expect(tickets).toHaveLength(1);
-    const note = (await history(rig)).find((e) => e.kind === 'note');
-    expect(note?.payload).toEqual({ text: expect.stringContaining('budget cap') });
   });
 });

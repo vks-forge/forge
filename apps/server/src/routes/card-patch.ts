@@ -8,15 +8,18 @@
  *   patchable: it follows from the tickets and questions (d-0107), and `closed` is the one
  *   column an act sets, only by giving a reason. A type the registry does not know is 400,
  *   a type that does not accept the card's source is 409, and a closed card takes no further
- *   change (409), so a late request cannot quietly reopen or retype dropped work.
+ *   change (409), so a late request cannot quietly reopen or retype dropped work. Closing
+ *   also moves the stored phase to `closed` through `transitionCard()`, so the phase and the
+ *   reason never disagree.
  *
  * Exports: cardPatchRoute().
- * Depends on: @forge/core (CardId, CardPatchBody, checkTypeChange), services/card-view,
+ * Depends on: @forge/core (CardId, CardPatchBody, checkTypeChange), services/card-phase, services/card-view,
  *   services/http/*, types/routes. IO: reads and writes storage.
  */
 
 import { CardId, CardPatchBody, checkTypeChange } from '@forge/core';
 import type { CardActor, NewCardEvent } from '@forge/core';
+import { moveCardPhase } from '#/services/card-phase.js';
 import { cardDetail, viewCard } from '#/services/card-view.js';
 import { readJson } from '#/services/http/body.js';
 import { HttpError } from '#/services/http/http-errors.js';
@@ -88,9 +91,19 @@ export function cardPatchRoute(deps: RouteDeps): Route {
           }
         }
 
+        if (body.closed_reason !== undefined) {
+          // The phase follows the reason through the one door, so Board and phase agree.
+          await moveCardPhase(tx, card.id, { type: 'close' }, at);
+        }
+
         const slug = (await tx.projects.get(card.project))?.slug ?? card.project;
         const fresh = (await tx.cards.get(card.id)) ?? card;
-        const view = await viewCard(tx, fresh, await tx.interactions.listPending());
+        const view = await viewCard(
+          tx,
+          fresh,
+          await tx.interactions.listPending(),
+          await tx.cardRelations.listFor(card.id),
+        );
 
         return cardDetail(tx, view, slug, deps.engine.cardDirector(card.id));
       });

@@ -5,7 +5,8 @@
  *   would show the old project's tickets, runs and cards under the new one; and it must
  *   never reach into another project, or deleting one repository would destroy a
  *   neighbour's history. Both backends are held to the same walk: tickets and what hangs
- *   off them, runs and their records, cards and their history, inbox marks, the project row.
+ *   off them, runs and their records, cards with their history, relations, queued replies and
+ *   card questions, inbox marks, the project row.
  *
  * Exports: describeProjectPurgeContract().
  * Depends on: vitest, @forge/core, helpers/fixtures. IO only through the adapter under test.
@@ -28,6 +29,7 @@ import {
 
 const HASH = 'a'.repeat(64);
 const cardIdOf = (slug: string): CardId => `${slug.toUpperCase()}-C1` as CardId;
+const peerIdOf = (slug: string): CardId => `${slug.toUpperCase()}-C2` as CardId;
 
 /** Registers the cases; `getDb` returns the adapter the surrounding suite created for this test. */
 export function describeProjectPurgeContract(getDb: () => StorageAdapter): void {
@@ -75,7 +77,29 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
         created_by: { type: 'user', id: 'u1' },
         created_at: T0,
         updated_at: T0,
+        phase: 'grilling',
+        phase_version: 0,
+        needs_you: false,
+        priority: 'normal',
+        links: [],
       });
+
+      await t.cards.insert({ ...(await t.cards.get(cardId))!, id: peerIdOf(slug) });
+      await t.cardRelations.add(
+        { from: cardId, to: peerIdOf(slug), kind: 'depends_on' },
+        T0,
+      );
+
+      await t.cardReplyQueue.enqueue({
+        card_id: cardId,
+        event_id: 0,
+        reason: 'card_created',
+        enqueued_at: T0,
+      });
+
+      await t.interactions.insert(
+        makeInteraction(`cint-${slug}`, { ticket_id: 'none', card_id: cardId }),
+      );
 
       await t.cardEvents.append(cardId, {
         kind: 'note',
@@ -106,7 +130,11 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
       token: await t.runTokens.getHash(runId),
       gates: await t.gateResults.listByTicket(ticketId),
       interaction: await t.interactions.get(`int-${slug}`),
+      cardInteraction: await t.interactions.get(`cint-${slug}`),
       card: await t.cards.get(cardIdOf(slug)),
+      peer: await t.cards.get(peerIdOf(slug)),
+      cardRelations: await t.cardRelations.listFor(cardIdOf(slug)),
+      cardReplies: await t.cardReplyQueue.listOpen(cardIdOf(slug)),
       cardEvents: await t.cardEvents.list(cardIdOf(slug), { limit: 10 }),
       mark: await t.inboxStates.get(slug, 'question', 'i'),
     }));
@@ -130,7 +158,11 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
         token: null,
         gates: [],
         interaction: null,
+        cardInteraction: null,
         card: null,
+        peer: null,
+        cardRelations: [],
+        cardReplies: [],
         cardEvents: [],
         mark: null,
       });
@@ -146,6 +178,9 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
       expect(await footprint('beta', 2)).toEqual(before);
       expect(before.project).not.toBeNull();
       expect(before.events).toHaveLength(1);
+      expect(before.cardRelations).toHaveLength(1);
+      expect(before.cardReplies).toHaveLength(1);
+      expect(before.cardInteraction).not.toBeNull();
     });
 
     it('returns false for an unknown slug and changes nothing', async () => {

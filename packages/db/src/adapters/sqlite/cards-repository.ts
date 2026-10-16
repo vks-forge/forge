@@ -5,7 +5,10 @@
  *   re-parsed with the core `Card` schema on read, so a hand-edited or half-migrated row
  *   cannot reach the Board unvalidated. Numbering is storage's job: the highest stored
  *   `<PREFIX>-C<n>` plus one, read inside the caller's single-writer transaction, so two
- *   intakes cannot take the same number. The rolled-up column is not stored here.
+ *   intakes cannot take the same number. The rolled-up column is not stored here, but the
+ *   lifecycle is: `updatePhase` writes the phase fields only when the stored `phase_version`
+ *   is the one the caller read, so two writers racing on one card cannot both win (d-0134).
+ *   Create-card dedupe finds a card by the source and reference it was made from.
  *
  * Exports: createCardRepository().
  * Depends on: @forge/core, shared/db-errors, shared/json, types/storage-driver.types.
@@ -14,12 +17,19 @@
 import { Card, InvalidInputError } from '@forge/core';
 import type { CardRepository } from '@forge/core';
 import { parseStored } from '#/shared/db-errors.js';
-import { dropNulls } from '#/shared/json.js';
+import { dropNulls, fromJson, toJson } from '#/shared/json.js';
 import type { SqlDriver, SqlRow, SqlValue } from '#/types/storage-driver.types.js';
 
 const toCard = (row: SqlRow): Card => {
-  const { source_kind, source_ref, created_by_type, created_by_id, ...rest } =
-    dropNulls(row);
+  const {
+    source_kind,
+    source_ref,
+    created_by_type,
+    created_by_id,
+    needs_you,
+    links_json,
+    ...rest
+  } = dropNulls(row);
 
   return parseStored(
     Card,
@@ -27,13 +37,15 @@ const toCard = (row: SqlRow): Card => {
       ...rest,
       source: { kind: source_kind, ref: source_ref },
       created_by: { type: created_by_type, id: created_by_id },
+      needs_you: needs_you === 1,
+      links: fromJson(links_json),
     },
     'card',
   );
 };
 
 const CLEARABLE = ['closed_reason', 'budget_cap_usd'] as const;
-const SETTABLE = ['type', 'title', 'summary', ...CLEARABLE] as const;
+const SETTABLE = ['type', 'title', 'summary', 'priority', ...CLEARABLE] as const;
 
 export function createCardRepository(driver: SqlDriver): CardRepository {
   return {
@@ -43,12 +55,23 @@ export function createCardRepository(driver: SqlDriver): CardRepository {
       return row ? toCard(row) : null;
     },
 
+    async findBySource(project, kind, ref) {
+      const row = driver.get(
+        `SELECT * FROM cards WHERE project = ? AND source_kind = ? AND source_ref = ?
+         ORDER BY created_at, id LIMIT 1`,
+        [project, kind, ref],
+      );
+
+      return row ? toCard(row) : null;
+    },
+
     async insert(card) {
       const c = Card.parse(card);
       driver.run(
         `INSERT INTO cards (id, project, type, title, summary, source_kind, source_ref,
-           created_by_type, created_by_id, created_at, updated_at, closed_reason, budget_cap_usd)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           created_by_type, created_by_id, created_at, updated_at, closed_reason, budget_cap_usd,
+           phase, phase_version, needs_you, priority, links_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           c.id,
           c.project,
@@ -63,6 +86,11 @@ export function createCardRepository(driver: SqlDriver): CardRepository {
           c.updated_at,
           c.closed_reason ?? null,
           c.budget_cap_usd ?? null,
+          c.phase,
+          c.phase_version,
+          c.needs_you ? 1 : 0,
+          c.priority,
+          toJson(c.links),
         ],
       );
     },
@@ -119,10 +147,26 @@ export function createCardRepository(driver: SqlDriver): CardRepository {
         }
       }
 
+      if (patch.links !== undefined) {
+        sets.push('links_json = ?');
+        params.push(toJson(patch.links));
+      }
+
       const res = driver.run(`UPDATE cards SET ${sets.join(', ')} WHERE id = ?`, [
         ...params,
         id,
       ]);
+
+      return res.changes === 1;
+    },
+
+    async updatePhase(id, expectedVersion, update) {
+      const res = driver.run(
+        `UPDATE cards SET phase = ?, needs_you = ?, phase_version = phase_version + 1,
+           updated_at = ?
+         WHERE id = ? AND phase_version = ?`,
+        [update.phase, update.needs_you ? 1 : 0, update.updated_at, id, expectedVersion],
+      );
 
       return res.changes === 1;
     },

@@ -23,6 +23,7 @@ import type {
   DriverRegistry,
   ErrorFamily,
   IntakeEvent,
+  ProjectEventSink,
   MemorySource,
   ProjectConfigView,
   ReportStore,
@@ -31,6 +32,12 @@ import type {
   StorageAdapter,
 } from '@forge/core';
 import type { ReceiptLog } from '@forge/tools';
+import type {
+  CreateCardInput,
+  CreateCardResult,
+  SetCardRelationsInput,
+  SetCardRelationsResult,
+} from '#/types/card-create.types.js';
 import type { ProjectRuntime, VerifiedTicket } from '#/types/verify.types.js';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
@@ -83,6 +90,8 @@ export interface EngineDeps {
   readonly mcpIdentity?: string;
   /** Called (never re-entrantly, coalesced) when something wants an immediate tick; the app schedules `engine.tick()`. */
   readonly onTickRequested?: () => void;
+  /** Tells live views which queries went stale when engine memory (not a stored row) changed; absent in tests that watch nothing. */
+  readonly projectEvents?: ProjectEventSink;
   readonly log?: Logger;
 }
 
@@ -169,8 +178,19 @@ export interface Engine {
   tick(): Promise<TickReport>;
   /** Asks for an immediate tick through `deps.onTickRequested`; calls coalesce. */
   requestTick(): void;
-  /** Stores an intake event (deduped) and maps it: new request -> card (and an inbox ticket when its type starts tickets), reply -> steering or an answer. */
+  /** Stores an intake event (deduped) and maps it: new request -> card in `grilling` (plus an inbox ticket only on the PR fast path), reply -> steering or an answer. */
   ingest(event: IntakeEvent): Promise<IngestResult>;
+  /**
+   * Creates a card in `grilling` with its first event and a queued Director reply, after the
+   * dependency checks (same project, no cycle); a repeated `dedupe_key` returns the first card.
+   * No ticket is made. Wakes the tick so the Director answers soon.
+   */
+  createCard(input: CreateCardInput): Promise<CreateCardResult>;
+  /** Replaces a card's dependency edges after the same checks as creation. */
+  setCardRelations(
+    cardId: string,
+    input: SetCardRelationsInput,
+  ): Promise<SetCardRelationsResult>;
   /** Answers a pending interaction (CAS) and queues the response wake. False when it was not pending. */
   answerInteraction(interactionId: string, answer: unknown): Promise<boolean>;
   /**

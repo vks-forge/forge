@@ -3,16 +3,18 @@
  *
  * Why: a card is a request the user and the Director talk through, so this is where the
  *   user steers intent (the Worker thread on a ticket is where they watch the doing). It loads
- *   the card (refreshing on a slow poll and on focus), shows the header, an amber banner when
- *   questions wait on the user (each links to its ticket), and three tabs: Chat, Tickets, Details.
- *   The tab lives in the URL (`?tab=`), so a link opens the right view and Back works. Loading,
+ *   the card (refreshing on a slow poll and on focus), shows the header, a pinned Needs you banner
+ *   when the Director raised one (with every action it listed wired), an amber banner when
+ *   ticket questions wait on the user (each links to its ticket), and the body: the chat with a
+ *   Plan / Tickets / Details side panel (tabs below 768 px). The tab lives in the URL
+ *   (`?tab=`), so a link opens the right view and Back works. Loading,
  *   not-found, error (with retry) and offline-with-old-data are each handled in words; an id
  *   that does not exist is a clear "no such card", not an empty page.
  *
  * Exports: CardPage.
- * Depends on: react, react-router, lucide-react, api/use-card, api/use-card-board, api/describe-error,
- *   components/status/state-panel, components/card/*, domain/nav-entries, routes/card/* (incl. close-dialog),
- *   state/use-online.
+ * Depends on: react, react-router, lucide-react, api/use-card, api/use-card-board, api/use-plan,
+ *   api/describe-error, components/status/state-panel, domain/director-flow, domain/nav-entries,
+ *   routes/card/* (incl. close-dialog, card-body, needs-you-banner), state/use-media-query, state/use-online.
  */
 
 import { CircleAlert } from 'lucide-react';
@@ -20,18 +22,23 @@ import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { ApiError } from '#/api/api-error.js';
 import { describeError } from '#/api/describe-error.js';
-import { useCardDetail, usePatchCard } from '#/api/use-card.js';
+import { useCardDetail, useCardEvents, usePatchCard } from '#/api/use-card.js';
+import { usePlan } from '#/api/use-plan.js';
 import { useCardTypes } from '#/api/use-card-board.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
+import { activeNeedsYou } from '#/domain/director-flow.js';
 import { projectPath } from '#/domain/nav-entries.js';
-import { CardChat } from '#/routes/card/card-chat.js';
-import { CardDetails } from '#/routes/card/card-details.js';
+import { CardBody } from '#/routes/card/card-body.js';
 import { CardHeader } from '#/routes/card/card-header.js';
+import { CARD_TABS } from '#/routes/card/card-tabs.js';
 import { CloseDialog } from '#/routes/card/close-dialog.js';
-import { CARD_TABS, CardTabs } from '#/routes/card/card-tabs.js';
-import { CardTickets } from '#/routes/card/card-tickets.js';
+import { NeedsYouBanner } from '#/routes/card/needs-you-banner.js';
+import { PlanDialogs } from '#/routes/card/plan/plan-dialogs.js';
+import { usePlanDecisions } from '#/routes/card/plan/use-plan-decisions.js';
+import { useBannerActions } from '#/routes/card/use-banner-actions.js';
 import { useNotify } from '#/state/notify/notify-context.js';
+import { useMediaQuery } from '#/state/use-media-query.js';
 import { useOnline } from '#/state/use-online.js';
 import type { CardTab } from '#/types/cards-ui.types.js';
 
@@ -49,8 +56,28 @@ export function CardPage() {
   const [closing, setClosing] = useState(false);
   const [reason, setReason] = useState('');
   const online = useOnline();
+  const wide = useMediaQuery('(min-width: 768px)');
   const card = query.data;
   const tab = tabOf(params.get('tab'));
+  const goTab = (next: CardTab): void =>
+    setParams(next === 'chat' ? {} : { tab: next }, { replace: true });
+
+  const decisions = usePlanDecisions(id, () => goTab('plan'));
+  const history = useCardEvents(id);
+  const plan = usePlan(id);
+  const raised = activeNeedsYou(history.data?.events ?? []);
+  const needs =
+    card && card.needs_you && card.closed_reason === undefined ? raised : null;
+
+  const banner = useBannerActions({
+    cardId: id,
+    needs,
+    hasPlan: plan.data?.current != null,
+    tab,
+    wide,
+    decisions,
+    goTab,
+  });
 
   useEffect(() => {
     document.title = `${id} · Forge`;
@@ -92,7 +119,6 @@ export function CardPage() {
   }
 
   const waiting = card.pending_interactions.filter((i) => i.status === 'pending');
-  const ticketsNeedingYou = card.tickets.some((t) => t.needs_you);
 
   return (
     <section className="grid gap-6">
@@ -125,6 +151,15 @@ export function CardPage() {
         </p>
       ) : null}
 
+      {needs ? (
+        <NeedsYouBanner
+          needs={needs}
+          busy={banner.busy}
+          error={banner.error}
+          onAction={banner.run}
+        />
+      ) : null}
+
       {waiting.length > 0 ? (
         <div className="grid gap-1 rounded-2xl border-2 border-attn bg-attn-soft p-4">
           <p className="flex items-center gap-2 text-sm font-semibold">
@@ -145,30 +180,20 @@ export function CardPage() {
         </div>
       ) : null}
 
-      <div className="grid gap-4">
-        <CardTabs
-          tab={tab}
-          ticketCount={card.tickets.length}
-          needsYou={ticketsNeedingYou}
-          onChange={(next) =>
-            setParams(next === 'chat' ? {} : { tab: next }, { replace: true })
-          }
-        />
-        <div id="card-panel" role="tabpanel" aria-labelledby={`card-tab-${tab}`}>
-          {tab === 'chat' ? (
-            <CardChat
-              card={card}
-              types={types.data}
-              onSuggestClose={(suggested) => {
-                setReason(suggested);
-                setClosing(true);
-              }}
-            />
-          ) : null}
-          {tab === 'tickets' ? <CardTickets slug={slug} tickets={card.tickets} /> : null}
-          {tab === 'details' ? <CardDetails card={card} /> : null}
-        </div>
-      </div>
+      <PlanDialogs cardId={card.id} decisions={decisions} />
+
+      <CardBody
+        card={card}
+        types={types.data}
+        tab={tab}
+        wide={wide}
+        decisions={decisions}
+        onTab={goTab}
+        onSuggestClose={(suggested) => {
+          setReason(suggested);
+          setClosing(true);
+        }}
+      />
     </section>
   );
 }

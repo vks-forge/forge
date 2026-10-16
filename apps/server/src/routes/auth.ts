@@ -12,8 +12,9 @@
  *   request). `POST /auth/proof` answers a challenge with an HMAC under the install token,
  *   so the CLI can check a port is really this server before it sends the token. The
  *   page's `EventSource` cannot send headers either, so `POST /auth/sse-ticket` (token or
- *   session) hands out a ticket bound to one run id for the stream URL; it is useless for any
- *   other run and any other route. A code that fails gets a plain page, not JSON, because a
+ *   session) hands out a ticket bound to one run id (`{run_id}`) or one project slug
+ *   (`{project}`) for the stream URL; it is useless for any other run or project, for the
+ *   other kind of stream and for any other route. A code that fails gets a plain page, not JSON, because a
  *   person reads it, and it says what to do next.
  *
  * Exports: authRoutes().
@@ -51,8 +52,11 @@ export function authRoutes(deps: RouteDeps): Route[] {
       method: 'POST',
       path: '/auth/sse-ticket',
       async handle({ req, res }) {
-        const { run_id: runId } = await readJson(req, SseTicketBody);
-        const { ticket, expiresInSeconds } = deps.tickets.issue(runId);
+        const body = await readJson(req, SseTicketBody);
+        const { ticket, expiresInSeconds } =
+          'run_id' in body
+            ? deps.tickets.issue(body.run_id)
+            : deps.tickets.issueProject(body.project);
 
         sendJson(res, 200, { ticket, expires_in_s: expiresInSeconds });
       },

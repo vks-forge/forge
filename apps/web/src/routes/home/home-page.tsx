@@ -5,24 +5,23 @@
  *   answers three questions in order: what waits on me (inbox items that need action), what is
  *   moving (tickets with a stage track), and how is it going (daily graphs plus lead time,
  *   rework, gate pass and cost coverage over a 7, 30 or 90 day range). A readout line above
- *   gives the numbers right now. The Director bar at the foot is the same composer as the
- *   Board's. Every block has its own loading and error state, and a failing stats call never
+ *   gives the numbers right now. A New card button in the header starts work, the same popup as
+ *   the Board's. Every block has its own loading and error state, and a failing stats call never
  *   hides the inbox or the tickets. Figures the server cannot compute are "No data", never 0.
  *
  * Exports: HomePage.
- * Depends on: react, react-router, api/*, components/*, routes/home/*, routes/board/ask-director.
+ * Depends on: react, react-router, api/*, components/*, routes/home/*.
  */
 
 import { useEffect } from 'react';
 import { useParams } from 'react-router';
 import { describeError } from '#/api/describe-error.js';
-import { useAllProjects } from '#/api/use-projects.js';
 import { useStats } from '#/api/use-stats.js';
+import { NewCardButton } from '#/components/cards/new-card-button.js';
 import { OfflineNotice } from '#/components/status/offline-notice.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { ToggleGroup } from '#/components/ui/toggle-group.js';
 import { RANGES, rangeLabel } from '#/domain/stats-format.js';
-import { AskDirector } from '#/routes/board/ask-director.js';
 import { InProgress } from '#/routes/home/in-progress.js';
 import { ReadoutLine } from '#/routes/home/readout-line.js';
 import { StatsGrid } from '#/routes/home/stats-grid.js';
@@ -33,8 +32,6 @@ export function HomePage() {
   const { slug = '' } = useParams();
   const { range, setRange } = useStatsPrefs();
   const stats = useStats(slug, range);
-  const projects = useAllProjects();
-  const project = projects.data?.find((p) => p.slug === slug);
 
   useEffect(() => {
     document.title = 'Home · Forge';
@@ -42,9 +39,12 @@ export function HomePage() {
 
   return (
     <section className="grid gap-6">
-      <header className="grid gap-1">
-        <p className="font-data text-xs text-muted">{slug}</p>
-        <h1 className="text-2xl font-semibold tracking-tight">Home</h1>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div className="grid gap-1">
+          <p className="font-data text-xs text-muted">{slug}</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Home</h1>
+        </div>
+        <NewCardButton slug={slug} variant="primary" />
       </header>
 
       <OfflineNotice>You are offline. These are the last figures loaded.</OfflineNotice>
@@ -85,10 +85,6 @@ export function HomePage() {
         </p>
         {stats.data ? <StatsGrid stats={stats.data} /> : null}
       </section>
-
-      {project && project.status !== 'archived' ? (
-        <AskDirector project={project} />
-      ) : null}
     </section>
   );
 }

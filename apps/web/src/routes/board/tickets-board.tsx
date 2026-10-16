@@ -56,8 +56,8 @@ export function TicketsBoard(props: { slug: string }) {
           retrying={query.isFetching}
         />
       ) : tickets.length === 0 ? (
-        <BoardEmpty title="No tickets yet" columns={BOARD_COLUMNS}>
-          Tell the Director what you want in the box above, and the tickets it plans for
+        <BoardEmpty slug={props.slug} title="No tickets yet" columns={BOARD_COLUMNS}>
+          Create a card to tell the Director what you want, and the tickets it plans for
           Workers will appear in these columns.
         </BoardEmpty>
       ) : (

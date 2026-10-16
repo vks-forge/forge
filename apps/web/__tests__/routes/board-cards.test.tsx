@@ -1,7 +1,7 @@
 /**
  * Pins: the Board opens on the Cards view; its six columns come from the column the server
- * rolled up (the UI never decides one); a tile shows type, title, ticket progress and the amber
- * Needs you mark, and is one link to the Card page; type and text filters narrow the cards;
+ * rolled up (the UI never decides one); a tile shows type, phase, title, dependency chips, ticket
+ * progress and the amber Needs you mark, and is one link to the Card page; type and text filters narrow the cards;
  * the Cards | Tickets choice is remembered; and loading, empty and failure states are worded.
  *
  * Why: the Board is the first screen of the day. A card in the wrong column, a tile that is
@@ -10,7 +10,7 @@
  * Depends on: the stubbed Forge server via helpers/render-app, routes/board/*, state/board-prefs.
  */
 
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { storageKeyOf } from '#/state/create-persisted-store.js';
@@ -32,13 +32,11 @@ describe('Board, Cards view', () => {
       (await screen.findByRole('button', { name: 'Cards' })).getAttribute('aria-pressed'),
     ).toBe('true');
 
-    expect(
-      (await column('New')).getByText('Look at webhook retries'),
-    ).toBeInTheDocument();
-
-    expect(
-      (await column('Shaping')).getByText('Plan a retry strategy for webhooks'),
-    ).toBeInTheDocument();
+    const shaping = await column('Shaping');
+    expect(shaping.getByText('Look at webhook retries')).toBeInTheDocument();
+    expect(shaping.getByText('Plan a retry strategy for webhooks')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'New' })).not.toBeInTheDocument();
+    expect(await column('Queued')).toBeTruthy();
 
     const needsYou = await column('Needs you');
     expect(needsYou.getByText(/Fix off-by-one/)).toBeInTheDocument();
@@ -47,7 +45,10 @@ describe('Board, Cards view', () => {
 
     const active = await column('In progress');
     expect(active.getByText('Stream large CSV exports')).toBeInTheDocument();
-    expect(active.getByText('1 of 3 tickets done')).toBeInTheDocument();
+    expect(active.getByText('1/3 tickets')).toBeInTheDocument();
+    expect(
+      active.getByRole('progressbar', { name: '1 of 3 tickets done' }),
+    ).toBeInTheDocument();
 
     expect(
       (await column('Done')).getByText('Rename retries to maxRetries'),
@@ -89,8 +90,9 @@ describe('Board, Cards view', () => {
     const link = shaping.getByRole('link', { name: /Plan a retry strategy/ });
 
     expect(link).toHaveAttribute('href', '/p/sample-service/cards/FG-C2');
-    expect(shaping.getByText('Plan')).toBeInTheDocument();
-    expect(shaping.getByText('No tickets yet')).toBeInTheDocument();
+    const tile = within(link.closest('article') as HTMLElement);
+    expect(tile.getByText('Plan')).toBeInTheDocument();
+    expect(tile.getByText('No tickets yet')).toBeInTheDocument();
   });
 
   it('filters by type and by text, and clears the filter', async () => {
@@ -140,7 +142,83 @@ describe('Board, Cards view', () => {
     });
 
     expect(await screen.findByText('No cards yet')).toBeInTheDocument();
-    expect(screen.getByLabelText('Ask the Director')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create your first card' })).toBeEnabled();
+  });
+
+  it('shows the phase in words and the dependencies as chips on a card face', async () => {
+    renderApp({ path: BOARD });
+
+    const active = await column('In progress');
+    const tile = within(
+      active.getByText('Stream large CSV exports').closest('article') as HTMLElement,
+    );
+
+    expect(tile.getByText('1/3 tickets')).toBeInTheDocument();
+    const chips = tile.getByRole('list', { name: 'Dependencies' });
+    expect(within(chips).getByText('Blocked by')).toBeInTheDocument();
+    expect(within(chips).getByText('FG-C5')).toBeInTheDocument();
+
+    const shaping = await column('Shaping');
+    expect(shaping.getByText('Grilling')).toBeInTheDocument();
+    expect(shaping.getByText('Plan ready')).toBeInTheDocument();
+    expect(shaping.queryByRole('list', { name: 'Dependencies' })).not.toBeInTheDocument();
+  });
+
+  it('says which cards a card blocks, and folds a long list into a count', async () => {
+    const row = {
+      id: 'FG-C9',
+      project: 'sample-service',
+      type: 'plan',
+      title: 'Foundation work',
+      summary: '',
+      source: { kind: 'chat', ref: 'web' },
+      created_by: { type: 'user', id: 'owner' },
+      created_at: '2026-10-10T09:00:00.000Z',
+      updated_at: '2026-10-10T09:00:00.000Z',
+      ticket_count: 0,
+      tickets_done: 0,
+      column: 'queued',
+      phase: 'queued',
+      blocks: ['FG-C1', 'FG-C2', 'FG-C3', 'FG-C4', 'FG-C5'],
+    };
+
+    renderApp({
+      path: BOARD,
+      routes: { 'GET /projects/:slug/cards': json({ items: [row], nextCursor: null }) },
+    });
+
+    const queued = await column('Queued');
+
+    expect(queued.getByText('Foundation work')).toBeInTheDocument();
+    expect(queued.getAllByText('Blocks')).toHaveLength(3);
+    expect(queued.getByText('+2 more blocked')).toBeInTheDocument();
+  });
+
+  it('shows a card from an older server that sends no phase or dependencies', async () => {
+    const row = {
+      id: 'FG-C9',
+      project: 'sample-service',
+      type: 'plan',
+      title: 'Written by an older server',
+      summary: '',
+      source: { kind: 'chat', ref: 'web' },
+      created_by: { type: 'user', id: 'owner' },
+      created_at: '2026-10-10T09:00:00.000Z',
+      updated_at: '2026-10-10T09:00:00.000Z',
+      ticket_count: 0,
+      tickets_done: 0,
+      column: 'new',
+    };
+
+    renderApp({
+      path: BOARD,
+      routes: { 'GET /projects/:slug/cards': json({ items: [row], nextCursor: null }) },
+    });
+
+    const shaping = await column('Shaping');
+
+    expect(shaping.getByText('Written by an older server')).toBeInTheDocument();
+    expect(shaping.queryByRole('list', { name: 'Dependencies' })).not.toBeInTheDocument();
   });
 
   it('explains a failure and offers to try again', async () => {
@@ -148,33 +226,5 @@ describe('Board, Cards view', () => {
 
     expect(await screen.findByText('Cannot reach Forge')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
-  });
-
-  it('links a started card from the Director box when the request became a card', async () => {
-    const user = userEvent.setup();
-    renderApp({
-      path: BOARD,
-      routes: {
-        'POST /intake': {
-          status: 202,
-          body: { status: 'card_created', cardId: 'FG-C7' },
-        },
-      },
-    });
-
-    await user.type(
-      await screen.findByLabelText('Ask the Director'),
-      'Talk about caching',
-    );
-
-    await user.click(screen.getByRole('button', { name: 'Send to Director' }));
-
-    const status = await screen.findByText(/Started a card/);
-    await waitFor(() =>
-      expect(within(status).getByRole('link', { name: /FG-C7/ })).toHaveAttribute(
-        'href',
-        '/p/sample-service/cards/FG-C7',
-      ),
-    );
   });
 });

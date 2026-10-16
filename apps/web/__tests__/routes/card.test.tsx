@@ -218,3 +218,38 @@ describe('Card page: chat', () => {
     expect(await screen.findByText(/model quota exhausted/)).toBeInTheDocument();
   });
 });
+
+describe('Card page: a new card', () => {
+  it('says the Director is reading the project until its first message arrives', async () => {
+    renderApp({ path: card('FG-C1') });
+
+    expect(
+      await screen.findByText('Director is reading the project…'),
+    ).toBeInTheDocument();
+  });
+
+  it('stops saying so once the Director has spoken', async () => {
+    renderApp({
+      path: card('FG-C2'),
+      routes: { 'GET /cards/:id': json({ ...detailOf(2), phase: 'grilling' }) },
+    });
+
+    expect(
+      await screen.findByText(/Yes\. I would retry three times/),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.queryByText('Director is reading the project…'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not say it for a card that is past grilling or closed', async () => {
+    renderApp({ path: card('FG-C6') });
+
+    await screen.findByRole('heading', { level: 1, name: /Should we adopt pnpm/ });
+
+    expect(
+      screen.queryByText('Director is reading the project…'),
+    ).not.toBeInTheDocument();
+  });
+});

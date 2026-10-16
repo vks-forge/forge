@@ -73,7 +73,9 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0155 — New agent: from scratch, from a template gallery, or drafted by the Director from a description; review + Test before save; no import/export now
 - d-0156 — Build order S1 → S2∥S3 → S4a → S5a agents → S5b pipelines+Standard → S5c Full → S5d → S6; autonomous run, commit + push per slice
 - d-0157 — Archived projects listed under "Archived" in the switcher; Unarchive from switcher + project settings; archived opens read-only
-- d-0158 — Card-first flow build ON HOLD until the owner resumes; UI issues first
+- d-0160 — (supersedes d-0158 hold) Card-first flow build RESUMED autonomously (S1 → S6), one commit+push per slice
+- d-0162 — Overview dashboard (d-0159) GO: build autonomously after card-first work
+- d-0159 — `/` = cross-project Overview dashboard (KPIs, charts by day/week/month, projects table, cost); amends d-0104; brief docs/briefs/forge-overview-dashboard.md
 - d-0122 — Web UI state in zustand + persist (localStorage), UI prefs/drafts only; server data stays in TanStack Query; never tokens/secrets
 - d-0123 — Web uses the real server API only: mock adapter/fixtures/switches removed; missing backends built with their screen; tests stub fetch in __tests__ only
 - d-0124 — Any folder can be a project: no git → Forge inits (snapshot commit default, or init only); no remote → verified work merges locally through the merge door; subfolder of a repo → use repo top (default) or scope to subfolder
@@ -148,7 +150,6 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0036 — M0 four slices amended: preflight probes + answer endpoint in slice 2, URL precondition (supersedes d-0030)
 
 ## Superseded
-
 - d-0034 — `profile: ts | generic` → superseded by d-0095 (role-tagged commands, any language, 2026-10-14)
 - d-0054 — restart kills in-flight runs → superseded by d-0092 (daemon + resume, 2026-10-14)
 - d-0053 — ACP on SDK-bundled pinned CLI 2.1.293 → superseded by d-0088 (installed harness, per-version compat check, 2026-10-14)
@@ -166,7 +167,6 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0022, d-0024, d-0026, d-0027, d-0028, d-0029, d-0030 — grill answers → superseded by d-0031..d-0039 after the enhance pass (2026-10-12)
 
 ## Rejected approaches
-
 - r-0001 — Vector / graph memory frameworks (mem0, Zep, LangMem) for Director memory
 - r-0002 — Always-on memory janitor agent
 - r-0003 — Long-lived LLM session as the orchestrator
@@ -194,7 +194,4 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - x-0014 — Bind the browser session to the port with a per-session secret held outside cookies (W7b review finding 1); pending
 
 ## Outcomes
-
-- Older outcome pointers (2026-10-12 – 2026-10-14): `outcomes/ARCHIVE.md`
-- 2026-10-16 — Overnight: web app W2–W7 + W6 cards on the real API, mock removed, zustand, forge start serves UI; CI quota exhausted: `outcomes/2026-10/2026-10-16-web-app-overnight.md`
-- 2026-10-16 — Card-first Director flow grill (d-0127..d-0158, build on hold); delete/archive projects, Picker, board fit; CI fixed forward: `outcomes/2026-10/2026-10-16-card-flow-grill-and-ui.md`
+- Older outcome pointers (2026-10-12 – 2026-10-16 overnight): `outcomes/ARCHIVE.md`

@@ -94,5 +94,7 @@ export interface ErrorBody {
     readonly code: string;
     readonly message: string;
     readonly issues?: readonly ErrorIssue[];
+    /** Present on `dependency_cycle`: the loop as a closed path of card ids. */
+    readonly cycle?: readonly string[];
   };
 }

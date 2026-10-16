@@ -1,6 +1,6 @@
 # Card-first flow: build plan (MVP)
 
-Status: **approved, ON HOLD** (d-0158; run mode d-0156 when resumed) · 2026-10-16
+Status: **approved, IN PROGRESS** (d-0160, autonomous per d-0156) · 2026-10-16
 Decisions: d-0128 – d-0156 (d-0107 superseded by d-0139, d-0108 by d-0142, d-0145 by d-0146).
 Review: `docs/briefs/card-first-flow-enhance-report.md` (accepted, d-0141).
 

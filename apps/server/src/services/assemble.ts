@@ -41,9 +41,11 @@ import { assertLoopbackBind, closeServer, listen } from '#/services/http/listen.
 import { createLazySecretStore } from '#/services/lazy-secrets.js';
 import { composeProjectMemory } from '#/services/project-memory.js';
 import { withKnownProjects } from '#/services/known-project-config.js';
+import { createProjectEvents } from '#/services/project-events.js';
 import { createProjectRegistry } from '#/services/project-registry.js';
 import { createRunWiring } from '#/services/run-wiring.js';
 import { shutdownServer } from '#/services/shutdown.js';
+import { trackProjectWrites } from '#/services/tracked-storage.js';
 import { composeWorker } from '#/services/worker-wiring.js';
 import { createTicker } from '#/services/ticker.js';
 import { composeTriggers } from '#/services/triggers.js';
@@ -69,7 +71,10 @@ export async function assembleServer(
 
   await mkdir(dirname(layout.data.dbPath), { recursive: true });
   const sqlite = openSqlite(layout.data.dbPath);
-  const { storage, receipts, catalogue } = sqlite;
+  const { receipts, catalogue } = sqlite;
+  // Wrapping the one storage port means no writer can forget to tell the project streams (d-0132).
+  const projectEvents = createProjectEvents();
+  const storage = trackProjectWrites(sqlite.storage, projectEvents);
   // Settings are only served for registered projects; an unknown slug is not given defaults.
   const config = withKnownProjects(sqlite.config, storage);
 
@@ -182,6 +187,7 @@ export async function assembleServer(
       owner,
       catalogueHash: () => policy.catalogueHash(),
       onTickRequested: ticker.requestTick,
+      projectEvents,
       log,
     });
 
@@ -216,6 +222,7 @@ export async function assembleServer(
         hooks,
         secrets,
         harnessTest: harnessTestFor(ports.harnessTest, secrets),
+        projectEvents,
         tickets: auth.tickets,
         sessions: auth.sessions,
         prover: auth.prover,

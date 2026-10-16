@@ -40,8 +40,12 @@ come later (d-0082).
    without one verified work merges locally into the base branch (a dirty
    checked-out branch waits for you). Forge detects the languages and commands, runs them
    once, then the Director asks a few onboarding questions (d-0095).
-4. Ask for work in the project chat (later: GitHub Issues, d-0096). The
-   Director triages it into a ticket with a lane (Express / Standard / Full).
+4. Create a card with the New card form: title, description, type, priority,
+   dependencies and links (later: GitHub Issues, d-0096). The card starts in
+   Shaping and no ticket exists yet; the Director replies in the card chat
+   (d-0128). Planning, approval and ticket creation come next in the card-first
+   flow; today the Director triages tickets it is asked to file (lane Express /
+   Standard / Full).
 5. Workers run; you watch live, answer their questions, approve what needs you.
    Gates verify; Forge opens the PR and merges when policy allows.
 6. Everything — agents, pipelines, models, budgets, limits, credentials — is
@@ -91,8 +95,8 @@ project settings; Forge settings (harnesses, GitHub, limits, general). UI
 preferences persist across reloads.
 
 **Not yet:** GitHub Issues intake and the Issues page (P5); the card Director
-cannot yet pause, restart or re-plan tickets, and Plan cards wait for a
-plan-approval step; not packaged or published.
+cannot yet grill, write a plan or approve one (the card-first flow S2), nor
+pause, restart or re-plan tickets; not packaged or published.
 
 **Known limits:** Workers and project checks run as the user's own Windows
 account, so code a Worker writes (a test, a script) can read Forge's data
@@ -116,6 +120,8 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-16: Card-first flow S3 (card page and board): chat-first card page with grill questions as option buttons, a pinned Needs-you banner whose every action is wired, and a Plan tab (fixed sections, version diff, approve with ticket order, request changes, light ticket edits); board cards show phase line, priority, progress and Blocked by / Blocks chips with dependency-chain highlight and gliding column moves (reduced-motion aware). Server side of planning lands with S2.
+- 2026-10-16: Card-first flow S1 (foundation): cards are created through a New card form (title, description, type, priority, dependencies, links) with no ticket and a durable Director reply; a card carries a stored phase, dependencies (cycle-checked) and priority; the Board and Card page update live over a per-project event stream; chat intake no longer files tickets except the PR fast path.
 - 2026-10-16: Shared Picker replaces native selects; board columns fit the screen with a collapsible Closed strip.
 - 2026-10-16: Archived projects listed in the switcher with Unarchive; memory proposal dates fixed.
 - 2026-10-16: Shared Tooltip component on icon buttons (inbox actions, notifications, theme toggle, mobile navigation, capacity rows).

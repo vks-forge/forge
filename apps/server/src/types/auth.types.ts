@@ -16,8 +16,8 @@
  * every route), `bearer` the install token only (it mints the one-time sign-in code, which
  * a session must not be able to do), `open` nobody needs to prove anything (`/health`) or
  * the route checks its own secret (`/runs/:id/hook`, `/auth/open`), `token_or_ticket` the
- * token, a session or a signed SSE ticket for the run in the path (browsers cannot set
- * headers on an `EventSource`).
+ * token, a session or a signed SSE ticket for the run or project in the path (browsers
+ * cannot set headers on an `EventSource`).
  */
 export type RouteAccess = 'token' | 'bearer' | 'open' | 'token_or_ticket';
 
@@ -31,8 +31,10 @@ export interface AuthRequest {
   readonly authorization: string | undefined;
   /** The `?ticket=` query value, only honoured for `token_or_ticket`. */
   readonly ticket: string | null;
-  /** The run id in the path, which a ticket is bound to. */
+  /** The run id in the path, which a run ticket is bound to. */
   readonly runId: string | undefined;
+  /** The project slug in the path, which a project ticket is bound to. */
+  readonly projectSlug?: string | undefined;
   /** The raw `Cookie` header, where the session cookie travels. */
   readonly cookie?: string | undefined;
 }
@@ -64,11 +66,17 @@ export interface SessionStore extends SessionVerifier {
   readonly cookieMaxAgeSeconds: number;
 }
 
-/** Short-lived, run-bound credentials for `GET /runs/:id/events?ticket=`. */
+/** Short-lived, scope-bound credentials for `GET /runs/:id/events?ticket=` and `GET /projects/:slug/events?ticket=`. */
 export interface SseTicketIssuer {
   /** A ticket valid for `expiresInSeconds` for this run only. */
   issue(runId: string): { readonly ticket: string; readonly expiresInSeconds: number };
   verify(ticket: string, runId: string): boolean;
+  /** A ticket valid for `expiresInSeconds` for this project's stream only. */
+  issueProject(slug: string): {
+    readonly ticket: string;
+    readonly expiresInSeconds: number;
+  };
+  verifyProject(ticket: string, slug: string): boolean;
 }
 
 /** Shows knowledge of the install token without revealing it. */

@@ -1,5 +1,5 @@
 /**
- * Contract cases for `cards`, `cardEvents`, `cardTypes` and `tickets.listByCard`.
+ * Contract cases for `cards`, `cardEvents`, `cardTypes` and `tickets.listByCard` (the phase, dedupe lookup and CAS are in card-phase.contract).
  *
  * Why: the Board and the Card page rest on these rows behaving the same in SQLite and in
  *   memory: card numbers must continue from the highest stored one (two intakes may not
@@ -30,6 +30,11 @@ const card = (n: number, over: Partial<Card> = {}): Card => ({
   created_by: { type: 'user', id: 'u1' },
   created_at: T0,
   updated_at: T0,
+  phase: 'grilling',
+  phase_version: 0,
+  needs_you: false,
+  priority: 'normal',
+  links: [],
   ...over,
 });
 
@@ -241,7 +246,7 @@ export function describeCardsContract(getDb: () => StorageAdapter): void {
         icon: 'layers',
         allowed_sources: ['chat' as const],
         actions: ['chat'],
-        plan_approval: true,
+        plan_approval: 'director_or_user' as const,
         tickets_on_intake: false,
         default_lane: 'full' as const,
       };

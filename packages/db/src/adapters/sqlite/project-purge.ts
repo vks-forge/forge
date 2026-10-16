@@ -16,6 +16,7 @@
 import type { SqlDriver } from '#/types/storage-driver.types.js';
 
 const TICKETS = 'SELECT id FROM tickets WHERE project = ?';
+const CARDS = 'SELECT id FROM cards WHERE project = ?';
 const RUNS = `SELECT id FROM runs WHERE project = ? OR ticket_id IN (${TICKETS})`;
 
 /** Remove the project's rows from every table; false when the project row did not exist. */
@@ -43,7 +44,9 @@ export function purgeProject(driver: SqlDriver, slug: string): boolean {
     del(`DELETE FROM ${table} WHERE run_id IN (${RUNS})`);
   }
 
-  del(`DELETE FROM interactions WHERE ticket_id IN (${TICKETS}) OR run_id IN (${RUNS})`);
+  del(
+    `DELETE FROM interactions WHERE ticket_id IN (${TICKETS}) OR run_id IN (${RUNS}) OR card_id IN (${CARDS})`,
+  );
 
   del(`DELETE FROM wake_requests WHERE ticket_id IN (${TICKETS})`);
   del(
@@ -53,8 +56,10 @@ export function purgeProject(driver: SqlDriver, slug: string): boolean {
   del('DELETE FROM intake_events WHERE project = ?');
   del(`DELETE FROM runs WHERE project = ? OR ticket_id IN (${TICKETS})`);
   del('DELETE FROM tickets WHERE project = ?');
+  del(`DELETE FROM card_events WHERE card_id IN (${CARDS})`);
+  del(`DELETE FROM card_reply_queue WHERE card_id IN (${CARDS})`);
   del(
-    'DELETE FROM card_events WHERE card_id IN (SELECT id FROM cards WHERE project = ?)',
+    `DELETE FROM card_relations WHERE from_card IN (${CARDS}) OR to_card IN (${CARDS})`,
   );
 
   del('DELETE FROM cards WHERE project = ?');

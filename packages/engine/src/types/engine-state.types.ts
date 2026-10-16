@@ -58,9 +58,12 @@ export interface QueuedReply {
   readonly author: string;
 }
 
-/** Card chat bookkeeping, all process-local: a restart drops pending replies and error flags (the history keeps what was said). */
+/**
+ * Card chat bookkeeping, process-local: a view of work in flight for the Card page. The owed
+ * replies themselves are stored (`card_reply_queue`), so a restart loses only error flags.
+ */
 export interface CardChatState {
-  /** Cards with a user message the Director has not answered yet. */
+  /** Cards whose reply is queued and not yet claimed; a mirror of the queue for `cardDirector()`. */
   readonly pending: Set<string>;
   /** Cards whose chat step is running now. */
   readonly busy: Set<string>;

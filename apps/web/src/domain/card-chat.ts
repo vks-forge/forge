@@ -10,14 +10,17 @@
  *   testable without a browser.
  *
  * Exports: transcriptOf(), lineOf(), awaitingReply().
- * Depends on: schemas/cards (type), domain/board-columns (STATE_LABEL), types/cards-ui.types.
+ * Depends on: schemas/cards (type), domain/board-columns (STATE_LABEL), domain/card-event-lines,
+ *   domain/director-flow, types/cards-ui.types.
  */
 
 import type { CardTypeName } from '@forge/core';
 import { TicketStatus } from '@forge/core';
 import { STATE_LABEL } from '#/domain/board-columns.js';
+import { flowLineOf } from '#/domain/card-event-lines.js';
+import { grillOf } from '#/domain/director-flow.js';
 import type { CardHistoryEvent } from '#/schemas/cards.js';
-import type { ChatAction, ChatLine } from '#/types/cards-ui.types.js';
+import type { ChatAction, ChatLine, FlowLineContext } from '#/types/cards-ui.types.js';
 
 const str = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim() !== '' ? value : undefined;
@@ -58,12 +61,15 @@ function actionsOf(payload: Record<string, unknown>): readonly ChatAction[] {
     : [];
 }
 
+const NO_FLOW: FlowLineContext = { grill: grillOf([]), canAnswer: false };
+
 const humanKind = (kind: string): string => kind.replace(/_/g, ' ');
 
 /** One history event as a transcript line. `typeLabel` names a card type in words. */
 export function lineOf(
   event: CardHistoryEvent,
   typeLabel: (name: CardTypeName) => string = (name) => name,
+  flow: FlowLineContext = NO_FLOW,
 ): ChatLine {
   const { payload } = event;
   const base = {
@@ -138,19 +144,34 @@ export function lineOf(
     case 'note':
       return note(str(payload['text']) ?? 'Note');
     default:
-      // An event kind newer than this UI: say what we can, never crash.
-      return note(str(payload['text']) ?? `Event: ${humanKind(event.kind)}`, ticketId);
+      // The planning flow's kinds have their own lines; anything else is newer than this UI:
+      // say what we can, never crash.
+      return (
+        flowLineOf(event, flow) ??
+        note(str(payload['text']) ?? `Event: ${humanKind(event.kind)}`, ticketId)
+      );
   }
 }
 
-/** The whole transcript, plus lines the server has not confirmed yet at the end. */
+/** Kinds the transcript leaves out: a running step shows as the "thinking" row, a raise as the banner. */
+const NOT_IN_TRANSCRIPT: ReadonlySet<string> = new Set(['step_started', 'needs_you']);
+
+/**
+ * The whole transcript, plus lines the server has not confirmed yet at the end.
+ * `canAnswer` is false on a closed card or outside the grilling phase.
+ */
 export function transcriptOf(
   events: readonly CardHistoryEvent[],
   unsent: readonly { id: string; text: string; at: string }[],
   typeLabel?: (name: CardTypeName) => string,
+  canAnswer = true,
 ): readonly ChatLine[] {
+  const flow: FlowLineContext = { grill: grillOf(events), canAnswer };
+
   return [
-    ...events.map((event) => lineOf(event, typeLabel)),
+    ...events
+      .filter((event) => !NOT_IN_TRANSCRIPT.has(event.kind))
+      .map((event) => lineOf(event, typeLabel, flow)),
     ...unsent.map((message): ChatLine => ({
       key: `u${message.id}`,
       at: message.at,

@@ -8,7 +8,7 @@
  *   different one) instead of importing the adapter. Which endpoint a method hits is the
  *   adapter's business, never the screen's.
  *
- * Exports: TicketsApi, InteractionsApi, RunEventsApi, IntakeApi, TicketListParams, ChatIntake,
+ * Exports: TicketsApi, InteractionsApi, RunEventsApi, ProjectEventsApi, IntakeApi, TicketListParams, ChatIntake,
  *   ForgeApi, ResourceApis, ProjectsApi, ResourceName, RequestOptions, HttpClientOptions,
  *   JsonRequest, ApiErrorKind.
  * Depends on: @forge/core, schemas/projects, schemas/tickets, types/sse.types (types only).
@@ -23,7 +23,12 @@ import type { ProjectSettingsApi } from '#/types/project-settings.types.js';
 import type { AnswerReply, IngestReply, TicketDetail } from '#/schemas/tickets.js';
 import type { CardsApi } from '#/types/cards-api.types.js';
 import type { CostApi, InboxApi, RunsApi, StatsApi } from '#/types/work-api.types.js';
-import type { RunEventWatch, RunEventWatchOptions } from '#/types/sse.types.js';
+import type {
+  ProjectEventsWatch,
+  ProjectEventsWatchOptions,
+  RunEventWatch,
+  RunEventWatchOptions,
+} from '#/types/sse.types.js';
 
 /** Per-call options every method accepts so TanStack Query can cancel in-flight work. */
 export interface RequestOptions {
@@ -61,6 +66,11 @@ export interface RunEventsApi {
   watch(options: Omit<RunEventWatchOptions, 'baseUrl'>): RunEventWatch;
 }
 
+export interface ProjectEventsApi {
+  /** Follows one project's change feed live; see `watchProjectEvents()`. */
+  watch(options: Omit<ProjectEventsWatchOptions, 'baseUrl'>): ProjectEventsWatch;
+}
+
 export interface ChatIntake {
   /** The project's id (not its slug): intake is keyed by id. */
   readonly projectId: string;
@@ -85,6 +95,7 @@ export interface ResourceApis {
   readonly tickets: TicketsApi;
   readonly interactions: InteractionsApi;
   readonly runEvents: RunEventsApi;
+  readonly projectEvents: ProjectEventsApi;
   readonly intake: IntakeApi;
   readonly stats: StatsApi;
   readonly cost: CostApi;

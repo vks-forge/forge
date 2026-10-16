@@ -10,14 +10,13 @@
  * Depends on: domain/card-columns, domain/card-chat, domain/thread, domain/steer-errors.
  */
 
-import type { CardSummary } from '@forge/core';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '#/api/api-error.js';
 import { awaitingReply, lineOf } from '#/domain/card-chat.js';
 import { filterCards, groupCards, isCardFilterActive } from '#/domain/card-columns.js';
 import { describeSteerError } from '#/domain/steer-errors.js';
 import { applyEvent, EMPTY_THREAD } from '#/domain/thread.js';
-import type { CardHistoryEvent } from '#/schemas/cards.js';
+import type { CardHistoryEvent, CardSummary } from '#/schemas/cards.js';
 import { SAMPLE_CARDS } from '#tests/helpers/forge-data/card-data.js';
 
 const cards: readonly CardSummary[] = SAMPLE_CARDS.map((c) => c.summary);

@@ -6,37 +6,46 @@
  *   title, how far its tickets have got ("2 of 3 tickets done", from the server's roll-up) with
  *   a thin bar of the same counts (nothing estimated), and in amber with a left edge, only for
  *   a card in Needs you, that it waits on the user. The whole tile is one link to the Card page
- *   (d-0116 style); hover and keyboard focus (the ring follows the link inside) show that. It
- *   cannot be dragged: the column is computed from the card's tickets and questions, never set
- *   by hand (d-0107).
+ *   (d-0116 style); hover and keyboard focus (the ring follows the link inside) show that. The
+ *   phase line sits under the title in words ("Grilling · 3 open points", "Plan v2 ready", "4/7
+ *   tickets"; the column says where the card is, the phase says what is happening), a priority
+ *   mark appears for anything but Normal, and dependencies show as chips by id: "Blocked by"
+ *   what it waits for and "Blocks" what waits for it, so the order of work is readable from the
+ *   Board. Hovering or focusing a tile reports it to the Board, which dims every card outside
+ *   its dependency chain (the tile only draws `dimmed`). The tile is memoised: with 60 cards a
+ *   hover re-renders only the tiles whose dimming changed. It cannot be dragged: the column is
+ *   computed from the card's tickets and questions, never set by hand (d-0107).
  *
  * Exports: CardTile.
- * Depends on: react, react-router, lucide-react, @forge/core (types), components/card/*,
- *   domain/card-paths, domain/relative-time.
+ * Depends on: react, react-router, lucide-react, motion/react, @forge/core (types), components/card/*,
+ *   domain/card-paths, domain/card-phase, domain/relative-time, schemas/cards (types).
  */
 
-import type { CardSummary, CardType } from '@forge/core';
+import type { CardType } from '@forge/core';
 import { CircleAlert } from 'lucide-react';
+import { motion } from 'motion/react';
+import { memo } from 'react';
 import { Link } from 'react-router';
 import { CardTypeIcon, labelOfType } from '#/components/card/card-type-icon.js';
+import { PriorityMark } from '#/components/card/priority-mark.js';
 import { cardPath } from '#/domain/card-paths.js';
+import { dependencyChips, phaseLine } from '#/domain/card-phase.js';
 import { timeAgo } from '#/domain/relative-time.js';
+import type { CardSummary } from '#/schemas/cards.js';
 
-function progress(card: CardSummary): string {
-  if (card.ticket_count === 0) {
-    return 'No tickets yet';
-  }
-
-  return `${card.tickets_done} of ${card.ticket_count} ticket${card.ticket_count === 1 ? '' : 's'} done`;
-}
-
-export function CardTile(props: {
+export const CardTile = memo(function CardTile(props: {
   card: CardSummary;
   types: readonly CardType[] | undefined;
   now: number;
+  /** Outside the dependency chain of the hovered or focused card. */
+  dimmed: boolean;
+  /** Called with this card's id on hover or focus, and with null when it ends. */
+  onHighlight: (id: string | null) => void;
 }) {
-  const { card, types, now } = props;
+  const { card, types, now, onHighlight } = props;
   const needsYou = card.column === 'needs_you';
+  const phase = phaseLine(card);
+  const chips = dependencyChips(card);
   const icon = types?.find((type) => type.name === card.type)?.icon;
   const percent =
     card.ticket_count === 0
@@ -45,7 +54,15 @@ export function CardTile(props: {
 
   return (
     <article
-      className={`relative grid gap-2.5 rounded-xl border bg-surface p-3 transition-[background-color,border-color] duration-150 hover:bg-hover has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-signal motion-reduce:transition-none ${
+      data-card={card.id}
+      data-dimmed={props.dimmed}
+      onMouseEnter={() => onHighlight(card.id)}
+      onMouseLeave={() => onHighlight(null)}
+      onFocus={() => onHighlight(card.id)}
+      onBlur={() => onHighlight(null)}
+      className={`relative grid gap-2.5 rounded-xl border bg-surface p-3 transition-[background-color,border-color,opacity] duration-150 hover:bg-hover has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-signal motion-reduce:transition-none ${
+        props.dimmed ? 'opacity-40' : ''
+      } ${
         needsYou
           ? 'border-attn shadow-[inset_3px_0_0_var(--attn),0_1px_2px_oklch(25%_0.03_255/0.06)]'
           : 'border-line shadow-[0_1px_2px_oklch(25%_0.03_255/0.06)] hover:border-faint'
@@ -66,8 +83,50 @@ export function CardTile(props: {
           {card.title}
         </Link>
       </h3>
+      {phase !== null || card.priority !== 'normal' ? (
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+          {phase !== null ? (
+            <motion.span
+              key={phase}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2 }}
+              className="font-medium"
+            >
+              {phase}
+            </motion.span>
+          ) : null}
+          <PriorityMark priority={card.priority} />
+        </p>
+      ) : null}
+      {chips.length > 0 ? (
+        <ul aria-label="Dependencies" className="flex flex-wrap gap-1.5">
+          {chips.map((chip) => (
+            <li
+              key={chip.key}
+              className="inline-flex items-center gap-1 rounded-md bg-hover px-1.5 py-0.5 text-xs text-muted"
+            >
+              {chip.id === null ? (
+                `+${chip.more} more ${chip.direction === 'blocks' ? 'blocked' : 'blockers'}`
+              ) : (
+                <>
+                  {chip.direction === 'blocks' ? 'Blocks' : 'Blocked by'}
+                  <span className="font-data text-fg">{chip.id}</span>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {card.ticket_count > 0 ? (
-        <div aria-hidden="true" className="h-1 overflow-hidden rounded-full bg-hover">
+        <div
+          role="progressbar"
+          aria-label={`${card.tickets_done} of ${card.ticket_count} ticket${card.ticket_count === 1 ? '' : 's'} done`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percent}
+          className="h-1 overflow-hidden rounded-full bg-hover"
+        >
           <div
             className={`h-full rounded-full ${percent === 100 ? 'bg-good' : 'bg-signal'}`}
             style={{ width: `${percent}%` }}
@@ -81,9 +140,9 @@ export function CardTile(props: {
             Needs you
           </span>
         ) : null}
-        <span>{progress(card)}</span>
+        {card.ticket_count === 0 ? <span>No tickets yet</span> : null}
         <span className="ml-auto whitespace-nowrap">{timeAgo(card.updated_at, now)}</span>
       </div>
     </article>
   );
-}
+});

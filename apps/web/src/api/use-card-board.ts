@@ -5,20 +5,23 @@
  *   view it loads one newest-change-first list and groups it on the client by the `column` the
  *   server rolled up (d-0107): a card has one column, so one list is a single consistent
  *   snapshot and one cursor pages it; per-column requests would drift apart as cards move.
- *   It refetches every 5 seconds and when the tab regains focus (and pauses while hidden), and
+ *   It refetches every 5 seconds (30 while the project stream is open) and when the tab regains focus (and pauses while hidden), and
  *   pages in up to a cap before asking the user for more. The card-type registry (label and
  *   icon per type) changes only when settings do, so it is read once and kept for a while.
  *
  * Exports: CARDS_KEY, cardKey(), cardEventsKey(), useCardBoard(), useCardTypes(),
  *   CARD_PAGE_SIZE, CARD_AUTO_PAGES.
- * Depends on: @tanstack/react-query, api/api-provider, api/use-tickets (POLL_MS), @forge/core (types).
+ * Depends on: @tanstack/react-query, api/api-provider, api/poll-interval, api/use-tickets (POLL_MS),
+ *   @forge/core (types), schemas/cards (types).
  */
 
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import type { CardSummary, CardType } from '@forge/core';
+import type { CardType } from '@forge/core';
 import { useEffect, useMemo } from 'react';
 import { useForgeApi } from '#/api/api-provider.js';
+import { useRefetchMs } from '#/api/poll-interval.js';
 import { POLL_MS } from '#/api/use-tickets.js';
+import type { CardSummary } from '#/schemas/cards.js';
 
 export const CARDS_KEY = ['cards'] as const;
 export const cardKey = (id: string) => ['card', id] as const;
@@ -31,6 +34,7 @@ export const CARD_AUTO_PAGES = 5;
 /** Every card of a project, newest change first, deduplicated across pages. */
 export function useCardBoard(slug: string) {
   const api = useForgeApi();
+  const pollMs = useRefetchMs(POLL_MS);
   const query = useInfiniteQuery({
     queryKey: [...CARDS_KEY, slug],
     queryFn: ({ pageParam, signal }) =>
@@ -44,7 +48,7 @@ export function useCardBoard(slug: string) {
       ),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (page) => page.nextCursor ?? undefined,
-    refetchInterval: POLL_MS,
+    refetchInterval: pollMs,
     refetchOnWindowFocus: true,
   });
 

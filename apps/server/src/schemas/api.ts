@@ -9,12 +9,14 @@
  *
  * Exports: ToolDecisionBody, CataloguePutBody, AnswerBody, LastEventId, SettingsPutBody, HarnessPutBody, HarnessSecretBody, LiveQuery,
  *   ProjectCreateBody, ProjectInspectBody, ProjectPatchBody, ProjectDeleteBody, MemoryApproveBody, MemoryRejectBody, ConnectionCreateBody,
- *   SseTicketBody, ProofBody.
+ *   SseTicketBody, ProofBody, CardCreateBody, CardRelationsBody.
  * Depends on: @forge/core (HarnessAuthMode, HarnessKind, HarnessSecretKind, GitHostConfig, ProjectPrefix,
- *   ProjectCheck, GateRules), zod. No IO.
+ *   ProjectCheck, GateRules, CardId, CardPriority), zod. No IO.
  */
 
 import {
+  CardId,
+  CardPriority,
   GateRules,
   GitHostConfig,
   GitSetup,
@@ -36,9 +38,42 @@ export const AnswerBody = z
   });
 export type AnswerBody = z.infer<typeof AnswerBody>;
 
-/** `POST /auth/sse-ticket`: the run the stream ticket is for. */
-export const SseTicketBody = z.strictObject({ run_id: z.string().min(1).max(200) });
+/** `POST /auth/sse-ticket`: the run, or the project slug, the stream ticket is for. */
+export const SseTicketBody = z.union([
+  z.strictObject({ run_id: z.string().min(1).max(200) }),
+  z.strictObject({ project: z.string().min(1).max(200) }),
+]);
 export type SseTicketBody = z.infer<typeof SseTicketBody>;
+
+const CardIdList = z.array(CardId).max(50).default([]);
+
+/**
+ * `POST /projects/:slug/cards` (d-0138): the create-card form. Title 4 to 120 characters,
+ * description at least 20, a Plan, Discussion or Issue, dependencies by card id (checked
+ * against the project and for cycles by the engine), http(s) links, and a `dedupe_key`
+ * so a double click makes one card.
+ */
+export const CardCreateBody = z.strictObject({
+  title: z.string().trim().min(4).max(120),
+  description: z.string().trim().min(20).max(20_000),
+  type: z.enum(['plan', 'discussion', 'issue']).default('plan'),
+  priority: CardPriority.default('normal'),
+  depends_on: CardIdList,
+  blocks: CardIdList,
+  links: z
+    .array(z.url({ protocol: /^https?$/ }))
+    .max(20)
+    .default([]),
+  dedupe_key: z.string().min(1).max(200),
+});
+export type CardCreateBody = z.infer<typeof CardCreateBody>;
+
+/** `PUT /cards/:id/relations`: the card's complete dependency set. */
+export const CardRelationsBody = z.strictObject({
+  depends_on: CardIdList,
+  blocks: CardIdList,
+});
+export type CardRelationsBody = z.infer<typeof CardRelationsBody>;
 
 /** `POST /auth/proof`: the caller's random challenge; the answer is an HMAC under the install token. */
 export const ProofBody = z.strictObject({ nonce: z.string().min(16).max(200) });

@@ -176,6 +176,7 @@ describe('probe 11: a failed G1 sends the ticket to rework on the real Claude ha
           actor: { type: 'user', id: 'probe' },
           project: 'fixture',
           payload: {
+            card_type: 'pr_issue',
             text: "Add a function add(a, b) to src/math.js and a test for it in test/math.test.js. Keep to the module's conventions, including its caps.",
           },
           received_at: new Date().toISOString(),

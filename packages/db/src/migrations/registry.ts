@@ -13,7 +13,7 @@
  *   migrations/0010-run-config-version, migrations/0011-many-projects, migrations/0012-harnesses. No IO.
  *   migrations/0010-run-config-version, migrations/0012-harnesses, migrations/0013-catalogue-and-compat,
  *   migrations/0016-scheduling, migrations/0017-run-resume, migrations/0018-inbox-states,
- *   migrations/0019-cards. No IO.
+ *   migrations/0019-cards, migrations/0020-project-scope, migrations/0021-card-flow. No IO.
  */
 
 import { MIGRATION_0001 } from '#/migrations/0001-state-tables.js';
@@ -34,6 +34,7 @@ import { MIGRATION_0017 } from '#/migrations/0017-run-resume.js';
 import { MIGRATION_0018 } from '#/migrations/0018-inbox-states.js';
 import { MIGRATION_0019 } from '#/migrations/0019-cards.js';
 import { MIGRATION_0020 } from '#/migrations/0020-project-scope.js';
+import { MIGRATION_0021 } from '#/migrations/0021-card-flow.js';
 import type { Migration } from '#/types/migrations.types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -55,4 +56,5 @@ export const MIGRATIONS: readonly Migration[] = [
   MIGRATION_0018,
   MIGRATION_0019,
   MIGRATION_0020,
+  MIGRATION_0021,
 ];

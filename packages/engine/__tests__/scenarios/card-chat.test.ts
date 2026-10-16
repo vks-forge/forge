@@ -67,8 +67,16 @@ describe('card chat', () => {
 
     const [call] = rig.llm.callsTo('card_chat');
     expect(call?.input).toMatchObject({
-      card: { id: 'FG-C1', type: 'issue', budget_cap_usd: null, spent_usd: 0 },
-      card_type: { name: 'issue', tickets_on_intake: true },
+      card: {
+        id: 'FG-C1',
+        type: 'pr_issue',
+        budget_cap_usd: null,
+        spent_usd: 0,
+        phase: 'queued',
+        priority: 'normal',
+        links: [],
+      },
+      card_type: { name: 'pr_issue', tickets_on_intake: true, plan_approval: 'user' },
       allowed_actions: ['create_ticket', 'steer_run', 'change_type', 'suggest_close'],
       tickets: [{ id: 'FG-1' }],
       pending_interactions: [],

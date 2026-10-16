@@ -123,6 +123,7 @@ describe('probe 8: Express ticket end to end on the real Claude harness', () => 
           actor: { type: 'user', id: 'probe' },
           project: 'fixture',
           payload: {
+            card_type: 'pr_issue',
             text: 'Add a function add(a, b) to src/math.js and a test for it in test/math.test.js.',
           },
           received_at: new Date().toISOString(),

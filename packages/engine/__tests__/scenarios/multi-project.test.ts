@@ -44,7 +44,9 @@ async function addApi(rig: Rig, baseRef = 'develop') {
 }
 
 const request = (rig: Rig, project: string, text: string) =>
-  rig.engine.ingest(intake({ project, payload: { text } }, rig.clock.now()));
+  rig.engine.ingest(
+    intake({ project, payload: { text, card_type: 'pr_issue' } }, rig.clock.now()),
+  );
 
 describe('several projects in one engine', () => {
   it('numbers tickets per project prefix', async () => {

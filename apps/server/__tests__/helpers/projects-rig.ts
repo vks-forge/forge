@@ -71,6 +71,7 @@ export async function startProjectsRig(
       compat: extras.compat,
       triggers: extras.triggers,
       tickets: extras.tickets,
+      projectEvents: extras.projectEvents,
       sessions: extras.sessions,
       prover: extras.prover,
       requestShutdown: extras.requestShutdown,

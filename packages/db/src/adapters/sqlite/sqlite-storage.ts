@@ -19,6 +19,8 @@
 
 import type { StorageAdapter, StorageTx } from '@forge/core';
 import { createCardEventRepository } from '#/adapters/sqlite/card-events-repository.js';
+import { createCardRelationRepository } from '#/adapters/sqlite/card-relations-repository.js';
+import { createCardReplyQueueRepository } from '#/adapters/sqlite/card-reply-queue-repository.js';
 import { createCardRepository } from '#/adapters/sqlite/cards-repository.js';
 import { createCardTypeRepository } from '#/adapters/sqlite/card-types-repository.js';
 import { createSqliteCatalogueStore } from '#/adapters/sqlite/catalogue-store.js';
@@ -81,6 +83,8 @@ export function createStorageOnDriver(
     cards: createCardRepository(driver),
     cardEvents: createCardEventRepository(driver),
     cardTypes: createCardTypeRepository(driver),
+    cardRelations: createCardRelationRepository(driver),
+    cardReplyQueue: createCardReplyQueueRepository(driver),
   };
 
   return {

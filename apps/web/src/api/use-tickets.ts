@@ -1,6 +1,5 @@
 /**
- * TanStack Query hooks for tickets: the Board's list, one ticket, answering a question and
- * filing a chat request.
+ * TanStack Query hooks for tickets: the Board's list, one ticket and answering a question.
  *
  * Why: the Board and Ticket page must stay current without the user reloading, cheaply and
  *   without hammering the server. Both queries refetch on a slow interval and when the tab
@@ -14,8 +13,8 @@
  *   the typed answer kept by the form, if the server refuses.
  *
  * Exports: TICKETS_KEY, ticketKey(), useTicketBoard(), useTicketDetail(), useAnswerInteraction(),
- *   useChatIntake(), BOARD_PAGE_SIZE, BOARD_AUTO_PAGES, POLL_MS.
- * Depends on: @tanstack/react-query, api/api-provider, schemas/tickets, types/api.types.
+ *   BOARD_PAGE_SIZE, BOARD_AUTO_PAGES, POLL_MS.
+ * Depends on: @tanstack/react-query, api/api-provider, api/poll-interval, schemas/tickets.
  */
 
 import {
@@ -27,8 +26,8 @@ import {
 import type { TicketSummary } from '@forge/core';
 import { useEffect, useMemo } from 'react';
 import { useForgeApi } from '#/api/api-provider.js';
+import { useRefetchMs } from '#/api/poll-interval.js';
 import type { TicketDetail } from '#/schemas/tickets.js';
-import type { ChatIntake } from '#/types/api.types.js';
 
 export const TICKETS_KEY = ['tickets'] as const;
 export const ticketKey = (id: string) => ['ticket', id] as const;
@@ -41,6 +40,8 @@ export const BOARD_AUTO_PAGES = 5;
 /** Every ticket of a project, newest change first, deduplicated across pages. */
 export function useTicketBoard(slug: string) {
   const api = useForgeApi();
+  // The project stream names `["tickets", slug]`, so the list can poll slowly while it is open.
+  const pollMs = useRefetchMs(POLL_MS);
   const query = useInfiniteQuery({
     queryKey: [...TICKETS_KEY, slug],
     queryFn: ({ pageParam, signal }) =>
@@ -54,7 +55,7 @@ export function useTicketBoard(slug: string) {
       ),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (page) => page.nextCursor ?? undefined,
-    refetchInterval: POLL_MS,
+    refetchInterval: pollMs,
     refetchOnWindowFocus: true,
   });
 
@@ -127,22 +128,5 @@ export function useAnswerInteraction(ticketId: string) {
         client.invalidateQueries({ queryKey: TICKETS_KEY }),
       ]);
     },
-  });
-}
-
-/** Files a chat request with the Director; the Board refetches so the new ticket appears. */
-export function useChatIntake() {
-  const api = useForgeApi();
-  const client = useQueryClient();
-
-  return useMutation({
-    mutationFn: (input: ChatIntake) => api.intake.chat(input),
-    // A new request becomes a card first (d-0105), so the Cards view refetches too; its key is
-    // written out here because `use-card-board` imports `POLL_MS` from this file.
-    onSuccess: () =>
-      Promise.all([
-        client.invalidateQueries({ queryKey: TICKETS_KEY }),
-        client.invalidateQueries({ queryKey: ['cards'] }),
-      ]),
   });
 }

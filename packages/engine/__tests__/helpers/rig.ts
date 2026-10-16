@@ -58,7 +58,7 @@ export interface Rig {
   readonly engine: Engine;
   readonly logs: { level: string; message: string }[];
   readonly tickRequests: { count: number };
-  /** Sends a chat `new_request` and returns the created ticket id. */
+  /** Sends a chat `new_request` on the PR fast path (a ticket at intake) and returns the created ticket id. */
   request(text: string, over?: Record<string, unknown>): Promise<string>;
   tick(): Promise<TickReport>;
   /** `tick()` for another engine over the same fakes (a restarted server). */
@@ -255,7 +255,12 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
       );
     },
     async request(text, over = {}) {
-      const r = await engine.ingest(intake({ payload: { text, ...over } }, clock.now()));
+      // The PR fast path is the one card type that files its ticket at intake (d-0141), so
+      // scenarios about running work start there; planned cards make no ticket until approved.
+      const r = await engine.ingest(
+        intake({ payload: { text, card_type: 'pr_issue', ...over } }, clock.now()),
+      );
+
       if (r.status !== 'ticket_created') {
         throw new Error(`not created: ${r.status}`);
       }

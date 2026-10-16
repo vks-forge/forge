@@ -1,6 +1,6 @@
 /**
  * Card reads: `GET /projects/:slug/cards`, `GET /cards/:id`, `GET /cards/:id/events` and
- * `GET /card-types`.
+ * `GET /card-types`; it also registers the card writes (`card-create`, `card-relations`, `card-patch`, `card-messages`).
  *
  * Why: every intake is a card (d-0105), and the Board, the Card page and the type picker
  *   read them here. The Board column is computed per request from the card's tickets and
@@ -13,14 +13,16 @@
  * Exports: cardRoutes().
  * Depends on: @forge/core (card schemas), services/card-view, services/find-project,
  *   services/page-cursor, services/seq-cursor, services/http/*, routes/card-patch, routes/card-messages,
- *   types/routes. IO: reads storage.
+ *   routes/card-create, routes/card-relations, types/routes. IO: reads storage.
  */
 
 import { CardEventsQuery, CardId, CardListQuery } from '@forge/core';
 import type { CardEventsPage, CardListPage, CardSummary } from '@forge/core';
 import type { ZodType } from 'zod';
+import { cardCreateRoute } from '#/routes/card-create.js';
 import { cardMessageRoute } from '#/routes/card-messages.js';
 import { cardPatchRoute } from '#/routes/card-patch.js';
+import { cardRelationsRoute } from '#/routes/card-relations.js';
 import { cardDetail, summarizeCard, viewCard } from '#/services/card-view.js';
 import { findProject } from '#/services/find-project.js';
 import { HttpError } from '#/services/http/http-errors.js';
@@ -72,6 +74,7 @@ export function cardRoutes(deps: RouteDeps): Route[] {
       const page = await deps.storage.transaction(async (tx) => {
         const project = await findProject(tx, slug);
         const pending = await tx.interactions.listPending();
+        const edges = await tx.cardRelations.listByProject(project.id);
         const items: CardSummary[] = [];
         let more = true;
 
@@ -83,7 +86,7 @@ export function cardRoutes(deps: RouteDeps): Route[] {
           });
 
           for (const card of rows) {
-            const view = await viewCard(tx, card, pending);
+            const view = await viewCard(tx, card, pending, edges);
             if (query.column === undefined || view.column === query.column) {
               items.push(summarizeCard(view, slug));
             }
@@ -127,7 +130,12 @@ export function cardRoutes(deps: RouteDeps): Route[] {
         }
 
         const slug = (await tx.projects.get(card.project))?.slug ?? card.project;
-        const view = await viewCard(tx, card, await tx.interactions.listPending());
+        const view = await viewCard(
+          tx,
+          card,
+          await tx.interactions.listPending(),
+          await tx.cardRelations.listFor(card.id),
+        );
 
         return cardDetail(tx, view, slug, deps.engine.cardDirector(card.id));
       });
@@ -226,5 +234,14 @@ export function cardRoutes(deps: RouteDeps): Route[] {
     },
   };
 
-  return [list, detail, events, types, cardPatchRoute(deps), cardMessageRoute(deps)];
+  return [
+    list,
+    detail,
+    events,
+    types,
+    cardPatchRoute(deps),
+    cardMessageRoute(deps),
+    cardCreateRoute(deps),
+    cardRelationsRoute(deps),
+  ];
 }

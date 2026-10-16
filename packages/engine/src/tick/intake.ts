@@ -4,25 +4,28 @@
  * Why: users, webhooks and cron all reach the Director as intake events (director-core.md
  *   §7). Events are stored first and deduped on (source, dedupe_key), so a redelivered
  *   webhook never makes a second ticket. A new request first becomes a card, the record of
- *   the intake (d-0105), with a `user_message` event; then, when the card's type starts
- *   tickets at intake (the registry says so, d-0106), an `inbox` ticket linked to the card,
- *   all in the same transaction that records the event, with the next `<PROJECT>-<n>` id.
- *   A Discussion or Plan card makes no ticket yet. An unknown card type, or a source the
- *   type does not accept, is ignored (fail closed) and makes nothing; the model
+ *   the intake (d-0105), in `grilling` with a `user_message` event and a queued Director
+ *   reply, so the Director plans before any work exists (d-0128). Only when the card's type
+ *   starts tickets at intake (the registry says so, d-0106; today the PR fast path alone) is
+ *   an `inbox` ticket linked to the card, all in the same transaction that records the
+ *   event, with the next `<PROJECT>-<n>` id, and the card starts `queued` with no Director
+ *   turn. An unknown card type, or a source the type does not accept, is ignored (fail
+ *   closed) and makes nothing; the model
  *   call (triage) is deliberately NOT here, so intake stays fast and a model outage never
  *   loses a request. A reply either answers the one question a parked ticket is waiting
  *   on, or is queued to steer the ticket's live run on the next tick.
  *
  * Exports: ingest().
- * Depends on: @forge/core (schemas), domain/titles, tick/card-log, tick/interactions,
- *   tick/ticket-insert, tick/tick-requests. Reads and writes storage.
+ * Depends on: @forge/core (schemas), domain/titles, tick/card-create, tick/card-log,
+ *   tick/interactions, tick/ticket-insert, tick/tick-requests. Reads and writes storage.
  */
 
-import { NewRequestPayload, ReplyPayload, makeCardId } from '@forge/core';
+import { NewRequestPayload, ReplyPayload } from '@forge/core';
 import type { CardActor, IntakeEvent, Ticket } from '@forge/core';
 import { deriveTitle } from '#/domain/titles.js';
 import { iso } from '#/shared/time.js';
-import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
+import { createCardTx } from '#/tick/card-create.js';
+import { ENGINE_ACTOR } from '#/tick/card-log.js';
 import { answerPending } from '#/tick/interactions.js';
 import { insertInboxTicket } from '#/tick/ticket-insert.js';
 import { requestTick } from '#/tick/tick-requests.js';
@@ -80,32 +83,25 @@ export async function ingest(
       }
 
       const now = iso(deps.clock.now());
-      const creator = cardActor(event);
       const title = p.title ?? deriveTitle(p.text);
-      const cardId = makeCardId(
-        project.prefix,
-        await tx.cards.nextNumber(project.prefix),
-      );
-
-      await tx.cards.insert({
-        id: cardId,
-        project: project.id,
+      const made = await createCardTx(tx, project, {
         type: typeName,
         title,
         summary: p.text,
+        message: p.text,
         source: { kind: event.source, ref: event.dedupe_key },
-        created_by: creator,
-        created_at: now,
-        updated_at: now,
-      });
-
-      await logCardEvent(tx, cardId, {
-        kind: 'user_message',
+        creator: cardActor(event),
+        // The PR fast path files its ticket below and needs no Director turn; every other card is planned first.
+        phase: cardType.tickets_on_intake ? 'queued' : 'grilling',
+        wake: !cardType.tickets_on_intake,
         at: now,
-        actor: creator,
-        payload: { text: p.text },
       });
 
+      if (!('card' in made)) {
+        return { status: 'ignored', reason: `card refused: ${made.status}` };
+      }
+
+      const cardId = made.card.id;
       if (!cardType.tickets_on_intake) {
         return { status: 'card_created', cardId };
       }
@@ -166,6 +162,7 @@ export async function ingest(
 
   if (
     result.status === 'ticket_created' ||
+    result.status === 'card_created' ||
     result.status === 'reply_queued' ||
     result.status === 'answered'
   ) {

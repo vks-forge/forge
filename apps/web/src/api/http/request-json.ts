@@ -45,12 +45,13 @@ async function send(
 }
 
 async function refusal(response: Response): Promise<ApiError> {
-  const parsed = ErrorBody.safeParse(await response.json().catch(() => null));
+  const raw: unknown = await response.json().catch(() => null);
+  const parsed = ErrorBody.safeParse(raw);
   const { code, message } = parsed.success
     ? parsed.data.error
     : { code: 'http_error', message: `The Forge server answered ${response.status}.` };
 
-  return new ApiError('http', message, { status: response.status, code });
+  return new ApiError('http', message, { status: response.status, code, body: raw });
 }
 
 /** Calls `path` under the client's base URL and returns the body parsed by `schema`. */

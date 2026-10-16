@@ -154,6 +154,7 @@ describe('probe 10: a run resumes after a server restart on the real Claude harn
           actor: { type: 'user', id: 'probe' },
           project: 'fixture',
           payload: {
+            card_type: 'pr_issue',
             text: 'Add a function add(a, b) to src/math.js and a test for it in test/math.test.js.',
           },
           received_at: new Date().toISOString(),

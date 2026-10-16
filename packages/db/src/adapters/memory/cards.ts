@@ -22,7 +22,7 @@ import { insertUnique } from '#/adapters/memory/rows.js';
 import type { MemoryState } from '#/types/memory-state.types.js';
 
 const CLEARABLE = ['closed_reason', 'budget_cap_usd'] as const;
-const SETTABLE = ['type', 'title', 'summary', ...CLEARABLE] as const;
+const SETTABLE = ['type', 'title', 'summary', 'priority', 'links', ...CLEARABLE] as const;
 
 export function memoryCards(state: MemoryState): CardRepository {
   return {
@@ -30,6 +30,17 @@ export function memoryCards(state: MemoryState): CardRepository {
       const c = state.cards.get(id);
 
       return c ? structuredClone(c) : null;
+    },
+    async findBySource(project, kind, ref) {
+      const found = [...state.cards.values()]
+        .filter(
+          (c) => c.project === project && c.source.kind === kind && c.source.ref === ref,
+        )
+        .sort(
+          (a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id),
+        );
+
+      return found[0] ? structuredClone(found[0]) : null;
     },
     async insert(card) {
       const c = Card.parse(card);
@@ -86,6 +97,25 @@ export function memoryCards(state: MemoryState): CardRepository {
       }
 
       state.cards.set(id, Card.parse(next));
+
+      return true;
+    },
+    async updatePhase(id, expectedVersion, update) {
+      const current = state.cards.get(id);
+      if (current?.phase_version !== expectedVersion) {
+        return false;
+      }
+
+      state.cards.set(
+        id,
+        Card.parse({
+          ...current,
+          phase: update.phase,
+          needs_you: update.needs_you,
+          phase_version: expectedVersion + 1,
+          updated_at: update.updated_at,
+        }),
+      );
 
       return true;
     },

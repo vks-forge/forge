@@ -1,7 +1,7 @@
 /**
  * The sample cards of the component tests: rows, tickets, history and the type registry.
  *
- * Why: the Cards view needs a card in every column and the Card page needs the interesting
+ * Why: the Cards view needs a card in every column that holds cards and the Card page needs the interesting
  *   cases (a talk-only plan with a Director conversation, a card with running tickets, one
  *   with a question waiting, a closed one with a reason). The rows are plainly samples about
  *   an imaginary service. Summaries are checked by core's schemas when the fake server answers,
@@ -12,7 +12,8 @@
  */
 
 import { BUILTIN_CARD_TYPES } from '@forge/core';
-import type { CardSummary, Interaction, TicketSummary } from '@forge/core';
+import type { Interaction, TicketSummary } from '@forge/core';
+import type { CardSummary } from '#/schemas/cards.js';
 import { ticketSummary } from '#tests/helpers/work-fixtures.js';
 
 export interface SampleCard {
@@ -40,6 +41,12 @@ function card(
     updated_at: at(10 - n),
     ticket_count: 0,
     tickets_done: 0,
+    needs_you: over.column === 'needs_you',
+    phase_version: 0,
+    priority: 'normal',
+    links: [],
+    depends_on: [],
+    blocks: [],
     ...over,
   };
 }
@@ -59,7 +66,8 @@ export const SAMPLE_CARDS: readonly SampleCard[] = [
     summary: card(1, {
       title: 'Look at webhook retries',
       type: 'discussion',
-      column: 'new',
+      column: 'shaping',
+      phase: 'grilling',
     }),
     tickets: [],
     pending: [],
@@ -69,6 +77,7 @@ export const SAMPLE_CARDS: readonly SampleCard[] = [
       title: 'Plan a retry strategy for webhooks',
       type: 'plan',
       column: 'shaping',
+      phase: 'plan_ready',
       summary: 'Retries with backoff, capped at three attempts.',
     }),
     tickets: [],
@@ -79,6 +88,7 @@ export const SAMPLE_CARDS: readonly SampleCard[] = [
       title: 'Fix off-by-one in the nightly report',
       type: 'issue',
       column: 'needs_you',
+      phase: 'in_progress',
       ticket_count: 1,
     }),
     tickets: [
@@ -97,6 +107,8 @@ export const SAMPLE_CARDS: readonly SampleCard[] = [
       title: 'Stream large CSV exports',
       type: 'issue',
       column: 'in_progress',
+      phase: 'in_progress',
+      depends_on: ['FG-C5'],
       ticket_count: 3,
       tickets_done: 1,
       budget_cap_usd: 5,
@@ -118,6 +130,8 @@ export const SAMPLE_CARDS: readonly SampleCard[] = [
       title: 'Rename retries to maxRetries',
       type: 'issue',
       column: 'done',
+      phase: 'done',
+      blocks: ['FG-C4'],
       ticket_count: 1,
       tickets_done: 1,
     }),
@@ -129,6 +143,7 @@ export const SAMPLE_CARDS: readonly SampleCard[] = [
       title: 'Should we adopt pnpm?',
       type: 'discussion',
       column: 'closed',
+      phase: 'closed',
       closed_reason: 'Decided to keep npm for now.',
     }),
     tickets: [],

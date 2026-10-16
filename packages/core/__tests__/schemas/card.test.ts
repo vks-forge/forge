@@ -72,6 +72,11 @@ describe('Card', () => {
     created_by: { type: 'user', id: 'u1' },
     created_at: T,
     updated_at: T,
+    phase: 'grilling',
+    phase_version: 0,
+    needs_you: false,
+    priority: 'normal',
+    links: [],
   };
 
   it('parses a card and keeps optional fields optional', () => {
@@ -79,6 +84,29 @@ describe('Card', () => {
 
     expect(parsed.closed_reason).toBeUndefined();
     expect(parsed.budget_cap_usd).toBeUndefined();
+  });
+
+  it('requires the stored phase fields and refuses an unknown phase or priority', () => {
+    expect(Card.safeParse({ ...card, phase: undefined }).success).toBe(false);
+    expect(Card.safeParse({ ...card, phase: 'limbo' }).success).toBe(false);
+    expect(Card.safeParse({ ...card, priority: 'asap' }).success).toBe(false);
+    expect(Card.safeParse({ ...card, phase_version: -1 }).success).toBe(false);
+  });
+
+  it('accepts http and https links only', () => {
+    expect(
+      Card.safeParse({ ...card, links: ['https://a.dev/x', 'http://b.dev'] }).success,
+    ).toBe(true);
+
+    expect(Card.safeParse({ ...card, links: ['javascript:alert(1)'] }).success).toBe(
+      false,
+    );
+
+    expect(Card.safeParse({ ...card, links: ['file:///etc/passwd'] }).success).toBe(
+      false,
+    );
+
+    expect(Card.safeParse({ ...card, links: ['not a url'] }).success).toBe(false);
   });
 
   it('refuses an unknown source kind, a bad type name and an empty closing reason', () => {
@@ -113,6 +141,10 @@ describe('NewCardEvent', () => {
       },
       { kind: 'type_changed', payload: { from: 'discussion', to: 'issue' } },
       { kind: 'card_closed', payload: { reason: 'duplicate' } },
+      {
+        kind: 'budget_warning',
+        payload: { threshold: 0.8, spent_usd: 4, cap_usd: 5 },
+      },
       { kind: 'note', payload: { text: 'n' } },
     ];
 
@@ -155,14 +187,28 @@ describe('card type registry entries', () => {
     }
   });
 
-  it('starts tickets at intake only for issue and pr_issue, and asks plan approval only for plan', () => {
+  it('starts tickets at intake only on the pr_issue fast path (d-0141)', () => {
     const by = Object.fromEntries(BUILTIN_CARD_TYPES.map((x) => [x.name, x]));
 
     expect(by['discussion']?.tickets_on_intake).toBe(false);
     expect(by['plan']?.tickets_on_intake).toBe(false);
-    expect(by['plan']?.plan_approval).toBe(true);
-    expect(by['issue']?.tickets_on_intake).toBe(true);
+    expect(by['issue']?.tickets_on_intake).toBe(false);
     expect(by['pr_issue']?.tickets_on_intake).toBe(true);
+  });
+
+  it('lets the Director approve plan and issue plans, and asks the owner for the others', () => {
+    const by = Object.fromEntries(BUILTIN_CARD_TYPES.map((x) => [x.name, x]));
+
+    expect(by['plan']?.plan_approval).toBe('director_or_user');
+    expect(by['issue']?.plan_approval).toBe('director_or_user');
+    expect(by['discussion']?.plan_approval).toBe('user');
+    expect(by['pr_issue']?.plan_approval).toBe('user');
+  });
+
+  it('refuses the old boolean plan_approval', () => {
+    expect(
+      CardType.safeParse({ ...BUILTIN_CARD_TYPES[1], plan_approval: true }).success,
+    ).toBe(false);
   });
 
   it('requires at least one allowed source', () => {

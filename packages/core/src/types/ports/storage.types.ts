@@ -35,6 +35,8 @@ import type {
 } from '#/types/ports/harness-registry.types.js';
 import type {
   CardEventRepository,
+  CardRelationRepository,
+  CardReplyQueueRepository,
   CardRepository,
   CardTypeRepository,
 } from '#/types/ports/card.types.js';
@@ -270,6 +272,8 @@ export interface StorageTx {
   readonly cards: CardRepository;
   readonly cardEvents: CardEventRepository;
   readonly cardTypes: CardTypeRepository;
+  readonly cardRelations: CardRelationRepository;
+  readonly cardReplyQueue: CardReplyQueueRepository;
 }
 
 /** Single-writer storage backend; every mutation happens inside `transaction`. */

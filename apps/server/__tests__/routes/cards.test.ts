@@ -7,7 +7,7 @@
  *   a card makes the Board flicker, and an unauthenticated read would expose every request
  *   on the machine.
  *
- * Pins: rolled-up columns and ticket counts, the column and type filters, cursor paging
+ * Pins: the column and type filters, cursor paging
  *   without gaps (including a filter that skips most rows), 404 / 400 / 401 answers, the
  *   detail with linked tickets (card_id) and pending questions, history paging oldest first,
  *   the registry list, and `card_id` on the ticket list.
@@ -38,38 +38,12 @@ afterEach(async () => {
 });
 
 describe('GET /projects/:slug/cards', () => {
-  it('rolls each card up into its column from its tickets and questions', async () => {
+  it('lets a pending question move a busy card to needs_you', async () => {
     await seed(
-      [card(1), card(2), card(3), card(4), card(5), card(6, { closed_reason: 'dup' })],
-      [
-        ticket(1, 1, { status: 'inbox' }),
-        ticket(2, 2, { status: 'in_progress' }),
-        ticket(3, 3, { status: 'review' }),
-        ticket(4, 4, { status: 'done' }),
-      ],
+      [card(1, { phase: 'in_progress' })],
+      [ticket(1, 1, { status: 'in_progress' })],
     );
 
-    const body = (await get('/projects/fixture/cards')).body as Page;
-    const columns = Object.fromEntries(body.items.map((i) => [i.id, i.column]));
-
-    expect(columns).toEqual({
-      'FX-C1': 'new',
-      'FX-C2': 'in_progress',
-      'FX-C3': 'needs_you',
-      'FX-C4': 'done',
-      'FX-C5': 'shaping',
-      'FX-C6': 'closed',
-    });
-
-    expect(body.items.find((i) => i.id === 'FX-C2')).toMatchObject({
-      ticket_count: 1,
-      tickets_done: 0,
-      project: 'fixture',
-    });
-  });
-
-  it('lets a pending question move a busy card to needs_you', async () => {
-    await seed([card(1)], [ticket(1, 1, { status: 'in_progress' })]);
     await ctx.storage.transaction((tx) => tx.interactions.insert(question('FX-1')));
 
     const body = (await get('/projects/fixture/cards?column=needs_you')).body as Page;
@@ -81,7 +55,7 @@ describe('GET /projects/:slug/cards', () => {
     await seed(
       [
         card(1, { type: 'discussion' }),
-        card(2),
+        card(2, { phase: 'in_progress' }),
         { ...card(3), project: 'other', id: 'OT-C3' as CardId },
       ],
       [ticket(2, 2, { status: 'planned' })],
@@ -271,7 +245,7 @@ describe('GET /card-types', () => {
     expect(body.types.map((t) => t.tickets_on_intake)).toEqual([
       false,
       false,
-      true,
+      false,
       true,
     ]);
   });

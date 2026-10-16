@@ -2,11 +2,12 @@
  * Tests for the card chat rules: which actions a card type allows, and retype validity.
  *
  * Why: the Director names actions but the card type registry decides what a card may do
- *   (d-0106). A Discussion must not file tickets until converted, a type without `close`
- *   must not be suggested closed, and the retype check is the same one the PATCH route
- *   applies, so the Director cannot do what the owner could not.
+ *   (d-0106), and the card's phase decides whether tickets may exist yet: none while the
+ *   plan is being shaped or awaits approval (d-0141). A type without `close` must not be
+ *   suggested closed, and the retype check is the same one the PATCH route applies, so the
+ *   Director cannot do what the owner could not.
  *
- * Pins: the allowed kinds of each built-in type; each refusal reason; a type without `chat`
+ * Pins: the allowed kinds per type and phase; each refusal reason; a type without `chat`
  *   allows nothing; unknown type and refused source in checkTypeChange.
  * Depends on: src/domain/card-chat-actions, src/schemas/card-type, vitest.
  */
@@ -30,19 +31,9 @@ const type = (name: string): CardType => {
 };
 
 describe('allowedChatActions', () => {
-  it('lets a Discussion and a Plan steer, convert and suggest close, but not file tickets', () => {
-    for (const name of ['discussion', 'plan']) {
-      expect(allowedChatActions(type(name))).toEqual([
-        'steer_run',
-        'change_type',
-        'suggest_close',
-      ]);
-    }
-  });
-
-  it('lets an Issue and a PR issue do all four', () => {
-    for (const name of ['issue', 'pr_issue']) {
-      expect(allowedChatActions(type(name))).toEqual([
+  it('lets every type do all four actions once the plan is approved', () => {
+    for (const name of ['discussion', 'plan', 'issue', 'pr_issue']) {
+      expect(allowedChatActions(type(name), 'approved')).toEqual([
         'create_ticket',
         'steer_run',
         'change_type',
@@ -51,22 +42,37 @@ describe('allowedChatActions', () => {
     }
   });
 
+  it.each(['grilling', 'verifying', 'plan_ready'] as const)(
+    'withholds create_ticket while the card is %s',
+    (phase) => {
+      expect(allowedChatActions(type('plan'), phase)).toEqual([
+        'steer_run',
+        'change_type',
+        'suggest_close',
+      ]);
+
+      expect(chatActionRefusal(type('issue'), 'create_ticket', phase)).toBe(
+        'tickets are created when the plan is approved',
+      );
+    },
+  );
+
   it('allows nothing for a type without chat', () => {
-    expect(allowedChatActions({ ...type('issue'), actions: ['close'] })).toEqual([]);
+    expect(
+      allowedChatActions({ ...type('issue'), actions: ['close'] }, 'approved'),
+    ).toEqual([]);
   });
 
   it('drops change_type without convert and suggest_close without close', () => {
     const t = { ...type('issue'), actions: ['chat'] };
 
-    expect(allowedChatActions(t)).toEqual(['create_ticket', 'steer_run']);
+    expect(allowedChatActions(t, 'in_progress')).toEqual(['create_ticket', 'steer_run']);
     expect(chatActionRefusal(t, 'change_type')).toMatch(/cannot be converted/);
     expect(chatActionRefusal(t, 'suggest_close')).toMatch(/cannot be closed/);
   });
 
-  it('says why a Discussion cannot file tickets', () => {
-    expect(chatActionRefusal(type('discussion'), 'create_ticket')).toMatch(
-      /do not start tickets/,
-    );
+  it('applies only the type rules when no phase is given', () => {
+    expect(chatActionRefusal(type('discussion'), 'create_ticket')).toBeNull();
   });
 });
 

@@ -5,9 +5,10 @@
  *   and then executed by the same code a person's request would use, never by a new path:
  *   a ticket is filed with the intake inserter (numbered, `inbox`, linked, logged), a Worker
  *   is steered with `steerRun`, a retype follows the PATCH rule (`checkTypeChange`), and a
- *   close is only ever a suggestion (d-0112). The card type's registry decides which kinds
- *   are allowed (`chatActionRefusal`) and a card over its budget cap files nothing more. A
- *   refusal is a plain `note` on the card and never throws, so one bad action cannot sink the
+ *   close is only ever a suggestion (d-0112). The card type's registry and the card's phase
+ *   decide which kinds are allowed (`chatActionRefusal`): no ticket while the card is being
+ *   grilled, verified or awaits plan approval (d-0141). A card over its budget cap is warned,
+ *   never refused (d-0143). A refusal is a plain `note` on the card and never throws, so one bad action cannot sink the
  *   reply or the tick; an executed action writes `director_action` in the same transaction as
  *   its effect. Pause, stop and re-plan of tickets have no door yet and are not offered.
  *
@@ -27,7 +28,6 @@ import type {
   StorageTx,
   TicketId,
 } from '@forge/core';
-import { cardSpend } from '#/tick/card-chat-context.js';
 import { logCardEvent } from '#/tick/card-log.js';
 import { steerRun } from '#/tick/steer-run.js';
 import { insertInboxTicket } from '#/tick/ticket-insert.js';
@@ -85,7 +85,10 @@ async function gate(
   }
 
   const type = await tx.cardTypes.get(card.type);
-  const why = type ? chatActionRefusal(type, kind) : `unknown card type ${card.type}`;
+  const why = type
+    ? chatActionRefusal(type, kind, card.phase)
+    : `unknown card type ${card.type}`;
+
   if (!type || why !== null) {
     return {
       ok: false,
@@ -102,18 +105,6 @@ async function createTicket(
   at: string,
   action: Extract<CardChatAction, { kind: 'create_ticket' }>,
 ): Promise<ActionTaken> {
-  const tickets = await tx.tickets.listByCard(card.id);
-  const spent = await cardSpend(tx, tickets);
-  if (card.budget_cap_usd !== undefined && spent >= card.budget_cap_usd) {
-    return refuse(
-      tx,
-      card.id,
-      at,
-      'create_ticket',
-      `the card has spent $${spent.toFixed(2)} of its $${card.budget_cap_usd.toFixed(2)} budget cap`,
-    );
-  }
-
   const project = await tx.projects.get(card.project);
   if (!project) {
     return refuse(tx, card.id, at, 'create_ticket', `unknown project ${card.project}`);

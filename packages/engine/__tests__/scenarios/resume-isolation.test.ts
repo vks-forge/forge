@@ -37,7 +37,10 @@ async function twoInterruptedRuns(rig: Rig): Promise<void> {
 
   for (const project of ['forge', 'api']) {
     await rig.engine.ingest(
-      intake({ project, payload: { text: project } }, rig.clock.now()),
+      intake(
+        { project, payload: { text: project, card_type: 'pr_issue' } },
+        rig.clock.now(),
+      ),
     );
   }
 

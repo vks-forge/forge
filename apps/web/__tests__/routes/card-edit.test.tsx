@@ -77,7 +77,9 @@ describe('Card page: type and close', () => {
     const user = userEvent.setup();
     const { forge } = renderApp({ path: card('FG-C2') });
 
-    await user.click(await screen.findByRole('button', { name: 'Close card' }));
+    // The Director's close suggestion in the chat also has a Close card shortcut; the header's is first.
+    const [header] = await screen.findAllByRole('button', { name: 'Close card' });
+    await user.click(header!);
     const dialog = await screen.findByRole('alertdialog');
     const confirm = within(dialog).getByRole('button', { name: 'Close card' });
 

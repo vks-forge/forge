@@ -11,22 +11,30 @@
  * Exports: CARD_LIST_DEFAULT_LIMIT, CARD_LIST_MAX_LIMIT, CARD_EVENTS_DEFAULT_LIMIT,
  *   CARD_EVENTS_MAX_LIMIT, CardSummary, CardListQuery, CardListPage, CardDetail,
  *   CardEventsQuery, CardEventsPage, CardPatchBody.
- * Depends on: schemas/card, schemas/card-chat, schemas/card-event, schemas/interaction, schemas/ticket-summary, zod. No IO.
+ * Depends on: schemas/card, schemas/card-chat, schemas/card-event, schemas/ids, schemas/interaction, schemas/ticket-summary, zod. No IO.
  */
 
 import { z } from 'zod';
 import { Card, CardColumn, CardTypeName } from '#/schemas/card.js';
 import { CardDirectorStatus } from '#/schemas/card-chat.js';
 import { CardEvent } from '#/schemas/card-event.js';
+import { CardId } from '#/schemas/ids.js';
 import { Interaction } from '#/schemas/interaction.js';
 import { TicketSummary } from '#/schemas/ticket-summary.js';
 
 export const CARD_LIST_DEFAULT_LIMIT = 50;
 export const CARD_LIST_MAX_LIMIT = 200;
 
-/** One Board card: the row, the rolled-up column and ticket counts. `project` is the project slug. */
+/**
+ * One Board card: the row, the rolled-up column and ticket counts. `project` is the project
+ * slug. `needs_you` is the effective overlay (the card's own flag, or a ticket waiting on a
+ * person), not the stored flag. `depends_on` lists the cards this one waits for, `blocks`
+ * the cards waiting for it (the reverse view of the same edges).
+ */
 export const CardSummary = Card.extend({
   column: CardColumn,
+  depends_on: z.array(CardId),
+  blocks: z.array(CardId),
   ticket_count: z.number().int().nonnegative(),
   tickets_done: z.number().int().nonnegative(),
 });

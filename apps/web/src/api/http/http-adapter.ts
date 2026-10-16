@@ -7,7 +7,8 @@
  *   `ForgeApi` type makes the compiler refuse an adapter that forgets a resource.
  *
  * Exports: createHttpAdapter().
- * Depends on: @forge/core (TicketListPage), api/http/cards-http, api/http/request-json, api/sse/watch-run-events,
+ * Depends on: @forge/core (TicketListPage), api/http/cards-http, api/http/request-json,
+ *   api/sse/watch-run-events, api/sse/watch-project-events,
  *   schemas/projects, schemas/tickets, types/api.types.
  */
 
@@ -19,6 +20,7 @@ import { requestJson } from '#/api/http/request-json.js';
 import { createSettingsHttp } from '#/api/http/settings-http.js';
 import { createWorkHttp } from '#/api/http/work-http.js';
 import { TicketListPage } from '@forge/core';
+import { watchProjectEvents } from '#/api/sse/watch-project-events.js';
 import { watchRunEvents } from '#/api/sse/watch-run-events.js';
 import { ProjectsResponse } from '#/schemas/projects.js';
 import { AnswerReply, IngestReply, TicketDetail } from '#/schemas/tickets.js';
@@ -82,6 +84,14 @@ export function createHttpAdapter(client: HttpClientOptions): ForgeApi {
     runEvents: {
       watch: (watch) =>
         watchRunEvents({
+          ...watch,
+          baseUrl: client.baseUrl,
+          ...(client.fetch ? { fetch: client.fetch } : {}),
+        }),
+    },
+    projectEvents: {
+      watch: (watch) =>
+        watchProjectEvents({
           ...watch,
           baseUrl: client.baseUrl,
           ...(client.fetch ? { fetch: client.fetch } : {}),

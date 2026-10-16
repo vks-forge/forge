@@ -3,24 +3,25 @@
  *
  * Why: the Board's Cards view answers "what needs me, what is moving, what is finished" for
  *   requests rather than tickets. The server rolls each card's column up from its tickets and
- *   pending questions (d-0107), so the UI never decides a column; it only groups by the one the
- *   server sent, which also means a card can never sit in two columns or none. A card's column
- *   is never moved by hand, so there is nothing here for dragging. Amber stays with Needs you.
+ *   pending questions and its phase (d-0107, d-0139), so the UI never decides a column; it only
+ *   groups by the one the server sent, which also means a card can never sit in two columns or
+ *   none. There is no New column: the Director starts on a card at once, so it lands in Shaping.
+ *   A card's column is never moved by hand, so there is nothing here for dragging. Amber stays
+ *   with Needs you.
  *
  * Exports: CARD_BOARD_COLUMNS, COLUMN_LABEL, EMPTY_CARD_FILTER, isCardFilterActive(),
  *   filterCards(), groupCards().
- * Depends on: @forge/core (CardSummary, CardColumn), types/cards-ui.types. No IO.
+ * Depends on: schemas/cards (types), types/cards-ui.types. No IO.
  */
 
-import type { CardColumn, CardSummary } from '@forge/core';
+import type { CardColumn, CardSummary } from '#/schemas/cards.js';
 import type { CardColumnDef, CardFilter } from '#/types/cards-ui.types.js';
 
 export const CARD_BOARD_COLUMNS: readonly CardColumnDef[] = [
-  { id: 'new', title: 'New', hint: 'Just arrived, not looked at', tone: 'neutral' },
   {
     id: 'shaping',
     title: 'Shaping',
-    hint: 'Being talked through, no work yet',
+    hint: 'The Director is asking, checking and writing the plan',
     tone: 'neutral',
   },
   {
@@ -29,15 +30,21 @@ export const CARD_BOARD_COLUMNS: readonly CardColumnDef[] = [
     hint: 'A question, a review or a sign-off',
     tone: 'attn',
   },
+  {
+    id: 'queued',
+    title: 'Queued',
+    hint: 'Approved, waiting for a card it depends on or a free Worker',
+    tone: 'neutral',
+  },
   { id: 'in_progress', title: 'In progress', hint: 'Workers are on it', tone: 'signal' },
   { id: 'done', title: 'Done', hint: 'All its tickets are finished', tone: 'good' },
   { id: 'closed', title: 'Closed', hint: 'Closed with a reason', tone: 'muted' },
 ];
 
 export const COLUMN_LABEL: Readonly<Record<CardColumn, string>> = {
-  new: 'New',
   shaping: 'Shaping',
   needs_you: 'Needs you',
+  queued: 'Queued',
   in_progress: 'In progress',
   done: 'Done',
   closed: 'Closed',
@@ -70,9 +77,9 @@ export function groupCards(
   cards: readonly CardSummary[],
 ): Record<CardColumn, readonly CardSummary[]> {
   const groups: Record<CardColumn, CardSummary[]> = {
-    new: [],
     shaping: [],
     needs_you: [],
+    queued: [],
     in_progress: [],
     done: [],
     closed: [],

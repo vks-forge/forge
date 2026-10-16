@@ -22,6 +22,7 @@ import { githubConnectionRoutes } from '#/routes/github-connections.js';
 import { hookRoute } from '#/routes/hook.js';
 import { intakeRoute } from '#/routes/intake.js';
 import { memoryRoutes } from '#/routes/memory.js';
+import { projectEventsRoute } from '#/routes/project-events.js';
 import { projectStatsRoutes } from '#/routes/project-stats.js';
 import { projectInspectRoutes } from '#/routes/project-inspect.js';
 import { projectDeleteRoutes } from '#/routes/project-delete.js';
@@ -44,6 +45,7 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ...cardRoutes(deps),
     answerRoute(deps),
     runEventsRoute(deps),
+    projectEventsRoute(deps),
     runSteerRoute(deps),
     hookRoute(deps),
     healthRoute(deps),

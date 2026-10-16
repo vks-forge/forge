@@ -10,10 +10,11 @@
  *   control room's "Needs you" pane has nothing to show (director-core.md §3, §8).
  *
  * Exports: InteractionStatus, Interaction.
- * Depends on: schemas/run, zod. No IO.
+ * Depends on: schemas/ids, schemas/run, zod. No IO.
  */
 
 import { z } from 'zod';
+import { CardId } from '#/schemas/ids.js';
 import { InteractionKind } from './run.js';
 
 /** Lifecycle of an interaction. */
@@ -31,6 +32,8 @@ export const Interaction = z.object({
   ticket_id: z.string().min(1),
   run_id: z.string().min(1).optional(),
   kind: InteractionKind,
+  /** The card this question belongs to when it is asked of the owner about the card itself (d-0141 item 8); absent for a ticket's own question. */
+  card_id: CardId.optional(),
   payload: z.unknown(),
   status: InteractionStatus,
   asked_at: z.iso.datetime(),

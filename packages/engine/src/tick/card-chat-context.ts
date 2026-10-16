@@ -150,6 +150,9 @@ export async function loadChatContext(
         source: card.source,
         budget_cap_usd: card.budget_cap_usd ?? null,
         spent_usd: loaded.spend,
+        phase: card.phase,
+        priority: card.priority,
+        links: card.links,
       },
       card_type: {
         name: type.name,
@@ -157,7 +160,7 @@ export async function loadChatContext(
         plan_approval: type.plan_approval,
         tickets_on_intake: type.tickets_on_intake,
       },
-      allowed_actions: allowedChatActions(type),
+      allowed_actions: allowedChatActions(type, card.phase),
       history: loaded.history.map((e) => ({
         seq: e.seq,
         at: e.at,

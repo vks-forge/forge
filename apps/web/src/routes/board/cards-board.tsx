@@ -2,8 +2,11 @@
  * CardsBoard: the Board's Cards view, six columns of requests.
  *
  * Why: the Cards view is the default way into a project's work: each request (a card) in the
- *   column the server rolled up from its tickets and questions (d-0107), with the Needs you
- *   column in amber. It keeps itself fresh by polling and refetching on focus, and every state
+ *   column the server rolled up from its tickets and questions (d-0107, d-0139), with the Needs
+ *   you column in amber. Hovering or focusing a card dims every card outside its dependency
+ *   chain; the chain is worked out here, once per highlighted card, from all cards (not just
+ *   the visible ones, so a filter never hides a link). It keeps itself fresh by the live
+ *   stream (polling is only the fallback) and refetching on focus, and every state
  *   is designed: skeleton while loading, an explanation when there are no cards yet (the Ask
  *   the Director box above is how to start one), an error with retry when Forge is unreachable,
  *   and, when data is on screen but a refresh fails or the browser is offline, a banner that
@@ -11,15 +14,17 @@
  *
  * Exports: CardsBoard.
  * Depends on: react, motion/react, api/use-card-board, api/describe-error, domain/card-columns,
+ *   domain/card-chain,
  *   state/board-prefs, state/use-now, state/use-online, routes/board/*, components/status/state-panel.
  */
 
 import { LayoutGroup } from 'motion/react';
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { describeError } from '#/api/describe-error.js';
 import { useCardBoard, useCardTypes } from '#/api/use-card-board.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { Button } from '#/components/ui/button.js';
+import { dependencyChain } from '#/domain/card-chain.js';
 import {
   CARD_BOARD_COLUMNS,
   filterCards,
@@ -42,6 +47,18 @@ export function CardsBoard(props: { slug: string }) {
   const now = useNow();
   const visible = useMemo(() => filterCards(cards, cardFilter), [cards, cardFilter]);
   const groups = useMemo(() => groupCards(visible), [visible]);
+  // The card under the pointer or keyboard focus; every card outside its chain is dimmed.
+  const [lit, setLit] = useState<string | null>(null);
+  const onHighlight = useCallback((id: string | null) => setLit(id), []);
+  const dimmed = useMemo<ReadonlySet<string>>(() => {
+    if (lit === null) {
+      return new Set();
+    }
+
+    const chain = dependencyChain(cards, lit);
+
+    return new Set(cards.filter((card) => !chain.has(card.id)).map((card) => card.id));
+  }, [cards, lit]);
 
   if (query.isPending) {
     return <StatePanel kind="loading" label="Loading cards" />;
@@ -61,10 +78,9 @@ export function CardsBoard(props: { slug: string }) {
 
   if (cards.length === 0) {
     return (
-      <BoardEmpty title="No cards yet" columns={CARD_BOARD_COLUMNS}>
-        Tell the Director what you want in the box above. Each request becomes a card you
-        can talk through with it, and the card moves across these columns as work gets
-        done.
+      <BoardEmpty slug={props.slug} title="No cards yet" columns={CARD_BOARD_COLUMNS}>
+        Tell the Director what you want in a card. It reads the project, asks what it
+        needs, and the card moves across these columns as work gets done.
       </BoardEmpty>
     );
   }
@@ -103,6 +119,8 @@ export function CardsBoard(props: { slug: string }) {
               types={types.data}
               filtered={isCardFilterActive(cardFilter)}
               now={now}
+              dimmed={dimmed}
+              onHighlight={onHighlight}
             />
           ))}
         </ColumnScroller>

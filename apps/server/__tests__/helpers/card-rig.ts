@@ -58,6 +58,11 @@ export const card = (n: number, over: Partial<Card> = {}): Card => ({
   created_by: { type: 'user', id: 'u1' },
   created_at: at(0),
   updated_at: at(n % 50),
+  phase: 'grilling',
+  phase_version: 0,
+  needs_you: false,
+  priority: 'normal',
+  links: [],
   ...over,
 });
 

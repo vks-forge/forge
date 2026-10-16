@@ -26,16 +26,25 @@ Public API from `src/index.ts`:
     `engine.tick_interval_ms` (30 s) and whenever `deps.onTickRequested` fires.
   - `requestTick()`: coalesced "tick soon" request; also made by intake, every run event and every
     finished run.
-  - `postCardMessage(cardId, text, author)`: stores a `user_message` on an open card (`stored` with the event, `not_found`, `closed`) and queues the card for the next tick's `card_chat` Director step (d-0109); `cardDirector(cardId)` is `thinking` while queued or running, `error` after a failed reply until the next message, else `idle` (process-local). The step (`tick/card-chat.ts`, before triage) is given the card, its last 30 events, tickets with run state, pending questions, spend against the budget cap, the allowed actions and the project memory slice, all as one JSON input the driver fences as data. Its `{reply, actions}` output is parsed against `CardChatOutput`; each action runs only through an existing door (`tick/card-chat-actions.ts`): `create_ticket` through the intake inserter (`tick/ticket-insert.ts`, so it is numbered, `inbox`, linked and triaged the same tick), `steer_run` through `steerRun` on the live run of one of the card's own tickets (author `director`), `change_type` by the PATCH rule, `suggest_close` as a `close_suggested` event only. An executed action writes `director_action` in the same transaction; a refusal (type forbids it, closed card, ticket of another card, no live Worker, budget cap reached, same or unknown type) writes a `note`; the reply is then written as `director_message` with `actions_taken`. Invalid output or a model failure sets `error` and writes a plain `note`; the tick never crashes.
+  - `postCardMessage(cardId, text, author)`: stores a `user_message` on an open card (`stored` with the event, `not_found`, `closed`) and stores the owed reply in the durable `card_reply_queue` (same transaction) for the next tick's `card_chat` Director step (d-0109, d-0134); `cardDirector(cardId)` is `thinking` while queued or running, `error` after a failed reply until the next message, else `idle` (process-local). The step (`tick/card-chat.ts`, before triage) is given the card, its last 30 events, tickets with run state, pending questions, spend against the budget cap, the allowed actions and the project memory slice, all as one JSON input the driver fences as data. Its `{reply, actions}` output is parsed against `CardChatOutput`; each action runs only through an existing door (`tick/card-chat-actions.ts`): `create_ticket` through the intake inserter (`tick/ticket-insert.ts`, so it is numbered, `inbox`, linked and triaged the same tick), `steer_run` through `steerRun` on the live run of one of the card's own tickets (author `director`), `change_type` by the PATCH rule, `suggest_close` as a `close_suggested` event only. An executed action writes `director_action` in the same transaction; a refusal (type forbids it, closed card, the card is still grilling, verifying or awaiting plan approval, ticket of another card, no live Worker, same or unknown type) writes a `note`; the reply is then written as `director_message` with `actions_taken`. Invalid output or a model failure sets `error` and writes a plain `note`; the tick never crashes.
   - `ingest(event)`: stores an intake event (deduped) and maps it: `new_request` to a card
     (`<PROJECT>-C<n>`, type from the payload's `card_type`, default `issue`, checked against the
-    card type registry and its allowed sources; unknown or refused is `ignored`) with a
-    `user_message` event, then, when the type starts tickets at intake, to an `inbox` ticket
-    (`<PROJECT>-<n>`) linked by `card_id` with a `ticket_created` event (a Discussion or Plan makes
-    the card only: `card_created`), `reply` to the answer of the one pending question or to a queued
-    steering message for the live run. The engine does not know ticket sources: which sources may
-    reach `ingest` is decided by the app's trigger registry (`apps/server`), so unregistered
-    sources never get here.
+    card type registry and its allowed sources; unknown or refused is `ignored`) in phase
+    `grilling` with a `user_message` event and a queued Director reply (`card_created`), and no
+    ticket. Only a type that starts tickets at intake (`pr_issue`, the PR fast path) also makes an
+    `inbox` ticket (`<PROJECT>-<n>`) linked by `card_id` with a `ticket_created` event; its card
+    starts `queued` and no Director turn is queued. `reply` goes to the answer of the one pending
+    question or to a queued steering message for the live run. The engine does not know ticket
+    sources: which sources may reach `ingest` is decided by the app's trigger registry
+    (`apps/server`), so unregistered sources never get here.
+  - `createCard(input)` (`tick/card-create.ts`, the create-card form): validates the type (it must
+    take chat) and the dependencies, creates the card in `grilling` with the title and description as
+    the first `user_message`, and queues the Director's reply, in one transaction; a repeated
+    `dedupe_key` returns the first card (`duplicate`). Refusals are typed results, not throws:
+    `project_not_found`, `project_archived`, `invalid_type`, `card_not_found` (a dependency id that
+    is no card), `cross_project_dependency`, `dependency_cycle` with the loop (`findCycle`). No ticket.
+  - `setCardRelations(cardId, {depends_on, blocks, actor})`: replaces the card's dependency edges
+    (the set is complete: an edge left out is removed) after the same checks, and writes a `note`.
   - `answerInteraction(id, answer)`: CAS answer, queues the `response_wake`.
   - `cancelTicket(id)`: `cancelled` through `transition()`, cancels the live run, removes the worktree.
   - `interruptRun(runId)`: shutdown path (`tick/interrupt.ts`). Marks a live run `interrupted`
@@ -218,7 +227,7 @@ Dispatch parks a ticket (WaitingHuman, "Needs you") when the worktree manager ra
 ## Limits
 
 - `engine.steerRun(runId, message, author)` is the direct user-to-Worker message (d-0109): no model call, no tick wait, `steer` mode only. It writes the run inbox row and a `user_message` run event in one transaction, calls `driver.steer(handle, text, 'steer', inboxSeq)`, then marks the row delivered. Result: `delivered {inboxSeq}`, `not_live` (no live pump here, run not starting/running, or owned by another server) or `unsupported` (driver lacks `steer`, or the live session refused with `InvalidInputError`; the stored message stays undelivered). Any other driver failure throws and leaves the message undelivered. It never falls back to `follow_up`: that would change what the person asked for.
-- Card chat: replies and the `thinking`/`error` flags are process-local, so a message pending at a restart is not answered (it stays in the history; the user writes again). Pause, stop, restart and re-plan of tickets are not offered to the Director yet: only `create_ticket`, `steer_run`, `change_type` and `suggest_close` exist. `create_ticket` on a Plan card is refused (the plan approval action is not built), a Discussion must be retyped first, the ticket type is always `chore` (triage may refine it) and the budget cap only stops new tickets, it does not pause running ones.
+- Card chat: owed replies are rows in `card_reply_queue` (claimed per tick, completed with the reply; a claim older than 10 minutes, `STALE_CLAIM_MS`, is taken again), so a restart resumes them; the `thinking`/`error` flags are process-local (`thinking` is mirrored from the queue and set inside the posting transaction, and `deps.projectEvents` is told when it ends). Pause, stop, restart and re-plan of tickets are not offered to the Director yet: only `create_ticket`, `steer_run`, `change_type` and `suggest_close` exist. `create_ticket` is refused while the card is `grilling`, `verifying` or `plan_ready` (tickets come from the approved plan, d-0141), the ticket type is always `chore` (triage may refine it), and the budget cap never blocks anything: crossing 80 percent and 100 percent of it writes one `budget_warning` card event each (d-0143, `tick/card-budget.ts`, checked after a card reply and after a run settles). The planning flow itself (grill, plan, approval) is not built yet: a new card gets the existing `card_chat` reply only.
 - Process-local by design: live run pumps, step/dispatch holds and queued steering replies. After a
   restart pumps are gone (interrupted runs are resumed with new pumps, d-0092) and holds reset. The requester's hint, type and
   title are read from the stored intake event (`intakeEvents.get`), so they survive a restart.
@@ -227,6 +236,7 @@ Dispatch parks a ticket (WaitingHuman, "Needs you") when the worktree manager ra
   had arrived but was not yet settled when the server stopped is resumed too, and told to continue.
 - A running Worker keeps the limits it was started with (budget, stall time); a settings edit reaches runs started on the next tick. The stall scan itself uses the current `stall_ms`. Run rows predating migration 0010 have no `config_version`.
 - Ticket numbers come from listing every ticket id (no counter); fine at M0 scale.
+- Card phase changes only through `tick/card-phase.ts` (`moveCardTx` runs `transitionCard` and stores it with a CAS on `phase_version`); `syncCardWithTickets` runs inside `moveTicketTx` and starts a `queued`/`approved` card with its first ticket past the inbox and completes it with its last live ticket done. A card is created only by `tick/card-create.ts`.
 - Card history is written by `tick/card-log.ts` inside the transaction of the change it describes: `ticket_state` from `moveTicketTx` (the one ticket door), `interaction_opened` when a pause is applied, `interaction_answered` when an answer wins. Steering and Director messages are not logged yet (no card chat); a ticket without a `card_id` is skipped, not failed.
 - The rotation cursor is process-local: after a restart the first dispatch starts at the first project by id. Priority
   is set directly on the ticket row (no API to change it yet). A wait reason is computed on request and not stored.

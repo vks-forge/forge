@@ -14,6 +14,7 @@
 import { createMemoryCatalogueStore, createMemoryStorage } from '@forge/db';
 import { createTokenProver } from '#/services/auth/proof.js';
 import { createSessionStore } from '#/services/auth/sessions.js';
+import { createProjectEvents } from '#/services/project-events.js';
 import { createSseTicketIssuer } from '#/services/auth/sse-tickets.js';
 import { createHarnessCompat } from '#/services/harness-compat.js';
 import { createChatTrigger } from '@forge/triggers';
@@ -45,6 +46,7 @@ export function inertRouteExtras(): Pick<
   | 'compat'
   | 'triggers'
   | 'tickets'
+  | 'projectEvents'
   | 'sessions'
   | 'prover'
   | 'requestShutdown'
@@ -61,6 +63,7 @@ export function inertRouteExtras(): Pick<
       worktreesDir: '/forge-test-home/worktrees',
     },
     triggers: createTriggerRegistry([createChatTrigger()]),
+    projectEvents: createProjectEvents(),
     tickets: createSseTicketIssuer(() => Date.now()),
     sessions: createSessionStore(() => Date.now()),
     prover: createTokenProver('inert-test-token'),

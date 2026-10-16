@@ -5,9 +5,10 @@ statement: The card-first flow build (plan docs/briefs/card-first-flow-plan.md, 
 source: { type: chat, ref: "2026-10-16 user: \"dont build the plan now, hold it for later. till then you fix the normal UI issues that i gave you\"" }
 author: user
 origin: owner
-status: active
+status: superseded
 valid_from: 2026-10-16
-superseded_by: null
+valid_to: 2026-10-16
+superseded_by: d-0160
 supersedes: null
 amends: [d-0156]
 tags: [build-plan, priorities]

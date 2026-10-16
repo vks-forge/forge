@@ -5,8 +5,8 @@
  * Why: the Card page is a conversation with the card's Director, so it must show a reply soon
  *   after it exists without hammering the server. The detail and the history refetch slowly
  *   (5 s) and every 3 s while a reply is awaited (the Director is thinking, or the user just
- *   sent a message and no Director message follows it), and pause while the tab is hidden. The
- *   history is held as a window by `seq`: the first read is the newest page, each poll asks only
+ *   sent a message and no Director message follows it), and pause while the tab is hidden; while the project stream is open the slow poll is 30 s
+ *   (the reply poll stays 3 s). The history is held as a window by `seq`: the first read is the newest page, each poll asks only
  *   for events after the newest one held, and "load older" asks for the page below the oldest
  *   one held, so a long history costs one small request per poll however long it is. A send is
  *   optimistic in the view: it appends an unsent line, and on success the server's own event
@@ -14,14 +14,17 @@
  *   Patching writes the returned card into the cache so the header changes at once.
  *
  * Exports: useCardDetail(), useCardEvents(), useLoadOlderEvents(), useSendCardMessage(),
- *   usePatchCard(), mergeEvents(), CARD_POLL_MS, REPLY_POLL_MS, HISTORY_PAGE_SIZE.
- * Depends on: @tanstack/react-query, api/api-provider, api/use-card-board, api/use-tickets,
- *   domain/card-chat, schemas/cards.
+ *   usePatchCard(), useCreateCard(), mergeEvents(), CARD_POLL_MS, REPLY_POLL_MS,
+ *   HISTORY_PAGE_SIZE.
+ * Depends on: @tanstack/react-query, api/api-provider, api/poll-interval, api/use-card-board,
+ *   api/use-tickets, domain/card-chat, schemas/cards, schemas/new-card (type).
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CardTypeName } from '@forge/core';
+import type { NewCardInput } from '#/schemas/new-card.js';
 import { useForgeApi } from '#/api/api-provider.js';
+import { useRefetchMs } from '#/api/poll-interval.js';
 import { CARDS_KEY, cardEventsKey, cardKey } from '#/api/use-card-board.js';
 import { TICKETS_KEY } from '#/api/use-tickets.js';
 import { awaitingReply } from '#/domain/card-chat.js';
@@ -35,12 +38,13 @@ export const HISTORY_PAGE_SIZE = 50;
 
 export function useCardDetail(id: string) {
   const api = useForgeApi();
+  const pollMs = useRefetchMs(CARD_POLL_MS);
 
   return useQuery({
     queryKey: cardKey(id),
     queryFn: ({ signal }) => api.cards.get(id, { signal }),
     refetchInterval: (query) =>
-      query.state.data?.director.state === 'thinking' ? REPLY_POLL_MS : CARD_POLL_MS,
+      query.state.data?.director.state === 'thinking' ? REPLY_POLL_MS : pollMs,
     refetchOnWindowFocus: true,
   });
 }
@@ -71,6 +75,7 @@ function olderMayExist(
  */
 export function useCardEvents(id: string) {
   const api = useForgeApi();
+  const pollMs = useRefetchMs(CARD_POLL_MS);
   const client = useQueryClient();
 
   return useQuery<CardHistory>({
@@ -109,7 +114,7 @@ export function useCardEvents(id: string) {
       client.getQueryData<CardDetailReply>(cardKey(id))?.director.state === 'thinking' ||
       awaitingReply(query.state.data?.events ?? [])
         ? REPLY_POLL_MS
-        : CARD_POLL_MS,
+        : pollMs,
     refetchOnWindowFocus: true,
   });
 }
@@ -176,5 +181,16 @@ export function usePatchCard(cardId: string) {
         client.invalidateQueries({ queryKey: TICKETS_KEY }),
       ]);
     },
+  });
+}
+
+/** Creates a card; the Board's list refetches so it appears (the stream does the same live). */
+export function useCreateCard(slug: string) {
+  const api = useForgeApi();
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: NewCardInput) => api.cards.create(slug, input),
+    onSuccess: () => client.invalidateQueries({ queryKey: [...CARDS_KEY, slug] }),
   });
 }

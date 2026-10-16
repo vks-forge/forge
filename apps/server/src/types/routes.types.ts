@@ -25,6 +25,7 @@ import type { CatalogueStore } from '@forge/tools';
 import type { SessionStore, SseTicketIssuer, TokenProver } from '#/types/auth.types.js';
 import type { FolderPicker, FolderRevealer } from '#/types/folder-picker.types.js';
 import type { HarnessCompat } from '#/types/harness-compat.types.js';
+import type { ProjectEvents } from '#/types/project-events.types.js';
 import type { ProjectRegistry } from '#/types/project-registry.types.js';
 import type { HttpTuning } from '#/types/settings.types.js';
 import type { TriggerRegistry } from '#/types/trigger.types.js';
@@ -52,7 +53,9 @@ export interface RouteDeps {
     setup: HarnessSetup,
     live: boolean,
   ) => Promise<HarnessTestResult>;
-  /** Mints the short-lived tickets that let `EventSource` open a run's event stream. */
+  /** Where writes announce stale queries and the project streams listen (`GET /projects/:slug/events`). */
+  readonly projectEvents: ProjectEvents;
+  /** Mints the short-lived tickets that let `EventSource` open a run's or a project's event stream. */
   readonly tickets: SseTicketIssuer;
   /** Browser sessions and the one-time codes that start them (`/auth/open-code`, `/auth/open`). */
   readonly sessions: SessionStore;

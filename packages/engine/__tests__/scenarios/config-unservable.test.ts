@@ -35,7 +35,9 @@ async function addApi(rig: Rig): Promise<void> {
 }
 
 const request = (rig: Rig, project: string, text: string) =>
-  rig.engine.ingest(intake({ project, payload: { text } }, rig.clock.now()));
+  rig.engine.ingest(
+    intake({ project, payload: { text, card_type: 'pr_issue' } }, rig.clock.now()),
+  );
 
 /** An engine whose source throws for `slug` only. */
 function breakProject(rig: Rig, slug: string, reads: string[] = []) {

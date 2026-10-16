@@ -20,6 +20,7 @@ import type { Ticket } from '@forge/core';
 import { iso } from '#/shared/time.js';
 import { runCardChats } from '#/tick/card-chat.js';
 import { cardDirectorStatus, postCardMessage } from '#/tick/card-chat-post.js';
+import { createCard, setCardRelations } from '#/tick/card-create.js';
 import { dispatchReady } from '#/tick/dispatch.js';
 import { explainWait } from '#/tick/explain.js';
 import { answerInteraction, expireInteractions } from '#/tick/interactions.js';
@@ -154,6 +155,8 @@ export function createEngine(deps: EngineDeps): Engine {
     },
     requestTick: () => requestTick(deps, state),
     ingest: (event) => ingest(deps, state, event),
+    createCard: (input) => createCard(deps, state, input),
+    setCardRelations: (cardId, input) => setCardRelations(deps, cardId, input),
     answerInteraction: (id, answer) => answerInteraction(deps, state, id, answer),
     steerRun: (runId, message, author) => steerRun(deps, state, runId, message, author),
     postCardMessage: (cardId, text, author) =>

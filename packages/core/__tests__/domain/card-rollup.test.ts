@@ -1,25 +1,31 @@
 /**
  * Tests for the card column rollup.
  *
- * Why: the Board column is never stored (d-0107), so this one function is the only thing
- *   that decides whether a card says "Needs you", "In progress" or "Done". A wrong
- *   precedence hides a question the owner must answer, or marks unmerged work Done, and
- *   nothing else would catch it because no stored column exists to disagree.
+ * Why: the Board column is never stored (d-0107, d-0139): it follows from the stored phase
+ *   and from whether anyone waits on the owner, so this one function is the only thing that
+ *   decides whether a card says "Shaping", "Needs you" or "Done". A wrong precedence hides a
+ *   question the owner must answer, or shows unplanned work as running, and nothing else
+ *   would catch it because no stored column exists to disagree.
  *
- * Pins: each column's rule, the d-0107 precedence (Needs you, then Closed, then In progress,
- *   then Done), closed
- *   as the one explicit state, discussion cards staying in Shaping, questions of other
- *   cards being ignored, and properties over any set of ticket statuses.
- * Depends on: src/domain/card-rollup, src/schemas/ticket, fast-check, vitest.
+ * Pins: the phase to column table, needs_you winning over every phase but closed, the three
+ *   ways a card needs the owner (own flag, ticket waiting, pending question), closed winning
+ *   over needs_you, questions of other cards being ignored, and properties over any phase.
+ * Depends on: src/domain/card-rollup, src/schemas/card, src/schemas/ticket, fast-check, vitest.
  */
 
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { rollupCardColumn } from '#/domain/card-rollup.js';
+import { cardNeedsYou, rollupCardColumn } from '#/domain/card-rollup.js';
+import { CARD_PHASES } from '#/schemas/card.js';
+import type { Card } from '#/schemas/card.js';
 import { TicketStatus } from '#/schemas/ticket.js';
 import type { Ticket } from '#/schemas/ticket.js';
 
-const open = {};
+const card = (
+  phase: Card['phase'],
+  over: Partial<Pick<Card, 'needs_you' | 'closed_reason'>> = {},
+) => ({ phase, needs_you: false, ...over });
+
 const t = (n: number, status: Ticket['status']) => ({
   id: `SF-${n}` as Ticket['id'],
   status,
@@ -31,162 +37,126 @@ const asked = (ticketId: string, status = 'pending' as const) => ({
 });
 
 describe('rollupCardColumn', () => {
-  it('puts a card with no tickets in shaping (a discussion, or a plan not yet approved)', () => {
-    expect(rollupCardColumn(open, [], [])).toBe('shaping');
+  it.each([
+    ['grilling', 'shaping'],
+    ['verifying', 'shaping'],
+    ['plan_ready', 'shaping'],
+    ['approved', 'queued'],
+    ['queued', 'queued'],
+    ['in_progress', 'in_progress'],
+    ['done', 'done'],
+    ['closed', 'closed'],
+  ] as const)('puts a %s card in %s', (phase, column) => {
+    expect(rollupCardColumn(card(phase), [], [])).toBe(column);
   });
 
-  it('puts a card whose tickets are all untriaged in new', () => {
-    expect(rollupCardColumn(open, [t(1, 'inbox')], [])).toBe('new');
-    expect(rollupCardColumn(open, [t(1, 'inbox'), t(2, 'cancelled')], [])).toBe('new');
-  });
-
-  it.each(['planned', 'in_progress', 'verifying', 'blocked'] as const)(
-    'puts a card with a %s ticket in in_progress',
-    (status) => {
-      expect(rollupCardColumn(open, [t(1, status)], [])).toBe('in_progress');
+  it.each(CARD_PHASES.filter((p) => p !== 'closed'))(
+    'puts a %s card that waits on the owner in needs_you',
+    (phase) => {
+      expect(rollupCardColumn(card(phase, { needs_you: true }), [], [])).toBe(
+        'needs_you',
+      );
     },
   );
 
   it.each(['waiting_human', 'review', 'needs_signoff'] as const)(
-    'puts a card with a %s ticket in needs_you',
+    'puts an in_progress card with a %s ticket in needs_you',
     (status) => {
-      expect(rollupCardColumn(open, [t(1, status)], [])).toBe('needs_you');
+      expect(rollupCardColumn(card('in_progress'), [t(1, status)], [])).toBe('needs_you');
     },
   );
 
   it('puts a card in needs_you for a pending question even when the ticket looks busy', () => {
-    expect(rollupCardColumn(open, [t(1, 'in_progress')], [asked('SF-1')])).toBe(
-      'needs_you',
-    );
-  });
-
-  it('lets needs_you win over in_progress and done', () => {
     expect(
-      rollupCardColumn(open, [t(1, 'in_progress'), t(2, 'review'), t(3, 'done')], []),
+      rollupCardColumn(card('in_progress'), [t(1, 'in_progress')], [asked('SF-1')]),
     ).toBe('needs_you');
-  });
-
-  it('lets in_progress win over done while any ticket is still running', () => {
-    expect(rollupCardColumn(open, [t(1, 'done'), t(2, 'verifying')], [])).toBe(
-      'in_progress',
-    );
-  });
-
-  it('puts a card in done when every ticket that was not cancelled is merged', () => {
-    expect(rollupCardColumn(open, [t(1, 'done'), t(2, 'done')], [])).toBe('done');
-    expect(rollupCardColumn(open, [t(1, 'done'), t(2, 'cancelled')], [])).toBe('done');
-  });
-
-  it('puts a card whose tickets were all cancelled back in shaping', () => {
-    expect(rollupCardColumn(open, [t(1, 'cancelled')], [])).toBe('shaping');
   });
 
   it('ignores questions that are answered or belong to another card', () => {
     const tickets = [t(1, 'done')];
 
-    expect(rollupCardColumn(open, tickets, [asked('SF-1', 'answered' as never)])).toBe(
-      'done',
-    );
+    expect(
+      rollupCardColumn(card('done'), tickets, [asked('SF-1', 'answered' as never)]),
+    ).toBe('done');
 
-    expect(rollupCardColumn(open, tickets, [asked('SF-99')])).toBe('done');
+    expect(rollupCardColumn(card('done'), tickets, [asked('SF-99')])).toBe('done');
   });
 
-  it('puts a closed card in closed over its running or finished tickets', () => {
-    const closed = { closed_reason: 'duplicate of SF-C3' };
+  it('does not let running tickets move a card out of its stored phase', () => {
+    expect(rollupCardColumn(card('grilling'), [t(1, 'in_progress')], [])).toBe('shaping');
+    expect(rollupCardColumn(card('queued'), [t(1, 'done')], [])).toBe('queued');
+  });
 
-    expect(rollupCardColumn(closed, [t(1, 'in_progress'), t(2, 'done')], [])).toBe(
+  it('puts a card with a closing reason in closed even when its phase lags', () => {
+    expect(rollupCardColumn(card('in_progress', { closed_reason: 'dup' }), [], [])).toBe(
+      'closed',
+    );
+  });
+
+  it('keeps a closed card closed while a question or review waits', () => {
+    const closed = card('closed', { closed_reason: 'duplicate of SF-C3' });
+
+    expect(rollupCardColumn(closed, [t(1, 'in_progress')], [asked('SF-1')])).toBe(
       'closed',
     );
 
-    expect(rollupCardColumn(closed, [], [])).toBe('closed');
+    expect(rollupCardColumn(closed, [t(1, 'review')], [])).toBe('closed');
+    expect(rollupCardColumn(card('closed', { needs_you: true }), [], [])).toBe('closed');
   });
+});
 
-  it('keeps a closed card in needs_you while a question or review is waiting (d-0107)', () => {
-    const closed = { closed_reason: 'duplicate of SF-C3' };
+describe('cardNeedsYou', () => {
+  it('is true for the own flag, a waiting ticket or a pending question, and false otherwise', () => {
+    expect(cardNeedsYou({ needs_you: true }, [], [])).toBe(true);
+    expect(cardNeedsYou({ needs_you: false }, [t(1, 'waiting_human')], [])).toBe(true);
+    expect(
+      cardNeedsYou({ needs_you: false }, [t(1, 'in_progress')], [asked('SF-1')]),
+    ).toBe(true);
 
-    expect(rollupCardColumn(closed, [t(1, 'in_progress')], [asked('SF-1')])).toBe(
-      'needs_you',
-    );
-
-    expect(rollupCardColumn(closed, [t(1, 'review')], [])).toBe('needs_you');
+    expect(cardNeedsYou({ needs_you: false }, [t(1, 'in_progress')], [])).toBe(false);
   });
 });
 
 describe('rollupCardColumn: properties', () => {
   const statuses = fc.array(fc.constantFrom(...TicketStatus.options), { maxLength: 8 });
+  const phases = fc.constantFrom(...CARD_PHASES);
   const ticketsOf = (list: Ticket['status'][]) => list.map((s, i) => t(i + 1, s));
 
-  it('is needs_you whenever one ticket waits on a person and the card is open', () => {
+  it('is needs_you whenever a ticket waits on a person and the card is not closed', () => {
     fc.assert(
       fc.property(
+        phases.filter((p) => p !== 'closed'),
         statuses,
         fc.constantFrom('waiting_human', 'review', 'needs_signoff'),
-        (list, w) => {
-          const tickets = ticketsOf([...list, w]);
-
-          expect(rollupCardColumn(open, tickets, [])).toBe('needs_you');
+        (phase, list, w) => {
+          expect(rollupCardColumn(card(phase), ticketsOf([...list, w]), [])).toBe(
+            'needs_you',
+          );
         },
       ),
     );
   });
 
-  it('is never done while a ticket is unmerged and not cancelled', () => {
+  it('is closed exactly when the phase is closed or a reason is set', () => {
     fc.assert(
-      fc.property(statuses, (list) => {
-        const tickets = ticketsOf(list);
-        const unfinished = list.some((s) => s !== 'done' && s !== 'cancelled');
+      fc.property(phases, fc.boolean(), fc.boolean(), (phase, reason, flag) => {
+        const c = card(phase, {
+          needs_you: flag,
+          ...(reason ? { closed_reason: 'r' } : {}),
+        });
 
-        if (unfinished) {
-          expect(rollupCardColumn(open, tickets, [])).not.toBe('done');
-        }
-      }),
-    );
-  });
-
-  it('is closed exactly when a reason is set and nothing waits on a person', () => {
-    const waits = (list: Ticket['status'][]) =>
-      list.some((s) => ['waiting_human', 'review', 'needs_signoff'].includes(s));
-
-    fc.assert(
-      fc.property(statuses, fc.boolean(), (list, isClosed) => {
-        const card = isClosed ? { closed_reason: 'r' } : open;
-        const column = rollupCardColumn(card, ticketsOf(list), []);
-
-        expect(column === 'closed').toBe(isClosed && !waits(list));
-      }),
-    );
-  });
-
-  it('puts a card in needs_you for any pending question, closed or not', () => {
-    fc.assert(
-      fc.property(statuses, fc.boolean(), (list, isClosed) => {
-        const card = isClosed ? { closed_reason: 'r' } : open;
-        const tickets = ticketsOf([...list, 'in_progress']);
-        const last = tickets[tickets.length - 1]!;
-
-        expect(rollupCardColumn(card, tickets, [asked(last.id)])).toBe('needs_you');
+        expect(rollupCardColumn(c, [], []) === 'closed').toBe(
+          phase === 'closed' || reason,
+        );
       }),
     );
   });
 
   it('does not depend on the order of the tickets', () => {
     fc.assert(
-      fc.property(statuses, (list) => {
-        const forward = rollupCardColumn(open, ticketsOf(list), []);
-        const backward = rollupCardColumn(open, ticketsOf([...list].reverse()), []);
-
-        expect(backward).toBe(forward);
-      }),
-    );
-  });
-
-  it('is deterministic: the same facts always give the same column', () => {
-    fc.assert(
-      fc.property(statuses, fc.boolean(), (list, withQuestion) => {
-        const questions = withQuestion ? [asked('SF-1')] : [];
-
-        expect(rollupCardColumn(open, ticketsOf(list), questions)).toBe(
-          rollupCardColumn(open, ticketsOf(list), questions),
+      fc.property(phases, statuses, (phase, list) => {
+        expect(rollupCardColumn(card(phase), ticketsOf([...list].reverse()), [])).toBe(
+          rollupCardColumn(card(phase), ticketsOf(list), []),
         );
       }),
     );

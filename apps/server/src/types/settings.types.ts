@@ -34,6 +34,8 @@ export interface HttpTuning {
   readonly ssePollMs: number;
   /** Interval of the SSE keep-alive comment. */
   readonly sseHeartbeatMs: number;
+  /** Interval of the project stream's keep-alive comment; absent means 25 seconds. */
+  readonly projectHeartbeatMs?: number;
 }
 
 export interface ServerSettings {

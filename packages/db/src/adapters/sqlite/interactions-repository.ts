@@ -26,6 +26,7 @@ import type { ColumnCodec, SqlDriver, SqlRow } from '#/types/storage-driver.type
 const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
   ticket_id: { column: 'ticket_id' },
   run_id: { column: 'run_id', clearable: true },
+  card_id: { column: 'card_id', clearable: true },
   kind: { column: 'kind' },
   payload: { column: 'payload_json', encode: toJson },
   status: { column: 'status' },
@@ -76,13 +77,14 @@ export function createInteractionRepository(driver: SqlDriver): InteractionRepos
     async insert(interaction) {
       const i = Interaction.parse(interaction);
       driver.run(
-        `INSERT INTO interactions (id, ticket_id, run_id, kind, payload_json, status, asked_at,
-           answered_at, timeout_at, answer_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO interactions (id, ticket_id, run_id, card_id, kind, payload_json, status,
+           asked_at, answered_at, timeout_at, answer_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           i.id,
           i.ticket_id,
           i.run_id ?? null,
+          i.card_id ?? null,
           i.kind,
           toJson(i.payload),
           i.status,

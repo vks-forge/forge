@@ -1,75 +1,79 @@
 /**
- * Card column rollup — which Board column a card is in, from its tickets and questions.
+ * Card column rollup — which Board column a card is in, from its phase and what waits on the owner.
  *
  * Why: the Board must show where a request stands without anyone moving cards by hand
- *   (d-0107). Storing the column would let it drift from the ticket state machine, so it is
- *   computed from the facts: the card's tickets and the questions waiting on the user. One
- *   pure function with a fixed precedence keeps the Board, the Card page, the label mirror
- *   on the source issue and "Needs you" in agreement.
+ *   (d-0107, d-0139). The phase is stored and moved only by `transitionCard()`; the column
+ *   and the "needs you" overlay are computed from it, so the Board, the Card page, the
+ *   Inbox and the label mirror on the source issue agree. A card needs the owner when the
+ *   card itself waits (its stored flag), or when one of its tickets waits on a person or
+ *   has a pending question; that overlay wins over every phase but closed, so an owner's
+ *   answer is never hidden behind "In progress". One pure function with a fixed precedence.
  *
- * Precedence, first match wins. d-0107: "Needs you wins over everything, then In progress":
- *   1. Needs you: a pending question on one of its tickets, or a ticket waiting on a person
- *      (waiting_human, review, needs_signoff). Wins over everything else, a closed card
- *      included, so a question still pending on a closed card stays visible until it is
- *      answered or cancelled.
- *   2. Closed: `closed_reason` set.
- *   3. In progress: a ticket that is planned, running, gated or blocked on another ticket.
- *   4. Done: at least one ticket and every ticket not cancelled is done (merged).
- *   5. New: tickets exist and every ticket not cancelled is still in the inbox, untriaged.
- *   6. Shaping: everything else, including a card with no tickets (a Discussion, a Plan not
- *      yet approved) or whose tickets were all cancelled.
+ * Precedence, first match wins:
+ *   1. Closed: phase `closed`, or `closed_reason` set.
+ *   2. Needs you: `cardNeedsYou()` is true.
+ *   3. By phase: grilling, verifying, plan_ready -> shaping; approved, queued -> queued;
+ *      in_progress -> in_progress; done -> done.
  *
- * Exports: rollupCardColumn().
+ * Exports: cardNeedsYou(), rollupCardColumn().
  * Depends on: schemas/card, schemas/ticket, schemas/ticket-summary, types/card-rollup. No IO.
  */
 
 import type { Card, CardColumn } from '#/schemas/card.js';
-import type { Ticket } from '#/schemas/ticket.js';
 import { NEEDS_YOU_STATUSES } from '#/schemas/ticket-summary.js';
-import type { RolledInteraction, RolledTicket } from '#/types/card-rollup.types.js';
-
-const RUNNING_STATUSES: readonly Ticket['status'][] = [
-  'planned',
-  'in_progress',
-  'verifying',
-  'blocked',
-];
+import type {
+  RolledCard,
+  RolledInteraction,
+  RolledTicket,
+} from '#/types/card-rollup.types.js';
 
 /**
- * The Board column for `card`. `tickets` are the card's own tickets; `pendingInteractions`
- * may hold more than the card's (the whole project's open questions): only those naming one
- * of its tickets and still pending count.
+ * Whether the card waits on the owner: its own flag, a ticket in a waiting status, or a
+ * pending question. `pendingInteractions` may hold the whole project's questions: only those
+ * naming one of the card's tickets and still pending count.
  */
+export function cardNeedsYou(
+  card: Pick<Card, 'needs_you'>,
+  tickets: readonly RolledTicket[],
+  pendingInteractions: readonly RolledInteraction[],
+): boolean {
+  if (card.needs_you) {
+    return true;
+  }
+
+  const ids = new Set<string>(tickets.map((t) => t.id));
+
+  return (
+    tickets.some((t) => NEEDS_YOU_STATUSES.includes(t.status)) ||
+    pendingInteractions.some((i) => i.status === 'pending' && ids.has(i.ticket_id))
+  );
+}
+
+/** The Board column for `card`; see the precedence above. */
 export function rollupCardColumn(
-  card: Pick<Card, 'closed_reason'>,
+  card: RolledCard,
   tickets: readonly RolledTicket[],
   pendingInteractions: readonly RolledInteraction[],
 ): CardColumn {
-  const ids = new Set<string>(tickets.map((t) => t.id));
-  const asked = pendingInteractions.some(
-    (i) => i.status === 'pending' && ids.has(i.ticket_id),
-  );
-
-  if (asked || tickets.some((t) => NEEDS_YOU_STATUSES.includes(t.status))) {
-    return 'needs_you';
-  }
-
-  if (card.closed_reason !== undefined) {
+  if (card.phase === 'closed' || card.closed_reason !== undefined) {
     return 'closed';
   }
 
-  if (tickets.some((t) => RUNNING_STATUSES.includes(t.status))) {
-    return 'in_progress';
+  if (cardNeedsYou(card, tickets, pendingInteractions)) {
+    return 'needs_you';
   }
 
-  const live = tickets.filter((t) => t.status !== 'cancelled');
-  if (live.length > 0 && live.every((t) => t.status === 'done')) {
-    return 'done';
+  switch (card.phase) {
+    case 'approved':
+    case 'queued':
+      return 'queued';
+    case 'in_progress':
+      return 'in_progress';
+    case 'done':
+      return 'done';
+    case 'grilling':
+    case 'verifying':
+    case 'plan_ready':
+      return 'shaping';
   }
-
-  if (live.length > 0 && live.every((t) => t.status === 'inbox')) {
-    return 'new';
-  }
-
-  return 'shaping';
 }

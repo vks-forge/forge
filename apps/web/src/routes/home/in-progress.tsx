@@ -52,7 +52,7 @@ export function InProgress(props: { slug: string }) {
         />
       ) : active.length === 0 ? (
         <p className="rounded-xl border border-line bg-surface p-4 text-sm text-muted">
-          No ticket is in progress. Ask the Director for something below.
+          No ticket is in progress. Create a card to start something.
         </p>
       ) : (
         <>

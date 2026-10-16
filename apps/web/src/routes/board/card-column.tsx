@@ -12,10 +12,11 @@
  *   types/cards-ui.types.
  */
 
-import type { CardSummary, CardType } from '@forge/core';
+import type { CardType } from '@forge/core';
 import { WindowedList } from '#/components/list/windowed-list.js';
 import { CardTile } from '#/routes/board/card-tile.js';
 import { ColumnShell } from '#/routes/board/column-shell.js';
+import type { CardSummary } from '#/schemas/cards.js';
 import type { CardColumnDef } from '#/types/cards-ui.types.js';
 
 export function CardColumnView(props: {
@@ -25,8 +26,11 @@ export function CardColumnView(props: {
   /** Why the column is empty: a filter hides cards, or there are simply none. */
   filtered: boolean;
   now: number;
+  /** Cards outside the hovered or focused card's dependency chain; empty when none is. */
+  dimmed: ReadonlySet<string>;
+  onHighlight: (id: string | null) => void;
 }) {
-  const { column, cards, types, filtered, now } = props;
+  const { column, cards, types, filtered, now, dimmed, onHighlight } = props;
 
   return (
     <ColumnShell
@@ -44,7 +48,15 @@ export function CardColumnView(props: {
         getKey={(card) => card.id}
         label={`${column.title} cards`}
         className="max-h-[68dvh] pr-1"
-        renderItem={(card) => <CardTile card={card} types={types} now={now} />}
+        renderItem={(card) => (
+          <CardTile
+            card={card}
+            types={types}
+            now={now}
+            dimmed={dimmed.has(card.id)}
+            onHighlight={onHighlight}
+          />
+        )}
       />
     </ColumnShell>
   );

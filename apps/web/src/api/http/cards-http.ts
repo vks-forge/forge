@@ -7,21 +7,27 @@
  *   offending field named, while history events stay open to kinds this UI does not know yet.
  *
  * Exports: createCardsHttp().
- * Depends on: api/http/request-json, schemas/cards, types/api.types, types/cards-api.types.
+ * Depends on: api/http/request-json, schemas/cards, schemas/plan, types/api.types, types/cards-api.types, zod.
  */
 
+import { z } from 'zod';
 import { requestJson } from '#/api/http/request-json.js';
 import {
+  CardCreateReply,
   CardDetailReply,
   CardHistoryPage,
   CardListReply,
   CardMessageReply,
   CardTypesReply,
 } from '#/schemas/cards.js';
+import { PlanApproveReply, PlanReply, PlanVersionReply } from '#/schemas/plan.js';
 import type { HttpClientOptions } from '#/types/api.types.js';
 import type { CardsApi } from '#/types/cards-api.types.js';
 
 const enc = encodeURIComponent;
+
+/** Replies the UI does not read (it reloads the card instead): any body, or none. */
+const Ignored = z.unknown();
 
 /** `?a=1&b=2`, skipping undefined values. */
 function query(params: Record<string, string | number | undefined>): string {
@@ -72,10 +78,58 @@ export function createCardsHttp(client: HttpClientOptions): CardsApi {
         method: 'PATCH',
         body,
       }),
+    create: (slug, body, options) =>
+      requestJson(client, `/projects/${enc(slug)}/cards`, CardCreateReply, {
+        ...options,
+        method: 'POST',
+        body,
+      }),
+    setRelations: (id, body) =>
+      requestJson(client, `/cards/${enc(id)}/relations`, CardCreateReply, {
+        method: 'PUT',
+        body,
+      }),
     send: (id, text, author) =>
       requestJson(client, `/cards/${enc(id)}/messages`, CardMessageReply, {
         method: 'POST',
         body: { text, author },
+      }),
+    plan: (id, options) =>
+      requestJson(client, `/cards/${enc(id)}/plan`, PlanReply, options),
+    planVersion: (id, version, options) =>
+      requestJson(client, `/cards/${enc(id)}/plan/${version}`, PlanVersionReply, options),
+    answerGrill: (id, body) =>
+      requestJson(client, `/cards/${enc(id)}/grill/answer`, Ignored, {
+        method: 'POST',
+        body,
+      }),
+    grillShortcut: (id, kind) =>
+      requestJson(client, `/cards/${enc(id)}/grill/shortcut`, Ignored, {
+        method: 'POST',
+        body: { kind },
+      }),
+    approvePlan: (id, version) =>
+      requestJson(client, `/cards/${enc(id)}/plan/approve`, PlanApproveReply, {
+        method: 'POST',
+        body: { version },
+      }),
+    requestChanges: (id, version, comment) =>
+      requestJson(client, `/cards/${enc(id)}/plan/request-changes`, Ignored, {
+        method: 'POST',
+        body: { version, comment },
+      }),
+    editPlanTickets: (id, version, body) =>
+      requestJson(client, `/cards/${enc(id)}/plan/${version}/tickets`, PlanVersionReply, {
+        method: 'PATCH',
+        body,
+      }),
+    startPlanning: (id) =>
+      requestJson(client, `/cards/${enc(id)}/start-planning`, Ignored, {
+        method: 'POST',
+      }),
+    runAsExpress: (ticketId) =>
+      requestJson(client, `/tickets/${enc(ticketId)}/run-as-express`, Ignored, {
+        method: 'POST',
       }),
   };
 }

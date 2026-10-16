@@ -1,7 +1,7 @@
 /**
  * Pins: the Board shows every ticket in its column with the facts that matter, links each
- * card to its page, filters, shows loading/empty/error states and lets the user file a request
- * with the Director. (The Cards view is pinned in board-cards.test.tsx.)
+ * card to its page, filters, shows loading/empty/error states and starts work from a New card
+ * button instead of a free-text Director box. (The Cards view is pinned in board-cards.test.tsx.)
  *
  * Why: the Board is the first screen a user opens each day. A ticket in the wrong column, a
  *   card that is not a link (d-0116), a filter with no way back, or a silent failure would
@@ -9,7 +9,7 @@
  * Depends on: the stubbed Forge server via helpers/render-app, routes/board/*.
  */
 
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { boardPrefsStore } from '#/state/board-prefs.js';
@@ -82,24 +82,25 @@ describe('Board, Tickets view', () => {
     expect(screen.getByText(/Move sessions/)).toBeInTheDocument();
   });
 
-  it('disables every request control on an archived project and says why', async () => {
+  it('disables New card on an archived project', async () => {
     renderApp({ path: '/p/sample-legacy/board' });
 
-    expect(await screen.findByLabelText('Ask the Director')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'New request' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Send to Director' })).toBeDisabled();
-    expect(
-      screen.getByText('This project is archived and takes no new work.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'New card' })).toBeDisabled();
   });
 
-  it('disables "Write a request" on an archived project with nothing on its Board', async () => {
+  it('disables "Create your first card" on an archived project with nothing on its Board', async () => {
     renderApp({
       path: '/p/sample-legacy/board',
       routes: { 'GET /projects/:slug/tickets': json({ items: [], nextCursor: null }) },
     });
 
-    expect(await screen.findByRole('button', { name: 'Write a request' })).toBeDisabled();
+    expect(
+      await screen.findByRole('button', { name: 'Create your first card' }),
+    ).toBeDisabled();
+
+    expect(
+      screen.getByText('This project is archived and takes no new work.'),
+    ).toBeInTheDocument();
   });
 
   it('says so when the project has no tickets, with the way to start', async () => {
@@ -109,10 +110,20 @@ describe('Board, Tickets view', () => {
     });
 
     expect(await screen.findByText('No tickets yet')).toBeInTheDocument();
-    expect(screen.getByLabelText('Ask the Director')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create your first card' })).toBeEnabled();
   });
 
-  it('shows an empty project the columns it will fill and moves focus to the request box', async () => {
+  it('no longer offers the Ask the Director box on the Board', async () => {
+    renderApp({ path: BOARD });
+    await screen.findByText(/Stream large CSV/);
+
+    expect(screen.queryByLabelText('Ask the Director')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ask the Director')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Send to Director' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'New card' })).toBeEnabled();
+  });
+
+  it('shows an empty project the columns it will fill and opens the New card popup', async () => {
     const user = userEvent.setup();
     renderApp({
       path: BOARD,
@@ -123,8 +134,8 @@ describe('Board, Tickets view', () => {
     expect(within(preview).getByText('Needs you')).toBeInTheDocument();
     expect(within(preview).getAllByRole('listitem')).toHaveLength(6);
 
-    await user.click(screen.getByRole('button', { name: 'Write a request' }));
-    expect(screen.getByLabelText('Ask the Director')).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Create your first card' }));
+    expect(await screen.findByRole('dialog', { name: 'New card' })).toBeInTheDocument();
   });
 
   it('explains a failure and offers to try again', async () => {
@@ -132,27 +143,5 @@ describe('Board, Tickets view', () => {
 
     expect(await screen.findByText('Cannot reach Forge')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
-  });
-
-  it('files a request with the Director and links the new ticket', async () => {
-    const user = userEvent.setup();
-    renderApp({ path: BOARD });
-
-    await user.type(
-      await screen.findByLabelText('Ask the Director'),
-      'Add a health check',
-    );
-
-    await user.click(screen.getByRole('button', { name: 'Send to Director' }));
-
-    const status = await screen.findByText(/Filed as/);
-    expect(within(status).getByRole('link', { name: 'SVC-12' })).toHaveAttribute(
-      'href',
-      '/p/sample-service/tickets/SVC-12',
-    );
-
-    await waitFor(() =>
-      expect(screen.getByLabelText('Ask the Director')).toHaveValue(''),
-    );
   });
 });

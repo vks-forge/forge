@@ -7,14 +7,15 @@
  *   a card changing column glides from its old place to its new one (shared layout spring,
  *   transform only). Virtualised rows are absolutely positioned and skip that glide: a
  *   windowed row has no old place to come from, and 100+ simultaneous layout measurements
- *   would break the 60 fps floor (d-0103).
+ *   would break the 60 fps floor (d-0103). When the OS asks for reduced motion the glide is
+ *   removed outright and a card simply appears in its new column (`data-motion="instant"`).
  *
  * Exports: WindowedList, WINDOW_THRESHOLD.
  * Depends on: react, motion/react, @tanstack/react-virtual, theme/motion.
  */
 
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { motion } from 'motion/react';
+import { motion, useReducedMotionConfig } from 'motion/react';
 import { useRef } from 'react';
 import type { ReactNode } from 'react';
 import { springs } from '#/theme/motion.js';
@@ -34,6 +35,8 @@ export function WindowedList<T>(props: {
   const { items, getKey, renderItem, estimate = 104, label, className = '' } = props;
   const scroller = useRef<HTMLDivElement>(null);
   const windowed = items.length > WINDOW_THRESHOLD;
+  // Under reduced motion a card swaps column instantly: no layout glide at all, not a slower one.
+  const glide = useReducedMotionConfig() !== true;
   const virtualizer = useVirtualizer({
     count: windowed ? items.length : 0,
     getScrollElement: () => scroller.current,
@@ -63,17 +66,25 @@ export function WindowedList<T>(props: {
           ))}
         </ul>
       ) : (
-        <ul aria-label={label} className="grid gap-2">
-          {items.map((item) => (
-            <motion.li
-              key={getKey(item)}
-              layout="position"
-              layoutId={`card-${getKey(item)}`}
-              transition={springs.smooth}
-            >
-              {renderItem(item)}
-            </motion.li>
-          ))}
+        <ul
+          aria-label={label}
+          data-motion={glide ? 'glide' : 'instant'}
+          className="grid gap-2"
+        >
+          {items.map((item) =>
+            glide ? (
+              <motion.li
+                key={getKey(item)}
+                layout="position"
+                layoutId={`card-${getKey(item)}`}
+                transition={springs.smooth}
+              >
+                {renderItem(item)}
+              </motion.li>
+            ) : (
+              <li key={getKey(item)}>{renderItem(item)}</li>
+            ),
+          )}
         </ul>
       )}
     </div>

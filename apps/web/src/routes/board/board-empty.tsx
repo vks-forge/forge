@@ -4,26 +4,24 @@
  * Why: a brand-new project opens on a Board with nothing on it, and a blank page there reads
  *   as broken. This shows the columns the work will move through (their real names and
  *   meanings, no invented items), so the user sees the shape of the Board, and says plainly how
- *   to start: tell the Director what you want. The button moves focus to the Ask the Director
- *   box, so the way in is one click or one Tab away.
+ *   to start: create a card for the Director. The button opens the New card popup, so the way
+ *   in is one click or one Tab away.
  *
  * Exports: BoardEmpty.
- * Depends on: react, lucide-react, routes/board/ask-director, routes/board/column-shell,
- *   routes/board/archived-reason, state/project-archived, components/ui/{button,tooltip},
- *   types/board.types.
+ * Depends on: react, lucide-react, components/cards/new-card-button, routes/board/column-shell,
+ *   state/project-archived, types/board.types.
  */
 
 import { MessageSquarePlus } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Button } from '#/components/ui/button.js';
-import { Tooltip } from '#/components/ui/tooltip.js';
-import { focusComposer } from '#/routes/board/ask-director.js';
+import { NewCardButton } from '#/components/cards/new-card-button.js';
 import { ARCHIVED_REASON } from '#/routes/board/archived-reason.js';
 import { TONE_DOT } from '#/routes/board/column-shell.js';
 import { useProjectArchived } from '#/state/project-archived.js';
 import type { ColumnTone } from '#/types/board.types.js';
 
 export function BoardEmpty(props: {
+  slug: string;
   title: string;
   children: ReactNode;
   columns: readonly { id: string; title: string; hint: string; tone: ColumnTone }[];
@@ -41,13 +39,11 @@ export function BoardEmpty(props: {
         </span>
         <h2 className="text-lg font-semibold tracking-tight">{props.title}</h2>
         <p className="max-w-prose text-sm text-muted">{props.children}</p>
-        <Tooltip content={ARCHIVED_REASON} disabled={!archived}>
-          <span className="inline-flex">
-            <Button variant="primary" onClick={focusComposer} disabled={archived}>
-              Write a request
-            </Button>
-          </span>
-        </Tooltip>
+        <NewCardButton
+          slug={props.slug}
+          variant="primary"
+          label="Create your first card"
+        />
         {archived ? <p className="text-xs text-muted">{ARCHIVED_REASON}</p> : null}
       </div>
       <ul

@@ -14,6 +14,8 @@
 import type {
   Card,
   CardEvent,
+  CardRelation,
+  CardReplyQueueItem,
   CardType,
   GateResult,
   Harness,
@@ -71,4 +73,10 @@ export interface MemoryState {
   cardEvents: Map<string, CardEvent[]>;
   /** Card type registry keyed by name; insertion order is list order. */
   cardTypes: Map<string, CardType>;
+  /** `card_relations` in insertion order: the one source of card dependencies. */
+  cardRelations: CardRelation[];
+  /** `card_reply_queue` rows in id order. */
+  cardReplies: CardReplyQueueItem[];
+  /** Last reply id handed out (SQLite AUTOINCREMENT stand-in). */
+  cardReplySeq: number;
 }

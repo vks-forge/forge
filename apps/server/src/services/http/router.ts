@@ -176,6 +176,7 @@ export function createRouter(
           authorization,
           ticket: url.searchParams.get('ticket'),
           runId: params['id'],
+          projectSlug: params['slug'],
           cookie,
         });
 

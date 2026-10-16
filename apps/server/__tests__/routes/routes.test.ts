@@ -4,11 +4,9 @@
  * Why: the routes are thin, but each one is a trust boundary: intake parses untrusted JSON,
  *   the ticket view joins four tables, the answer route turns a compare-and-swap loss into
  *   409, the hook route turns a bearer header into a token, and health must report a broken
- *   database as 503. The engine is a fake here so each test pins exactly what the route
- *   sends it and returns; the real engine runs in the end-to-end tests.
+ *   database as 503. The engine is a fake here so each test pins exactly what the route sends it and returns; the real engine runs in the end-to-end tests.
  *
- * Pins: status codes and bodies of /intake, /tickets/:id, /interactions/:id/answer,
- *   /runs/:id/hook, /runs/:id/events (errors only) and /health.
+ * Pins: status codes and bodies of /intake, /tickets/:id, /interactions/:id/answer, /runs/:id/hook, /runs/:id/events (errors only) and /health.
  * Depends on: src/routes/routes, helpers/http-rig, @forge/db (memory storage). IO: a loopback socket.
  */
 
@@ -79,6 +77,8 @@ beforeEach(async () => {
     answerInteraction: vi.fn(async () => true),
     steerRun: vi.fn(),
     postCardMessage: vi.fn(),
+    createCard: vi.fn(),
+    setCardRelations: vi.fn(),
     cardDirector: vi.fn(() => ({ state: 'idle' })),
     cancelTicket: vi.fn(),
     explainWait: vi.fn(async () => null),

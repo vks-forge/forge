@@ -190,3 +190,22 @@ describe('Home', () => {
     expect(await screen.findByRole('list', { name: 'In progress' })).toBeInTheDocument();
   });
 });
+
+describe('Home: starting work', () => {
+  it('has a New card button and no Ask the Director box', async () => {
+    renderWork(HOME, routes());
+
+    expect(await screen.findByRole('button', { name: 'New card' })).toBeEnabled();
+    expect(screen.queryByLabelText('Ask the Director')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ask the Director')).not.toBeInTheDocument();
+  });
+
+  it('opens the New card popup from the button', async () => {
+    const user = userEvent.setup();
+    renderWork(HOME, routes());
+
+    await user.click(await screen.findByRole('button', { name: 'New card' }));
+
+    expect(await screen.findByRole('dialog', { name: 'New card' })).toBeInTheDocument();
+  });
+});

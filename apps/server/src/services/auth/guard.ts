@@ -7,8 +7,8 @@
  *   per-run secret) and `/auth/open` (its own one-time code). Proof is the install token (the
  *   CLI, the hooks, tests, the dev proxy) or a live browser session cookie; `bearer` routes
  *   take the token alone, because a session must not be able to mint more sign-in codes.
- *   The ticket path is open only to the SSE route and only for the run the ticket was
- *   issued for. The answer says which proof was used because a cookie is sent by the browser
+ *   The ticket path is open only to the SSE routes and only for the scope the ticket was
+ *   issued for: the run in the path, or the project slug in the path. The answer says which proof was used because a cookie is sent by the browser
  *   on its own, so the router adds a same-origin check for it (and only for it). Anything
  *   unclear is a refusal (fail closed, code.md rule 6).
  *
@@ -39,6 +39,7 @@ export function createAuthGuard(
     authorization,
     ticket,
     runId,
+    projectSlug,
     cookie,
   }: AuthRequest): AuthMethod | undefined => {
     if (access === 'open') {
@@ -59,12 +60,15 @@ export function createAuthGuard(
       return 'session';
     }
 
-    return access === 'token_or_ticket' &&
-      ticket !== null &&
-      runId !== undefined &&
-      tickets.verify(ticket, runId)
-      ? 'ticket'
-      : undefined;
+    if (access !== 'token_or_ticket' || ticket === null) {
+      return undefined;
+    }
+
+    const byRun = runId !== undefined && tickets.verify(ticket, runId);
+    const byProject =
+      projectSlug !== undefined && tickets.verifyProject(ticket, projectSlug);
+
+    return byRun || byProject ? 'ticket' : undefined;
   };
 
   return {

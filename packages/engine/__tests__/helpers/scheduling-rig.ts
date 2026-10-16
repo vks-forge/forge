@@ -50,7 +50,9 @@ export async function addProject(
 }
 
 export const ask = (rig: Rig, project: string, text: string) =>
-  rig.engine.ingest(intake({ project, payload: { text } }, rig.clock.now()));
+  rig.engine.ingest(
+    intake({ project, payload: { text, card_type: 'pr_issue' } }, rig.clock.now()),
+  );
 
 export async function finishAll(rig: Rig, runIds: string[]): Promise<void> {
   for (const id of runIds) {

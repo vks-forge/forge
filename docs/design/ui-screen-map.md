@@ -41,18 +41,29 @@ sidebar changes project in real time, with an in-page alert when the view has
 unsaved changes. Company-level pages (harnesses, GitHub, models, limits,
 tools, notifications, backups) live under "Forge settings" at the foot of the
 sidebar. Project Home = readout line + "Waiting on you" + "In progress" (stage
-track per ticket) + "Ask the Director" bar. "Waiting on you" has a view
+track per ticket) + a "New card" button (the free-text Ask bar is gone, d-0138). "Waiting on you" has a view
 switcher (List / Compact / Grouped in the prototype); what each view shows is
 decided after the Board, Director chat and Ticket pages are approved. Ledger
 (autonomy tiers) is deferred.
 
-Cards and issues (d-0105 … d-0115): the project Board shows **Cards** (one per
-chat request or approved GitHub issue; columns New, Shaping, Needs you, In
-progress, Done, Closed, rolled up from tickets) with a toggle to a **Tickets**
-view. Opening a card opens the **Card page**: chat panel with the card's
-Director and history, card details, a Tickets tab with a timeline, and ticket
-detail (status, live Worker thread with direct steer, gates, PR and merge
-links). The project sidebar gains **Issues** (open GitHub issues with verdict,
+Cards and issues (d-0105 … d-0115, card-first flow d-0128 … d-0160): the project
+Board shows **Cards** (one per chat request or approved GitHub issue; columns
+Shaping, Needs you, Queued, In progress, Done and a collapsed Closed strip, rolled
+up from the card's phase and tickets; there is no New column and no Ask bar, the
+Director starts at once) with a toggle to a **Tickets** view. All columns fit at
+1440 px; narrower screens scroll inside the board. A card face shows id, type,
+title, a phase line ("Grilling · 3 open points", "Plan v2 ready", "4/7 tickets"),
+a priority mark, a progress bar and Blocked by / Blocks chips; hovering or
+focusing a card keeps its dependency chain lit and dims the rest, and cards glide
+between columns live (instant swap under reduced motion). Opening a card opens
+the **Card page**: the chat with the card's Director is the main column (grill
+questions with option buttons, steps, a ready-plan card, system lines, and a
+pinned **Needs you** banner whose every action works) beside a side panel with
+tabs **Plan** (the fixed plan sections, dependency graph, version picker with
+diff, Approve plan / Request changes / light ticket edits), **Tickets** (a
+timeline) and **Details**; below 768 px the panel becomes tabs Chat / Plan /
+Tickets / Details. Ticket detail (status, live Worker thread with direct steer,
+gates, PR and merge links) is its own page. The project sidebar gains **Issues** (open GitHub issues with verdict,
 confidence, size, risk and the analysis report; Approve → card, Re-analyse,
 Skip) and later **PRs**. Project nav: Home, Board, Issues, (PRs), Chat, Runs,
 Memory, Project settings.

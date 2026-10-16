@@ -1,11 +1,12 @@
 /**
  * Shapes for watching a run's event stream.
  *
- * Why: the live ticket thread (W3) and later screens all follow a Worker the same way; one
- *   options bag with injectable `fetch` and `EventSource` lets the helper be tested without a
- *   browser or a server.
+ * Why: the live ticket thread (W3) and later screens all follow a Worker the same way, and the
+ *   project scope follows the project's change feed; one options bag style with injectable
+ *   `fetch` and `EventSource` lets each helper be tested without a browser or a server.
  *
- * Exports: ConnectionState, RunEventWatchOptions, RunEventWatch, EventSourceLike, EventSourceCtor.
+ * Exports: ConnectionState, RunEventWatchOptions, RunEventWatch, ProjectEventsWatchOptions,
+ *   ProjectEventsWatch, EventSourceLike, EventSourceCtor.
  * Depends on: @forge/core (RunEvent type), api/api-error (type).
  */
 
@@ -45,6 +46,28 @@ export interface RunEventWatchOptions {
 }
 
 export interface RunEventWatch {
+  /** Stops watching; safe to call twice. */
+  close(): void;
+}
+
+export interface ProjectEventsWatchOptions {
+  readonly slug: string;
+  /** Path prefix of the proxy or server, such as `/api`. */
+  readonly baseUrl: string;
+  /** Query keys the server says are stale, each exactly as the screens use it. */
+  readonly onInvalidate: (keys: readonly (readonly (string | number)[])[]) => void;
+  /** The stream was lost and is back: whatever happened in between was never sent. */
+  readonly onResync: () => void;
+  /** A refusal that asking again will not fix (unknown project, bad credentials): the watch stops. */
+  readonly onError: (error: ApiError) => void;
+  readonly onConnection?: (state: ConnectionState) => void;
+  readonly fetch?: typeof globalThis.fetch;
+  readonly EventSource?: EventSourceCtor;
+  /** Delay before reconnect number `attempt` (1-based), in ms. */
+  readonly backoffMs?: (attempt: number) => number;
+}
+
+export interface ProjectEventsWatch {
   /** Stops watching; safe to call twice. */
   close(): void;
 }

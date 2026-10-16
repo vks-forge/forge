@@ -154,7 +154,11 @@ describe('Express flow', () => {
 
   it('drops a redelivered intake event and allocates the next number for a new one', async () => {
     const rig = await makeRig();
-    const event = intake({}, rig.clock.now());
+    const event = intake(
+      { payload: { text: 'Fix it', card_type: 'pr_issue' } },
+      rig.clock.now(),
+    );
+
     expect((await rig.engine.ingest(event)).status).toBe('ticket_created');
     expect((await rig.engine.ingest(event)).status).toBe('duplicate');
     expect(await rig.request('Another')).toBe('FG-2');

@@ -9,7 +9,11 @@
  *   does not allow. Rows are seeded by migration and later edited through the settings UI,
  *   never by hand (code.md rule 9).
  *
- * Exports: CardTypeIcon, CardAction, CardType, BUILTIN_CARD_TYPES.
+ *   `plan_approval` says who may approve a card's plan: the Director behind the deterministic
+ *   floor, or only the owner (d-0141, item 6). Tickets no longer start at intake for Plan or
+ *   Issue cards: the Director plans first (d-0128); only the PR fast path keeps them.
+ *
+ * Exports: CardTypeIcon, CardAction, PlanApproval, CardType, BUILTIN_CARD_TYPES.
  * Depends on: schemas/card, schemas/ticket, zod. No IO.
  */
 
@@ -25,22 +29,26 @@ export type CardTypeIcon = z.infer<typeof CardTypeIcon>;
 export const CardAction = z.string().regex(/^[a-z][a-z0-9_]{0,31}$/);
 export type CardAction = z.infer<typeof CardAction>;
 
+/** Who approves a plan: `director_or_user` lets the Director approve behind the floor, `user` always asks the owner. */
+export const PlanApproval = z.enum(['director_or_user', 'user']);
+export type PlanApproval = z.infer<typeof PlanApproval>;
+
 export const CardType = z.object({
   name: CardTypeName,
   label: z.string().min(1),
   icon: CardTypeIcon,
   allowed_sources: z.array(CardSourceKind).min(1),
   actions: z.array(CardAction),
-  /** True when tickets wait for the user to approve the Director's plan in the card. */
-  plan_approval: z.boolean(),
-  /** True when intake hands the card to triage right away; false types start talk-only. */
+  /** Who may approve the Director's plan before tickets exist. */
+  plan_approval: PlanApproval,
+  /** True when intake files an inbox ticket at once (the PR fast path); false types plan first. */
   tickets_on_intake: z.boolean(),
   /** A lane suggestion for triage; never overrides the pre-check or the user's hint. */
   default_lane: Lane.optional(),
 });
 export type CardType = z.infer<typeof CardType>;
 
-/** The four types d-0106 starts with, in display order; migration 0019 seeds the same rows. */
+/** The four types d-0106 starts with, in display order; migrations 0019 and 0021 seed the same rows. */
 export const BUILTIN_CARD_TYPES: readonly CardType[] = [
   {
     name: 'discussion',
@@ -48,7 +56,7 @@ export const BUILTIN_CARD_TYPES: readonly CardType[] = [
     icon: 'message-circle',
     allowed_sources: ['chat', 'github_issue'],
     actions: ['chat', 'convert', 'close'],
-    plan_approval: false,
+    plan_approval: 'user',
     tickets_on_intake: false,
   },
   {
@@ -57,7 +65,7 @@ export const BUILTIN_CARD_TYPES: readonly CardType[] = [
     icon: 'list-checks',
     allowed_sources: ['chat', 'github_issue'],
     actions: ['chat', 'approve_plan', 'convert', 'close'],
-    plan_approval: true,
+    plan_approval: 'director_or_user',
     tickets_on_intake: false,
   },
   {
@@ -74,8 +82,8 @@ export const BUILTIN_CARD_TYPES: readonly CardType[] = [
       'legacy',
     ],
     actions: ['chat', 'convert', 'close'],
-    plan_approval: false,
-    tickets_on_intake: true,
+    plan_approval: 'director_or_user',
+    tickets_on_intake: false,
   },
   {
     name: 'pr_issue',
@@ -83,7 +91,7 @@ export const BUILTIN_CARD_TYPES: readonly CardType[] = [
     icon: 'git-pull-request',
     allowed_sources: ['github_pr', 'webhook', 'chat'],
     actions: ['chat', 'convert', 'close'],
-    plan_approval: false,
+    plan_approval: 'user',
     tickets_on_intake: true,
   },
 ];

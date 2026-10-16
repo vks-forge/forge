@@ -12,7 +12,9 @@
  *
  *   The card chat adds three entries: `director_message` carries the actions the Director took
  *   with its reply, `director_action` logs each executed action, and `close_suggested`
- *   records a suggestion to close that only the user can act on (d-0112).
+ *   records a suggestion to close that only the user can act on (d-0112). `budget_warning`
+ *   records that spend crossed a fraction of the card's cap, once per threshold; it only
+ *   informs the owner and never blocks anything (d-0143).
  *
  * Exports: CARD_EVENT_KINDS, CardEventKind, NewCardEvent, CardEvent.
  * Depends on: schemas/card, schemas/card-chat, schemas/ids, schemas/ticket, zod. No IO.
@@ -35,6 +37,7 @@ export const CARD_EVENT_KINDS = [
   'interaction_answered',
   'type_changed',
   'card_closed',
+  'budget_warning',
   'note',
 ] as const;
 export const CardEventKind = z.enum(CARD_EVENT_KINDS);
@@ -76,6 +79,14 @@ export const NewCardEvent = z.discriminatedUnion('kind', [
   event('interaction_answered', ticket.extend({ interaction_id: z.string().min(1) })),
   event('type_changed', z.object({ from: CardTypeName, to: CardTypeName })),
   event('card_closed', z.object({ reason: z.string().min(1) })),
+  event(
+    'budget_warning',
+    z.object({
+      threshold: z.number().positive(),
+      spent_usd: z.number().nonnegative(),
+      cap_usd: z.number().nonnegative(),
+    }),
+  ),
   event('note', text),
 ]);
 export type NewCardEvent = z.infer<typeof NewCardEvent>;

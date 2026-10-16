@@ -74,7 +74,11 @@ export interface E2eOptions {
   readonly drainMs?: number;
 }
 
-/** An intake event asking for the `add` function, unique per `key`. */
+/**
+ * An intake event asking for the `add` function, unique per `key`. It uses the `pr_issue` card
+ * type, the one that files its ticket at intake (d-0141): the flows under test run work, and a
+ * planned card makes no ticket until its plan is approved.
+ */
 export function intakeBody(key: string): Record<string, unknown> {
   return {
     source: 'chat',
@@ -82,7 +86,10 @@ export function intakeBody(key: string): Record<string, unknown> {
     dedupe_key: key,
     actor: { type: 'user', id: 'tester' },
     project: 'fixture',
-    payload: { text: 'Add a function add(a, b) to src/math.js and a test for it.' },
+    payload: {
+      text: 'Add a function add(a, b) to src/math.js and a test for it.',
+      card_type: 'pr_issue',
+    },
     received_at: new Date().toISOString(),
   };
 }

@@ -8,7 +8,9 @@
  *   server, and a script that ends in `finish` or `error` is followed by the `end` frame, so
  *   a finished run closes while a script without an ending stays open like a Worker still
  *   working. A run with no script recorded nothing and ends at once. Tests can also push a frame by hand (`emit`) or make the browser give up
- *   (`drop`) to stage a noisy or lost stream.
+ *   (`drop`) to stage a noisy or lost stream. A project change stream (`/projects/<slug>/events`)
+ *   is different: it stays connecting until the test calls `open()`, so screen tests keep their
+ *   normal polling pace and only the tests about the live stream turn it on.
  *
  * Exports: stubEventSource(), StubSource, EventSourceStub.
  * Depends on: vitest (vi.stubGlobal), @forge/core (RunEvent type). No network.
@@ -23,17 +25,23 @@ type Listener = (event: MessageEvent<string>) => void;
 export interface StubSource {
   readonly url: string;
   readonly runId: string;
+  /** True for a project change stream; it opens only when the test says so. */
+  readonly isProject: boolean;
   readyState: number;
   closed: boolean;
   /** Delivers a frame by hand: `type` is the SSE event name, `data` is JSON-encoded. */
   emit(type: string, data: unknown): void;
   /** The browser gave up (ticket refused, 204, network down). */
   drop(): void;
+  /** Opens a project stream, as the server accepting the connection does. */
+  open(): void;
 }
 
 export interface EventSourceStub {
-  /** Every source opened so far, oldest first. */
+  /** Every run stream opened so far, oldest first. */
   readonly sources: StubSource[];
+  /** Every project change stream opened so far, oldest first. */
+  readonly projectSources: StubSource[];
 }
 
 const CLOSED = 2;
@@ -43,6 +51,7 @@ export function stubEventSource(
   scripts: Readonly<Record<string, readonly RunEvent[]>>,
 ): EventSourceStub {
   const sources: StubSource[] = [];
+  const projectSources: StubSource[] = [];
 
   class Source implements StubSource {
     readyState = 0;
@@ -50,15 +59,21 @@ export function stubEventSource(
     onopen: ((event: unknown) => void) | null = null;
     onerror: ((event: unknown) => void) | null = null;
     readonly runId: string;
+    readonly isProject: boolean;
     private readonly listeners = new Map<string, Listener[]>();
     private readonly timers: ReturnType<typeof setTimeout>[] = [];
 
     constructor(readonly url: string) {
       const parsed = new URL(url, 'http://forge.test');
       this.runId = decodeURIComponent(parsed.pathname.split('/').at(-2) ?? '');
+      this.isProject = /\/projects\/[^/]+\/events$/.test(parsed.pathname);
       const after = Number(parsed.searchParams.get('after') ?? 0);
-      sources.push(this);
-      this.timers.push(setTimeout(() => this.play(after), 0));
+      if (this.isProject) {
+        projectSources.push(this);
+      } else {
+        sources.push(this);
+        this.timers.push(setTimeout(() => this.play(after), 0));
+      }
     }
 
     addEventListener(type: string, listener: Listener): void {
@@ -77,6 +92,11 @@ export function stubEventSource(
       for (const listener of this.listeners.get(type) ?? []) {
         listener({ data: JSON.stringify(data) } as MessageEvent<string>);
       }
+    }
+
+    open(): void {
+      this.readyState = 1;
+      this.onopen?.({});
     }
 
     drop(): void {
@@ -114,5 +134,5 @@ export function stubEventSource(
 
   vi.stubGlobal('EventSource', Source);
 
-  return { sources };
+  return { sources, projectSources };
 }

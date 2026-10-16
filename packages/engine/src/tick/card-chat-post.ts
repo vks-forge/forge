@@ -3,12 +3,14 @@
  *
  * Why: the user talks to the Director of a card (d-0109), but the reply is a model call that
  *   must not hold the HTTP request open or run outside the tick. So the message is stored
- *   first as a `user_message` event (the history never loses what the user said), the card
- *   is queued for the next tick's `card_chat` step, and the request returns at once. A
- *   closed card takes no chat: a late message must not look answered. While the reply is
- *   queued or running the status is `thinking` so the Card page can show it; after a failed
- *   reply it is `error` until the user writes again. Both are process-local on purpose: they
- *   describe work in flight, and the history already holds everything that happened.
+ *   first as a `user_message` event (the history never loses what the user said), the owed
+ *   reply is stored in the durable `card_reply_queue` in the same transaction (so a restart
+ *   cannot lose it, d-0134) and the request returns at once. A closed card takes no chat: a
+ *   late message must not look answered. While the reply is queued or running the status is
+ *   `thinking` so the Card page can show it; after a failed reply it is `error` until the
+ *   user writes again. The status is a process-local view of work in flight (the queue is the
+ *   truth, the history holds everything that happened), set inside the transaction so a
+ *   client that refetches on the commit already sees `thinking`.
  *
  * Exports: postCardMessage(), cardDirectorStatus().
  * Depends on: @forge/core (CardId), tick/card-log, tick/tick-requests, shared/time.
@@ -55,13 +57,25 @@ export async function postCardMessage(
         payload: { text },
       });
 
-      return event ? { status: 'stored', event } : { status: 'not_found' };
+      if (!event) {
+        return { status: 'not_found' };
+      }
+
+      await tx.cardReplyQueue.enqueue({
+        card_id: card.id,
+        event_id: event.seq,
+        reason: 'user_message',
+        enqueued_at: at,
+      });
+
+      state.chat.errors.delete(card.id);
+      state.chat.pending.add(card.id);
+
+      return { status: 'stored', event };
     },
   );
 
   if (result.status === 'stored') {
-    state.chat.errors.delete(id.data);
-    state.chat.pending.add(id.data);
     requestTick(deps, state);
   }
 

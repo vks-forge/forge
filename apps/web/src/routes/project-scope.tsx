@@ -8,9 +8,10 @@
  *   instead of an empty page. It also remembers the project so Forge settings and "back"
  *   return to it. An archived project opens read-only (d-0157): a banner with Unarchive sits above
  *   its screens and the controls that would start work read the archived flag from the context.
+ *   It also opens the project's live change stream, once, for everything inside it (d-0132).
  *
  * Exports: ProjectScope.
- * Depends on: react, react-router, api/use-projects, api/describe-error,
+ * Depends on: react, react-router, api/use-projects, api/use-project-events, api/describe-error,
  *   components/status/state-panel, components/shell/archived-banner, domain/nav-entries,
  *   state/current-project, state/project-archived.
  */
@@ -18,6 +19,7 @@
 import { useEffect } from 'react';
 import { Link, Outlet, useParams } from 'react-router';
 import { describeError } from '#/api/describe-error.js';
+import { useProjectEvents } from '#/api/use-project-events.js';
 import { archivedProjects, openProjects, useAllProjects } from '#/api/use-projects.js';
 import { ArchivedBanner } from '#/components/shell/archived-banner.js';
 import { StatePanel } from '#/components/status/state-panel.js';
@@ -29,6 +31,9 @@ export function ProjectScope() {
   const { slug = '' } = useParams();
   const query = useAllProjects();
   const known = query.data?.some((p) => p.slug === slug) ?? false;
+
+  // Mounted here, once, so every project screen is kept fresh by the same stream.
+  useProjectEvents(known ? slug : null);
 
   useEffect(() => {
     if (known) {
