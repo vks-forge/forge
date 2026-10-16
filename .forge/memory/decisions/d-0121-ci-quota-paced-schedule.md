@@ -5,9 +5,10 @@ statement: CI is paced to stay inside the GitHub Free Actions quota (Windows min
 source: { type: chat, ref: "2026-10-16 after the estimate that daily macOS alone would use ~1,800 of the 2,000 free minutes, recommendation 'macOS weekly, Linux daily, docs-only pushes skip CI'; user: \"yes do it\"" }
 author: user
 origin: owner
-status: active
+status: superseded
 valid_from: 2026-10-16
-superseded_by: null
+valid_to: 2026-10-16
+superseded_by: d-0125
 supersedes: d-0120
 tags: [ci, cost, testing]
 pinned: false

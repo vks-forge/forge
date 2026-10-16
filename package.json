@@ -1,6 +1,7 @@
 {
   "name": "software-factory",
   "private": true,
+  "license": "MIT",
   "version": "0.0.0",
   "type": "module",
   "packageManager": "pnpm@12.6.0",
