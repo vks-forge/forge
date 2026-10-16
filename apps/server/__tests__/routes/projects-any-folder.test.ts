@@ -18,8 +18,7 @@
  * Depends on: helpers/fixture-repo, helpers/projects-rig, helpers/temp. IO: git, temp folders.
  */
 
-import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -30,7 +29,7 @@ import {
 import type { FixtureRepo } from '#tests/helpers/fixture-repo.js';
 import { startProjectsRig } from '#tests/helpers/projects-rig.js';
 import type { ProjectsRig } from '#tests/helpers/projects-rig.js';
-import { trackTemp } from '#tests/helpers/temp.js';
+import { makeCanonicalTempDir } from '#tests/helpers/temp.js';
 
 let fixture: FixtureRepo;
 let rigs: ProjectsRig;
@@ -50,7 +49,7 @@ afterEach(async () => {
 });
 
 const plainFolder = (): string => {
-  const dir = trackTemp(mkdtempSync(join(tmpdir(), 'forge-any-')));
+  const dir = makeCanonicalTempDir('forge-any-');
   writeFileSync(join(dir, 'readme.txt'), 'hello\n');
 
   return dir;

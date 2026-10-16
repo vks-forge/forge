@@ -16,15 +16,12 @@
  *   IO: real git repositories in the OS temp dir, in-memory storage, settings and secrets.
  */
 
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createFixtureRepo, fixtureProjectBody } from '#tests/helpers/fixture-repo.js';
 import type { FixtureRepo } from '#tests/helpers/fixture-repo.js';
 import { startProjectsRig } from '#tests/helpers/projects-rig.js';
 import type { ProjectsRig } from '#tests/helpers/projects-rig.js';
-import { trackTemp } from '#tests/helpers/temp.js';
+import { makeCanonicalTempDir } from '#tests/helpers/temp.js';
 
 let fixture: FixtureRepo;
 let second: FixtureRepo;
@@ -173,7 +170,7 @@ describe('POST /projects', () => {
   ])('refuses %s and saves nothing', async (_name, over, status, code) => {
     const body = fixtureProjectBody(fixture, over);
     if (body['local_path'] === 'ROOT_PARENT') {
-      body['local_path'] = trackTemp(mkdtempSync(join(tmpdir(), 'forge-plain-')));
+      body['local_path'] = makeCanonicalTempDir('forge-plain-');
     }
 
     if (body['git_host'] === undefined) {

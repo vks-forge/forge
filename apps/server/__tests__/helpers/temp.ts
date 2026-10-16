@@ -8,13 +8,17 @@
  *   directory it already passed would only hide real failures behind noise. So removal
  *   retries, and if the directory still cannot go it is left with a one-line warning.
  *   Directories made through `makeTempDir` are removed when the test file ends; a test
- *   that removes its own earlier (`removeTree`) loses nothing.
+ *   that removes its own earlier (`removeTree`) loses nothing. Product code reports a folder
+ *   in git's canonical spelling, but `os.tmpdir()` is not canonical on every CI runner (macOS
+ *   `/var` is a symlink to `/private/var`, Windows TEMP can be an 8.3 `RUNNER~1` name), so a
+ *   test that compares a reported path to its temp folder builds that folder with
+ *   `makeCanonicalTempDir`.
  *
- * Exports: makeTempDir(), trackTemp(), removeTree().
+ * Exports: makeTempDir(), makeCanonicalTempDir(), trackTemp(), removeTree().
  * Depends on: node:fs, node:fs/promises, node:os, node:path, vitest (afterAll). IO: temp directories.
  */
 
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, realpathSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -43,6 +47,11 @@ export function trackTemp(path: string): string {
 /** `mkdtemp` under the OS temp directory, removed after the test file. */
 export function makeTempDir(prefix: string): string {
   return trackTemp(mkdtempSync(join(tmpdir(), prefix)));
+}
+
+/** Like `makeTempDir`, but already resolved to the real path (`.native` also expands Windows 8.3 names). */
+export function makeCanonicalTempDir(prefix: string): string {
+  return trackTemp(realpathSync.native(mkdtempSync(join(tmpdir(), prefix))));
 }
 
 afterAll(async () => {

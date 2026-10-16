@@ -15,15 +15,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  writeFileSync,
-} from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -33,13 +25,12 @@ import {
   inspectFolderGit,
   scanSnapshot,
 } from '#/index.js';
-import { trackTemp } from '#tests/helpers/temp.js';
+import { makeCanonicalTempDir } from '#tests/helpers/temp.js';
 
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync('git', args, { cwd, encoding: 'utf8', windowsHide: true }).trim();
 
-const folder = (): string =>
-  trackTemp(realpathSync(mkdtempSync(join(tmpdir(), 'forge onboard '))));
+const folder = (): string => makeCanonicalTempDir('forge onboard ');
 
 const put = (dir: string, rel: string, text = 'x\n'): void => {
   mkdirSync(dirname(join(dir, rel)), { recursive: true });

@@ -16,7 +16,7 @@
  *   IO: real git repositories in the OS temp dir, in-memory storage.
  */
 
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -28,7 +28,7 @@ import {
 import type { FixtureRepo } from '#tests/helpers/fixture-repo.js';
 import { startProjectsRig } from '#tests/helpers/projects-rig.js';
 import type { ProjectsRig } from '#tests/helpers/projects-rig.js';
-import { trackTemp } from '#tests/helpers/temp.js';
+import { makeCanonicalTempDir } from '#tests/helpers/temp.js';
 
 let fixture: FixtureRepo;
 let rigs: ProjectsRig;
@@ -176,7 +176,7 @@ describe('POST /projects/inspect: any folder (d-0124)', () => {
   });
 
   it('reports a folder with no git: state none, a snapshot count, main as the base', async () => {
-    const dir = trackTemp(mkdtempSync(join(tmpdir(), 'forge-plain-')));
+    const dir = makeCanonicalTempDir('forge-plain-');
     writeFileSync(
       join(dir, 'package.json'),
       '{"name":"p","scripts":{"test":"node t.js"}}\n',
@@ -219,7 +219,7 @@ describe('POST /projects/inspect: any folder (d-0124)', () => {
   });
 
   it('accepts an empty repository: no commits yet is reported, not refused', async () => {
-    const dir = trackTemp(mkdtempSync(join(tmpdir(), 'forge-empty-')));
+    const dir = makeCanonicalTempDir('forge-empty-');
     git(dir, 'init', '-b', 'trunk');
 
     const res = await inspect({ local_path: dir });

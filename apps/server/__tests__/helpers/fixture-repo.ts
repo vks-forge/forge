@@ -18,10 +18,9 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { trackTemp } from '#tests/helpers/temp.js';
+import { makeCanonicalTempDir, trackTemp } from '#tests/helpers/temp.js';
 
 export interface FixtureRepo {
   /** The main checkout the server runs in (FORGE_ROOT). */
@@ -99,7 +98,7 @@ function removeAll(paths: readonly string[]): void {
  * `remote` is unused (there is none).
  */
 export function createPlainFixture(): FixtureRepo {
-  const root = trackTemp(mkdtempSync(join(tmpdir(), 'forge-plain-fixture-')));
+  const root = makeCanonicalTempDir('forge-plain-fixture-');
   const dataHome = trackTemp(`${root}-home`);
   writeProjectFiles(root);
 
@@ -111,7 +110,7 @@ export function createPlainFixture(): FixtureRepo {
  * and belong to someone else. `root` is the repository top; register `join(root, 'app')`.
  */
 export function createSubfolderFixture(): FixtureRepo {
-  const root = trackTemp(mkdtempSync(join(tmpdir(), 'forge-sub-fixture-')));
+  const root = makeCanonicalTempDir('forge-sub-fixture-');
   const dataHome = trackTemp(`${root}-home`);
   writeProjectFiles(join(root, 'app'));
   mkdirSync(join(root, 'other'), { recursive: true });
@@ -156,7 +155,7 @@ export function fixtureProjectBody(
 export function createFixtureRepo(dir?: string): FixtureRepo {
   // A caller-named `dir` is kept on purpose (the live probe keeps it on failure); anything
   // else is removed with its remote when the test file ends, even if dispose() was missed.
-  const root = dir ?? trackTemp(mkdtempSync(join(tmpdir(), 'forge-fixture-')));
+  const root = dir ?? makeCanonicalTempDir('forge-fixture-');
   const remote = `${root}-remote.git`;
   const dataHome = `${root}-home`;
   if (!dir) {

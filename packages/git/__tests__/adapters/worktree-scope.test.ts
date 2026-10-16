@@ -15,13 +15,12 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { InvalidInputError } from '@forge/core';
 import { describe, expect, it } from 'vitest';
 import { createGitWorktreeManager } from '#/index.js';
-import { trackTemp } from '#tests/helpers/temp.js';
+import { makeCanonicalTempDir, trackTemp } from '#tests/helpers/temp.js';
 
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync('git', args, { cwd, encoding: 'utf8', windowsHide: true }).trim();
@@ -32,7 +31,7 @@ const put = (dir: string, rel: string, text: string): void => {
 };
 
 function monorepo() {
-  const repo = trackTemp(realpathSync(mkdtempSync(join(tmpdir(), 'forge scope '))));
+  const repo = makeCanonicalTempDir('forge scope ');
   const trees = trackTemp(`${repo}-trees`);
   git(repo, 'init', '-b', 'main');
   git(repo, 'config', 'user.name', 'User');
@@ -125,7 +124,7 @@ describe('scoped worktree manager', () => {
   });
 
   it('refuses a base branch with no commit, with a message the user can act on', async () => {
-    const repo = trackTemp(realpathSync(mkdtempSync(join(tmpdir(), 'forge empty '))));
+    const repo = makeCanonicalTempDir('forge empty ');
     git(repo, 'init', '-b', 'main');
     const manager = createGitWorktreeManager({
       repoRoot: repo,

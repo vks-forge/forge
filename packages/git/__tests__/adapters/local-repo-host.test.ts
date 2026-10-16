@@ -16,15 +16,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  writeFileSync,
-} from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { HeadMovedError } from '@forge/core';
 import { describe, expect, it } from 'vitest';
@@ -33,7 +25,7 @@ import {
   createGitWorktreeManager,
   createLocalRepoGitHost,
 } from '#/index.js';
-import { trackTemp } from '#tests/helpers/temp.js';
+import { makeCanonicalTempDir, trackTemp } from '#tests/helpers/temp.js';
 
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync('git', args, { cwd, encoding: 'utf8', windowsHide: true }).trim();
@@ -54,7 +46,7 @@ interface Rig {
 }
 
 function rig(): Rig {
-  const repo = trackTemp(realpathSync(mkdtempSync(join(tmpdir(), 'forge local host '))));
+  const repo = makeCanonicalTempDir('forge local host ');
   const trees = trackTemp(`${repo}-trees`);
   git(repo, 'init', '-b', 'main');
   git(repo, 'config', 'user.name', 'User');
