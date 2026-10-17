@@ -26,6 +26,7 @@ export * from '#/domain/lane-defaults.js';
 export * from '#/domain/receipt-verify.js';
 export * from '#/domain/receipts.js';
 export * from '#/domain/rules.js';
+export * from '#/domain/scrub-secrets.js';
 export * from '#/domain/shell-allowlist.js';
 export * from '#/domain/tokenizer.js';
 export * from '#/domain/tool-id.js';

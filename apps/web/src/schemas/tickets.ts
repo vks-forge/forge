@@ -4,7 +4,7 @@
  * Why: the Board and the Ticket page show what the server says about work in flight, so a
  *   server and UI that disagree must fail at the boundary with a named field, not as a blank
  *   card. `TicketDetail` mirrors apps/server `routes/tickets.ts` (one ticket with its runs,
- *   gate results, pending questions and escalations and the scheduler's reason for waiting) and is built from
+ *   gate results, pending questions and escalations, the scheduler's reason for waiting and the review facts of finished work) and is built from
  *   core's own row schemas, so a column added there reaches the UI with no edit here. The
  *   list page is core's `TicketListPage` itself. `IngestReply` mirrors the engine's
  *   `IngestResult` returned by `POST /intake`; `AnswerReply` is the body of
@@ -21,6 +21,7 @@ import {
   Interaction,
   Run,
   Ticket,
+  TicketReview,
 } from '@forge/core';
 import { z } from 'zod';
 
@@ -36,6 +37,8 @@ export const TicketDetail = z.object({
   escalations: z.array(EscalationView).default([]),
   /** What the owner can do about a wait that has no question (review, sign-off, scheduler waits). */
   wait_actions: z.array(EscalationAction).default([]),
+  /** The diff stat and gated commit of finished work (review or sign-off); null for any other ticket. */
+  review: TicketReview.nullable().default(null),
 });
 export type TicketDetail = z.infer<typeof TicketDetail>;
 

@@ -38,6 +38,8 @@ export const CARD_MOVES: Readonly<
   queue: { from: ['approved'], to: 'queued' },
   start: { from: ['approved', 'queued'], to: 'in_progress' },
   complete: { from: ['in_progress'], to: 'done' },
+  // New work filed on a finished card (the card chat adds a ticket): the card is live again.
+  resume_work: { from: ['done'], to: 'in_progress' },
   close: {
     from: [
       'grilling',

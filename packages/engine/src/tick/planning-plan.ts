@@ -32,6 +32,7 @@ import {
   latestPlanOf,
   logPlanEvent,
   mergeUnique,
+  stamp,
 } from '#/tick/planning-state.js';
 import { callStep, finishStep, startStep } from '#/tick/planning-step-io.js';
 import type { PlanCtx, StepOutcome } from '#/types/card-planning.types.js';
@@ -65,7 +66,7 @@ async function composePlan(
   const plan = PlanVersion.parse({
     card_id: pc.card.id,
     version: (previous?.version ?? 0) + 1,
-    created_at: pc.ctx.nowIso,
+    created_at: stamp(pc),
     author: 'director',
     config_version: pc.configVersion,
     base_sha: head,
@@ -122,7 +123,7 @@ export async function writePlanStep(
     patch: (g) => ({ ...g, floor, pending_changes: null }),
     after: async (tx) => {
       await tx.cardPlanning.appendPlan(plan);
-      await logPlanEvent(tx, pc.card.id, pc.ctx.nowIso, {
+      await logPlanEvent(tx, pc.card.id, stamp(pc), {
         kind: 'plan_ready',
         payload: {
           version: plan.version,
@@ -131,7 +132,7 @@ export async function writePlanStep(
         },
       });
 
-      await moveCardTx(tx, pc.card.id, { type: 'plan_written' }, pc.ctx.nowIso);
+      await moveCardTx(tx, pc.card.id, { type: 'plan_written' }, stamp(pc));
     },
   });
 
@@ -170,10 +171,7 @@ export async function approveStep(
       cost,
       patch: (g) => ({ ...g, floor }),
       after: (tx) =>
-        askOwner(tx, pc.card.id, pc.ctx.nowIso, reason, [
-          'approve_plan',
-          'request_changes',
-        ]),
+        askOwner(tx, pc.card.id, stamp(pc), reason, ['approve_plan', 'request_changes']),
     });
 
   if (!floor.pass || ownerMustApprove(pc)) {
@@ -213,7 +211,7 @@ export async function approveStep(
         pc.card.id,
         plan.version,
         'director',
-        pc.ctx.nowIso,
+        stamp(pc),
         pc.tierCGlobs,
         'engine',
       );

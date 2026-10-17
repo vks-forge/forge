@@ -82,8 +82,10 @@ export async function settleRun(
   }
 
   let chainHash: string | undefined;
+  let receipts: SettleOptions['receipts'];
   try {
-    chainHash = (await deps.receipts.list(run.id)).at(-1)?.hash;
+    receipts = await deps.receipts.list(run.id);
+    chainHash = receipts.at(-1)?.hash;
   } catch (e) {
     deps.log?.('warn', `could not read receipt chain for ${run.id}`, {
       error: String(e),
@@ -105,7 +107,10 @@ export async function settleRun(
     });
 
     await tx.runTokens.revoke(run.id, ctx.nowIso);
-    await applyOutcome(ctx, tx, run, result, family, pump, opts);
+    await applyOutcome(ctx, tx, run, result, family, pump, {
+      ...opts,
+      receipts: opts.receipts ?? receipts,
+    });
 
     // The run's cost is now on its row: a card crossing its budget cap is warned, never stopped (d-0143).
     const ticket = await tx.tickets.get(run.ticket_id as TicketId);

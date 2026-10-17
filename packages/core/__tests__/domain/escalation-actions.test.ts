@@ -135,13 +135,18 @@ describe('action tables', () => {
 });
 
 describe('ticket waits', () => {
-  it('offers rework and cancel for review and sign-off', () => {
-    for (const status of ['review', 'needs_signoff'] as const) {
-      expect(ticketWaitActions({ status, replannable: true }, [], null)).toEqual([
-        'rework',
-        'cancel',
-      ]);
-    }
+  it('offers approve, rework and cancel for review (tier B)', () => {
+    expect(ticketWaitActions({ status: 'review', replannable: true }, [], null)).toEqual([
+      'approve',
+      'rework',
+      'cancel',
+    ]);
+  });
+
+  it('offers sign_off, rework and cancel for sign-off (tier C)', () => {
+    expect(
+      ticketWaitActions({ status: 'needs_signoff', replannable: true }, [], null),
+    ).toEqual(['sign_off', 'rework', 'cancel']);
   });
 
   it('offers cancel while the scheduler holds a ticket back', () => {

@@ -28,6 +28,7 @@ export type CardPhaseEvent =
   | (EventBase & { type: 'queue' })
   | (EventBase & { type: 'start' })
   | (EventBase & { type: 'complete' })
+  | (EventBase & { type: 'resume_work' })
   | (EventBase & { type: 'close' })
   | (EventBase & { type: 'needs_you_set' })
   | (EventBase & { type: 'needs_you_cleared' });

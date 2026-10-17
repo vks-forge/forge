@@ -31,6 +31,8 @@ export const ACTION_LABEL: Readonly<Record<EscalationAction, string>> = {
   run_as_express: 'Run as Express',
   rework: 'Send back for rework',
   recheck: 'I fixed it, check again',
+  approve: 'Approve and merge',
+  sign_off: 'Sign off and merge',
 };
 
 const LANE_WORD: Readonly<Record<string, string>> = {
@@ -87,6 +89,8 @@ const SETTLED_VERB: Readonly<Record<string, string>> = {
   run_as_express: 'Released as Express',
   rework: 'Sent back for rework',
   recheck: 'Checked and resumed',
+  approve: 'Approved and merged',
+  sign_off: 'Signed off and merged',
 };
 
 /** "Answered by you": what was done and by whom, without a time. */
@@ -122,6 +126,8 @@ const BY_CODE: Readonly<Record<string, string>> = {
     'The ticket moved on since this page loaded, so nothing was changed. The page is refreshing.',
   interaction_not_found: 'This item no longer exists. The page is refreshing.',
   ticket_not_found: 'This ticket no longer exists. The page is refreshing.',
+  head_moved:
+    'The pull request changed after the checks passed, so nothing was merged. It is being checked again; approve once it is back in review.',
   invalid_answer: 'That answer was not accepted. Check what you entered and try again.',
   invalid_body:
     'Forge could not read that request. Check what you entered and try again.',
@@ -136,6 +142,14 @@ export function describeEscalationError(error: unknown): string {
       return detail === undefined
         ? 'It is still not fixed. Fix it, then check again.'
         : `It is still not fixed: ${detail} Fix it, then check again.`;
+    }
+
+    if (error.code === 'merge_refused') {
+      const detail = detailOf(error.body);
+
+      return detail === undefined
+        ? 'The change could not be merged, so nothing was merged.'
+        : `The change could not be merged: ${detail}`;
     }
 
     const known = error.code === undefined ? undefined : BY_CODE[error.code];

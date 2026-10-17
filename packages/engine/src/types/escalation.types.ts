@@ -42,7 +42,9 @@ export type EffectEnd = 'done' | 'not_pending' | 'stale';
 /**
  * What an action did. `done` carries the settled interaction (null for a ticket-level action with
  * no interaction behind it). `not_pending` and `stale` are 409s: someone else settled it, or the
- * ticket moved. `invalid_answer` is a 400 (an option the question does not have).
+ * ticket moved. `head_moved` and `merge_refused` (409) come from Approve and merge: the PR changed after
+ * the gates ran (the ticket went back to be gated), or the merge cannot happen (closed PR, conflicts).
+ * `invalid_answer` is a 400 (an option the question does not have).
  */
 export type ActOutcome =
   | { readonly status: 'done'; readonly interaction: Interaction | null }
@@ -52,6 +54,8 @@ export type ActOutcome =
   | { readonly status: 'invalid_answer'; readonly reason: string }
   | { readonly status: 'ticket_has_dependents'; readonly dependents: TicketId[] }
   | { readonly status: 'still_broken'; readonly detail: string }
+  | { readonly status: 'head_moved' }
+  | { readonly status: 'merge_refused'; readonly detail: string }
   | { readonly status: 'stale' };
 
 /** The engine doors of escalations: what `POST /interactions/:id/act` and `POST /tickets/:id/act` call. */
@@ -67,8 +71,9 @@ export interface EscalationDoors {
     author: string,
   ): Promise<ActOutcome>;
   /**
-   * The owner's action on a ticket's own wait, where no escalation is behind it: Rework on
-   * finished work and Cancel on anything open. Anything else is `action_not_offered`.
+   * The owner's action on a ticket's own wait, where no escalation is behind it: Approve (tier B)
+   * or Sign off (tier C) and merge, and Rework, on finished work, and Cancel on anything open.
+   * Anything else is `action_not_offered`.
    */
   actOnTicket(
     ticketId: string,

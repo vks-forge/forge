@@ -4,7 +4,8 @@
  * Why: the Director, storage and control room speak `RunEvent`, never ACP. The adapter
  *   streams message chunks, tool calls, tool updates, plans, mode changes and usage in its
  *   own vocabulary, and new update kinds appear with adapter versions. This translation
- *   keeps only what Forge uses (assistant text, tool calls and their results, spend and the
+ *   keeps only what Forge uses (assistant text, tool calls, the input a call receives in a later
+ *   update, their results, spend and the
  *   rate-limit state) and drops the rest with a note for the debug log. Dropping instead of
  *   throwing is deliberate: an update kind the driver has never seen must not crash a run
  *   that is otherwise healthy. Tool names come from the adapter's `name` (or its
@@ -12,11 +13,13 @@
  *   both key on the harness-native name.
  *
  * Exports: normaliseAcpUpdate().
- * Depends on: @agentclientprotocol/sdk (types), schemas/claude-acp, types/claude/engine.
+ * Depends on: @agentclientprotocol/sdk (types), schemas/claude-acp, domain/call-input,
+ *   types/claude/engine.
  *   No IO.
  */
 
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import { hasInput } from '#/domain/call-input.js';
 import { readClaudeToolName, readRateLimit } from '#/schemas/claude-acp.js';
 import type { AcpNormalised } from '#/types/claude/normalised.types.js';
 import type { EventDraft } from '#/types/claude/engine.types.js';
@@ -72,11 +75,24 @@ export function normaliseAcpUpdate(update: SessionUpdate): AcpNormalised {
       };
     }
 
-    case 'tool_call_update':
-      return {
-        events:
-          update.status && KEPT_STATUSES.has(update.status) ? [resultOf(update)] : [],
-      };
+    case 'tool_call_update': {
+      const events: EventDraft[] = [];
+      // The adapter announces a call with `{}` and delivers the input in a later update.
+      if (hasInput(update.rawInput)) {
+        events.push({
+          type: 'tool_call_update',
+          call_id: update.toolCallId,
+          input: update.rawInput,
+        });
+      }
+
+      if (update.status && KEPT_STATUSES.has(update.status)) {
+        events.push(resultOf(update));
+      }
+
+      return { events };
+    }
+
     case 'usage_update': {
       const rateLimit = readRateLimit(update._meta);
       const cost = update.cost;

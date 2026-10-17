@@ -10,7 +10,7 @@
  *   and offers "Cancel all" instead of leaving the owner with a bare error. A refusal is shown
  *   inside the dialog so it never closes on a failure.
  *
- * Exports: CommentDialog, CancelDialog.
+ * Exports: CommentDialog, CancelDialog, MergeDialog.
  * Depends on: react, components/ui/button, components/ui/confirm-dialog, components/ui/field,
  *   components/ui/modal, components/ticket/ticket-link, domain/escalation-copy.
  */
@@ -82,6 +82,74 @@ export function CommentDialog(props: {
         </p>
       ) : null}
     </Modal>
+  );
+}
+
+/**
+ * Asks before merging finished work: merging cannot be undone from Forge. Tier C (`sign_off`) asks
+ * who signs it off. A refusal (the PR changed, a conflict) is shown inside the dialog, which then
+ * stays open so the owner can read it.
+ */
+export function MergeDialog(props: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  controls: EscalationControls;
+  action: 'approve' | 'sign_off';
+}) {
+  const { controls, action } = props;
+  const [signer, setSigner] = useState('owner');
+  const signing = action === 'sign_off';
+  const hasError = controls.error !== null && controls.error !== undefined;
+  // As with Cancel: the confirm button closes the dialog by itself, but a refusal must stay
+  // readable, so closing waits for the server's answer.
+  const holding = useRef(false);
+
+  return (
+    <ConfirmDialog
+      open={props.open}
+      onOpenChange={(next) => {
+        if (next || !holding.current) {
+          props.onOpenChange(next);
+        }
+      }}
+      title={signing ? 'Sign off and merge?' : 'Approve and merge?'}
+      description={
+        signing
+          ? 'You sign off a change that touches protected paths. It is merged into the main branch now, and that cannot be undone from Forge.'
+          : 'The checked change is merged into the main branch now. That cannot be undone from Forge.'
+      }
+      confirmLabel={signing ? 'Sign off and merge' : 'Approve and merge'}
+      confirmDisabled={signing && signer.trim() === ''}
+      onConfirm={() => {
+        holding.current = true;
+        controls.act(
+          signing ? { action, signer: signer.trim() } : { action },
+          () => {
+            holding.current = false;
+            props.onOpenChange(false);
+          },
+          () => {
+            holding.current = false;
+          },
+        );
+      }}
+    >
+      {signing ? (
+        <Field id="escalation-signer" label="Signed off by" hint="Recorded on the card.">
+          <input
+            id="escalation-signer"
+            value={signer}
+            onChange={(event) => setSigner(event.target.value)}
+            className={INPUT_CLASS}
+          />
+        </Field>
+      ) : null}
+      {hasError ? (
+        <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm">
+          {describeEscalationError(controls.error)}
+        </p>
+      ) : null}
+    </ConfirmDialog>
   );
 }
 

@@ -23,13 +23,13 @@ import type { FlowStep, GrillState, StepName } from '@forge/core';
 import type { ZodType } from 'zod';
 import { rejectStep, runStep } from '#/steps/run-step.js';
 import { warnOnBudget } from '#/tick/card-budget.js';
-import { askStepBudget, logPlanEvent } from '#/tick/planning-state.js';
+import { askStepBudget, logPlanEvent, stamp } from '#/tick/planning-state.js';
 import type { ModelCall, PlanCtx, StepFinish } from '#/types/card-planning.types.js';
 
 /** Writes `step_started` so the card shows which step the Director is on. */
 export async function startStep(pc: PlanCtx, step: FlowStep): Promise<void> {
   await pc.ctx.deps.storage.transaction((tx) =>
-    logPlanEvent(tx, pc.card.id, pc.ctx.nowIso, {
+    logPlanEvent(tx, pc.card.id, stamp(pc), {
       kind: 'step_started',
       payload: { step_id: step.id, step_kind: step.kind, label: step.label },
     }),
@@ -62,7 +62,7 @@ export async function callStep<T>(
       askStepBudget(
         tx,
         pc.card.id,
-        pc.ctx.nowIso,
+        stamp(pc),
         step.label,
         pc.ctx.config.forge.engine.step_budget_usd,
       ),
@@ -72,7 +72,7 @@ export async function callStep<T>(
   }
 
   await pc.ctx.deps.storage.transaction((tx) =>
-    logPlanEvent(tx, pc.card.id, pc.ctx.nowIso, {
+    logPlanEvent(tx, pc.card.id, stamp(pc), {
       kind: 'note',
       payload: {
         text: `The Director could not run "${step.label}" (${result.error.kind}: ${result.error.message}). It will try again shortly.`,
@@ -89,7 +89,7 @@ export async function finishStep(
   step: FlowStep,
   done: StepFinish,
 ): Promise<GrillState> {
-  const at = pc.ctx.nowIso;
+  const at = stamp(pc);
 
   return pc.ctx.deps.storage.transaction(async (tx) => {
     const state = await tx.cardPlanning.get(pc.card.id);

@@ -58,6 +58,19 @@ describe('dispatch: worker contract', () => {
     expect(prompt).toContain('exactly `pnpm test`');
   });
 
+  it('records the brief sent to the Worker as the first run event, redacted', async () => {
+    const { rig } = await makeVerifyRig();
+    await rig.request('Fix it');
+    await rig.tick();
+
+    const events = await rig.storage.transaction((tx) => tx.runEvents.listByRun('run-1'));
+    const first = events[0];
+
+    expect(first?.type).toBe('prompt');
+    expect(first && 'text' in first ? first.text : '').toBe(rig.driver.starts[0]?.prompt);
+    expect(first && 'text' in first ? first.text : '').toContain('## Rules of this run');
+  });
+
   it('adds a rework note when the run follows a failed gate', async () => {
     const { rig, gate } = await makeVerifyRig();
     gate.script(verdict('failed', [{ check: 'claims', message: 'edit not claimed' }]));

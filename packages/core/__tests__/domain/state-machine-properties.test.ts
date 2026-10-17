@@ -41,6 +41,7 @@ const eventArb: fc.Arbitrary<TicketEvent> = fc.oneof(
     { type: 'unparked', at: T1 },
     { type: 'done', at: T1, signer: 's' },
     { type: 'rework', at: T1 },
+    { type: 'regate', at: T1 },
   ),
 );
 

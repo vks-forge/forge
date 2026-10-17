@@ -40,6 +40,7 @@ import { RESUME_PROMPT } from '#/tick/resume-prompt.js';
 import { buildRunRequest } from '#/tick/run-request.js';
 import { planDispatch } from '#/tick/schedule.js';
 import { settleRun } from '#/tick/settle.js';
+import { settleGuarded } from '#/tick/settle-guard.js';
 import { isUnservable } from '#/tick/tick-config.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 
@@ -56,10 +57,12 @@ async function giveUp(ctx: EngineCtx, run: Run, reason: string): Promise<void> {
   });
 
   ctx.report.resumeFailed.push(run.id);
-  await settleRun(ctx, run, failureResult('crash', sessionOf(run) ?? null), undefined, {
-    status: 'settled',
-    retryReason: 'resume_failed',
-  });
+  await settleGuarded(ctx, run, () =>
+    settleRun(ctx, run, failureResult('crash', sessionOf(run) ?? null), undefined, {
+      status: 'settled',
+      retryReason: 'resume_failed',
+    }),
+  );
 }
 
 /**
@@ -184,7 +187,7 @@ export async function reconcileRestart(ctx: EngineCtx): Promise<void> {
 
     if (!sessionOf(run)) {
       // Lost with nothing to resume from: the old rule, a crash that is retried.
-      await settleRun(ctx, run, failureResult('crash'));
+      await settleGuarded(ctx, run, () => settleRun(ctx, run, failureResult('crash')));
       ctx.report.crashed.push(run.id);
       continue;
     }

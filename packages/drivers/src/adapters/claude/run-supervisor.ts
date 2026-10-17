@@ -7,8 +7,9 @@
  *   every tool call the harness is seen making must already have a decision receipt on the
  *   server, because on Windows the Worker's OS user can rewrite the hook (hook.json,
  *   hook.js) and the hook is only attribution. A call with no receipt after the grace
- *   window means the hook was bypassed, so the run is cancelled as `policy_denied`. A call
- *   announced with a still-streaming input (ACP) is checked when it resolves, since its hook
+ *   window means the hook was bypassed, so the run is cancelled as `policy_denied`, unless
+ *   the harness itself rejected the call in validation (`<tool_use_error>`), which happens
+ *   before the hook and means the tool never ran. A call announced with a still-streaming input (ACP) is checked when it resolves, since its hook
  *   cannot run before the input is complete. The
  *   supervisor also notices a Worker that stopped right after `ask_director` and turns that
  *   into a `paused` result, and asks git (never the Worker) which files changed. Engines
@@ -17,7 +18,7 @@
  *
  * Exports: superviseRun().
  * Depends on: @forge/core (RunEvent, RunResult, InvalidInputError), @forge/tools (Decision),
- *   domain/run-result, domain/pending-ask, domain/call-input, shared/event-log,
+ *   domain/run-result, domain/pending-ask, shared/call-tracker, shared/event-log,
  *   shared/await-decision, types/claude/*.
  *   IO: git through the injected port; timers through the injected clock.
  */
@@ -25,12 +26,12 @@
 import { InvalidInputError, RunEvent, RunResult } from '@forge/core';
 import type { UsageReport } from '@forge/core';
 import type { Decision } from '@forge/tools';
-import { hasInput } from '#/domain/call-input.js';
 import { findInteractionId, isAskTool } from '#/domain/pending-ask.js';
 import { buildRunResult, familyOf } from '#/domain/run-result.js';
 import type { Override } from '#/types/claude/run-result.types.js';
 import type { SuperviseArgs, SupervisedRun } from '#/types/claude/supervisor.types.js';
 import { awaitDecision } from '#/shared/await-decision.js';
+import { createCallTracker } from '#/shared/call-tracker.js';
 import { EventLog } from '#/shared/event-log.js';
 import type {
   EngineEnd,
@@ -47,9 +48,6 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
   const { req, clock, log, config } = a;
   const events = new EventLog<RunEvent>();
   const askCalls = new Set<string>();
-  const checked = new Set<string>();
-  // Calls announced with a still-streaming input (ACP sends `{}`): checked once they resolve.
-  const deferred = new Map<string, ToolCallRef>();
   const errorFamilies = new Set<string>();
   let seq = 0;
   let deliveries = 0;
@@ -118,9 +116,14 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
       call,
     );
 
+  const tracker = createCallTracker(
+    config.receiptCrossCheck,
+    (ref) => void crossCheck(ref),
+  );
+
   async function crossCheck(call: ToolCallRef): Promise<void> {
     const decision = await decisionFor(call);
-    if (decision === null && !settling) {
+    if (decision === null && !settling && !tracker.isRejected(call.id)) {
       impose({
         kind: 'policy_denied',
         detail: `tool call ${call.id} (${call.name}) has no server-side decision receipt`,
@@ -129,28 +132,12 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
   }
 
   function inspect(e: RunEvent): void {
-    if (e.type === 'tool_result') {
-      const ref = deferred.get(e.call_id);
-      deferred.delete(e.call_id);
-      if (ref) {
-        void crossCheck(ref);
-      }
-    }
+    tracker.onEvent(e);
 
     if (e.type === 'tool_call') {
       pendingAsk = null;
       if (isAskTool(e.name, req.mcpIdentity)) {
         askCalls.add(e.call_id);
-      }
-
-      if (config.receiptCrossCheck && !checked.has(e.call_id)) {
-        checked.add(e.call_id);
-        const ref = { id: e.call_id, name: e.name, input: e.input };
-        if (hasInput(e.input)) {
-          void crossCheck(ref);
-        } else {
-          deferred.set(e.call_id, ref);
-        }
       }
     } else if (e.type === 'tool_result' && askCalls.has(e.call_id) && !e.is_error) {
       pendingAsk = findInteractionId(e.output) ?? pendingAsk;
@@ -207,7 +194,7 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
     cancelTurn();
     if (end.kind === 'completed' && !override) {
       // Never resolved, yet the turn ended normally: its hook had every chance to run.
-      for (const ref of deferred.values()) {
+      for (const ref of tracker.unresolved()) {
         if ((await decisionFor(ref)) === null) {
           const detail = `tool call ${ref.id} (${ref.name}) has no server-side decision receipt`;
           override = { kind: 'policy_denied', detail };
@@ -216,7 +203,7 @@ export function superviseRun(a: SuperviseArgs): SupervisedRun {
       }
     }
 
-    deferred.clear();
+    tracker.clear();
     let files: string[] = [];
     if (a.base !== null) {
       try {

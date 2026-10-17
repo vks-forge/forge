@@ -93,6 +93,8 @@ export interface EngineState {
   readonly chat: CardChatState;
   /** Interactions the Director's first look is working on now; keeps one tick from looking twice at the same row. */
   readonly escalating: Set<string>;
+  /** Consecutive failed settles per run id; a run that keeps failing is parked, not retried for ever. */
+  readonly settleFailures: Map<string, number>;
 }
 
 /** What every phase receives. */

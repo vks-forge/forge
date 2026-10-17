@@ -84,6 +84,8 @@ Off by default. `FORGE_TRACE=1` (or `true`) writes everything that happens to a 
 - **Redaction (fail closed):** one `redact()` pass before any write removes values under keys like `Authorization`, cookie, token, secret, password, key; GitHub, `sk-`, Slack and bearer patterns, session cookies and PEM blocks; the install token, every SecretStore value and the env-passthrough values; and any value seen under a secret key earlier in the run. If redaction throws the entry is dropped with one stderr warning.
 - **Writer:** buffered, flushed about every 200 ms and at shutdown, never blocks or fails the engine (one stderr warning on a write error), entries over 2 MB have their biggest strings cut with a `�[truncated N bytes]` marker. A start-up line says whether tracing is on and where it writes.
 
+- Card flow fixes: `PATCH /cards/:id` with a close reason also calls `engine.closeCardWork()`; the Inbox, `GET /cards/:id/escalations` and `wait_actions` hide the waits of closed cards; `GET /tickets/:id` adds `review` (diff stat and gated commit from `engine.reviewOf`) and `wait_actions` offers `approve` (tier B) or `sign_off` (tier C); `POST /tickets/:id/act` merges through the engine (409 `head_moved` or `merge_refused`).
+
 ## Why this approach
 
 - `node:http` with a small router and hand-written SSE, no framework (d-0061). Rejected: Hono, Fastify.

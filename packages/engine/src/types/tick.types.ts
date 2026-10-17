@@ -23,6 +23,7 @@ import type {
   WakeKind,
   WakeRequest,
 } from '@forge/core';
+import type { Receipt } from '@forge/tools';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { PickCandidate, PickCaps, PickRunning } from '#/types/pick-next.types.js';
 
@@ -130,6 +131,8 @@ export interface SettleOptions {
   readonly parkReason?: string;
   /** The harness build that changed under the approvals: the park is a setup for the owner (review the build), not a failure. */
   readonly parkBuild?: { readonly installed: string | null };
+  /** The run's receipts, read before the settle transaction: the receipt log shares the writer lock, so it cannot be read inside it. */
+  readonly receipts?: readonly Receipt[] | undefined;
 }
 
 /** What differs between one run's start request and another's; the rest comes from the settings. */

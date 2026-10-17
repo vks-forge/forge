@@ -105,6 +105,28 @@ describe('Ticket page: waiting without a question', () => {
     );
   });
 
+  it('asks before merging: Approve and merge opens a confirmation, and only its button posts approve', async () => {
+    const user = userEvent.setup();
+    const { forge } = open(
+      [],
+      { waitActions: { 'SVC-5': ['approve', 'rework', 'cancel'] } },
+      '/p/sample-service/tickets/SVC-5',
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Approve and merge' }));
+    expect(forge.stub.callsTo('POST /tickets/:id/act')).toHaveLength(0);
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveTextContent(/cannot be undone from Forge/);
+    await user.click(within(dialog).getByRole('button', { name: 'Approve and merge' }));
+
+    await waitFor(() =>
+      expect(forge.stub.callsTo('POST /tickets/:id/act')[0]?.body).toEqual({
+        action: 'approve',
+      }),
+    );
+  });
+
   it('says a scheduler hold clears by itself and still offers Cancel', async () => {
     open([], { waitActions: { 'SVC-6': ['cancel'] } }, '/p/sample-service/tickets/SVC-6');
 

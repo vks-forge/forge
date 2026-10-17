@@ -37,7 +37,8 @@ export type TicketEvent =
   | (EventBase & { type: 'merged' })
   | (EventBase & { type: 'done'; signer?: string })
   | (EventBase & { type: 'cancelled' })
-  | (EventBase & { type: 'rework' });
+  | (EventBase & { type: 'rework' })
+  | (EventBase & { type: 'regate' });
 
 /** Why an event was rejected: terminal ticket, illegal move, stale CAS version, or unmet precondition. */
 export type TransitionError =

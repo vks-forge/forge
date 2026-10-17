@@ -10,7 +10,8 @@
  *   a type that does not accept the card's source is 409, and a closed card takes no further
  *   change (409), so a late request cannot quietly reopen or retype dropped work. Closing
  *   also moves the stored phase to `closed` through `transitionCard()`, so the phase and the
- *   reason never disagree.
+ *   reason never disagree, then asks the engine to cancel the card's unfinished tickets (a closed
+ *   card must not leave work running or waiting).
  *
  * Exports: cardPatchRoute().
  * Depends on: @forge/core (CardId, CardPatchBody, checkTypeChange), services/card-phase, services/card-view,
@@ -107,6 +108,12 @@ export function cardPatchRoute(deps: RouteDeps): Route {
 
         return cardDetail(tx, view, slug, deps.engine.cardDirector(card.id));
       });
+
+      // Closing also closes the card's work (its tickets, their waits and live runs), after the
+      // card itself committed; the engine's start-up sweep repairs a crash between the two.
+      if (body.closed_reason !== undefined) {
+        await deps.engine.closeCardWork(id.data);
+      }
 
       sendJson(res, 200, detail);
     },

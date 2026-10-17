@@ -26,6 +26,7 @@ import type {
 import { titleOf } from '#/domain/escalation-copy.js';
 import { FAR_FUTURE } from '#/shared/time.js';
 import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
+import { isCardClosed } from '#/tick/card-close.js';
 import { directorFor } from '#/tick/planning-state.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { EngineDeps } from '#/types/engine.types.js';
@@ -89,7 +90,7 @@ export async function logOpened(
 }
 
 /**
- * Opens a failure or setup escalation for `ticket` and returns its id. A ticket that already
+ * Opens a failure or setup escalation for `ticket` and returns its id (null for a ticket of a closed card: none is raised). A ticket that already
  * has one pending keeps it (a second park of the same wait must not raise a second row). A row
  * that starts with the owner is stamped and announced on the card at once; failures and setups
  * never time out.
@@ -102,7 +103,13 @@ export async function raiseEscalation(
   payload: RaisedPayload,
   stage: EscalationStage,
   runId?: string,
-): Promise<string> {
+): Promise<string | null> {
+  // A closed card asks the owner nothing: its work is cancelled, so there is nothing to answer.
+  const card = ticket.card_id === undefined ? null : await tx.cards.get(ticket.card_id);
+  if (card && isCardClosed(card)) {
+    return null;
+  }
+
   const open = (await tx.interactions.listByTicket(ticket.id)).find(
     (i) => i.status === 'pending' && (i.kind === 'failure' || i.kind === 'setup'),
   );

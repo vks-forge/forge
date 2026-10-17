@@ -6,7 +6,8 @@
  *   same way (`<PROJECT>-<n>`, next free), start it in the `inbox` for triage, link it to its
  *   card and write `ticket_created` to the card history in the same transaction, so a ticket
  *   can never exist without its history line or be filed twice under one number. One function
- *   keeps that identical for every caller.
+ *   keeps that identical for every caller. New work on a card that was `done` moves it back to
+ *   `in_progress`.
  *
  * Exports: insertInboxTicket().
  * Depends on: @forge/core (ticket schemas, makeTicketId), domain/ticket-numbers, tick/card-log,
@@ -18,6 +19,7 @@ import { TicketStatus, makeTicketId } from '@forge/core';
 import type { Project, StorageTx, Ticket } from '@forge/core';
 import { nextTicketNumber } from '#/domain/ticket-numbers.js';
 import { logCardEvent } from '#/tick/card-log.js';
+import { moveCardTx } from '#/tick/card-phase.js';
 import type { NewInboxTicket } from '#/types/ticket-insert.types.js';
 
 async function allTicketIds(tx: StorageTx): Promise<string[]> {
@@ -67,6 +69,13 @@ export async function insertInboxTicket(
     actor: input.actor,
     payload: { ticket_id: id, title: input.title },
   });
+
+  // A finished card that gets new work is live again (through the one card door), so the Board
+  // does not show a Done card with open tickets.
+  const card = await tx.cards.get(input.cardId);
+  if (card?.phase === 'done') {
+    await moveCardTx(tx, card.id, { type: 'resume_work' }, input.at);
+  }
 
   return ticket;
 }

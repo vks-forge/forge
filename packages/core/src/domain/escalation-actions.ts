@@ -5,12 +5,12 @@
  *   editing the database (d-0135). Every waiting state has a row here: a question can be answered
  *   or its ticket cancelled; a lane hold can be run as Express, re-planned or cancelled; a capped
  *   or refused failure can be retried, re-planned or cancelled; a setup problem is fixed outside
- *   and re-checked; finished work can be sent back for rework. The same tables serve the engine
+ *   and re-checked; finished work can be approved and merged (tier B), signed off (tier C), or sent back for rework. The same tables serve the engine
  *   (it refuses an action that was not offered), the server (it returns the list in each view) and
  *   the tests (a rule test fails when a status, cause or setup type has no row). Order is button
  *   order. "Fix in settings" is a link in the setup payload, not an action.
  *
- * Exports: QUESTION_ACTIONS, FAILURE_ACTIONS, SETUP_ACTIONS, REVIEW_ACTIONS, SCHEDULER_WAIT_KINDS,
+ * Exports: QUESTION_ACTIONS, FAILURE_ACTIONS, SETUP_ACTIONS, REVIEW_ACTIONS, SIGNOFF_ACTIONS, SCHEDULER_WAIT_KINDS,
  *   STATUS_WAIT_CLASS, escalationActions(), ticketWaitActions().
  * Depends on: schemas/escalation, schemas/ticket, types/escalation. No IO.
  */
@@ -30,7 +30,17 @@ import type {
 
 export const QUESTION_ACTIONS: readonly EscalationAction[] = ['answer', 'cancel'];
 export const SETUP_ACTIONS: readonly EscalationAction[] = ['recheck', 'cancel'];
-export const REVIEW_ACTIONS: readonly EscalationAction[] = ['rework', 'cancel'];
+/** Finished work: tier B is approved and merged by the owner, tier C needs a named sign-off; both can be sent back or cancelled. */
+export const REVIEW_ACTIONS: readonly EscalationAction[] = [
+  'approve',
+  'rework',
+  'cancel',
+];
+export const SIGNOFF_ACTIONS: readonly EscalationAction[] = [
+  'sign_off',
+  'rework',
+  'cancel',
+];
 
 const RETRYABLE: readonly EscalationAction[] = ['retry', 'replan', 'cancel'];
 
@@ -91,7 +101,7 @@ const unique = (actions: readonly EscalationAction[]): EscalationAction[] => [
 /**
  * What a ticket page offers for the ticket's own wait: the pending owner escalations' actions for
  * a waiting ticket (cancel alone while the Director is still looking, or when no escalation
- * exists yet), Rework and Cancel for finished work, Cancel for a ticket the scheduler holds back,
+ * exists yet), Approve (tier B) or Sign off (tier C) with Rework and Cancel for finished work, Cancel for a ticket the scheduler holds back,
  * nothing for one that is running or finished. `schedulerWait` is the ticket page's wait line.
  */
 export function ticketWaitActions(
@@ -110,7 +120,7 @@ export function ticketWaitActions(
     }
 
     case 'review':
-      return [...REVIEW_ACTIONS];
+      return [...(ticket.status === 'needs_signoff' ? SIGNOFF_ACTIONS : REVIEW_ACTIONS)];
     case 'scheduler':
       return schedulerWait === null ? [] : ['cancel'];
     case 'none':

@@ -10,8 +10,10 @@
  *   page cannot disagree with dispatch; it is null when nothing holds the ticket back.
  *   Every pending wait is also returned as an escalation view (any stage), and `wait_actions`
  *   lists what the owner can do about the ticket's own wait where no escalation applies (rework
- *   or cancel for finished work, cancel for a ticket the scheduler holds back); the owner acts
- *   through `POST /tickets/:id/act`.
+ *   or cancel for finished work, approve (tier B) or sign off (tier C) and merge, cancel for a ticket
+ *   the scheduler holds back); the owner acts through `POST /tickets/:id/act`. `review` holds the
+ *   diff stat and gated commit of finished work (null for any other ticket); the PR link is the
+ *   ticket's `pr_url` and the G1 report is the gate row's `report_ref`.
  *
  * Exports: ticketRoute().
  * Depends on: @forge/core (TicketId), services/escalation-view, services/http/http-errors, services/http/respond,
@@ -73,7 +75,10 @@ export function ticketRoute(deps: RouteDeps): Route {
         };
       });
 
-      sendJson(res, 200, { ...found, wait_reason: waitReason, ...waits });
+      // What approving needs to see: the change's size and the commit the gates judged (null off review).
+      const review = await deps.engine.reviewOf(found.ticket.id);
+
+      sendJson(res, 200, { ...found, wait_reason: waitReason, ...waits, review });
     },
   };
 }

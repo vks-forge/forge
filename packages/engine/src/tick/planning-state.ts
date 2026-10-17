@@ -10,7 +10,7 @@
  *   history), so a step cannot flip a card's phase or invent an event shape by hand.
  *
  * Exports: PLANNING_ACTOR, isPlannedType(), isPlanningPhase(), directorFor(), loadPlanCtx(),
- *   logPlanEvent(), setNeedsYou(), askOwner(), askStepBudget(), mergeUnique(), enterVerifying(), latestPlanOf(), headOf().
+ *   stamp(), logPlanEvent(), setNeedsYou(), askOwner(), askStepBudget(), mergeUnique(), enterVerifying(), latestPlanOf(), headOf().
  * Depends on: @forge/core (card schemas, config), tick/card-log, tick/card-phase, tick/tick-config,
  *   types/card-planning. Reads and writes inside the caller's transaction where it takes one.
  */
@@ -26,6 +26,7 @@ import type {
   PlanVersion,
   StorageTx,
 } from '@forge/core';
+import { iso } from '#/shared/time.js';
 import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
 import { moveCardTx } from '#/tick/card-phase.js';
 import { projectSettings } from '#/tick/tick-config.js';
@@ -95,6 +96,15 @@ export async function loadPlanCtx(
     root: loaded.project.local_path ?? null,
     tierCGlobs: projectSettings(ctx.config, loaded.project.slug).tier_c_globs,
   };
+}
+
+/**
+ * The time of a planning write: the clock now, not the tick's start. A step's model call takes
+ * as long as it takes, so `step_started`, the result and the question each carry the moment they
+ * were written, and the card page can tell a Director that is thinking from one that is stuck.
+ */
+export function stamp(pc: Pick<PlanCtx, 'ctx'>): string {
+  return iso(pc.ctx.deps.clock.now());
 }
 
 /** Appends a card event written by the Director's planning flow. */
@@ -190,7 +200,7 @@ export async function enterVerifying(pc: PlanCtx): Promise<void> {
   await pc.ctx.deps.storage.transaction(async (tx) => {
     const card = await tx.cards.get(pc.card.id);
     if (card?.phase === 'grilling') {
-      await moveCardTx(tx, pc.card.id, { type: 'start_verifying' }, pc.ctx.nowIso);
+      await moveCardTx(tx, pc.card.id, { type: 'start_verifying' }, stamp(pc));
     }
   });
 }

@@ -23,6 +23,12 @@ export interface MessageItem extends ItemBase {
   readonly text: string;
 }
 
+/** The instructions the Worker was sent at run start. */
+export interface BriefItem extends ItemBase {
+  readonly kind: 'brief';
+  readonly text: string;
+}
+
 export interface ToolItem extends ItemBase {
   readonly kind: 'tool';
   readonly callId: string;
@@ -63,7 +69,7 @@ export interface UserItem extends ItemBase {
 }
 
 export type ThreadItem =
-  MessageItem | ToolItem | AskItem | DecisionItem | StatusItem | UserItem;
+  BriefItem | MessageItem | ToolItem | AskItem | DecisionItem | StatusItem | UserItem;
 
 export interface ThreadState {
   readonly items: readonly ThreadItem[];

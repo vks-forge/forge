@@ -46,6 +46,7 @@ describe('transitionCard: moves', () => {
     ['queued', 'start', 'in_progress'],
     ['approved', 'start', 'in_progress'],
     ['in_progress', 'complete', 'done'],
+    ['done', 'resume_work', 'in_progress'],
     ['plan_ready', 'regrill', 'grilling'],
     ['in_progress', 'regrill', 'grilling'],
     ['grilling', 'close', 'closed'],

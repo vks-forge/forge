@@ -3,7 +3,10 @@
  *
  * Why: a Worker run arrives as a stream of small events: text, a tool call and (later) its
  *   result, a permission decision, a question for the user, a finish or an error. Rendering
- *   them one per line makes a log nobody reads. This reducer pairs a tool call with its
+ *   them one per line makes a log nobody reads: a reply streams in as dozens of one-word
+ *   text chunks, which this reducer joins into one message, and a tool call whose input
+ *   arrives in a later update gets that input filled in. The brief the Worker was sent
+ *   (a `prompt` event) becomes its own item at the top. This reducer pairs a tool call with its
  *   result, keeps questions and denials visible, turns finish and error into status lines,
  *   and drops machine noise (usage, session, liveness). It is idempotent per `seq`: after a
  *   reconnect the server replays from the last `seq` we saw, and a duplicate must never show
@@ -88,11 +91,35 @@ export function applyEvent(state: ThreadState, event: RunEvent): ThreadState {
   });
 
   switch (event.type) {
-    case 'text':
+    case 'text': {
+      const last = state.items.at(-1);
+      // Streamed chunks are one message; the raw chunks stay in storage (d-0163 trace, receipts).
+      if (last?.kind === 'message') {
+        return next([
+          ...state.items.slice(0, -1),
+          { ...last, text: last.text + event.text },
+        ]);
+      }
+
       return next([
         ...state.items,
         { kind: 'message', seq: event.seq, ts: event.ts, text: event.text },
       ]);
+    }
+
+    case 'prompt':
+      return next([
+        ...state.items,
+        { kind: 'brief', seq: event.seq, ts: event.ts, text: event.text },
+      ]);
+    case 'tool_call_update':
+      return next(
+        state.items.map((item) =>
+          item.kind === 'tool' && item.callId === event.call_id
+            ? { ...item, input: event.input }
+            : item,
+        ),
+      );
     case 'user_message':
       return next([
         ...state.items,

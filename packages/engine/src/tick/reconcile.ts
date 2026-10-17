@@ -12,13 +12,15 @@
  *   counted as an ordinary failure.
  *
  * Exports: settleFinishedPumps(), cancelStalled().
- * Depends on: @forge/core (WorkerDriver port), tick/settle, tick/pump, domain/results.
+ * Depends on: @forge/core (WorkerDriver port), tick/settle, tick/settle-guard, tick/pump, domain/results.
+ *   Each run settles in isolation: one that throws is counted and parked after repeated failures.
  */
 
 import type { RunResult } from '@forge/core';
 import { failureResult } from '#/domain/results.js';
 import { pumpResult } from '#/tick/pump.js';
 import { settleRun } from '#/tick/settle.js';
+import { settleGuarded } from '#/tick/settle-guard.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 
 /** Grace for a cancelled harness to report before the stall is settled without its result. */
@@ -44,18 +46,17 @@ export async function settleFinishedPumps(ctx: EngineCtx): Promise<void> {
       const family = result.errorFamily;
       const plain = family === undefined || family === 'unknown' || family === 'crash';
       ctx.report.resumeFailed.push(run.id);
-      await settleRun(
-        ctx,
-        run,
-        plain ? { ...result, errorFamily: 'crash' } : result,
-        pump,
-        { status: 'settled', retryReason: 'resume_failed' },
+      await settleGuarded(ctx, run, () =>
+        settleRun(ctx, run, plain ? { ...result, errorFamily: 'crash' } : result, pump, {
+          status: 'settled',
+          retryReason: 'resume_failed',
+        }),
       );
 
       continue;
     }
 
-    await settleRun(ctx, run, result, pump);
+    await settleGuarded(ctx, run, () => settleRun(ctx, run, result, pump));
   }
 }
 
@@ -98,6 +99,8 @@ export async function cancelStalled(ctx: EngineCtx): Promise<void> {
     const base: RunResult =
       pump.result ?? failureResult('stall', pump.handle.session ?? null);
 
-    await settleRun(ctx, run, { ...base, status: 'timeout', errorFamily: 'stall' }, pump);
+    await settleGuarded(ctx, run, () =>
+      settleRun(ctx, run, { ...base, status: 'timeout', errorFamily: 'stall' }, pump),
+    );
   }
 }

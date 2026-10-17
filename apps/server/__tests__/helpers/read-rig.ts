@@ -92,6 +92,7 @@ export async function startReadRig(): Promise<ReadRig> {
       ...stubHarnessDeps(),
       engine: {
         explainWait: vi.fn(async () => null),
+        reviewOf: vi.fn(async () => null),
         unservableProjects: vi.fn(() => new Map()),
       } as unknown as Engine,
       storage,

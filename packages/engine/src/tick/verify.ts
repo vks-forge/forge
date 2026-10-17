@@ -13,7 +13,7 @@
  *   twice. If the branch moved after the gates passed, nothing merges and the new head is
  *   gated again. At most `max_concurrent_by_state.verifying` tickets are worked per tick.
  *
- * Exports: verifyReady().
+ * Exports: verifyReady(), resolveTarget().
  * Depends on: domain/{gate-rows,ticket-numbers}, tick/{gate-jobs,project-runtime},
  *   tick/verify-{publish,gates,outcomes,merge}.
  */
@@ -41,7 +41,7 @@ import type { GateRun, VerifyTarget } from '#/types/verify.types.js';
 const MAX_REGATES = 3;
 
 /** Resolves everything verify needs for a ticket, or null (with a log) when it cannot be verified yet. */
-async function resolveTarget(
+export async function resolveTarget(
   ctx: EngineCtx,
   ticket: Ticket,
 ): Promise<VerifyTarget | null> {

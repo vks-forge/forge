@@ -44,7 +44,7 @@ export async function applyOutcome(
   result: RunResult,
   family: ErrorFamily | undefined,
   pump?: Pump,
-  opts: Pick<SettleOptions, 'retryReason' | 'parkReason' | 'parkBuild'> = {},
+  opts: Pick<SettleOptions, 'retryReason' | 'parkReason' | 'parkBuild' | 'receipts'> = {},
 ): Promise<void> {
   const ticket = await tx.tickets.get(run.ticket_id as Ticket['id']);
   if (!ticket || TERMINAL_STATUSES.includes(ticket.status) || pump?.cancelled) {
@@ -111,7 +111,7 @@ export async function applyOutcome(
       run,
       opts.parkReason ?? decision.reason,
       family,
-      await setupCauseOfRun(ctx, tx, run, family, opts.parkBuild),
+      await setupCauseOfRun(ctx, tx, run, family, opts.parkBuild, opts.receipts),
     );
   }
 

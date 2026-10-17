@@ -65,6 +65,7 @@ export * from '#/schemas/errors.js';
 export * from '#/schemas/escalation.js';
 export * from '#/schemas/forge-config.js';
 export * from '#/schemas/gate-result.js';
+export * from '#/schemas/ticket-review.js';
 export * from '#/schemas/grill.js';
 export * from '#/schemas/harness-compat.js';
 export * from '#/schemas/harness-state.js';

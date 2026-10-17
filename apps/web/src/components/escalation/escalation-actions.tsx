@@ -6,7 +6,8 @@
  *   page and in the Inbox. The server decides which actions apply (`view.actions`); this draws
  *   them in the owner's words and wires each to its call: Retry takes an optional note for the
  *   Worker, Re-plan and Send back for rework open a dialog that asks for a comment (and Re-plan
- *   says what happens to the tickets), Cancel asks before it acts, Run as Express and "I fixed
+ *   says what happens to the tickets), Approve and merge / Sign off and merge ask before they merge
+ *   (a merge cannot be undone), Cancel asks before it acts, Run as Express and "I fixed
  *   it, check again" act at once. The first action is the primary one; Cancel is the only
  *   danger-styled button. `answer` has its own form and is skipped here. An action this UI has no
  *   button for never reaches this component (the schema drops it).
@@ -22,6 +23,7 @@ import type { ReactNode } from 'react';
 import {
   CancelDialog,
   CommentDialog,
+  MergeDialog,
 } from '#/components/escalation/escalation-dialogs.js';
 import { Button } from '#/components/ui/button.js';
 import { INPUT_CLASS } from '#/components/ui/field.js';
@@ -39,12 +41,15 @@ export function EscalationActions(props: {
   retryHint?: string | undefined;
 }) {
   const { controls } = props;
-  const [dialog, setDialog] = useState<'replan' | 'rework' | 'cancel' | null>(null);
+  const [dialog, setDialog] = useState<
+    'replan' | 'rework' | 'cancel' | 'approve' | 'sign_off' | null
+  >(null);
+
   const [noting, setNoting] = useState(false);
   const [note, setNote] = useState('');
   const actions = props.actions.filter((action) => action !== 'answer');
   const busy = controls.pending !== null;
-  const open = (which: 'replan' | 'rework' | 'cancel'): void => {
+  const open = (which: 'replan' | 'rework' | 'cancel' | 'approve' | 'sign_off'): void => {
     controls.reset();
     setDialog(which);
   };
@@ -89,6 +94,13 @@ export function EscalationActions(props: {
         );
       case 'replan':
       case 'rework':
+        return (
+          <Button {...common} onClick={() => open(action)}>
+            {ACTION_LABEL[action]}
+          </Button>
+        );
+      case 'approve':
+      case 'sign_off':
         return (
           <Button {...common} onClick={() => open(action)}>
             {ACTION_LABEL[action]}
@@ -166,6 +178,18 @@ export function EscalationActions(props: {
           description="A Worker starts again on this ticket with your comment."
           label="What needs to change?"
           sendLabel="Send back"
+        />
+      ) : null}
+      {actions.includes('approve') || actions.includes('sign_off') ? (
+        <MergeDialog
+          open={dialog === 'approve' || dialog === 'sign_off'}
+          onOpenChange={(next) =>
+            next
+              ? setDialog(actions.includes('approve') ? 'approve' : 'sign_off')
+              : close()
+          }
+          controls={controls}
+          action={actions.includes('sign_off') ? 'sign_off' : 'approve'}
         />
       ) : null}
       {actions.includes('cancel') ? (

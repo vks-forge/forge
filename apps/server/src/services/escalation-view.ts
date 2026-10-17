@@ -31,6 +31,13 @@ async function replannable(tx: StorageTx, ticket: Ticket | null): Promise<boolea
   return card !== null && card.type !== 'discussion' && card.closed_reason === undefined;
 }
 
+/** Whether the ticket's card was closed: its waits offer nothing, because its work is cancelled. */
+async function closedCard(tx: StorageTx, ticket: Ticket | null): Promise<boolean> {
+  const card = ticket?.card_id === undefined ? null : await tx.cards.get(ticket.card_id);
+
+  return card !== null && (card.closed_reason !== undefined || card.phase === 'closed');
+}
+
 /** The views of `rows`, in the order given. */
 export async function escalationViews(
   tx: StorageTx,
@@ -46,7 +53,9 @@ export async function escalationViews(
     const ticket = tickets.get(row.ticket_id) ?? null;
     const base = toEscalation(row);
     const actions: EscalationAction[] =
-      row.status === 'pending' && base.stage === 'owner'
+      row.status === 'pending' &&
+      base.stage === 'owner' &&
+      !(await closedCard(tx, ticket))
         ? escalationActions(base.payload, { replannable: await replannable(tx, ticket) })
         : [];
 
@@ -70,6 +79,11 @@ export async function waitActionsFor(
   pending: readonly EscalationView[],
   waitReason: string | null,
 ): Promise<EscalationAction[]> {
+  const card = ticket.card_id === undefined ? null : await tx.cards.get(ticket.card_id);
+  if (card && (card.closed_reason !== undefined || card.phase === 'closed')) {
+    return [];
+  }
+
   return ticketWaitActions(
     { status: ticket.status, replannable: await replannable(tx, ticket) },
     pending,
@@ -82,7 +96,11 @@ export async function cardEscalations(
   tx: StorageTx,
   cardId: CardId,
 ): Promise<EscalationView[]> {
-  const pending = await tx.interactions.listPendingByCard(cardId);
+  const card = await tx.cards.get(cardId);
+  const closed =
+    card !== null && (card.closed_reason !== undefined || card.phase === 'closed');
+
+  const pending = closed ? [] : await tx.interactions.listPendingByCard(cardId);
   const tickets = await tx.tickets.listByCard(cardId);
   const settled = (
     await Promise.all(tickets.map((t) => tx.interactions.listByTicket(t.id)))

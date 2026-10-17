@@ -118,6 +118,8 @@ export async function startCardRig(
       engine: {
         explainWait: vi.fn(async () => null),
         cardDirector: vi.fn(() => ({ state: 'idle' })),
+        closeCardWork: vi.fn(async () => []),
+        reviewOf: vi.fn(async () => null),
         ...engineOverrides,
         unservableProjects: vi.fn(() => new Map()),
       } as unknown as Engine,

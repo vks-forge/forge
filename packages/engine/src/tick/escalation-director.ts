@@ -18,7 +18,8 @@
  */
 
 import { TERMINAL_STATUSES, toEscalation } from '@forge/core';
-import type { Interaction, Ticket, TicketId } from '@forge/core';
+import type { CardId, Interaction, Ticket, TicketId } from '@forge/core';
+import { isCardClosed } from '#/tick/card-close.js';
 import { lookAtQuestion } from '#/tick/escalation-answer-step.js';
 import { lookAtFailure } from '#/tick/escalation-recover-step.js';
 import { handToOwner } from '#/tick/escalation-raise.js';
@@ -48,7 +49,14 @@ async function lookAt(ctx: EngineCtx, row: Interaction): Promise<void> {
     return;
   }
 
-  if (TERMINAL_STATUSES.includes(ticket.status)) {
+  const card =
+    ticket.card_id === undefined
+      ? null
+      : await ctx.deps.storage.transaction((tx) =>
+          tx.cards.get(ticket.card_id as CardId),
+        );
+
+  if (TERMINAL_STATUSES.includes(ticket.status) || (card && isCardClosed(card))) {
     await ctx.deps.storage.transaction((tx) =>
       cancelLeftovers(tx, ctx.nowIso, ticket.id, `the ticket is ${ticket.status}`),
     );

@@ -126,6 +126,7 @@ export async function setupCauseOfRun(
   run: Run,
   family: ErrorFamily | undefined,
   build: SettleOptions['parkBuild'],
+  receipts: SettleOptions['receipts'] = [],
 ): Promise<SetupCause | null> {
   const harness = await tx.harnesses.get(run.harness);
   const kind = harness?.kind ?? 'claude';
@@ -141,8 +142,9 @@ export async function setupCauseOfRun(
     return null;
   }
 
-  const receipts = family === 'policy_denied' ? await ctx.deps.receipts.list(run.id) : [];
-  const decisions = receipts.flatMap((r) =>
+  // The receipts come from the caller: listing them here would open the receipt writer inside
+  // the settle transaction, and the two share one lock (re-entrant call, run stuck settling).
+  const decisions = (family === 'policy_denied' ? receipts : []).flatMap((r) =>
     r.kind === 'decision'
       ? [{ tool: r.tool, reason: r.reason, decision: r.decision, version: r.version }]
       : [],

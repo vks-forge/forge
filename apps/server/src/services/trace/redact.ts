@@ -12,13 +12,14 @@
  *   entry: an unredacted entry is never written (d-0163).
  *
  * Exports: createRedactor(), REDACTED.
- * Depends on: @forge/core (TraceEntry type), types/trace. No IO.
+ * Depends on: @forge/core (TraceEntry type), @forge/tools (scrubSecrets, shared with the run-event brief), types/trace. No IO.
  */
 
 import type { TraceEntry } from '@forge/core';
+import { REDACTED, scrubSecrets } from '@forge/tools';
 import type { Redactor } from '#/types/trace.types.js';
 
-export const REDACTED = '[redacted]';
+export { REDACTED };
 
 const MAX_DEPTH = 40;
 const MIN_SECRET_LENGTH = 6;
@@ -28,16 +29,6 @@ const MAX_LEARNED = 500;
 const SECRET_WORDS =
   /authorization|cookie|secret|password|passwd|api[_-]?key|private[_-]?key|credential|bearer|access[_-]?key/i;
 
-const PATTERNS: readonly RegExp[] = [
-  /-----BEGIN [A-Z0-9 ]+-----[\s\S]*?(?:-----END [A-Z0-9 ]+-----|$)/g,
-  /\bgh[pousr]_[A-Za-z0-9]{8,}/g,
-  /\bgithub_pat_[A-Za-z0-9_]{8,}/g,
-  /\bsk-[A-Za-z0-9_-]{8,}/g,
-  /\bxox[abprs]-[A-Za-z0-9-]{8,}/g,
-  /\bBearer\s+[A-Za-z0-9._~+/=-]{8,}/gi,
-  /\bforge_session=[A-Za-z0-9_-]+/g,
-];
-
 /** True for a key that holds a credential; plural `tokens` is a counter, not a secret. */
 function isSecretKey(key: string): boolean {
   if (SECRET_WORDS.test(key)) {
@@ -45,21 +36,6 @@ function isSecretKey(key: string): boolean {
   }
 
   return /token/i.test(key) && !/tokens$/i.test(key);
-}
-
-function scrub(text: string, secrets: readonly string[]): string {
-  let out = text;
-  for (const secret of secrets) {
-    if (out.includes(secret)) {
-      out = out.split(secret).join(REDACTED);
-    }
-  }
-
-  for (const pattern of PATTERNS) {
-    out = out.replace(pattern, REDACTED);
-  }
-
-  return out;
 }
 
 /** Plain-JSON copy of `value`; secret-named keys are replaced and their values returned in `found`. */
@@ -152,7 +128,7 @@ function plain(
 
 function scrubTree(value: unknown, secrets: readonly string[]): unknown {
   if (typeof value === 'string') {
-    return scrub(value, secrets);
+    return scrubSecrets(value, secrets);
   }
 
   if (Array.isArray(value)) {
@@ -162,7 +138,7 @@ function scrubTree(value: unknown, secrets: readonly string[]): unknown {
   if (value !== null && typeof value === 'object') {
     return Object.fromEntries(
       Object.entries(value).map(([key, item]) => [
-        scrub(key, secrets),
+        scrubSecrets(key, secrets),
         scrubTree(item, secrets),
       ]),
     );

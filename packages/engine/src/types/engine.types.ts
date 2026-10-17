@@ -31,6 +31,7 @@ import type {
   RunStatus,
   StepName,
   StorageAdapter,
+  TicketReview,
   TraceSink,
 } from '@forge/core';
 import type { ReceiptLog } from '@forge/tools';
@@ -228,6 +229,10 @@ export interface Engine extends PlanningDoors, EscalationDoors {
   ): Promise<PostCardMessageResult>;
   /** Whether the card's Director is answering (`thinking`), failed its last answer (`error`) or is `idle`. Process-local; read-only. */
   cardDirector(cardId: string): CardDirectorStatus;
+  /** The diff stat and gated commit of a ticket in review or sign-off, for the owner's decision; null for any other ticket or when the worktree cannot be read. Read-only. */
+  reviewOf(ticketId: string): Promise<TicketReview | null>;
+  /** After a card was closed: cancels its unfinished tickets (and their waits), stops their runs; returns the ids. Nothing for a card that is not closed. */
+  closeCardWork(cardId: string): Promise<string[]>;
   /** Cancels a ticket through `transition()` and stops its live run. False when the ticket is terminal or unknown. */
   cancelTicket(ticketId: string): Promise<boolean>;
   /** Why the ticket has not started (`quota: claude-code until 14:20 UTC`, `cap: per-project 1/1`, `deps: PAY-231`), or null when nothing holds it back. Read-only. */

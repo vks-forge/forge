@@ -21,6 +21,7 @@
 
 import { resolveFlowStep } from '@forge/core';
 import type { CardId, CardPhase, CardReplyQueueItem, FlowStep } from '@forge/core';
+import { iso } from '#/shared/time.js';
 import { logCardEvent } from '#/tick/card-log.js';
 import { askQueued, grillStep, recordAnswerTx } from '#/tick/planning-grill.js';
 import { approveStep, writePlanStep } from '#/tick/planning-plan.js';
@@ -29,6 +30,7 @@ import {
   isPlanningPhase,
   loadPlanCtx,
   logPlanEvent,
+  stamp,
 } from '#/tick/planning-state.js';
 import {
   customStep,
@@ -99,7 +101,7 @@ async function absorbMessage(pc: PlanCtx, item: CardReplyQueueItem): Promise<voi
     return;
   }
 
-  const at = pc.ctx.nowIso;
+  const at = stamp(pc);
   await pc.ctx.deps.storage.transaction(async (tx) => {
     const card = await tx.cards.get(pc.card.id);
     const { grill } = await tx.cardPlanning.get(pc.card.id);
@@ -264,7 +266,7 @@ export async function noteFailure(
   await ctx.deps.storage.transaction((tx) =>
     logCardEvent(tx, cardId, {
       kind: 'note',
-      at: ctx.nowIso,
+      at: iso(ctx.deps.clock.now()),
       actor: { type: 'director', id: 'engine' },
       payload: {
         text: `Planning hit a problem (${reason}). The Director will try again shortly.`,

@@ -19,6 +19,7 @@ import {
   CircleCheck,
   CircleX,
   ChevronRight,
+  FileText,
   LoaderCircle,
   ShieldCheck,
   ShieldX,
@@ -26,7 +27,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { clockTime } from '#/domain/relative-time.js';
-import type { ThreadItem, ToolItem } from '#/types/thread.types.js';
+import type { BriefItem, ThreadItem, ToolItem } from '#/types/thread.types.js';
 
 const MAX_SHOWN = 4000;
 
@@ -127,6 +128,25 @@ function ToolLine(props: { item: ToolItem; expandAll: boolean }) {
   );
 }
 
+function BriefLine(props: { item: BriefItem }) {
+  const { item } = props;
+
+  return (
+    <details className="rounded-lg border border-line bg-surface">
+      <summary className="flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm hover:bg-hover">
+        <FileText aria-hidden="true" className="size-4 shrink-0 text-muted" />
+        <span className="font-medium">Brief sent to the Worker</span>
+        <span className="ml-auto">
+          <Time ts={item.ts} />
+        </span>
+      </summary>
+      <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words border-t border-line p-2 font-data text-xs">
+        {show(item.text)}
+      </pre>
+    </details>
+  );
+}
+
 export function ThreadItemView(props: {
   item: ThreadItem;
   expandTools: boolean;
@@ -136,6 +156,8 @@ export function ThreadItemView(props: {
   const { item } = props;
 
   switch (item.kind) {
+    case 'brief':
+      return <BriefLine item={item} />;
     case 'message':
       return (
         <div className="grid gap-0.5">

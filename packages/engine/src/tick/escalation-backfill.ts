@@ -16,6 +16,7 @@
 
 import { classifyPark } from '@forge/core';
 import { FAR_FUTURE } from '#/shared/time.js';
+import { isCardClosed } from '#/tick/card-close.js';
 import { attemptsOf, raiseEscalation } from '#/tick/escalation-raise.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 
@@ -41,7 +42,10 @@ export async function backfillEscalations(ctx: EngineCtx): Promise<number> {
         continue;
       }
 
-      const park = classifyPark(ticket);
+      const card =
+        ticket.card_id === undefined ? null : await tx.cards.get(ticket.card_id);
+
+      const park = card && isCardClosed(card) ? null : classifyPark(ticket);
       if (!park) {
         continue;
       }

@@ -78,6 +78,23 @@ describe('transition: happy paths', () => {
     expect(apply(sign, { type: 'done', at: T1, signer: 'vikash' }).status).toBe('done');
   });
 
+  it('regate sends finished work back to verifying for a new gate run, dropping the tier', () => {
+    const review = makeTicket({ status: 'review', tier_actual: 'B' });
+    const back = apply(review, { type: 'regate', at: T1 });
+    expect(back.status).toBe('verifying');
+    expect(back.tier_actual).toBeUndefined();
+    expect(
+      apply(makeTicket({ status: 'needs_signoff', tier_actual: 'C' }), {
+        type: 'regate',
+        at: T1,
+      }).status,
+    ).toBe('verifying');
+
+    expect(
+      transition(makeTicket({ status: 'in_progress' }), { type: 'regate', at: T1 }).ok,
+    ).toBe(false);
+  });
+
   it('only escalates lane on triage', () => {
     const t = makeTicket({ lane: 'full' });
     expect(apply(t, ev.triaged).lane).toBe('full');

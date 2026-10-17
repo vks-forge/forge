@@ -58,6 +58,59 @@ describe('applyEvent', () => {
     expect(state.items[0]).toMatchObject({ kind: 'tool', done: true, output: 'late' });
   });
 
+  it('merges consecutive text chunks into one message (live run 2: 74 chunks, 74 bubbles)', () => {
+    const chunks = Array.from({ length: 74 }, (_, i) =>
+      ev(i + 1, { type: 'text', text: `w${i} ` }),
+    );
+
+    const state = applyEvents(EMPTY_THREAD, chunks);
+
+    expect(state.items).toHaveLength(1);
+    expect(state.items[0]).toMatchObject({ kind: 'message', seq: 1 });
+    expect((state.items[0] as { text: string }).text).toBe(
+      chunks.map((c) => (c as { text: string }).text).join(''),
+    );
+
+    expect(state.lastSeq).toBe(74);
+  });
+
+  it('starts a new message after any other event, and stays idempotent on replay', () => {
+    const events = [
+      ev(1, { type: 'text', text: 'a' }),
+      ev(2, { type: 'text', text: 'b' }),
+      ev(3, { type: 'tool_call', call_id: 'c1', name: 'Read', input: { p: 1 } }),
+      ev(4, { type: 'text', text: 'c' }),
+    ];
+
+    const state = applyEvents(EMPTY_THREAD, events);
+    const replayed = applyEvents(state, events);
+
+    expect(state.items.map((i) => i.kind)).toEqual(['message', 'tool', 'message']);
+    expect(state.items[0]).toMatchObject({ text: 'ab' });
+    expect(replayed).toBe(state);
+  });
+
+  it('fills a tool call input from a later tool_call_update', () => {
+    const state = applyEvents(EMPTY_THREAD, [
+      ev(1, { type: 'tool_call', call_id: 'c1', name: 'Write', input: {} }),
+      ev(2, { type: 'tool_call_update', call_id: 'c1', input: { file_path: '/a/b.ts' } }),
+      ev(3, { type: 'tool_result', call_id: 'c1', output: 'ok', is_error: false }),
+    ]);
+
+    expect(state.items).toHaveLength(1);
+    expect(state.items[0]).toMatchObject({
+      kind: 'tool',
+      done: true,
+      input: { file_path: '/a/b.ts' },
+    });
+  });
+
+  it('shows the prompt event as the brief item', () => {
+    const state = applyEvents(EMPTY_THREAD, [ev(0, { type: 'prompt', text: 'Do it.' })]);
+
+    expect(state.items[0]).toMatchObject({ kind: 'brief', text: 'Do it.' });
+  });
+
   it('turns questions, permission decisions, finish and error into visible items', () => {
     const state = applyEvents(EMPTY_THREAD, [
       ev(1, { type: 'ask', interaction_id: 'i1', kind: 'question', prompt: 'UTC?' }),

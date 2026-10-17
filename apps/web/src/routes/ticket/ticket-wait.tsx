@@ -3,11 +3,13 @@
  *
  * Why: a ticket in review or sign-off, or one held back by the scheduler (it waits for another
  *   ticket, a free slot, a harness quota), is not asking anything, but the owner must still be
- *   able to act: send a reviewed ticket back for rework, or cancel something they no longer want.
+ *   able to act: approve and merge a reviewed ticket (or sign off tier C), send it back for rework, or cancel something they no longer want.
  *   A wait that clears by itself says so ("it starts by itself when that clears"), so nobody
  *   thinks it is stuck, and still offers Cancel. The server decides which actions apply
  *   (`wait_actions`); this draws them with the same buttons and dialogs as an escalation. A ticket
  *   with nothing to do and nothing to say draws nothing.
+ *
+ *   For finished work the panel also shows what Approve / Sign off will merge (routes/ticket/review-facts).
  *
  * Exports: TicketWait.
  * Depends on: api/use-escalations, components/escalation/escalation-actions, domain/escalation-copy,
@@ -18,6 +20,7 @@ import { Hourglass } from 'lucide-react';
 import { useActOnTicketWait } from '#/api/use-escalations.js';
 import { EscalationActions } from '#/components/escalation/escalation-actions.js';
 import { dependentsOf, describeEscalationError } from '#/domain/escalation-copy.js';
+import { ReviewFacts } from '#/routes/ticket/review-facts.js';
 import type { EscalationAction } from '#/schemas/escalation.js';
 import type { TicketDetail } from '#/schemas/tickets.js';
 import type { EscalationControls } from '#/types/escalation-ui.types.js';
@@ -80,6 +83,7 @@ export function TicketWait(props: { detail: TicketDetail }) {
       {resumes ? (
         <p className="text-sm text-muted">It starts by itself when that clears.</p>
       ) : null}
+      <ReviewFacts detail={detail} />
       <EscalationActions id={detail.ticket.id} actions={actions} controls={controls} />
       {mutation.isError && dependentsOf(mutation.error) === null ? (
         <p role="alert" className="rounded-lg bg-danger-soft p-2 text-sm">

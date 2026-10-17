@@ -115,7 +115,7 @@ describe('GET /tickets/:id', () => {
     expect(body.interactions.map((i) => i.id)).toEqual(['int-f1']);
   });
 
-  it('offers rework and cancel for finished work and cancel for a held ticket', async () => {
+  it('offers approve, rework and cancel for finished work and cancel for a held ticket', async () => {
     await ctx.seed(
       [card(2)],
       [ticket(2, 2, { status: 'review' }), ticket(3, 2, { status: 'planned' })],
@@ -123,6 +123,7 @@ describe('GET /tickets/:id', () => {
 
     const review = await ctx.rig.json('GET', '/tickets/FX-2');
     expect((review.body as { wait_actions: string[] }).wait_actions).toEqual([
+      'approve',
       'rework',
       'cancel',
     ]);

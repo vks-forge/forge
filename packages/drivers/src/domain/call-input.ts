@@ -7,9 +7,26 @@
  *   is complete, so the receipt cross-check must not start its grace clock on an empty
  *   announcement: it would kill a healthy run that was still writing its second tool call.
  *
- * Exports: hasInput().
+ * Exports: hasInput(), isHarnessRejection().
  * Depends on: nothing. No IO.
  */
+
+/**
+ * True for an error result Claude Code produced itself while validating the call (a
+ * `<tool_use_error>` wrapper, e.g. an Edit whose old string matches several places). That
+ * validation runs before PreToolUse, so the tool never ran and no receipt exists; the
+ * cross-check must not read that as a bypassed hook. A success, or an error without the
+ * wrapper, is never a rejection: those calls ran and still need their receipt.
+ */
+export function isHarnessRejection(output: unknown, isError: boolean): boolean {
+  if (!isError) {
+    return false;
+  }
+
+  const text = typeof output === 'string' ? output : (JSON.stringify(output) ?? '');
+
+  return text.includes('<tool_use_error>');
+}
 
 /** False for a missing or empty object input, the shape of a call whose input is still streaming. */
 export function hasInput(input: unknown): boolean {

@@ -12,7 +12,8 @@
  *   newest checked): an older build can no longer be acted on and would nag forever. A tool
  *   approval is dated by when Forge checked its build. Quota waits show only where open work
  *   is affected. Memory proposals carry no timestamp, so they use the epoch and sort last
- *   (the web shows no date for an epoch item).
+ *   (the web shows no date for an epoch item). Tickets of a closed card never show: their work was
+ *   cancelled with the card.
  *
  * Exports: gatherInboxCandidates().
  * Depends on: @forge/core (inbox rules, StorageTx, memory entries), services/collect-pages,
@@ -106,7 +107,17 @@ export async function gatherInboxCandidates(
 ): Promise<InboxCandidate[]> {
   const slug = project.slug;
   const nowIso = new Date(nowMs).toISOString();
-  const tickets = await collectTickets(tx, project.id);
+  // The work of a closed card is dropped: nothing about it asks the owner anything.
+  const everyTicket = await collectTickets(tx, project.id);
+  const closedCards = new Set<string>();
+  for (const id of new Set(everyTicket.flatMap((t) => (t.card_id ? [t.card_id] : [])))) {
+    const card = await tx.cards.get(id);
+    if (card && (card.closed_reason !== undefined || card.phase === 'closed')) {
+      closedCards.add(id);
+    }
+  }
+
+  const tickets = everyTicket.filter((t) => !t.card_id || !closedCards.has(t.card_id));
   const byId = new Map(tickets.map((t) => [t.id as string, t]));
   const items: InboxCandidate[] = [];
 

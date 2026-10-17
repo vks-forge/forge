@@ -64,13 +64,16 @@ const ANSWERS: Record<StepName, unknown> = {
   ticket_recover: { decision: 'escalate', diagnosis: 'Needs a person.', confidence: 0.1 },
 };
 
-export function createScriptedDirector(): ScriptedDirector {
+/** `answers` replace the default answer of a step (a triage that predicts tier B, for instance). */
+export function createScriptedDirector(
+  answers: Partial<Record<StepName, unknown>> = {},
+): ScriptedDirector {
   const calls: ScriptedDirector['calls'] = [];
   const llm: DirectorLLM = {
     capabilities: () => ({ structuredOutput: true, reportsCost: false }),
     async step<T>(name: StepName, input: unknown, schema: ZodType<T>, opts: StepOptions) {
       calls.push({ name, input, opts });
-      const parsed = schema.safeParse(ANSWERS[name]);
+      const parsed = schema.safeParse(name in answers ? answers[name] : ANSWERS[name]);
 
       return parsed.success
         ? ok(parsed.data)

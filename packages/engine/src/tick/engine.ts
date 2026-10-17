@@ -24,6 +24,7 @@ import { iso } from '#/shared/time.js';
 import { emitTrace } from '#/shared/trace.js';
 import { runCardChats } from '#/tick/card-chat.js';
 import { cardDirectorStatus, postCardMessage } from '#/tick/card-chat-post.js';
+import { closeCardWork, sweepClosedCards } from '#/tick/card-close.js';
 import { createCard, setCardRelations } from '#/tick/card-create.js';
 import { dispatchReady } from '#/tick/dispatch.js';
 import { backfillEscalations } from '#/tick/escalation-backfill.js';
@@ -41,6 +42,7 @@ import {
 import { editPlanTickets } from '#/tick/plan-edit.js';
 import { cardPlan, cardPlans } from '#/tick/plan-reads.js';
 import { approvePlan } from '#/tick/plan-to-tickets.js';
+import { reviewOf } from '#/tick/review-facts.js';
 import { runAsExpress } from '#/tick/run-as-express.js';
 import { answerGrill, grillShortcut } from '#/tick/planning-owner.js';
 import { sweepPlanning } from '#/tick/planning-sweep.js';
@@ -52,31 +54,13 @@ import { beginTick, endTick, requestTick } from '#/tick/tick-requests.js';
 import { resumeFixedSetups } from '#/tick/setup-recheck.js';
 import { cancelTicketsTx, stopCancelled } from '#/tick/ticket-cancel.js';
 import { loadTickConfig } from '#/tick/tick-config.js';
+import { emptyReport } from '#/tick/tick-report.js';
 import { triageInbox } from '#/tick/triage.js';
 import { verifyReady } from '#/tick/verify.js';
 import { checkInvariants } from '#/tick/violations.js';
 import type { EngineCtx, EngineState } from '#/types/engine-state.types.js';
 import type { Engine, EngineDeps, TickReport } from '#/types/engine.types.js';
 import type { TickConfig } from '#/types/tick.types.js';
-
-function emptyReport(nowIso: string, firstTick: boolean): TickReport {
-  return {
-    at: nowIso,
-    firstTick,
-    crashed: [],
-    resumed: [],
-    resumeFailed: [],
-    settled: [],
-    triaged: [],
-    dispatched: [],
-    steered: [],
-    verified: [],
-    parked: [],
-    violations: [],
-    rejectedSteps: [],
-    errors: [],
-  };
-}
 
 /** Runs one phase; a throw becomes a report error so one bad phase never blocks the others. */
 async function phase(
@@ -135,6 +119,8 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
   }
 
   const ctx: EngineCtx = { deps, state, report, config, now, nowIso: iso(now) };
+  // Work of a closed card is cancelled before anything can raise a wait for it or run it.
+  await phase(ctx, 'closed cards', async (c) => void (await sweepClosedCards(c)));
   if (state.firstTick) {
     await phase(ctx, 'restart reconcile', reconcileRestart);
     // Tickets parked before escalations existed get one to act on, once, at start.
@@ -184,6 +170,7 @@ export function createEngine(deps: EngineDeps): Engine {
     replies: [],
     chat: { pending: new Set(), busy: new Set(), errors: new Map() },
     escalating: new Set(),
+    settleFailures: new Map(),
   };
 
   const engine: Engine = {
@@ -221,6 +208,8 @@ export function createEngine(deps: EngineDeps): Engine {
     postCardMessage: (cardId, text, author) =>
       postCardMessage(deps, state, cardId, text, author),
     cardDirector: (cardId) => cardDirectorStatus(state, cardId),
+    closeCardWork: (cardId) => closeCardWork(deps, state, cardId),
+    reviewOf: (ticketId) => reviewOf(deps, state, ticketId),
     async cancelTicket(ticketId) {
       const nowIso = iso(deps.clock.now());
       const [cancelled] = await deps.storage.transaction((tx) =>

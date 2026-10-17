@@ -44,6 +44,16 @@ export function escalationRefusal(
       return new HttpError(409, 'still_broken', outcome.detail, {
         details: { detail: outcome.detail },
       });
+    case 'head_moved':
+      return new HttpError(
+        409,
+        'head_moved',
+        'the pull request changed after the checks passed; it is being checked again',
+      );
+    case 'merge_refused':
+      return new HttpError(409, 'merge_refused', outcome.detail, {
+        details: { detail: outcome.detail },
+      });
     case 'stale':
       return new HttpError(409, 'stale', 'the ticket moved on; reload before acting');
   }

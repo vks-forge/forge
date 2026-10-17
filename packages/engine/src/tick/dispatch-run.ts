@@ -10,7 +10,8 @@
  *   are written together before the harness starts, so a crash after start leaves a run the
  *   restart rule can find and revoke (d-0054). The ticket moves to `in_progress` only once
  *   the harness accepted the run; a start that throws settles the run as a failure and the
- *   family decides retry or park. A resume is a NEW run that names the old one in
+ *   family decides retry or park. The redacted brief is stored as the run's first `prompt`
+ *   event in the same transaction as the run row. A resume is a NEW run that names the old one in
  *   `retry_of` (d-0055): an ended run is never reopened.
  *
  * Exports: startRun().
@@ -25,7 +26,7 @@ import {
   branchName,
 } from '@forge/core';
 import type { Run, Ticket, Worktree, WorkerDriver } from '@forge/core';
-import { sha256Hex } from '@forge/tools';
+import { scrubSecrets, sha256Hex } from '@forge/tools';
 import { familyOf, failureResult } from '#/domain/results.js';
 import { renderWorkerContract, workerContract } from '#/domain/worker-contract.js';
 import { hold, rejectStep, runStep } from '#/steps/run-step.js';
@@ -182,6 +183,13 @@ async function tryStart(
 
   await deps.storage.transaction(async (tx) => {
     await tx.runs.insert(run);
+    // The brief is the first event of the run: the thread shows what the Worker was told.
+    await tx.runEvents.append(runId, {
+      type: 'prompt',
+      ts: ctx.nowIso,
+      text: scrubSecrets(prompt, []),
+    });
+
     await tx.runTokens.issue(runId, sha256Hex(token), ctx.nowIso);
     if (c.wake) {
       await tx.wakeRequests.markConsumed(c.wake.id, ctx.nowIso);

@@ -12,7 +12,7 @@
  */
 
 import type { CardId } from '@forge/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { at, card, startCardRig, ticket } from '#tests/helpers/card-rig.js';
 import type { CardRig } from '#tests/helpers/card-rig.js';
 
@@ -63,6 +63,20 @@ describe('PATCH /cards/:id', () => {
     });
 
     expect((await events()).map((e) => e.kind)).toEqual(['card_closed']);
+  });
+
+  it('asks the engine to close the work of the card, once, only when closing', async () => {
+    const closeCardWork = vi.fn(async () => []);
+    await ctx.rig.close();
+    ctx = await startCardRig({ closeCardWork });
+    await seed([card(1), card(2)], [ticket(1, 1, { status: 'waiting_human' })]);
+
+    await patch('/cards/FX-C2', { type: 'plan' });
+    expect(closeCardWork).not.toHaveBeenCalled();
+
+    await patch('/cards/FX-C1', { closed_reason: 'duplicate' });
+    expect(closeCardWork).toHaveBeenCalledTimes(1);
+    expect(closeCardWork).toHaveBeenCalledWith('FX-C1');
   });
 
   it('records the type change before the close when one request does both', async () => {

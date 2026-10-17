@@ -106,7 +106,7 @@ describe('Express flow', () => {
     rig.driver.emit('run-1', { type: 'text', text: 'working' });
     await rig.flush();
     const events = await rig.storage.transaction((tx) => tx.runEvents.listByRun('run-1'));
-    expect(events.map((e) => e.type)).toEqual(['text']);
+    expect(events.map((e) => e.type)).toEqual(['prompt', 'text']);
     expect(rig.tickRequests.count).toBeGreaterThan(before);
     const mid = await rig.storage.transaction((tx) => tx.runs.get('run-1'));
     expect(mid?.last_event_at).toBe(new Date(rig.clock.now()).toISOString());

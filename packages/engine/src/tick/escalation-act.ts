@@ -11,6 +11,8 @@
  *   transaction (tick/escalation-effects), so the card history and the ticket cannot disagree.
  *
  * Exports: actOnEscalation(), actOnTicket().
+ *   Approve and Sign off (finished work) have no interaction: they come in through the ticket door and
+ *   merge through tick/review-merge.
  * Depends on: @forge/core (escalation rules and schemas), tick/escalation-effects, tick/escalation-facts,
  *   tick/escalation-settle, tick/interactions, tick/plan-to-tickets, tick/ticket-cancel,
  *   tick/card-notify, tick/tick-requests, types/escalation. Writes storage.
@@ -36,6 +38,7 @@ import { cancelFlow } from '#/tick/escalation-cancel.js';
 import { replanTx, retryTx, reworkTx } from '#/tick/escalation-effects.js';
 import { setupFactsFor } from '#/tick/escalation-facts.js';
 import { answerQuestionTx } from '#/tick/interactions.js';
+import { approveAndMerge } from '#/tick/review-merge.js';
 import { runAsExpress } from '#/tick/run-as-express.js';
 import { requestTick } from '#/tick/tick-requests.js';
 import type { EngineState } from '#/types/engine-state.types.js';
@@ -154,6 +157,8 @@ async function apply(
     }
 
     case 'rework':
+    case 'approve':
+    case 'sign_off':
       return { status: 'action_not_offered' };
   }
 }
@@ -228,12 +233,24 @@ export async function actOnTicket(
     'open',
   );
 
-  // Only these two work without an escalation behind them; everything else goes through the interaction.
+  // Only these work without an escalation behind them; everything else goes through the interaction.
   if (
-    (body.action !== 'rework' && body.action !== 'cancel') ||
+    (body.action !== 'rework' &&
+      body.action !== 'cancel' &&
+      body.action !== 'approve' &&
+      body.action !== 'sign_off') ||
     !offered.includes(body.action)
   ) {
     return { status: 'action_not_offered' };
+  }
+
+  if (body.action === 'approve' || body.action === 'sign_off') {
+    return approveAndMerge(
+      deps,
+      state,
+      ticket,
+      body.action === 'sign_off' ? (body.signer ?? author) : undefined,
+    );
   }
 
   if (body.action === 'cancel') {

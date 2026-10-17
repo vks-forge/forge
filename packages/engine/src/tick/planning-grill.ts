@@ -36,6 +36,7 @@ import {
   logPlanEvent,
   mergeUnique,
   setNeedsYou,
+  stamp,
 } from '#/tick/planning-state.js';
 import { callStep, finishStep, startStep } from '#/tick/planning-step-io.js';
 import type { OpenExtras, PlanCtx, StepOutcome } from '#/types/card-planning.types.js';
@@ -68,7 +69,7 @@ async function openQuestionTx(
   cost: number,
   extras: OpenExtras = {},
 ): Promise<boolean> {
-  const at = pc.ctx.nowIso;
+  const at = stamp(pc);
   const fresh = (await tx.cardPlanning.get(pc.card.id)).grill;
   const spent = fresh.director_spend_usd + cost;
   if (fresh.done || fresh.current !== null) {
@@ -140,7 +141,7 @@ async function finishGrill(
     },
     after: async (tx) => {
       if (extra.logDone) {
-        await logPlanEvent(tx, pc.card.id, pc.ctx.nowIso, {
+        await logPlanEvent(tx, pc.card.id, stamp(pc), {
           kind: 'grill_done',
           payload: { reason, assumptions },
         });

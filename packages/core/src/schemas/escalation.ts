@@ -128,6 +128,8 @@ export const ESCALATION_ACTIONS = [
   'run_as_express',
   'rework',
   'recheck',
+  'approve',
+  'sign_off',
 ] as const;
 export const EscalationAction = z.enum(ESCALATION_ACTIONS);
 export type EscalationAction = z.infer<typeof EscalationAction>;
@@ -207,5 +209,10 @@ export const EscalationActBody = z.discriminatedUnion('action', [
   z.object({ action: z.literal('run_as_express') }),
   z.object({ action: z.literal('rework'), comment }),
   z.object({ action: z.literal('recheck') }),
+  z.object({ action: z.literal('approve') }),
+  z.object({
+    action: z.literal('sign_off'),
+    signer: z.string().trim().min(1).max(100).optional(),
+  }),
 ]);
 export type EscalationActBody = z.infer<typeof EscalationActBody>;
