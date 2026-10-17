@@ -34,6 +34,8 @@ import { GateStrip, RunsList } from '#/routes/ticket/ticket-side.js';
 import { useNow } from '#/state/use-now.js';
 import { useOnline } from '#/state/use-online.js';
 import type { TicketDetail } from '#/schemas/tickets.js';
+import { Activity, SearchX } from 'lucide-react';
+import { EmptyState } from '#/components/ui/empty-state.js';
 
 /** Thread, questions and runs for one chosen run. Keyed by run so state never crosses runs. */
 function TicketBody(props: {
@@ -71,9 +73,9 @@ function TicketBody(props: {
             className="grid min-w-0 content-start gap-2"
           >
             <h2 className="text-sm font-semibold">Worker thread</h2>
-            <p className="text-sm text-muted">
-              No Worker has started on this ticket, so there is nothing to follow yet.
-            </p>
+            <EmptyState variant="compact" icon={Activity} title="No Worker has started">
+              There is nothing to follow on this ticket yet.
+            </EmptyState>
           </section>
         ) : (
           <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-3">
@@ -118,13 +120,20 @@ export function TicketPage() {
   if (query.isError && !detail) {
     if (query.error instanceof ApiError && query.error.status === 404) {
       return (
-        <StatePanel kind="empty" title={`There is no ticket ${id}`}>
-          <Link
-            className="font-medium text-signal underline"
-            to={projectPath(slug, 'board')}
-          >
-            Back to the Board
-          </Link>
+        <StatePanel
+          kind="empty"
+          icon={SearchX}
+          title={`There is no ticket ${id}`}
+          actions={
+            <Link
+              className="font-medium text-signal underline"
+              to={projectPath(slug, 'board')}
+            >
+              Back to the Board
+            </Link>
+          }
+        >
+          It may have been removed, or the link is mistyped.
         </StatePanel>
       );
     }

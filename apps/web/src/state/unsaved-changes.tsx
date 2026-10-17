@@ -5,7 +5,8 @@
  *   another screen) would silently lose their work. d-0104 requires an in-page alert in that
  *   case. Views do not know about navigation and navigation does not know about forms, so
  *   they meet here: a view calls `useUnsavedChanges(isDirty)`, and the shell's route guard
- *   and dialog (components/shell/leave-guard.tsx) read the registry. W2, W4 and every
+ *   and dialog (components/shell/leave-guard.tsx) read the registry. A screen made of tabs
+ *   passes its URL prefix so switching tabs keeps the draft and never asks. W2, W4 and every
  *   later form uses this one hook.
  *
  * Exports: UnsavedChangesProvider, useUnsavedChanges(), useUnsavedChangesState().
@@ -28,19 +29,24 @@ import type { PendingLeave, UnsavedChangesContextValue } from '#/types/state.typ
 const UnsavedContext = createContext<UnsavedChangesContextValue | null>(null);
 
 export function UnsavedChangesProvider(props: { children: ReactNode }) {
-  const [dirtyIds, setDirtyIds] = useState<ReadonlySet<string>>(() => new Set());
+  // id -> the path prefix inside which navigation keeps the edits (null: any navigation loses them).
+  const [dirtyIds, setDirtyIds] = useState<ReadonlyMap<string, string | null>>(
+    () => new Map(),
+  );
+
   const [pending, setPending] = useState<PendingLeave | null>(null);
   const dirty = dirtyIds.size > 0;
 
-  const setDirty = useCallback((id: string, isDirty: boolean) => {
+  const setDirty = useCallback((id: string, isDirty: boolean, stayWithin?: string) => {
     setDirtyIds((previous) => {
-      if (previous.has(id) === isDirty) {
+      const scope = stayWithin ?? null;
+      if (isDirty ? previous.get(id) === scope : !previous.has(id)) {
         return previous;
       }
 
-      const next = new Set(previous);
+      const next = new Map(previous);
       if (isDirty) {
-        next.add(id);
+        next.set(id, scope);
       } else {
         next.delete(id);
       }
@@ -48,6 +54,15 @@ export function UnsavedChangesProvider(props: { children: ReactNode }) {
       return next;
     });
   }, []);
+
+  const shouldBlock = useCallback(
+    (pathname: string) =>
+      [...dirtyIds.values()].some(
+        (scope) =>
+          scope === null || !(pathname === scope || pathname.startsWith(`${scope}/`)),
+      ),
+    [dirtyIds],
+  );
 
   // A ref beside the state makes settling idempotent: Radix reports "closed" right after the
   // Discard click, and that second report must not turn a discard into a cancel.
@@ -86,8 +101,8 @@ export function UnsavedChangesProvider(props: { children: ReactNode }) {
   }, [dirty]);
 
   const value = useMemo(
-    () => ({ dirty, setDirty, pending, askToLeave, settle }),
-    [dirty, setDirty, pending, askToLeave, settle],
+    () => ({ dirty, setDirty, shouldBlock, pending, askToLeave, settle }),
+    [dirty, setDirty, shouldBlock, pending, askToLeave, settle],
   );
 
   return (
@@ -108,13 +123,13 @@ export function useUnsavedChangesState(): UnsavedChangesContextValue {
 }
 
 /** For a view: report whether it currently holds unsaved edits. Clears itself on unmount. */
-export function useUnsavedChanges(isDirty: boolean): void {
+export function useUnsavedChanges(isDirty: boolean, stayWithin?: string): void {
   const { setDirty } = useUnsavedChangesState();
   const id = useId();
 
   useEffect(() => {
-    setDirty(id, isDirty);
-  }, [id, isDirty, setDirty]);
+    setDirty(id, isDirty, stayWithin);
+  }, [id, isDirty, stayWithin, setDirty]);
 
   useEffect(() => () => setDirty(id, false), [id, setDirty]);
 }

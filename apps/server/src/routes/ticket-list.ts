@@ -10,13 +10,20 @@
  *   parameter is a 400 listing the fields. Archived projects are still listed: their history
  *   stays readable.
  *
+ *   The same route feeds the Tickets page: `lane`, `card` and `q` (id or title) narrow the
+ *   list, `sort` is `updated` (default), `created` or `cost`, and `offset` pages every order.
+ *   Sorting by cost or creation has no stable key to resume from, so those pages (and any
+ *   page with `offset`) carry `total` but no cursor; a cursor with `offset` or another sort
+ *   is a 400. Every row carries its recorded run cost (one grouped read for the page, not a
+ *   query per ticket) and its card's title.
+ *
  * Exports: ticketListRoute().
  * Depends on: @forge/core (TicketListQuery), services/ticket-cursor, services/ticket-summary,
  *   services/http/http-errors, services/http/respond, types/routes. IO: reads storage.
  */
 
 import { TicketListQuery } from '@forge/core';
-import type { TicketListPage, TicketSummary } from '@forge/core';
+import type { CardId, TicketListPage, TicketMatch, TicketSummary } from '@forge/core';
 import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
 import { decodeTicketCursor, encodeTicketCursor } from '#/services/ticket-cursor.js';
@@ -39,6 +46,11 @@ export function ticketListRoute(deps: RouteDeps): Route {
       const slug = params['slug'] ?? '';
       const parsed = TicketListQuery.safeParse({
         state: statesOf(url.searchParams),
+        lane: url.searchParams.get('lane') ?? undefined,
+        card: url.searchParams.get('card') ?? undefined,
+        q: url.searchParams.get('q') ?? undefined,
+        sort: url.searchParams.get('sort') ?? undefined,
+        offset: url.searchParams.get('offset') ?? undefined,
         limit: url.searchParams.get('limit') ?? undefined,
         cursor: url.searchParams.get('cursor') ?? undefined,
       });
@@ -48,6 +60,15 @@ export function ticketListRoute(deps: RouteDeps): Route {
       }
 
       const query = parsed.data;
+      const byCursor = query.sort === 'updated' && query.offset === undefined;
+      if (query.cursor !== undefined && !byCursor) {
+        throw new HttpError(
+          400,
+          'invalid_query',
+          'cursor only continues the default sort and cannot be combined with offset',
+        );
+      }
+
       const after =
         query.cursor === undefined ? undefined : decodeTicketCursor(query.cursor);
 
@@ -59,6 +80,13 @@ export function ticketListRoute(deps: RouteDeps): Route {
         );
       }
 
+      const match: TicketMatch = {
+        ...(query.state ? { statuses: query.state } : {}),
+        ...(query.lane ? { lane: query.lane } : {}),
+        ...(query.card ? { card_id: query.card } : {}),
+        ...(query.q ? { search: query.q } : {}),
+      };
+
       const page = await deps.storage.transaction(async (tx) => {
         const project = (await tx.projects.list()).find((p) => p.slug === slug);
         if (!project) {
@@ -67,26 +95,44 @@ export function ticketListRoute(deps: RouteDeps): Route {
 
         // One extra row tells whether another page exists without a second query.
         const rows = await tx.tickets.listByProject(project.id, {
-          ...(query.state ? { statuses: query.state } : {}),
+          ...match,
+          sort: query.sort,
           limit: query.limit + 1,
+          ...(query.offset === undefined ? {} : { offset: query.offset }),
           ...(after ? { after } : {}),
         });
 
         const shown = rows.slice(0, query.limit);
+        const costs = await tx.runs.costByTicket(shown.map((t) => t.id));
+        const titles = new Map<CardId, string>();
+        for (const id of new Set(shown.flatMap((t) => (t.card_id ? [t.card_id] : [])))) {
+          const card = await tx.cards.get(id);
+          if (card) {
+            titles.set(id, card.title);
+          }
+        }
+
         const items: TicketSummary[] = [];
         for (const ticket of shown) {
           const run = ticket.assignee_run_id
             ? await tx.runs.get(ticket.assignee_run_id)
             : null;
 
-          items.push(summarizeTicket(ticket, slug, run?.status));
+          const cardTitle = ticket.card_id ? titles.get(ticket.card_id) : undefined;
+          items.push(
+            summarizeTicket(ticket, slug, run?.status, {
+              costUsd: costs[ticket.id] ?? 0,
+              ...(cardTitle === undefined ? {} : { cardTitle }),
+            }),
+          );
         }
 
         const last = shown[shown.length - 1];
         const body: TicketListPage = {
           items,
+          total: await tx.tickets.countByProject(project.id, match),
           nextCursor:
-            rows.length > query.limit && last
+            byCursor && rows.length > query.limit && last
               ? encodeTicketCursor({ updated_at: last.updated_at, id: last.id })
               : null,
         };

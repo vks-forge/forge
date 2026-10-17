@@ -10,13 +10,21 @@
 
 import { Link } from 'react-router';
 import { StatePanel } from '#/components/status/state-panel.js';
+import { Compass } from 'lucide-react';
 
 export function NotFound() {
   return (
-    <StatePanel kind="empty" title="This page does not exist">
-      <Link className="font-medium text-signal underline" to="/">
-        Go to your project
-      </Link>
+    <StatePanel
+      kind="empty"
+      icon={Compass}
+      title="This page does not exist"
+      actions={
+        <Link className="font-medium text-signal underline" to="/">
+          Go to your project
+        </Link>
+      }
+    >
+      The address may be mistyped or from an older version.
     </StatePanel>
   );
 }

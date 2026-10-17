@@ -6,7 +6,7 @@
  *   that showed invented runs or spend would be believed (d-0123). Response and query types
  *   come from `@forge/core`, so the UI and server cannot disagree about a field.
  *
- * Exports: QueryParams, StatsApi, OverviewApi, CostApi, InboxApi, RunsApi, InboxMarkName, InboxListArgs,
+ * Exports: QueryParams, StatsApi, OverviewApi, CostApi, CostPaging, InboxApi, RunsApi, InboxMarkName, InboxListArgs,
  *   RunListArgs.
  * Depends on: @forge/core (types only), types/api.types.
  */
@@ -53,8 +53,20 @@ export interface OverviewApi {
   get(request: OverviewRequest, options?: RequestOptions): Promise<OverviewStats>;
 }
 
+/** Which rows of the ranked ticket and run tables to fetch; the two page independently. */
+export interface CostPaging {
+  readonly ticket: { readonly limit: number; readonly offset: number };
+  readonly run: { readonly limit: number; readonly offset: number };
+}
+
 export interface CostApi {
-  get(slug: string, range: StatsRange, options?: RequestOptions): Promise<CostReport>;
+  /** Without `page` the server returns its default first page of each ranked table. */
+  get(
+    slug: string,
+    range: StatsRange,
+    options?: RequestOptions,
+    page?: CostPaging,
+  ): Promise<CostReport>;
 }
 
 export interface InboxApi {

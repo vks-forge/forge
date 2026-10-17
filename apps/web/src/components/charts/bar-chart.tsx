@@ -9,14 +9,22 @@
  *   to desktop, no horizontal scroll); it is named and described for assistive tech, and the
  *   same numbers sit in a visually hidden table so nothing is available only as pixels. Bars
  *   grow with a spring on `transform` only, and not at all under reduced motion. Today's bar
- *   takes the signal colour; the rest use the quiet chart colour.
+ *   takes the signal colour; the rest use the quiet chart colour. Each day's exact value
+ *   shows in the app's own Tooltip, never the browser's `title` bubble: a full-height
+ *   transparent hit area per day makes short bars easy to hover, and the bars are one
+ *   keyboard stop (arrow keys move between days).
  *
  * Exports: BarChart.
- * Depends on: motion/react, theme/motion, domain/stats-format, types/chart.types.
+ * Depends on: motion/react, theme/motion, domain/stats-format, types/chart.types,
+ *   components/ui/tooltip, components/charts/use-roving-slots.
  */
 
 import { motion } from 'motion/react';
-import { useId } from 'react';
+import { Fragment, useId } from 'react';
+import { useRovingSlots } from '#/components/charts/use-roving-slots.js';
+import { Tooltip } from '#/components/ui/tooltip.js';
+import { ChartNoAxesColumn } from 'lucide-react';
+import { EmptyState } from '#/components/ui/empty-state.js';
 import { shortDay } from '#/domain/stats-format.js';
 import { springs } from '#/theme/motion.js';
 import type { ChartPoint } from '#/types/chart.types.js';
@@ -34,6 +42,7 @@ export function BarChart(props: {
   noData: string;
 }) {
   const id = useId();
+  const { attach, active, setActive } = useRovingSlots(props.points.length);
   const known = props.points.filter(
     (p): p is { date: string; value: number } => p.value !== null,
   );
@@ -57,20 +66,24 @@ export function BarChart(props: {
       </figcaption>
 
       {known.length === 0 ? (
-        <p className="grid h-28 place-items-center rounded-lg bg-hover px-3 text-center text-sm text-muted">
-          {props.noData}
-        </p>
+        <EmptyState
+          variant="compact"
+          icon={ChartNoAxesColumn}
+          title={props.noData}
+          className="h-28"
+        />
       ) : (
         <>
           <svg
             role="img"
-            aria-labelledby={`${id}-t`}
+            ref={attach}
+            aria-label={props.title}
             aria-describedby={`${id}-d`}
+
             viewBox={`0 0 ${props.points.length * SLOT} ${HEIGHT}`}
             preserveAspectRatio="none"
             className="h-28 w-full overflow-hidden"
           >
-            <title id={`${id}-t`}>{props.title}</title>
             <desc id={`${id}-d`}>{summary}</desc>
             <line
               x1={0}
@@ -84,43 +97,59 @@ export function BarChart(props: {
             {props.points.map((point, index) => {
               const x = index * SLOT + 1;
               const isToday = index === props.points.length - 1;
+              const text =
+                point.value === null
+                  ? `${shortDay(point.date)}: no data`
+                  : `${shortDay(point.date)}: ${props.format(point.value)}`;
 
-              if (point.value === null) {
-                return (
-                  <line
-                    key={point.date}
-                    x1={x + 4}
-                    x2={x + 4}
-                    y1={HEIGHT - 6}
-                    y2={HEIGHT - 1}
-                    stroke="var(--faint)"
-                    strokeWidth={1}
-                    strokeDasharray="1 2"
-                    vectorEffect="non-scaling-stroke"
-                  >
-                    <title>{`${shortDay(point.date)}: no data`}</title>
-                  </line>
-                );
-              }
-
-              const height = Math.max(MIN_BAR, max > 0 ? (point.value / max) * PLOT : 0);
+              const height =
+                point.value === null
+                  ? 0
+                  : Math.max(MIN_BAR, max > 0 ? (point.value / max) * PLOT : 0);
 
               return (
-                <motion.rect
-                  key={point.date}
-                  x={x}
-                  y={HEIGHT - height}
-                  width={SLOT - 2}
-                  height={height}
-                  rx={1}
-                  fill={isToday ? 'var(--signal)' : 'var(--chart-bar)'}
-                  initial={{ scaleY: 0 }}
-                  animate={{ scaleY: 1 }}
-                  transition={springs.gentle}
-                  style={{ transformBox: 'fill-box', transformOrigin: '50% 100%' }}
-                >
-                  <title>{`${shortDay(point.date)}: ${props.format(point.value)}`}</title>
-                </motion.rect>
+                <Fragment key={point.date}>
+                  <Tooltip content={text}>
+                    <rect
+                      data-slot=""
+                      x={index * SLOT}
+                      y={0}
+                      width={SLOT}
+                      height={HEIGHT}
+                      tabIndex={index === active ? 0 : -1}
+                      aria-label={text}
+                      onFocus={() => setActive(index)}
+                      className="fill-transparent outline-none hover:fill-hover focus-visible:fill-hover"
+                    />
+                  </Tooltip>
+                  {point.value === null ? (
+                    <line
+                      x1={x + 4}
+                      x2={x + 4}
+                      y1={HEIGHT - 6}
+                      y2={HEIGHT - 1}
+                      stroke="var(--faint)"
+                      strokeWidth={1}
+                      strokeDasharray="1 2"
+                      vectorEffect="non-scaling-stroke"
+                      pointerEvents="none"
+                    />
+                  ) : (
+                    <motion.rect
+                      x={x}
+                      y={HEIGHT - height}
+                      width={SLOT - 2}
+                      height={height}
+                      rx={1}
+                      fill={isToday ? 'var(--signal)' : 'var(--chart-bar)'}
+                      pointerEvents="none"
+                      initial={{ scaleY: 0 }}
+                      animate={{ scaleY: 1 }}
+                      transition={springs.gentle}
+                      style={{ transformBox: 'fill-box', transformOrigin: '50% 100%' }}
+                    />
+                  )}
+                </Fragment>
               );
             })}
           </svg>

@@ -94,6 +94,25 @@ confidence, size, risk and the analysis report; Approve → card, Re-analyse,
 Skip) and later **PRs**. Project nav: Home, Board, Issues, (PRs), Chat, Runs,
 Memory, Project settings.
 
+Amended by the UI pass U1 (shared surfaces, d-0164):
+- **Tickets** joins the project nav after Board (`/p/:slug/tickets`): a table of every
+  ticket (id, title, card, lane, state chip, cost, updated) with state and lane filters,
+  debounced search, sort and server-side pages (10/25/50), all in the URL; a row opens
+  `/p/:slug/tickets/:id`.
+- **Settings use left tabs**: Forge settings (General, Director, Limits, Harnesses, GitHub)
+  and project settings (`/p/:slug/settings/<section>`: project, workers, checks, repository,
+  director, history, danger) are a sticky vertical tab list beside the section; below 768 px
+  the tabs become a picker. One draft and one save bar span the project tabs; switching tabs
+  keeps edits, leaving settings still asks.
+- **Empty states** are one component (centred, quiet icon, title, one help line, actions;
+  compact in columns and panels). **Scroll areas** share one thin themed scrollbar that wakes
+  on hover or scroll.
+- **Cost**: Top tickets and Top runs are server-paged (10/25/50, "x-y of N"); every chart
+  shows its value in the app's Tooltip (hover or arrow keys), never a native title bubble.
+- **Inbox alerts**: a new needs-you item raises a toast with Open, bumps the sidebar badge,
+  puts `(n)` in the tab title and, if the owner turned it on in Settings, General (per
+  browser), a desktop notification while the tab is hidden.
+
 Visual direction: A "Instrument" (Instrument Sans + IBM Plex Mono, graphite
 with one cobalt signal, amber only for what needs the user, critically damped
 springs). Prototype: https://claude.ai/artifact/1bdAeov3SxXfQYydSrgWrP

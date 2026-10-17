@@ -10,7 +10,7 @@
  *   hold (the per-run and per-step caps), with `null` where none exists.
  *
  * Exports: TokenTotals, CostByTicket, CostByRun, CostByHarness, CostByModel, CostBudgets,
- *   CostReport, COST_TOP_N.
+ *   CostReport, CostPageQuery, COST_TOP_N, COST_PAGE_MAX.
  * Depends on: schemas/stats-range, zod. No IO.
  */
 
@@ -71,8 +71,19 @@ export const CostBudgets = z.object({
 });
 export type CostBudgets = z.infer<typeof CostBudgets>;
 
-/** Cap on `by_ticket` and `by_run`. */
+/** Default page size of `by_ticket` and `by_run` (the report's long-standing top 50). */
 export const COST_TOP_N = 50;
+/** Largest page a client may ask for. */
+export const COST_PAGE_MAX = 100;
+
+/** `GET /projects/:slug/cost` paging parameters; ticket and run tables page independently. */
+export const CostPageQuery = z.object({
+  ticket_limit: z.coerce.number().int().min(1).max(COST_PAGE_MAX).default(COST_TOP_N),
+  ticket_offset: z.coerce.number().int().min(0).default(0),
+  run_limit: z.coerce.number().int().min(1).max(COST_PAGE_MAX).default(COST_TOP_N),
+  run_offset: z.coerce.number().int().min(0).default(0),
+});
+export type CostPageQuery = z.infer<typeof CostPageQuery>;
 
 /** `GET /projects/:slug/cost`. */
 export const CostReport = StatsWindow.extend({
@@ -82,10 +93,14 @@ export const CostReport = StatsWindow.extend({
   runs_with_cost: Count,
   tokens: TokenTotals,
   per_day: z.array(SeriesPoint),
-  /** Highest spend first, at most `COST_TOP_N`. */
+  /** Highest spend first: the page `ticket_offset`/`ticket_limit` asks for (default the top `COST_TOP_N`). */
   by_ticket: z.array(CostByTicket),
-  /** Highest spend first (runs without cost last, newest first), at most `COST_TOP_N`. */
+  /** Tickets with a run in the window, all pages together (absent from older servers). */
+  by_ticket_total: Count.optional(),
+  /** Highest spend first (runs without cost last, newest first): the page `run_offset`/`run_limit` asks for. */
   by_run: z.array(CostByRun),
+  /** Runs in the window, all pages together (absent from older servers). */
+  by_run_total: Count.optional(),
   by_harness: z.array(CostByHarness),
   by_model: z.array(CostByModel),
   budgets: CostBudgets,

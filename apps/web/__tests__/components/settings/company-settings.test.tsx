@@ -156,7 +156,12 @@ describe('Limits', () => {
     await user.clear(field);
     await user.type(field, '2');
 
-    await user.click(screen.getByRole('link', { name: 'General' }));
+    await user.click(
+      within(screen.getByRole('navigation', { name: 'Settings sections' })).getByRole(
+        'link',
+        { name: 'General' },
+      ),
+    );
 
     expect(await screen.findByRole('alertdialog')).toHaveTextContent(
       'Discard unsaved changes?',

@@ -206,7 +206,7 @@ export function ProjectSwitcher() {
                 style={{
                   transformOrigin: 'var(--radix-dropdown-menu-content-transform-origin)',
                 }}
-                className="z-50 max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] min-w-[var(--radix-dropdown-menu-trigger-width)] max-w-[min(20rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-line bg-surface p-1.5 shadow-float"
+                className="z-50 max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] min-w-[var(--radix-dropdown-menu-trigger-width)] max-w-[min(20rem,calc(100vw-2rem))] scroll-area overflow-y-auto rounded-xl border border-line bg-surface p-1.5 shadow-float"
               >
                 <MenuBody query={query} {...(slug ? { slug } : {})} onPick={pick} />
                 <Menu.Separator className="my-1 h-px bg-line" />

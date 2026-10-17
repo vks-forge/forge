@@ -79,10 +79,19 @@ export function createWorkHttp(
         ),
     },
     cost: {
-      get: (slug, range, options) =>
+      get: (slug, range, options, page) =>
         requestJson(
           client,
-          project(slug, `/cost${query({ range })}`),
+          project(
+            slug,
+            `/cost${query({
+              range,
+              ticket_limit: page?.ticket.limit,
+              ticket_offset: page?.ticket.offset,
+              run_limit: page?.run.limit,
+              run_offset: page?.run.offset,
+            })}`,
+          ),
           CostReport,
           options,
         ),

@@ -12,7 +12,7 @@
  *   the history holds, and a crash cannot answer twice. A bad answer (off-schema twice, a
  *   model outage) never crashes the tick: the card shows `error` with a plain note, the rows
  *   are completed, and the user's next message tries again. Spend is checked for a budget
- *   warning after each answer (d-0143). The phase runs before triage so a ticket the
+ *   warning after each answer, and its cost joins the card's Director spend (d-0143). The phase runs before triage so a ticket the
  *   Director files is triaged in the same tick. Cards of a planned type in a planning phase
  *   are not chatted with: their queued turns are planning turns and go to the planning flow
  *   (tick/card-planning); only cards outside planning (and Discussion cards) use `card_chat`.
@@ -27,7 +27,7 @@ import { CardChatOutput } from '@forge/core';
 import type { ActionTaken, CardId, CardReplyQueueItem, StorageTx } from '@forge/core';
 import { iso } from '#/shared/time.js';
 import { rejectStep, runStep } from '#/steps/run-step.js';
-import { warnOnBudget } from '#/tick/card-budget.js';
+import { addDirectorSpend, warnOnBudget } from '#/tick/card-budget.js';
 import { CHAT_ACTOR, runChatAction } from '#/tick/card-chat-actions.js';
 import { loadChatContext } from '#/tick/card-chat-context.js';
 import { logCardEvent } from '#/tick/card-log.js';
@@ -81,7 +81,13 @@ async function answerCard(
     return;
   }
 
-  const answer = await runStep(ctx, 'card_chat', view.input, CardChatOutput);
+  let cost = 0;
+  const answer = await runStep(ctx, 'card_chat', view.input, CardChatOutput, {
+    onCost: (usd) => {
+      cost += usd;
+    },
+  });
+
   if (!answer.ok) {
     // The step key is the card id: `rejectStep` records it where it records a ticket id.
     rejectStep(ctx, 'card_chat', cardId, answer.error);
@@ -105,6 +111,7 @@ async function answerCard(
       },
     });
 
+    await addDirectorSpend(tx, cardId, cost, ctx.nowIso);
     await warnOnBudget(tx, cardId, ctx.nowIso);
     await completeRows(tx, rows, ctx.nowIso);
   });

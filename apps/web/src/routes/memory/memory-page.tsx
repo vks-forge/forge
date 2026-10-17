@@ -13,7 +13,7 @@
  * Depends on: react, react-router, api/*, components/*, domain/memory-filter, state/*.
  */
 
-import { CircleAlert, WifiOff } from 'lucide-react';
+import { BookOpen, CircleAlert, SearchX, WifiOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { describeError } from '#/api/describe-error.js';
@@ -172,12 +172,13 @@ export function MemoryPage() {
         {tabTotal === 0 ? (
           <StatePanel
             kind="empty"
+            icon={BookOpen}
             title={`No ${TAB_LABELS[filter.tab].toLowerCase()} yet`}
           >
             {EMPTY_HINT[filter.tab]}
           </StatePanel>
         ) : shown.length === 0 ? (
-          <StatePanel kind="empty" title="Nothing matches">
+          <StatePanel kind="empty" icon={SearchX} title="Nothing matches">
             Try fewer words, or clear the filters.
           </StatePanel>
         ) : (

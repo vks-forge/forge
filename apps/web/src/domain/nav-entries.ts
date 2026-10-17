@@ -33,6 +33,12 @@ export const PROJECT_NAV: readonly NavEntry[] = [
     blurb: 'Tickets by state, with cards arriving in W6.',
   },
   {
+    segment: 'tickets',
+    label: 'Tickets',
+    batch: 'W3',
+    blurb: 'Every ticket of the project, with state, lane and cost.',
+  },
+  {
     segment: 'issues',
     label: 'Issues',
     batch: 'W8',
@@ -72,6 +78,24 @@ export const PROJECT_NAV: readonly NavEntry[] = [
 
 export const SETTINGS_NAV: readonly NavEntry[] = [
   {
+    segment: 'general',
+    label: 'General',
+    batch: 'W2',
+    blurb: 'Data folder, backups and updates.',
+  },
+  {
+    segment: 'director',
+    label: 'Director',
+    batch: 'W2',
+    blurb: 'Models per step, house rules and the planning flow.',
+  },
+  {
+    segment: 'limits',
+    label: 'Limits',
+    batch: 'W2',
+    blurb: 'Global, per-project and per-harness limits.',
+  },
+  {
     segment: 'harnesses',
     label: 'Harnesses',
     batch: 'W2',
@@ -82,24 +106,6 @@ export const SETTINGS_NAV: readonly NavEntry[] = [
     label: 'GitHub',
     batch: 'W2',
     blurb: 'Connections and installations.',
-  },
-  {
-    segment: 'limits',
-    label: 'Limits',
-    batch: 'W2',
-    blurb: 'Global, per-project and per-harness limits.',
-  },
-  {
-    segment: 'director',
-    label: 'Director',
-    batch: 'W2',
-    blurb: 'Models per step, house rules and the planning flow.',
-  },
-  {
-    segment: 'general',
-    label: 'General',
-    batch: 'W2',
-    blurb: 'Data folder, backups and updates.',
   },
 ];
 

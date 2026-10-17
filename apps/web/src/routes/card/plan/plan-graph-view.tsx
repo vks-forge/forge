@@ -15,6 +15,7 @@
 import { useMemo } from 'react';
 import { DEFAULT_METRICS, layoutPlanGraph } from '#/domain/plan-graph.js';
 import type { PlanTicket } from '#/schemas/plan.js';
+import { ScrollArea } from '#/components/ui/scroll-area.js';
 
 const PAD = 4;
 
@@ -37,7 +38,10 @@ export function PlanGraphView(props: { tickets: readonly PlanTicket[] }) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-bg p-3">
+    <ScrollArea
+      orientation="horizontal"
+      className="rounded-xl border border-line bg-bg p-3"
+    >
       <svg
         role="img"
         aria-label="Ticket dependency graph"
@@ -92,6 +96,6 @@ export function PlanGraphView(props: { tickets: readonly PlanTicket[] }) {
           </g>
         ))}
       </svg>
-    </div>
+    </ScrollArea>
   );
 }

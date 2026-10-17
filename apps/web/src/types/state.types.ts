@@ -37,8 +37,14 @@ export interface PendingLeave {
 export interface UnsavedChangesContextValue {
   /** True while any registered view has unsaved edits. */
   readonly dirty: boolean;
-  /** A view reports whether it has unsaved edits; `id` identifies the view. */
-  readonly setDirty: (id: string, dirty: boolean) => void;
+  /**
+   * A view reports whether it has unsaved edits; `id` identifies the view. `stayWithin` is a
+   * path prefix inside which moving around keeps the edits alive (the tabs of one settings
+   * screen), so only leaving it asks.
+   */
+  readonly setDirty: (id: string, dirty: boolean, stayWithin?: string) => void;
+  /** Whether going to `pathname` would lose edits some view holds. */
+  readonly shouldBlock: (pathname: string) => boolean;
   /** Non-null while the "keep editing or discard" question is open. */
   readonly pending: PendingLeave | null;
   /** Opens the question; `proceed` runs only if the user chooses to discard. */

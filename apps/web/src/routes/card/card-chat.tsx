@@ -24,7 +24,7 @@
  */
 
 import type { CardType } from '@forge/core';
-import { ArrowDown } from 'lucide-react';
+import { ArrowDown, MessageSquare } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { ApiError } from '#/api/api-error.js';
 import { describeError } from '#/api/describe-error.js';
@@ -44,6 +44,8 @@ import { OWNER } from '#/domain/owner.js';
 import type { CardDetailReply } from '#/schemas/cards.js';
 import { cardDraftKey } from '#/state/message-draft.js';
 import type { FlowHandlers } from '#/types/cards-ui.types.js';
+import { EmptyState } from '#/components/ui/empty-state.js';
+import { ScrollArea } from '#/components/ui/scroll-area.js';
 
 function refusalText(error: unknown): string {
   if (error instanceof ApiError && error.kind === 'http') {
@@ -159,14 +161,14 @@ export function CardChat(props: {
         />
       ) : (
         <div className="relative">
-          <div
+          <ScrollArea
             ref={scroller}
             onScroll={onScroll}
             role="log"
             aria-live="polite"
             aria-label="Conversation"
             tabIndex={0}
-            className="grid h-[52dvh] content-start gap-3 overflow-y-auto rounded-xl border border-line bg-bg p-3"
+            className="grid h-[52dvh] content-start gap-3 rounded-xl border border-line bg-bg p-3"
           >
             {history.data?.hasOlder ? (
               <button
@@ -185,9 +187,9 @@ export function CardChat(props: {
               </p>
             ) : null}
             {lines.length === 0 ? (
-              <p className="text-sm text-muted">
-                Nothing has been said yet. Tell the Director what you want from this card.
-              </p>
+              <EmptyState variant="compact" icon={MessageSquare} title="Nothing said yet">
+                Tell the Director what you want from this card.
+              </EmptyState>
             ) : (
               lines.map((line) => (
                 <ChatLineView
@@ -206,7 +208,7 @@ export function CardChat(props: {
               reading={reading}
               lastError={director.last_error}
             />
-          </div>
+          </ScrollArea>
           {!stuck ? (
             <button
               type="button"

@@ -55,7 +55,7 @@ export function MemoryTabs(props: {
     <div
       role="tablist"
       aria-label="Memory"
-      className="flex gap-1 overflow-x-auto border-b border-line"
+      className="flex gap-1 scroll-area overflow-x-auto border-b border-line"
     >
       {ORDER.map((tab, index) => {
         const active = tab === props.tab;

@@ -28,4 +28,8 @@ export interface CardView {
   readonly openPoints: number | null;
   /** The newest plan version, or null before a plan exists. */
   readonly planVersion: number | null;
+  /** Dollars the card's Director steps cost (planning, chat, escalation answers). */
+  readonly directorUsd: number;
+  /** Recorded run cost of the card's tickets in dollars. */
+  readonly ticketsUsd: number;
 }

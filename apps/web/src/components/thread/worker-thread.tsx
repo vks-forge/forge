@@ -21,6 +21,7 @@ import { useStickToBottom } from '#/components/thread/use-stick-to-bottom.js';
 import { Button } from '#/components/ui/button.js';
 import { useThreadPrefs } from '#/state/thread-prefs.js';
 import type { ThreadConnection, ThreadItem } from '#/types/thread.types.js';
+import { ScrollArea } from '#/components/ui/scroll-area.js';
 
 /** More items than this and the thread is virtualised. */
 export const THREAD_WINDOW = 100;
@@ -108,14 +109,14 @@ export function WorkerThread(props: {
       ) : null}
 
       <div className="relative min-w-0">
-        <div
+        <ScrollArea
           ref={scroller}
           onScroll={onScroll}
           role="log"
           aria-live="polite"
           aria-label="Worker messages"
           tabIndex={0}
-          className="h-[60dvh] overflow-y-auto rounded-xl border border-line bg-bg p-3"
+          className="h-[60dvh] rounded-xl border border-line bg-bg p-3"
         >
           {items.length === 0 ? (
             <p className="text-sm text-muted">
@@ -161,7 +162,7 @@ export function WorkerThread(props: {
               ))}
             </ol>
           )}
-        </div>
+        </ScrollArea>
         {!stuck ? (
           <button
             type="button"

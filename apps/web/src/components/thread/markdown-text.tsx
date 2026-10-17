@@ -98,7 +98,7 @@ function Block(props: { block: MarkdownBlock }): ReactNode {
 
     case 'code':
       return (
-        <pre className="max-w-full overflow-auto rounded-lg bg-surface p-2 font-data text-xs">
+        <pre className="max-w-full scroll-area overflow-auto rounded-lg bg-surface p-2 font-data text-xs">
           {block.text}
         </pre>
       );

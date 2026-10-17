@@ -1,22 +1,24 @@
 /**
- * ProjectSettingsPage: a project's facts, its overrides of company settings, history, archive, delete.
+ * ProjectSettingsPage: the editor frame of a project's settings: draft, banners, save bar and the tabs' outlet.
  *
  * Why: how Workers behave on a project (which checks gate a ticket, which harness runs, how
  *   many at once) is data the owner edits here, never a file (d-0085, d-0090). The page keeps
  *   three things honest: what is inherited versus overridden; that a save is a new numbered
  *   version tied to the version the user opened (a newer one blocks the save and offers a
  *   review, never an overwrite); and that unsaved edits survive a stray click (the
- *   unsaved-changes guard). It also covers loading, error, offline and an empty history.
+ *   unsaved-changes guard) and a tab switch. The draft lives here, above the tabs (one URL per
+ *   section, see project-settings-routes), so every tab edits the same draft and one save bar
+ *   saves them all. It also covers loading, error, offline and an empty history.
  *
  * Exports: ProjectSettingsPage.
  * Depends on: react, react-router, api/*, domain/settings-draft, routes/project-settings/*,
- *   state/*.
+ *   components/settings/settings-layout, state/*.
  */
 
 import { useQueryClient } from '@tanstack/react-query';
 import { WifiOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router';
+import { Outlet, useParams } from 'react-router';
 import { describeError } from '#/api/describe-error.js';
 import {
   settingsKey,
@@ -24,25 +26,26 @@ import {
   useSaveSettings,
 } from '#/api/use-project-settings.js';
 import { useAllProjects } from '#/api/use-projects.js';
+import { SettingsLayout } from '#/components/settings/settings-layout.js';
 import { StatePanel } from '#/components/status/state-panel.js';
+import { projectPath } from '#/domain/nav-entries.js';
 import {
   docFromDraft,
   draftFromSnapshot,
   isDirty,
   validateDraft,
 } from '#/domain/settings-draft.js';
-import { ArchiveSection } from '#/routes/project-settings/archive-section.js';
-import { DirectorOverride } from '#/routes/project-settings/director-override.js';
-import { DeleteSection } from '#/routes/project-settings/delete-section.js';
 import { ConflictBanner } from '#/routes/project-settings/conflict-banner.js';
-import { HistoryPanel } from '#/routes/project-settings/history-panel.js';
-import { ProjectSection } from '#/routes/project-settings/project-section.js';
+import { PROJECT_SETTINGS_SECTIONS } from '#/routes/project-settings/project-settings-routes.js';
 import { SaveBar } from '#/routes/project-settings/save-bar.js';
-import { SettingsForm } from '#/routes/project-settings/settings-form.js';
 import { useNotify } from '#/state/notify/notify-context.js';
 import { useOnline } from '#/state/use-online.js';
 import { useUnsavedChanges } from '#/state/unsaved-changes.js';
 import type { SettingsDraft, SettingsSnapshot } from '#/types/project-settings.types.js';
+import type {
+  ProjectSettingsContext,
+  SettingsTab,
+} from '#/types/settings-layout.types.js';
 
 function Editor(props: { slug: string; latest: SettingsSnapshot }) {
   const { slug, latest } = props;
@@ -62,7 +65,9 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
   }, []);
 
   const dirty = isDirty(opened, draft);
-  useUnsavedChanges(dirty);
+  // Tabs are URLs under the settings path: moving between them keeps the draft, leaving asks.
+  const base = projectPath(slug, 'settings');
+  useUnsavedChanges(dirty, base);
 
   function restart(snapshot: SettingsSnapshot): void {
     setOpened(snapshot);
@@ -111,8 +116,26 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
     );
   };
 
+  const tabs: readonly SettingsTab[] = PROJECT_SETTINGS_SECTIONS.map((section) => ({
+    to: `${base}/${section.segment}`,
+    label: section.label,
+    icon: section.icon,
+  }));
+
+  const shared: ProjectSettingsContext = {
+    slug,
+    project,
+    latest,
+    opened,
+    draft,
+    issues,
+    onChange: setDraft,
+    saving: save.isPending,
+    online,
+  };
+
   return (
-    <div className="grid max-w-4xl gap-6">
+    <div className="grid max-w-5xl gap-6">
       <header className="grid gap-1">
         <p className="font-data text-xs text-muted">{slug}</p>
         <h1 className="text-2xl font-semibold tracking-tight">Project settings</h1>
@@ -121,84 +144,54 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
         </p>
       </header>
 
-      {!online ? (
-        <p
-          role="status"
-          className="flex items-center gap-2 rounded-lg bg-hover px-3 py-2 text-sm"
-        >
-          <WifiOff aria-hidden="true" className="size-4 shrink-0" />
-          You are offline. You can read and edit, but saving is paused.
-        </p>
-      ) : null}
+      <SettingsLayout label="Project settings sections" tabs={tabs}>
+        <div className="grid gap-6">
+          {!online ? (
+            <p
+              role="status"
+              className="flex items-center gap-2 rounded-lg bg-hover px-3 py-2 text-sm"
+            >
+              <WifiOff aria-hidden="true" className="size-4 shrink-0" />
+              You are offline. You can read and edit, but saving is paused.
+            </p>
+          ) : null}
 
-      {latest.warnings.length > 0 ? (
-        <ul
-          role="status"
-          className="grid gap-1 rounded-lg bg-attn-soft px-3 py-2 text-sm"
-        >
-          {latest.warnings.map((warning) => (
-            <li key={warning}>{warning}</li>
-          ))}
-        </ul>
-      ) : null}
+          {latest.warnings.length > 0 ? (
+            <ul
+              role="status"
+              className="grid gap-1 rounded-lg bg-attn-soft px-3 py-2 text-sm"
+            >
+              {latest.warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          ) : null}
 
-      {stale ? (
-        <ConflictBanner
-          opened={opened}
-          latest={latest}
-          onReload={() => restart(latest)}
-        />
-      ) : null}
+          {stale ? (
+            <ConflictBanner
+              opened={opened}
+              latest={latest}
+              onReload={() => restart(latest)}
+            />
+          ) : null}
 
-      {project ? <ProjectSection project={project} snapshot={latest} /> : null}
+          <Outlet context={shared} />
 
-      <section aria-labelledby="overrides-heading" className="grid gap-3">
-        <h2 id="overrides-heading" className="text-base font-semibold">
-          Settings for this project
-        </h2>
-        <SettingsForm
-          snapshot={opened}
-          draft={draft}
-          issues={issues}
-          onChange={setDraft}
-          disabled={save.isPending}
-        />
-      </section>
-
-      <section aria-labelledby="director-heading" className="grid gap-3">
-        <h2 id="director-heading" className="text-base font-semibold">
-          Director for this project
-        </h2>
-        <DirectorOverride
-          snapshot={opened}
-          draft={draft}
-          issues={issues.filter((i) => i.field === 'director').map((i) => i.message)}
-          onChange={setDraft}
-          disabled={save.isPending}
-        />
-      </section>
-
-      <HistoryPanel versions={latest.versions} />
-      <ArchiveSection
-        slug={slug}
-        archived={project?.status === 'archived'}
-        disabled={!online}
-      />
-      <DeleteSection slug={slug} localPath={project?.local_path} disabled={!online} />
-
-      <SaveBar
-        version={opened.version.project}
-        latest={opened.versions.at(-1)}
-        dirty={dirty}
-        reason={reason}
-        onReason={setReason}
-        holdReason={holdReason}
-        saving={save.isPending}
-        saveError={save.isError ? describeError(save.error).detail : null}
-        saved={dirty ? null : saved}
-        onSave={onSave}
-        onDiscard={() => restart(opened)}
-      />
+          <SaveBar
+            version={opened.version.project}
+            latest={opened.versions.at(-1)}
+            dirty={dirty}
+            reason={reason}
+            onReason={setReason}
+            holdReason={holdReason}
+            saving={save.isPending}
+            saveError={save.isError ? describeError(save.error).detail : null}
+            saved={dirty ? null : saved}
+            onSave={onSave}
+            onDiscard={() => restart(opened)}
+          />
+        </div>
+      </SettingsLayout>
     </div>
   );
 }

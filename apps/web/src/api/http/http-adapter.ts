@@ -19,6 +19,7 @@ import { createOnboardingHttp } from '#/api/http/onboarding-http.js';
 import { createProjectSettingsHttp } from '#/api/http/project-settings-http.js';
 import { requestJson } from '#/api/http/request-json.js';
 import { createSettingsHttp } from '#/api/http/settings-http.js';
+import { createTicketsTableHttp } from '#/api/http/tickets-table-http.js';
 import { createWorkHttp } from '#/api/http/work-http.js';
 import { TicketListPage } from '@forge/core';
 import { watchProjectEvents } from '#/api/sse/watch-project-events.js';
@@ -63,6 +64,7 @@ export function createHttpAdapter(client: HttpClientOptions): ForgeApi {
         return body.projects;
       },
     },
+    ticketsTable: createTicketsTableHttp(client),
     tickets: {
       list: (params, options) =>
         requestJson(

@@ -15,12 +15,15 @@
  *   diff stat and gated commit of finished work (null for any other ticket); the PR link is the
  *   ticket's `pr_url` and the G1 report is the gate row's `report_ref`.
  *
+ *   `cost` is the sum of the runs' recorded dollars with one line per run (a run that recorded
+ *   no cost is 0 and flagged `recorded: false`).
+ *
  * Exports: ticketRoute().
- * Depends on: @forge/core (TicketId), services/escalation-view, services/http/http-errors, services/http/respond,
+ * Depends on: @forge/core (TicketId, rollupTicketCost), services/escalation-view, services/http/http-errors, services/http/respond,
  *   types/routes. IO: reads storage and the engine's read-only wait explanation.
  */
 
-import { TicketId } from '@forge/core';
+import { TicketId, rollupTicketCost } from '@forge/core';
 import { escalationViews, waitActionsFor } from '#/services/escalation-view.js';
 import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
@@ -78,7 +81,13 @@ export function ticketRoute(deps: RouteDeps): Route {
       // What approving needs to see: the change's size and the commit the gates judged (null off review).
       const review = await deps.engine.reviewOf(found.ticket.id);
 
-      sendJson(res, 200, { ...found, wait_reason: waitReason, ...waits, review });
+      sendJson(res, 200, {
+        ...found,
+        wait_reason: waitReason,
+        ...waits,
+        review,
+        cost: rollupTicketCost(found.runs),
+      });
     },
   };
 }

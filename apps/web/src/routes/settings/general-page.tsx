@@ -8,10 +8,12 @@
  *   installed, and moving it means moving files, not changing a setting.
  *
  * Exports: GeneralPage.
- * Depends on: components/settings/*, domain/settings-fields.
+ * Depends on: components/settings/* (incl. the per-browser desktop-notification switch),
+ *   domain/settings-fields.
  */
 
 import { Folder } from 'lucide-react';
+import { BrowserNotifySetting } from '#/components/settings/browser-notify-setting.js';
 import { CompanyScreen } from '#/components/settings/company-screen.js';
 import { ConfigFields } from '#/components/settings/config-fields.js';
 import { SettingsSection } from '#/components/settings/settings-page.js';
@@ -39,6 +41,7 @@ export function GeneralPage() {
               changed from here.
             </p>
           </SettingsSection>
+          <BrowserNotifySetting />
           {GENERAL_GROUPS.map((group) => (
             <SettingsSection
               key={group.id}

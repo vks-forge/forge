@@ -9,7 +9,7 @@
  *   to the row it filters, so the server route and the storage port agree on the allowed
  *   statuses and the page size cap (a board never asks for the whole table).
  *
- * Exports: TicketSummary, TicketListQuery, TicketListPage, TICKET_LIST_DEFAULT_LIMIT,
+ * Exports: TicketSummary, TicketListQuery, TicketListPage, TicketSort, TICKET_LIST_DEFAULT_LIMIT,
  *   TICKET_LIST_MAX_LIMIT, NEEDS_YOU_STATUSES.
  * Depends on: schemas/ids, schemas/run, schemas/ticket, zod. No IO.
  */
@@ -49,6 +49,10 @@ export const TicketSummary = z.object({
   run_id: z.string().min(1).optional(),
   run_status: RunStatus.optional(),
   pr_url: z.string().min(1).optional(),
+  /** Title of the parent card (list rows only). */
+  card_title: z.string().optional(),
+  /** Recorded run cost of this ticket in dollars; runs that recorded none count as 0. The server always sets it. */
+  cost_usd: z.number().nonnegative().optional(),
   created_at: z.iso.datetime(),
   updated_at: z.iso.datetime(),
 });
@@ -58,8 +62,20 @@ export type TicketSummary = z.infer<typeof TicketSummary>;
  * `GET /projects/:slug/tickets` parameters after the route has split repeated and
  * comma-separated `state` values. Strings are coerced because they come from a URL.
  */
+export const TicketSort = z.enum(['updated', 'created', 'cost']);
+export type TicketSort = z.infer<typeof TicketSort>;
+
 export const TicketListQuery = z.object({
   state: z.array(TicketStatus).optional(),
+  lane: Lane.optional(),
+  /** Only the tickets of this card. */
+  card: CardId.optional(),
+  /** Case-insensitive match on the ticket id or title. */
+  q: z.string().trim().min(1).max(100).optional(),
+  /** Newest first by `updated_at` (default), `created_at`, or highest recorded cost first. */
+  sort: TicketSort.default('updated'),
+  /** Rows to skip. Works with every sort; the cursor only continues the default sort. */
+  offset: z.coerce.number().int().min(0).optional(),
   limit: z.coerce
     .number()
     .int()
@@ -73,6 +89,8 @@ export type TicketListQuery = z.infer<typeof TicketListQuery>;
 /** One page of the list; `next_cursor` is null on the last page. */
 export const TicketListPage = z.object({
   items: z.array(TicketSummary),
+  /** Tickets matching the filters, whatever the page (absent from older servers). */
+  total: z.number().int().nonnegative().optional(),
   nextCursor: z.string().min(1).nullable(),
 });
 export type TicketListPage = z.infer<typeof TicketListPage>;

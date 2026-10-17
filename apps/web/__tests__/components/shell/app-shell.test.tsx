@@ -30,6 +30,7 @@ describe('AppShell navigation', () => {
       'Home',
       'Inbox',
       'Board',
+      'Tickets',
       'Issues',
       'Chat',
       'Runs',
@@ -42,7 +43,7 @@ describe('AppShell navigation', () => {
       within(forge)
         .getAllByRole('link')
         .map((l) => l.textContent),
-    ).toEqual(['Harnesses', 'GitHub', 'Limits', 'Director', 'General']);
+    ).toEqual(['General', 'Director', 'Limits', 'Harnesses', 'GitHub']);
 
     expect(within(project).getByRole('link', { name: 'Home' })).toHaveAttribute(
       'aria-current',

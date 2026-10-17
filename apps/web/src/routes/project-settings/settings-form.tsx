@@ -6,7 +6,8 @@
  *   deliberately. Checks are by role (d-0095). Concurrency can only be lowered below the
  *   company limit (d-0097) and the form says so before the server has to. The Tier C path
  *   list warns that it replaces the safe set, because dropping `.forge/**` quietly lets
- *   Workers change Forge's own policy without a human sign-off.
+ *   Workers change Forge's own policy without a human sign-off. The fields are split over the
+ *   Workers, Checks and Repository tabs; one draft serves all three.
  *
  * Exports: SettingsForm.
  * Depends on: react, domain/settings-draft, routes/project-settings/*, components/ui/field.
@@ -23,6 +24,7 @@ import { ChecksEditor } from '#/routes/project-settings/checks-editor.js';
 import { OverrideField } from '#/routes/project-settings/override-field.js';
 import type {
   FieldKey,
+  FormScope,
   SettingsDraft,
   SettingsIssue,
   SettingsSnapshot,
@@ -80,6 +82,13 @@ const TEXT_FIELDS: readonly TextFieldSpec[] = [
   },
 ];
 
+/** Which overridable fields each tab of the project settings shows. */
+const SCOPE_FIELDS = {
+  workers: ['default_harness', 'max_concurrent', 'harness_fallbacks'],
+  checks: ['checks', 'ecosystems'],
+  repository: ['remote', 'tier_c_globs'],
+} as const satisfies Record<FormScope, readonly FieldKey[]>;
+
 const plain = (text: string, empty: string): string =>
   text.trim() === '' ? empty : text.split('\n').join(', ');
 
@@ -89,8 +98,11 @@ export function SettingsForm(props: {
   issues: readonly SettingsIssue[];
   onChange: (next: SettingsDraft) => void;
   disabled: boolean;
+  /** The tab this form serves; only its fields are shown. */
+  scope: FormScope;
 }) {
   const { snapshot, draft } = props;
+  const shown: readonly FieldKey[] = SCOPE_FIELDS[props.scope];
   const errorOf = (key: FieldKey): string | undefined =>
     props.issues.find((i) => i.field === key)?.message;
 
@@ -104,33 +116,37 @@ export function SettingsForm(props: {
 
   return (
     <div className="rounded-xl border border-line bg-surface px-4 sm:px-5">
-      <OverrideField
-        id="field-checks"
-        label="Checks by role"
-        hint="The commands the gates run in this project's worktree, in order."
-        overridden={draft.checks.overridden}
-        onToggle={(on) => toggle('checks', on)}
-        source="Forge default"
-        inherited={
-          inheritedChecks.length === 0 ? 'no checks' : `${inheritedChecks.length} checks`
-        }
-        inheritedView={
-          draft.checks.value.length === 0
-            ? 'No checks'
-            : draft.checks.value.map((c) => `${c.role}: ${c.command}`).join(', ')
-        }
-        error={errorOf('checks')}
-        disabled={props.disabled}
-      >
-        <ChecksEditor
-          checks={draft.checks.value}
-          onChange={(checks) =>
-            props.onChange({ ...draft, checks: { overridden: true, value: checks } })
+      {shown.includes('checks') ? (
+        <OverrideField
+          id="field-checks"
+          label="Checks by role"
+          hint="The commands the gates run in this project's worktree, in order."
+          overridden={draft.checks.overridden}
+          onToggle={(on) => toggle('checks', on)}
+          source="Forge default"
+          inherited={
+            inheritedChecks.length === 0
+              ? 'no checks'
+              : `${inheritedChecks.length} checks`
           }
-        />
-      </OverrideField>
+          inheritedView={
+            draft.checks.value.length === 0
+              ? 'No checks'
+              : draft.checks.value.map((c) => `${c.role}: ${c.command}`).join(', ')
+          }
+          error={errorOf('checks')}
+          disabled={props.disabled}
+        >
+          <ChecksEditor
+            checks={draft.checks.value}
+            onChange={(checks) =>
+              props.onChange({ ...draft, checks: { overridden: true, value: checks } })
+            }
+          />
+        </OverrideField>
+      ) : null}
 
-      {TEXT_FIELDS.map((spec) => {
+      {TEXT_FIELDS.filter((spec) => shown.includes(spec.key)).map((spec) => {
         const state = draft[spec.key];
         const id = `field-${spec.key}`;
         const inherited = inheritedOf(snapshot, spec.key) as string;

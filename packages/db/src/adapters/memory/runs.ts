@@ -72,6 +72,29 @@ export function memoryRuns(state: MemoryState): RunRepository {
         .slice(0, filter.limit)
         .map((r) => structuredClone(r));
     },
+    async costByTicket(ticketIds) {
+      const wanted = new Set<string>(ticketIds);
+      const spent: Record<string, number> = {};
+      for (const r of state.runs.values()) {
+        if (wanted.has(r.ticket_id) && r.cost_usd !== undefined) {
+          spent[r.ticket_id] = (spent[r.ticket_id] ?? 0) + r.cost_usd;
+        }
+      }
+
+      return spent;
+    },
+    async costByCard(cardIds) {
+      const wanted = new Set<string>(cardIds);
+      const spent: Record<string, number> = {};
+      for (const r of state.runs.values()) {
+        const card = state.tickets.get(r.ticket_id)?.card_id;
+        if (card !== undefined && wanted.has(card) && r.cost_usd !== undefined) {
+          spent[card] = (spent[card] ?? 0) + r.cost_usd;
+        }
+      }
+
+      return spent;
+    },
     async insert(run) {
       const r = Run.parse(run);
       insertUnique(state.runs, r.id, { ...r, generation: r.generation ?? 1 }, 'run');

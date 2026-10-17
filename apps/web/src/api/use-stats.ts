@@ -15,15 +15,16 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { StatsRange } from '@forge/core';
 import { useForgeApi } from '#/api/api-provider.js';
+import type { CostPaging } from '#/types/work-api.types.js';
 
 const REFRESH_MS = 60_000;
 
-export function useCostReport(slug: string, range: StatsRange) {
+export function useCostReport(slug: string, range: StatsRange, page?: CostPaging) {
   const api = useForgeApi();
 
   return useQuery({
-    queryKey: ['cost', slug, range] as const,
-    queryFn: ({ signal }) => api.cost.get(slug, range, { signal }),
+    queryKey: ['cost', slug, range, page] as const,
+    queryFn: ({ signal }) => api.cost.get(slug, range, { signal }, page),
     placeholderData: keepPreviousData,
     refetchInterval: REFRESH_MS,
   });

@@ -13,6 +13,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { EmptyState } from '#/components/ui/empty-state.js';
 
 export function SettingsBox(props: {
   title: string;
@@ -74,13 +75,19 @@ export function SettingsRow(props: {
   );
 }
 
-export function BoxEmpty(props: { title: string; children?: ReactNode }) {
+export function BoxEmpty(props: {
+  title: string;
+  icon?: LucideIcon;
+  children?: ReactNode;
+}) {
   return (
-    <div className="grid justify-items-center gap-3 px-4 py-12 text-center">
-      <p className="text-base font-semibold">{props.title}</p>
-      {props.children ? (
-        <div className="max-w-prose text-sm text-muted">{props.children}</div>
-      ) : null}
-    </div>
+    <EmptyState
+      variant="compact"
+      title={props.title}
+      {...(props.icon ? { icon: props.icon } : {})}
+      className="py-10"
+    >
+      {props.children}
+    </EmptyState>
   );
 }

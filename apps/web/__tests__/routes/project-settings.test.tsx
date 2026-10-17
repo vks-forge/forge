@@ -17,7 +17,13 @@ import { describe, expect, it } from 'vitest';
 import { renderApp } from '#tests/helpers/render-app.js';
 import { renderScreens } from '#tests/helpers/render-screens.js';
 
-const PATH = '/p/sample-service/settings';
+const BASE = '/p/sample-service/settings';
+const PROJECT = `${BASE}/project`;
+const WORKERS = `${BASE}/workers`;
+const REPOSITORY = `${BASE}/repository`;
+const HISTORY = `${BASE}/history`;
+const DANGER = `${BASE}/danger`;
+const PATH = BASE;
 
 async function ready(): Promise<void> {
   await screen.findByRole('heading', { name: 'Project settings', level: 1 });
@@ -25,7 +31,7 @@ async function ready(): Promise<void> {
 
 describe('project settings', () => {
   it('shows read-only project facts and the saved version', async () => {
-    renderScreens(PATH);
+    renderScreens(PROJECT);
     await ready();
 
     expect((await screen.findByText('Ticket prefix')).nextSibling).toHaveTextContent(
@@ -37,7 +43,7 @@ describe('project settings', () => {
   });
 
   it('distinguishes overridden fields from inherited ones and shows the inherited value', async () => {
-    renderScreens(PATH);
+    renderScreens(WORKERS);
     await ready();
 
     expect(
@@ -54,7 +60,7 @@ describe('project settings', () => {
 
   it('clearing an override and saving creates the next version without that key', async () => {
     const user = userEvent.setup();
-    const { api } = renderScreens(PATH);
+    const { api } = renderScreens(WORKERS);
     await ready();
 
     await user.click(screen.getByRole('switch', { name: 'Override Workers at once' }));
@@ -71,12 +77,13 @@ describe('project settings', () => {
     expect(snapshot.version.project).toBe(4);
     expect(snapshot.override).not.toHaveProperty('max_concurrent');
     expect(snapshot.override).toHaveProperty('default_harness');
-    expect(screen.getByText('use the company limit')).toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'History' }));
+    expect(await screen.findByText('use the company limit')).toBeInTheDocument();
   });
 
   it('refuses to raise the company concurrency before saving', async () => {
     const user = userEvent.setup();
-    renderScreens(PATH);
+    renderScreens(WORKERS);
     await ready();
 
     const box = screen.getByRole('textbox', { name: 'Workers at once' });
@@ -93,7 +100,7 @@ describe('project settings', () => {
 
   it('a newer version saved elsewhere blocks the save and offers a review, never an overwrite', async () => {
     const user = userEvent.setup();
-    const { api } = renderScreens(PATH);
+    const { api } = renderScreens(REPOSITORY);
     await ready();
 
     await user.click(screen.getByRole('switch', { name: 'Override Remote name' }));
@@ -134,7 +141,7 @@ describe('project settings', () => {
 
   it('lists every version newest first and expands a plain-words diff', async () => {
     const user = userEvent.setup();
-    renderScreens(PATH);
+    renderScreens(HISTORY);
     await ready();
 
     const items = within(
@@ -155,7 +162,7 @@ describe('project settings', () => {
   });
 
   it('says so for a project that has never saved settings', async () => {
-    renderScreens('/p/sample-web/settings');
+    renderScreens('/p/sample-web/settings/checks');
     await ready();
 
     expect(screen.getAllByText(/Nothing saved yet/).length).toBeGreaterThan(0);
@@ -166,7 +173,7 @@ describe('project settings', () => {
 
   it('asks before leaving with unsaved edits', async () => {
     const user = userEvent.setup();
-    renderApp({ path: PATH });
+    renderApp({ path: REPOSITORY });
     await ready();
 
     await user.click(screen.getByRole('switch', { name: 'Override Remote name' }));
@@ -177,7 +184,7 @@ describe('project settings', () => {
 
   it('archives only after a confirm that names the project and says it can be undone', async () => {
     const user = userEvent.setup();
-    const { router } = renderScreens(PATH);
+    const { router } = renderScreens(DANGER);
     await ready();
 
     await user.click(screen.getByRole('button', { name: 'Archive project' }));
@@ -186,7 +193,7 @@ describe('project settings', () => {
     });
 
     expect(dialog).toHaveTextContent(/you can unarchive it/);
-    expect(router.state.location.pathname).toBe(PATH);
+    expect(router.state.location.pathname).toBe(DANGER);
 
     await user.click(within(dialog).getByRole('button', { name: 'Archive project' }));
 

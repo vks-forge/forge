@@ -31,6 +31,8 @@ import type { DecisionForm } from '#/schemas/settings.js';
 import { useSubmit } from '#/state/use-submit.js';
 import type { ToolDecision } from '#/types/settings-api.types.js';
 import type { AskedDecision as Asked } from '#/types/settings-ui.types.js';
+import { EmptyState } from '#/components/ui/empty-state.js';
+import { Wrench } from 'lucide-react';
 
 const ORDER = { pending: 0, denied: 1, approved: 2 } as const;
 
@@ -127,10 +129,9 @@ export function ToolApprovals(props: { id: string }) {
 
   if (rows.length === 0) {
     return (
-      <p className="text-sm text-muted">
-        No tool schemas are recorded for this build yet. Run the compatibility check and
-        they will appear here.
-      </p>
+      <EmptyState variant="compact" icon={Wrench} title="No tool schemas recorded yet">
+        Run the compatibility check and they will appear here.
+      </EmptyState>
     );
   }
 

@@ -7,17 +7,19 @@
  *   drifting apart.
  *
  * Exports: summarizeTicket().
- * Depends on: @forge/core (NEEDS_YOU_STATUSES, ticket types). No IO.
+ * Depends on: @forge/core (NEEDS_YOU_STATUSES, ticket types), types/ticket-summary. No IO.
  */
 
 import { NEEDS_YOU_STATUSES } from '@forge/core';
 import type { Ticket, TicketSummary } from '@forge/core';
+import type { TicketExtras } from '#/types/ticket-summary.types.js';
 
 /** `slug` is the project slug the summary reports; `runStatus` is the persisted status of the run working the ticket, if any. */
 export function summarizeTicket(
   ticket: Ticket,
   slug: string,
   runStatus: TicketSummary['run_status'],
+  extras: TicketExtras = {},
 ): TicketSummary {
   return {
     id: ticket.id,
@@ -37,6 +39,8 @@ export function summarizeTicket(
     ...(ticket.assignee_run_id === undefined ? {} : { run_id: ticket.assignee_run_id }),
     ...(runStatus === undefined ? {} : { run_status: runStatus }),
     ...(ticket.pr_url === undefined ? {} : { pr_url: ticket.pr_url }),
+    ...(extras.cardTitle === undefined ? {} : { card_title: extras.cardTitle }),
+    ...(extras.costUsd === undefined ? {} : { cost_usd: extras.costUsd }),
     created_at: ticket.created_at,
     updated_at: ticket.updated_at,
   };

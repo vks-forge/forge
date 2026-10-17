@@ -11,9 +11,10 @@
  * Depends on: lucide-react, domain/director-settings, schemas/director-config (types).
  */
 
-import { Lock } from 'lucide-react';
+import { BookOpen, Lock } from 'lucide-react';
 import { LOCKED_RULES } from '#/domain/director-settings.js';
 import type { DirectorConfig } from '#/schemas/director-config.js';
+import { EmptyState } from '#/components/ui/empty-state.js';
 
 export function LockedRules() {
   return (
@@ -39,10 +40,13 @@ export function PlaybooksView(props: { playbooks: DirectorConfig['playbooks'] })
 
   if (entries.length === 0) {
     return (
-      <p className="text-sm text-muted">
-        No playbooks are in these settings yet. Steps then use only their own
-        instructions.
-      </p>
+      <EmptyState
+        variant="compact"
+        icon={BookOpen}
+        title="No playbooks are in these settings yet"
+      >
+        Steps then use only their own instructions.
+      </EmptyState>
     );
   }
 
@@ -55,7 +59,7 @@ export function PlaybooksView(props: { playbooks: DirectorConfig['playbooks'] })
               {playbook.title}
               <span className="font-data text-xs font-normal text-muted">{id}</span>
             </summary>
-            <pre className="max-h-96 overflow-auto border-t border-line px-3 py-3 font-data text-xs whitespace-pre-wrap">
+            <pre className="max-h-96 scroll-area overflow-auto border-t border-line px-3 py-3 font-data text-xs whitespace-pre-wrap">
               {playbook.body}
             </pre>
           </details>

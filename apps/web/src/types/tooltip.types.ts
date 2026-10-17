@@ -9,11 +9,11 @@
  * Depends on: react. Types only.
  */
 
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 export interface TooltipProps {
   /** The words shown. Supplements the trigger's `aria-label`, never replaces it. */
-  readonly content: string;
+  readonly content: ReactNode;
   readonly side?: 'top' | 'right' | 'bottom' | 'left';
   readonly align?: 'start' | 'center' | 'end';
   /** A key hint shown as a small chip after the words, e.g. "Esc". */

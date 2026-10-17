@@ -5,22 +5,27 @@
  *   existing BarChart draws one series only. A chart library would be a dependency for what is
  *   a row of rectangles (code.md rule 11), so this stacks series (spend by project, runs by
  *   outcome) or groups them (tickets done vs started) in the same hand-drawn style. A bucket
- *   with nothing in it draws nothing, never a sliver that reads as data. Hovering a bucket
- *   lists every series' value in it; the same numbers sit in a visually hidden table, and the
+ *   with nothing in it draws nothing, never a sliver that reads as data. Hovering or
+ *   focusing a bucket opens the app's own Tooltip listing every series' value in it (arrow
+ *   keys move between buckets, one Tab stop; never the browser's `title` bubble); the same numbers sit in a visually hidden table, and the
  *   chart is named and described, so nothing is available only as pixels. Bars grow on
  *   `transform` only and not at all under reduced motion (MotionConfig). The SVG stretches to
  *   its box, so 375 px phones to wide monitors never scroll sideways.
  *
  * Exports: BucketChart.
  * Depends on: motion/react, theme/motion, domain/chart-geometry, domain/overview-view,
- *   components/charts/chart-legend, types/overview.types.
+ *   components/charts/chart-legend, components/charts/use-roving-slots, components/ui/tooltip,
+ *   types/overview.types.
  */
 
 import type { StatsGroup } from '@forge/core';
 import { motion } from 'motion/react';
-import { useId, useState } from 'react';
-import type { PointerEvent } from 'react';
+import { ChartNoAxesColumn } from 'lucide-react';
+import { useId } from 'react';
 import { ChartLegend } from '#/components/charts/chart-legend.js';
+import { useRovingSlots } from '#/components/charts/use-roving-slots.js';
+import { EmptyState } from '#/components/ui/empty-state.js';
+import { Tooltip } from '#/components/ui/tooltip.js';
 import { PLOT_HEIGHT, layoutBars } from '#/domain/chart-geometry.js';
 import { bucketLabel } from '#/domain/overview-view.js';
 import { springs } from '#/theme/motion.js';
@@ -39,8 +44,8 @@ export function BucketChart(props: {
   note?: string | undefined;
 }) {
   const id = useId();
-  const [hover, setHover] = useState<number | null>(null);
   const count = props.buckets.length;
+  const { attach, active, setActive } = useRovingSlots(count);
   const layout = layoutBars(props.series, count, props.mode);
   const total = props.series.reduce(
     (sum, s) => sum + s.values.reduce((a, b) => a + b, 0),
@@ -57,14 +62,43 @@ export function BucketChart(props: {
       ? props.noData
       : `${count} buckets from ${first} to ${last}. Total ${props.format(total)}, tallest ${props.format(layout.max)}.`;
 
-  function track(event: PointerEvent<HTMLDivElement>): void {
-    const box = event.currentTarget.getBoundingClientRect();
-    const at = Math.floor(((event.clientX - box.left) / Math.max(1, box.width)) * count);
+  function tip(index: number) {
+    const bar = layout.bars[index];
 
-    setHover(Math.min(count - 1, Math.max(0, at)));
+    return (
+      <div className="grid min-w-32 gap-1">
+        <span className="font-medium">{label(index)}</span>
+        {props.series.map((s) => {
+          const value = s.values[index] ?? 0;
+
+          return value === 0 ? null : (
+            <span key={s.key} className="flex items-center justify-between gap-3">
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span
+                  className="size-2 shrink-0 rounded-sm"
+                  style={{ backgroundColor: s.color }}
+                />
+                <span className="truncate">{s.label}</span>
+              </span>
+              <span className="font-data tabular-nums">{props.format(value)}</span>
+            </span>
+          );
+        })}
+        {props.mode === 'stacked' && props.series.length > 1 && bar ? (
+          <span className="flex justify-between gap-3 border-t border-bg/30 pt-1 font-medium">
+            <span>Total</span>
+            <span className="font-data tabular-nums">{props.format(bar.total)}</span>
+          </span>
+        ) : null}
+      </div>
+    );
   }
 
-  const hovered = hover === null ? undefined : layout.bars[hover];
+  function slotLabel(index: number): string {
+    const bar = layout.bars[index];
+
+    return `${label(index)}: ${props.format(bar?.total ?? 0)}`;
+  }
 
   return (
     <figure className="grid min-w-0 content-start gap-2">
@@ -74,35 +108,26 @@ export function BucketChart(props: {
       </figcaption>
 
       {total === 0 ? (
-        <p className="grid h-36 place-items-center rounded-lg bg-hover px-3 text-center text-sm text-muted">
-          {props.noData}
-        </p>
+        <EmptyState
+          variant="compact"
+          icon={ChartNoAxesColumn}
+          title={props.noData}
+          className="h-36"
+        />
       ) : (
         <>
-          <div
-            className="relative"
-            onPointerMove={track}
-            onPointerLeave={() => setHover(null)}
-          >
+          <div className="relative">
             <svg
               role="img"
-              aria-labelledby={`${id}-t`}
+              ref={attach}
+              aria-label={props.title}
+
               aria-describedby={`${id}-d`}
               viewBox={`0 0 ${layout.width} ${PLOT_HEIGHT}`}
               preserveAspectRatio="none"
               className="h-36 w-full overflow-hidden"
             >
-              <title id={`${id}-t`}>{props.title}</title>
               <desc id={`${id}-d`}>{summary}</desc>
-              {hover === null ? null : (
-                <rect
-                  x={hover * (layout.width / count)}
-                  y={0}
-                  width={layout.width / count}
-                  height={PLOT_HEIGHT}
-                  fill="var(--hover)"
-                />
-              )}
               <line
                 x1={0}
                 x2={layout.width}
@@ -128,44 +153,22 @@ export function BucketChart(props: {
                   />
                 )),
               )}
+              {layout.bars.map((bar) => (
+                <Tooltip key={`hit-${bar.index}`} content={tip(bar.index)}>
+                  <rect
+                    data-slot=""
+                    x={bar.index * (layout.width / count)}
+                    y={0}
+                    width={layout.width / count}
+                    height={PLOT_HEIGHT}
+                    tabIndex={bar.index === active ? 0 : -1}
+                    aria-label={slotLabel(bar.index)}
+                    onFocus={() => setActive(bar.index)}
+                    className="fill-transparent outline-none hover:fill-hover/60 focus-visible:fill-hover/60"
+                  />
+                </Tooltip>
+              ))}
             </svg>
-            {hovered ? (
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute top-0 z-10 grid min-w-36 -translate-x-1/2 gap-1 rounded-lg border border-line bg-surface p-2 text-xs shadow-float"
-                style={{
-                  left: `clamp(4.5rem, ${((hovered.index + 0.5) / count) * 100}%, calc(100% - 4.5rem))`,
-                }}
-              >
-                <span className="font-medium">{label(hovered.index)}</span>
-                {props.series.map((s) => {
-                  const value = s.values[hovered.index] ?? 0;
-
-                  return value === 0 ? null : (
-                    <span key={s.key} className="flex items-center justify-between gap-3">
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <span
-                          className="size-2 shrink-0 rounded-sm"
-                          style={{ backgroundColor: s.color }}
-                        />
-                        <span className="truncate text-muted">{s.label}</span>
-                      </span>
-                      <span className="font-data tabular-nums">
-                        {props.format(value)}
-                      </span>
-                    </span>
-                  );
-                })}
-                {props.mode === 'stacked' && props.series.length > 1 ? (
-                  <span className="flex justify-between gap-3 border-t border-line pt-1 font-medium">
-                    <span>Total</span>
-                    <span className="font-data tabular-nums">
-                      {props.format(hovered.total)}
-                    </span>
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
           </div>
           <p
             aria-hidden="true"

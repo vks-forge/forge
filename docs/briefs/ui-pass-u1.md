@@ -65,3 +65,65 @@ tokens and theme, no new colours or fonts) and run a Nielsen pass per screen bef
 `pnpm typecheck`; `eslint --fix` then `pnpm lint` 0 errors; prettier on changed files;
 vitest `--maxWorkers=2` on touched areas (`--project web` for web). Low RAM: sequential,
 foreground. No commits. READMEs and `docs/design/ui-screen-map.md` current. No PRODUCT.md.
+
+## U1-A contract (as built)
+
+All routes need the install token or browser session like every route; errors are
+`{error: {code, message, issues?}}`. Money is `number` dollars; only **recorded** cost is summed
+(a run that recorded none is 0). New fields on schemas the web already parses are **optional in
+the type** (`cost_usd?`, `total?`, `cost?`, `by_*_total?`, `card_title?`) so older fixtures still
+validate; this server always sends them. Zod schemas live in `@forge/core`: `TicketCost`,
+`CardCost`, `TicketListQuery`, `TicketListPage`, `CostPageQuery`, `CostReport`.
+
+### `GET /tickets/:id` (adds `cost`)
+```
+cost: { total_usd: number,
+        by_run: { run_id, usd, status: RunStatus, started_at, recorded: boolean }[] }  // oldest run first
+```
+`recorded: false` = the harness reported no cost for that run (`usd` is 0): show "not recorded",
+not "$0.00". No runs: `{ total_usd: 0, by_run: [] }`. 404 `ticket_not_found`, 400 `invalid_ticket_id`.
+
+### `GET /cards/:id` (adds `cost`, `cost_usd`; its `tickets[]` rows also carry `cost_usd`, `card_title`)
+```
+cost_usd: number                                   // = cost.total_usd (also on every CardSummary)
+cost: { director_usd, tickets_usd, total_usd,
+        by_ticket: { ticket_id, title, usd }[] }   // every ticket of the card, highest spend first
+```
+`director_usd` = the card's Director steps: planning steps, `card_chat` turns, escalation answer
+and recover steps. There is **no `by_step`** (the engine stores one running sum per card). Not
+counted: triage/steering steps and failed model calls, so the total is a floor (README Limits).
+404 `card_not_found`, 400 `invalid_card_id`.
+
+### `GET /projects/:slug/cards` (rows add `cost_usd`)
+Same query as before (`column`, `type`, `limit`, `cursor`); each `CardSummary` has `cost_usd`
+(Director + tickets, one grouped read per page). Reply shape unchanged: `{items, nextCursor}`.
+
+### `GET /projects/:slug/tickets` (extended, same path the Board uses)
+Query (all optional): `state` (repeatable or comma list of ticket statuses), `lane`
+(`express|standard|full`), `card` (card id like `FX-C2`), `q` (1..100 chars,
+case-insensitive substring of ticket id or title; `%`/`_` literal), `sort` = `updated` (default,
+newest `updated_at` first) | `created` (newest `created_at` first) | `cost` (highest recorded run
+cost first; ties by id desc), `limit` (1..500, default 100; the Tickets page should send 25),
+`offset` (>= 0, any sort), `cursor` (opaque, default sort only).
+Reply:
+```
+{ items: TicketSummary[], total: number, nextCursor: string | null }
+TicketSummary = { id, title, state /* the ticket status; there is no separate "status" */, lane, type,
+  tier_predicted, project, card_id?, card_title?, priority, rework_count, needs_you, blocked_reason?,
+  run_id?, run_status?, pr_url?, cost_usd, created_at, updated_at }
+```
+`total` counts every ticket matching the filters (not the page). **Page the Tickets table with
+`offset`** (`offset = pageIndex * limit`, last page when `offset + items.length >= total`).
+`nextCursor` is only non-null when paging by cursor (`sort=updated`, no `offset`: the Board's
+mode) and a `cursor` combined with `offset` or `sort` other than `updated` is `400 invalid_query`.
+Errors: 400 for a bad `state`/`lane`/`card`/`sort`/`q`/`limit`/`offset` (the body lists the
+field), 400 `invalid_cursor`, 404 `project_not_found`.
+
+### `GET /projects/:slug/cost` (paging of "Top tickets" and "Top runs")
+Existing `range=7d|30d|90d` plus, independently per table: `ticket_limit` (1..100, default 50),
+`ticket_offset` (>= 0, default 0), `run_limit` (1..100, default 50), `run_offset` (default 0).
+Defaults return exactly the old first page (top 50 of each). New reply fields:
+`by_ticket_total` (tickets with a run in the window) and `by_run_total` (runs in the window).
+Ranking is stable across pages (tickets by cost desc then id; runs by cost desc, cost-less last,
+newest first). Everything else in `CostReport` is unchanged. 400 for a limit outside 1..100 or a
+negative/non-numeric offset, 400 bad `range`, 404 `project_not_found`.

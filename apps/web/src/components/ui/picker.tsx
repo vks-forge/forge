@@ -229,7 +229,7 @@ export function Picker(props: PickerProps) {
             aria-labelledby={props['aria-labelledby']}
             aria-multiselectable={multiple || undefined}
             aria-activedescendant={searchable ? undefined : activeId}
-            className="scroll-thin max-h-72 overflow-y-auto outline-none"
+            className="scroll-area max-h-72 overflow-y-auto outline-none"
           >
             <PickerList
               listId={listId}

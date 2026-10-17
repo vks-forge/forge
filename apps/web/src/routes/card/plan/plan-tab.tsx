@@ -15,7 +15,7 @@
  *   schemas/cards (type), types/plan.types.
  */
 
-import { CircleAlert, CircleCheck } from 'lucide-react';
+import { CircleAlert, CircleCheck, ScrollText } from 'lucide-react';
 import { useState } from 'react';
 import { ApiError } from '#/api/api-error.js';
 import { describeError } from '#/api/describe-error.js';
@@ -30,6 +30,7 @@ import { PlanTickets } from '#/routes/card/plan/plan-tickets.js';
 import type { CardDetailReply } from '#/schemas/cards.js';
 import type { FloorResult, PlanVersion } from '#/schemas/plan.js';
 import type { PlanDecisions } from '#/types/plan.types.js';
+import { EmptyState } from '#/components/ui/empty-state.js';
 
 function Floor(props: { floor: FloorResult }) {
   const { floor } = props;
@@ -111,12 +112,12 @@ export function PlanTab(props: { card: CardDetailReply; decisions: PlanDecisions
 
   if (current === null) {
     return (
-      <p className="max-w-md rounded-xl border border-dashed border-line p-4 text-sm text-muted">
-        No plan yet. The Director writes one into this tab when the questions are answered
+      <EmptyState icon={ScrollText} title="No plan yet">
+        The Director writes one into this tab when the questions are answered
         {card.phase === 'grilling'
           ? '; answer them in the chat, or choose "Enough, write the plan".'
           : '.'}
-      </p>
+      </EmptyState>
     );
   }
 

@@ -79,7 +79,7 @@ export function SidebarContent() {
       </div>
       <nav
         aria-label="Project"
-        className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto"
+        className="flex min-h-0 flex-1 flex-col gap-0.5 scroll-area overflow-y-auto"
       >
         {slug ? (
           PROJECT_NAV.map((entry) => (

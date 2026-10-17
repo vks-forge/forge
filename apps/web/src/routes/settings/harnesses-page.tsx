@@ -50,7 +50,7 @@ export function HarnessesPage() {
           </div>
         ) : null}
         {harnesses.isSuccess && harnesses.data.harnesses.length === 0 ? (
-          <BoxEmpty title="No harness is set up yet">
+          <BoxEmpty icon={Cpu} title="No harness is set up yet">
             <p>
               Forge needs one to run Workers.{' '}
               <Link

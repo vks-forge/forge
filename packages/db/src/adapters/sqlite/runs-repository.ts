@@ -132,6 +132,37 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
         .map(toRun);
     },
 
+    async costByTicket(ticketIds) {
+      if (ticketIds.length === 0) {
+        return {};
+      }
+
+      const rows = driver.all<{ id: string; spent: number }>(
+        `SELECT ticket_id AS id, SUM(cost_usd) AS spent FROM runs
+         WHERE ticket_id IN (${ticketIds.map(() => '?').join(', ')}) AND cost_usd IS NOT NULL
+         GROUP BY ticket_id`,
+        [...ticketIds],
+      );
+
+      return Object.fromEntries(rows.map((r) => [r.id, r.spent]));
+    },
+
+    async costByCard(cardIds) {
+      if (cardIds.length === 0) {
+        return {};
+      }
+
+      const rows = driver.all<{ id: string; spent: number }>(
+        `SELECT t.card_id AS id, SUM(r.cost_usd) AS spent
+         FROM runs r JOIN tickets t ON t.id = r.ticket_id
+         WHERE t.card_id IN (${cardIds.map(() => '?').join(', ')}) AND r.cost_usd IS NOT NULL
+         GROUP BY t.card_id`,
+        [...cardIds],
+      );
+
+      return Object.fromEntries(rows.map((r) => [r.id, r.spent]));
+    },
+
     async insert(run) {
       const r = Run.parse(run);
       driver.run(

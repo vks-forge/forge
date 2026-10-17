@@ -5,7 +5,7 @@
  *   reads (ticket titles, the budgets settings hold). Naming the bundle keeps the pure
  *   function independent of storage and lets tests build it by hand.
  *
- * Exports: CostReportInput, CostBucket.
+ * Exports: CostReportInput, CostPageWindow, CostBucket.
  * Depends on: schemas/cost-report, schemas/run, schemas/stats-range. Types only.
  */
 
@@ -22,6 +22,17 @@ export interface CostReportInput {
   /** Ticket titles by id, for the per-ticket rows. */
   readonly titles: ReadonlyMap<string, string>;
   readonly budgets: Omit<CostBudgets, 'period_usd'>;
+  /** Which rows of the ranked ticket and run tables to return; default the first `COST_TOP_N` of each. */
+  readonly page?: {
+    readonly ticket: CostPageWindow;
+    readonly run: CostPageWindow;
+  };
+}
+
+/** A page of a ranked table. */
+export interface CostPageWindow {
+  readonly limit: number;
+  readonly offset: number;
 }
 
 /** Running totals of one ticket or harness. */

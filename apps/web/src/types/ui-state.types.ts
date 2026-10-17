@@ -5,7 +5,7 @@
  *   store's shape once lets the schemas that guard storage and the hooks that read it agree
  *   on exactly what is saved.
  *
- * Exports: BoardPrefs, ThreadPrefs, ThemePrefs, ProjectPrefs, AnswerDrafts, MemoryPrefs,
+ * Exports: NotifyPrefs, BoardPrefs, ThreadPrefs, ThemePrefs, ProjectPrefs, AnswerDrafts, MemoryPrefs,
  *   AuthorPrefs, WelcomePrefs.
  * Depends on: types/board.types, types/cards-ui.types, types/memory.types, types/nav.types. Types only.
  */
@@ -59,6 +59,11 @@ export interface MemoryPrefs {
 export interface WelcomePrefs {
   readonly step: 'data' | 'harness' | 'github' | 'project' | null;
   readonly dismissed: boolean;
+}
+
+/** Whether the owner wants a desktop notification for new Inbox items while the tab is hidden; per browser. */
+export interface NotifyPrefs {
+  readonly browser: boolean;
 }
 
 /** The name recorded on settings saves; a label for the audit trail, not an identity. */

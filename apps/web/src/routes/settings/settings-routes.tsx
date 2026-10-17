@@ -7,11 +7,12 @@
  *   `/settings/harnesses/:id`.
  *
  * Exports: settingsRoutes.
- * Depends on: react-router, routes/settings/*.
+ * Depends on: react-router, routes/settings/*. The tab list frames every child (forge-settings-layout).
  */
 
 import { Navigate } from 'react-router';
 import type { RouteObject } from 'react-router';
+import { ForgeSettingsLayout } from '#/routes/settings/forge-settings-layout.js';
 import { DirectorPage } from '#/routes/settings/director-page.js';
 import { GeneralPage } from '#/routes/settings/general-page.js';
 import { GithubPage } from '#/routes/settings/github-page.js';
@@ -21,10 +22,15 @@ import { LimitsPage } from '#/routes/settings/limits-page.js';
 
 export const settingsRoutes: RouteObject[] = [
   { index: true, element: <Navigate to="harnesses" replace /> },
-  { path: 'harnesses', element: <HarnessesPage /> },
-  { path: 'harnesses/:id', element: <HarnessDetailPage /> },
-  { path: 'github', element: <GithubPage /> },
-  { path: 'limits', element: <LimitsPage /> },
-  { path: 'director', element: <DirectorPage /> },
-  { path: 'general', element: <GeneralPage /> },
+  {
+    element: <ForgeSettingsLayout />,
+    children: [
+      { path: 'general', element: <GeneralPage /> },
+      { path: 'director', element: <DirectorPage /> },
+      { path: 'limits', element: <LimitsPage /> },
+      { path: 'harnesses', element: <HarnessesPage /> },
+      { path: 'harnesses/:id', element: <HarnessDetailPage /> },
+      { path: 'github', element: <GithubPage /> },
+    ],
+  },
 ];

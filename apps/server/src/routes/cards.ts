@@ -85,8 +85,10 @@ export function cardRoutes(deps: RouteDeps): Route[] {
             ...(after ? { after: { updated_at: after.at, id: after.id } } : {}),
           });
 
+          // One grouped read of ticket run cost for the whole batch, not one per card.
+          const costs = await tx.runs.costByCard(rows.map((c) => c.id));
           for (const card of rows) {
-            const view = await viewCard(tx, card, pending, edges);
+            const view = await viewCard(tx, card, pending, edges, costs[card.id] ?? 0);
             if (query.column === undefined || view.column === query.column) {
               items.push(summarizeCard(view, slug));
             }

@@ -123,7 +123,7 @@ export function HarnessDetailPage() {
         icon={Cpu}
         crumbs={[...crumbs.slice(0, 2), { label: 'Not found' }]}
       >
-        <StatePanel kind="empty" title={`There is no harness called "${id}"`}>
+        <StatePanel kind="empty" icon={Cpu} title={`There is no harness called "${id}"`}>
           Pick one from the list.
         </StatePanel>
       </SettingsPage>

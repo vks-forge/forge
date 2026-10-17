@@ -82,7 +82,7 @@ export function CardBody(props: {
       <div className="min-w-0">{chat}</div>
       <aside
         aria-label="Plan, tickets and details"
-        className="grid min-w-0 gap-4 md:sticky md:top-4 md:max-h-[calc(100dvh-2rem)] md:overflow-y-auto md:pr-1"
+        className="grid min-w-0 gap-4 md:sticky md:top-4 md:max-h-[calc(100dvh-2rem)] scroll-area md:overflow-y-auto md:pr-1"
       >
         {tabs}
         {view}

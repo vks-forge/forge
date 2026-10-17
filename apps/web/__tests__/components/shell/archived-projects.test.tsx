@@ -156,7 +156,7 @@ describe('archived project screens', () => {
 
   it('offers Unarchive project in settings of an archived project, after a confirm', async () => {
     const user = userEvent.setup();
-    renderScreens('/p/sample-legacy/settings');
+    renderScreens('/p/sample-legacy/settings/danger');
 
     await user.click(await screen.findByRole('button', { name: 'Unarchive project' }));
     const dialog = await screen.findByRole('alertdialog', {

@@ -16,6 +16,7 @@ import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { ReactNode } from 'react';
 import { springs } from '#/theme/motion.js';
+import { ScrollArea } from '#/components/ui/scroll-area.js';
 
 export function SideDrawer(props: {
   open: boolean;
@@ -63,9 +64,9 @@ export function SideDrawer(props: {
                     <X aria-hidden="true" className="size-4" />
                   </Dialog.Close>
                 </header>
-                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+                <ScrollArea className="min-h-0 flex-1 px-5 py-4">
                   {props.children}
-                </div>
+                </ScrollArea>
               </motion.div>
             </Dialog.Content>
           </Dialog.Portal>

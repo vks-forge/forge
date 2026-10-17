@@ -22,8 +22,11 @@ import { useUnsavedChangesState } from '#/state/unsaved-changes.js';
 import { popVariants } from '#/theme/motion.js';
 
 export function LeaveGuard() {
-  const { dirty, pending, askToLeave, settle } = useUnsavedChangesState();
-  const blocker = useBlocker(dirty);
+  const { dirty, shouldBlock, pending, askToLeave, settle } = useUnsavedChangesState();
+
+  const blocker = useBlocker(
+    ({ nextLocation }) => dirty && shouldBlock(nextLocation.pathname),
+  );
 
   useEffect(() => {
     if (blocker.state === 'blocked') {

@@ -8,7 +8,7 @@
  *   quietly starts saving server data, tokens or run content (d-0122).
  *
  * Exports: ThemePrefsSchema, ProjectPrefsSchema, BoardPrefsSchema, ThreadPrefsSchema,
- *   AnswerDraftsSchema, MemoryPrefsSchema, AuthorPrefsSchema, WelcomePrefsSchema.
+ *   AnswerDraftsSchema, MemoryPrefsSchema, AuthorPrefsSchema, WelcomePrefsSchema, NotifyPrefsSchema.
  * Depends on: zod, @forge/core (Lane, TicketStatus), types/ui-state.types. No IO.
  */
 
@@ -19,6 +19,7 @@ import type {
   AuthorPrefs,
   BoardPrefs,
   MemoryPrefs,
+  NotifyPrefs,
   ProjectPrefs,
   ThemePrefs,
   ThreadPrefs,
@@ -27,6 +28,10 @@ import type {
 
 export const ThemePrefsSchema: z.ZodType<ThemePrefs> = z.object({
   mode: z.enum(['system', 'light', 'dark']),
+});
+
+export const NotifyPrefsSchema: z.ZodType<NotifyPrefs> = z.object({
+  browser: z.boolean(),
 });
 
 export const ProjectPrefsSchema: z.ZodType<ProjectPrefs> = z.object({

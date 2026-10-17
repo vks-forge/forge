@@ -47,7 +47,9 @@ export function WindowedList<T>(props: {
 
   // A short list grows to its full height so the page scrolls, not the column; only a windowed
   // list needs its own bounded scroll box for the virtualiser to measure against.
-  const box = windowed ? `max-h-[68dvh] overflow-y-auto pr-1 ${className}` : className;
+  const box = windowed
+    ? `scroll-area max-h-[68dvh] overflow-y-auto pr-1 ${className}`
+    : className;
 
   return (
     <div ref={scroller} className={box}>

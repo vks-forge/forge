@@ -78,6 +78,64 @@
   }
 }
 
+/* Page and inner scrollbars: thin, themed, and quiet until the area is in use. The thumb only
+   changes colour, never width, so waking it moves nothing. */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+html::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 9999px;
+  border: 2px solid var(--bg);
+}
+
+html::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-area {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scroll-area:hover,
+.scroll-area:focus-within,
+.scroll-area[data-scrolling] {
+  scrollbar-color: var(--line) transparent;
+}
+
+.scroll-area::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-area::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+  transition: background-color 150ms ease-out;
+}
+
+.scroll-area:hover::-webkit-scrollbar-thumb,
+.scroll-area:focus-within::-webkit-scrollbar-thumb,
+.scroll-area[data-scrolling]::-webkit-scrollbar-thumb {
+  background: var(--line);
+}
+
+.scroll-area::-webkit-scrollbar-thumb:hover {
+  background: var(--faint);
+}
+
 /* The Picker popover rises in from its trigger; reduced motion collapses it below. */
 @keyframes picker-in {
   from {

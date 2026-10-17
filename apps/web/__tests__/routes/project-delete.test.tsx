@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest';
 import { json, refusal } from '#tests/helpers/fetch-stub.js';
 import { renderScreens } from '#tests/helpers/render-screens.js';
 
-const PATH = '/p/sample-service/settings';
+const PATH = '/p/sample-service/settings/danger';
 
 async function openPopup(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole('heading', { name: 'Project settings', level: 1 });

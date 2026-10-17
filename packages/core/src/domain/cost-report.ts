@@ -113,13 +113,17 @@ export function computeCostReport(input: CostReportInput): CostReport {
         tokens: tokensOf(r.usage),
       },
     }))
-    .sort(bySpend)
-    .slice(0, COST_TOP_N)
-    .map((x) => x.row);
+    .sort(bySpend);
 
-  const byTicket = [...tickets.entries()]
-    .sort(([ia, a], [ib, b]) => b.cost_usd - a.cost_usd || (ia < ib ? -1 : 1))
-    .slice(0, COST_TOP_N)
+  const runPage = input.page?.run ?? { limit: COST_TOP_N, offset: 0 };
+  const ticketPage = input.page?.ticket ?? { limit: COST_TOP_N, offset: 0 };
+
+  const rankedTickets = [...tickets.entries()].sort(
+    ([ia, a], [ib, b]) => b.cost_usd - a.cost_usd || (ia < ib ? -1 : 1),
+  );
+
+  const byTicket = rankedTickets
+    .slice(ticketPage.offset, ticketPage.offset + ticketPage.limit)
     .map(([ticket_id, b]) => {
       const title = input.titles.get(ticket_id);
 
@@ -135,7 +139,9 @@ export function computeCostReport(input: CostReportInput): CostReport {
     tokens: total,
     per_day: denseSeries(days, perDay),
     by_ticket: byTicket,
-    by_run: byRun,
+    by_ticket_total: rankedTickets.length,
+    by_run: byRun.slice(runPage.offset, runPage.offset + runPage.limit).map((x) => x.row),
+    by_run_total: byRun.length,
     by_harness: [...harnesses.entries()]
       .sort(([ia, a], [ib, b]) => b.cost_usd - a.cost_usd || (ia < ib ? -1 : 1))
       .map(([harness, b]) => ({ harness, ...b })),

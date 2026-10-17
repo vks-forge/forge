@@ -25,11 +25,13 @@ import { MemoryPage } from '#/routes/memory/memory-page.js';
 import { NotFound } from '#/routes/not-found.js';
 import { PlaceholderPage } from '#/routes/placeholder-page.js';
 import { ProjectSettingsPage } from '#/routes/project-settings/project-settings-page.js';
+import { projectSettingsRoutes } from '#/routes/project-settings/project-settings-routes.js';
 import { ProjectScope } from '#/routes/project-scope.js';
 import { OverviewPage } from '#/routes/overview/overview-page.js';
 import { RunsPage } from '#/routes/runs/runs-page.js';
 import { settingsRoutes } from '#/routes/settings/settings-routes.js';
 import { NewProjectPage } from '#/routes/projects/new-project-page.js';
+import { TicketsPage } from '#/routes/tickets/tickets-page.js';
 import { TicketPage } from '#/routes/ticket/ticket-page.js';
 import { WelcomePage } from '#/routes/welcome/welcome-page.js';
 
@@ -41,6 +43,7 @@ const PROJECT_SCREENS: Readonly<Record<string, ReactNode>> = {
   memory: <MemoryPage />,
   runs: <RunsPage />,
   settings: <ProjectSettingsPage />,
+  tickets: <TicketsPage />,
 };
 
 export const appRoutes: RouteObject[] = [
@@ -64,6 +67,9 @@ export const appRoutes: RouteObject[] = [
                   element: PROJECT_SCREENS[entry.segment] ?? (
                     <PlaceholderPage entry={entry} inProject />
                   ),
+                  ...(entry.segment === 'settings'
+                    ? { children: projectSettingsRoutes }
+                    : {}),
                 },
           ),
         ],

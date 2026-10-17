@@ -21,6 +21,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { AppProviders } from '#/components/app-providers.js';
 import { MemoryPage } from '#/routes/memory/memory-page.js';
 import { ProjectSettingsPage } from '#/routes/project-settings/project-settings-page.js';
+import { projectSettingsRoutes } from '#/routes/project-settings/project-settings-routes.js';
 import type { ForgeApi } from '#/types/api.types.js';
 import { installFakeForge } from '#tests/helpers/fake-forge/fake-forge.js';
 import type { FakeForge } from '#tests/helpers/fake-forge/fake-forge.js';
@@ -43,7 +44,11 @@ export function renderScreens(
   const router = createMemoryRouter(
     [
       { path: '/p/:slug/memory', element: <MemoryPage /> },
-      { path: '/p/:slug/settings', element: <ProjectSettingsPage /> },
+      {
+        path: '/p/:slug/settings',
+        element: <ProjectSettingsPage />,
+        children: projectSettingsRoutes,
+      },
       { path: '*', element: <p>elsewhere</p> },
     ],
     { initialEntries: [path] },

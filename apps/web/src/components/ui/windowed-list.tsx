@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { ScrollArea } from '#/components/ui/scroll-area.js';
 
 /** Below this many rows everything is rendered. */
 export const WINDOW_THRESHOLD = 100;
@@ -71,10 +72,10 @@ export function WindowedList<T>(props: {
   );
 
   return (
-    <div
+    <ScrollArea
       ref={box}
       onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
-      className="h-[min(70vh,48rem)] overflow-y-auto overscroll-contain"
+      className="h-[min(70vh,48rem)]"
     >
       <ul
         aria-label={props.label}
@@ -96,6 +97,6 @@ export function WindowedList<T>(props: {
           </li>
         ))}
       </ul>
-    </div>
+    </ScrollArea>
   );
 }

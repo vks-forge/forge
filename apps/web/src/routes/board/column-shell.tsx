@@ -17,10 +17,11 @@
  * Depends on: react, lucide-react, state/closed-strip, types/board.types.
  */
 
-import { ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, CircleCheck, Inbox, SearchX } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useClosedStrip } from '#/state/closed-strip.js';
 import type { ColumnTone } from '#/types/board.types.js';
+import { EmptyState } from '#/components/ui/empty-state.js';
 
 export const TONE_DOT: Readonly<Record<ColumnTone, string>> = {
   neutral: 'bg-muted',
@@ -113,14 +114,13 @@ export function ColumnShell(props: {
         <p className="pl-4 text-xs text-muted">{props.hint}</p>
       </header>
       {count === 0 ? (
-        <div className="grid justify-items-center gap-0.5 rounded-xl border border-dashed border-line px-3 py-6 text-center">
-          <p className="text-sm text-muted">
-            {props.filtered ? `No ${noun} match the filter.` : 'Nothing here.'}
-          </p>
-          {tone === 'attn' && !props.filtered ? (
-            <p className="text-xs text-faint">You are all caught up.</p>
-          ) : null}
-        </div>
+        <EmptyState
+          variant="compact"
+          icon={props.filtered ? SearchX : tone === 'attn' ? CircleCheck : Inbox}
+          title={props.filtered ? `No ${noun} match the filter.` : 'Nothing here.'}
+        >
+          {tone === 'attn' && !props.filtered ? 'You are all caught up.' : null}
+        </EmptyState>
       ) : (
         props.children
       )}
@@ -130,7 +130,7 @@ export function ColumnShell(props: {
 
 export function ColumnScroller(props: { children: ReactNode }) {
   return (
-    <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-px-4 px-4 pb-3 motion-safe:scroll-smooth md:-mx-8 md:snap-none md:scroll-px-8 md:px-8">
+    <div className="-mx-4 flex snap-x snap-mandatory gap-3 scroll-area overflow-x-auto overscroll-x-contain scroll-px-4 px-4 pb-3 motion-safe:scroll-smooth md:-mx-8 md:snap-none md:scroll-px-8 md:px-8">
       {props.children}
     </div>
   );

@@ -24,6 +24,8 @@ import { SideDrawer } from '#/components/ui/side-drawer.js';
 import { formatWhen } from '#/domain/format-time.js';
 import { ticketPath } from '#/domain/ticket-paths.js';
 import { formatDuration, formatTokens, formatUsd } from '#/domain/stats-format.js';
+import { EmptyState } from '#/components/ui/empty-state.js';
+import { ShieldCheck } from 'lucide-react';
 
 const GATE_WORD: Readonly<Record<GateResult['status'], string>> = {
   passed: 'Passed',
@@ -83,7 +85,11 @@ function Body(props: { run: RunDetail; slug: string }) {
           Gates
         </h3>
         {run.gates.length === 0 ? (
-          <p className="text-sm text-muted">No gate has judged this run yet.</p>
+          <EmptyState
+            variant="compact"
+            icon={ShieldCheck}
+            title="No gate has judged this run yet"
+          />
         ) : (
           <ul className="grid">
             {run.gates.map((gate) => (

@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { ForgeMark } from '#/components/brand/forge-mark.js';
 import { PageTransition } from '#/components/motion/page-transition.js';
+import { InboxAlerts } from '#/components/shell/inbox-alerts.js';
 import { LeaveGuard } from '#/components/shell/leave-guard.js';
 import { MobileDrawer } from '#/components/shell/mobile-drawer.js';
 import { SidebarContent } from '#/components/shell/sidebar-content.js';
@@ -44,6 +45,7 @@ export function AppShell() {
         Skip to content
       </a>
       <LeaveGuard />
+      <InboxAlerts />
       {isMobile ? null : (
         <aside className="sticky top-0 h-dvh w-64 shrink-0 border-r border-line bg-rail">
           <SidebarContent />

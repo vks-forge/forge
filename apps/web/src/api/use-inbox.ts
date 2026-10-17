@@ -57,11 +57,17 @@ export function useInboxCounts(slug: string) {
 }
 
 /** The first few items that need the user, for Home. */
-export function useInboxPreview(slug: string, limit: number) {
+export function useInboxPreview(
+  slug: string,
+  limit: number,
+  options: { pollMs?: number } = {},
+) {
   const api = useForgeApi();
 
   return useQuery({
     queryKey: [...root(slug), 'preview', limit] as const,
+    enabled: slug !== '',
+    refetchInterval: options.pollMs ?? false,
     queryFn: ({ signal }) =>
       api.inbox.list(slug, { view: 'needs_action', limit }, { signal }),
   });

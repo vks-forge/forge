@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest';
 import { choose } from '#tests/helpers/choose.js';
 import { renderScreens } from '#tests/helpers/render-screens.js';
 
-const PATH = '/p/sample-service/settings';
+const PATH = '/p/sample-service/settings/director';
 
 async function ready(): Promise<void> {
   await screen.findByRole('heading', { name: 'Director for this project', level: 2 });

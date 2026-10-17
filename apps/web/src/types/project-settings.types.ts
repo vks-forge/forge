@@ -8,7 +8,7 @@
  *   snapshot a load returns, the editable draft, and the save request.
  *
  * Exports: SettingsSnapshot, SettingsSaveRequest, ProjectSettingsApi, FieldKey, FieldDraft,
- *   SettingsDraft, DocChange, SettingsIssue, TextFieldSpec.
+ *   FormScope, SettingsDraft, DocChange, SettingsIssue, TextFieldSpec.
  * Depends on: @forge/core (types), schemas/project-settings, schemas/projects, types/api.types.
  */
 
@@ -34,6 +34,9 @@ export interface SettingsSnapshot {
   /** Company settings, the source of the inherited concurrency and fallbacks. */
   readonly company: ForgeConfig;
 }
+
+/** The tabs of project settings that show overridable fields. */
+export type FormScope = 'workers' | 'checks' | 'repository';
 
 export interface SettingsSaveRequest {
   readonly slug: string;

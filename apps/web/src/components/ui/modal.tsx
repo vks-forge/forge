@@ -22,6 +22,7 @@ import type { ReactNode } from 'react';
 import { Button } from '#/components/ui/button.js';
 import { ConfirmDialog } from '#/components/ui/confirm-dialog.js';
 import { popVariants } from '#/theme/motion.js';
+import { ScrollArea } from '#/components/ui/scroll-area.js';
 
 export function Modal(props: {
   open: boolean;
@@ -138,9 +139,9 @@ export function Modal(props: {
                         {props.subheader}
                       </div>
                     ) : null}
-                    <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+                    <ScrollArea className="min-h-0 flex-1 px-5 py-5">
                       {props.children}
-                    </div>
+                    </ScrollArea>
                     <footer className="flex flex-wrap justify-end gap-2 border-t border-line bg-rail px-5 py-3">
                       <Button disabled={busy} onClick={requestClose}>
                         Cancel

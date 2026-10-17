@@ -22,6 +22,7 @@ import type { OnboardingApi } from '#/types/onboarding.types.js';
 import type { ProjectSettingsApi } from '#/types/project-settings.types.js';
 import type { AnswerReply, IngestReply, TicketDetail } from '#/schemas/tickets.js';
 import type { CardsApi } from '#/types/cards-api.types.js';
+import type { TicketsTableApi } from '#/types/tickets-table.types.js';
 import type { EscalationsApi } from '#/types/escalations-api.types.js';
 import type {
   CostApi,
@@ -100,6 +101,7 @@ export interface ResourceApis {
   readonly projectSettings: ProjectSettingsApi;
   readonly memory: MemoryApi;
   readonly tickets: TicketsApi;
+  readonly ticketsTable: TicketsTableApi;
   readonly interactions: InteractionsApi;
   readonly runEvents: RunEventsApi;
   readonly projectEvents: ProjectEventsApi;

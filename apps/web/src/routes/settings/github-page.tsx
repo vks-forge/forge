@@ -84,7 +84,7 @@ export function GithubPage() {
           </div>
         ) : null}
         {connections.isSuccess && list.length === 0 ? (
-          <BoxEmpty title="No GitHub connection yet">
+          <BoxEmpty icon={Plug} title="No GitHub connection yet">
             <p>Add the App Forge should use for your repositories.</p>
             <div className="mt-3">{addButton}</div>
           </BoxEmpty>

@@ -26,6 +26,7 @@ import { isLive, RUN_FILTERS } from '#/domain/run-format.js';
 import { RunDrawer } from '#/routes/runs/run-drawer.js';
 import { RUN_ROW_HEIGHT, RunRow } from '#/routes/runs/run-row.js';
 import { useRunsPrefs } from '#/state/use-runs-prefs.js';
+import { Activity } from 'lucide-react';
 
 const EMPTY_HINT = {
   all: 'When a Worker starts on a ticket, its run appears here.',
@@ -108,7 +109,7 @@ export function RunsPage() {
       </div>
 
       {runs.length === 0 ? (
-        <StatePanel kind="empty" title="No runs here">
+        <StatePanel kind="empty" icon={Activity} title="No runs here">
           {EMPTY_HINT[filter]}
         </StatePanel>
       ) : (

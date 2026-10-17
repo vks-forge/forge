@@ -14,7 +14,11 @@
  */
 
 import { Ticket, TicketRelation } from '@forge/core';
-import type { TicketRelationRepository, TicketRepository } from '@forge/core';
+import type {
+  TicketMatch,
+  TicketRelationRepository,
+  TicketRepository,
+} from '@forge/core';
 import { insertUnique, withoutUndefined } from '#/adapters/memory/rows.js';
 import { parseTicketPatch } from '#/shared/patches.js';
 import { deriveTicketRelations } from '#/shared/relations.js';
@@ -22,6 +26,22 @@ import type { MemoryState } from '#/types/memory-state.types.js';
 
 const sameEdge = (a: TicketRelation, b: TicketRelation): boolean =>
   a.from_id === b.from_id && a.to_id === b.to_id && a.kind === b.kind;
+
+/** The same narrowing the SQLite `WHERE` does: project, statuses, lane, card and a literal substring of id or title. */
+function matches(t: Ticket, project: string, m: TicketMatch): boolean {
+  const statuses = m.statuses ?? [];
+  const needle = m.search?.toLowerCase();
+
+  return (
+    t.project === project &&
+    (statuses.length === 0 || statuses.includes(t.status)) &&
+    (m.lane === undefined || t.lane === m.lane) &&
+    (m.card_id === undefined || t.card_id === m.card_id) &&
+    (needle === undefined ||
+      t.id.toLowerCase().includes(needle) ||
+      t.title.toLowerCase().includes(needle))
+  );
+}
 
 export function memoryTickets(state: MemoryState): TicketRepository {
   const view = (t: Ticket): Ticket => {
@@ -47,25 +67,43 @@ export function memoryTickets(state: MemoryState): TicketRepository {
       return [...state.tickets.values()].filter((t) => t.card_id === cardId).map(view);
     },
     async listByProject(project, filter) {
-      const statuses = filter.statuses ?? [];
       const { after } = filter;
+      const sort = filter.sort ?? 'updated';
+      const spent = new Map<string, number>();
+      if (sort === 'cost') {
+        for (const r of state.runs.values()) {
+          spent.set(r.ticket_id, (spent.get(r.ticket_id) ?? 0) + (r.cost_usd ?? 0));
+        }
+      }
+
+      const key = (t: Ticket): string =>
+        sort === 'created' ? t.created_at : t.updated_at;
+
+      const byIdDesc = (a: Ticket, b: Ticket): number =>
+        Number(b.id > a.id) - Number(b.id < a.id);
 
       return [...state.tickets.values()]
-        .filter((t) => t.project === project)
-        .filter((t) => statuses.length === 0 || statuses.includes(t.status))
+        .filter((t) => matches(t, project, filter))
         .filter(
           (t) =>
             !after ||
             t.updated_at < after.updated_at ||
             (t.updated_at === after.updated_at && t.id < after.id),
         )
-        .sort((a, b) =>
-          a.updated_at === b.updated_at
-            ? Number(b.id > a.id) - Number(b.id < a.id)
-            : Number(b.updated_at > a.updated_at) - Number(b.updated_at < a.updated_at),
-        )
-        .slice(0, filter.limit)
+        .sort((a, b) => {
+          if (sort === 'cost') {
+            return (spent.get(b.id) ?? 0) - (spent.get(a.id) ?? 0) || byIdDesc(a, b);
+          }
+
+          return key(a) === key(b)
+            ? byIdDesc(a, b)
+            : Number(key(b) > key(a)) - Number(key(b) < key(a));
+        })
+        .slice(filter.offset ?? 0, (filter.offset ?? 0) + filter.limit)
         .map(view);
+    },
+    async countByProject(project, match) {
+      return [...state.tickets.values()].filter((t) => matches(t, project, match)).length;
     },
     async insert(ticket) {
       const t = Ticket.parse(ticket);

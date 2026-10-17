@@ -118,7 +118,7 @@ export function FolderList(props: {
       aria-activedescendant={entries.length > 0 ? `${listId}-${current}` : undefined}
       tabIndex={0}
       onKeyDown={onKeyDown}
-      className="grid max-h-[min(22rem,45vh)] select-none overflow-y-auto rounded-lg border border-line p-1"
+      className="grid max-h-[min(22rem,45vh)] select-none scroll-area overflow-y-auto rounded-lg border border-line p-1"
     >
       {entries.map((entry, index) => (
         <li

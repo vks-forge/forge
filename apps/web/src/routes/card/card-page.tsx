@@ -18,7 +18,7 @@
  *   routes/card/* (incl. close-dialog, card-body, needs-you-banner), state/use-media-query, state/use-online.
  */
 
-import { CircleAlert } from 'lucide-react';
+import { CircleAlert, SearchX } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { ApiError } from '#/api/api-error.js';
@@ -100,13 +100,20 @@ export function CardPage() {
   if (query.isError && !card) {
     if (query.error instanceof ApiError && query.error.status === 404) {
       return (
-        <StatePanel kind="empty" title={`There is no card ${id}`}>
-          <Link
-            className="font-medium text-signal underline"
-            to={projectPath(slug, 'board')}
-          >
-            Back to the Board
-          </Link>
+        <StatePanel
+          kind="empty"
+          icon={SearchX}
+          title={`There is no card ${id}`}
+          actions={
+            <Link
+              className="font-medium text-signal underline"
+              to={projectPath(slug, 'board')}
+            >
+              Back to the Board
+            </Link>
+          }
+        >
+          It may have been removed, or the link is mistyped.
         </StatePanel>
       );
     }

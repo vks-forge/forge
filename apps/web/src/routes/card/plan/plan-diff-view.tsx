@@ -10,8 +10,9 @@
  * Depends on: react, lucide-react, types/plan.types.
  */
 
-import { Minus, Pencil, Plus } from 'lucide-react';
+import { Equal, Minus, Pencil, Plus } from 'lucide-react';
 import type { DiffRow } from '#/types/plan.types.js';
+import { EmptyState } from '#/components/ui/empty-state.js';
 
 function kindOf(row: DiffRow): { word: string; Icon: typeof Plus } {
   if (row.before === null) {
@@ -32,7 +33,11 @@ export function PlanDiffView(props: { since: number; rows: readonly DiffRow[] })
       className="grid gap-2 rounded-xl border border-line bg-surface p-3"
     >
       {props.rows.length === 0 ? (
-        <p className="text-sm text-muted">Nothing differs from v{props.since}.</p>
+        <EmptyState
+          variant="compact"
+          icon={Equal}
+          title={`Nothing differs from v${props.since}.`}
+        />
       ) : (
         <ul className="grid gap-3">
           {props.rows.map((row) => {

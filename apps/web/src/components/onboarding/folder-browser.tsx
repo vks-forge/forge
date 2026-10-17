@@ -65,7 +65,7 @@ export function FolderBrowser(props: {
                   initial="initial"
                   animate="animate"
                   exit="exit"
-                  className="pointer-events-auto grid max-h-full w-full max-w-2xl gap-3 overflow-y-auto rounded-xl border border-line bg-surface p-5 shadow-float"
+                  className="pointer-events-auto grid max-h-full w-full max-w-2xl gap-3 scroll-area overflow-y-auto rounded-xl border border-line bg-surface p-5 shadow-float"
                 >
                   <Dialog.Title className="text-base font-semibold">
                     Choose a folder

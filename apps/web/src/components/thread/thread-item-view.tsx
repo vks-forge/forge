@@ -111,7 +111,7 @@ function ToolLine(props: { item: ToolItem; expandAll: boolean }) {
         <div className="grid grid-cols-[minmax(0,1fr)] gap-2 border-t border-line p-2">
           <div className="min-w-0">
             <p className="text-xs font-medium text-muted">Input</p>
-            <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words font-data text-xs">
+            <pre className="max-h-64 scroll-area overflow-auto whitespace-pre-wrap break-words font-data text-xs">
               {show(item.input) || '(none)'}
             </pre>
           </div>
@@ -121,7 +121,7 @@ function ToolLine(props: { item: ToolItem; expandAll: boolean }) {
                 {failed ? 'Error output' : 'Output'}
               </p>
               <pre
-                className={`max-h-64 overflow-auto whitespace-pre-wrap break-words font-data text-xs ${failed ? 'text-danger' : ''}`}
+                className={`max-h-64 scroll-area overflow-auto whitespace-pre-wrap break-words font-data text-xs ${failed ? 'text-danger' : ''}`}
               >
                 {show(item.output) || '(empty)'}
               </pre>
@@ -145,7 +145,7 @@ function BriefLine(props: { item: BriefItem }) {
           <Time ts={item.ts} />
         </span>
       </summary>
-      <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words border-t border-line p-2 font-data text-xs">
+      <pre className="max-h-96 scroll-area overflow-auto whitespace-pre-wrap break-words border-t border-line p-2 font-data text-xs">
         {show(item.text)}
       </pre>
     </details>

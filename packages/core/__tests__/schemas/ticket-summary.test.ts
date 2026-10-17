@@ -39,6 +39,40 @@ describe('TicketListQuery', () => {
   });
 });
 
+describe('TicketListQuery filters and paging', () => {
+  it('defaults sort to updated and accepts lane, card, q, offset', () => {
+    const parsed = TicketListQuery.parse({
+      lane: 'express',
+      card: 'FG-C2',
+      q: ' fix ',
+      sort: 'cost',
+      offset: '40',
+    });
+
+    expect(parsed).toMatchObject({
+      lane: 'express',
+      card: 'FG-C2',
+      q: 'fix',
+      sort: 'cost',
+      offset: 40,
+    });
+
+    expect(TicketListQuery.parse({}).sort).toBe('updated');
+  });
+
+  it('refuses an unknown sort, lane, card id, blank q and a negative offset', () => {
+    const results = [
+      { sort: 'name' },
+      { lane: 'warp' },
+      { card: 'nope' },
+      { q: '   ' },
+      { offset: -1 },
+    ].map((q) => TicketListQuery.safeParse(q).success);
+
+    expect(results).toEqual([false, false, false, false, false]);
+  });
+});
+
 describe('TicketSummary', () => {
   it('rejects an id that is not PREFIX-n', () => {
     const base = {

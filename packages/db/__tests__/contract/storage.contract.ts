@@ -39,6 +39,7 @@ import { describeRunsContract } from './runs.contract.js';
 import { describeTicketsContract } from './tickets.contract.js';
 import { describeTicketListContract } from './ticket-list.contract.js';
 import { describeRunListContract } from './run-list.contract.js';
+import { describeRunCostContract } from './run-cost.contract.js';
 import { describeCardsContract } from './cards.contract.js';
 import { describeCardFlowContract } from './card-flow.contract.js';
 import { describeCardPlanningContract } from './card-planning.contract.js';
@@ -85,6 +86,7 @@ export function describeStorageContract(
     describeTicketsContract(() => db);
     describeTicketListContract(() => db);
     describeRunListContract(() => db);
+    describeRunCostContract(() => db);
     describeInboxStatesContract(() => db);
     describeCardsContract(() => db);
     describeCardPhaseContract(() => db);

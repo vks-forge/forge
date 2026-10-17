@@ -35,6 +35,7 @@ import { OverviewKpis } from '#/components/overview/overview-kpis.js';
 import { OverviewProjects } from '#/routes/overview/overview-projects.js';
 import { useWelcomePrefs } from '#/state/use-welcome-prefs.js';
 import type { OverviewChange } from '#/types/overview.types.js';
+import { FolderPlus, FolderSearch } from 'lucide-react';
 
 function Dashboard() {
   const [search, setSearch] = useSearchParams();
@@ -85,17 +86,19 @@ function Dashboard() {
           retrying={stats.isFetching}
         />
       ) : stats.data.projects.length === 0 ? (
-        <StatePanel kind="empty" title="No projects match these filters">
-          <p>
-            {filters.projects.length > 0
-              ? 'None of the chosen projects is in this view.'
-              : 'Every project is archived. Include archived projects to see them.'}
-          </p>
-          {filters.projects.length > 0 ? (
-            <Button className="mt-3" onClick={() => change({ projects: [] })}>
-              Show all projects
-            </Button>
-          ) : null}
+        <StatePanel
+          kind="empty"
+          icon={FolderSearch}
+          title="No projects match these filters"
+          actions={
+            filters.projects.length > 0 ? (
+              <Button onClick={() => change({ projects: [] })}>Show all projects</Button>
+            ) : undefined
+          }
+        >
+          {filters.projects.length > 0
+            ? 'None of the chosen projects is in this view.'
+            : 'Every project is archived. Include archived projects to see them.'}
         </StatePanel>
       ) : (
         <>
@@ -150,22 +153,26 @@ export function OverviewPage() {
 
   if (projects.data.length === 0) {
     return (
-      <StatePanel kind="empty" title="No projects yet">
-        <p>
-          Add a repository from this machine to start, or finish setting Forge up first.
-        </p>
-        <p className="mt-3 flex flex-wrap gap-4">
-          <Link className="font-medium text-signal underline" to="/projects/new">
-            Add project
-          </Link>
-          <Link
-            className="font-medium text-signal underline"
-            to="/welcome"
-            onClick={welcome.reopen}
-          >
-            Resume setup
-          </Link>
-        </p>
+      <StatePanel
+        kind="empty"
+        icon={FolderPlus}
+        title="No projects yet"
+        actions={
+          <>
+            <Link className="font-medium text-signal underline" to="/projects/new">
+              Add project
+            </Link>
+            <Link
+              className="font-medium text-signal underline"
+              to="/welcome"
+              onClick={welcome.reopen}
+            >
+              Resume setup
+            </Link>
+          </>
+        }
+      >
+        Add a repository from this machine to start, or finish setting Forge up first.
       </StatePanel>
     );
   }

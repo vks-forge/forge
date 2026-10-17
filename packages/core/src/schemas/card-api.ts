@@ -11,13 +11,14 @@
  * Exports: CARD_LIST_DEFAULT_LIMIT, CARD_LIST_MAX_LIMIT, CARD_EVENTS_DEFAULT_LIMIT,
  *   CARD_EVENTS_MAX_LIMIT, CardSummary, CardListQuery, CardListPage, CardDetail,
  *   CardEventsQuery, CardEventsPage, CardPatchBody.
- * Depends on: schemas/card, schemas/card-chat, schemas/card-event, schemas/ids, schemas/interaction, schemas/ticket-summary, zod. No IO.
+ * Depends on: schemas/card, schemas/card-chat, schemas/card-event, schemas/cost-rollup, schemas/ids, schemas/interaction, schemas/ticket-summary, zod. No IO.
  */
 
 import { z } from 'zod';
 import { Card, CardColumn, CardTypeName } from '#/schemas/card.js';
 import { CardDirectorStatus } from '#/schemas/card-chat.js';
 import { CardEvent } from '#/schemas/card-event.js';
+import { CardCost } from '#/schemas/cost-rollup.js';
 import { CardId } from '#/schemas/ids.js';
 import { Interaction } from '#/schemas/interaction.js';
 import { TicketSummary } from '#/schemas/ticket-summary.js';
@@ -42,6 +43,8 @@ export const CardSummary = Card.extend({
   open_points: z.number().int().nonnegative().nullable().default(null),
   /** The newest plan version of the card; null until a plan is written (d-0132). */
   plan_version: z.number().int().positive().nullable().default(null),
+  /** Dollars the card cost so far: Director steps plus its tickets' recorded runs. The server always sets it. */
+  cost_usd: z.number().nonnegative().optional(),
 });
 export type CardSummary = z.infer<typeof CardSummary>;
 
@@ -70,6 +73,8 @@ export const CardDetail = CardSummary.extend({
   tickets: z.array(TicketSummary),
   pending_interactions: z.array(Interaction),
   director: CardDirectorStatus,
+  /** The cost split behind `cost_usd`. The server always sets it. */
+  cost: CardCost.optional(),
 });
 export type CardDetail = z.infer<typeof CardDetail>;
 

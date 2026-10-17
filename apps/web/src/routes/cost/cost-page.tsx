@@ -11,6 +11,7 @@
  *
  * Exports: CostPage.
  * Depends on: react, react-router, api/use-stats, components/*, domain/cost-view, state/*.
+ *   Top tickets and Top runs are server-paged (components/stats/paged-rank-list).
  */
 
 import { useEffect } from 'react';
@@ -19,10 +20,12 @@ import { useParams } from 'react-router';
 import { describeError } from '#/api/describe-error.js';
 import { useCostReport } from '#/api/use-stats.js';
 import { BarChart } from '#/components/charts/bar-chart.js';
+import { PagedRankList } from '#/components/stats/paged-rank-list.js';
 import { RankList } from '#/components/stats/rank-list.js';
 import { StatTile } from '#/components/stats/stat-tile.js';
 import { OfflineNotice } from '#/components/status/offline-notice.js';
 import { StatePanel } from '#/components/status/state-panel.js';
+import { EmptyState } from '#/components/ui/empty-state.js';
 import { ToggleGroup } from '#/components/ui/toggle-group.js';
 import {
   costSeries,
@@ -40,7 +43,9 @@ import {
   RANGES,
   rangeLabel,
 } from '#/domain/stats-format.js';
+import { useCostPaging } from '#/state/use-cost-paging.js';
 import { useStatsPrefs } from '#/state/use-stats-prefs.js';
+import { Coins } from 'lucide-react';
 
 function Section(props: {
   id: string;
@@ -65,7 +70,8 @@ function Section(props: {
 export function CostPage() {
   const { slug = '' } = useParams();
   const { range, setRange } = useStatsPrefs();
-  const query = useCostReport(slug, range);
+  const { paging, setOffset, setLimit } = useCostPaging(range);
+  const query = useCostReport(slug, range, paging);
 
   useEffect(() => {
     document.title = 'Cost · Forge';
@@ -117,7 +123,7 @@ export function CostPage() {
       </div>
 
       {none ? (
-        <StatePanel kind="empty" title="No runs in this range">
+        <StatePanel kind="empty" icon={Coins} title="No runs in this range">
           Spend appears here once Workers have run on this project in the{' '}
           {rangeLabel(report.range)}.
         </StatePanel>
@@ -156,10 +162,26 @@ export function CostPage() {
               title="Top tickets"
               note="Highest reported spend first."
             >
-              {report.by_ticket.length === 0 ? (
-                <p className="text-sm text-muted">No ticket has a reported cost.</p>
+              {report.by_ticket.length === 0 && paging.ticket.offset === 0 ? (
+                <EmptyState
+                  variant="compact"
+                  icon={Coins}
+                  title="No ticket has a reported cost."
+                />
               ) : (
-                <RankList label="Top tickets" entries={ticketEntries(slug, report)} />
+                <PagedRankList
+                  label="Top tickets"
+                  entries={ticketEntries(slug, report)}
+                  offset={paging.ticket.offset}
+                  limit={paging.ticket.limit}
+                  total={
+                    report.by_ticket_total ??
+                    paging.ticket.offset + report.by_ticket.length
+                  }
+                  busy={query.isFetching}
+                  onOffset={(offset) => setOffset('ticket', offset)}
+                  onLimit={(limit) => setLimit('ticket', limit)}
+                />
               )}
             </Section>
             <Section
@@ -167,11 +189,24 @@ export function CostPage() {
               title="Top runs"
               note="Runs without a reported cost come last."
             >
-              <RankList label="Top runs" entries={runEntries(slug, report)} />
+              <PagedRankList
+                label="Top runs"
+                entries={runEntries(slug, report)}
+                offset={paging.run.offset}
+                limit={paging.run.limit}
+                total={report.by_run_total ?? paging.run.offset + report.by_run.length}
+                busy={query.isFetching}
+                onOffset={(offset) => setOffset('run', offset)}
+                onLimit={(limit) => setLimit('run', limit)}
+              />
             </Section>
             <Section id="cost-harness" title="By harness">
               {report.by_harness.length === 0 ? (
-                <p className="text-sm text-muted">No harness reported a cost.</p>
+                <EmptyState
+                  variant="compact"
+                  icon={Coins}
+                  title="No harness reported a cost."
+                />
               ) : (
                 <RankList label="By harness" entries={harnessEntries(report)} />
               )}
@@ -182,7 +217,11 @@ export function CostPage() {
               note="Tokens; no price table yet, so no dollars per model."
             >
               {report.by_model.length === 0 ? (
-                <p className="text-sm text-muted">No model usage was reported.</p>
+                <EmptyState
+                  variant="compact"
+                  icon={Coins}
+                  title="No model usage was reported."
+                />
               ) : (
                 <RankList label="By model" entries={modelEntries(report)} />
               )}

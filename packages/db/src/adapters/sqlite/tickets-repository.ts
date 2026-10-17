@@ -20,6 +20,7 @@ import type {
   CardId,
   TicketId,
   TicketListFilter,
+  TicketMatch,
   TicketPatch,
   TicketRepository,
   TicketStatus,
@@ -59,6 +60,48 @@ const EDGES_SQL = `SELECT from_id, to_id, kind FROM ticket_relations
   WHERE (from_id = ? AND kind IN ('spawned_from', 'depends_on')) OR (to_id = ? AND kind = 'blocks')
   ORDER BY rowid`;
 
+const ORDER_BY = {
+  updated: 't.updated_at DESC, t.id DESC',
+  created: 't.created_at DESC, t.id DESC',
+  cost: 'COALESCE(r.spent, 0) DESC, t.id DESC',
+} as const;
+
+/** `%`, `_` and the escape character itself are literal in a user's search text. */
+function likePattern(text: string): string {
+  return `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+}
+
+/** The WHERE terms shared by the list and the count; columns are qualified with the `t` alias. */
+function matchClause(
+  project: string,
+  match: TicketMatch,
+): { where: string[]; params: (string | number)[] } {
+  const where = ['t.project = ?'];
+  const params: (string | number)[] = [project];
+  const statuses = match.statuses ?? [];
+  if (statuses.length > 0) {
+    where.push(`t.status IN (${statuses.map(() => '?').join(', ')})`);
+    params.push(...statuses);
+  }
+
+  if (match.lane !== undefined) {
+    where.push('t.lane = ?');
+    params.push(match.lane);
+  }
+
+  if (match.card_id !== undefined) {
+    where.push('t.card_id = ?');
+    params.push(match.card_id);
+  }
+
+  if (match.search !== undefined) {
+    where.push("(t.id LIKE ? ESCAPE '\\' OR t.title LIKE ? ESCAPE '\\')");
+    params.push(likePattern(match.search), likePattern(match.search));
+  }
+
+  return { where, params };
+}
+
 export function createTicketRepository(driver: SqlDriver): TicketRepository {
   function toTicket(row: SqlRow): Ticket {
     const id = String(row['id']) as TicketId;
@@ -97,26 +140,37 @@ export function createTicketRepository(driver: SqlDriver): TicketRepository {
     },
 
     async listByProject(project: string, filter: TicketListFilter) {
-      const where = ['project = ?'];
-      const params: (string | number)[] = [project];
-      const statuses = filter.statuses ?? [];
-      if (statuses.length > 0) {
-        where.push(`status IN (${statuses.map(() => '?').join(', ')})`);
-        params.push(...statuses);
-      }
-
+      const { where, params } = matchClause(project, filter);
       if (filter.after) {
-        where.push('(updated_at < ? OR (updated_at = ? AND id < ?))');
+        where.push('(t.updated_at < ? OR (t.updated_at = ? AND t.id < ?))');
         params.push(filter.after.updated_at, filter.after.updated_at, filter.after.id);
       }
 
+      const sort = filter.sort ?? 'updated';
+      // Cost sorts over one grouped sum of the runs; the other orders need no join.
+      const join =
+        sort === 'cost'
+          ? `LEFT JOIN (SELECT ticket_id, SUM(cost_usd) AS spent FROM runs GROUP BY ticket_id) r
+               ON r.ticket_id = t.id`
+          : '';
+
       return driver
         .all(
-          `SELECT * FROM tickets WHERE ${where.join(' AND ')}
-           ORDER BY updated_at DESC, id DESC LIMIT ?`,
-          [...params, filter.limit],
+          `SELECT t.* FROM tickets t ${join} WHERE ${where.join(' AND ')}
+           ORDER BY ${ORDER_BY[sort]} LIMIT ? OFFSET ?`,
+          [...params, filter.limit, filter.offset ?? 0],
         )
         .map(toTicket);
+    },
+
+    async countByProject(project: string, match: TicketMatch) {
+      const { where, params } = matchClause(project, match);
+      const row = driver.get<{ n: number }>(
+        `SELECT COUNT(*) AS n FROM tickets t WHERE ${where.join(' AND ')}`,
+        params,
+      );
+
+      return row?.n ?? 0;
     },
 
     async insert(ticket: Ticket) {

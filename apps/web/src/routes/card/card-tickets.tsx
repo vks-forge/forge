@@ -17,6 +17,8 @@ import { LaneChip, RunChip, StateChip } from '#/components/ticket/status-chips.j
 import { TicketLink } from '#/components/ticket/ticket-link.js';
 import { timeAgo } from '#/domain/relative-time.js';
 import { useNow } from '#/state/use-now.js';
+import { EmptyState } from '#/components/ui/empty-state.js';
+import { Ticket } from 'lucide-react';
 
 export function CardTickets(props: { slug: string; tickets: readonly TicketSummary[] }) {
   const now = useNow();
@@ -26,10 +28,10 @@ export function CardTickets(props: { slug: string; tickets: readonly TicketSumma
 
   if (ordered.length === 0) {
     return (
-      <p className="max-w-md rounded-xl border border-dashed border-line p-4 text-sm text-muted">
-        No tickets yet. The Director creates them when this card turns into work; a
-        discussion or a plan can stay talk-only for a while.
-      </p>
+      <EmptyState icon={Ticket} title="No tickets yet">
+        The Director creates them when this card turns into work; a discussion or a plan
+        can stay talk-only for a while.
+      </EmptyState>
     );
   }
 

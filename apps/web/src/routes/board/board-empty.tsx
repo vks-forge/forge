@@ -15,6 +15,7 @@
 import { MessageSquarePlus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { NewCardButton } from '#/components/cards/new-card-button.js';
+import { EmptyState } from '#/components/ui/empty-state.js';
 import { ARCHIVED_REASON } from '#/routes/board/archived-reason.js';
 import { TONE_DOT } from '#/routes/board/column-shell.js';
 import { useProjectArchived } from '#/state/project-archived.js';
@@ -29,23 +30,21 @@ export function BoardEmpty(props: {
   const archived = useProjectArchived();
 
   return (
-    <div role="status" className="grid gap-4">
-      <div className="grid justify-items-start gap-3 rounded-2xl border border-line bg-surface p-6 md:p-8">
-        <span
-          aria-hidden="true"
-          className="grid size-10 place-items-center rounded-xl bg-signal-soft text-signal"
-        >
-          <MessageSquarePlus className="size-5" />
-        </span>
-        <h2 className="text-lg font-semibold tracking-tight">{props.title}</h2>
-        <p className="max-w-prose text-sm text-muted">{props.children}</p>
-        <NewCardButton
-          slug={props.slug}
-          variant="primary"
-          label="Create your first card"
-        />
-        {archived ? <p className="text-xs text-muted">{ARCHIVED_REASON}</p> : null}
-      </div>
+    <div className="grid gap-4">
+      <EmptyState
+        icon={MessageSquarePlus}
+        title={props.title}
+        actions={
+          <NewCardButton
+            slug={props.slug}
+            variant="primary"
+            label="Create your first card"
+          />
+        }
+      >
+        {props.children}
+        {archived ? <span className="mt-2 block text-xs">{ARCHIVED_REASON}</span> : null}
+      </EmptyState>
       <ul
         aria-label="Where work will appear"
         className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6"

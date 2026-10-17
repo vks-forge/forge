@@ -106,4 +106,54 @@ describe('Cost', () => {
 
     expect(await screen.findByText('No runs in this range')).toBeInTheDocument();
   });
+
+  it('pages Top tickets from the server and keeps the page size across pages', async () => {
+    const user = userEvent.setup();
+    const { stub } = renderWork(COST, {
+      [REPORT]: { body: costBody({ by_ticket_total: 134, by_run_total: 6 }) },
+    });
+
+    const tickets = await screen.findByRole('region', { name: 'Top tickets' });
+
+    expect(within(tickets).getByText(/1–\d+ of 134/)).toBeInTheDocument();
+    expect(
+      within(tickets).getByRole('button', { name: 'Top tickets: previous page' }),
+    ).toBeDisabled();
+
+    await user.click(
+      within(tickets).getByRole('button', { name: 'Top tickets: next page' }),
+    );
+
+    await waitFor(() =>
+      expect(
+        stub
+          .callsTo(REPORT)
+          .some(
+            (c) =>
+              c.path.includes('ticket_offset=10') && c.path.includes('ticket_limit=10'),
+          ),
+      ).toBe(true),
+    );
+  });
+
+  it('asks for a bigger page when the page size changes, for that table only', async () => {
+    const user = userEvent.setup();
+    const { stub } = renderWork(COST, {
+      [REPORT]: { body: costBody({ by_ticket_total: 134, by_run_total: 6 }) },
+    });
+
+    const runs = await screen.findByRole('region', { name: 'Top runs' });
+
+    await user.click(within(runs).getByRole('button', { name: '25' }));
+
+    await waitFor(() =>
+      expect(
+        stub
+          .callsTo(REPORT)
+          .some(
+            (c) => c.path.includes('run_limit=25') && c.path.includes('ticket_limit=10'),
+          ),
+      ).toBe(true),
+    );
+  });
 });

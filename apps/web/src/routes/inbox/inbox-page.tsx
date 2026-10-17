@@ -36,6 +36,7 @@ import { useNotify } from '#/state/notify/notify-context.js';
 import { useInboxPrefs } from '#/state/use-inbox-prefs.js';
 import { useOnline } from '#/state/use-online.js';
 import type { InboxMarkName } from '#/types/work-api.types.js';
+import { Inbox as InboxIcon } from 'lucide-react';
 
 const EMPTY_HINT = {
   needs_action:
@@ -138,7 +139,11 @@ export function InboxPage() {
         className="grid gap-3"
       >
         {items.length === 0 ? (
-          <StatePanel kind="empty" title={`Nothing in ${INBOX_VIEW_LABEL[view]}`}>
+          <StatePanel
+            kind="empty"
+            icon={InboxIcon}
+            title={`Nothing in ${INBOX_VIEW_LABEL[view]}`}
+          >
             {EMPTY_HINT[view]}
           </StatePanel>
         ) : (

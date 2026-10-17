@@ -14,6 +14,8 @@
 import type { ConfigVersion } from '@forge/core';
 import { formatWhen } from '#/domain/format-time.js';
 import { describeChanges } from '#/domain/settings-patch.js';
+import { EmptyState } from '#/components/ui/empty-state.js';
+import { History } from 'lucide-react';
 
 const docOf = (v: ConfigVersion | undefined): Record<string, unknown> =>
   v ? (v.doc as Record<string, unknown>) : {};
@@ -41,7 +43,13 @@ export function VersionHistory(props: { history: readonly ConfigVersion[] }) {
   const before = new Map(props.history.map((v, i) => [v.version, props.history[i - 1]]));
 
   if (newestFirst.length === 0) {
-    return <p className="text-sm text-muted">No version has been saved yet.</p>;
+    return (
+      <EmptyState
+        variant="compact"
+        icon={History}
+        title="No version has been saved yet."
+      />
+    );
   }
 
   return (

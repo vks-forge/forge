@@ -5,7 +5,10 @@
  *   are computed on request from tickets, runs and gate verdicts already stored, so they can
  *   never drift from the board and need no new tables. Spend is only what runs recorded: the
  *   responses say how many runs carried a cost rather than guessing the rest. `range` is 7d,
- *   30d or 90d (default 30d); anything else is a 400, an unregistered slug is a 404.
+ *   30d or 90d (default 30d); anything else is a 400, an unregistered slug is a 404. The two
+ *   ranked cost tables (tickets, runs) page independently with `ticket_limit` / `ticket_offset`
+ *   and `run_limit` / `run_offset` (limit 1..100, default 50 = the report's old top 50); the
+ *   report's `by_ticket_total` and `by_run_total` count every row of the window.
  *
  * Exports: projectStatsRoutes().
  * Depends on: @forge/core (stats and cost rules and schemas), services/collect-pages,
@@ -13,6 +16,7 @@
  */
 
 import {
+  CostPageQuery,
   StatsRangeQuery,
   computeCostReport,
   computeProjectStats,
@@ -33,6 +37,24 @@ function rangeOf(params: URLSearchParams) {
   }
 
   return parsed.data.range;
+}
+
+function costPageOf(params: URLSearchParams) {
+  const parsed = CostPageQuery.safeParse({
+    ticket_limit: params.get('ticket_limit') ?? undefined,
+    ticket_offset: params.get('ticket_offset') ?? undefined,
+    run_limit: params.get('run_limit') ?? undefined,
+    run_offset: params.get('run_offset') ?? undefined,
+  });
+
+  if (!parsed.success) {
+    throw HttpError.fromZod(parsed.error);
+  }
+
+  return {
+    ticket: { limit: parsed.data.ticket_limit, offset: parsed.data.ticket_offset },
+    run: { limit: parsed.data.run_limit, offset: parsed.data.run_offset },
+  };
 }
 
 export function projectStatsRoutes(deps: RouteDeps): Route[] {
@@ -77,6 +99,7 @@ export function projectStatsRoutes(deps: RouteDeps): Route[] {
       path: '/projects/:slug/cost',
       async handle({ res, params, url }) {
         const range = rangeOf(url.searchParams);
+        const page = costPageOf(url.searchParams);
         const nowMs = deps.now();
         const slug = params['slug'] ?? '';
         const { from } = statsWindow(range, nowMs);
@@ -97,6 +120,7 @@ export function projectStatsRoutes(deps: RouteDeps): Route[] {
             nowMs,
             runs,
             titles,
+            page,
             budgets: {
               run_max_usd: engine.run_budget.max_usd,
               step_budget_usd: engine.step_budget_usd,

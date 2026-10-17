@@ -43,8 +43,10 @@ import type {
 } from '#/types/ports/card.types.js';
 import type { CardPlanningRepository } from '#/types/ports/card-planning.types.js';
 import type { InboxStateRepository } from '#/types/ports/inbox-state.types.js';
-import type { GithubConnection } from '#/schemas/github-connection.js';
-import type { Project } from '#/schemas/project.js';
+import type {
+  GithubConnectionRepository,
+  ProjectRepository,
+} from '#/types/ports/registry.types.js';
 import type { NewRunInboxMessage, RunInboxMessage } from '#/schemas/run-inbox.js';
 import type { Run, RunEvent, RunStatus } from '#/schemas/run.js';
 import type { TicketRelation } from '#/schemas/ticket-relation.js';
@@ -52,7 +54,7 @@ import type { Ticket, TicketRelationKind, TicketStatus } from '#/schemas/ticket.
 import type { NewWakeRequest, WakeKind, WakeRequest } from '#/schemas/wake-request.js';
 import type { NewRunEvent } from '#/types/run-event.types.js';
 import type { RunListFilter } from '#/types/run-list.types.js';
-import type { TicketListFilter } from '#/types/ticket-list.types.js';
+import type { TicketListFilter, TicketMatch } from '#/types/ticket-list.types.js';
 
 /**
  * Fields a CAS update may change; identity and creation time are immutable,
@@ -85,6 +87,8 @@ export interface TicketRepository {
   // One project's tickets, newest `updated_at` first, `id` descending as tie-break (a total
   // order). `after` is the previous page's last row (exclusive); non-empty `statuses` narrows.
   listByProject(project: string, filter: TicketListFilter): Promise<Ticket[]>;
+  // How many of the project's tickets match `match` (no paging).
+  countByProject(project: string, match: TicketMatch): Promise<number>;
   // Stores the ticket row. A `parent` or `blocked_by` is recorded as relation rows in the same
   // transaction (`spawned_from` / `depends_on`); from then on relations change only through
   // `ticketRelations`.
@@ -127,6 +131,10 @@ export interface RunRepository {
   // Newest `started_at` first, `id` descending as tie-break; `project` matches the run's ticket's
   // project; `after` is the previous page's last row (exclusive). See `RunListFilter`.
   list(filter: RunListFilter): Promise<Run[]>;
+  // Recorded `cost_usd` per ticket id, one grouped query; ids with none are absent (read as 0).
+  costByTicket(ticketIds: readonly string[]): Promise<Record<string, number>>;
+  // The same sum over each card's tickets, keyed by card id.
+  costByCard(cardIds: readonly CardId[]): Promise<Record<string, number>>;
   insert(run: Run): Promise<void>;
   update(id: string, patch: Partial<Omit<Run, 'id'>>): Promise<void>;
 }
@@ -235,32 +243,6 @@ export interface GateResultRepository {
   insert(result: NewGateResult): Promise<GateResult>;
   // Results for every run of the ticket, oldest first.
   listByTicket(ticketId: string): Promise<GateResult[]>;
-}
-
-/** The `projects` registry (director-core.md §3). */
-export interface ProjectRepository {
-  get(id: string): Promise<Project | null>;
-  // Insert or replace by id.
-  upsert(project: Project): Promise<void>;
-  // Remove the row (undoing a registration that did not complete); false when there was none.
-  delete(id: string): Promise<boolean>;
-  // Remove the project and everything it owns (tickets, runs and their records, cards, inbox
-  // marks) in the caller's transaction; settings history stays. False when the slug is unknown.
-  purge(slug: string): Promise<boolean>;
-  list(): Promise<Project[]>;
-}
-
-/** The `github_connections` registry (d-0094): one GitHub App per org or account. Keys live in the SecretStore. */
-export interface GithubConnectionRepository {
-  get(id: string): Promise<GithubConnection | null>;
-  // Insert or replace by id.
-  upsert(connection: GithubConnection): Promise<void>;
-  // Insert only: false (and nothing written) when a connection with that id exists.
-  insertIfAbsent(connection: GithubConnection): Promise<boolean>;
-  // Remove the row; false when there was none.
-  delete(id: string): Promise<boolean>;
-  // Oldest first.
-  list(): Promise<GithubConnection[]>;
 }
 
 /** The repositories visible inside one transaction. */

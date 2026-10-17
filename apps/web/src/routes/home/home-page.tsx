@@ -32,6 +32,7 @@ import { nextSearch, parseOverviewFilters, requestOf } from '#/domain/overview-p
 import { InProgress } from '#/routes/home/in-progress.js';
 import { WaitingOnYou } from '#/routes/home/waiting-on-you.js';
 import type { OverviewChange } from '#/types/overview.types.js';
+import { ChartNoAxesColumn } from 'lucide-react';
 
 /** Home's filters are range and grouping only; a hand-edited project or archived parameter is dropped. */
 function homeSearch(search: URLSearchParams): URLSearchParams {
@@ -104,8 +105,12 @@ export function HomePage() {
           retrying={stats.isFetching}
         />
       ) : stats.data.projects_included.length === 0 ? (
-        <StatePanel kind="empty" title="No figures for this project">
-          <p>Forge has no record of a project called {slug}.</p>
+        <StatePanel
+          kind="empty"
+          icon={ChartNoAxesColumn}
+          title="No figures for this project"
+        >
+          Forge has no record of a project called {slug}.
         </StatePanel>
       ) : (
         <>

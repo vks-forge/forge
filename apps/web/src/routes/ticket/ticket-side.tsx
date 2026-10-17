@@ -13,9 +13,17 @@
  */
 
 import type { GateResult, Run } from '@forge/core';
-import { CircleCheck, CircleX, CircleDashed, TriangleAlert } from 'lucide-react';
+import {
+  Activity,
+  CircleCheck,
+  CircleDashed,
+  CircleX,
+  ShieldCheck,
+  TriangleAlert,
+} from 'lucide-react';
 import { RunChip } from '#/components/ticket/status-chips.js';
 import { timeAgo } from '#/domain/relative-time.js';
+import { EmptyState } from '#/components/ui/empty-state.js';
 
 /** The newest result of each gate, in gate order (G1 first). */
 export function latestGates(results: readonly GateResult[]): readonly GateResult[] {
@@ -44,7 +52,11 @@ export function GateStrip(props: { results: readonly GateResult[] }) {
     <section aria-label="Gates" className="grid gap-2">
       <h2 className="text-sm font-semibold">Gates</h2>
       {gates.length === 0 ? (
-        <p className="text-sm text-muted">No gate has run on this ticket yet.</p>
+        <EmptyState
+          variant="compact"
+          icon={ShieldCheck}
+          title="No gate has run on this ticket yet"
+        />
       ) : (
         <ul className="flex flex-wrap gap-2">
           {gates.map((gate) => {
@@ -79,7 +91,11 @@ export function RunsList(props: {
     <section aria-label="Runs" className="grid content-start gap-2">
       <h2 className="text-sm font-semibold">Runs</h2>
       {runs.length === 0 ? (
-        <p className="text-sm text-muted">No Worker has run on this ticket yet.</p>
+        <EmptyState
+          variant="compact"
+          icon={Activity}
+          title="No Worker has run on this ticket yet"
+        />
       ) : (
         <ul className="grid gap-2">
           {runs.map((run) => {

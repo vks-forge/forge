@@ -6,7 +6,7 @@
  *   one, but a series with unreported cost is mapped to null before it reaches the chart.
  *   Ranked lists (top tickets, harnesses) share one entry shape so every ranking reads alike.
  *
- * Exports: ChartPoint, RankEntry.
+ * Exports: CostTable, CostPagingState, RovingSlots, ChartPoint, RankEntry.
  * Depends on: react (type only).
  */
 
@@ -26,4 +26,21 @@ export interface RankEntry {
   /** Right-hand figure, already formatted. */
   readonly value: ReactNode;
   readonly to?: string;
+}
+
+/** What a chart needs to make its bars one roving keyboard stop. */
+export interface RovingSlots {
+  readonly attach: (node: SVGSVGElement | null) => void;
+  /** Index of the bar that holds `tabIndex=0`. */
+  readonly active: number;
+  readonly setActive: (index: number) => void;
+}
+
+/** The two ranked tables of the Cost screen; each pages on its own. */
+export type CostTable = 'ticket' | 'run';
+
+export interface CostPagingState {
+  readonly range: string;
+  readonly ticket: { readonly limit: number; readonly offset: number };
+  readonly run: { readonly limit: number; readonly offset: number };
 }

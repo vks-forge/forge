@@ -26,6 +26,7 @@ import { StatePanel } from '#/components/status/state-panel.js';
 import { projectPath } from '#/domain/nav-entries.js';
 import { rememberProject } from '#/state/current-project.js';
 import { ProjectArchivedContext } from '#/state/project-archived.js';
+import { FolderSearch } from 'lucide-react';
 
 export function ProjectScope() {
   const { slug = '' } = useParams();
@@ -63,17 +64,22 @@ export function ProjectScope() {
     const first = openProjects(query.data)[0];
 
     return (
-      <StatePanel kind="empty" title={`There is no project named “${slug}”`}>
-        {first ? (
-          <Link
-            className="font-medium text-signal underline"
-            to={projectPath(first.slug)}
-          >
-            Open {first.slug}
-          </Link>
-        ) : (
-          'Forge has no projects yet.'
-        )}
+      <StatePanel
+        kind="empty"
+        icon={FolderSearch}
+        title={`There is no project named “${slug}”`}
+        actions={
+          first ? (
+            <Link
+              className="font-medium text-signal underline"
+              to={projectPath(first.slug)}
+            >
+              Open {first.slug}
+            </Link>
+          ) : undefined
+        }
+      >
+        {first ? 'Pick another project to continue.' : 'Forge has no projects yet.'}
       </StatePanel>
     );
   }

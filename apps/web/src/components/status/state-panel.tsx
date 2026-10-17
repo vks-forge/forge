@@ -3,23 +3,32 @@
  *
  * Why: every screen has these three states (build plan, "Rules every UI batch follows"), and
  *   a user should recognise them at a glance instead of decoding a new layout per screen.
- *   Loading is a calm skeleton (the shape of what is coming, no spinner theatre), empty says
+ *   Loading is a calm skeleton (the shape of what is coming, no spinner theatre), empty (the shared EmptyState, centred) says
  *   what will appear and what to do, and error says what failed in plain words with a way to
  *   try again. Errors are announced to screen readers (`role="alert"`), loading is a polite
  *   status.
  *
  * Exports: StatePanel.
- * Depends on: react, lucide-react, components/ui/button.
+ * Depends on: react, lucide-react, components/ui/button, components/ui/empty-state.
  */
 
-import { CircleAlert, Inbox } from 'lucide-react';
+import { CircleAlert } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '#/components/ui/button.js';
+import { EmptyState } from '#/components/ui/empty-state.js';
 
 export function StatePanel(
   props:
     | { kind: 'loading'; label: string }
-    | { kind: 'empty'; title: string; children?: ReactNode }
+    | {
+        kind: 'empty';
+        title: string;
+        children?: ReactNode;
+        icon?: LucideIcon;
+        actions?: ReactNode;
+        compact?: boolean;
+      }
     | {
         kind: 'error';
         title: string;
@@ -39,24 +48,29 @@ export function StatePanel(
     );
   }
 
-  const isError = props.kind === 'error';
-  const Icon = isError ? CircleAlert : Inbox;
+  if (props.kind === 'empty') {
+    return (
+      <EmptyState
+        title={props.title}
+        {...(props.icon ? { icon: props.icon } : {})}
+        {...(props.actions ? { actions: props.actions } : {})}
+        variant={props.compact ? 'compact' : 'page'}
+      >
+        {props.children}
+      </EmptyState>
+    );
+  }
 
   return (
     <div
-      role={isError ? 'alert' : 'status'}
+      role="alert"
       className="grid max-w-md justify-items-start gap-3 rounded-xl border border-line bg-surface p-5"
     >
-      <Icon
-        aria-hidden="true"
-        className={`size-5 ${isError ? 'text-danger' : 'text-muted'}`}
-      />
+      <CircleAlert aria-hidden="true" className="size-5 text-danger" />
       <h2 className="text-base font-semibold">{props.title}</h2>
-      {isError && props.detail ? (
-        <p className="text-sm text-muted">{props.detail}</p>
-      ) : null}
+      {props.detail ? <p className="text-sm text-muted">{props.detail}</p> : null}
       {props.children ? <div className="text-sm text-muted">{props.children}</div> : null}
-      {isError && props.onRetry ? (
+      {props.onRetry ? (
         <Button onClick={props.onRetry} status={props.retrying ? 'loading' : 'idle'}>
           Try again
         </Button>
