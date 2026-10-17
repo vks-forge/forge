@@ -94,7 +94,10 @@ describe('AppShell navigation', () => {
   it('shows a placeholder naming the batch that will build the screen', async () => {
     renderApp({ path: '/p/sample-service/issues' });
 
-    expect(await screen.findByRole('heading', { name: 'Issues' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Issues is not built yet' }),
+    ).toBeInTheDocument();
+
     expect(screen.getByText(/Coming in W8/)).toBeInTheDocument();
   });
 

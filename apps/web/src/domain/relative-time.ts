@@ -5,7 +5,7 @@
  *   tells a user whether a run is alive. Takes `now` as an argument so labels are testable
  *   and the caller decides when to re-render.
  *
- * Exports: timeAgo(), clockTime().
+ * Exports: timeAgo(), clockTime(), shortTime().
  * Depends on: nothing. No IO.
  */
 
@@ -52,4 +52,13 @@ export function clockTime(iso: string): string {
         second: '2-digit',
         hour12: false,
       });
+}
+
+/** `HH:MM` in the viewer's time zone, for the header of a group of chat messages. */
+export function shortTime(iso: string): string {
+  const date = new Date(iso);
+
+  return Number.isNaN(date.getTime())
+    ? ''
+    : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 }

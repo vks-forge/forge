@@ -5,7 +5,8 @@
  *   (code.md rule 7). Retry and status decisions read the error family, never the message.
  *   A failure that is the server's own fault (crash, unknown, a plain Error) is reported as
  *   a bare 500 without its message, because such messages can carry paths, SQL or tokens;
- *   only an `HttpError`, which is written for the client, echoes its text; any other
+ *   only an `HttpError`, which is written for the client, echoes its text (a 502, 503 or 504
+ *   keeps its code too: the Director or a harness failed, not Forge); any other
  *   ForgeError answers with its family's fixed message. Secrets and run tokens never
  *   appear in a response.
  *
@@ -124,10 +125,14 @@ export function statusOf(error: unknown): number {
   return 500;
 }
 
-/** JSON body for `error`; the message of a 5xx is replaced by a fixed text. */
+/**
+ * JSON body for `error`; the message of a 500 is replaced by a fixed text. An `HttpError` with a
+ * 502, 503 or 504 status is a failure of something the server asked (the Director's model, a
+ * harness) written for the client, and keeps its code and message.
+ */
 export function errorBody(error: unknown): ErrorBody {
   const status = statusOf(error);
-  if (status >= 500) {
+  if (status >= 500 && !(error instanceof HttpError && status > 500)) {
     return { error: { code: 'internal', message: 'internal server error' } };
   }
 

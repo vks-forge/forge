@@ -12,7 +12,15 @@
  * Depends on: every module under src/. No IO.
  */
 
+export * from '#/domain/agent-doc.js';
+export * from '#/domain/agent-history.js';
+export * from '#/domain/agent-memory.js';
+export * from '#/domain/agent-rules.js';
+export * from '#/domain/agent-templates.js';
 export * from '#/domain/branch.js';
+export * from '#/domain/builtin-agents.js';
+export { SAME_FAMILY_WARNING } from '#/domain/builtin-agent-texts/critic.js';
+export * from '#/domain/effective-agents.js';
 export * from '#/domain/card-chat-actions.js';
 export * from '#/domain/card-phase.js';
 export * from '#/domain/card-rollup.js';
@@ -49,6 +57,8 @@ export * from '#/domain/trace.js';
 export * from '#/domain/stats-window.js';
 export * from '#/domain/bucketize.js';
 export * from '#/domain/ticket-patch.js';
+export * from '#/schemas/agent-api.js';
+export * from '#/schemas/agent.js';
 export * from '#/schemas/bootstrap-home.js';
 export * from '#/schemas/card-api.js';
 export * from '#/schemas/card-chat.js';
@@ -104,6 +114,9 @@ export * from '#/shared/stable-json.js';
 export * from '#/shared/glob.js';
 export * from '#/shared/memory-errors.js';
 export * from '#/shared/result.js';
+export type * from '#/types/agent-doc.types.js';
+export type * from '#/types/agent-history.types.js';
+export type * from '#/types/agent-rules.types.js';
 export type * from '#/types/approval-floor.types.js';
 export type * from '#/types/branch.types.js';
 export type * from '#/types/card-chat.types.js';
@@ -111,6 +124,7 @@ export type * from '#/types/card-phase.types.js';
 export type * from '#/types/card-rollup.types.js';
 export type * from '#/types/data-home.types.js';
 export type * from '#/types/config.types.js';
+export type * from '#/types/effective-agents.types.js';
 export type * from '#/types/errors.types.js';
 export type * from '#/types/escalation.types.js';
 export type * from '#/types/flow-cursor.types.js';

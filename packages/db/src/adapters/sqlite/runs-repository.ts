@@ -52,6 +52,8 @@ const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
   catalogue_hash: { column: 'catalogue_hash', clearable: true },
   prompt_hash: { column: 'prompt_hash', clearable: true },
   config_version: { column: 'config_version', clearable: true },
+  agent_id: { column: 'agent_id', clearable: true },
+  agent_hash: { column: 'agent_hash', clearable: true },
   hook_registered_at: { column: 'hook_registered_at', clearable: true },
   generation: { column: 'generation' },
   resumable_session: { column: 'resumable_session', clearable: true },
@@ -168,9 +170,9 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
       driver.run(
         `INSERT INTO runs (id, ticket_id, project, harness, driver_version, session_ref, cwd, lane,
            started_at, ended_at, status, usage_json, cost_usd, error_family, retry_of, owner,
-           pid, last_event_at, final_chain_hash, catalogue_hash, prompt_hash, config_version, hook_registered_at,
+           pid, last_event_at, final_chain_hash, catalogue_hash, prompt_hash, config_version, agent_id, agent_hash, hook_registered_at,
            generation, resumable_session, interrupted_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           r.id,
           r.ticket_id,
@@ -194,6 +196,8 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
           r.catalogue_hash ?? null,
           r.prompt_hash ?? null,
           r.config_version ?? null,
+          r.agent_id ?? null,
+          r.agent_hash ?? null,
           r.hook_registered_at ?? null,
           r.generation ?? 1,
           r.resumable_session ?? null,

@@ -1,19 +1,21 @@
 /**
- * CardHeader: who this card is, where it stands, and the two things a person may change.
+ * CardHeader: who this card is, where it stands, what it has cost, and the two things a person
+ *   may change. Compact and always visible above the tabs.
  *
  * Why: on arrival the user needs the card's title, its column (amber only when it waits on
- *   them) and where it came from. The two edits the server allows are both consequential, so
- *   both ask first in words that say what will happen: changing the type tells the Director to
- *   treat the card differently and is written to its history; closing requires a reason (it is
- *   recorded and shown to everyone who opens the card later) and cannot be undone from here. The
- *   column itself is never an input, it follows the card's tickets and questions (d-0107). A
- *   closed card shows its reason where the close button was, and a refused change is explained
- *   in plain words with the card left as it was.
+ *   them), the phase and what it has cost so far; the page below scrolls, this does not. Cost is
+ *   one small muted figure whose tooltip splits Director and tickets. The two edits the server
+ *   allows are both consequential, so both ask first in words that say what will happen:
+ *   changing the type tells the Director to treat the card differently and is written to its
+ *   history; closing requires a reason (it is recorded and shown to everyone who opens the card
+ *   later) and cannot be undone from here. The column itself is never an input, it follows the
+ *   card's tickets and questions (d-0107). A closed card shows its reason where the close button
+ *   was, and a refused change is explained in plain words with the card left as it was.
  *
  * Exports: CardHeader.
  * Depends on: react, react-router, lucide-react, @forge/core (types), api/use-card,
- *   api/describe-error, components/card/*, components/ui/*, domain/card-columns,
- *   domain/nav-entries, routes/card/card-details.
+ *   api/describe-error, components/card/*, components/cost/cost-chip, components/ui/*,
+ *   domain/card-columns, domain/card-phase, domain/card-source, domain/cost-display, domain/nav-entries.
  */
 
 import type { CardType, CardTypeName } from '@forge/core';
@@ -24,12 +26,15 @@ import { ApiError } from '#/api/api-error.js';
 import { describeError } from '#/api/describe-error.js';
 import type { usePatchCard } from '#/api/use-card.js';
 import { CardTypeIcon, labelOfType } from '#/components/card/card-type-icon.js';
+import { CostChip } from '#/components/cost/cost-chip.js';
 import { Button } from '#/components/ui/button.js';
 import { ConfirmDialog } from '#/components/ui/confirm-dialog.js';
 import { Picker } from '#/components/ui/picker.js';
 import { COLUMN_LABEL } from '#/domain/card-columns.js';
+import { SOURCE_LABEL } from '#/domain/card-source.js';
+import { phaseLine } from '#/domain/card-phase.js';
+import { cardCostSplit } from '#/domain/cost-display.js';
 import { projectPath } from '#/domain/nav-entries.js';
-import { SOURCE_LABEL } from '#/routes/card/card-details.js';
 import { useNotify } from '#/state/notify/notify-context.js';
 import type { CardDetailReply } from '#/schemas/cards.js';
 
@@ -74,18 +79,19 @@ export function CardHeader(props: {
     })),
   ];
 
-  return (
-    <header className="grid gap-3">
-      <Link
-        to={projectPath(card.project, 'board')}
-        className="inline-flex w-fit items-center gap-1 text-sm text-muted hover:text-fg"
-      >
-        <ArrowLeft aria-hidden="true" className="size-4" />
-        Board
-      </Link>
+  const phase = phaseLine(card);
 
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-data text-sm text-muted">{card.id}</span>
+  return (
+    <header className="grid gap-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+        <Link
+          to={projectPath(card.project, 'board')}
+          className="inline-flex items-center gap-1 text-muted hover:text-fg"
+        >
+          <ArrowLeft aria-hidden="true" className="size-4" />
+          Board
+        </Link>
+        <span className="font-data text-muted">{card.id}</span>
         <span
           className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium ${
             needsYou ? 'bg-attn-soft text-fg' : 'bg-hover text-muted'
@@ -96,37 +102,38 @@ export function CardHeader(props: {
           ) : null}
           {COLUMN_LABEL[card.column]}
         </span>
+        {phase === null ? null : <span className="text-xs text-muted">{phase}</span>}
         <span className="text-xs text-muted">from {SOURCE_LABEL[card.source.kind]}</span>
-      </div>
-
-      <h1 className="text-2xl font-semibold tracking-tight">{card.title}</h1>
-
-      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-        <div className="grid gap-1">
-          <label htmlFor="card-type" className="text-xs text-muted">
+        <div className="ml-auto flex items-center gap-3">
+          <CostChip
+            usd={card.cost?.total_usd ?? card.cost_usd}
+            recorded={(card.cost?.total_usd ?? card.cost_usd ?? 0) > 0}
+            label="Cost of this card"
+            {...(card.cost === undefined ? {} : { split: cardCostSplit(card.cost) })}
+          />
+          <label htmlFor="card-type" className="sr-only">
             Type
           </label>
-          <div className="flex items-center gap-2">
-            <Picker
-              id="card-type"
-              className="min-w-40"
-              items={typeItems}
-              value={card.type}
-              disabled={closed || patch.isPending}
-              onChange={(next) => setNextType(next as CardTypeName)}
-            />
-          </div>
+          <Picker
+            id="card-type"
+            className="min-w-36"
+            items={typeItems}
+            value={card.type}
+            disabled={closed || patch.isPending}
+            onChange={(next) => setNextType(next as CardTypeName)}
+          />
+          {closed ? null : (
+            <Button variant="danger" onClick={props.onClose}>
+              Close card
+            </Button>
+          )}
         </div>
-
-        {closed ? null : (
-          <Button variant="danger" onClick={props.onClose}>
-            Close card
-          </Button>
-        )}
       </div>
 
+      <h1 className="line-clamp-2 text-xl font-semibold tracking-tight">{card.title}</h1>
+
       {closed ? (
-        <p className="rounded-xl border border-line bg-surface p-3 text-sm">
+        <p className="rounded-xl border border-line bg-surface p-2.5 text-sm">
           <span className="font-medium">Closed.</span> {card.closed_reason}
         </p>
       ) : null}

@@ -62,11 +62,14 @@ const LenientForgeConfig = z.object({
       custom_step: true,
       ticket_answer: true,
       ticket_recover: true,
+      draft_agent: true,
     }),
     worker: ModelMatrix.shape.worker,
   }),
   engine: EngineConfig,
   director: DirectorConfig.optional(),
+  // Agents arrived after this screen: an older server sends none, and none is shown as none.
+  agents: ForgeConfig.shape.agents.optional(),
 });
 
 type LenientForgeConfig = z.infer<typeof LenientForgeConfig>;
@@ -92,11 +95,13 @@ export function withDirectorDefaults(raw: LenientForgeConfig): ForgeConfig {
         custom_step: d.custom_step ?? fallback.custom_step,
         ticket_answer: d.ticket_answer ?? fallback.ticket_answer,
         ticket_recover: d.ticket_recover ?? fallback.ticket_recover,
+        draft_agent: d.draft_agent ?? fallback.draft_agent,
       },
       worker: raw.models.worker,
     },
     engine: raw.engine,
     director: raw.director ?? FALLBACK_DIRECTOR,
+    agents: raw.agents ?? {},
   };
 }
 

@@ -21,6 +21,7 @@ import {
   Interaction,
   Run,
   Ticket,
+  TicketCost,
   TicketReview,
 } from '@forge/core';
 import { z } from 'zod';
@@ -39,6 +40,8 @@ export const TicketDetail = z.object({
   wait_actions: z.array(EscalationAction).default([]),
   /** The diff stat and gated commit of finished work (review or sign-off); null for any other ticket. */
   review: TicketReview.nullable().default(null),
+  /** Recorded run cost, total and per run; absent from a server that predates it. */
+  cost: TicketCost.optional(),
 });
 export type TicketDetail = z.infer<typeof TicketDetail>;
 

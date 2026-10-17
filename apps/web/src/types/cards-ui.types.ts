@@ -89,7 +89,7 @@ export interface ChatLine {
   readonly byRecommendation?: boolean;
 }
 
-export type CardTab = 'chat' | 'plan' | 'tickets' | 'details';
+export type CardTab = 'conversation' | 'plan' | 'tickets' | 'details';
 
 /** The grill as the history tells it (domain/director-flow). */
 export interface GrillView {

@@ -1,18 +1,20 @@
 /**
- * CardTickets: the Tickets tab of the Card page, a timeline of the card's linked tickets.
+ * TicketsTab: the Tickets tab of the Card page, a timeline of the card's linked tickets.
  *
  * Why: once the Director turns a card into work, the user wants to see what was built for it
  *   and where each piece stands without leaving the card. Tickets are listed in the order they
- *   were created, each with its state (amber when it waits on the user), run status, lane and
- *   last change, and each is one link to its Ticket page (d-0116) where the live Worker thread
+ *   were created, each with its state (amber when it waits on the user), run status, lane, cost
+ *   (muted; a dash when the server sent none) and last change, and each is one link to its Ticket page (d-0116) where the live Worker thread
  *   and the steer box live. A card with no tickets says so and why that is normal (talk-only
  *   types start with none).
  *
- * Exports: CardTickets.
- * Depends on: react, @forge/core (type), components/ticket/*, domain/relative-time, state/use-now.
+ * Exports: TicketsTab.
+ * Depends on: react, @forge/core (type), components/ticket/*, components/cost/cost-chip,
+ *   domain/relative-time, state/use-now.
  */
 
 import type { TicketSummary } from '@forge/core';
+import { CostChip } from '#/components/cost/cost-chip.js';
 import { LaneChip, RunChip, StateChip } from '#/components/ticket/status-chips.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
 import { timeAgo } from '#/domain/relative-time.js';
@@ -20,7 +22,7 @@ import { useNow } from '#/state/use-now.js';
 import { EmptyState } from '#/components/ui/empty-state.js';
 import { Ticket } from 'lucide-react';
 
-export function CardTickets(props: { slug: string; tickets: readonly TicketSummary[] }) {
+export function TicketsTab(props: { slug: string; tickets: readonly TicketSummary[] }) {
   const now = useNow();
   const ordered = [...props.tickets].sort((a, b) =>
     a.created_at.localeCompare(b.created_at),
@@ -36,7 +38,7 @@ export function CardTickets(props: { slug: string; tickets: readonly TicketSumma
   }
 
   return (
-    <ol aria-label="Tickets of this card" className="grid gap-0">
+    <ol aria-label="Tickets of this card" className="mx-auto grid max-w-3xl gap-0">
       {ordered.map((ticket, index) => (
         <li key={ticket.id} className="relative grid gap-1.5 pb-5 pl-6 last:pb-0">
           <span
@@ -54,6 +56,12 @@ export function CardTickets(props: { slug: string; tickets: readonly TicketSumma
             <StateChip state={ticket.state} />
             <LaneChip lane={ticket.lane} />
             {ticket.run_status ? <RunChip status={ticket.run_status} /> : null}
+            <CostChip
+              usd={ticket.cost_usd}
+              recorded={(ticket.cost_usd ?? 0) > 0}
+              label={`Cost of ${ticket.id}`}
+              className="ml-auto"
+            />
           </div>
           <p className="text-sm">{ticket.title}</p>
           <p className="text-xs text-muted">

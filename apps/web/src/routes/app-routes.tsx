@@ -57,8 +57,8 @@ export const appRoutes: RouteObject[] = [
         path: 'p/:slug',
         element: <ProjectScope />,
         children: [
-          { path: 'tickets/:id', element: <TicketPage /> },
-          { path: 'cards/:id', element: <CardPage /> },
+          { path: 'tickets/:id/:tab?', element: <TicketPage /> },
+          { path: 'cards/:id/:tab?', element: <CardPage /> },
           ...PROJECT_NAV.map((entry) =>
             entry.segment === ''
               ? { index: true, element: <HomePage /> }

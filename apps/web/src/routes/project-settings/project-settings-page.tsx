@@ -30,9 +30,11 @@ import { SettingsLayout } from '#/components/settings/settings-layout.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { projectPath } from '#/domain/nav-entries.js';
 import {
+  dirtyFields,
   docFromDraft,
   draftFromSnapshot,
   isDirty,
+  SCOPE_FIELDS,
   validateDraft,
 } from '#/domain/settings-draft.js';
 import { ConflictBanner } from '#/routes/project-settings/conflict-banner.js';
@@ -116,11 +118,21 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
     );
   };
 
-  const tabs: readonly SettingsTab[] = PROJECT_SETTINGS_SECTIONS.map((section) => ({
-    to: `${base}/${section.segment}`,
-    label: section.label,
-    icon: section.icon,
-  }));
+  // A tab whose fields differ from the saved version carries a small "unsaved" dot.
+  const changed: ReadonlySet<string> = dirty ? dirtyFields(opened, draft) : new Set();
+  const tabs: readonly SettingsTab[] = PROJECT_SETTINGS_SECTIONS.map((section) => {
+    const fields: readonly string[] =
+      section.segment in SCOPE_FIELDS
+        ? SCOPE_FIELDS[section.segment as keyof typeof SCOPE_FIELDS]
+        : [];
+
+    return {
+      to: `${base}/${section.segment}`,
+      label: section.label,
+      icon: section.icon,
+      dirty: fields.some((field) => changed.has(field)),
+    };
+  });
 
   const shared: ProjectSettingsContext = {
     slug,

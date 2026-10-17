@@ -3,7 +3,8 @@
  *
  * Why: which ticket gets the next slot depends on facts spread over several tables (waiting
  *   tickets and due wakes, live runs, parked harnesses, project status) and on the settings
- *   of this tick (the layered limits, each project's own cap and fallback harnesses). Both
+ *   of this tick (the layered limits, each project's own cap and fallback harnesses, and the
+ *   harness and fallback list of the ticket's agent). Both
  *   the dispatch phase and the ticket page's "why is this waiting?" need that same picture;
  *   building it in one place, from one transaction, means the page can only ever explain what
  *   dispatch would do. Only a project that is ready takes a slot: archived ones are history
@@ -12,7 +13,7 @@
  *
  * Exports: planDispatch(), pickFrom().
  * Depends on: @forge/core, domain/pick-next, domain/harness-choice, domain/ticket-numbers,
- *   tick/wake-candidates, tick/tick-config, shared/time. IO only through the open transaction.
+ *   tick/run-agent, tick/wake-candidates, tick/tick-config, shared/time. IO only through the open transaction.
  */
 
 import { PLANNING_PHASES } from '@forge/core';
@@ -21,6 +22,7 @@ import { chooseHarness } from '#/domain/harness-choice.js';
 import { pickNext } from '#/domain/pick-next.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { FAR_FUTURE } from '#/shared/time.js';
+import { resolveAgent } from '#/tick/run-agent.js';
 import { classifyWake, wakeIsDue } from '#/tick/wake-candidates.js';
 import { isUnservable, projectSettings } from '#/tick/tick-config.js';
 import type {
@@ -115,18 +117,18 @@ export async function planDispatch(
   for (const c of found.filter((x) => ready.has(x.ticket.project))) {
     const slug = slugOf.get(c.ticket.project) ?? c.ticket.project;
     const settings = projectSettings(view.config, slug);
-    const fallbacks = settings.harness_fallbacks ?? engine.harness_fallbacks;
+    // The ticket's agent names its own harness; its fallback list, when it has one, replaces the company's (quota and harness-down only).
+    const agent = resolveAgent(view.config, slug, c.ticket.lane);
+    const fallbacks =
+      agent.fallbackHarnesses.length > 0
+        ? agent.fallbackHarnesses
+        : (settings.harness_fallbacks ?? engine.harness_fallbacks);
+
     byId.set(c.ticket.id, c);
     pickable.push({
       id: c.ticket.id,
       project: c.ticket.project,
-      harness: chooseHarness(
-        settings.default_harness,
-        fallbacks,
-        paused,
-        installed,
-        view.now,
-      ),
+      harness: chooseHarness(agent.harnessId, fallbacks, paused, installed, view.now),
       priority: c.ticket.priority,
       number: ticketNumber(c.ticket.id),
       wake: c.wake !== undefined,

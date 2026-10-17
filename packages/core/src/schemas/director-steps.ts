@@ -20,13 +20,14 @@
  *
  * Exports: MAX_READ_REQUESTS, ReadRequest, ReadRequests, CardSurveyOutput, VerifyOutput,
  *   GrillTurnOutput, EnhanceOutput, WritePlanOutput, ApprovePlanOutput, CustomStepOutput,
- *   ANSWER_GROUND_KINDS, ESCALATE_REASONS, TicketAnswerOutput, TicketRecoverOutput.
- * Depends on: schemas/escalation, schemas/grill, schemas/ids, schemas/plan, zod. No IO.
+ *   ANSWER_GROUND_KINDS, ESCALATE_REASONS, TicketAnswerOutput, TicketRecoverOutput, DraftAgentOutput.
+ * Depends on: schemas/agent, schemas/escalation, schemas/grill, schemas/ids, schemas/plan, zod. No IO.
  */
 
 import { z } from 'zod';
 import { EscalationOption, MAX_OPTIONS } from '#/schemas/escalation.js';
 import { GrillQuestionDraft, SurveyFindings, VerifyFindings } from '#/schemas/grill.js';
+import { AgentInput } from '#/schemas/agent.js';
 import { CardId } from '#/schemas/ids.js';
 import { PlanTickets } from '#/schemas/plan.js';
 
@@ -190,3 +191,11 @@ export const TicketRecoverOutput = z.object({
   confidence: z.number().min(0).max(1),
 });
 export type TicketRecoverOutput = z.infer<typeof TicketRecoverOutput>;
+
+/** `draft_agent`: a proposed agent definition, why, and what the Director could not decide; nothing is saved from it. */
+export const DraftAgentOutput = z.object({
+  definition: AgentInput,
+  rationale: z.string().max(1000),
+  questions: z.array(z.string()).max(3),
+});
+export type DraftAgentOutput = z.infer<typeof DraftAgentOutput>;

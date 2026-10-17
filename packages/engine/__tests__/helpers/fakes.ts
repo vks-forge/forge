@@ -13,8 +13,10 @@
  * Depends on: @forge/core, @forge/tools (types). No IO.
  */
 
+import { filterMemorySlice } from '@forge/core';
 import type {
   Clock,
+  MemoryFilter,
   MemorySource,
   ReportStore,
   TicketId,
@@ -77,18 +79,25 @@ export function createFakeWorktrees(): FakeWorktrees {
   return fake;
 }
 
-export function createFakeMemory(): MemorySource & { calls: string[] } {
+export function createFakeMemory(): MemorySource & {
+  calls: string[];
+  filters: (MemoryFilter | undefined)[];
+} {
   const calls: string[] = [];
+  const filters: (MemoryFilter | undefined)[] = [];
 
   return {
     calls,
-    async slice(slug) {
+    filters,
+    async slice(slug, filter) {
       calls.push(slug);
-
-      return {
-        decisions: [{ id: 'd-0001', statement: 'Use pnpm.' }],
-        rejected: [{ id: 'r-0001', statement: 'No vector memory.' }],
+      filters.push(filter);
+      const all = {
+        decisions: [{ id: 'd-0001', statement: 'Use pnpm.', tags: ['tooling'] }],
+        rejected: [{ id: 'r-0001', statement: 'No vector memory.', tags: ['memory'] }],
       };
+
+      return filter ? filterMemorySlice(all, filter) : all;
     },
   };
 }

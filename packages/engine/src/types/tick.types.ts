@@ -10,7 +10,7 @@
  *   DispatchKind, Candidate, DispatchPlan, WakeView, ScheduleView, StepReject, TickConfig, RewakeCap,
  *   SettleOptions, RunRequestInput.
  * Depends on: @forge/core (TicketEvent, Ticket, WakeKind, WakeRequest, StepError),
- *   types/pick-next. Types only.
+ *   types/pick-next, types/run-agent. Types only.
  */
 
 import type {
@@ -26,6 +26,7 @@ import type {
 import type { Receipt } from '@forge/tools';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { PickCandidate, PickCaps, PickRunning } from '#/types/pick-next.types.js';
+import type { ResolvedAgent } from '#/types/run-agent.types.js';
 
 type WithoutAt<E> = E extends TicketEvent ? Omit<E, 'at' | 'expected_version'> : never;
 
@@ -139,6 +140,10 @@ export interface SettleOptions {
 export interface RunRequestInput {
   readonly runId: string;
   readonly ticket: Ticket;
+  /** The agent the run is for: its model, budget and harness-specific model apply. */
+  readonly agent: ResolvedAgent;
+  /** The harness the run starts on when a fallback harness took it; absent means the agent's own. */
+  readonly harnessId?: string;
   readonly cwd: string;
   readonly prompt: string;
   readonly promptHash: string;

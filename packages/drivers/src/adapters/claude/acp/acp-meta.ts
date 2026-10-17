@@ -31,7 +31,7 @@ export function sessionMeta(req: RunRequest, files: RunFiles): Record<string, un
         allowDangerouslySkipPermissions: false,
         maxTurns: req.budget.maxTurns,
         maxBudgetUsd: req.budget.maxUsd,
-        model: req.model,
+        ...(req.model === undefined ? {} : { model: req.model }),
         settings: files.settingsPath,
         env: { ...WORKER_HARNESS_ENV },
       },

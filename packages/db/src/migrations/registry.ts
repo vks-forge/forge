@@ -38,6 +38,7 @@ import { MIGRATION_0020 } from '#/migrations/0020-project-scope.js';
 import { MIGRATION_0021 } from '#/migrations/0021-card-flow.js';
 import { MIGRATION_0022 } from '#/migrations/0022-card-planning.js';
 import { MIGRATION_0023 } from '#/migrations/0023-escalations.js';
+import { MIGRATION_0024 } from '#/migrations/0024-run-agent.js';
 import type { Migration } from '#/types/migrations.types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -62,4 +63,5 @@ export const MIGRATIONS: readonly Migration[] = [
   MIGRATION_0021,
   MIGRATION_0022,
   MIGRATION_0023,
+  MIGRATION_0024,
 ];

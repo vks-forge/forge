@@ -5,7 +5,7 @@
  *   only what separates tickets: id and title (the whole card is one link to the Ticket page,
  *   d-0116), the lane, the exact state when a column holds several, the current run's status,
  *   rework count, why it is blocked, and, in amber with a left edge, that it waits on the
- *   user. A ticket that came out of a card links back to it (its id, above the overlay link)
+ *   user. A ticket that has spent money shows it as a small muted figure. A ticket that came out of a card links back to it (its id, above the overlay link)
  *   so the user can reach the conversation. Amber appears nowhere else on a card, so it keeps
  *   its meaning. Hover and keyboard focus (the ring follows the link inside) show the whole
  *   card is the target.
@@ -17,6 +17,7 @@
 import type { TicketSummary } from '@forge/core';
 import { CircleAlert, CornerLeftUp, OctagonAlert, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router';
+import { CostChip } from '#/components/cost/cost-chip.js';
 import { LaneChip, RunChip, StateChip } from '#/components/ticket/status-chips.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
 import { cardPath } from '#/domain/card-paths.js';
@@ -91,7 +92,16 @@ export function TicketCard(props: {
         ) : (
           <span />
         )}
-        <span className="whitespace-nowrap">{timeAgo(ticket.updated_at, now)}</span>
+        <span className="flex items-center gap-2 whitespace-nowrap">
+          {ticket.cost_usd !== undefined && ticket.cost_usd > 0 ? (
+            <CostChip
+              usd={ticket.cost_usd}
+              label={`Cost of ${ticket.id}`}
+              className="relative z-10"
+            />
+          ) : null}
+          {timeAgo(ticket.updated_at, now)}
+        </span>
       </div>
     </article>
   );

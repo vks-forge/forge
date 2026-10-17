@@ -12,12 +12,13 @@
  *
  * Exports: QUOTA_WAIT, parkHarnessForQuota(), requestQuotaWake().
  * Depends on: @forge/core (HarnessId, RunResult), domain/harness-choice, domain/wait-reason,
- *   shared/time, tick/wakes, tick/tick-config. Writes inside the caller's transaction.
+ *   shared/time, tick/run-agent, tick/wakes, tick/tick-config. Writes inside the caller's transaction.
  */
 
 import { HarnessId } from '@forge/core';
 import type { Run, RunResult, StorageTx, Ticket } from '@forge/core';
 import { chooseHarness } from '#/domain/harness-choice.js';
+import { resolveAgent } from '#/tick/run-agent.js';
 import { clockUtc } from '#/domain/wait-reason.js';
 import { iso } from '#/shared/time.js';
 import { projectSettings } from '#/tick/tick-config.js';
@@ -91,8 +92,18 @@ export async function requestQuotaWake(
 ): Promise<void> {
   const project = await tx.projects.get(ticket.project);
   const settings = projectSettings(ctx.config, project?.slug ?? ticket.project);
+  // The agent the run used may carry its own fallback list; it replaces the company's.
+  const agent = resolveAgent(
+    ctx.config,
+    project?.slug ?? ticket.project,
+    ticket.lane,
+    run.agent_id,
+  );
+
   const fallbacks =
-    settings.harness_fallbacks ?? ctx.config.forge.engine.harness_fallbacks;
+    agent.fallbackHarnesses.length > 0
+      ? agent.fallbackHarnesses
+      : (settings.harness_fallbacks ?? ctx.config.forge.engine.harness_fallbacks);
 
   const elsewhere =
     chooseHarness(

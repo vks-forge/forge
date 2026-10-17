@@ -19,7 +19,13 @@
 
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { MemoryRecordRef, MemorySlice, MemorySource } from '@forge/core';
+import { filterMemorySlice } from '@forge/core';
+import type {
+  MemoryFilter,
+  MemoryRecordRef,
+  MemorySlice,
+  MemorySource,
+} from '@forge/core';
 import { parseFrontMatter } from '#/domain/front-matter.js';
 import { MemoryRecordFrontMatter } from '#/schemas/memory-record.js';
 import { readCommittedFiles } from '#/shared/committed-files.js';
@@ -82,7 +88,11 @@ function toRefs(
     }
 
     if (accepted.includes(rec.data.status)) {
-      out.push({ id: rec.data.id, statement: rec.data.statement });
+      out.push({
+        id: rec.data.id,
+        statement: rec.data.statement,
+        ...(rec.data.tags && rec.data.tags.length > 0 ? { tags: rec.data.tags } : {}),
+      });
     }
   }
 
@@ -92,7 +102,8 @@ function toRefs(
 /**
  * Creates a MemorySource reading `<rootDir>/<slug>/{decisions,rejected}/*.md`, where
  * `rootDir` is `<dataHome>/memory`. An unknown project, or a slug that is not
- * `[a-z][a-z0-9-]*`, yields an empty slice.
+ * `[a-z][a-z0-9-]*`, yields an empty slice. With a `filter` (an agent's memory view) only
+ * records carrying one of its tags are returned, and rejected approaches only if asked for.
  */
 export function createFileMemorySource(
   rootDir: string,
@@ -100,36 +111,42 @@ export function createFileMemorySource(
 ): MemorySource {
   const onSkip = deps.onSkip ?? ((): void => undefined);
 
+  async function read(projectSlug: string): Promise<MemorySlice> {
+    if (!SLUG.test(projectSlug)) {
+      onSkip(projectSlug, 'invalid project slug');
+
+      return EMPTY;
+    }
+
+    const base = join(rootDir, projectSlug);
+    if (!(await isRepo(base))) {
+      if (await isDir(base)) {
+        onSkip(base, 'not a git repository; memory is read from commits only');
+      }
+
+      return EMPTY;
+    }
+
+    let files: CommittedFile[];
+    try {
+      files = await readCommittedFiles(base, ['decisions', 'rejected']);
+    } catch (err) {
+      onSkip(base, `unreadable: ${err instanceof Error ? err.message : String(err)}`);
+
+      return EMPTY;
+    }
+
+    return {
+      decisions: toRefs(base, files, 'decisions', DECISION_STATUSES, onSkip),
+      rejected: toRefs(base, files, 'rejected', REJECTED_STATUSES, onSkip),
+    };
+  }
+
   return {
-    async slice(projectSlug: string): Promise<MemorySlice> {
-      if (!SLUG.test(projectSlug)) {
-        onSkip(projectSlug, 'invalid project slug');
+    async slice(projectSlug: string, filter?: MemoryFilter): Promise<MemorySlice> {
+      const all = await read(projectSlug);
 
-        return EMPTY;
-      }
-
-      const base = join(rootDir, projectSlug);
-      if (!(await isRepo(base))) {
-        if (await isDir(base)) {
-          onSkip(base, 'not a git repository; memory is read from commits only');
-        }
-
-        return EMPTY;
-      }
-
-      let files: CommittedFile[];
-      try {
-        files = await readCommittedFiles(base, ['decisions', 'rejected']);
-      } catch (err) {
-        onSkip(base, `unreadable: ${err instanceof Error ? err.message : String(err)}`);
-
-        return EMPTY;
-      }
-
-      return {
-        decisions: toRefs(base, files, 'decisions', DECISION_STATUSES, onSkip),
-        rejected: toRefs(base, files, 'rejected', REJECTED_STATUSES, onSkip),
-      };
+      return filter ? filterMemorySlice(all, filter) : all;
     },
   };
 }

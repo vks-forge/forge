@@ -25,6 +25,8 @@ export interface SettingsTab {
   readonly to: string;
   readonly label: string;
   readonly icon: LucideIcon;
+  /** The section holds edits that are not saved yet: shown as a small dot. */
+  readonly dirty?: boolean;
 }
 
 /** What the project-settings editor shares with every section through the router outlet. */

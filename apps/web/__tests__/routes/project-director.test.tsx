@@ -10,6 +10,7 @@
  * Depends on: routes/project-settings, helpers/render-screens, helpers/choose. jsdom.
  */
 
+import { STEP_NAMES } from '@forge/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
@@ -100,7 +101,7 @@ describe('project Director override', () => {
     ).step_timeouts_ms;
 
     expect(timeouts['verify']).toBe(90_000);
-    expect(Object.keys(timeouts)).toHaveLength(13);
+    expect(Object.keys(timeouts)).toHaveLength(STEP_NAMES.length);
   });
 
   it('Reset to company drops every override, and saving removes the key', async () => {

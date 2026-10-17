@@ -6,14 +6,22 @@
  *   capabilities are declared and stable, preflight has a fixed shape, a run streams
  *   numbered events and ends in one parseable result, cancel ends a hung run as
  *   `cancelled`, a finished session can be resumed, and steering works exactly for the
- *   modes the driver declared. A new harness driver passes this before it gets any test of
+ *   modes the driver declared; its models are valid, and a probe call always comes back as a
+ *   result, never a throw. A new harness driver passes this before it gets any test of
  *   its own (code.md rule 8); the Claude engines run it on fakes.
  *
  * Exports: ContractHarness, describeWorkerDriverContract().
  * Depends on: vitest, @forge/core (schemas and WorkerDriver). No IO of its own.
  */
 
-import { DriverCapabilities, RunEvent, RunResult, SteerMode } from '@forge/core';
+import {
+  DriverCapabilities,
+  ErrorFamily,
+  HarnessModel,
+  RunEvent,
+  RunResult,
+  SteerMode,
+} from '@forge/core';
 import type { RunRequest, WorkerDriver } from '@forge/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -36,9 +44,14 @@ async function drain(driver: WorkerDriver, runId: string): Promise<RunEvent[]> {
   return out;
 }
 
+/**
+ * `opts.probe` is false for a driver whose probe needs a live process that a hand-advanced clock
+ * cannot finish (the Claude rigs); its probe is pinned by its own test instead.
+ */
 export function describeWorkerDriverContract(
   name: string,
   make: () => Promise<ContractHarness>,
+  opts: { readonly probe: boolean } = { probe: true },
 ): void {
   // 30s per case: the CLI engine runs real node child processes, slow under a loaded suite.
   describe(`WorkerDriver contract: ${name}`, { timeout: 30_000 }, () => {
@@ -67,6 +80,35 @@ export function describeWorkerDriverContract(
       expect(Array.isArray(p.issues)).toBe(true);
       expect(p.ok).toBe(p.issues.length === 0);
     });
+
+    it('declares its models as valid, uniquely named entries', async () => {
+      const models = await h.driver.models();
+
+      expect(Array.isArray(models)).toBe(true);
+      for (const m of models) {
+        expect(HarnessModel.parse(m)).toEqual(m);
+      }
+
+      expect(new Set(models.map((m) => m.id)).size).toBe(models.length);
+    });
+
+    it.skipIf(!opts.probe)(
+      'probe resolves to a result with a duration and never throws for a failed call',
+      async () => {
+        const r = await h.driver.probe({
+          instructions: 'Be brief.',
+          prompt: 'Say hello.',
+          timeoutMs: 2_000,
+          maxUsd: 0.05,
+        });
+
+        expect(typeof r.ok).toBe('boolean');
+        expect(r.durationMs).toBeGreaterThanOrEqual(0);
+        if (!r.ok) {
+          expect(ErrorFamily.options).toContain(r.error?.family);
+        }
+      },
+    );
 
     it('start streams numbered events and ends in one stable, valid result', async () => {
       h.scriptSuccess();

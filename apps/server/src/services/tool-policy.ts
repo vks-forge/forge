@@ -15,11 +15,12 @@
  *   closed). The project's `tool_grants` come from its effective settings; a malformed grant
  *   fails the call closed. Its checks and ecosystems shape the lane's shell allow-list, so a
  *   Worker can run its own project's tests and lint unattended in any language (an interpreter-led
- *   check such as `node scripts/lint.mjs` only as that exact text, from the run's cwd). Each run's grant carries the data home, so the floors deny a
+ *   check such as `node scripts/lint.mjs` only as that exact text, from the run's cwd). The run's
+ *   agent adds one more narrowing layer (its tools and write scope), rebuilt on every call. Each run's grant carries the data home, so the floors deny a
  *   Worker everything in Forge's folder except its own worktree (d-0098).
  *
  * Exports: createToolPolicy().
- * Depends on: @forge/core (ConfigSource, Run, PolicyDeniedError, StorageAdapter),
+ * Depends on: @forge/core (ConfigSource, Run, PolicyDeniedError, StorageAdapter), services/agent-grant-for-run,
  *   @forge/engine (Logger), @forge/mcp (computeToolSchemaHashes), @forge/tools (CatalogueStore,
  *   effectiveCatalogue, effectiveGrant, Grant), services/harness-source, types/server. IO:
  *   reads the catalogue and approval rows.
@@ -29,6 +30,7 @@ import { PolicyDeniedError } from '@forge/core';
 import { computeToolSchemaHashes } from '@forge/mcp';
 import { Grant, effectiveCatalogue, effectiveGrant } from '@forge/tools';
 import type { EffectiveCatalogue } from '@forge/tools';
+import { agentGrantForRun } from '#/services/agent-grant-for-run.js';
 import { DEFAULT_HARNESS } from '#/services/harness-source.js';
 import type { ToolPolicy, ToolPolicyDeps } from '#/types/server.types.js';
 
@@ -98,6 +100,8 @@ export function createToolPolicy(deps: ToolPolicyDeps): ToolPolicy {
                 ...(run.cwd ? { runCwd: run.cwd } : {}),
               }
             : undefined,
+          // The run's agent narrows tools and write scope further; it can never widen them.
+          view ? agentGrantForRun(view.config, run.agent_id) : undefined,
         ),
         liveSchemaHashes: { ...eff.liveSchemaHashes, ...(await forgeHashes) },
         schemaStatus: eff.schemaStatus,

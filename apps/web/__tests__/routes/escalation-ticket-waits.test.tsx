@@ -85,7 +85,7 @@ describe('Ticket page: waiting without a question', () => {
     const { forge } = open(
       [],
       { waitActions: { 'SVC-5': ['rework', 'cancel'] } },
-      '/p/sample-service/tickets/SVC-5',
+      '/p/sample-service/tickets/SVC-5/review',
     );
 
     expect(
@@ -110,7 +110,7 @@ describe('Ticket page: waiting without a question', () => {
     const { forge } = open(
       [],
       { waitActions: { 'SVC-5': ['approve', 'rework', 'cancel'] } },
-      '/p/sample-service/tickets/SVC-5',
+      '/p/sample-service/tickets/SVC-5/review',
     );
 
     await user.click(await screen.findByRole('button', { name: 'Approve and merge' }));

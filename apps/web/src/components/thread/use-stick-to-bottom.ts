@@ -6,7 +6,9 @@
  *   always follows snatches the page away while they read an earlier tool call. So it
  *   follows only while the user is within a few pixels of the bottom, stops the moment they
  *   scroll up, counts what arrived meanwhile, and offers "Jump to latest" to resume. Users
- *   who never want following can turn it off (thread prefs).
+ *   who never want following can turn it off (thread prefs). A list that opens at a saved
+ *   offset (the owner scrolled up, switched tab and came back) starts un-stuck at that offset
+ *   instead of jumping to the newest line.
  *
  * Exports: useStickToBottom(), NEAR_BOTTOM_PX.
  * Depends on: react.
@@ -25,10 +27,14 @@ export function useStickToBottom(
   /** Anything else that changes the content height (virtualised total size). */
   size: number,
   enabled: boolean,
+  /** A saved offset to open at instead of the newest line. */
+  initialTop?: number,
 ) {
-  const [stuck, setStuck] = useState(true);
+  const restored = initialTop !== undefined;
+  const [stuck, setStuck] = useState(!restored);
   const [anchor, setAnchor] = useState(count);
-  const stuckRef = useRef(true);
+  const stuckRef = useRef(!restored);
+  const openAt = useRef(initialTop);
 
   const onScroll = useCallback(() => {
     const el = ref.current;
@@ -45,6 +51,13 @@ export function useStickToBottom(
       }
     }
   }, [ref, count]);
+
+  // Only on mount: later growth follows the newest line or leaves the reader alone.
+  useLayoutEffect(() => {
+    if (ref.current && openAt.current !== undefined) {
+      ref.current.scrollTop = openAt.current;
+    }
+  }, [ref]);
 
   useLayoutEffect(() => {
     const el = ref.current;

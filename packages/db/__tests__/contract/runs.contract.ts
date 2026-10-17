@@ -56,6 +56,44 @@ export function describeRunsContract(getDb: () => StorageAdapter): void {
     });
   });
 
+  describe('agent record', () => {
+    it('stores the agent id and hash of a run and lets them be absent on older runs', async () => {
+      const hash = 'a'.repeat(64);
+      await db.transaction(async (tx) => {
+        await tx.runs.insert(
+          makeRun('ra', { agent_id: 'implementer', agent_hash: hash }),
+        );
+
+        await tx.runs.insert(makeRun('rb'));
+      });
+
+      const got = await db.transaction(async (tx) => ({
+        a: await tx.runs.get('ra'),
+        b: await tx.runs.get('rb'),
+      }));
+
+      expect(got.a).toMatchObject({ agent_id: 'implementer', agent_hash: hash });
+      expect('agent_id' in (got.b ?? {})).toBe(false);
+      expect('agent_hash' in (got.b ?? {})).toBe(false);
+    });
+
+    it('lets a patch set and clear the agent record', async () => {
+      await db.transaction(async (tx) => {
+        await tx.runs.insert(makeRun('rc'));
+        await tx.runs.update('rc', { agent_id: 'reviewer', agent_hash: 'b'.repeat(64) });
+      });
+
+      expect((await db.transaction((tx) => tx.runs.get('rc')))?.agent_id).toBe(
+        'reviewer',
+      );
+
+      await db.transaction((tx) => tx.runs.update('rc', { agent_id: undefined }));
+      expect(
+        'agent_id' in ((await db.transaction((tx) => tx.runs.get('rc'))) ?? {}),
+      ).toBe(false);
+    });
+  });
+
   describe('optional run columns', () => {
     it('update clears an optional column given as undefined', async () => {
       await db.transaction(async (tx) => {

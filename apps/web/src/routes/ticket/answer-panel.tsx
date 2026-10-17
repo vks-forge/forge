@@ -6,8 +6,8 @@
  *   important thing on the Ticket page and sits above the thread in amber (the only colour
  *   that means "needs you"). Escalations (a question, a failure, a setup to fix) draw as the same
  *   card the chat and the Inbox use; while the Director is still looking at one, the panel says so
- *   and offers nothing; a wait with no question (review, sign-off, a scheduler hold) shows its
- *   actions below. A question from a server that predates escalations keeps the plain form below.
+ *   and offers nothing; a wait with no question (a scheduler hold) shows its actions below; review and
+ *   sign-off belong to the Review tab, so the page passes `showWait={false}` while that tab exists. A question from a server that predates escalations keeps the plain form below.
  *   Sending is optimistic: the question leaves at once and a status
  *   line says it was sent. If the server refuses, the question returns with the user's words
  *   still in the box (the draft lives outside the form, state/answer-draft) and a plain
@@ -109,6 +109,8 @@ function QuestionCard(props: {
 
 export function AnswerPanel(props: {
   detail: TicketDetail;
+  /** False when the Review tab owns the review and sign-off actions. */
+  showWait?: boolean;
   /** The prompt the run streamed for an interaction, when seen. */
   streamedPrompt: (interactionId: string) => string | undefined;
 }) {
@@ -150,7 +152,9 @@ export function AnswerPanel(props: {
       {shown.map((view) => (
         <EscalationCard key={view.id} view={view} showTicket={false} onKeep={keep} />
       ))}
-      {!ownerHasItem && legacy.length === 0 ? <TicketWait detail={detail} /> : null}
+      {!ownerHasItem && legacy.length === 0 && props.showWait !== false ? (
+        <TicketWait detail={detail} />
+      ) : null}
       {legacy.map((interaction) => (
         <QuestionCard
           key={interaction.id}

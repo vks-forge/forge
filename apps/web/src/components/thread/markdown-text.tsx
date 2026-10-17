@@ -40,7 +40,7 @@ function Inline(props: { nodes: readonly MarkdownInline[] }): ReactNode {
         );
       case 'code':
         return (
-          <code key={index} className="rounded bg-surface px-1 font-data text-xs">
+          <code key={index} className="rounded bg-hover px-1 font-data text-xs">
             {node.text}
           </code>
         );
@@ -98,7 +98,7 @@ function Block(props: { block: MarkdownBlock }): ReactNode {
 
     case 'code':
       return (
-        <pre className="max-w-full scroll-area overflow-auto rounded-lg bg-surface p-2 font-data text-xs">
+        <pre className="max-w-full scroll-area overflow-auto rounded-lg bg-hover p-2 font-data text-xs">
           {block.text}
         </pre>
       );

@@ -9,9 +9,10 @@
  *   default and every install that never overrode it picks it up.
  *
  * Exports: BUILTIN_FORGE_CONFIG, BUILTIN_PROJECT_SETTINGS, BUILTIN_CONFIG.
- * Depends on: domain/builtin-director, schemas/config-override, schemas/forge-config. No IO.
+ * Depends on: domain/builtin-agents, domain/builtin-director, schemas/config-override, schemas/forge-config. No IO.
  */
 
+import { BUILTIN_AGENTS } from '#/domain/builtin-agents.js';
 import { BUILTIN_DIRECTOR_CONFIG } from '#/domain/builtin-director.js';
 import type { EffectiveConfig, ProjectSettings } from '#/schemas/config-override.js';
 import type { ForgeConfig } from '#/schemas/forge-config.js';
@@ -35,6 +36,8 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
       // Escalation steps (d-0141 item 8): answering a Worker is a quick turn, diagnosing a failure is judging.
       ticket_answer: 'sonnet',
       ticket_recover: 'opus',
+      // Drafting an agent from a description is one quick structured answer.
+      draft_agent: 'sonnet',
     },
     worker: { express: 'sonnet', standard: 'sonnet', full: 'sonnet' },
   },
@@ -65,6 +68,7 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
     shutdown_drain_ms: 10_000,
   },
   director: BUILTIN_DIRECTOR_CONFIG,
+  agents: { ...BUILTIN_AGENTS },
 };
 
 /** What a project gets until it overrides: no checks (any role may be absent), no ecosystems (the gates detect them), the safe Tier C set. */

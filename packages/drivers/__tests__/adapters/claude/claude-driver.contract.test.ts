@@ -12,5 +12,11 @@
 import { describeWorkerDriverContract } from '#tests/contract/worker-driver.contract.js';
 import { makeAcpRig, makeCliRig } from '#tests/helpers/claude-rigs.js';
 
-describeWorkerDriverContract('Claude driver, ACP engine', async () => makeAcpRig());
-describeWorkerDriverContract('Claude driver, CLI engine', async () => makeCliRig());
+// The probe is a separate short-lived process; adapters/claude/agent-probe.test.ts pins it.
+describeWorkerDriverContract('Claude driver, ACP engine', async () => makeAcpRig(), {
+  probe: false,
+});
+
+describeWorkerDriverContract('Claude driver, CLI engine', async () => makeCliRig(), {
+  probe: false,
+});

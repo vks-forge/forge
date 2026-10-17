@@ -1,5 +1,5 @@
 /**
- * Pins: the Ticket page shows the ticket, its gates and runs, streams the current run's
+ * Pins: the Ticket page shows the ticket (gates under Details, runs under Runs), streams the current run's
  * thread (messages, collapsed tool calls, decisions, status), surfaces the Worker's question
  * in amber, answers it optimistically with recovery on refusal, and handles a lost stream.
  *
@@ -19,23 +19,28 @@ import { renderApp } from '#tests/helpers/render-app.js';
 const ticketPath = (id: string) => `/p/sample-service/tickets/${id}`;
 
 describe('Ticket page', () => {
-  it('shows the header, the pull request, gates and runs', async () => {
+  it('shows the header and the pull request; gates and runs live in their own tabs', async () => {
+    const user = userEvent.setup();
     renderApp({ path: ticketPath('SVC-8') });
 
     expect(
       await screen.findByRole('heading', { level: 1, name: /Reject oversized uploads/ }),
     ).toBeInTheDocument();
 
-    const gates = within(screen.getByRole('region', { name: 'Gates' }));
-    expect(gates.getByText('G1')).toBeInTheDocument();
-    expect(gates.getByText('failed')).toBeInTheDocument();
-    const runs = within(screen.getByRole('region', { name: 'Runs' }));
-    expect(runs.getAllByRole('button')).toHaveLength(2);
-    expect(runs.getByText(/retry of/)).toBeInTheDocument();
     expect(screen.getByText(/Reworked 1×/)).toBeInTheDocument();
     expect(
       within(screen.getByRole('main')).getByRole('link', { name: /Board/ }),
     ).toHaveAttribute('href', '/p/sample-service/board');
+
+    await user.click(screen.getByRole('tab', { name: 'Details' }));
+    const gates = within(await screen.findByRole('region', { name: 'Gates' }));
+    expect(gates.getByText('G1')).toBeInTheDocument();
+    expect(gates.getByText('failed')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Runs' }));
+    const runs = within(await screen.findByRole('region', { name: 'Runs' }));
+    expect(runs.getAllByRole('link')).toHaveLength(2);
+    expect(runs.getByText(/retry of/)).toBeInTheDocument();
   });
 
   it('links the pull request out in a new tab', async () => {
@@ -95,16 +100,19 @@ describe('Ticket page', () => {
     expect(screen.queryByText(/Run ended/)).not.toBeInTheDocument();
   });
 
-  it('switches the thread to another run of the ticket', async () => {
+  it('switches the thread to another run of the ticket from the Runs tab, via ?run=', async () => {
     const user = userEvent.setup();
-    renderApp({ path: ticketPath('SVC-8') });
+    const { router } = renderApp({ path: ticketPath('SVC-8') });
     await screen.findByText(/The Worker process exited unexpectedly/);
 
-    const runs = within(screen.getByRole('region', { name: 'Runs' }));
+    await user.click(screen.getByRole('tab', { name: 'Runs' }));
+    const runs = within(await screen.findByRole('region', { name: 'Runs' }));
     await user.click(runs.getByText('run-svc-8a'));
 
     expect(await screen.findByText('This run recorded no messages.')).toBeInTheDocument();
     expect(screen.queryByText(/exited unexpectedly/)).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(`${ticketPath('SVC-8')}/conversation`);
+    expect(router.state.location.search).toBe('?run=run-svc-8a');
   });
 });
 

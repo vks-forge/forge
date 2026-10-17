@@ -1,0 +1,22 @@
+{
+  "runId": "run-1",
+  "projectId": "forge",
+  "lane": "express",
+  "promptHash": "b9f5789dbd65d327197b8d627fe6b5a57ddf9cd17ac80f6be9d1def8e6c184bf",
+  "mcpIdentity": "forge",
+  "ticketId": "FG-1",
+  "cwd": "/repo/.worktrees/FG-1",
+  "prompt": "Do the ticket.\n\n## Rules of this run (set by the Director)\n\nShell:\n- Your working directory is already the ticket worktree. Never `cd` into it or anywhere else; run commands directly and use relative paths.\n- Run one shell command per call. Compound commands (`;`, `&&`, `||`, pipes) need an approval nobody can give in an unattended run and are denied. Prefer the Read, Glob, Grep and Edit tools over `cat`, `ls` and `sed`.\n- The project defines no test command: do not claim `ran_tests`.\n\nFinishing:\n- End the run by calling the `finish` tool; a run that ends without it cannot be verified. Its schema is already available to you, call it directly.\n- Give `finish` a typed claim for every file you edited or created ({\"kind\":\"edited\",\"path\":...}, tests included, no exceptions); add {\"kind\":\"ran_tests\"} if you ran the project tests, {\"kind\":\"added_test\",\"name\":...} for tests you added, and {\"kind\":\"read\",...} for files you relied on.\n- Call `finish` once, when the work is done. If you notice a mistake in a call, call `finish` again: the last call replaces the earlier one until the run ends.\n- Gate G1 checks each claim against the tool-call receipts and the real git diff: a claim without evidence, or an edit without a claim, fails the gate.\n- Do not push or open pull requests; the Director publishes the branch after your run.",
+  "model": "sonnet",
+  "budget": {
+    "maxTurns": 40,
+    "maxUsd": 5,
+    "stallMs": 300000,
+    "turnMs": 600000
+  },
+  "env": {
+    "FORGE_RUN_TOKEN": "token-1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "FORGE_TICKET": "FG-1"
+  },
+  "isolation": "host"
+}

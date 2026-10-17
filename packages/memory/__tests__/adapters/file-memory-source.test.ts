@@ -31,10 +31,12 @@ function rec(
   id: string,
   status: string | null,
   statement = `statement of ${id}`,
+  tags: string[] = [],
 ): string {
   const st = status === null ? '' : `status: ${status}\n`;
+  const tg = tags.length === 0 ? '' : `tags: [${tags.join(', ')}]\n`;
 
-  return `---\nid: ${id}\nstatement: ${statement}\n${st}---\nbody\n`;
+  return `---\nid: ${id}\nstatement: ${statement}\n${st}${tg}---\nbody\n`;
 }
 
 async function put(dir: string, file: string, text: string): Promise<void> {
@@ -62,10 +64,10 @@ function sealed(deps?: Parameters<typeof createFileMemorySource>[1]): MemorySour
   const inner = createFileMemorySource(root, deps);
 
   return {
-    async slice(slug) {
+    async slice(slug, filter) {
       await seal(slug);
 
-      return inner.slice(slug);
+      return inner.slice(slug, filter);
     },
   };
 }
@@ -226,5 +228,50 @@ describe('committed content only', () => {
 
     expect(slice).toEqual({ decisions: [], rejected: [] });
     expect(skips.map((s) => s.reason)).toEqual([expect.stringMatching(/repository/)]);
+  });
+
+  describe('agent memory filter', () => {
+    async function seed(): Promise<void> {
+      const decisions = join(root, 'proj', 'decisions');
+      await put(decisions, 'd-0001.md', rec('d-0001', 'active', 's1', ['db']));
+      await put(decisions, 'd-0002.md', rec('d-0002', 'active', 's2', ['ui']));
+      await put(decisions, 'd-0003.md', rec('d-0003', 'active', 's3'));
+      await put(
+        join(root, 'proj', 'rejected'),
+        'r-0001.md',
+        rec('r-0001', null, 'x', ['db']),
+      );
+    }
+
+    it('carries the tags of a record and returns the whole slice without a filter', async () => {
+      await seed();
+
+      const slice = await sealed().slice('proj');
+
+      expect(slice.decisions.map((d) => d.id)).toEqual(['d-0001', 'd-0002', 'd-0003']);
+      expect(slice.decisions[0]?.tags).toEqual(['db']);
+      expect(slice.decisions[2]?.tags).toBeUndefined();
+    });
+
+    it('treats an empty tag list as the whole slice, as before agents existed', async () => {
+      await seed();
+
+      const slice = await sealed().slice('proj', { tags: [], include_rejected: true });
+
+      expect(slice.decisions).toHaveLength(3);
+      expect(slice.rejected).toHaveLength(1);
+    });
+
+    it('keeps only records with a requested tag and drops rejected ones when not asked for', async () => {
+      await seed();
+
+      const slice = await sealed().slice('proj', {
+        tags: ['db'],
+        include_rejected: false,
+      });
+
+      expect(slice.decisions.map((d) => d.id)).toEqual(['d-0001']);
+      expect(slice.rejected).toEqual([]);
+    });
   });
 });

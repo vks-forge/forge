@@ -46,8 +46,8 @@ export function buildCliArgs(
     String(req.budget.maxUsd),
     '--max-turns',
     String(req.budget.maxTurns),
-    '--model',
-    req.model,
+    // No model for an agent set to "harness default": the CLI then picks its own.
+    ...(req.model === undefined ? [] : ['--model', req.model]),
     '--permission-mode',
     'default',
     ...(resumeSession ? ['--resume', resumeSession] : []),

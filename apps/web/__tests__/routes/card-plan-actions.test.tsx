@@ -2,14 +2,13 @@
  * Pins: in `plan_ready` the owner approves only after a dialog that lists the tickets in order,
  * sends changes back with a comment of at least five characters, and edits tickets lightly
  * (rename, reorder, remove, priority) in one request, with a 409 shown in words; outside
- * `plan_ready` there are no decision buttons; the card page puts the chat beside a side panel on
- * wide screens and turns the four views into tabs below 768 px.
+ * `plan_ready` there are no decision buttons.
  *
  * Why: approving is the only path that creates tickets (d-0133). An approval with no preview, an
  *   edit that fails silently, or a decision button on a plan that is no longer waiting would each
  *   cost the owner trust in the plan.
  * Depends on: the stubbed Forge server via helpers/render-app, helpers/flow-fixtures,
- *   routes/card/plan/*, routes/card/card-body, helpers/choose.
+ *   routes/card/plan/*, helpers/choose.
  */
 
 import { screen, waitFor, within } from '@testing-library/react';
@@ -20,7 +19,7 @@ import { refusal } from '#tests/helpers/fetch-stub.js';
 import { flowRoutes, FLOW_CARD, planFixture } from '#tests/helpers/flow-fixtures.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
-const PLAN_PAGE = `/p/sample-service/cards/${FLOW_CARD}?tab=plan`;
+const PLAN_PAGE = `/p/sample-service/cards/${FLOW_CARD}/plan`;
 const when = new Date().toISOString();
 const ready = { phase: 'plan_ready', column: 'needs_you', needs_you: true };
 
@@ -231,51 +230,5 @@ describe('Plan tab: light ticket edits', () => {
 
     expect(screen.queryByLabelText('Title of t1')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit tickets' })).toBeInTheDocument();
-  });
-});
-
-describe('Card page: layout', () => {
-  const wide = (query: string) => query.includes('768');
-
-  it('puts the chat in the main column and Plan, Tickets, Details in a side panel on wide screens', async () => {
-    const { setMatchMedia } = await import('#tests/helpers/match-media.js');
-    setMatchMedia(wide);
-    renderApp({ path: `/p/sample-service/cards/${FLOW_CARD}`, routes: withPlan() });
-
-    expect(await screen.findByRole('log', { name: 'Conversation' })).toBeInTheDocument();
-
-    const tabs = within(screen.getByRole('tablist', { name: 'Card panel' })).getAllByRole(
-      'tab',
-    );
-
-    expect(tabs.map((t) => t.textContent?.replace(/\d+$/, ''))).toEqual([
-      'Plan',
-      'Tickets',
-      'Details',
-    ]);
-
-    expect(
-      await screen.findByRole('heading', { level: 3, name: 'Goal' }),
-    ).toBeInTheDocument();
-  });
-
-  it('turns into Chat, Plan, Tickets, Details tabs below 768 px', async () => {
-    renderApp({ path: `/p/sample-service/cards/${FLOW_CARD}`, routes: withPlan() });
-
-    const tabs = within(
-      await screen.findByRole('tablist', { name: 'Card' }),
-    ).getAllByRole('tab');
-
-    expect(tabs.map((t) => t.textContent?.replace(/\d+$/, ''))).toEqual([
-      'Chat',
-      'Plan',
-      'Tickets',
-      'Details',
-    ]);
-
-    expect(screen.queryByRole('tablist', { name: 'Card panel' })).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { level: 3, name: 'Goal' }),
-    ).not.toBeInTheDocument();
   });
 });

@@ -18,6 +18,7 @@ import {
   inheritedOf,
   parseLines,
   SAFE_TIER_C,
+  SCOPE_FIELDS,
   setOverridden,
 } from '#/domain/settings-draft.js';
 import { ChecksEditor } from '#/routes/project-settings/checks-editor.js';
@@ -81,13 +82,6 @@ const TEXT_FIELDS: readonly TextFieldSpec[] = [
     placeholder: 'origin',
   },
 ];
-
-/** Which overridable fields each tab of the project settings shows. */
-const SCOPE_FIELDS = {
-  workers: ['default_harness', 'max_concurrent', 'harness_fallbacks'],
-  checks: ['checks', 'ecosystems'],
-  repository: ['remote', 'tier_c_globs'],
-} as const satisfies Record<FormScope, readonly FieldKey[]>;
 
 const plain = (text: string, empty: string): string =>
   text.trim() === '' ? empty : text.split('\n').join(', ');

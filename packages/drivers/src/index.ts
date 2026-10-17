@@ -15,6 +15,7 @@
  * Depends on: adapters/claude, schemas, types. No IO on import.
  */
 
+export * from '#/adapters/claude/agent-probe.js';
 export * from '#/adapters/claude/claude-driver.js';
 export * from '#/adapters/claude/director-llm.js';
 export * from '#/adapters/claude/harness-resolver.js';
@@ -31,6 +32,7 @@ export {
 } from '#/compat/run-installed.js';
 export { diffToolShapes, hashToolSchema, toolShapes } from '#/compat/tool-shapes.js';
 export { resolveClaudeBinary, resolveInstalledClaude } from '#/domain/claude-binary.js';
+export { CLAUDE_MODELS } from '#/domain/claude-models.js';
 export { authVerdict } from '#/domain/harness-auth.js';
 export { HarnessNotInstalledError, INSTALL_CLAUDE_HINT } from '#/shared/errors.js';
 export * from '#/schemas/claude-config.js';

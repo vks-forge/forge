@@ -2,8 +2,8 @@
  * `useBannerActions()`: what each button of the Needs you banner does.
  *
  * Why: the Director lists the actions that can unblock a card, and each must lead somewhere
- *   (d-0135, no dead ends): "answer" moves focus to the open question (switching to the Chat tab
- *   first on a narrow screen); "approve plan" and "request changes" open the plan dialogs, or the
+ *   (d-0135, no dead ends): "answer" moves focus to the open question (switching to the Conversation
+ *   tab first when another tab is open); "approve plan" and "request changes" open the plan dialogs, or the
  *   Plan tab when no plan has loaded; "start planning" calls the endpoint for a card that was
  *   never planned; "run as Express" releases the held ticket the raise names, or opens the
  *   Tickets tab so the owner can choose one; "retry step" re-queues the planning step that ran out
@@ -33,11 +33,10 @@ export function useBannerActions(input: {
   needs: NeedsYou | null;
   hasPlan: boolean;
   tab: CardTab;
-  wide: boolean;
   decisions: PlanDecisions;
   goTab: (tab: CardTab) => void;
 }) {
-  const { cardId, needs, tab, wide, decisions, goTab } = input;
+  const { cardId, needs, tab, decisions, goTab } = input;
   const start = useStartPlanning(cardId);
   const express = useRunAsExpress(cardId);
   const retry = useRetryPlanningStep(cardId);
@@ -51,9 +50,9 @@ export function useBannerActions(input: {
     return first !== null;
   };
 
-  // The question is not mounted until the Chat tab is: focus it once it is.
+  // The question is not mounted until the Conversation tab is: focus it once it is.
   useEffect(() => {
-    if (focusWhenShown.current && (wide || tab === 'chat') && focusQuestion()) {
+    if (focusWhenShown.current && tab === 'conversation' && focusQuestion()) {
       focusWhenShown.current = false;
     }
   });
@@ -63,7 +62,7 @@ export function useBannerActions(input: {
       case 'answer':
         if (!focusQuestion()) {
           focusWhenShown.current = true;
-          goTab('chat');
+          goTab('conversation');
         }
 
         break;

@@ -18,14 +18,12 @@
  *   parallel `Read` is attempted part way through, and PostToolUse is posted about a second
  *   after the edit, so a graceful stop has a call in flight to wait for.
  *
- *   A run the script has no line for (a second fresh `resumable*` run, e.g. the rework run after
- *   a failed gate) ends at once as an error recorded in `failures`, so a test fails with the
- *   reason instead of waiting for a Worker that would park forever.
+ *   A run the script has no line for (e.g. a rework run after a failed gate) ends at once as an
+ *   error recorded in `failures`, so a test fails with the reason instead of parking forever.
  *
  * Exports: Behaviour, FakeWorker, createFakeWorker().
  * Depends on: @forge/core (WorkerDriver, RunEvent), helpers/channel, helpers/harness-session,
- *   helpers/scripted-writes.
- *   IO: edits files, HTTP to the server.
+ *   helpers/scripted-writes. IO: edits files, HTTP to the server.
  */
 
 import { readFileSync } from 'node:fs';
@@ -250,6 +248,8 @@ export function createFakeWorker(
     }),
     // A build the release shipped as verified (the rig's compat port reports the same one).
     preflight: async () => ({ ok: true, issues: [], harnessVersion: '2.1.293' }),
+    models: async () => [],
+    probe: async () => ({ ok: true, reply: 'ok', durationMs: 1 }),
     async start(req) {
       const prepared = await deps.prepareRun(req);
       const behaviour =

@@ -20,11 +20,11 @@
  *   fails before the chain's `resumed` link was written gives the generation back, so the
  *   chain stays 1, 2, 3 without a gap. Each run is resumed on its own: a project whose runtime
  *   cannot be built (or a store error) is reported as a tick error against that run, which stays
- *   interrupted for the next tick, while every other run still resumes.
+ *   interrupted for the next tick, while every other run still resumes. A resume keeps its run's agent.
  *
  * Exports: reconcileRestart(), resumeInterrupted().
  * Depends on: @forge/core (TERMINAL_STATUSES, branchName), @forge/tools (sha256Hex), domain/results,
- *   tick/{project-runtime,pump,resume-prompt,run-request,settle}, shared/time. IO only through the engine ports.
+ *   tick/{project-runtime,pump,resume-prompt,run-agent,run-request,settle}, shared/time. IO only through the engine ports.
  */
 
 import { TERMINAL_STATUSES, branchName } from '@forge/core';
@@ -37,6 +37,7 @@ import { baseRefFor, driverFor, runtimeFor } from '#/tick/project-runtime.js';
 import { startPump } from '#/tick/pump.js';
 import { generationLinked } from '#/tick/resume-chain.js';
 import { RESUME_PROMPT } from '#/tick/resume-prompt.js';
+import { resolveAgent } from '#/tick/run-agent.js';
 import { buildRunRequest } from '#/tick/run-request.js';
 import { planDispatch } from '#/tick/schedule.js';
 import { settleRun } from '#/tick/settle.js';
@@ -92,9 +93,10 @@ async function tryResume(
     return `project ${ticket.project} has no runtime on this server`;
   }
 
+  const agent = resolveAgent(ctx.config, ticket.project, ticket.lane, run.agent_id);
   let driver;
   try {
-    driver = driverFor(ctx, ticket.project);
+    driver = driverFor(ctx, ticket.project, agent.harnessId);
   } catch (e) {
     return msg(e);
   }
@@ -123,6 +125,7 @@ async function tryResume(
   const req = buildRunRequest(ctx, {
     runId: run.id,
     ticket,
+    agent,
     cwd: run.cwd,
     prompt: RESUME_PROMPT,
     promptHash: run.prompt_hash ?? sha256Hex(RESUME_PROMPT),

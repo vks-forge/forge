@@ -172,3 +172,18 @@ html::-webkit-scrollbar-track {
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * A page that fills the shell's content area exactly, so its panel (not the document) scrolls
+ * and a chat composer can dock at the bottom. Subtracts the shell's vertical padding (3rem on a
+ * phone, 4.5rem from 768px) and the phone's top bar (3rem plus its hairline).
+ */
+.page-fill {
+  height: calc(100dvh - 6rem - 1px);
+}
+
+@media (min-width: 768px) {
+  .page-fill {
+    height: calc(100dvh - 4.5rem);
+  }
+}

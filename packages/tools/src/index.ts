@@ -13,6 +13,7 @@
  */
 
 export * from '#/domain/admit.js';
+export * from '#/domain/agent-grant.js';
 export * from '#/domain/budgets.js';
 export * from '#/domain/call-resource.js';
 export * from '#/domain/check-exact-rules.js';
@@ -41,6 +42,7 @@ export * from '#/shared/canonical-json.js';
 export * from '#/shared/errors.js';
 export * from '#/shared/hmac.js';
 export type * from '#/types/admit.types.js';
+export type * from '#/types/agent-grant.types.js';
 export type * from '#/types/budgets.types.js';
 export type * from '#/types/catalogue.types.js';
 export type * from '#/types/grants.types.js';

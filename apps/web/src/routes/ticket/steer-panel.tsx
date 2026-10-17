@@ -1,9 +1,9 @@
 /**
- * SteerPanel: "Message the Worker", under the live thread of a running ticket.
+ * SteerPanel: "Message the Worker", the docked box under the live thread of a running ticket.
  *
  * Why: a Worker can be redirected while it runs (d-0109), and the person watching its thread
- *   is the one who notices it going the wrong way. The box sits right under the thread it
- *   steers, only while the run is live. The message shows up in the thread itself as the user's
+ *   is the one who notices it going the wrong way. The box is docked under the thread it
+ *   steers (components/chat/chat-pane), only while the run is live. The message shows up in the thread itself as the user's
  *   line when the server stores it; this panel only confirms delivery. A refusal says why in
  *   plain words (the run ended, the harness cannot take messages, Forge is shutting down) and
  *   the words stay in the box (state/message-draft). Ctrl+Enter sends.
@@ -23,7 +23,7 @@ export function SteerPanel(props: { runId: string }) {
   const steer = useSteerRun(props.runId);
 
   return (
-    <div className="grid gap-2 rounded-xl border border-line bg-surface p-3">
+    <div className="grid gap-1">
       <MessageComposer
         id={`steer-${props.runId}`}
         label="Message the Worker"

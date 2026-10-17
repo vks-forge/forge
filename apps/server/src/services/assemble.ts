@@ -13,12 +13,12 @@
  *   restart (d-0092): shutdown interrupts live runs instead of cancelling them, the first tick
  *   resumes them, and run secrets live in the SecretStore until the run is over and are swept
  *   at start and after every tick (d-0100). Planning reads the code via a git repo reader
- *   (d-0131). A failed assembly closes the database again.
+ *   (d-0131). Agent routes get the drivers and the Director model. A failed assembly closes the DB.
  *
  * Exports: assembleServer().
- * Depends on: @forge/db, @forge/drivers (systemClock), @forge/engine, @forge/git, @forge/hooks,
- *   @forge/tools, services/data-wiring (secrets, optional debug trace, d-0163) and the other services.
- *   IO: opens SQLite, creates the data home, binds the port on `start()`.
+ * Depends on: @forge/db, @forge/drivers (systemClock), @forge/engine, @forge/git, @forge/hooks, @forge/tools,
+ *   services/data-wiring (secrets, optional debug trace, d-0163) and the other services. IO: opens SQLite,
+ *   creates the data home, binds the port on `start()`.
  */
 
 import { mkdir } from 'node:fs/promises';
@@ -101,8 +101,7 @@ export async function assembleServer(
       now,
       log,
       address: () => address,
-      // Refuses a run on a harness build with no loaded approvals and records the build.
-      checkBuild: (runId) => buildCheck(runId),
+      checkBuild: (runId) => buildCheck(runId), // refuses a build with no loaded approvals
     });
 
     const projects = createProjectRegistry({
@@ -216,6 +215,7 @@ export async function assembleServer(
         hooks,
         secrets,
         harnessTest: harnessTestFor(ports.harnessTest, secrets),
+        agentPorts: { drivers, llm },
         projectEvents,
         tickets: auth.tickets,
         sessions: auth.sessions,

@@ -19,7 +19,7 @@ import { choose } from '#tests/helpers/choose.js';
 import { flowRoutes, FLOW_CARD, planFixture } from '#tests/helpers/flow-fixtures.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
-const PLAN_PAGE = `/p/sample-service/cards/${FLOW_CARD}?tab=plan`;
+const PLAN_PAGE = `/p/sample-service/cards/${FLOW_CARD}/plan`;
 const when = new Date().toISOString();
 const ready = { phase: 'plan_ready', column: 'needs_you', needs_you: true };
 

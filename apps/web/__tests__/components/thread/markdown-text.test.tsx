@@ -63,7 +63,7 @@ describe('thread layout', () => {
     expect(container.textContent).not.toContain('**');
   });
 
-  it('gives every thread grid a shrinkable track', () => {
+  it('lets every thread container and bubble shrink so nothing widens the column', () => {
     const items: ThreadItem[] = [{ kind: 'message', seq: 1, ts, text: 'hi' }];
     const { container } = render(
       <WorkerThread
@@ -76,14 +76,18 @@ describe('thread layout', () => {
       />,
     );
 
-    const grids = container.querySelectorAll('section, ol');
+    const boxes = container.querySelectorAll('section, li, [role="log"] > div');
 
-    expect(grids.length).toBeGreaterThan(1);
+    expect(boxes.length).toBeGreaterThan(1);
 
-    for (const grid of grids) {
-      expect(grid.className).toContain('grid-cols-[minmax(0,1fr)]');
-      expect(grid.className).toContain('min-w-0');
+    for (const box of boxes) {
+      expect(box.className).toContain('min-w-0');
     }
+
+    const bubble = screen.getByText('hi').closest('div[class*="max-w-"]');
+
+    expect(bubble?.className).toContain('min-w-0');
+    expect(bubble?.className).toContain('max-w-[min(70%,36rem)]');
   });
 
   it('lets a tool row shrink so its hint truncates instead of widening', () => {

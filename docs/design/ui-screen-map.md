@@ -67,14 +67,24 @@ title, a phase line ("Grilling · 3 open points", "Plan v2 ready", "4/7 tickets"
 a priority mark, a progress bar and Blocked by / Blocks chips; hovering or
 focusing a card keeps its dependency chain lit and dims the rest, and cards glide
 between columns live (instant swap under reduced motion). Opening a card opens
-the **Card page**: the chat with the card's Director is the main column (grill
-questions with option buttons, steps, a ready-plan card, system lines, and a
-pinned **Needs you** banner whose every action works) beside a side panel with
-tabs **Plan** (the fixed plan sections, dependency graph, version picker with
-diff, Approve plan / Request changes / light ticket edits), **Tickets** (a
-timeline) and **Details**; below 768 px the panel becomes tabs Chat / Plan /
-Tickets / Details. Ticket detail (status, live Worker thread with direct steer,
-gates, PR and merge links) is its own page.
+the **Card page** (`/p/:slug/cards/:id/<tab>`, U1): a compact header (id, column, phase,
+source, type, a small muted cost with a Director / tickets split on hover, Close card), the
+banners that need you (a pinned **Needs you** banner whose every action works, waiting tickets),
+a tab strip and one panel. Tabs are real links: **Conversation** (default; the chat with the
+card's Director: grill questions with option buttons, steps, a ready-plan card, system lines),
+**Plan** (the fixed plan sections, dependency graph, version picker with diff, Approve plan /
+Request changes / light ticket edits), **Tickets** (a timeline with state, lane and cost) and
+**Details** (source, creator, times, budget cap, summary and the cost breakdown: Director, each
+ticket, total, "not recorded" never shown as free). An unknown tab replaces itself with the
+conversation, Back and Forward step through views, each tab keeps its scroll. The chat is a
+pane: bubbles are narrow (70% / 36rem) and quiet, author and time show once per group with day
+separators, the list scrolls above a composer docked at the bottom. The **Ticket page**
+(`/p/:slug/tickets/:id/<tab>`) is the same frame: **Conversation** (the live Worker thread with
+the steer box docked below), **Review** (only while the ticket waits on review or sign-off:
+what will be merged, Approve and merge / Sign off and merge, rework, cancel), **Runs** (status,
+duration, cost per run; a run opens in Conversation via `?run=`) and **Details** (metadata,
+gates, cost by run). A question that waits on you and a ready-for-review notice stay above the
+tabs. Cost also shows small on Board tiles.
 
 Waiting tickets (S4a, d-0135 / d-0141): a ticket that cannot go on waits on the owner as
 one **escalation**, drawn by one card in three places, so acting in one settles the
@@ -104,6 +114,8 @@ Amended by the UI pass U1 (shared surfaces, d-0164):
   director, history, danger) are a sticky vertical tab list beside the section; below 768 px
   the tabs become a picker. One draft and one save bar span the project tabs; switching tabs
   keeps edits, leaving settings still asks.
+- **Unsaved dot**: a project-settings tab whose fields differ from the saved version shows a
+  small amber dot (spoken as "unsaved changes"; "(unsaved)" in the phone picker).
 - **Empty states** are one component (centred, quiet icon, title, one help line, actions;
   compact in columns and panels). **Scroll areas** share one thin themed scrollbar that wakes
   on hover or scroll.

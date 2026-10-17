@@ -8,7 +8,9 @@
  *   shown right under the box in plain words with the way forward. While a send is in flight
  *   the button is busy and a second send is blocked. Ctrl or Cmd + Enter sends. When messages
  *   cannot be sent at all (a closed card, an archived project) the box is disabled and says why,
- *   never just greyed.
+ *   never just greyed. It is docked at the bottom of the chat pane (components/chat/chat-pane):
+ *   a short box with the Send button beside it, so on a phone the keyboard leaves room for the
+ *   conversation above it; the hint and refusal sit under the box.
  *
  * Exports: MessageComposer.
  * Depends on: react, components/ui/button, state/message-draft, state/project-archived.
@@ -48,40 +50,32 @@ export function MessageComposer(props: {
 
   return (
     <form
-      className="grid gap-2"
+      className="grid gap-1.5"
       onSubmit={(event) => {
         event.preventDefault();
         send();
       }}
     >
-      <label htmlFor={props.id} className="text-sm font-medium">
+      <label htmlFor={props.id} className="sr-only">
         {props.label}
       </label>
-      <textarea
-        id={props.id}
-        rows={3}
-        value={draft}
-        disabled={blocked}
-        placeholder={props.placeholder}
-        aria-describedby={`${props.id}-help`}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-            event.preventDefault();
-            send();
-          }
-        }}
-        className="min-w-0 resize-y rounded-lg border border-line bg-surface p-2 text-sm disabled:cursor-not-allowed disabled:bg-hover disabled:text-muted"
-      />
-      <p id={`${props.id}-help`} className="text-xs text-muted">
-        {disabledReason ?? props.hint}
-      </p>
-      {props.error ? (
-        <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm">
-          {props.error}
-        </p>
-      ) : null}
-      <div>
+      <div className="flex items-end gap-2">
+        <textarea
+          id={props.id}
+          rows={2}
+          value={draft}
+          disabled={blocked}
+          placeholder={props.placeholder}
+          aria-describedby={`${props.id}-help`}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+              event.preventDefault();
+              send();
+            }
+          }}
+          className="max-h-40 min-h-12 min-w-0 flex-1 resize-none rounded-xl border border-line bg-surface px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-hover disabled:text-muted"
+        />
         <Button
           type="submit"
           variant="primary"
@@ -91,6 +85,14 @@ export function MessageComposer(props: {
           {props.sendLabel}
         </Button>
       </div>
+      <p id={`${props.id}-help`} className="text-xs text-muted">
+        {disabledReason ?? props.hint}
+      </p>
+      {props.error ? (
+        <p role="alert" className="rounded-lg bg-danger-soft p-2 text-sm">
+          {props.error}
+        </p>
+      ) : null}
     </form>
   );
 }

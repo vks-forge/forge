@@ -104,6 +104,8 @@ export function createScriptedDriver(): ScriptedDriver {
       permissionRequests: false,
     }),
     preflight: async () => ({ ok: true, issues: [] }),
+    models: async () => [],
+    probe: async () => ({ ok: true, reply: 'ok', durationMs: 1 }),
     async start(req) {
       if (startError) {
         const e = startError;

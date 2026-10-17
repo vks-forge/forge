@@ -11,7 +11,7 @@
  *
  * Exports: CheckRole, ProjectCheck, GateRules, GitHostConfig, ToolGrantConfig, ProjectConfigShape, ProjectConfig,
  *   ProjectStatus, Project.
- * Depends on: domain/legacy-project-doc, schemas/director-config, schemas/ids, schemas/secret-name,
+ * Depends on: domain/legacy-project-doc, schemas/agent, schemas/director-config, schemas/ids, schemas/secret-name,
  *   shared/deep-partial, types/config.types, zod. No IO.
  */
 
@@ -20,6 +20,7 @@ import {
   legacyProjectDocProblem,
   migrateLegacyProjectDoc,
 } from '#/domain/legacy-project-doc.js';
+import { ProjectAgents } from '#/schemas/agent.js';
 import { DirectorConfig } from '#/schemas/director-config.js';
 import { ProjectPrefix } from '#/schemas/ids.js';
 import { SecretName } from '#/schemas/secret-name.js';
@@ -189,6 +190,8 @@ export const ProjectConfigShape = z.object({
    * `director` section, so the engine reads one effective `forge.director`.
    */
   director: DirectorOverride.optional(),
+  /** This project's own agents, overrides of company agents' instructions and runs_on, and agents switched off here (d-0149). */
+  agents: ProjectAgents.optional(),
 });
 
 /**

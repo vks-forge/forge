@@ -85,7 +85,8 @@ export const RunRequest = z.object({
   ticketId: z.string().min(1),
   cwd: z.string().min(1),
   prompt: z.string(),
-  model: z.string().min(1),
+  /** Absent means the harness's own default model (an agent set to "harness default"). */
+  model: z.string().min(1).optional(),
   permissionPolicy: PermissionPolicy.optional(),
   tools: ToolExposure.optional(),
   budget: RunBudget,
@@ -199,6 +200,9 @@ export const Run = z.object({
   prompt_hash: Sha256Hex.optional(),
   /** Settings versions the run started under, `c<company>:p<project>` (d-0085); 0 means built-in defaults. */
   config_version: ConfigVersionRef.optional(),
+  /** The agent that ran and the sha256 of its effective definition at start (S5a); absent on older runs. */
+  agent_id: z.string().min(1).optional(),
+  agent_hash: Sha256Hex.optional(),
   hook_registered_at: Timestamp.optional(),
   /** Run secret generation; absent reads as 1. A resume after a restart adds 1 (d-0100). */
   generation: z.number().int().positive().optional(),

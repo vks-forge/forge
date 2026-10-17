@@ -28,6 +28,8 @@ Public API (`src/index.ts`):
 
 Layout: `schemas/` zod, `types/` hand-written types (and `types/ports/`), `domain/` policy (the catalogue seed in `catalogue-seed*.ts`), `shared/` canonical JSON, HMAC and matchers. Tests in `__tests__/` mirror `src/`.
 
+- **Agent grant (S5a).** `agentGrant(def)` turns an agent's `tools` and `write_scope` into one more narrowing `Grant` layer, passed as the last argument of `effectiveGrant`: the tool list intersects with the lane and project (the Forge tools a run needs to finish, `RUN_CORE_TOOLS`, always stay), and the write scope becomes path rules that deny every `edit` and `write` outside it (an empty scope denies all writes). Lane-default tools with the whole worktree add no layer. Rule layers combine by severity, so the layer can only tighten: a scope that names a protected path does not unlock it. Property-tested.
+
 ## Why this approach
 
 - `zod@4.6.7` for every boundary; `yaml@2.9.1` only in tests (the mirror file); HMAC via `node:crypto` (no crypto dependency); `@forge/core` for lane and error types.

@@ -62,6 +62,28 @@ const ANSWERS: Record<StepName, unknown> = {
   // does not care about the Director's first look still ends with the owner holding the wait.
   ticket_answer: { decision: 'escalate', confidence: 0.1, grounds: [] },
   ticket_recover: { decision: 'escalate', diagnosis: 'Needs a person.', confidence: 0.1 },
+  draft_agent: {
+    definition: {
+      name: 'Drafted',
+      description: 'A scripted draft.',
+      role: 'reviewer',
+      instructions: 'Review.',
+      runs_on: {
+        harness: 'project_default',
+        model: { kind: 'harness_default' },
+        fallbacks: [],
+      },
+      tools: ['read'],
+      write_scope: [],
+      inputs: [],
+      output: ['findings'],
+      skills: [],
+      memory: { tags: [], include_rejected: true },
+      budget: {},
+    },
+    rationale: 'A scripted draft.',
+    questions: [],
+  },
 };
 
 /** `answers` replace the default answer of a step (a triage that predicts tier B, for instance). */

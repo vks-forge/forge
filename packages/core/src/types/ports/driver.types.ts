@@ -9,10 +9,12 @@
  *   place of guesswork. Types only, so core has no runtime dependency on any driver
  *   (execution-plane.md §3, d-0029, d-0035).
  *
- * Exports: Preflight, WorkerDriver, DriverRegistry.
- * Depends on: schemas/run. No IO (interfaces only).
+ * Exports: Preflight, AgentProbeRequest, AgentProbeResult, WorkerDriver, DriverRegistry.
+ * Depends on: schemas/agent, schemas/errors, schemas/run. No IO (interfaces only).
  */
 
+import type { HarnessModel } from '#/schemas/agent.js';
+import type { ErrorFamily } from '#/schemas/errors.js';
 import type {
   DriverCapabilities,
   RunEvent,
@@ -36,6 +38,27 @@ export interface Preflight {
   readonly harnessVersion?: string;
 }
 
+/** One tool-less, session-less call a driver makes to show an agent's model and instructions work. */
+export interface AgentProbeRequest {
+  /** Absent means the harness default model. */
+  readonly model?: string;
+  /** The agent's instructions, given as the system prompt. */
+  readonly instructions: string;
+  readonly prompt: string;
+  readonly timeoutMs: number;
+  readonly maxUsd: number;
+}
+
+/** How a probe went; a failure is a value with its error family, never a throw. */
+export interface AgentProbeResult {
+  readonly ok: boolean;
+  readonly reply?: string;
+  readonly modelUsed?: string;
+  readonly durationMs: number;
+  readonly costUsd?: number;
+  readonly error?: { readonly family: ErrorFamily; readonly message: string };
+}
+
 /** The contract every harness driver implements, so the Director starts, steers, resumes and kills a run the same way on any harness. `events()` and `result()` make a serialisable {@link RunHandle} usable after a restart. */
 export interface WorkerDriver {
   readonly id: string;
@@ -53,6 +76,10 @@ export interface WorkerDriver {
   cancel(handle: RunHandle): Promise<void>;
   events(handle: RunHandle): AsyncIterable<RunEvent>;
   result(handle: RunHandle): Promise<RunResult>;
+  /** The models this harness offers, as the driver declares them; agent pickers list them. */
+  models(): Promise<readonly HarnessModel[]>;
+  /** One short call with no tools, no session and no MCP, to test an agent's model and instructions. */
+  probe(req: AgentProbeRequest): Promise<AgentProbeResult>;
 }
 
 /**

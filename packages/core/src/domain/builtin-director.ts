@@ -39,6 +39,7 @@ export const DIRECTOR_STEP_TIMEOUTS_MS: DirectorConfig['step_timeouts_ms'] = {
   custom_step: 180_000,
   ticket_answer: 180_000,
   ticket_recover: 180_000,
+  draft_agent: 120_000,
 };
 
 export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {

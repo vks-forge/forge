@@ -282,3 +282,141 @@ worktrees. LF. READMEs of touched packages current. PRODUCT.md is left to the or
    pipelines can name another writer.
 6. **Models list.** Default: driver-declared list refreshed at each compat check, plus custom
    ids; no live "detect model" call (the claude CLI has no list command).
+
+## S5a-A contract (as built)
+
+Everything in "Contract (shared, binding)" holds unless listed under **Deviations**. Envelope for
+every error: `{ error: { code, message, issues?: { path, message }[] } }`. Every write answers 200
+with the fresh list of the scope it wrote, so the client never re-derives tags, hashes or readiness.
+Writes are attributed to author `owner` (no per-user identity yet) with the `reason` of the body.
+
+### Shared shapes (core `@forge/core`; mirror in `apps/web/src/schemas/agents.ts`)
+
+- `schemas/agent.ts`: `AgentId`, `AgentRole`, `ArtifactKind`, `ModelChoice`, `HarnessRef`,
+  `AgentFallback`, `RunsOn`, `AgentBudget`, `AgentMemory`, `AgentOrigin`, `AgentFields` (the editable
+  fields: name, description, role, instructions, runs_on, tools, write_scope, inputs, output, skills,
+  memory, budget), `AgentDefinition` (fields + `archived`, default false, + `origin`), `AgentInput`
+  (fields, no origin), `AgentsRecord`, `ProjectAgents` (`custom`, `overrides`, `disabled`, all default
+  empty), `HarnessModel`, `MAX_AGENT_FALLBACKS` = 5.
+- `schemas/agent-api.ts`: `AgentTag` (`builtin | company | overridden | project | disabled | archived`),
+  `AgentReadiness { ready, reasons[] }`, `AgentView { id, scope, tags[], definition, base?, hash, readiness }`,
+  `AgentTemplate { id, title, summary, definition: AgentInput }`,
+  `AgentChange` (`created | edited | reset | archived | unarchived | disabled | enabled`),
+  `AgentHistoryEntry { version, author, reason, created_at (epoch ms), change }`,
+  `RunsOnHarness { id, kind, version?, signed_in, compat, paused_until?, ready, reasons[], fix_href, models[], models_checked_at? }`,
+  `AgentTestResult { ok, reply? (<= 2000), model_used?, harness_id, duration_ms, cost_usd?, error?: { family, message } }`.
+- `schemas/director-steps.ts`: `DraftAgentOutput { definition: AgentInput, rationale (<= 1000), questions[] (<= 3) }`.
+- Tag rules. Company scope: `builtin` (origin builtin) or `company` (custom); `overridden` on a built-in
+  whose stored definition differs from what the release ships (the web label is "edited"); `archived`
+  when archived. Project scope: the company agents with the project override applied (`overridden`,
+  `base` = the company definition, `disabled` from the project list) followed by the project's own
+  agents (`scope: 'project'`, tag `project`). Order: built-ins in shipped order, company by name,
+  project by name.
+- Role bounds (core `agentRuleIssues`, also run by the schema). Reviewer and researcher must list their
+  tools explicitly (`lane_default` is refused), hold no write-class tool (`edit`, `write`, `shell`,
+  `task`, any `mcp__<server>__` tool other than `mcp__forge__*`) and have an empty `write_scope`.
+  Writer and tester need a non-empty `write_scope` (`['**']` is the whole worktree). Fallbacks must be
+  distinct, at most 5, and never `forge_default`. `forge_default` (the company lane model) is only valid
+  on the agent id `implementer`.
+- Builtin ids: `implementer` (writer, `lane_default`, `['**']`, model `forge_default`), `test-writer`
+  (tester, test globs), `reviewer` and `critic` (read-only, model `opus`, tools `read grep glob
+  mcp__forge__docs_lookup mcp__forge__add_comment mcp__forge__ask_director`). Template ids:
+  `security-reviewer`, `docs-writer`, `network-config-reviewer`, `accessibility-reviewer`,
+  `performance-reviewer`, `migration-reviewer` (model `sonnet`).
+- `GET /settings/company` now also returns `config.agents` (the effective company roster, including
+  the long instruction texts), `config.models.director.draft_agent` and
+  `config.director.step_timeouts_ms.draft_agent`. The web company schema must accept them, and a
+  company save must not resend `agents`.
+
+### Company routes (prefix `/settings/agents`)
+
+Bodies use `expected_version` (the company version the editor saw; 0 on a fresh install) and `reason`
+(3 to 500 chars). `L = { agents: AgentView[], version: number }`.
+
+| Method + path | Body | 200 | Errors |
+|---|---|---|---|
+| `GET /settings/agents` | none | `L` | none |
+| `POST /settings/agents` | `{ agent: AgentFields, origin: 'custom' \| 'director_draft' \| 'template:<id>' \| 'duplicate:<id>', expected_version, reason }` | `L & { id }` (id = slug of the name) | 400 `invalid_request`, `role_bounds`, `unknown_tool`, `forge_default_not_allowed`, `invalid_name`; 409 `name_taken`, `version_conflict` |
+| `PUT /settings/agents/:id` | `{ agent: AgentFields, expected_version, reason }` (a built-in is stored as a diff; archived and origin are kept) | `L` | 404 `agent_not_found`; the 400s above; 409 `name_taken`, `version_conflict` |
+| `POST /settings/agents/:id/reset` | `{ expected_version, reason }` | `L` | 404; 409 `not_builtin`, `not_overridden`, `version_conflict` |
+| `POST /settings/agents/:id/archive` | same | `L` | 404; 409 `agent_required` (implementer), `builtin_locked` (any other built-in), `version_conflict` |
+| `POST /settings/agents/:id/unarchive` | same | `L` | 404; 409 `version_conflict` |
+| `POST /settings/agents/:id/duplicate` | `{ name, scope: 'company' \| 'project', project?, expected_version, reason }` (`expected_version` is the TARGET scope's) | `{ id, agents, version }` of the target scope (a number for company, `{ company, project }` for project) | 404; 400 `project_required`; 404 `project_not_found`; 409 `name_taken`, `version_conflict` |
+| `GET /settings/agents/:id/history` | none | `{ versions: AgentHistoryEntry[] }`, oldest first | 404 `agent_not_found` |
+
+Duplicating the implementer turns `forge_default` into `{ kind: 'model', id: <models.worker.standard> }` in the copy.
+
+### Project routes (prefix `/settings/projects/:slug/agents`)
+
+`L = { agents: AgentView[], version: { company: number, project: number } }`; `expected_version` is the
+PROJECT version. Every route answers 404 `project_not_found` for an unregistered slug.
+
+| Method + path | Body | 200 | Errors |
+|---|---|---|---|
+| `GET .../agents` | none | `L` | 404 |
+| `POST .../agents` | as company create | `L & { id }` | as company create |
+| `PUT .../agents/:id` | project agent: `{ agent: AgentFields, expected_version, reason }`; company agent: `{ override: { instructions?, runs_on? }, expected_version, reason }` (merged over the current override; values equal to the company agent are dropped) | `L` | 404 `agent_not_found`; 400 `override_fields` (any other key in `override`, an `agent` sent for a company agent, or no `override`), `role_bounds`, `forge_default_not_allowed`; 409 `version_conflict` |
+| `POST .../agents/:id/reset-override` | `{ expected_version, reason }` | `L` | 404; 409 `not_overridden` |
+| `POST .../agents/:id/disable` | same | `L` (a no-op when already disabled) | 404; 409 `agent_required` (implementer) |
+| `POST .../agents/:id/enable` | same | `L` | 404 |
+| `POST .../agents/:id/archive` | same (project agents only) | `L` | 404; 409 `builtin_locked` for a company agent (use disable) |
+| `POST .../agents/:id/unarchive` | same | `L` | 404; 409 `builtin_locked` for a company agent |
+| `POST .../agents/:id/duplicate` | `{ name, scope: 'company' \| 'project', project?, expected_version, reason }` (source = any agent visible in this project; `project` defaults to this slug; `expected_version` is the target scope's) | `{ id, agents, version }` of the target scope | as company duplicate |
+| `GET .../agents/:id/history` | none | `{ versions: AgentHistoryEntry[] }` | 404 |
+
+### Helper routes
+
+- `GET /agents/templates` returns `{ templates: AgentTemplate[] }` (six, with real instructions).
+- `GET /agents/runs-on` returns `{ harnesses: RunsOnHarness[] }`: one entry per driver id the server runs
+  (today `claude-code`; this is the id project settings and `runs_on.harness` use). `models` are the models
+  stored with the compatibility report of the installed build, else what the driver declares (opus, sonnet
+  and haiku with speed, cost and `recommended_for`). `ready` is false, with plain-language `reasons`, when the
+  harness is paused for quota (`paused_until` set), is paused after a failed compatibility check, failed its
+  last test, or the build's compat is `fail`. `signed_in` is true when the harness row's last test passed.
+  `fix_href` is `/settings/harnesses/claude`. A fresh install reads as ready (nothing is known against it).
+- `POST /agents/draft`, body `{ description (10..2000), scope: 'company' | 'project', project? }`, answers
+  200 `{ definition: AgentInput, rationale, questions }` and writes nothing. Errors: 400 `invalid_request`,
+  400 `project_required`, 404 `project_not_found`, 422 `draft_invalid` (`issues` lists every broken role
+  bound, unknown tool or schema issue), 502 `draft_failed`, 504 `step_timeout`, 503 `not_available` (no
+  Director model wired).
+- `POST /agents/test`, body `{ agent: AgentFields, project? }`, answers 200 `AgentTestResult`. A failed probe
+  is 200 with `ok: false` and `error.family` in `auth | quota | rate_limit | budget | stall | refusal | crash |
+  unknown`. One call: no tools, no session, $0.10, 60 s, prompt "In one line, state your role and the first
+  rule in your instructions.", the agent's instructions as the system prompt, no model sent for
+  `harness_default`, the company lane model for `forge_default`. Errors: 409 `harness_not_ready` (the reasons
+  are in `message` and `issues`; also for a harness this server does not have), 409 `test_in_progress` (one
+  per harness), 404 `project_not_found`, 503 `not_available`.
+- A 502, 503 or 504 answer from these routes keeps its `code` and `message`. The server used to scrub every
+  5xx to `internal`; an `HttpError` with one of those statuses is now exempt.
+
+### Query keys and invalidation (as in the brief)
+
+Agent writes bump the company or project version, so mutations also invalidate `['settings', 'company']` or
+`['project-settings', slug]`. A duplicate into another scope invalidates that scope's list.
+
+### Deviations from the brief
+
+1. Request body schemas live in `apps/server/src/schemas/agent-api.ts`, not `schemas/api.ts` (that file is near
+   the line limit). `AgentView`, `RunsOnHarness` and the other view shapes are in core `schemas/agent-api.ts`,
+   not `schemas/agent.ts` (they need `CompatStatus`, which would make an import loop with
+   `CompatReport.models`); `DraftAgentOutput` is in `schemas/director-steps.ts` as the brief says.
+2. A writer also needs a non-empty `write_scope` (the brief required it for the tester only); the built-in
+   implementer has `['**']`. A reviewer or researcher with `tools: 'lane_default'` is refused (the lane default
+   includes editing).
+3. Extra error codes: `forge_default_not_allowed`, `invalid_name`, `invalid_agent` (a merged document the config
+   schemas refuse), `project_required`, `not_available`, `draft_failed`.
+4. Extra routes the web needs for project rows: `unarchive`, `duplicate` and `history` under the project
+   prefix. Archive of a company agent from a project is 409 `builtin_locked`.
+5. The built-in reviewer, critic and the templates use `mcp__forge__docs_lookup` as their code-reading Forge
+   tool: the catalogue seed has no `code_graph` tool. Tool ids are checked against the catalogue on every save
+   (`unknown_tool`).
+6. `RunsOnHarness.id` is the driver id (`claude-code`). The harness row, compat report and `signed_in` come from
+   the one configured `claude` setup that backs every driver id today.
+7. `minutes` in an agent budget is stored and logged as not enforced; no driver has a wall-clock cap.
+8. `services/compat-record.ts` needed no change: the report already travels whole, and the compatibility run now
+   includes `models` in it; the readiness service falls back to the driver's declared list for older reports.
+   `resume-chain.ts` is unchanged (it only reads the receipt chain); the restart resume in `tick/restart.ts`
+   continues on the run's `agent_id` while that agent is usable.
+9. `.forge/config/forge.yaml` gained `models.director.draft_agent: sonnet`; the built-in defaults test pins yaml
+   equality for `models` and `engine` only (agents and director are built-in only).
+10. The migration is `0024-run-agent`, as planned (the highest before it was 0023).

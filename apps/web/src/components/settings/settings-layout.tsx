@@ -9,7 +9,8 @@
  *   scrolls, moves with the arrow keys (one tab stop, like a toolbar) so a keyboard user does
  *   not tab through every entry, and on a phone folds into a picker so the content keeps the
  *   full width. The layout knows nothing about the section: edits held above it survive a tab
- *   switch.
+ *   switch; a tab flagged `dirty` shows a small dot (and carries the description "Unsaved changes" for
+ *   assistive tech, so its name stays the section's name) so the owner sees which section holds edits before leaving it.
  *
  * Exports: SettingsLayout.
  * Depends on: react, react-router, components/ui/picker, state/use-media-query,
@@ -77,7 +78,7 @@ export function SettingsLayout(props: {
           onChange={(to) => void navigate(to)}
           items={tabs.map((tab) => ({
             value: tab.to,
-            label: tab.label,
+            label: tab.dirty ? `${tab.label} (unsaved)` : tab.label,
             icon: <tab.icon aria-hidden="true" />,
           }))}
         />
@@ -95,10 +96,17 @@ export function SettingsLayout(props: {
                 links.current[index] = el;
               }}
               tabIndex={index === Math.max(activeIndex, 0) ? 0 : -1}
+              aria-description={tab.dirty ? 'Unsaved changes' : undefined}
               className="relative flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted transition-colors duration-150 hover:bg-hover hover:text-fg aria-[current=page]:bg-hover aria-[current=page]:font-medium aria-[current=page]:text-fg"
             >
               <tab.icon aria-hidden="true" className="size-4 shrink-0" />
               <span className="truncate">{tab.label}</span>
+              {tab.dirty ? (
+                <span
+                  aria-hidden="true"
+                  className="ml-auto size-2 shrink-0 rounded-full bg-attn"
+                />
+              ) : null}
             </NavLink>
           ))}
         </nav>

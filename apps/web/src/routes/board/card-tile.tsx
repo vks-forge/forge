@@ -12,7 +12,8 @@
  *   mark appears for anything but Normal, and dependencies show as chips by id: "Blocked by"
  *   what it waits for and "Blocks" what waits for it, so the order of work is readable from the
  *   Board. Hovering or focusing a tile reports it to the Board, which dims every card outside
- *   its dependency chain (the tile only draws `dimmed`). The tile is memoised: with 60 cards a
+ *   its dependency chain (the tile only draws `dimmed`). A card that has spent money shows the
+ *   total as a small muted figure (its tooltip says only recorded cost is counted). The tile is memoised: with 60 cards a
  *   hover re-renders only the tiles whose dimming changed. It cannot be dragged: the column is
  *   computed from the card's tickets and questions, never set by hand (d-0107).
  *
@@ -26,6 +27,7 @@ import { CircleAlert } from 'lucide-react';
 import { motion } from 'motion/react';
 import { memo } from 'react';
 import { Link } from 'react-router';
+import { CostChip } from '#/components/cost/cost-chip.js';
 import { CardTypeIcon, labelOfType } from '#/components/card/card-type-icon.js';
 import { PriorityMark } from '#/components/card/priority-mark.js';
 import { cardPath } from '#/domain/card-paths.js';
@@ -141,7 +143,16 @@ export const CardTile = memo(function CardTile(props: {
           </span>
         ) : null}
         {card.ticket_count === 0 ? <span>No tickets yet</span> : null}
-        <span className="ml-auto whitespace-nowrap">{timeAgo(card.updated_at, now)}</span>
+        <span className="ml-auto flex items-center gap-2 whitespace-nowrap">
+          {card.cost_usd !== undefined && card.cost_usd > 0 ? (
+            <CostChip
+              usd={card.cost_usd}
+              label={`Cost of ${card.id}`}
+              className="relative z-10"
+            />
+          ) : null}
+          {timeAgo(card.updated_at, now)}
+        </span>
       </div>
     </article>
   );

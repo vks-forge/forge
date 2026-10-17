@@ -99,7 +99,9 @@ describe('Card chat: Director activity and system lines', () => {
 
     await user.click(screen.getByRole('button', { name: 'Review plan' }));
 
-    expect(router.state.location.search).toBe('?tab=plan');
+    expect(router.state.location.pathname).toBe(
+      `/p/sample-service/cards/${FLOW_CARD}/plan`,
+    );
   });
 
   it('draws approvals, requested changes, the end of the grill and budget warnings as system lines', async () => {

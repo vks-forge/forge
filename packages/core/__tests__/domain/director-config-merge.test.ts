@@ -18,6 +18,7 @@ import { BUILTIN_CONFIG } from '#/domain/builtin-config.js';
 import { BUILTIN_DIRECTOR_CONFIG } from '#/domain/builtin-director.js';
 import { mergeCompany, mergeConfig } from '#/domain/merge-config.js';
 import { DirectorConfig } from '#/schemas/director-config.js';
+import { STEP_NAMES } from '#/schemas/steps.js';
 import { InvalidInputError } from '#/shared/errors.js';
 
 describe('built-in director config', () => {
@@ -41,7 +42,9 @@ describe('built-in director config', () => {
   });
 
   it('has a timeout for every step name', () => {
-    expect(Object.keys(BUILTIN_DIRECTOR_CONFIG.step_timeouts_ms)).toHaveLength(13);
+    expect(Object.keys(BUILTIN_DIRECTOR_CONFIG.step_timeouts_ms)).toHaveLength(
+      STEP_NAMES.length,
+    );
   });
 });
 

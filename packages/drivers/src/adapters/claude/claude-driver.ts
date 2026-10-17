@@ -14,12 +14,14 @@
  *   serialisable; the live state is kept in this process only. A Forge restart does not end
  *   a run: the Director starts it again with `req.resume` (the saved session) and a new
  *   `req.generation`, and `start` prepares it from scratch (new token, a hook config with the
- *   new server URL and port, d-0092), so nothing about a resume needs the old process.
+ *   new server URL and port, d-0092), so nothing about a resume needs the old process. The
+ *   driver also declares the models it offers and runs one tool-less probe call, so an agent's
+ *   model and instructions can be tested without a worktree or a session.
  *
  * Exports: createClaudeDriver(), CONTINUE_PROMPT.
  * Depends on: @forge/core (RunRequest, InvalidInputError, port types), run-supervisor,
  *   run-files, settings-sources, git-cli, harness-resolver, acp-engine, cli-engine,
- *   domain/child-env, schemas/claude-config. IO: through the injected ports and the run files.
+ *   domain/child-env, domain/claude-models, adapters/claude/agent-probe, schemas/claude-config. IO: through the injected ports and the run files.
  */
 
 import { existsSync } from 'node:fs';
@@ -28,6 +30,7 @@ import { fileURLToPath } from 'node:url';
 import { InvalidInputError, RunRequest } from '@forge/core';
 import type { RunHandle, WorkerDriver } from '@forge/core';
 import { createAcpEngine } from '#/adapters/claude/acp/acp-engine.js';
+import { probeClaude } from '#/adapters/claude/agent-probe.js';
 import { createCliEngine } from '#/adapters/claude/cli/cli-engine.js';
 import { createGitCli } from '#/adapters/claude/git-cli.js';
 import { createHarnessResolver } from '#/adapters/claude/harness-resolver.js';
@@ -38,6 +41,7 @@ import {
   settingsSourcePaths,
 } from '#/adapters/claude/settings-sources.js';
 import { allowlistEnv, buildChildEnv } from '#/domain/child-env.js';
+import { CLAUDE_MODELS } from '#/domain/claude-models.js';
 import { parseClaudeConfig } from '#/schemas/claude-config.js';
 import type { SupervisedRun } from '#/types/claude/supervisor.types.js';
 import type { ClaudeDriverDeps } from '#/types/claude/driver-deps.types.js';
@@ -184,5 +188,8 @@ export function createClaudeDriver(deps: ClaudeDriverDeps): WorkerDriver {
     cancel: (handle) => get(handle).cancel(),
     events: (handle) => get(handle).events.iterate(),
     result: (handle) => get(handle).result,
+    models: async () => CLAUDE_MODELS,
+    probe: (req) =>
+      probeClaude({ spawn: deps.spawn, clock: deps.clock, resolver, baseEnv }, req),
   };
 }

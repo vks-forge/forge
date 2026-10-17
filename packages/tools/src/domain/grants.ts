@@ -96,12 +96,13 @@ export function parseGrant(input: unknown): Grant {
 }
 
 /**
- * Merges lane defaults with the project and ticket grants. Narrowing only: `allow` lists
+ * Merges lane defaults with the project, ticket and agent grants. Narrowing only: `allow` lists
  * intersect, `deny` lists union, rule layers are kept separate and combined by severity
  * at evaluation. `managed` adds operator deny-only rules after the built-in floors.
  * `floors.dataHome` names the folder the data-home floor protects; omitted, every path is
  * denied (fail closed). `shell` (the project's check commands and ecosystems) builds the lane's
- * shell allow-list; omitted, every ecosystem's verify commands apply.
+ * shell allow-list; omitted, every ecosystem's verify commands apply. `agentGrant` is the run's
+ * agent layer (see `agentGrant()`): one more narrowing layer, never a widening one.
  */
 export function effectiveGrant(
   lane: Lane,
@@ -110,9 +111,10 @@ export function effectiveGrant(
   managed: readonly CallRule[] = [],
   floors?: FloorInputs,
   shell?: ShellAllowInput,
+  agentGrant?: Grant,
 ): EffectiveGrant {
   const defaults = LANE_DEFAULTS[lane];
-  const layers = [projectGrant, ticketGrant];
+  const layers = [projectGrant, ticketGrant, agentGrant];
   // The shell allow-list follows the project's checks and ecosystems when they are given.
   const laneRules = shell ? laneRulesFor(lane, shell) : defaults.rules;
   assertValidRules(laneRules, false, true);
@@ -129,6 +131,7 @@ export function effectiveGrant(
     { name: `lane:${lane}`, rules: laneRules },
     { name: 'project', rules: projectGrant?.rules ?? [] },
     { name: 'ticket', rules: ticketGrant?.rules ?? [] },
+    { name: 'agent', rules: agentGrant?.rules ?? [] },
   ];
 
   return {

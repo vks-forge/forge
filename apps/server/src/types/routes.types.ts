@@ -7,7 +7,7 @@
  *   reaching for globals such as the clock or the process.
  *
  * Exports: RouteDeps.
- * Depends on: @forge/core (StorageAdapter, SecretStore), @forge/drivers (types), @forge/engine (Engine),
+ * Depends on: @forge/core (StorageAdapter, SecretStore), types/agent-store, @forge/drivers (types), @forge/engine (Engine),
  *   @forge/hooks (HookHandler), types/auth, types/settings. Types only.
  */
 
@@ -22,6 +22,7 @@ import type { HarnessSetup, HarnessTestResult } from '@forge/drivers';
 import type { Engine } from '@forge/engine';
 import type { HookHandler } from '@forge/hooks';
 import type { CatalogueStore } from '@forge/tools';
+import type { AgentPorts } from '#/types/agent-store.types.js';
 import type { SessionStore, SseTicketIssuer, TokenProver } from '#/types/auth.types.js';
 import type { FolderPicker, FolderRevealer } from '#/types/folder-picker.types.js';
 import type { HarnessCompat } from '#/types/harness-compat.types.js';
@@ -39,6 +40,8 @@ export interface RouteDeps {
   readonly catalogue: CatalogueStore;
   /** Harness build checks and tool approvals behind `/harnesses/:id/compat` and `/tools`. */
   readonly compat: HarnessCompat;
+  /** The drivers and the Director model behind `/agents/runs-on`, `/agents/test` and `/agents/draft`; absent (route tests) those answer 503 `not_available`. */
+  readonly agentPorts?: AgentPorts | undefined;
   /** Projects being served; the projects API adds to it and archives from it. */
   readonly projects: ProjectRegistry;
   /** Each project's memory repository: the memory API reads it and applies approvals and rejections. */

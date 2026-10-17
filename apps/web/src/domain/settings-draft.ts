@@ -9,7 +9,7 @@
  *   the rules here, away from React, lets tests pin them: inherited versus override, clearing
  *   an override, carrying unknown keys through, and what counts as unsaved.
  *
- * Exports: FIELD_KEYS, draftFromSnapshot(), inheritedOf(), docFromDraft(), isDirty(),
+ * Exports: FIELD_KEYS, draftFromSnapshot(), inheritedOf(), docFromDraft(), isDirty(), dirtyFields(), SCOPE_FIELDS,
  *   validateDraft(), setOverridden(), parseLines(), SAFE_TIER_C.
  * Depends on: @forge/core (BUILTIN_PROJECT_SETTINGS), domain/director-override,
  *   domain/director-settings, types/project-settings.types. No IO.
@@ -21,6 +21,7 @@ import { directorDraftOf, directorIssues } from '#/domain/director-override.js';
 import { effectiveDirector } from '#/domain/director-settings.js';
 import type {
   FieldKey,
+  FormScope,
   SettingsDraft,
   SettingsIssue,
   SettingsSnapshot,
@@ -201,6 +202,25 @@ export function isDirty(snapshot: SettingsSnapshot, draft: SettingsDraft): boole
     stable(docFromDraft(snapshot.override, draft)) !==
     stable(docFromDraft(snapshot.override, draftFromSnapshot(snapshot)))
   );
+}
+
+/** Which overridable fields each tab of the project settings shows. */
+export const SCOPE_FIELDS = {
+  workers: ['default_harness', 'max_concurrent', 'harness_fallbacks'],
+  checks: ['checks', 'ecosystems'],
+  repository: ['remote', 'tier_c_globs'],
+  director: ['director'],
+} as const satisfies Record<FormScope | 'director', readonly FieldKey[]>;
+
+/** The fields whose value in the draft differs from the saved one, so a tab can say "unsaved". */
+export function dirtyFields(
+  snapshot: SettingsSnapshot,
+  draft: SettingsDraft,
+): ReadonlySet<FieldKey> {
+  const now = docFromDraft(snapshot.override, draft);
+  const saved = docFromDraft(snapshot.override, draftFromSnapshot(snapshot));
+
+  return new Set(FIELD_KEYS.filter((key) => stable(now[key]) !== stable(saved[key])));
 }
 
 /** Problems that would make the server refuse the save, found before the user clicks it. */

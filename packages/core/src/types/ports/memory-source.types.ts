@@ -7,14 +7,22 @@
  *   needs only a small, read-only slice (id and statement), so it depends on this port and
  *   not on the markdown files, the index or the writer.
  *
- * Exports: MemoryRecordRef, MemorySlice, MemorySource.
+ * Exports: MemoryRecordRef, MemoryFilter, MemorySlice, MemorySource.
  * Depends on: nothing. Types only.
  */
 
-/** One active record: its id (`d-0012`) and the statement the owner approved. */
+/** One active record: its id (`d-0012`), the statement the owner approved and its tags. */
 export interface MemoryRecordRef {
   readonly id: string;
   readonly statement: string;
+  /** Absent reads as no tags. */
+  readonly tags?: readonly string[];
+}
+
+/** What part of a slice an agent sees: records carrying one of `tags` (empty means all) and whether rejected approaches are included. */
+export interface MemoryFilter {
+  readonly tags: readonly string[];
+  readonly include_rejected: boolean;
 }
 
 /** Active decisions and rejected approaches of one project. */
@@ -25,5 +33,6 @@ export interface MemorySlice {
 
 /** Read-only memory slice per project. An unknown project yields an empty slice, never an error. */
 export interface MemorySource {
-  slice(projectSlug: string): Promise<MemorySlice>;
+  /** The slice, narrowed by `filter` when given; without one, the whole slice. */
+  slice(projectSlug: string, filter?: MemoryFilter): Promise<MemorySlice>;
 }

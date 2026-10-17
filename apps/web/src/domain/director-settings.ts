@@ -48,6 +48,10 @@ export const STEP_INFO: Readonly<Record<StepName, StepInfo>> = {
     label: 'Recover a failure',
     hint: 'Diagnoses a stopped ticket and retries it once before asking you.',
   },
+  draft_agent: {
+    label: 'Draft an agent',
+    hint: 'Proposes an agent definition from your description; nothing is saved from it.',
+  },
 };
 
 /** Common models offered first; anything else is typed in. */

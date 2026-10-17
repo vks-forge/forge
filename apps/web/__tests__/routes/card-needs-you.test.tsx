@@ -159,7 +159,7 @@ describe('Card page: Needs you banner', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Choose a ticket' }));
 
-    expect(router.state.location.search).toBe('?tab=tickets');
+    expect(router.state.location.pathname).toMatch(/\/cards\/[^/]+\/tickets$/);
   });
 
   it('offers a Settings link and a Retry button when a step ran out of budget', async () => {

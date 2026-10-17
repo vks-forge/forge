@@ -9,7 +9,7 @@
  *   untrusted, so each field is read defensively. Pure and synchronous: every event kind is
  *   testable without a browser.
  *
- * Exports: transcriptOf(), lineOf(), awaitingReply().
+ * Exports: transcriptOf(), lineOf(), lineAuthor(), awaitingReply().
  * Depends on: schemas/cards (type), domain/board-columns (STATE_LABEL), domain/card-event-lines,
  *   domain/card-escalation-lines,
  *   domain/director-flow, types/cards-ui.types.
@@ -194,6 +194,18 @@ export function transcriptOf(
       pending: true,
     })),
   ];
+}
+
+/**
+ * Who a line speaks for, for grouping: `owner` or `director` for speech and questions, null
+ * for notes, steps and escalations (they are events, not turns, and never carry a header).
+ */
+export function lineAuthor(line: ChatLine): 'owner' | 'director' | null {
+  if (line.block?.kind === 'escalation' || line.block?.kind === 'step') {
+    return null;
+  }
+
+  return line.tone === 'you' ? 'owner' : line.tone === 'director' ? 'director' : null;
 }
 
 /** True while the newest message is the user's and the Director has not answered after it. */

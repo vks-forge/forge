@@ -12,11 +12,13 @@
 import { BUILTIN_CONFIG } from '@forge/core';
 import { describe, expect, it } from 'vitest';
 import {
+  dirtyFields,
   docFromDraft,
   draftFromSnapshot,
   inheritedOf,
   isDirty,
   parseLines,
+  SCOPE_FIELDS,
   setOverridden,
   validateDraft,
 } from '#/domain/settings-draft.js';
@@ -170,5 +172,24 @@ describe('helpers', () => {
 
   it('inheritedOf reads the company, not this project, for limits', () => {
     expect(inheritedOf(snapshot({ max_concurrent: 1 }), 'max_concurrent')).toBe('2');
+  });
+});
+
+describe('dirtyFields', () => {
+  it('is empty for an untouched draft and names only the field that differs', () => {
+    const snap = snapshot();
+    const draft = draftFromSnapshot(snap);
+
+    expect(dirtyFields(snap, draft).size).toBe(0);
+
+    const edited = { ...draft, default_harness: { overridden: true, value: 'codex' } };
+
+    expect([...dirtyFields(snap, edited)]).toEqual(['default_harness']);
+  });
+
+  it('maps each settings tab to its own fields so only that tab shows the dot', () => {
+    expect(SCOPE_FIELDS.workers).toContain('default_harness');
+    expect(SCOPE_FIELDS.checks).not.toContain('default_harness');
+    expect(SCOPE_FIELDS.director).toEqual(['director']);
   });
 });

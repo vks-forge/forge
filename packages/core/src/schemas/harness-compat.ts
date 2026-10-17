@@ -14,10 +14,11 @@
  *
  * Exports: CompatCheckId, CompatCheckStatus, CompatCheck, CompatToolShape, CompatReport,
  *   CompatStatus, HarnessVersion, ToolSchemaStatus, HarnessToolSchema.
- * Depends on: schemas/harness, zod. No IO.
+ * Depends on: schemas/agent, schemas/harness, zod. No IO.
  */
 
 import { z } from 'zod';
+import { HarnessModel } from '#/schemas/agent.js';
 import { HarnessKind } from '#/schemas/harness.js';
 
 /** The facts the check proves about a build; the first four are the d-0088 probe set. */
@@ -65,6 +66,8 @@ export const CompatReport = z.object({
   summary: z.string().min(1),
   checks: z.array(CompatCheck),
   tools: z.array(CompatToolShape),
+  /** The models the driver declared for this build (agent pickers read them); absent on older reports. */
+  models: z.array(HarnessModel).optional(),
 });
 export type CompatReport = z.infer<typeof CompatReport>;
 

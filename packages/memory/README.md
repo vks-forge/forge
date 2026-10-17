@@ -34,6 +34,8 @@ Public API (from `src/index.ts`):
 
 Front matter is the YAML block between `---` fences; BOM and CRLF are tolerated.
 
+- **Agent memory view (S5a).** `slice(slug, filter?)` takes an optional `{ tags, include_rejected }`: records carry their `tags` from the front matter (a malformed `tags` reads as none), an empty tag list is the whole slice (what every Worker saw before agents), a record with no tags shows only then, and rejected approaches are dropped unless asked for.
+
 ## Why this approach
 
 - Git-backed markdown per project, SQLite as a rebuildable index, one gated writer, Workers read-only, event-triggered propose-only janitor (d-0007). Git gives diff, blame, revert and human review for free, which is the approval workflow memory writes need. The repository lives in the data home, not in the user's repo (d-0086, d-0098).

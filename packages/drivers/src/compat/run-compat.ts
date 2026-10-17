@@ -32,6 +32,7 @@ import { evaluateChecks, summarize } from '#/compat/evaluate.js';
 import { startFakeModelApi } from '#/compat/fake-model-api.js';
 import { sessionScript } from '#/compat/session-script.js';
 import { toolShapes } from '#/compat/tool-shapes.js';
+import { CLAUDE_MODELS } from '#/domain/claude-models.js';
 import type {
   CompatDeps,
   CompatTrace,
@@ -253,6 +254,8 @@ export async function runCompatCheck(deps: CompatDeps): Promise<CompatReport> {
       summary: summarize(deps.version, checks),
       checks,
       tools: toolShapes(trace.captured, deps.nativeTools),
+      // The declared models travel with the report so the agent pickers list what this build offers.
+      models: [...CLAUDE_MODELS],
     };
   } finally {
     await Promise.all([api.close(), hooks.close()]);

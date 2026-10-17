@@ -34,6 +34,7 @@ export const STEP_NAMES = [
   'custom_step',
   'ticket_answer',
   'ticket_recover',
+  'draft_agent',
 ] as const;
 export const StepName = z.enum(STEP_NAMES);
 export type StepName = z.infer<typeof StepName>;

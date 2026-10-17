@@ -95,6 +95,16 @@ describe('errorBody', () => {
     expect(body.error.issues?.[0]?.path).toBe('a');
   });
 
+  it('keeps the code and message of a gateway HttpError (502, 503, 504) written for the client', () => {
+    expect(
+      errorBody(new HttpError(504, 'step_timeout', 'the Director did not answer')),
+    ).toEqual({
+      error: { code: 'step_timeout', message: 'the Director did not answer' },
+    });
+
+    expect(errorBody(new HttpError(500, 'oops', 'details')).error.code).toBe('internal');
+  });
+
   it('hides the message of a server fault', () => {
     expect(errorBody(new CrashError('/home/x/secret.db locked'))).toEqual({
       error: { code: 'internal', message: 'internal server error' },

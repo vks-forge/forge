@@ -16,7 +16,7 @@
  */
 
 import { NEEDS_YOU_STATUSES } from '@forge/core';
-import type { Ticket, TicketSummary } from '@forge/core';
+import type { Run, Ticket, TicketSummary } from '@forge/core';
 import { json, refusal } from '#tests/helpers/fetch-stub.js';
 import type { Routes } from '#tests/helpers/fetch-stub.js';
 import { buildSampleTickets } from '#tests/helpers/forge-data/ticket-fixtures.js';
@@ -52,6 +52,21 @@ function summarize(item: SampleTicket, slug: string): TicketSummary {
     created_at: ticket.created_at,
     updated_at: ticket.updated_at,
   };
+}
+
+/** The server's `cost` for a ticket: recorded dollars per run (oldest first) and their sum. */
+function ticketCost(runs: readonly Run[]) {
+  const by_run = [...runs]
+    .sort((a, b) => a.started_at.localeCompare(b.started_at))
+    .map((run) => ({
+      run_id: run.id,
+      usd: run.cost_usd ?? 0,
+      status: run.status,
+      started_at: run.started_at,
+      recorded: run.cost_usd !== undefined,
+    }));
+
+  return { total_usd: by_run.reduce((sum, run) => sum + run.usd, 0), by_run };
 }
 
 export function ticketRoutes(options: { empty: boolean }): Routes {
@@ -120,6 +135,7 @@ export function ticketRoutes(options: { empty: boolean }): Routes {
         wait_reason: item.waitReason,
         escalations: [],
         wait_actions: [],
+        cost: ticketCost(item.runs),
       });
     },
 

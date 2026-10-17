@@ -10,6 +10,7 @@
  */
 
 import { adminRoutes } from '#/routes/admin.js';
+import { agentRoutes } from '#/routes/agents.js';
 import { authRoutes } from '#/routes/auth.js';
 import { cardPlanRoutes } from '#/routes/card-plan.js';
 import { cardRoutes } from '#/routes/cards.js';
@@ -24,6 +25,7 @@ import { githubConnectionRoutes } from '#/routes/github-connections.js';
 import { hookRoute } from '#/routes/hook.js';
 import { intakeRoute } from '#/routes/intake.js';
 import { memoryRoutes } from '#/routes/memory.js';
+import { projectAgentRoutes } from '#/routes/project-agents.js';
 import { projectEventsRoute } from '#/routes/project-events.js';
 import { projectStatsRoutes } from '#/routes/project-stats.js';
 import { statsOverviewRoutes } from '#/routes/stats-overview.js';
@@ -57,6 +59,8 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ...authRoutes(deps),
     ...adminRoutes(deps),
     ...settingsRoutes(deps),
+    ...agentRoutes(deps),
+    ...projectAgentRoutes(deps),
     ...harnessRoutes(deps),
     ...folderRoutes(deps),
     folderPickRoute(deps),

@@ -89,6 +89,8 @@ export function createFakeDriver(): {
       permissionRequests: false,
     }),
     preflight: async () => ({ ok: true, issues: [] }),
+    models: async () => [],
+    probe: async () => ({ ok: true, reply: 'ok', durationMs: 1 }),
     async start(req: RunRequest) {
       const f = begin(req.runId);
 

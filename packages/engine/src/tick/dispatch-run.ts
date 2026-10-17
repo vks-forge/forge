@@ -6,7 +6,9 @@
  *   `dispatch_prompt` step renders the brief from the ticket, project memory and what
  *   changed since the last run, plus the Worker contract (shell rules, typed claims for
  *   every edit), which is also appended to the returned prompt verbatim so a paraphrase
- *   cannot drop it. The run row and the per-run token (stored only as a hash)
+ *   cannot drop it. The ticket's agent (its instructions, harness, model, budget; the implementer
+ *   until lane pipelines exist) is resolved from the tick's settings and recorded on the run row
+ *   with the hash of its definition; its instructions go between the brief and the rules. The run row and the per-run token (stored only as a hash)
  *   are written together before the harness starts, so a crash after start leaves a run the
  *   restart rule can find and revoke (d-0054). The ticket moves to `in_progress` only once
  *   the harness accepted the run; a start that throws settles the run as a failure and the
@@ -16,7 +18,7 @@
  *
  * Exports: startRun().
  * Depends on: @forge/core (branchName, DispatchPromptOutput), @forge/tools (sha256Hex),
- *   steps/run-step, domain/worker-contract, tick/project-runtime, tick/dispatch-park, tick/pump, tick/settle, tick/ticket-moves, domain/results.
+ *   steps/run-step, domain/worker-contract, tick/agent-prompt, tick/project-runtime, tick/run-agent, tick/dispatch-park, tick/pump, tick/settle, tick/ticket-moves, domain/results.
  */
 
 import {
@@ -30,8 +32,10 @@ import { scrubSecrets, sha256Hex } from '@forge/tools';
 import { familyOf, failureResult } from '#/domain/results.js';
 import { renderWorkerContract, workerContract } from '#/domain/worker-contract.js';
 import { hold, rejectStep, runStep } from '#/steps/run-step.js';
+import { workerPrompt } from '#/tick/agent-prompt.js';
 import { parkDispatch, parkForHarness } from '#/tick/dispatch-park.js';
 import { baseRefFor, driverFor, runtimeFor } from '#/tick/project-runtime.js';
+import { resolveAgent } from '#/tick/run-agent.js';
 import { configVersionRef } from '#/tick/tick-config.js';
 import { emitTrace } from '#/shared/trace.js';
 import { startPump } from '#/tick/pump.js';
@@ -45,7 +49,7 @@ import type { Candidate } from '#/types/tick.types.js';
 const msg = (e: unknown): string => String(e instanceof Error ? e.message : e);
 
 /**
- * Starts a run for `c` on `harnessId` (the project's own harness unless the scheduler
+ * Starts a run for `c` on `harnessId` (the agent's own harness unless the scheduler
  * chose a fallback); returns true when a run is now live. Never throws.
  */
 export async function startRun(
@@ -101,9 +105,12 @@ async function tryStart(
     throw new Error(`project ${project.slug} has no runtime on this server`);
   }
 
+  // A retry or resume continues on the agent the ticket's earlier run used, while it is usable.
+  const agent = resolveAgent(ctx.config, project.slug, ticket.lane, previous?.agent_id);
+  const harness = harnessId ?? agent.harnessId;
   let driver: WorkerDriver;
   try {
-    driver = driverFor(ctx, project.slug, harnessId);
+    driver = driverFor(ctx, project.slug, harness);
   } catch (e) {
     await parkForHarness(ctx, ticket, e);
 
@@ -125,7 +132,7 @@ async function tryStart(
     throw e;
   }
 
-  const slice = await deps.memory.slice(project.slug);
+  const slice = await deps.memory.slice(project.slug, agent.definition.memory);
   const contract = workerContract({
     rework: c.kind === 'retry' && c.wake?.kind === 'continuation',
     checks: runtime.config.checks,
@@ -158,8 +165,13 @@ async function tryStart(
     return false;
   }
 
-  // The rules are facts about the environment: appended verbatim, whatever the step wrote.
-  const prompt = [drafted.value.prompt, renderWorkerContract(contract)].join('\n\n');
+  // The rules are facts about the environment: appended verbatim, whatever the step or agent wrote.
+  const prompt = workerPrompt(
+    drafted.value.prompt,
+    agent.definition.instructions,
+    renderWorkerContract(contract),
+  );
+
   const promptHash = sha256Hex(prompt);
 
   const runId = deps.ids.runId();
@@ -179,6 +191,8 @@ async function tryStart(
     prompt_hash: promptHash,
     catalogue_hash: await deps.catalogueHash(driver.id),
     config_version: configVersionRef(ctx.config, project.slug),
+    agent_id: agent.id,
+    agent_hash: agent.hash,
   };
 
   await deps.storage.transaction(async (tx) => {
@@ -207,6 +221,8 @@ async function tryStart(
   const req = buildRunRequest(ctx, {
     runId,
     ticket,
+    agent,
+    harnessId: harness,
     cwd: wt.path,
     prompt,
     promptHash,
