@@ -52,6 +52,7 @@ describe('Claude DirectorLLM: onTrace', { timeout: 30_000 }, () => {
         throw new Error('boom');
       },
     });
+
     rig.fixture(j(resultDoc({ structured_output: { answer: 'ok' } })));
 
     const r = await rig.llm.step('triage', {}, Answer, OPTS);

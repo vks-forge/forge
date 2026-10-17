@@ -6,9 +6,21 @@
  *   trace entries only after the commit, so a rolled-back transaction leaves no trace of
  *   changes that never happened (d-0163).
  *
- * Exports: WriteCall.
- * Depends on: nothing. Types only.
+ * Exports: WriteCall, TraceRow, TraceRule.
+ * Depends on: @forge/core (TraceKind, TraceInput). Types only.
  */
+
+import type { TraceInput, TraceKind } from '@forge/core';
+
+/** A loosely typed row or argument, read field by field. */
+export type TraceRow = Record<string, unknown>;
+
+/** What a listed write becomes in the trace. */
+export interface TraceRule {
+  readonly kind: TraceKind;
+  readonly text: string;
+  readonly level?: TraceInput['level'];
+}
 
 export interface WriteCall {
   /** The repository property of the transaction (`tickets`, `cardEvents`, ...). */

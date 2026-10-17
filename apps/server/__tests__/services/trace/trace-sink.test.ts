@@ -93,6 +93,7 @@ describe('trace sink', () => {
       message: 'has SECRET-VALUE-FROM-STORE',
       data: { Authorization: 'Bearer abcdefghijklmnopqrstuv', ok: 'fine' },
     });
+
     await done();
 
     const text = JSON.stringify(written[0]?.entry);

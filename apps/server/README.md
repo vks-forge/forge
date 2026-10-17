@@ -68,6 +68,22 @@ Any folder can be a project (d-0124). `POST /projects/inspect` reports the folde
 
 - **Escalations (S4a).** `POST /interactions/:id/act` settles a wait with an action it offers (answer, retry, replan, cancel, run_as_express, recheck) and returns `{escalation}`; `POST /tickets/:id/act` does Rework and Cancel for waits with no interaction (review, sign-off, scheduler holds) and returns `{ticket_id, action}`; `GET /cards/:id/escalations` lists a card's pending waits then the last 50 settled; `GET /tickets/:id` adds `escalations` and `wait_actions`; the Inbox `question` items cover all three kinds and carry the `escalation` view, owner stage only. Refusals: 400 `invalid_body` / `invalid_answer`, 404 `interaction_not_found` / `ticket_not_found` / `card_not_found`, 409 `not_pending` (with `settled`), `action_not_offered`, `ticket_has_dependents` (with `dependents`), `still_broken` (with `detail`), `stale`. `POST /interactions/:id/answer` stays and settles the same typed owner answer at any stage. Every ticket and interaction write also invalidates `["ticket", id]`.
 
+### Debug trace
+
+Off by default. `FORGE_TRACE=1` (or `true`) writes everything that happens to a card as JSON lines, with secrets removed; no UI, files only (d-0163).
+
+| Variable                | Default                 | Meaning                                                                        |
+| ----------------------- | ----------------------- | ------------------------------------------------------------------------------ |
+| `FORGE_TRACE`           | unset (off)             | `1` / `true` turns tracing on; off installs no decorator and creates no folder |
+| `FORGE_TRACE_DIR`       | `<dataHome>/logs/trace` | where the files go                                                             |
+| `FORGE_TRACE_KEEP_DAYS` | `14`                    | files whose modification time is older are deleted at start-up and once a day  |
+
+- **Files:** `forge-YYYY-MM-DD.jsonl` (everything, in order, one per server-local day) and `cards/<CARD-ID>.jsonl` (one card's story: creation, chat, Director steps, tickets, runs, escalations). An entry with a ticket or run but no card is attributed through a cached ticket-to-card lookup; entries with no card go only to the day file. Each line is a `TraceEntry` from `@forge/core`.
+- **Captured:** storage decorator `services/trace-storage.ts` (every committed write: cards, card events, chat turns, ticket moves with before and after status, interactions and escalations, run rows, gates, projects); Director decorator `services/trace/trace-llm.ts` (step input, rendered prompt and raw output through the driver's `onTrace`, parsed result or error, cost, duration, model, harness); engine entries (run events and results, dispatch picks, rejected steps, tick errors); config saves (`trace-config.ts`); HTTP (`http-trace.ts`: method, path, status, duration, mutation bodies, hook calls as `tool` entries, router errors with family).
+- **Not logged:** GET bodies, anything under `/auth`, query values (only key names), run tokens' hashes.
+- **Redaction (fail closed):** one `redact()` pass before any write removes values under keys like `Authorization`, cookie, token, secret, password, key; GitHub, `sk-`, Slack and bearer patterns, session cookies and PEM blocks; the install token, every SecretStore value and the env-passthrough values; and any value seen under a secret key earlier in the run. If redaction throws the entry is dropped with one stderr warning.
+- **Writer:** buffered, flushed about every 200 ms and at shutdown, never blocks or fails the engine (one stderr warning on a write error), entries over 2 MB have their biggest strings cut with a `�[truncated N bytes]` marker. A start-up line says whether tracing is on and where it writes.
+
 ## Why this approach
 
 - `node:http` with a small router and hand-written SSE, no framework (d-0061). Rejected: Hono, Fastify.
@@ -125,3 +141,4 @@ Add a route as `src/routes/<name>.ts` returning a `Route`, list it in `routes/ro
 - GitHub App host: wired from config but its live check is probe 9 (not part of this app's tests).
 - `GET /runs/:id/events` polls storage every 500 ms per open stream.
 - Stats, cost, overview and inbox are computed per request by reading the project's rows (no cache, no aggregate table): fine for one machine, to be revisited if a project holds tens of thousands of runs. A queued ticket has no run row yet, so Runs shows it only once dispatched (the ticket list shows it waiting). Memory proposals carry no timestamp, so they are dated at the epoch (the web shows no date for them), sort last and cannot resurface by change.
+- Debug trace: files only (no UI); retention is by age, not size; Worker harness stderr and the MCP server's own logs are not captured, only what reaches the engine, the storage port, the config source, the Director's model and HTTP.

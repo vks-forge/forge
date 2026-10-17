@@ -38,14 +38,25 @@ const run = (data: unknown, secrets: string[] = [INSTALL], message?: string) =>
 describe('redact: by key', () => {
   it('removes Authorization, cookie, token, secret, password and key fields', () => {
     const out = run({
-      headers: { Authorization: 'Bearer abc.def.ghi', cookie: 'forge_session=xyz', Accept: 'json' },
+      headers: {
+        Authorization: 'Bearer abc.def.ghi',
+        cookie: 'forge_session=xyz',
+        Accept: 'json',
+      },
       FORGE_RUN_TOKEN: 'run-token-value-1',
       client_secret: 'shh-shh-shh',
       password: 'hunter2hunter2',
       api_key: 'plain-key-value',
     });
 
-    for (const gone of ['abc.def.ghi', 'xyz', 'run-token-value-1', 'shh-shh-shh', 'hunter2', 'plain-key']) {
+    for (const gone of [
+      'abc.def.ghi',
+      'xyz',
+      'run-token-value-1',
+      'shh-shh-shh',
+      'hunter2',
+      'plain-key',
+    ]) {
       expect(out).not.toContain(gone);
     }
 
@@ -77,7 +88,9 @@ describe('redact: by pattern', () => {
   });
 
   it('removes a whole PEM block', () => {
-    const pem = '-----BEGIN RSA PRIVATE KEY-----\nMIIEabc\ndefGHI\n-----END RSA PRIVATE KEY-----';
+    const pem =
+      '-----BEGIN RSA PRIVATE KEY-----\nMIIEabc\ndefGHI\n-----END RSA PRIVATE KEY-----';
+
     const out = run({ log: `key:\n${pem}\ndone` }, []);
 
     expect(out).not.toContain('MIIEabc');
@@ -105,7 +118,10 @@ describe('redact: by value', () => {
     const redactor = createRedactor();
     const out = JSON.stringify(
       redactor.redact(
-        entry({ env: { FORGE_RUN_TOKEN: 'learned-run-token-77' }, cmd: 'tool --t learned-run-token-77' }) as never,
+        entry({
+          env: { FORGE_RUN_TOKEN: 'learned-run-token-77' },
+          cmd: 'tool --t learned-run-token-77',
+        }) as never,
         [],
       ),
     );
@@ -171,6 +187,7 @@ describe('redact: robustness', () => {
               : wrap === 1
                 ? [rest, { deeper: { [key]: secret } }]
                 : { rest, list: [`${secret}`, { [key]: [secret] }] };
+
           const out = run(planted);
 
           expect(out).not.toContain(GHP);

@@ -6,9 +6,10 @@
  *   writer on the trace folder, a redactor, and a sink that finds a ticket's or run's card by
  *   reading storage (cached). The literal secrets the redactor removes live in three places
  *   that only the app knows: the install token file, the SecretStore (GitHub keys, harness
- *   credentials, run secrets) and the values of the env-passthrough variables; they are read
- *   again at most every few seconds so a run secret created a moment ago is covered, and a
- *   store that cannot be read costs only that net, never the trace. One start-up line says
+ *   credentials, run secrets) and the values of the env-passthrough variables. The store's name
+ *   list is read for every entry so a secret written a moment ago is covered at once (its value
+ *   is fetched when the name is new, and all values again every few seconds), and a store that
+ *   cannot be read costs only that net, never the trace. One start-up line says
  *   whether tracing is on and where it writes.
  *
  * Exports: createTrace().
@@ -18,29 +19,14 @@
 
 import { readFile } from 'node:fs/promises';
 import { NOOP_TRACE } from '@forge/core';
-import type { Clock, SecretStore, StorageAdapter } from '@forge/core';
-import type { Logger } from '@forge/engine';
+import type { Clock, SecretStore } from '@forge/core';
 import { createRedactor } from '#/services/trace/redact.js';
 import { createTraceSink } from '#/services/trace/trace-sink.js';
 import { createTraceWriter } from '#/services/trace/writer.js';
-import type { TraceSettings } from '#/types/settings.types.js';
-import type { Trace } from '#/types/trace.types.js';
+import type { CreateTraceOptions, Trace } from '#/types/trace.types.js';
 
 const SECRET_TTL_MS = 5_000;
-
-export interface CreateTraceOptions {
-  readonly settings: TraceSettings | undefined;
-  /** The unwrapped storage: used only to look up which card a ticket or run belongs to. */
-  readonly storage: StorageAdapter;
-  readonly secrets: SecretStore;
-  readonly installTokenPath: string;
-  readonly env: Readonly<Record<string, string | undefined>>;
-  /** Names of env variables whose values reach harness children (`FORGE_HARNESS_ENV_PASSTHROUGH`). */
-  readonly passthrough: readonly string[];
-  readonly clock: Clock;
-  readonly stderr: (text: string) => void;
-  readonly log: Logger;
-}
+const MAX_SEEN = 500;
 
 const NOT_TRACING: Trace = {
   sink: NOOP_TRACE,
@@ -48,8 +34,40 @@ const NOT_TRACING: Trace = {
   close: async () => undefined,
 };
 
+/** The SecretStore values seen so far, by name; new names are read at once, known ones again after a while. */
+function createStoreReader(store: SecretStore, clock: Clock) {
+  const seen = new Map<string, string>();
+  let refreshedAt = Number.NEGATIVE_INFINITY;
+
+  return async (): Promise<string[]> => {
+    try {
+      const names = await store.list('');
+      const stale = clock.now() - refreshedAt > SECRET_TTL_MS;
+      for (const name of names.filter((n) => stale || !seen.has(n))) {
+        const bytes = await store.get(name);
+        if (bytes) {
+          seen.set(name, Buffer.from(bytes).toString('utf8').trim());
+        }
+      }
+
+      refreshedAt = stale ? clock.now() : refreshedAt;
+      // Values of deleted secrets (a finished run's) stay: they may still be in flight in an entry.
+      while (seen.size > MAX_SEEN) {
+        seen.delete(seen.keys().next().value as string);
+      }
+    } catch {
+      // A store that cannot be read (DPAPI off Windows) must not stop the trace.
+    }
+
+    return [...seen.values()];
+  };
+}
+
 /** Reads every literal secret the app knows of; each source that fails is skipped. */
-async function readSecrets(opts: CreateTraceOptions): Promise<string[]> {
+async function readSecrets(
+  opts: CreateTraceOptions,
+  fromStore: () => Promise<string[]>,
+): Promise<string[]> {
   const out: string[] = [];
   for (const name of opts.passthrough) {
     const value = opts.env[name];
@@ -64,16 +82,7 @@ async function readSecrets(opts: CreateTraceOptions): Promise<string[]> {
     // No token file yet (or unreadable): the pattern and key nets still apply.
   }
 
-  try {
-    for (const name of await opts.secrets.list('')) {
-      const bytes = await opts.secrets.get(name);
-      if (bytes) {
-        out.push(Buffer.from(bytes).toString('utf8').trim());
-      }
-    }
-  } catch {
-    // A store that cannot be read (DPAPI off Windows) must not stop the trace.
-  }
+  out.push(...(await fromStore()));
 
   return out.filter((s) => s !== '');
 }
@@ -94,15 +103,10 @@ export function createTrace(opts: CreateTraceOptions): Trace {
     stderr: opts.stderr,
   });
 
-  let cached: { at: number; values: string[] } | undefined;
-  const secretValues = async (): Promise<readonly string[]> => {
-    const now = opts.clock.now();
-    if (!cached || now - cached.at > SECRET_TTL_MS) {
-      cached = { at: now, values: await readSecrets(opts) };
-    }
-
-    return cached.values;
-  };
+  const fromStore = createStoreReader(opts.secrets, opts.clock);
+  // Read on every entry: the install token file and the store's name list are cheap, and a secret
+  // written a moment ago must already be covered.
+  const secretValues = (): Promise<readonly string[]> => readSecrets(opts, fromStore);
 
   const sink = createTraceSink({
     write: (entry, cardId) => writer.write(entry, cardId),
@@ -111,7 +115,9 @@ export function createTrace(opts: CreateTraceOptions): Trace {
     now: () => opts.clock.now(),
     lookup: {
       cardOfTicket: (id) =>
-        opts.storage.transaction(async (tx) => (await tx.tickets.get(id as never))?.card_id),
+        opts.storage.transaction(
+          async (tx) => (await tx.tickets.get(id as never))?.card_id,
+        ),
       ticketOfRun: (id) =>
         opts.storage.transaction(async (tx) => (await tx.runs.get(id))?.ticket_id),
     },

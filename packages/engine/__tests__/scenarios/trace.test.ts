@@ -44,7 +44,10 @@ describe('engine trace', () => {
     await rig.flush();
     await rig.tickOn(engine);
 
-    const start = entries.find((e) => e.kind === 'run' && e.message.startsWith('run start'));
+    const start = entries.find(
+      (e) => e.kind === 'run' && e.message.startsWith('run start'),
+    );
+
     expect(start).toMatchObject({ run_id: 'run-1', actor: 'engine' });
 
     const events = entries.filter((e) => e.kind === 'run_event');
@@ -52,12 +55,15 @@ describe('engine trace', () => {
     expect(events[0]).toMatchObject({ run_id: 'run-1', actor: 'worker' });
     expect(JSON.stringify(events.map((e) => e.data))).toContain('a.ts');
 
-    const ended = entries.find((e) => e.kind === 'run' && e.message.startsWith('run result'));
+    const ended = entries.find(
+      (e) => e.kind === 'run' && e.message.startsWith('run result'),
+    );
+
     expect(ended).toMatchObject({ run_id: 'run-1' });
     expect(ended?.data).toMatchObject({ status: 'success' });
-    expect(entries.some((e) => e.kind === 'engine' && e.message.includes('dispatch'))).toBe(
-      true,
-    );
+    expect(
+      entries.some((e) => e.kind === 'engine' && e.message.includes('dispatch')),
+    ).toBe(true);
   });
 
   it('records a rejected step with its error and a retry after invalid output', async () => {
@@ -78,6 +84,7 @@ describe('engine trace', () => {
     const rejected = entries.find(
       (e) => e.kind === 'engine' && e.message.includes('rejected'),
     );
+
     expect(rejected).toMatchObject({ step: 'dispatch_prompt', level: 'warn' });
     expect(JSON.stringify(rejected?.data)).toContain('bad shape');
   });

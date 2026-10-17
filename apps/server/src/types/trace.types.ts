@@ -6,11 +6,21 @@
  *   writer). Naming the seams here keeps each part replaceable and keeps the engine and the
  *   adapters on the one-method `TraceSink` port from `@forge/core`.
  *
- * Exports: TraceWriterOptions, TraceWriter, TraceLookup, Redactor, TraceSinkOptions, Trace.
- * Depends on: @forge/core (Clock, TraceEntry, TraceSink). Types only.
+ * Exports: TraceWriterOptions, TraceWriter, TraceLookup, Redactor, TraceSinkOptions, Trace, CreateTraceOptions,
+ *   StepCapture, StringSlot.
+ * Depends on: @forge/core, @forge/drivers and @forge/engine (types), types/settings. Types only.
  */
 
-import type { Clock, TraceEntry, TraceSink } from '@forge/core';
+import type {
+  Clock,
+  SecretStore,
+  StorageAdapter,
+  TraceEntry,
+  TraceSink,
+} from '@forge/core';
+import type { Logger } from '@forge/engine';
+import type { DirectorStepTrace } from '@forge/drivers';
+import type { TraceSettings } from '#/types/settings.types.js';
 
 export interface TraceWriterOptions {
   /** Folder of the day files; card files go in `<dir>/cards`. */
@@ -67,4 +77,32 @@ export interface Trace {
   readonly enabled: boolean;
   /** Flushes and stops timers; safe to call twice. */
   close(): Promise<void>;
+}
+
+/** What `createTrace` is built from. */
+export interface CreateTraceOptions {
+  readonly settings: TraceSettings | undefined;
+  /** The unwrapped storage: used only to look up which card a ticket or run belongs to. */
+  readonly storage: StorageAdapter;
+  readonly secrets: SecretStore;
+  readonly installTokenPath: string;
+  readonly env: Readonly<Record<string, string | undefined>>;
+  /** Names of env variables whose values reach harness children (`FORGE_HARNESS_ENV_PASSTHROUGH`). */
+  readonly passthrough: readonly string[];
+  readonly clock: Clock;
+  readonly stderr: (text: string) => void;
+  readonly log: Logger;
+}
+
+/** What the Director decorator gathers for one step call: its cost and what the driver reported. */
+export interface StepCapture {
+  cost: number;
+  seen: DirectorStepTrace[];
+}
+
+/** One string field of an entry, found for truncation: where it sits and how many bytes it holds. */
+export interface StringSlot {
+  readonly holder: Record<string, unknown> | unknown[];
+  readonly key: string | number;
+  readonly size: number;
 }

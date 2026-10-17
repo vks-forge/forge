@@ -61,11 +61,17 @@ const answers = (calls: Map<StepName, number>): Partial<Record<StepName, unknown
         }
       : { done: true, done_reason: 'nothing_open', open_points: 0, assumptions: [] },
   verify: { findings: { summary: 'Nothing conflicts.', blast_radius: 'one file' } },
-  enhance: { summary: 'Fine.', report: '# Enhance', assumptions: [], owner_questions: [] },
+  enhance: {
+    summary: 'Fine.',
+    report: '# Enhance',
+    assumptions: [],
+    owner_questions: [],
+  },
   write_plan: plan,
   approve_plan: { decision: 'approve', questions: [] },
   dispatch_prompt: {
-    prompt: 'Add add(a, b) to src/math.js and a test for it, then call finish with claims.',
+    prompt:
+      'Add add(a, b) to src/math.js and a test for it, then call finish with claims.',
   },
   steer_reply: { mode: 'none', text: '' },
   card_chat: { reply: 'Noted.', actions: [] },
@@ -79,7 +85,12 @@ export function planningDirector(): LlmFactory {
     const calls = new Map<StepName, number>();
     const llm: DirectorLLM = {
       capabilities: () => ({ structuredOutput: true, reportsCost: true }),
-      async step<T>(name: StepName, input: unknown, schema: ZodType<T>, opts: StepOptions) {
+      async step<T>(
+        name: StepName,
+        input: unknown,
+        schema: ZodType<T>,
+        opts: StepOptions,
+      ) {
         calls.set(name, (calls.get(name) ?? 0) + 1);
         const answer = answers(calls)[name];
         wiring.onTrace?.({

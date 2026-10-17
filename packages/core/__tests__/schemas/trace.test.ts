@@ -42,7 +42,13 @@ describe('TraceEntry', () => {
 
   it('lists every source the brief names', () => {
     expect(TRACE_KINDS).toEqual(
-      expect.arrayContaining(['http', 'card_event', 'director_step', 'run_event', 'error']),
+      expect.arrayContaining([
+        'http',
+        'card_event',
+        'director_step',
+        'run_event',
+        'error',
+      ]),
     );
   });
 

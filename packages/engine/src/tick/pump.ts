@@ -39,7 +39,7 @@ async function record(deps: EngineDeps, pump: Pump, event: RunEvent): Promise<vo
     kind: 'run_event',
     run_id: pump.runId,
     actor: 'worker',
-    message: `${event.type}${'tool' in event && typeof event.tool === 'string' ? ` ${event.tool}` : ''}`,
+    message: `${event.type}${'name' in event && typeof event.name === 'string' ? ` ${event.name}` : ''}`,
     data: event,
   });
 

@@ -14,7 +14,14 @@
  * Depends on: src/services/trace/writer, a fake clock, a temp dir. IO: temp files.
  */
 
-import { existsSync, readFileSync, readdirSync, utimesSync, writeFileSync, mkdirSync } from 'node:fs';
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  utimesSync,
+  writeFileSync,
+  mkdirSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import type { TraceEntry } from '@forge/core';
 import { describe, expect, it } from 'vitest';
@@ -96,7 +103,10 @@ describe('trace writer: layout', () => {
 
     const day = join(dir, 'forge-2026-10-17.jsonl');
     expect(lines(day).map((l) => l['message'])).toEqual(['a é', 'b']);
-    expect(lines(join(dir, 'cards', 'FG-C1.jsonl')).map((l) => l['message'])).toEqual(['a é']);
+    expect(lines(join(dir, 'cards', 'FG-C1.jsonl')).map((l) => l['message'])).toEqual([
+      'a é',
+    ]);
+
     expect(readFileSync(day, 'utf8')).not.toContain('\r');
     expect(readFileSync(day, 'utf8').endsWith('\n')).toBe(true);
   });
@@ -133,7 +143,10 @@ describe('trace writer: layout', () => {
 describe('trace writer: size cap', () => {
   it('cuts the biggest string and marks it, keeping a valid line under the cap', async () => {
     const { dir, clock, writer } = rig({ maxEntryBytes: 10_000 });
-    writer.write(entryAt(clock.now(), { data: { big: 'x'.repeat(50_000), small: 'keep' } }));
+    writer.write(
+      entryAt(clock.now(), { data: { big: 'x'.repeat(50_000), small: 'keep' } }),
+    );
+
     await writer.flush();
 
     const [line] = lines(join(dir, 'forge-2026-10-17.jsonl'));
@@ -152,8 +165,13 @@ describe('trace writer: roll-over', () => {
     writer.write(entryAt(at(2026, 10, 18, 0, 0, 1), { message: 'early' }));
     await writer.flush();
 
-    expect(lines(join(dir, 'forge-2026-10-17.jsonl')).map((l) => l['message'])).toEqual(['late']);
-    expect(lines(join(dir, 'forge-2026-10-18.jsonl')).map((l) => l['message'])).toEqual(['early']);
+    expect(lines(join(dir, 'forge-2026-10-17.jsonl')).map((l) => l['message'])).toEqual([
+      'late',
+    ]);
+
+    expect(lines(join(dir, 'forge-2026-10-18.jsonl')).map((l) => l['message'])).toEqual([
+      'early',
+    ]);
   });
 });
 

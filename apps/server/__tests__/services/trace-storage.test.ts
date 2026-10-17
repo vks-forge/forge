@@ -210,6 +210,29 @@ describe('traceStorageWrites', () => {
     expect(entries[0]).toMatchObject({ run_id: 'run-1', ticket_id: 'FX-1' });
   });
 
+  it('stays quiet for an idle reply-queue claim and never reads its timestamp as a card id', async () => {
+    const { storage, entries } = await setup();
+    await storage.transaction((tx) => tx.cards.insert(card));
+    await storage.transaction((tx) =>
+      tx.cardReplyQueue.enqueue({
+        card_id: card.id,
+        event_id: 0,
+        reason: 'card_created',
+        enqueued_at: T,
+      }),
+    );
+
+    entries.length = 0;
+
+    const claimed = await storage.transaction((tx) => tx.cardReplyQueue.claim(T, '0000'));
+    const idle = await storage.transaction((tx) => tx.cardReplyQueue.claim(T, '0000'));
+
+    expect(claimed).toHaveLength(1);
+    expect(idle).toEqual([]);
+    expect(entries.every((e) => e.card_id !== T)).toBe(true);
+    expect(entries.filter((e) => e.message.includes('claimed'))).toHaveLength(1);
+  });
+
   it('logs a project registration as config', async () => {
     const { raw, entries } = await setup();
     const storage = traceStorageWrites(raw, { emit: (e) => void entries.push(e) });

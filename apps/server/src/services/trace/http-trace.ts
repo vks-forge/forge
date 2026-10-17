@@ -32,22 +32,41 @@ const parse = (text: string): unknown => {
   }
 };
 
+const text = (value: unknown): string | undefined =>
+  typeof value === 'string' && value !== '' ? value : undefined;
+
+/** `hook PreToolUse Bash allow`: the Worker's tool call and the verdict it got. */
+function hookMessage(sent: unknown, verdict: unknown, status: number): string {
+  const body = (sent ?? {}) as { event?: unknown; payload?: { tool_name?: unknown } };
+  const reply = (verdict ?? {}) as { decision?: unknown };
+
+  return [
+    'hook',
+    text(body.event) ?? 'event',
+    text(body.payload?.tool_name),
+    text(reply.decision) ?? String(status),
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
 /** Patches `req` so the chunks a handler reads are also kept (up to the limit) for the trace. */
 function teeBody(req: IncomingMessage): () => string {
   const kept: Buffer[] = [];
   let size = 0;
   const original = req[Symbol.asyncIterator].bind(req);
-  (req as { [Symbol.asyncIterator]: unknown })[Symbol.asyncIterator] = async function* () {
-    for await (const chunk of original()) {
-      const part = Buffer.from(chunk as Uint8Array);
-      if (size < BODY_LIMIT) {
-        kept.push(part);
-        size += part.length;
-      }
+  (req as { [Symbol.asyncIterator]: unknown })[Symbol.asyncIterator] =
+    async function* () {
+      for await (const chunk of original()) {
+        const part = Buffer.from(chunk as Uint8Array);
+        if (size < BODY_LIMIT) {
+          kept.push(part);
+          size += part.length;
+        }
 
-      yield chunk;
-    }
-  };
+        yield chunk;
+      }
+    };
 
   return () => Buffer.concat(kept).toString('utf8').slice(0, BODY_LIMIT);
 }
@@ -88,12 +107,16 @@ export function beginHttpTrace(
       try {
         const status = res.statusCode;
         const sent = body?.() ?? '';
+        const sentBody = sent === '' ? undefined : parse(sent);
+        const verdict = response ? parse(response()) : undefined;
         deps.trace.emit({
           level: NO_BODY.has(method) && status < 400 ? 'debug' : 'info',
           kind: hook ? 'tool' : 'http',
           ...(hook?.[1] ? { run_id: hook[1] } : {}),
           actor: hook ? 'worker' : 'owner',
-          message: `${method} ${path} ${status}`,
+          message: hook
+            ? hookMessage(sentBody, verdict, status)
+            : `${method} ${path} ${status}`,
           data: {
             method,
             path,
@@ -102,10 +125,10 @@ export function beginHttpTrace(
             query_keys: [...url.searchParams.keys()],
             ...(hidden && !NO_BODY.has(method)
               ? { body: '[omitted]' }
-              : sent === ''
+              : sentBody === undefined
                 ? {}
-                : { body: parse(sent) }),
-            ...(response ? { response: parse(response()) } : {}),
+                : { body: sentBody }),
+            ...(verdict === undefined ? {} : { response: verdict }),
           },
         });
       } catch {

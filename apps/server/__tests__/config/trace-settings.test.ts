@@ -16,7 +16,11 @@ import { InvalidInputError } from '@forge/core';
 import { describe, expect, it } from 'vitest';
 import { loadSettings, readServerEnv } from '#/config/load-settings.js';
 
-const io = { platform: 'win32' as const, homedir: 'C:\\Users\\Ana', readText: async () => undefined };
+const io = {
+  platform: 'win32' as const,
+  homedir: 'C:\\Users\\Ana',
+  readText: async () => undefined,
+};
 
 describe('trace env', () => {
   it('is off by default with 14 days of retention', () => {
@@ -36,7 +40,10 @@ describe('trace env', () => {
   });
 
   it('rejects a bad keep-days value naming the variable', () => {
-    expect(() => readServerEnv({ FORGE_TRACE_KEEP_DAYS: 'x' })).toThrow(InvalidInputError);
+    expect(() => readServerEnv({ FORGE_TRACE_KEEP_DAYS: 'x' })).toThrow(
+      InvalidInputError,
+    );
+
     expect(() => readServerEnv({ FORGE_TRACE_KEEP_DAYS: '0' })).toThrow(
       'FORGE_TRACE_KEEP_DAYS',
     );
@@ -45,7 +52,11 @@ describe('trace env', () => {
 
 describe('trace settings', () => {
   it('defaults the directory under the data home logs', async () => {
-    const s = await loadSettings({ FORGE_HOME: 'E:\\dev-home', FORGE_TRACE: '1' }, 'E:\\repo', io);
+    const s = await loadSettings(
+      { FORGE_HOME: 'E:\\dev-home', FORGE_TRACE: '1' },
+      'E:\\repo',
+      io,
+    );
 
     expect(s.trace).toEqual({
       enabled: true,

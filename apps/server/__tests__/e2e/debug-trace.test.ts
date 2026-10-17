@@ -86,14 +86,21 @@ describe('debug trace end to end', { timeout: 300_000 }, () => {
 
     type Ev = { kind: string; payload: Record<string, unknown> };
     const events = async (): Promise<Ev[]> =>
-      ((await rig.call('GET', `/cards/${cardId}/events?limit=100`)).body as { items: Ev[] })
-        .items;
+      (
+        (await rig.call('GET', `/cards/${cardId}/events?limit=100`)).body as {
+          items: Ev[];
+        }
+      ).items;
 
     const question = await waitFor('the grill question', async () =>
       (await events()).find((e) => e.kind === 'grill_question'),
     );
 
-    const options = question.payload['options'] as { id: string; recommended?: boolean }[];
+    const options = question.payload['options'] as {
+      id: string;
+      recommended?: boolean;
+    }[];
+
     const answered = await rig.call('POST', `/cards/${cardId}/grill/answer`, {
       question_id: question.payload['question_id'],
       option_id: (options.find((o) => o.recommended) ?? options[0])?.id,
@@ -101,17 +108,10 @@ describe('debug trace end to end', { timeout: 300_000 }, () => {
 
     expect(answered.status).toBe(200);
 
-    const decision = await waitFor('the plan to be approved or ready', async () =>
-      (await events()).find((e) => e.kind === 'plan_approved' || e.kind === 'plan_ready'),
+    // The scripted Director approves a plan whose files are clear of the approval floor itself.
+    await waitFor('the plan to be approved', async () =>
+      (await events()).find((e) => e.kind === 'plan_approved'),
     );
-
-    if (decision.kind === 'plan_ready') {
-      const approved = await rig.call('POST', `/cards/${cardId}/plan/approve`, {
-        version: decision.payload['version'],
-      });
-
-      expect(approved.status).toBe(200);
-    }
 
     await waitFor(
       'the ticket to be done',
@@ -138,15 +138,17 @@ describe('debug trace end to end', { timeout: 300_000 }, () => {
       inOrder(card, [
         (l) => l.kind === 'card' && l.message.includes('created'),
         (l) => l.kind === 'chat',
-        (l) => l.kind === 'director_step' && l.step === 'card_survey' && l.level === 'warn',
-        (l) => l.kind === 'director_step' && l.step === 'card_survey' && l.level === 'info',
+        (l) =>
+          l.kind === 'director_step' && l.step === 'card_survey' && l.level === 'warn',
+        (l) =>
+          l.kind === 'director_step' && l.step === 'card_survey' && l.level === 'info',
         (l) => l.kind === 'card_event' && l.message.includes('grill_question'),
         (l) => l.kind === 'card_event' && l.message.includes('grill_answer'),
         (l) => l.kind === 'director_step' && l.step === 'write_plan',
-        (l) => l.kind === 'card_event' && /plan_(ready|approved)/.test(l.message),
+        (l) => l.kind === 'card_event' && l.message.includes('plan_ready'),
+        (l) => l.kind === 'ticket' && l.message.includes('ticket created FX-1'),
         (l) => l.kind === 'card_event' && l.message.includes('plan_approved'),
-        (l) => l.kind === 'ticket' && l.message.includes('created'),
-        (l) => l.kind === 'transition' && l.message.includes('done'),
+        (l) => l.kind === 'transition' && l.message.includes('FX-1: verifying -> done'),
       ]),
     ).toBe(true);
   });
@@ -155,7 +157,11 @@ describe('debug trace end to end', { timeout: 300_000 }, () => {
     const steps = card.filter((l) => l.kind === 'director_step');
     const good = steps.find((l) => l.step === 'grill_turn' && l.level === 'info');
 
-    expect(good?.data).toMatchObject({ model: expect.any(String), harness: 'claude-code' });
+    expect(good?.data).toMatchObject({
+      model: expect.any(String),
+      harness: 'claude-code',
+    });
+
     expect(good?.data?.['input']).toBeDefined();
     expect(String(good?.data?.['prompt'])).toContain('PROMPT grill_turn');
     expect(String(good?.data?.['raw'])).toContain('question');
@@ -174,7 +180,10 @@ describe('debug trace end to end', { timeout: 300_000 }, () => {
     const events = card.filter((l) => l.kind === 'run_event');
 
     expect(events.length).toBeGreaterThan(0);
-    expect(events.every((l) => l.run_id !== undefined && l.ticket_id === 'FX-1')).toBe(true);
+    expect(events.every((l) => l.run_id !== undefined && l.ticket_id === 'FX-1')).toBe(
+      true,
+    );
+
     expect(card.some((l) => l.kind === 'run' && l.message.startsWith('run result'))).toBe(
       true,
     );
@@ -194,12 +203,16 @@ describe('debug trace end to end', { timeout: 300_000 }, () => {
     ).toBe(true);
 
     expect(day.length).toBeGreaterThan(card.length);
-    expect(day.map((l) => l.seq)).toEqual([...day.map((l) => l.seq)].sort((a, b) => a - b));
+    expect(day.map((l) => l.seq)).toEqual(
+      [...day.map((l) => l.seq)].sort((a, b) => a - b),
+    );
   });
 
   it('never writes a planted secret anywhere in the trace folder', () => {
     const files = [
-      ...readdirSync(dir).filter((n) => n.endsWith('.jsonl')).map((n) => join(dir, n)),
+      ...readdirSync(dir)
+        .filter((n) => n.endsWith('.jsonl'))
+        .map((n) => join(dir, n)),
       ...readdirSync(join(dir, 'cards')).map((n) => join(dir, 'cards', n)),
     ];
 

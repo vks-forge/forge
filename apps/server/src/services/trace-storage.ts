@@ -19,8 +19,6 @@ import type { StorageAdapter, StorageTx, TraceSink } from '@forge/core';
 import { describeWrite, isWrite, needsBefore } from '#/services/trace/storage-rules.js';
 import type { WriteCall } from '#/types/trace-storage.types.js';
 
-type Repo = Record<string, (...args: unknown[]) => Promise<unknown>>;
-
 /** The row as it was before a ticket or interaction write; never fails the write. */
 async function readBefore(
   raw: StorageTx,
@@ -52,13 +50,24 @@ function watchRepo(
   return new Proxy(repo, {
     get(target, prop, receiver) {
       const value = Reflect.get(target, prop, receiver) as unknown;
-      if (typeof prop !== 'string' || typeof value !== 'function' || !isWrite(name, prop)) {
+      if (
+        typeof prop !== 'string' ||
+        typeof value !== 'function' ||
+        !isWrite(name, prop)
+      ) {
         return value;
       }
 
       return async (...args: unknown[]) => {
-        const before = needsBefore(name, prop) ? await readBefore(raw, name, args) : undefined;
-        const result = await (value as Repo[string]).apply(target, args);
+        const before = needsBefore(name, prop)
+          ? await readBefore(raw, name, args)
+          : undefined;
+
+        const result = await (value as (...a: unknown[]) => Promise<unknown>).apply(
+          target,
+          args,
+        );
+
         calls.push({
           repo: name,
           method: prop,

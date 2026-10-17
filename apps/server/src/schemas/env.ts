@@ -23,7 +23,8 @@ const integer = (min: number, max: number, fallback: number) =>
 
 /** `1` or `true` (any case) is on; anything else, including blank, is off. */
 const flag = z.preprocess(
-  (value) => typeof value === 'string' && ['1', 'true'].includes(value.trim().toLowerCase()),
+  (value) =>
+    typeof value === 'string' && ['1', 'true'].includes(value.trim().toLowerCase()),
   z.boolean(),
 );
 

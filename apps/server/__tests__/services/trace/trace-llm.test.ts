@@ -37,12 +37,7 @@ function rig(fake: Fake, over: { emit?: (e: TraceInput) => void } = {}) {
   const inner: DirectorLLM = {
     capabilities: () => ({ structuredOutput: true, reportsCost: true }),
     step: (async (name: string, input: unknown, _schema: unknown, opts: StepOptions) =>
-      fake(
-        (t) => holder.onTrace(t as never),
-        name,
-        input,
-        opts,
-      )) as DirectorLLM['step'],
+      fake((t) => holder.onTrace(t as never), name, input, opts)) as DirectorLLM['step'],
   };
 
   const traced = traceDirectorLLM(inner, {
@@ -107,7 +102,12 @@ describe('traceDirectorLLM', () => {
     const r = await llm.step('card_survey', { card: { id: 'FX-C1' } }, Out, OPTS);
 
     expect(r.ok).toBe(false);
-    expect(entries[0]).toMatchObject({ level: 'warn', card_id: 'FX-C1', step: 'card_survey' });
+    expect(entries[0]).toMatchObject({
+      level: 'warn',
+      card_id: 'FX-C1',
+      step: 'card_survey',
+    });
+
     expect(entries[0]?.message).toContain('invalid_output');
     expect(entries[0]?.data).toMatchObject({
       raw: 'not json at all',

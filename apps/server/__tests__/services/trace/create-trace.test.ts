@@ -67,7 +67,11 @@ async function rig(enabled: boolean) {
   });
 
   const secrets = createMemorySecretStore();
-  await secrets.put('github/acme/key', new TextEncoder().encode('STORE-SECRET-VALUE-123'));
+  await secrets.put(
+    'github/acme/key',
+    new TextEncoder().encode('STORE-SECRET-VALUE-123'),
+  );
+
   const logs: string[] = [];
   const errs: string[] = [];
   const trace = createTrace({
@@ -79,7 +83,8 @@ async function rig(enabled: boolean) {
     passthrough: ['PASS_ME'],
     clock,
     stderr: (t) => errs.push(t),
-    log: (_level, message, fields) => logs.push(`${message} ${JSON.stringify(fields ?? {})}`),
+    log: (_level, message, fields) =>
+      logs.push(`${message} ${JSON.stringify(fields ?? {})}`),
   });
 
   return { dir, trace, logs, errs, secrets };
@@ -88,7 +93,14 @@ async function rig(enabled: boolean) {
 describe('createTrace', () => {
   it('is the no-op sink when off, creates nothing and logs one line', async () => {
     const { dir, trace, logs } = await rig(false);
-    trace.sink.emit({ level: 'info', kind: 'card', actor: 'owner', message: 'x', data: {} });
+    trace.sink.emit({
+      level: 'info',
+      kind: 'card',
+      actor: 'owner',
+      message: 'x',
+      data: {},
+    });
+
     await trace.close();
 
     expect(trace.enabled).toBe(false);
@@ -134,7 +146,11 @@ describe('createTrace', () => {
       }
     }
 
-    expect(JSON.parse(cardText.trim())).toMatchObject({ card_id: 'FX-C1', ticket_id: 'FX-1' });
+    expect(JSON.parse(cardText.trim())).toMatchObject({
+      card_id: 'FX-C1',
+      ticket_id: 'FX-1',
+    });
+
     expect(logs[0]).toContain('on');
     expect(logs[0]).toContain(dir);
   });
@@ -145,7 +161,14 @@ describe('createTrace', () => {
       throw new Error('dpapi unavailable');
     };
 
-    trace.sink.emit({ level: 'info', kind: 'card', actor: 'owner', message: 'still here', data: {} });
+    trace.sink.emit({
+      level: 'info',
+      kind: 'card',
+      actor: 'owner',
+      message: 'still here',
+      data: {},
+    });
+
     await new Promise((r) => setTimeout(r, 30));
     await trace.close();
 

@@ -15,7 +15,7 @@
  *   IO: through create-trace (the trace folder, the install token file).
  */
 
-import type { Clock, ConfigSource, SecretStore, StorageAdapter } from '@forge/core';
+import type { Clock, ConfigSource, StorageAdapter } from '@forge/core';
 import type { Logger } from '@forge/engine';
 import { createDpapiSecretStore } from '@forge/secrets';
 import { withKnownProjects } from '#/services/known-project-config.js';
@@ -25,19 +25,9 @@ import { createTrace } from '#/services/trace/create-trace.js';
 import { traceConfigWrites } from '#/services/trace/trace-config.js';
 import { traceStorageWrites } from '#/services/trace-storage.js';
 import { trackProjectWrites } from '#/services/tracked-storage.js';
-import type { ProjectEvents } from '#/types/project-events.types.js';
+import type { DataPorts } from '#/types/data-wiring.types.js';
 import type { ExternalPorts } from '#/types/server.types.js';
 import type { ServerSettings } from '#/types/settings.types.js';
-import type { Trace } from '#/types/trace.types.js';
-
-/** The ports built here; `storage` and `config` are what everything else must use. */
-export interface DataPorts {
-  readonly secrets: SecretStore;
-  readonly trace: Trace;
-  readonly projectEvents: ProjectEvents;
-  readonly storage: StorageAdapter;
-  readonly config: ConfigSource;
-}
 
 export function composeData(opts: {
   readonly settings: ServerSettings;

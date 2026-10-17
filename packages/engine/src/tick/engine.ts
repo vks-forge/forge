@@ -19,7 +19,9 @@
  *   the backfill gives tickets parked before escalations existed one to act on.
  */
 
+import { familyOf } from '#/domain/results.js';
 import { iso } from '#/shared/time.js';
+import { emitTrace } from '#/shared/trace.js';
 import { runCardChats } from '#/tick/card-chat.js';
 import { cardDirectorStatus, postCardMessage } from '#/tick/card-chat-post.js';
 import { createCard, setCardRelations } from '#/tick/card-create.js';
@@ -88,6 +90,18 @@ async function phase(
     const message = e instanceof Error ? e.message : String(e);
     ctx.report.errors.push({ where, message });
     ctx.deps.log?.('error', `${where} failed`, { error: message });
+    emitTrace(ctx.deps, {
+      level: 'error',
+      kind: 'error',
+      actor: 'engine',
+      message: `${where} failed: ${message}`,
+      data: {
+        where,
+        family: familyOf(e),
+        error: message,
+        ...(e instanceof Error && e.stack ? { stack: e.stack } : {}),
+      },
+    });
   }
 }
 

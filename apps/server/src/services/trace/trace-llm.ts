@@ -18,11 +18,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type { DirectorLLM, StepName, StepOptions, TraceSink } from '@forge/core';
 import type { DirectorStepTrace } from '@forge/drivers';
 import type { ZodType } from 'zod';
-
-interface Capture {
-  cost: number;
-  seen: DirectorStepTrace[];
-}
+import type { StepCapture } from '#/types/trace.types.js';
 
 const idOf = (value: unknown): string | undefined =>
   typeof (value as { id?: unknown } | null)?.id === 'string'
@@ -36,9 +32,14 @@ function subjectOf(input: unknown): {
   project?: string;
 } {
   const row = (input ?? {}) as Record<string, unknown>;
-  const card = idOf(row['card']) ?? (typeof row['card_id'] === 'string' ? row['card_id'] : undefined);
+  const card =
+    idOf(row['card']) ??
+    (typeof row['card_id'] === 'string' ? row['card_id'] : undefined);
+
   const ticket =
-    idOf(row['ticket']) ?? (typeof row['ticket_id'] === 'string' ? row['ticket_id'] : undefined);
+    idOf(row['ticket']) ??
+    (typeof row['ticket_id'] === 'string' ? row['ticket_id'] : undefined);
+
   const project = typeof row['project'] === 'string' ? row['project'] : undefined;
 
   return {
@@ -56,7 +57,7 @@ export function traceDirectorLLM(
   llm: DirectorLLM,
   deps: { trace: TraceSink; harness: string; now: () => number },
 ): { llm: DirectorLLM; onTrace: (trace: DirectorStepTrace) => void } {
-  const context = new AsyncLocalStorage<Capture>();
+  const context = new AsyncLocalStorage<StepCapture>();
 
   return {
     onTrace: (trace) => {
@@ -64,8 +65,13 @@ export function traceDirectorLLM(
     },
     llm: {
       capabilities: () => llm.capabilities(),
-      async step<T>(name: StepName, input: unknown, schema: ZodType<T>, opts: StepOptions) {
-        const capture: Capture = { cost: 0, seen: [] };
+      async step<T>(
+        name: StepName,
+        input: unknown,
+        schema: ZodType<T>,
+        opts: StepOptions,
+      ) {
+        const capture: StepCapture = { cost: 0, seen: [] };
         const started = deps.now();
         const result = await context.run(capture, () =>
           llm.step(name, input, schema, {

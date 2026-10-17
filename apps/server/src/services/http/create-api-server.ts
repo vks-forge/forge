@@ -42,7 +42,10 @@ export function createApiServer(
     host: createHostPolicy(options.port),
     ...(webRoot ? { ui: createStaticUi(webRoot) } : {}),
     ...(options.trace
-      ? { onError: (error, req) => traceRouterError({ trace: options.trace! }, error, req) }
+      ? {
+          onError: (error, req) =>
+            traceRouterError({ trace: options.trace! }, error, req),
+        }
       : {}),
   });
 

@@ -8,21 +8,17 @@
  *   bytes went, and the structure around them is untouched.
  *
  * Exports: fitEntry(), truncationMarker().
- * Depends on: nothing. No IO.
+ * Depends on: types/trace. No IO.
  */
+
+import type { StringSlot } from '#/types/trace.types.js';
 
 /** Text appended where a string was cut. */
 export function truncationMarker(bytes: number): string {
   return `…[truncated ${bytes} bytes]`;
 }
 
-interface Slot {
-  readonly holder: Record<string, unknown> | unknown[];
-  readonly key: string | number;
-  readonly size: number;
-}
-
-function collect(value: unknown, out: Slot[]): void {
+function collect(value: unknown, out: StringSlot[]): void {
   if (Array.isArray(value)) {
     value.forEach((item, key) => {
       if (typeof item === 'string') {
@@ -43,7 +39,7 @@ function collect(value: unknown, out: Slot[]): void {
   }
 }
 
-const read = (slot: Slot): string =>
+const read = (slot: StringSlot): string =>
   (slot.holder as Record<string | number, string>)[slot.key] as string;
 
 /** Cuts `text` to at most `keep` bytes without splitting a character. */
@@ -63,7 +59,7 @@ function cut(text: string, keep: number): string {
 export function fitEntry(entry: Record<string, unknown>, maxBytes: number): string {
   let json = JSON.stringify(entry);
   for (let round = 0; round < 64 && Buffer.byteLength(json) > maxBytes; round++) {
-    const slots: Slot[] = [];
+    const slots: StringSlot[] = [];
     collect(entry, slots);
     const biggest = slots.sort((a, b) => b.size - a.size)[0];
     if (!biggest || biggest.size <= 64) {

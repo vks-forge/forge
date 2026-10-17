@@ -24,6 +24,8 @@ Workers run inside third-party harnesses (Claude Code first; Codex, OpenCode, Pi
 
 - The two escalation steps (`ticket_answer`, `ticket_recover`) use the same prompt template as the planning steps: a short role paragraph naming the answer keys (`decision`, `grounds`, `confidence`, `read_requests` for the first; `decision`, `note`, `diagnosis` for the second), the method as text in `input.playbook`, and all input as data. They stay tool-less; reads are run engine-side.
 
+- Debug trace (d-0163): `ClaudeDirectorLLMDeps.onTrace` is an optional callback `(DirectorStepTrace) => void`, called once per step whose child ran with the step name, the exact prompt sent on stdin, the raw stdout, how the child ended and the diagnostic tail. It passes text only (the driver stays harness-neutral), never the child's env or credentials, and a throwing callback is ignored. The app uses it to fill the `director_step` trace entries.
+
 ## Why this approach
 
 - ACP-first (d-0035, d-0049): live steering and resume; the CLI is the explicit fallback. The adapter still reads the user's settings, so the mode is forced to `default` after every new/load and every tool call is decided by the hook's receipt, never by harness-side settings. Bypass-permissions is rejected (r-0005).

@@ -13,10 +13,8 @@
  * Depends on: @forge/core (TraceInput type), types/trace-storage. No IO.
  */
 
-import type { TraceActor, TraceInput, TraceKind } from '@forge/core';
-import type { WriteCall } from '#/types/trace-storage.types.js';
-
-type Row = Record<string, unknown>;
+import type { TraceActor, TraceInput } from '@forge/core';
+import type { TraceRow, TraceRule, WriteCall } from '#/types/trace-storage.types.js';
 
 const READ_PREFIX = /^(get|list|find|count|next|latest|has|read|is)/;
 const CONFIG_REPOS = new Set([
@@ -29,14 +27,8 @@ const CONFIG_REPOS = new Set([
   'cardTypes',
 ]);
 
-interface Rule {
-  readonly kind: TraceKind;
-  readonly text: string;
-  readonly level?: TraceInput['level'];
-}
-
 /** Listed writes by `repo.method`. */
-const RULES: Readonly<Record<string, Rule>> = {
+const RULES: Readonly<Record<string, TraceRule>> = {
   'cards.insert': { kind: 'card', text: 'card created' },
   'cards.update': { kind: 'card', text: 'card updated' },
   'cards.updatePhase': { kind: 'card', text: 'card phase changed' },
@@ -56,12 +48,19 @@ const RULES: Readonly<Record<string, Rule>> = {
   'interactions.update': { kind: 'interaction', text: 'interaction updated' },
   'interactions.answer': { kind: 'interaction', text: 'interaction answered' },
   'interactions.expire': { kind: 'interaction', text: 'interaction timed out' },
-  'interactions.escalate': { kind: 'interaction', text: 'interaction escalate to the owner' },
+  'interactions.escalate': {
+    kind: 'interaction',
+    text: 'interaction escalate to the owner',
+  },
   'runs.insert': { kind: 'run', text: 'run row created' },
   'runs.update': { kind: 'run', text: 'run row updated' },
   'runInbox.append': { kind: 'run', text: 'steering message queued' },
   'wakeRequests.insertIfNew': { kind: 'engine', text: 'wake requested', level: 'debug' },
-  'intakeEvents.insertIfNew': { kind: 'engine', text: 'intake event stored', level: 'debug' },
+  'intakeEvents.insertIfNew': {
+    kind: 'engine',
+    text: 'intake event stored',
+    level: 'debug',
+  },
   'gateResults.insert': { kind: 'gate', text: 'gate result recorded' },
 };
 
@@ -84,16 +83,16 @@ export function needsBefore(repo: string, method: string): boolean {
   );
 }
 
-const asRow = (value: unknown): Row =>
-  value !== null && typeof value === 'object' ? (value as Row) : {};
+const asTraceRow = (value: unknown): TraceRow =>
+  value !== null && typeof value === 'object' ? (value as TraceRow) : {};
 
 const str = (value: unknown): string | undefined =>
   typeof value === 'string' && value !== '' ? value : undefined;
 
 function actorOf(c: WriteCall): TraceActor {
-  const event = asRow(c.args[1]);
-  const created = asRow(asRow(c.args[0])['created_by']);
-  const type = str(asRow(event['actor'])['type']) ?? str(created['type']);
+  const event = asTraceRow(c.args[1]);
+  const created = asTraceRow(asTraceRow(c.args[0])['created_by']);
+  const type = str(asTraceRow(event['actor'])['type']) ?? str(created['type']);
 
   if (type === 'user') {
     return 'owner';
@@ -107,12 +106,17 @@ function actorOf(c: WriteCall): TraceActor {
 }
 
 /** The subject ids this write names, found from its arguments and the row read before it. */
-function idsOf(c: WriteCall): Pick<TraceInput, 'card_id' | 'ticket_id' | 'run_id' | 'project'> {
+function idsOf(
+  c: WriteCall,
+): Pick<TraceInput, 'card_id' | 'ticket_id' | 'run_id' | 'project'> {
   const first = c.args[0];
-  const row = asRow(first);
-  const before = asRow(c.before);
-  const result = asRow(c.result);
-  const named = typeof first === 'string' ? first : undefined;
+  const row = asTraceRow(first);
+  const before = asTraceRow(c.before);
+  const result = asTraceRow(c.result);
+  // The reply queue's methods take timestamps, not ids: its subject comes from the row only.
+  const named =
+    typeof first === 'string' && c.repo !== 'cardReplyQueue' ? first : undefined;
+
   const ids: Record<string, string | undefined> = {};
 
   const card = str(row['card_id']) ?? str(before['card_id']);
@@ -149,24 +153,40 @@ function idsOf(c: WriteCall): Pick<TraceInput, 'card_id' | 'ticket_id' | 'run_id
   ) as Pick<TraceInput, 'card_id' | 'ticket_id' | 'run_id' | 'project'>;
 }
 
-function messageOf(c: WriteCall, rule: Rule): string {
+function messageOf(c: WriteCall, rule: TraceRule): string {
   const subject = idsOf(c);
-  const where = subject.card_id ?? subject.ticket_id ?? subject.run_id ?? '';
-  const patch = asRow(c.args[2]);
-  const before = asRow(c.before);
+  const where =
+    (c.repo.startsWith('ticket') || c.repo === 'interactions'
+      ? subject.ticket_id
+      : c.repo === 'runs' || c.repo === 'runInbox'
+        ? subject.run_id
+        : undefined) ??
+    subject.card_id ??
+    subject.ticket_id ??
+    subject.run_id ??
+    '';
+
+  const patch = asTraceRow(c.args[2]);
+  const before = asTraceRow(c.before);
 
   switch (KEY(c)) {
     case 'cardEvents.append':
-      return `card ${where} event ${str(asRow(c.args[1])['kind']) ?? ''}`.trim();
+      return `card ${where} event ${str(asTraceRow(c.args[1])['kind']) ?? ''}`.trim();
     case 'cards.updatePhase':
       return `card ${where} phase -> ${str(patch['phase']) ?? ''}`.trim();
     case 'tickets.updateTicketCas': {
       const to = str(patch['status']);
       const from = str(before['status']);
 
-      return to
-        ? `ticket ${where}: ${from ?? '?'} -> ${to}${c.result === false ? ' (lost the race)' : ''}`
-        : `ticket ${where} updated`;
+      if (!to) {
+        return `ticket ${where} updated`;
+      }
+
+      const lost = c.result === false ? ' (lost the race)' : '';
+
+      return to === from
+        ? `ticket ${where} updated, still ${to}${lost}`
+        : `ticket ${where}: ${from ?? '?'} -> ${to}${lost}`;
     }
 
     default:
@@ -188,14 +208,27 @@ function dataOf(c: WriteCall): unknown {
     case 'cards.updatePhase':
       return { expectedVersion: c.args[1], update: c.args[2], applied: c.result };
     default:
-      return { args: c.args, result: c.result, ...(c.before ? { before: c.before } : {}) };
+      return {
+        args: c.args,
+        result: c.result,
+        ...(c.before ? { before: c.before } : {}),
+      };
   }
 }
 
 /** The entry for one committed write, or null when it is not worth a line. */
 export function describeWrite(c: WriteCall): TraceInput | null {
+  // An idle claim is a poll, not a decision: never one line per quiet tick.
+  if (
+    KEY(c) === 'cardReplyQueue.claim' &&
+    Array.isArray(c.result) &&
+    c.result.length === 0
+  ) {
+    return null;
+  }
+
   if (c.repo === 'cardEvents' && c.method === 'append') {
-    const kind = str(asRow(c.args[1])['kind']);
+    const kind = str(asTraceRow(c.args[1])['kind']);
     const chat = kind === 'user_message' || kind === 'director_message';
 
     return {
