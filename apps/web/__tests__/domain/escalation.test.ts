@@ -115,8 +115,20 @@ describe('escalation copy', () => {
 
   it('says what is held and which lane', () => {
     expect(escalationTitle(EscalationView.parse(failureView('lane_hold')))).toBe(
-      'Held: Standard lane is not available yet',
+      'Held: the Standard lane goes live in the next update',
     );
+  });
+
+  it('words a held lane without a name, and labels the engine-only lane-live action for history', () => {
+    const view = failureView('lane_hold');
+
+    (view['payload'] as Record<string, unknown>)['lane'] = undefined;
+
+    expect(escalationTitle(EscalationView.parse(view))).toBe(
+      'Held: the lane goes live in the next update',
+    );
+
+    expect(ACTION_LABEL.pipeline_ready).toBe('Lane went live');
   });
 
   it('titles each setup cause and each question source', () => {

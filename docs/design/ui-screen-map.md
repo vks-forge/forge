@@ -28,7 +28,8 @@ Left sidebar (always visible)
     ├─ Models & budgets
     ├─ Limits & queue .. global / per-project / per-harness
     ├─ Agents .......... roster, editor, templates, Director drafts (S5a)
-    ├─ Pipelines · Skills   (editors, after x-0011)
+    ├─ Pipelines ....... per-lane stage lists (Express / Standard / Full), reset to built-in (S5b)
+    ├─ Skills           (editor, after x-0011)
     ├─ Tools ........... catalogue, changed-tool approvals
     └─ Notifications
 
@@ -110,9 +111,9 @@ Amended by the UI pass U1 (shared surfaces, d-0164):
   ticket (id, title, card, lane, state chip, cost, updated) with state and lane filters,
   debounced search, sort and server-side pages (10/25/50), all in the URL; a row opens
   `/p/:slug/tickets/:id`.
-- **Settings use left tabs**: Forge settings (General, Director, Agents, Limits, Harnesses, GitHub)
-  and project settings (`/p/:slug/settings/<section>`: project, workers, checks, repository,
-  director, agents, history, danger) are a sticky vertical tab list beside the section; below 768 px
+- **Settings use left tabs**: Forge settings (General, Director, Agents, Pipelines, Limits, Harnesses,
+  GitHub) and project settings (`/p/:slug/settings/<section>`: project, workers, checks, repository,
+  director, agents, pipelines, history, danger) are a sticky vertical tab list beside the section; below 768 px
   the tabs become a picker. One draft and one save bar span the project tabs; switching tabs
   keeps edits, leaving settings still asks.
 - **Agents** (S5a-B): Forge settings → Agents (`/settings/agents`) and a project's Agents tab
@@ -135,6 +136,34 @@ Amended by the UI pass U1 (shared surfaces, d-0164):
   and a sticky save bar (reason of 3 to 500 characters, a conflict choice on 409, unsaved-changes
   guard). A project override edits only Instructions and Runs on. The Director page's model rows
   use the models the harness reports.
+- **Pipelines** (S5b-B): Forge settings → Pipelines (`/settings/pipelines`) and a project's
+  Pipelines tab (`/p/:slug/settings/pipelines`, no shared save bar) show the lanes as tabs
+  (Express, Standard, Full; `?lane=` in the URL). Each lane has a tag (Built-in or Edited; in a
+  project "Same as company default" or "Changed from company default"), a **Reset** that asks for
+  a reason (held, with its reason, while the lane is already the default) and the **list
+  editor**: ordered rows (kind icon, name, agent and role, move up and down, remove, Details),
+  merge locked last and G1 pinned with a lock and the reason, and **Add stage** (Agent, Script
+  gate, Run-together group of 2 to 4 checks, Human sign-off, at most one). Details by kind: an
+  agent Picker over the effective roster (switched-off and archived agents shown greyed with the
+  reason), the red-proof switch for a tester, for a check the d-0165 policy (send back up to 2
+  times or hold for me; blocking severities; send back to a writer above), for a script gate its
+  command, folder, time limit and guarded paths, for the human stage what to ask. Problems from
+  core's rules show at once beside their row (or above the list for list-wide ones), the
+  server's verdict from a debounced validate call joins them, warnings (a critic on the writer's
+  model family) show as a notice, and **Save stays held** while a problem stands. The save bar
+  has the reason (3 to 500 characters), the version being saved over, a 409 conflict banner (keep
+  mine or reload) and the leave guard. Full says it runs from the next update. A project also has
+  **Routing rules**: glob chips and an agent Picker that offers reviewers and researchers only,
+  reorder, remove, its own save bar. States: loading, error with retry, no agents (links to
+  Agents), no routing rules, saved ("Saved as version N").
+- **Ticket pipeline strip** (S5b-B): above the ticket tabs, one chip per stage (icon and word:
+  Not yet, Running, Passed, Failed, Could not run, Waiting for you, Done earlier, Skipped), the
+  lane, "Rework 1 of 2" and "added by rule" for a routed check. A chip opens the stage's detail
+  in place: agent, round, times, a link to its run, finding counts by severity, the reviewer's
+  summary and the artifacts (loaded when opened; the Worker's own account is labelled and the
+  panel says a reviewer never saw it); a group shows each member. Before the first dispatch it
+  says "Starts when the ticket is dispatched." The Review tab lists each check that reported,
+  with counts and words, and the rework it took.
 - **Unsaved dot**: a project-settings tab whose fields differ from the saved version shows a
   small amber dot (spoken as "unsaved changes"; "(unsaved)" in the phone picker).
 - **Empty states** are one component (centred, quiet icon, title, one help line, actions;
@@ -161,7 +190,8 @@ springs). Prototype: https://claude.ai/artifact/1bdAeov3SxXfQYydSrgWrP
 | 5 | Company Settings: Harnesses, GitHub, Limits, General |
 | 6 | Project Settings, Memory, Runs, Cost |
 | 5a | Agents: company roster and editor, project overrides (S5a-B) |
-| later | Pipelines, Skills editors (after x-0011) |
+| 5b | Pipelines: company defaults, project overrides and routing rules, the ticket's stage strip (S5b-B) |
+| later | Skills editor (after x-0011) |
 
 Screens run on mock data behind the API shapes of build-plan batches B3–B12
 and switch to the real endpoints as they land.

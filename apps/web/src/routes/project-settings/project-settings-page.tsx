@@ -79,9 +79,10 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
   }
 
   const stale = latest.version.project !== opened.version.project;
-  // Agents save through their own editor (its own versions, reason and conflict banner), so
+  // Agents and pipelines save through their own editors (own versions, reason and conflict banner), so
   // this tab shows neither the shared save bar nor a conflict about fields it does not hold.
-  const onAgents = useLocation().pathname === `${base}/agents`;
+  const here = useLocation().pathname;
+  const onAgents = here === `${base}/agents` || here === `${base}/pipelines`;
 
   // An agent save moves the project's version. With nothing edited here there is nothing to
   // conflict with, so follow the latest instead of showing a banner about no change. (Adjusted

@@ -1,7 +1,7 @@
 /**
  * ForgeSettingsLayout: the tab list shared by every `/settings/*` screen.
  *
- * Why: General, Director, Limits, Harnesses and GitHub are siblings the owner hops between
+ * Why: General, Director, Agents, Pipelines, Limits, Harnesses and GitHub are siblings the owner hops between
  *   while setting Forge up. A left tab list on every one of them (a harness's own page
  *   included, under Harnesses) shows what exists and where you are, instead of making the
  *   owner go back to the sidebar. Each page keeps its own header and sections; this route only
@@ -12,7 +12,7 @@
  *   domain/nav-entries, types/settings-layout.types.
  */
 
-import { Bot, Cpu, Folder, Gauge, Plug, Workflow } from 'lucide-react';
+import { Bot, Cpu, Folder, Gauge, Layers, Plug, Workflow } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Outlet } from 'react-router';
 import { SettingsLayout } from '#/components/settings/settings-layout.js';
@@ -23,6 +23,7 @@ const ICONS: Readonly<Record<string, LucideIcon>> = {
   general: Folder,
   director: Workflow,
   agents: Bot,
+  pipelines: Layers,
   limits: Gauge,
   harnesses: Cpu,
   github: Plug,

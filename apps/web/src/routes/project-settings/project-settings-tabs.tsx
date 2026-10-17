@@ -1,6 +1,6 @@
 /**
- * The eight tabs of project settings: Project, Workers, Checks, Repository, Director,
- * Agents, History, Archive and delete.
+ * The nine tabs of project settings: Project, Workers, Checks, Repository, Director,
+ * Agents, Pipelines, History, Archive and delete.
  *
  * Why: one long page made an owner scroll past everything to reach the one thing they came
  *   for, and hid how much there is. Each tab here is a thin view over the editor's shared
@@ -8,7 +8,7 @@
  *   facts, inherited-versus-overridden fields, the Director override and the destructive
  *   actions each get their own URL, so a link can point at the exact section.
  *
- * Exports: ProjectTab, WorkersTab, ChecksTab, RepositoryTab, DirectorTab, AgentsTab, HistoryTab,
+ * Exports: ProjectTab, WorkersTab, ChecksTab, RepositoryTab, DirectorTab, AgentsTab, PipelinesTab, HistoryTab,
  *   DangerTab.
  * Depends on: routes/project-settings/*.
  */
@@ -17,6 +17,7 @@ import { AgentsSection } from '#/routes/project-settings/agents-section.js';
 import { ArchiveSection } from '#/routes/project-settings/archive-section.js';
 import { DeleteSection } from '#/routes/project-settings/delete-section.js';
 import { DirectorOverride } from '#/routes/project-settings/director-override.js';
+import { PipelinesSection } from '#/routes/project-settings/pipelines-section.js';
 import { HistoryPanel } from '#/routes/project-settings/history-panel.js';
 import { ProjectSection } from '#/routes/project-settings/project-section.js';
 import { SettingsForm } from '#/routes/project-settings/settings-form.js';
@@ -82,6 +83,10 @@ export function DirectorTab() {
 
 export function AgentsTab() {
   return <AgentsSection />;
+}
+
+export function PipelinesTab() {
+  return <PipelinesSection />;
 }
 
 export function HistoryTab() {

@@ -10,7 +10,8 @@
  *   `/review` on any other ticket redirects too; Runs lists the attempts and Details the
  *   metadata and cost. `?run=` picks which run's thread the Conversation shows. The thread and
  *   its stream live above the tabs (keyed by run, so one run's lines never leak into another's),
- *   so switching tabs does not reconnect. Loading, not-found, error (with retry) and
+ *   so switching tabs does not reconnect. A pipeline strip sits above the tabs on every one: the
+ *   stages of the ticket's lane and where it is in them. Loading, not-found, error (with retry) and
  *   offline-with-old-data are each handled in words; a ticket id that does not exist is a clear
  *   "no such ticket", not an empty page.
  *
@@ -35,7 +36,9 @@ import { projectPath } from '#/domain/nav-entries.js';
 import { TICKET_TAB_IDS, resolveTab, ticketHasReview } from '#/domain/route-tabs.js';
 import { pendingAsk } from '#/domain/thread.js';
 import { ticketPath } from '#/domain/ticket-paths.js';
+import { ticketStamp } from '#/domain/ticket-stamp.js';
 import { AnswerPanel } from '#/routes/ticket/answer-panel.js';
+import { PipelineStrip } from '#/routes/ticket/pipeline-strip.js';
 import { ConversationTab } from '#/routes/ticket/tabs/conversation-tab.js';
 import { DetailsTab } from '#/routes/ticket/tabs/details-tab.js';
 import { ReviewTab } from '#/routes/ticket/tabs/review-tab.js';
@@ -119,6 +122,7 @@ function TicketBody(props: {
         ) : null}
       </ScrollArea>
 
+      <PipelineStrip slug={slug} ticketId={id} stamp={ticketStamp(detail)} />
       <RouteTabs label="Ticket" idPrefix="ticket" tabs={tabs} active={tab} />
       <TabPanel
         idPrefix="ticket"

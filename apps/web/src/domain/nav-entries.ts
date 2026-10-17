@@ -96,6 +96,12 @@ export const SETTINGS_NAV: readonly NavEntry[] = [
     blurb: 'Who does the work and on what: instructions, models and tools.',
   },
   {
+    segment: 'pipelines',
+    label: 'Pipelines',
+    batch: 'W2',
+    blurb: 'The stages each lane runs: writers, gate, reviews and your sign-off.',
+  },
+  {
     segment: 'limits',
     label: 'Limits',
     batch: 'W2',

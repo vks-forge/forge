@@ -46,6 +46,7 @@ describe('Forge settings tabs', () => {
       'General',
       'Director',
       'Agents',
+      'Pipelines',
       'Limits',
       'Harnesses',
       'GitHub',

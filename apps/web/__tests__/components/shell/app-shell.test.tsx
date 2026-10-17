@@ -43,7 +43,15 @@ describe('AppShell navigation', () => {
       within(forge)
         .getAllByRole('link')
         .map((l) => l.textContent),
-    ).toEqual(['General', 'Director', 'Agents', 'Limits', 'Harnesses', 'GitHub']);
+    ).toEqual([
+      'General',
+      'Director',
+      'Agents',
+      'Pipelines',
+      'Limits',
+      'Harnesses',
+      'GitHub',
+    ]);
 
     expect(within(project).getByRole('link', { name: 'Home' })).toHaveAttribute(
       'aria-current',

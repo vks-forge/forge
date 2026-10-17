@@ -3,8 +3,8 @@
  * the reasons an action can be refused.
  *
  * Why: the same escalation shows in the card chat, on the Ticket page and in the Inbox, so its
- *   words must be chosen once. Titles say what is wrong in the owner's terms ("Held: Standard
- *   lane is not available yet"), never an enum value; buttons name the act ("Run as Express",
+ *   words must be chosen once. Titles say what is wrong in the owner's terms ("Held: the Full
+ *   lane goes live in the next update"), never an enum value; buttons name the act ("Run as Express",
  *   never `run_as_express`); a refusal is explained from the server's error code (never its
  *   message) and says what to do next. Every enum value has a sentence, and a test fails when a
  *   new cause or action arrives without one. Pure.
@@ -46,7 +46,7 @@ const LANE_WORD: Readonly<Record<string, string>> = {
 /** The title of a failure by cause; `lane_hold` names the lane when the server did. */
 export const FAILURE_TITLE: Readonly<Record<FailureCause, (lane?: string) => string>> = {
   lane_hold: (lane) =>
-    `Held: ${lane === undefined ? 'this' : (LANE_WORD[lane] ?? lane)} lane is not available yet`,
+    `Held: the ${lane === undefined ? '' : `${LANE_WORD[lane] ?? lane} `}lane goes live in the next update`,
   rework_cap: () => 'Stopped: reworked too many times',
   retry_cap: () => 'Stopped: retried too many times',
   rewake_cap: () => 'Stopped: woken too many times',
