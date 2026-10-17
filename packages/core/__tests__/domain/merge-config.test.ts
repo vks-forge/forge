@@ -7,7 +7,7 @@
  *   equal the shipped forge.yaml until that file is retired, so moving settings into the
  *   database changes no behaviour (d-0085).
  *
- * Pins: BUILTIN_FORGE_CONFIG equals parsed forge.yaml and validates; empty overrides give
+ * Pins: BUILTIN_FORGE_CONFIG equals parsed forge.yaml and validates, with a Director step budget above the claude CLI own cost; empty overrides give
  *   the defaults back; a project wins over the company; arrays replace; unknown keys,
  *   project identity and invalid values throw InvalidInputError; property tests for
  *   identity, precedence and "valid result or typed error".
@@ -32,6 +32,13 @@ const yamlConfig = (): unknown =>
       'utf8',
     ),
   );
+
+describe('Director step budget default', () => {
+  it('leaves room above the claude CLI own cost of about $0.50 per call', () => {
+    expect(BUILTIN_FORGE_CONFIG.engine.step_budget_usd).toBe(2);
+    expect(BUILTIN_FORGE_CONFIG.engine.step_budget_usd).toBeGreaterThan(0.5);
+  });
+});
 
 describe('built-in defaults', () => {
   it('equal what .forge/config/forge.yaml parses to', () => {

@@ -26,12 +26,27 @@ export function dayOf(iso: string): string {
 /**
  * The window of `range` ending at `nowMs`, plus its UTC days oldest first. `all` starts at the
  * day of `earliestMs` (the first recorded activity) when given, else at the 365-day fallback.
+ * `today` starts at local midnight for `utcOffsetMinutes` (east of UTC, 0 = UTC); its `days`
+ * lists the UTC day of that midnight, and only the Overview asks for it.
  */
 export function statsWindow(
   range: StatsRange,
   nowMs: number,
   earliestMs?: number,
+  utcOffsetMinutes = 0,
 ): StatsWindow & { readonly days: readonly string[] } {
+  if (range === 'today') {
+    const shift = utcOffsetMinutes * 60_000;
+    const midnight = Math.floor((nowMs + shift) / DAY_MS) * DAY_MS - shift;
+
+    return {
+      range,
+      from: new Date(midnight).toISOString(),
+      to: new Date(nowMs).toISOString(),
+      days: [new Date(midnight).toISOString().slice(0, 10)],
+    };
+  }
+
   const todayStart = Math.floor(nowMs / DAY_MS) * DAY_MS;
   const count =
     range === 'all' && earliestMs !== undefined

@@ -9,7 +9,8 @@
  * Pins: sums across projects with the stacked series, spend only from recorded cost with
  *   coverage, group defaults per range, 12m and all ranges, project filter with `unknown`,
  *   archived excluded unless asked, needs-action items with their project, 400 on a bad range,
- *   group or archived flag, 401 without the token.
+ *   group or archived flag (hour only with today, today only by the hour), today by the hour,
+ *   401 without the token.
  * Depends on: helpers/read-rig. IO: a loopback socket.
  */
 
@@ -137,9 +138,24 @@ describe('GET /stats/overview', () => {
     expect(all.kpis.spend_prev_usd).toBeNull();
   });
 
+  it('answers today by the hour from local midnight, whatever the machine zone', async () => {
+    const today = await stats('?range=today');
+
+    expect(today.range).toBe('today');
+    expect(today.group).toBe('hour');
+    expect(today.buckets.length).toBeGreaterThanOrEqual(1);
+    expect(today.buckets.length).toBeLessThanOrEqual(25);
+    expect(today.buckets[0]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\.000Z$/);
+    expect(today.kpis.spend_prev_usd).not.toBeNull();
+    expect(Date.parse(today.to) - Date.parse(today.from)).toBeLessThan(25 * 3_600_000);
+    expect((await stats('?range=today&group=hour')).group).toBe('hour');
+  });
+
   it('answers 400 for a bad range, group or archived flag', async () => {
     expect((await get('/stats/overview?range=1y')).status).toBe(400);
     expect((await get('/stats/overview?group=hour')).status).toBe(400);
+    expect((await get('/stats/overview?range=7d&group=hour')).status).toBe(400);
+    expect((await get('/stats/overview?range=today&group=day')).status).toBe(400);
     expect((await get('/stats/overview?archived=yes')).status).toBe(400);
   });
 

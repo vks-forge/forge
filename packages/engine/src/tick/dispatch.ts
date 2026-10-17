@@ -13,10 +13,11 @@
  *   terminal, elsewhere or already running is stale (director-core.md §3).
  *
  * Exports: dispatchReady().
- * Depends on: steps/run-step, tick/dispatch-run, tick/schedule.
+ * Depends on: steps/run-step, tick/dispatch-run, tick/schedule, shared/trace.
  */
 
 import { isHeld } from '#/steps/run-step.js';
+import { emitTrace } from '#/shared/trace.js';
 import { startRun } from '#/tick/dispatch-run.js';
 import { pickFrom, planDispatch } from '#/tick/schedule.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
@@ -40,6 +41,15 @@ export async function dispatchReady(ctx: EngineCtx): Promise<void> {
   for (const p of picked) {
     const candidate = plan.candidates.get(p.id);
     if (candidate) {
+      emitTrace(ctx.deps, {
+        level: 'info',
+        kind: 'engine',
+        ticket_id: p.id,
+        actor: 'engine',
+        message: `dispatch pick ${p.id} on ${p.harness}`,
+        data: { kind: candidate.kind, harness: p.harness },
+      });
+
       await startRun(ctx, candidate, p.harness);
     }
   }

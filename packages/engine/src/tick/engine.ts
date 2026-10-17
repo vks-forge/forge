@@ -31,7 +31,11 @@ import { explainWait } from '#/tick/explain.js';
 import { answerInteraction, expireInteractions } from '#/tick/interactions.js';
 import { ingest } from '#/tick/intake.js';
 import { interruptRun } from '#/tick/interrupt.js';
-import { requestPlanChanges, startPlanning } from '#/tick/plan-actions.js';
+import {
+  requestPlanChanges,
+  retryPlanningStep,
+  startPlanning,
+} from '#/tick/plan-actions.js';
 import { editPlanTickets } from '#/tick/plan-edit.js';
 import { cardPlan, cardPlans } from '#/tick/plan-reads.js';
 import { approvePlan } from '#/tick/plan-to-tickets.js';
@@ -194,6 +198,7 @@ export function createEngine(deps: EngineDeps): Engine {
     editPlanTickets: (cardId, version, input, author) =>
       editPlanTickets(deps, state, cardId, version, input, author),
     startPlanning: (cardId, author) => startPlanning(deps, state, cardId, author),
+    retryPlanningStep: (cardId, author) => retryPlanningStep(deps, state, cardId, author),
     runAsExpress: (ticketId, author) => runAsExpress(deps, state, ticketId, author),
     cardPlans: (cardId) => cardPlans(deps, cardId),
     cardPlan: (cardId, version) => cardPlan(deps, cardId, version),

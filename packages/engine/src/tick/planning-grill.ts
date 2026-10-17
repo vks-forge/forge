@@ -203,7 +203,7 @@ export async function grillStep(
   const input = await buildStepInput(pc, g, step, previous);
   const call = await callStep(pc, step, 'grill_turn', GrillTurnOutput, input);
   if (!call.ok) {
-    return 'stop';
+    return call.outcome;
   }
 
   const out = call.value;

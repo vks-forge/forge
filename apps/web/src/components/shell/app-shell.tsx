@@ -8,13 +8,14 @@
  *   chosen. A "skip to content" link lets keyboard users jump past the navigation.
  *
  * Exports: AppShell.
- * Depends on: react, react-router, lucide-react, state/use-media-query,
+ * Depends on: react, react-router, components/brand/forge-mark, lucide-react, state/use-media-query,
  *   components/shell/*, components/motion/page-transition, components/ui/tooltip.
  */
 
 import { Menu } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router';
+import { ForgeMark } from '#/components/brand/forge-mark.js';
 import { PageTransition } from '#/components/motion/page-transition.js';
 import { LeaveGuard } from '#/components/shell/leave-guard.js';
 import { MobileDrawer } from '#/components/shell/mobile-drawer.js';
@@ -61,7 +62,11 @@ export function AppShell() {
                 <Menu aria-hidden="true" className="size-5" />
               </button>
             </Tooltip>
-            <Link to={OVERVIEW_PATH} className="text-sm font-semibold tracking-tight">
+            <Link
+              to={OVERVIEW_PATH}
+              className="flex items-center gap-2 text-base font-semibold tracking-tight"
+            >
+              <ForgeMark size={32} />
               Forge
             </Link>
           </header>

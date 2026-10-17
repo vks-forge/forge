@@ -10,7 +10,7 @@
  *   history), so a step cannot flip a card's phase or invent an event shape by hand.
  *
  * Exports: PLANNING_ACTOR, isPlannedType(), isPlanningPhase(), directorFor(), loadPlanCtx(),
- *   logPlanEvent(), setNeedsYou(), askOwner(), mergeUnique(), enterVerifying(), latestPlanOf(), headOf().
+ *   logPlanEvent(), setNeedsYou(), askOwner(), askStepBudget(), mergeUnique(), enterVerifying(), latestPlanOf(), headOf().
  * Depends on: @forge/core (card schemas, config), tick/card-log, tick/card-phase, tick/tick-config,
  *   types/card-planning. Reads and writes inside the caller's transaction where it takes one.
  */
@@ -144,6 +144,37 @@ export async function askOwner(
   await logPlanEvent(tx, cardId, at, {
     kind: 'needs_you',
     payload: { reason, actions: [...actions] },
+  });
+
+  await setNeedsYou(tx, cardId, true, at);
+}
+
+/**
+ * A Director step ran out of the per-step budget: no retry can succeed until the owner raises
+ * it, so the card goes to Needs you with the two ways out (no dead end, d-0135). The note says
+ * what to do; the reason names the step and the amount.
+ */
+export async function askStepBudget(
+  tx: StorageTx,
+  cardId: CardId,
+  at: string,
+  stepLabel: string,
+  budgetUsd: number,
+): Promise<void> {
+  const usd = `$${budgetUsd.toFixed(2)}`;
+  await logPlanEvent(tx, cardId, at, {
+    kind: 'note',
+    payload: {
+      text: `The Director's step budget (${usd}) ran out during "${stepLabel}". Raise it in Settings → Limits, then Retry.`,
+    },
+  });
+
+  await logPlanEvent(tx, cardId, at, {
+    kind: 'needs_you',
+    payload: {
+      reason: `The Director's per-step budget (${usd}) is too small for "${stepLabel}".`,
+      actions: ['raise_step_budget', 'retry_step'],
+    },
   });
 
   await setNeedsYou(tx, cardId, true, at);

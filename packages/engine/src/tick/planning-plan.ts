@@ -108,7 +108,7 @@ export async function writePlanStep(
 
   const call = await callStep(pc, step, 'write_plan', WritePlanOutput, input);
   if (!call.ok) {
-    return 'stop';
+    return call.outcome;
   }
 
   const plan = await composePlan(pc, planning.grill, call.value, previous);
@@ -185,7 +185,7 @@ export async function approveStep(
   const input = buildApprovalInput(pc, planning.grill, step, plan, floor);
   const call = await callStep(pc, step, 'approve_plan', ApprovePlanOutput, input);
   if (!call.ok) {
-    return 'stop';
+    return call.outcome;
   }
 
   if (call.value.decision === 'ask_owner') {

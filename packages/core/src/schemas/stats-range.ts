@@ -8,13 +8,16 @@
  *   calendar day, and a day with nothing in it is a zero point, never a gap, so a chart
  *   never has to guess.
  *
+ * Today (Overview only) is the server's local calendar day from midnight to now, grouped by hour;
+ *   every other range is whole UTC days.
+ *
  * Exports: StatsRange, STATS_RANGE_DAYS, StatsGroup, defaultGroup(), StatsRangeQuery, SeriesPoint, StatsWindow.
  * Depends on: zod. No IO.
  */
 
 import { z } from 'zod';
 
-export const StatsRange = z.enum(['7d', '30d', '90d', '12m', 'all']);
+export const StatsRange = z.enum(['today', '7d', '30d', '90d', '12m', 'all']);
 export type StatsRange = z.infer<typeof StatsRange>;
 
 /**
@@ -22,6 +25,7 @@ export type StatsRange = z.infer<typeof StatsRange>;
  * the first recorded activity, and where no start is known it falls back to this many days.
  */
 export const STATS_RANGE_DAYS: Readonly<Record<StatsRange, number>> = {
+  today: 1,
   '7d': 7,
   '30d': 30,
   '90d': 90,
@@ -30,11 +34,15 @@ export const STATS_RANGE_DAYS: Readonly<Record<StatsRange, number>> = {
 };
 
 /** How the Overview groups a range into chart buckets. */
-export const StatsGroup = z.enum(['day', 'week', 'month']);
+export const StatsGroup = z.enum(['hour', 'day', 'week', 'month']);
 export type StatsGroup = z.infer<typeof StatsGroup>;
 
-/** The grouping a range reads best at: days up to 30d, weeks for 90d, months beyond. */
+/** The grouping a range reads best at: hours for today, days up to 30d, weeks for 90d, months beyond. */
 export function defaultGroup(range: StatsRange): StatsGroup {
+  if (range === 'today') {
+    return 'hour';
+  }
+
   if (range === '7d' || range === '30d') {
     return 'day';
   }
@@ -42,8 +50,10 @@ export function defaultGroup(range: StatsRange): StatsGroup {
   return range === '90d' ? 'week' : 'month';
 }
 
-/** `?range=` of the stats and cost endpoints; absent means 30 days. */
-export const StatsRangeQuery = z.object({ range: StatsRange.default('30d') });
+/** `?range=` of the stats and cost endpoints (per-day series, so no `today`); absent means 30 days. */
+export const StatsRangeQuery = z.object({
+  range: StatsRange.exclude(['today']).default('30d'),
+});
 export type StatsRangeQuery = z.infer<typeof StatsRangeQuery>;
 
 /** One day of a series: `date` is a UTC `YYYY-MM-DD`. */

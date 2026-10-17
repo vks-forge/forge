@@ -37,7 +37,8 @@ New project flow (modal steps)
 
 Amended by d-0162: `/` is the cross-project **Overview** (KPI strip, needs
 attention, spend and activity charts, projects table, cost coverage; range,
-grouping, project filter and archived toggle in the URL, refreshed every 30 s).
+grouping, project filter and archived toggle behind one Filter button, in the URL,
+refreshed every 30 s; range starts with Today, grouped by the hour).
 It replaces the redirect to the last project; the switcher still remembers it.
 A fresh install with no project opens the first-run wizard. "Overview" is first
 in the sidebar's Forge section and the logo links to it.
@@ -47,8 +48,11 @@ opens on the first connected project; a project switcher at the top of the
 sidebar changes project in real time, with an in-page alert when the view has
 unsaved changes. Company-level pages (harnesses, GitHub, models, limits,
 tools, notifications, backups) live under "Forge settings" at the foot of the
-sidebar. Project Home = readout line + "Waiting on you" + "In progress" (stage
-track per ticket) + a "New card" button (the free-text Ask bar is gone, d-0138). "Waiting on you" has a view
+sidebar. Project Home = header (title, the Overview's Filter button with range and
+grouping only beside the Updated status, "New card") + "Waiting on you" + "In
+progress" (stage track per ticket) + the Overview's key figures, charts, spend
+rings by harness and lane and cost coverage scoped to the project (the free-text
+Ask bar is gone, d-0138; the readout line and 7/30/90 switch are replaced). "Waiting on you" has a view
 switcher (List / Compact / Grouped in the prototype); what each view shows is
 decided after the Board, Director chat and Ticket pages are approved. Ledger
 (autonomy tiers) is deferred.

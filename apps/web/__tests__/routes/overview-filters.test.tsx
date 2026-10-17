@@ -7,7 +7,7 @@
  *   else a different view, and a grouping that stays on "day" after the range jumps to a year
  *   draws 365 bars of noise. The live refresh is what keeps "waiting on you" honest while the
  *   page is left open.
- * Pins: range change drops a chosen grouping, 12m and All, project filter and Clear, archived
+ * Pins: one Filter button (word and count only, summary as its accessible name, Reset, Escape returns focus) holds the controls; range change drops a chosen grouping, 12m and All, project filter and Clear, archived
  *   switch lists archived projects and sends the flag, a shared link restores every filter,
  *   30 second refetch.
  * Depends on: routes/overview/*, helpers/render-work (fetch stub over the real http adapter).
@@ -58,6 +58,12 @@ function routes(body = overviewBody()) {
   return { ...TWO_PROJECTS, [OVERVIEW]: { body } };
 }
 
+/** Opens the single Filter popover, as a user does before touching any control. */
+async function openFilters(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await user.click(screen.getByRole('button', { name: /^Filter/ }));
+  await screen.findByRole('dialog', { name: 'Filters' });
+}
+
 const lastOverviewCall = (stub: { callsTo(p?: string): { path: string }[] }) =>
   stub.callsTo(OVERVIEW).at(-1)?.path ?? '';
 
@@ -73,6 +79,7 @@ describe('Overview: filters live in the URL', () => {
     await screen.findByRole('region', { name: 'Key figures' });
     expect(lastOverviewCall(stub)).toContain('group=week');
 
+    await openFilters(user);
     await user.click(screen.getByRole('button', { name: '90d' }));
 
     await waitFor(() => expect(router.state.location.search).toBe('?range=90d'));
@@ -94,6 +101,7 @@ describe('Overview: filters live in the URL', () => {
     const { stub, router } = renderWork('/', routes());
 
     await screen.findByRole('region', { name: 'Key figures' });
+    await openFilters(user);
     await user.click(screen.getByRole('button', { name: 'All' }));
     await waitFor(() => expect(router.state.location.search).toBe('?range=all'));
     expect(screen.getByRole('button', { name: 'Month' })).toHaveAttribute(
@@ -110,11 +118,90 @@ describe('Overview: filters live in the URL', () => {
     expect(screen.getByRole('button', { name: '12m' })).toBeInTheDocument();
   });
 
+  it('counts the non-default filters on the button and lists them in its accessible name', async () => {
+    renderWork('/?range=12m&group=week&projects=sample-web', routes());
+
+    const button = await screen.findByRole('button', { name: /^Filter/ });
+
+    expect(button).toHaveTextContent(/^Filter3 active$/);
+    expect(button).toHaveAccessibleName('Filter: 12m · Week · sample-web, 3 active');
+  });
+
+  it('shows only the word Filter, with no count and no summary, on a clean URL', async () => {
+    renderWork('/', routes());
+
+    const button = await screen.findByRole('button', { name: /^Filter/ });
+
+    expect(button).toHaveTextContent(/^Filter$/);
+    expect(button).toHaveAccessibleName('Filter: 30d · Day · All projects');
+  });
+
+  it('Reset returns every filter to its default and the URL to clean', async () => {
+    const user = userEvent.setup();
+    const { router } = renderWork(
+      '/?range=12m&group=week&projects=sample-web&archived=1',
+      routes(),
+    );
+
+    await screen.findByRole('region', { name: 'Key figures' });
+    await openFilters(user);
+    await user.click(screen.getByRole('button', { name: 'Reset filters' }));
+
+    await waitFor(() => expect(router.state.location.search).toBe(''));
+    expect(screen.getByRole('button', { name: /^Filter/ })).toHaveAccessibleName(
+      'Filter: 30d · Day · All projects',
+    );
+
+    expect(screen.getByRole('button', { name: 'Reset filters' })).toBeDisabled();
+  });
+
+  it('closes on Escape and returns focus to the Filter button', async () => {
+    const user = userEvent.setup();
+
+    renderWork('/', routes());
+
+    await screen.findByRole('region', { name: 'Key figures' });
+    await openFilters(user);
+    await user.keyboard('{Escape}');
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Filters' })).not.toBeInTheDocument(),
+    );
+
+    expect(screen.getByRole('button', { name: /^Filter/ })).toHaveFocus();
+  });
+
+  it('puts the update status and the Filter button side by side in one header group', async () => {
+    renderWork('/', routes());
+
+    const button = await screen.findByRole('button', { name: /^Filter/ });
+    const status = await screen.findByText(/^(Updating|Updated)/);
+    const group = screen.getByRole('group', { name: 'Data status and filters' });
+
+    expect(group).toContainElement(button);
+    expect(group).toContainElement(status);
+    expect(group.closest('header')).toContainElement(group);
+  });
+
+  it('keeps the update status outside the popover', async () => {
+    const user = userEvent.setup();
+
+    renderWork('/', routes());
+
+    await screen.findByRole('region', { name: 'Key figures' });
+    await openFilters(user);
+
+    const status = await screen.findByText(/^(Updating|Updated)/);
+
+    expect(screen.getByRole('dialog', { name: 'Filters' })).not.toContainElement(status);
+  });
+
   it('filters to chosen projects and can show them all again', async () => {
     const user = userEvent.setup();
     const { stub, router } = renderWork('/', routes());
 
     await screen.findByRole('region', { name: 'Key figures' });
+    await openFilters(user);
     await choose(user, 'Projects', 'sample-web');
 
     await waitFor(() =>
@@ -133,6 +220,7 @@ describe('Overview: filters live in the URL', () => {
     const { stub, router } = renderWork('/', routes());
 
     await screen.findByRole('region', { name: 'Key figures' });
+    await openFilters(user);
     await user.click(screen.getByRole('combobox', { name: 'Projects' }));
     expect(screen.queryByRole('option', { name: /sample-old/ })).not.toBeInTheDocument();
     await user.keyboard('{Escape}');
@@ -159,6 +247,7 @@ describe('Overview: filters live in the URL', () => {
     expect(path).toContain('group=week');
     expect(path).toContain('projects=sample-web');
     expect(path).toContain('archived=1');
+    await openFilters(userEvent.setup());
     expect(screen.getByRole('button', { name: '12m' })).toHaveAttribute(
       'aria-pressed',
       'true',

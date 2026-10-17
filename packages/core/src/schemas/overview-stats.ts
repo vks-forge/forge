@@ -80,8 +80,8 @@ export const OverviewStats = z.object({
   group: StatsGroup,
   from: z.iso.datetime(),
   to: z.iso.datetime(),
-  /** UTC start date of each bucket, oldest first; every series below has one value per entry. */
-  buckets: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+  /** Start of each bucket, oldest first: a UTC date, or for `today` the ISO instant the hour starts; every series below has one value per entry. */
+  buckets: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}\.\d{3}Z)?$/)),
   /** Slugs the figures cover. */
   projects_included: z.array(z.string()),
   /** Requested slugs that are not registered projects; ignored. */
@@ -109,23 +109,31 @@ export type OverviewStats = z.infer<typeof OverviewStats>;
  * `GET /stats/overview` query as the URL carries it (strings in). `projects` is a comma list,
  * `archived` is `0` or `1`; `group` absent means the range's default grouping.
  */
-export const OverviewQuery = z.object({
-  range: StatsRange.default('30d'),
-  group: StatsGroup.optional(),
-  projects: z
-    .string()
-    .optional()
-    .transform((list) => [
-      ...new Set(
-        (list ?? '')
-          .split(',')
-          .map((s) => s.trim())
-          .filter((s) => s !== ''),
-      ),
-    ]),
-  archived: z
-    .enum(['0', '1'])
-    .default('0')
-    .transform((flag) => flag === '1'),
-});
+export const OverviewQuery = z
+  .object({
+    range: StatsRange.default('30d'),
+    group: StatsGroup.optional(),
+    projects: z
+      .string()
+      .optional()
+      .transform((list) => [
+        ...new Set(
+          (list ?? '')
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s !== ''),
+        ),
+      ]),
+    archived: z
+      .enum(['0', '1'])
+      .default('0')
+      .transform((flag) => flag === '1'),
+  })
+  .refine(
+    (q) => q.group === undefined || (q.range === 'today') === (q.group === 'hour'),
+    {
+      message: 'group hour goes with range today, and only with it',
+      path: ['group'],
+    },
+  );
 export type OverviewQuery = z.infer<typeof OverviewQuery>;

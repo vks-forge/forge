@@ -6,7 +6,9 @@
  *   first on a narrow screen); "approve plan" and "request changes" open the plan dialogs, or the
  *   Plan tab when no plan has loaded; "start planning" calls the endpoint for a card that was
  *   never planned; "run as Express" releases the held ticket the raise names, or opens the
- *   Tickets tab so the owner can choose one. A failed call is reported in words next to the
+ *   Tickets tab so the owner can choose one; "retry step" re-queues the planning step that ran out
+ *   of its budget, and "raise the step budget" is a link (drawn by the banner) to Settings → Limits.
+ *   A failed call is reported in words next to the
  *   banner.
  *
  * Exports: useBannerActions().
@@ -15,7 +17,11 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { useRunAsExpress, useStartPlanning } from '#/api/use-plan.js';
+import {
+  useRetryPlanningStep,
+  useRunAsExpress,
+  useStartPlanning,
+} from '#/api/use-plan.js';
 import { FIRST_OPTION_ID } from '#/components/card/question-block.js';
 import { describeFlowError } from '#/domain/flow-errors.js';
 import type { NeedsYou, NeedsYouAction } from '#/schemas/card-events.js';
@@ -34,6 +40,7 @@ export function useBannerActions(input: {
   const { cardId, needs, tab, wide, decisions, goTab } = input;
   const start = useStartPlanning(cardId);
   const express = useRunAsExpress(cardId);
+  const retry = useRetryPlanningStep(cardId);
   const focusWhenShown = useRef(false);
 
   const focusQuestion = (): boolean => {
@@ -73,6 +80,13 @@ export function useBannerActions(input: {
         start.reset();
         start.mutate();
         break;
+      case 'retry_step':
+        retry.reset();
+        retry.mutate();
+        break;
+      case 'raise_step_budget':
+        // Drawn as a link to Settings → Limits by the banner; nothing to run here.
+        break;
       case 'run_as_express':
         if (needs?.ticket_id === undefined) {
           goTab('tickets');
@@ -85,12 +99,14 @@ export function useBannerActions(input: {
     }
   };
 
-  const failure = start.error ?? express.error;
+  const failure = start.error ?? express.error ?? retry.error;
   const busy: NeedsYouAction | null = start.isPending
     ? 'start_planning'
-    : express.isPending
-      ? 'run_as_express'
-      : null;
+    : retry.isPending
+      ? 'retry_step'
+      : express.isPending
+        ? 'run_as_express'
+        : null;
 
   return {
     run,

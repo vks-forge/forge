@@ -17,6 +17,7 @@ import { bucketKeyOf, bucketize } from '#/domain/bucketize.js';
 import type { StatsGroup } from '#/schemas/stats-range.js';
 
 const GROUPS: readonly StatsGroup[] = ['day', 'week', 'month'];
+const HOUR_MS = 3_600_000;
 const window = (from: string, to: string) => ({ from, to });
 
 describe('bucketKeyOf', () => {
@@ -31,6 +32,66 @@ describe('bucketKeyOf', () => {
   it('puts a Sunday in the week that started the Monday before', () => {
     expect(bucketKeyOf('2026-10-18T00:00:00.000Z', 'week')).toBe('2026-10-12');
     expect(bucketKeyOf('2026-10-19T00:00:00.000Z', 'week')).toBe('2026-10-19');
+  });
+});
+
+describe('hour buckets', () => {
+  it('names a bucket by the ISO instant its hour starts', () => {
+    expect(bucketKeyOf('2026-10-16T14:59:59.000Z', 'hour')).toBe(
+      '2026-10-16T14:00:00.000Z',
+    );
+  });
+
+  it('aligns hours to the local clock when the offset is not whole hours', () => {
+    // India is UTC+5:30: local 14:00 is 08:30 UTC.
+    expect(bucketKeyOf('2026-10-16T08:45:00.000Z', 'hour', 330)).toBe(
+      '2026-10-16T08:30:00.000Z',
+    );
+
+    expect(bucketKeyOf('2026-10-16T08:29:00.000Z', 'hour', 330)).toBe(
+      '2026-10-16T07:30:00.000Z',
+    );
+  });
+
+  it('gives one bucket per hour from local midnight to now', () => {
+    const keys = bucketize(
+      window('2026-10-15T18:30:00.000Z', '2026-10-16T08:45:00.000Z'),
+      'hour',
+      330,
+    );
+
+    expect(keys).toHaveLength(15);
+    expect(keys[0]).toBe('2026-10-15T18:30:00.000Z');
+    expect(keys.at(-1)).toBe('2026-10-16T08:30:00.000Z');
+  });
+
+  it('is contiguous hour by hour and covers every instant, at any offset', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: Date.parse('2020-01-01'), max: Date.parse('2030-01-01') }),
+        fc.integer({ min: 0, max: 72 * HOUR_MS }),
+        fc.integer({ min: -12 * 2, max: 14 * 2 }).map((half) => half * 30),
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        (start, span, offset, at) => {
+          const from = new Date(start).toISOString();
+          const to = new Date(start + span).toISOString();
+          const keys = bucketize({ from, to }, 'hour', offset);
+
+          expect(keys[0]).toBe(bucketKeyOf(from, 'hour', offset));
+          expect(keys.at(-1)).toBe(bucketKeyOf(to, 'hour', offset));
+
+          for (let i = 1; i < keys.length; i += 1) {
+            expect(Date.parse(keys[i] ?? '') - Date.parse(keys[i - 1] ?? '')).toBe(
+              HOUR_MS,
+            );
+          }
+
+          const inside = new Date(start + Math.floor(at * span)).toISOString();
+          expect(keys).toContain(bucketKeyOf(inside, 'hour', offset));
+        },
+      ),
+      { numRuns: 200 },
+    );
   });
 });
 

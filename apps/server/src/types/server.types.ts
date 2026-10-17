@@ -8,7 +8,7 @@
  *   shutdown path use.
  *
  * Exports: ToolPolicy, ToolPolicyDeps, GateDeps, ShutdownParts, HarnessWiring, DriverFactoryDeps,
- *   LlmFactory, HarnessTester, ExternalPorts, AssembleOptions, ServerAddress, ForgeServer, Ticker.
+ *   LlmWiring, LlmFactory, HarnessTester, ExternalPorts, AssembleOptions, ServerAddress, ForgeServer, Ticker.
  * Depends on: @forge/core, @forge/drivers (types), @forge/engine (types), @forge/hooks (types),
  *   @forge/tools (types). Types only.
  */
@@ -26,6 +26,7 @@ import type {
   WorktreeManager,
 } from '@forge/core';
 import type {
+  DirectorStepTrace,
   HarnessSetup,
   HarnessSource,
   HarnessTestResult,
@@ -76,8 +77,13 @@ export interface DriverFactoryDeps extends HarnessWiring {
   readonly log: Logger;
 }
 
+/** What the Director's model is built from: the harness settings, and where to report prompts and raw output when the debug trace is on (d-0163). */
+export interface LlmWiring extends HarnessWiring {
+  readonly onTrace?: (trace: DirectorStepTrace) => void;
+}
+
 /** Builds the Director's model once the harness settings source exists. */
-export type LlmFactory = (wiring: HarnessWiring) => DirectorLLM;
+export type LlmFactory = (wiring: LlmWiring) => DirectorLLM;
 
 /** The "Test environment" check behind `POST /harnesses/:id/test`; `live` allows the one paid call. */
 export type HarnessTester = (

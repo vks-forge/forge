@@ -42,7 +42,7 @@ engine:
     max: 3
     window_ms: 3600000
   step_retries: 1 # an invalid step output is retried once with the validation error
-  step_budget_usd: 0.5 # per Director step call; replace after the measured dry run (d-0060)
+  step_budget_usd: 2 # per Director step call; the claude CLI itself costs about $0.50 per call (system prompt, cache write)
   confidence_threshold: 0.7 # below this triage confidence the lane moves one up
   interaction_timeout_ms: 14400000 # 4 h, then Blocked (director-core.md §8)
   run_budget: # placeholder caps until the measured dry run (d-0060)

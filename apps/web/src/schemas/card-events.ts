@@ -74,6 +74,8 @@ export const NeedsYouAction = z.enum([
   'request_changes',
   'start_planning',
   'run_as_express',
+  'raise_step_budget',
+  'retry_step',
 ]);
 export type NeedsYouAction = z.infer<typeof NeedsYouAction>;
 export const NEEDS_YOU_ACTIONS = NeedsYouAction.options;

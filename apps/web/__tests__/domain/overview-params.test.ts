@@ -6,12 +6,20 @@
  *   (not crash or ask the server for nonsense), changing the range must let the grouping
  *   follow it again, and the default view must keep a clean URL.
  *
- * Pins: parseOverviewFilters() defaults and fallbacks, nextSearch() per change, request mapping.
+ * Pins: parseOverviewFilters() defaults and fallbacks, nextSearch() per change, request mapping,
+ *   the filter button's summary text and its count of non-default filters.
  * Depends on: src/domain/overview-params. Pure.
  */
 
 import { describe, expect, it } from 'vitest';
-import { nextSearch, parseOverviewFilters, requestOf } from '#/domain/overview-params.js';
+import {
+  activeFilterCount,
+  filterSummary,
+  groupsFor,
+  nextSearch,
+  parseOverviewFilters,
+  requestOf,
+} from '#/domain/overview-params.js';
 
 const parse = (search: string) => parseOverviewFilters(new URLSearchParams(search));
 
@@ -43,6 +51,28 @@ describe('parseOverviewFilters', () => {
     });
   });
 
+  it('reads Today, which groups by the hour', () => {
+    expect(parse('range=today')).toMatchObject({
+      range: 'today',
+      group: 'hour',
+      groupChosen: false,
+    });
+
+    expect(parse('range=today&group=hour').groupChosen).toBe(true);
+  });
+
+  it('falls back when the grouping does not fit the range', () => {
+    expect(parse('range=today&group=day')).toMatchObject({
+      group: 'hour',
+      groupChosen: false,
+    });
+
+    expect(parse('range=7d&group=hour')).toMatchObject({
+      group: 'day',
+      groupChosen: false,
+    });
+  });
+
   it('falls back on a range or group it does not know', () => {
     expect(parse('range=1y&group=hour')).toMatchObject({
       range: '30d',
@@ -63,6 +93,18 @@ describe('nextSearch', () => {
     const base = new URLSearchParams('range=7d&group=week');
 
     expect(nextSearch(base, { range: '90d' }).toString()).toBe('range=90d');
+  });
+
+  it('writes Today, drops a grouping that does not fit it and offers hours only there', () => {
+    const base = new URLSearchParams('range=7d&group=week');
+
+    expect(nextSearch(base, { range: 'today' }).toString()).toBe('range=today');
+    expect(
+      nextSearch(new URLSearchParams('range=today'), { group: 'day' }).toString(),
+    ).toBe('range=today');
+
+    expect(groupsFor('today')).toEqual(['hour']);
+    expect(groupsFor('30d')).toEqual(['day', 'week', 'month']);
   });
 
   it('sets the grouping, the projects and the archived flag', () => {
@@ -96,5 +138,31 @@ describe('requestOf', () => {
     });
 
     expect(requestOf(parse('group=week')).group).toBe('week');
+  });
+});
+
+describe('filterSummary and activeFilterCount', () => {
+  it('summarises the default view and counts nothing', () => {
+    const filters = parse('');
+
+    expect(filterSummary(filters)).toBe('30d · Day · All projects');
+    expect(activeFilterCount(filters)).toBe(0);
+  });
+
+  it('says Today by the hour, with or without the project scope', () => {
+    const today = parse('range=today');
+
+    expect(filterSummary(today)).toBe('Today · Hour · All projects');
+    expect(filterSummary(today, true)).toBe('Today · Hour');
+    expect(activeFilterCount(today)).toBe(1);
+  });
+
+  it('names the range, grouping, project scope and archived flag', () => {
+    const one = parse('range=12m&group=week&projects=a&archived=1');
+
+    expect(filterSummary(one)).toBe('12m · Week · a · + archived');
+    expect(activeFilterCount(one)).toBe(4);
+    expect(filterSummary(parse('projects=a,b,c'))).toBe('30d · Day · 3 projects');
+    expect(activeFilterCount(parse('projects=a,b,c'))).toBe(1);
   });
 });

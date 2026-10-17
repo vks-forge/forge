@@ -12,7 +12,7 @@
  *
  * Exports: AnswerGrillInput, AnswerGrillResult, GrillShortcutKind, GrillShortcutResult,
  *   ApprovePlanResult, RequestChangesResult, TicketEdit, EditPlanInput, EditPlanResult,
- *   StartPlanningResult, RunAsExpressResult, PlanReadResult, PlanVersionResult, PlanCtx, ReadCtx,
+ *   StartPlanningResult, RetryPlanningResult, RunAsExpressResult, PlanReadResult, PlanVersionResult, PlanCtx, ReadCtx,
  *    StepOutcome, PlanEvent, FloorFacts, FlowEnd, ReadResult, ReadBudget, ModelCall, StepFinish,
  *   ReadOutput, ReadStepResult, PlanningDoors, OpenExtras.
  * Depends on: @forge/core (card, plan, ticket and config types), types/engine-state. Types only.
@@ -114,6 +114,12 @@ export type StartPlanningResult =
   | { readonly status: 'phase_mismatch' }
   | { readonly status: 'not_plannable' };
 
+/** `phase_mismatch` is the 409: the card is not stopped on a failed planning step. */
+export type RetryPlanningResult =
+  | { readonly status: 'retried'; readonly card: Card }
+  | { readonly status: 'not_found' }
+  | { readonly status: 'phase_mismatch' };
+
 /** `not_held` is the 409: the ticket is not waiting for a pipeline. */
 export type RunAsExpressResult =
   | { readonly status: 'released'; readonly ticket: Ticket }
@@ -154,8 +160,8 @@ export interface PlanCtx {
 /** What a read needs of its caller: the tick (for the repo reader) and the project folder; a planning step and a Worker's question both qualify. */
 export type ReadCtx = Pick<PlanCtx, 'ctx' | 'root'>;
 
-/** What a step runner tells the flow loop: go on, wait for the owner, stop (done or failed). */
-export type StepOutcome = 'continue' | 'wait' | 'stop';
+/** What a step runner tells the flow loop: go on, wait for the owner, stop (failed, retried later) or blocked (Needs you raised). */
+export type StepOutcome = 'continue' | 'wait' | 'stop' | 'blocked';
 
 /** A card event without its time and actor, which the planning flow fills in. */
 export type PlanEvent = NewCardEvent extends infer E
@@ -172,8 +178,8 @@ export interface FloorFacts {
   readonly tierCGlobs: readonly string[];
 }
 
-/** How a flow walk ended: waiting for the owner, finished, or a step failed (its turn stays queued for a retry). */
-export type FlowEnd = 'waiting' | 'done' | 'failed';
+/** How a flow walk ended: waiting, finished, a step failed (turn stays queued for a retry) or blocked on the owner. */
+export type FlowEnd = 'waiting' | 'done' | 'failed' | 'blocked';
 
 /** What one engine-side read request produced, as the step sees it. */
 export interface ReadResult {
@@ -193,7 +199,8 @@ export interface ReadBudget {
 
 /** A model call that succeeded with its cost, or failed (already reported and noted on the card). */
 export type ModelCall<T> =
-  { ok: true; value: T; cost: number } | { ok: false; cost: number };
+  | { ok: true; value: T; cost: number }
+  | { ok: false; cost: number; outcome: 'stop' | 'blocked' };
 
 /** What a finished step records; `patch` edits the grill state, `after` makes the step's own writes. */
 export interface StepFinish {
@@ -271,6 +278,8 @@ export interface PlanningDoors {
   ): Promise<EditPlanResult>;
   /** `POST /cards/:id/start-planning`: a card backfilled from before planning existed enters the grill. */
   startPlanning(cardId: string, author: string): Promise<StartPlanningResult>;
+  /** `POST /cards/:id/planning/retry`: re-queues the step that stopped on its budget. `phase_mismatch` is the 409. */
+  retryPlanningStep(cardId: string, author: string): Promise<RetryPlanningResult>;
   /** `POST /tickets/:id/run-as-express`: releases a ticket held for a pipeline into the Express lane through `transition()`. `not_held` is the 409. */
   runAsExpress(ticketId: string, author: string): Promise<RunAsExpressResult>;
   /** `GET /cards/:id/plan`: the versions, the current plan and the approval floor as it stands now. */

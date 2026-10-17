@@ -21,6 +21,12 @@ const text = z.preprocess(blankIsUnset, z.string().min(1).optional());
 const integer = (min: number, max: number, fallback: number) =>
   z.preprocess(blankIsUnset, z.coerce.number().int().min(min).max(max).default(fallback));
 
+/** `1` or `true` (any case) is on; anything else, including blank, is off. */
+const flag = z.preprocess(
+  (value) => typeof value === 'string' && ['1', 'true'].includes(value.trim().toLowerCase()),
+  z.boolean(),
+);
+
 export const ServerEnv = z.object({
   /** The folder whose `.forge/` holds project memory (a checkout of Forge itself in development). Projects are registered through the API, each with its own clone. Default: the current directory. Holds no Forge data. */
   FORGE_ROOT: text,
@@ -54,6 +60,12 @@ export const ServerEnv = z.object({
           .filter((n) => n !== ''),
       ),
   ),
+  /** Debug trace log switch (d-0163): `1` or `true` writes everything to JSON-lines files. Off by default. */
+  FORGE_TRACE: flag,
+  /** Folder of the trace files; default `<dataHome>/logs/trace`. */
+  FORGE_TRACE_DIR: text,
+  /** Trace files older than this many days are deleted at start-up and once a day. */
+  FORGE_TRACE_KEEP_DAYS: integer(1, 3650, 14),
   /** How long shutdown waits for running gate jobs before closing anyway. */
   FORGE_SHUTDOWN_GRACE_MS: integer(0, 600_000, 30_000),
 });

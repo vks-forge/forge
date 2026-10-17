@@ -162,6 +162,30 @@ describe('Card page: Needs you banner', () => {
     expect(router.state.location.search).toBe('?tab=tickets');
   });
 
+  it('offers a Settings link and a Retry button when a step ran out of budget', async () => {
+    const user = userEvent.setup();
+    const { forge, router } = renderApp({
+      path: PAGE,
+      routes: raised(
+        'The Director per-step budget ($0.50) is too small for "Survey the code".',
+        ['raise_step_budget', 'retry_step'],
+      ),
+    });
+
+    const banner = await screen.findByRole('region', { name: 'Needs you' });
+    const link = within(banner).getByRole('link', { name: 'Raise the step budget' });
+
+    expect(link).toHaveAttribute('href', '/settings/limits');
+
+    await user.click(within(banner).getByRole('button', { name: 'Retry the step' }));
+
+    await waitFor(() =>
+      expect(forge.stub.callsTo('POST /cards/:id/planning/retry')).toHaveLength(1),
+    );
+
+    expect(router.state.location.pathname).toBe(PAGE);
+  });
+
   it('goes away once a later event settled it', async () => {
     renderApp({
       path: PAGE,

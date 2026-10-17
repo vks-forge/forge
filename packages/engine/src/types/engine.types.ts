@@ -31,6 +31,7 @@ import type {
   RunStatus,
   StepName,
   StorageAdapter,
+  TraceSink,
 } from '@forge/core';
 import type { ReceiptLog } from '@forge/tools';
 import type { PlanningDoors } from '#/types/card-planning.types.js';
@@ -102,6 +103,8 @@ export interface EngineDeps {
   readonly toolCatalogued?: (tool: string) => Promise<boolean>;
   /** Tells live views which queries went stale when engine memory (not a stored row) changed; absent in tests that watch nothing. */
   readonly projectEvents?: ProjectEventSink;
+  /** Debug trace sink (d-0163): run events, run start and end, dispatch picks, rejected steps. Absent means nothing is traced. */
+  readonly trace?: TraceSink;
   readonly log?: Logger;
 }
 

@@ -117,6 +117,8 @@ export interface CardsApi {
   ): Promise<PlanVersionReply>;
   /** Starts planning on a backfilled card. */
   startPlanning(id: string): Promise<unknown>;
+  /** Re-runs the planning step that stopped on a too-small step budget. */
+  retryPlanningStep(id: string): Promise<unknown>;
   /** Releases a held, non-Express planned ticket into Express. */
   runAsExpress(ticketId: string): Promise<unknown>;
 }

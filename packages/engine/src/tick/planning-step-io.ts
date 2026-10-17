@@ -9,7 +9,10 @@
  *   writes of its own. One transaction means a crash leaves either nothing or the whole step,
  *   so the flow resumes at the right step and never half-records one. A failing model call
  *   writes a plain note to the card and leaves the queued turn claimed, so the step is tried
- *   again once the claim goes stale, rather than a card stalling silently.
+ *   again once the claim goes stale, rather than a card stalling silently. A budget failure is
+ *   the exception: the per-step cap is too small for the step, so every retry would spend the
+ *   same money and fail the same way. That step raises Needs you instead (raise the cap, or
+ *   retry now), and its queued turn is released by the caller.
  *
  * Exports: startStep(), callStep(), finishStep().
  * Depends on: @forge/core (step schemas, grill types), steps/run-step, tick/card-budget,
@@ -20,7 +23,7 @@ import type { FlowStep, GrillState, StepName } from '@forge/core';
 import type { ZodType } from 'zod';
 import { rejectStep, runStep } from '#/steps/run-step.js';
 import { warnOnBudget } from '#/tick/card-budget.js';
-import { logPlanEvent } from '#/tick/planning-state.js';
+import { askStepBudget, logPlanEvent } from '#/tick/planning-state.js';
 import type { ModelCall, PlanCtx, StepFinish } from '#/types/card-planning.types.js';
 
 /** Writes `step_started` so the card shows which step the Director is on. */
@@ -54,6 +57,20 @@ export async function callStep<T>(
   }
 
   rejectStep(pc.ctx, name, pc.card.id, result.error);
+  if (result.error.kind === 'budget') {
+    await pc.ctx.deps.storage.transaction((tx) =>
+      askStepBudget(
+        tx,
+        pc.card.id,
+        pc.ctx.nowIso,
+        step.label,
+        pc.ctx.config.forge.engine.step_budget_usd,
+      ),
+    );
+
+    return { ok: false, cost, outcome: 'blocked' };
+  }
+
   await pc.ctx.deps.storage.transaction((tx) =>
     logPlanEvent(tx, pc.card.id, pc.ctx.nowIso, {
       kind: 'note',
@@ -63,7 +80,7 @@ export async function callStep<T>(
     }),
   );
 
-  return { ok: false, cost };
+  return { ok: false, cost, outcome: 'stop' };
 }
 
 /** Records a finished step in one transaction and moves the cursor to the next step. */

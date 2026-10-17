@@ -1,6 +1,6 @@
 <div align="center">
 
-<!-- LOGO: docs/assets/logo.png (to be provided) -->
+<img src="docs/assets/logo.png" alt="Forge" width="160">
 
 <!-- BANNER: docs/assets/banner.png (to be provided) -->
 

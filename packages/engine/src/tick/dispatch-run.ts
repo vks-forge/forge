@@ -32,6 +32,7 @@ import { hold, rejectStep, runStep } from '#/steps/run-step.js';
 import { parkDispatch, parkForHarness } from '#/tick/dispatch-park.js';
 import { baseRefFor, driverFor, runtimeFor } from '#/tick/project-runtime.js';
 import { configVersionRef } from '#/tick/tick-config.js';
+import { emitTrace } from '#/shared/trace.js';
 import { startPump } from '#/tick/pump.js';
 import { buildRunRequest } from '#/tick/run-request.js';
 import { settleRun } from '#/tick/settle.js';
@@ -203,6 +204,18 @@ async function tryStart(
     promptHash,
     token,
     ...(resumeSession ? { resume: resumeSession } : {}),
+  });
+
+  emitTrace(deps, {
+    level: 'info',
+    kind: 'run',
+    project: ticket.project,
+    ticket_id: ticket.id,
+    run_id: runId,
+    actor: 'engine',
+    message: `run start ${runId} for ${ticket.id} on ${driver.id}`,
+    // The request carries the run token and env; the trace's redaction pass removes them.
+    data: { harness: driver.id, resume: resumeSession ?? null, request: req },
   });
 
   let handle;

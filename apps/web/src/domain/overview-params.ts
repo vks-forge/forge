@@ -8,7 +8,14 @@
  *   day is noise) until the user picks one; changing the range hands it back. The default
  *   view keeps a clean URL (no parameters) so `/` stays `/`.
  *
- * Exports: OVERVIEW_RANGES, OVERVIEW_GROUPS, parseOverviewFilters(), nextSearch(), requestOf().
+ *   The filter button's accessible summary and its count of non-default filters are derived
+ *   here too, so the button, the tests and the URL agree on what "default" means.
+ *
+ *   Today groups by the hour and only by the hour; every other range groups by day, week or
+ *   month. A grouping that does not fit the range (a hand-edited URL) falls back to the default.
+ *
+ * Exports: OVERVIEW_RANGES, OVERVIEW_GROUPS, RANGE_LABEL, GROUP_LABEL, groupsFor(),
+ *   parseOverviewFilters(), nextSearch(), requestOf(), filterSummary(), activeFilterCount().
  * Depends on: @forge/core (StatsRange, StatsGroup, defaultGroup), types/overview.types. Pure.
  */
 
@@ -19,15 +26,44 @@ import type {
   OverviewRequest,
 } from '#/types/overview.types.js';
 
-export const OVERVIEW_RANGES: readonly StatsRange[] = ['7d', '30d', '90d', '12m', 'all'];
-export const OVERVIEW_GROUPS: readonly StatsGroup[] = ['day', 'week', 'month'];
+export const OVERVIEW_RANGES: readonly StatsRange[] = [
+  'today',
+  '7d',
+  '30d',
+  '90d',
+  '12m',
+  'all',
+];
+export const OVERVIEW_GROUPS: readonly StatsGroup[] = ['hour', 'day', 'week', 'month'];
+
+/** The groupings that fit a range: hours for today, otherwise day, week or month. */
+export function groupsFor(range: StatsRange): readonly StatsGroup[] {
+  return range === 'today' ? ['hour'] : ['day', 'week', 'month'];
+}
+
+export const RANGE_LABEL: Readonly<Record<StatsRange, string>> = {
+  today: 'Today',
+  '7d': '7d',
+  '30d': '30d',
+  '90d': '90d',
+  '12m': '12m',
+  all: 'All',
+};
+
+export const GROUP_LABEL: Readonly<Record<StatsGroup, string>> = {
+  hour: 'Hour',
+  day: 'Day',
+  week: 'Week',
+  month: 'Month',
+};
 
 const DEFAULT_RANGE: StatsRange = '30d';
 
 export function parseOverviewFilters(search: URLSearchParams): OverviewFilters {
   const range = StatsRange.safeParse(search.get('range'));
-  const group = StatsGroup.safeParse(search.get('group'));
+  const parsedGroup = StatsGroup.safeParse(search.get('group'));
   const effective = range.success ? range.data : DEFAULT_RANGE;
+  const fits = parsedGroup.success && groupsFor(effective).includes(parsedGroup.data);
   const projects = (search.get('projects') ?? '')
     .split(',')
     .map((slug) => slug.trim())
@@ -35,8 +71,8 @@ export function parseOverviewFilters(search: URLSearchParams): OverviewFilters {
 
   return {
     range: effective,
-    group: group.success ? group.data : defaultGroup(effective),
-    groupChosen: group.success,
+    group: fits && parsedGroup.success ? parsedGroup.data : defaultGroup(effective),
+    groupChosen: fits,
     projects: [...new Set(projects)],
     archived: search.get('archived') === '1',
   };
@@ -50,7 +86,10 @@ export function nextSearch(
   const filters = parseOverviewFilters(current);
   const range = change.range ?? filters.range;
   const keepGroup = change.range === undefined && filters.groupChosen;
-  const group = change.group ?? (keepGroup ? filters.group : undefined);
+  const wanted = change.group ?? (keepGroup ? filters.group : undefined);
+  const group =
+    wanted !== undefined && groupsFor(range).includes(wanted) ? wanted : undefined;
+
   const projects = change.projects ?? filters.projects;
   const archived = change.archived ?? filters.archived;
   const next = new URLSearchParams();
@@ -82,4 +121,38 @@ export function requestOf(filters: OverviewFilters): OverviewRequest {
     projects: filters.projects,
     archived: filters.archived,
   };
+}
+
+/** How many filters differ from the clean view (the grouping counts only once chosen). */
+export function activeFilterCount(filters: OverviewFilters): number {
+  return [
+    filters.range !== DEFAULT_RANGE,
+    filters.groupChosen,
+    filters.projects.length > 0,
+    filters.archived,
+  ].filter(Boolean).length;
+}
+
+/**
+ * The filters in a few words for the button's accessible name, e.g. `30d · Day · All projects`.
+ * `scoped` leaves the project scope out (Home is always one project).
+ */
+export function filterSummary(filters: OverviewFilters, scoped = false): string {
+  if (scoped) {
+    return [RANGE_LABEL[filters.range], GROUP_LABEL[filters.group]].join(' · ');
+  }
+
+  const scope =
+    filters.projects.length === 0
+      ? 'All projects'
+      : filters.projects.length === 1
+        ? (filters.projects[0] ?? '')
+        : `${filters.projects.length} projects`;
+
+  return [
+    RANGE_LABEL[filters.range],
+    GROUP_LABEL[filters.group],
+    scope,
+    ...(filters.archived ? ['+ archived'] : []),
+  ].join(' · ');
 }

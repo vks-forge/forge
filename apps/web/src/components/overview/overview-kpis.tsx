@@ -1,12 +1,13 @@
 /**
- * OverviewKpis: the strip of headline figures across every project in the view.
+ * OverviewKpis: the strip of headline figures across every project in the view (or one project's).
  *
  * Why: before any chart the owner wants eight answers: what did it cost (and against the
  *   period before), what this month, how much got done, what is moving, what waits on me, how
  *   many Workers run right now, how many projects are alive, and whether first-gate checks
  *   pass. A figure that cannot be known is "No data" with the reason, never 0: spend with no
  *   run that reported a cost reads "No data", not a free week. "Waiting on you" is the one
- *   tile in amber, because it is the only figure that asks something of the person.
+ *   tile in amber, because it is the only figure that asks something of the person. On a
+ *   project's Home (`scoped`) "Active projects" is dropped, since there is only one.
  *
  * Exports: OverviewKpis.
  * Depends on: @forge/core (OverviewStats type), components/stats/stat-tile,
@@ -23,10 +24,13 @@ import {
   rangeLabel,
 } from '#/domain/stats-format.js';
 
-export function OverviewKpis(props: { stats: OverviewStats }) {
+export function OverviewKpis(props: { stats: OverviewStats; scoped?: boolean }) {
   const { kpis, cost_coverage: coverage } = props.stats;
   const reported = coverage.runs_with_cost > 0;
-  const change = reported ? spendChange(kpis.spend_usd, kpis.spend_prev_usd) : null;
+  const change = reported
+    ? spendChange(kpis.spend_usd, kpis.spend_prev_usd, props.stats.range === 'today')
+    : null;
+
   const g1 = kpis.g1_pass_rate;
 
   return (
@@ -71,11 +75,13 @@ export function OverviewKpis(props: { stats: OverviewStats }) {
           value={formatCount(kpis.workers_running)}
           note="Right now."
         />
-        <StatTile
-          label="Active projects"
-          value={formatCount(kpis.active_projects)}
-          note={`Of ${props.stats.projects_included.length} in this view.`}
-        />
+        {props.scoped ? null : (
+          <StatTile
+            label="Active projects"
+            value={formatCount(kpis.active_projects)}
+            note={`Of ${props.stats.projects_included.length} in this view.`}
+          />
+        )}
         <StatTile
           label="G1 pass rate"
           value={g1.rate === null ? null : formatPercent(g1.rate)}

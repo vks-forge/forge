@@ -15,6 +15,7 @@
 
 import type { ErrorFamily, Run, RunResult, TicketId } from '@forge/core';
 import { runStatusFor } from '#/domain/results.js';
+import { emitTrace } from '#/shared/trace.js';
 import { warnOnBudget } from '#/tick/card-budget.js';
 import { applyOutcome } from '#/tick/outcome.js';
 import { runtimeFor } from '#/tick/project-runtime.js';
@@ -109,6 +110,16 @@ export async function settleRun(
     // The run's cost is now on its row: a card crossing its budget cap is warned, never stopped (d-0143).
     const ticket = await tx.tickets.get(run.ticket_id as TicketId);
     await warnOnBudget(tx, ticket?.card_id, ctx.nowIso);
+  });
+
+  emitTrace(deps, {
+    level: family ? 'warn' : 'info',
+    kind: 'run',
+    ticket_id: run.ticket_id,
+    run_id: run.id,
+    actor: 'engine',
+    message: `run settled ${run.id} as ${status}`,
+    data: { status, errorFamily: family ?? null, costUsd: result.costUsd, files },
   });
 
   state.pumps.delete(run.id);

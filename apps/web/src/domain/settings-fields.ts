@@ -74,6 +74,7 @@ export const LIMIT_GROUPS: readonly FieldGroup[] = [
         label: 'Per Director step',
         unit: 'USD',
         step: 0.1,
+        hint: 'The Claude CLI alone costs about $0.50 per call, so a cap near that makes planning steps stop. Default 2.',
       },
     ],
   },

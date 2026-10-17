@@ -37,6 +37,8 @@ export interface OverviewStatsInput {
   readonly range: StatsRange;
   readonly group: StatsGroup;
   readonly nowMs: number;
+  /** Minutes east of UTC on the server's clock: where `today` starts and how hours are cut. Default 0. */
+  readonly utcOffsetMinutes?: number;
   readonly projects: readonly OverviewProjectInput[];
   /** Requested slugs that matched no project. */
   readonly unknown: readonly string[];

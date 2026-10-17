@@ -130,6 +130,16 @@ export function useStartPlanning(cardId: string) {
   });
 }
 
+export function useRetryPlanningStep(cardId: string) {
+  const api = useForgeApi();
+  const refresh = useRefreshCard(cardId);
+
+  return useMutation({
+    mutationFn: () => api.cards.retryPlanningStep(cardId),
+    onSettled: refresh,
+  });
+}
+
 export function useRunAsExpress(cardId: string) {
   const api = useForgeApi();
   const refresh = useRefreshCard(cardId);

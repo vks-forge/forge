@@ -8,7 +8,7 @@
  *   column and phones as a drawer; sharing this body means the two can never drift.
  *
  * Exports: SidebarContent.
- * Depends on: lucide-react, api/use-projects, domain/nav-entries,
+ * Depends on: lucide-react, components/brand/forge-mark, api/use-projects, domain/nav-entries,
  *   state/current-project, components/shell/*.
  */
 
@@ -30,6 +30,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Link } from 'react-router';
+import { ForgeLogo } from '#/components/brand/forge-mark.js';
 import { useInboxCounts } from '#/api/use-inbox.js';
 import { useProjects } from '#/api/use-projects.js';
 import { NavLinkItem } from '#/components/shell/nav-link-item.js';
@@ -68,11 +69,8 @@ export function SidebarContent() {
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 p-3">
       <div className="flex flex-col gap-3">
-        <Link
-          to={OVERVIEW_PATH}
-          className="w-fit rounded-md px-1 pt-1 text-sm font-semibold tracking-tight"
-        >
-          Forge
+        <Link to={OVERVIEW_PATH} className="flex w-fit items-center rounded-md px-1 pt-1">
+          <ForgeLogo height={40} />
         </Link>
         <nav aria-label="Forge" className="flex flex-col gap-0.5">
           <NavLinkItem to={OVERVIEW_PATH} label="Overview" icon={LayoutDashboard} exact />

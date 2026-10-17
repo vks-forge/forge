@@ -67,10 +67,23 @@ const FlowFields = {
   links: z.array(z.string()).default([]),
   depends_on: z.array(z.string()).default([]),
   blocks: z.array(z.string()).default([]),
-  // Optional because an older server does not send them; the card face drops that part of the
-  // phase line rather than inventing a number.
-  open_points: z.number().int().nonnegative().optional(),
-  plan_version: z.number().int().positive().optional(),
+  // An older server omits them and the current one sends null before any grill or plan; both
+  // read as absent, so the card face drops that part of the phase line rather than inventing a
+  // number.
+  open_points: z
+    .number()
+    .int()
+    .nonnegative()
+    .nullish()
+    .transform((v) => v ?? undefined)
+    .optional(),
+  plan_version: z
+    .number()
+    .int()
+    .positive()
+    .nullish()
+    .transform((v) => v ?? undefined)
+    .optional(),
 };
 
 export const CardSummary = CoreCardSummary.extend(FlowFields);

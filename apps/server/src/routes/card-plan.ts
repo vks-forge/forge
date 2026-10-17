@@ -1,6 +1,6 @@
 /**
  * The planning routes: plan reads, grill answers and shortcuts, approval, change requests,
- * ticket edits, start-planning and run-as-express.
+ * ticket edits, start-planning, retry of a stopped planning step and run-as-express.
  *
  * Why: the Director shapes every Plan card into an approved plan with the owner (d-0130 to
  *   d-0133), and the card page drives each owner action through these routes. Each is a thin
@@ -208,6 +208,20 @@ export function cardPlanRoutes(deps: RouteDeps): Route[] {
     },
   };
 
+  const retry: Route = {
+    method: 'POST',
+    path: '/cards/:id/planning/retry',
+    async handle({ res, params }) {
+      const id = cardIdOf(params);
+      const out = await engine.retryPlanningStep(id, OWNER);
+      if (out.status !== 'retried') {
+        throw planRefusal(out, id);
+      }
+
+      sendJson(res, 200, { card: await replyCard(deps, out.card) });
+    },
+  };
+
   const express: Route = {
     method: 'POST',
     path: '/tickets/:id/run-as-express',
@@ -235,6 +249,7 @@ export function cardPlanRoutes(deps: RouteDeps): Route[] {
     requestChanges,
     editTickets,
     start,
+    retry,
     express,
   ];
 }

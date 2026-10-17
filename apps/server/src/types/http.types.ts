@@ -12,6 +12,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { TraceSink } from '@forge/core';
 import type { Logger } from '@forge/engine';
 import type { RouteAccess } from '#/types/auth.types.js';
 
@@ -66,6 +67,8 @@ export interface RouterOptions {
   readonly host?: HostPolicy;
   /** Absent means API only. */
   readonly ui?: StaticUi;
+  /** Told about every error a handler threw, just before it is turned into a response (the debug trace). */
+  readonly onError?: (error: unknown, req: IncomingMessage) => void;
 }
 
 /** What the HTTP server is built with besides the route table. */
@@ -75,6 +78,8 @@ export interface ApiServerOptions {
   /** The port the server is bound to, once it is. */
   readonly port: () => number | undefined;
   readonly log: Logger;
+  /** The debug trace sink (d-0163); absent means requests are not traced. */
+  readonly trace?: TraceSink;
 }
 
 /** Where SSE frames go; `write` resolves once the chunk is flushed or the client is gone. */

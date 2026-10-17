@@ -17,7 +17,7 @@
  *
  * Exports: assembleServer().
  * Depends on: @forge/db, @forge/drivers (systemClock), @forge/engine, @forge/git, @forge/hooks,
- *   @forge/secrets, @forge/tools, and the services/routes of this app.
+ *   @forge/tools, services/data-wiring (secrets, optional debug trace, d-0163) and the other services.
  *   IO: opens SQLite, creates the data home, binds the port on `start()`.
  */
 
@@ -28,7 +28,7 @@ import { createReceiptLookup, systemClock } from '@forge/drivers';
 import { createEngine, createIdSource, createOwnerId } from '@forge/engine';
 import { createFileReportStore } from '@forge/gates';
 import { createGitRepoReader } from '@forge/git';
-import { createDpapiSecretStore } from '@forge/secrets';
+import { composeData } from '#/services/data-wiring.js';
 import { createAuth } from '#/services/auth/create-auth.js';
 import { createFolderPicker } from '#/services/folder-picker/index.js';
 import { createFolderRevealer } from '#/services/folder-reveal.js';
@@ -39,14 +39,10 @@ import { composeHarnessGuard } from '#/services/harness-guard.js';
 import { createHarnessSource } from '#/services/harness-source.js';
 import { createApiServer } from '#/services/http/create-api-server.js';
 import { assertLoopbackBind, closeServer, listen } from '#/services/http/listen.js';
-import { createLazySecretStore } from '#/services/lazy-secrets.js';
 import { composeProjectMemory } from '#/services/project-memory.js';
-import { withKnownProjects } from '#/services/known-project-config.js';
-import { createProjectEvents } from '#/services/project-events.js';
 import { createProjectRegistry } from '#/services/project-registry.js';
 import { createRunWiring } from '#/services/run-wiring.js';
 import { shutdownServer } from '#/services/shutdown.js';
-import { trackProjectWrites } from '#/services/tracked-storage.js';
 import { composeWorker } from '#/services/worker-wiring.js';
 import { createTicker } from '#/services/ticker.js';
 import { composeTriggers } from '#/services/triggers.js';
@@ -73,11 +69,15 @@ export async function assembleServer(
   await mkdir(dirname(layout.data.dbPath), { recursive: true });
   const sqlite = openSqlite(layout.data.dbPath);
   const { receipts, catalogue } = sqlite;
-  // Wrapping the one storage port means no writer can forget to tell the project streams (d-0132).
-  const projectEvents = createProjectEvents();
-  const storage = trackProjectWrites(sqlite.storage, projectEvents);
-  // Settings are only served for registered projects; an unknown slug is not given defaults.
-  const config = withKnownProjects(sqlite.config, storage);
+  // Secrets, the optional debug trace (d-0163), and storage and config wrapped for it.
+  const { secrets, trace, projectEvents, storage, config } = composeData({
+    settings,
+    ports,
+    storage: sqlite.storage,
+    config: sqlite.config,
+    clock,
+    log,
+  });
 
   try {
     // Before any socket: a server that cannot read or create its token must not start open.
@@ -89,14 +89,6 @@ export async function assembleServer(
     });
 
     const owner = createOwnerId();
-
-    // The DPAPI store is created on first use (run secrets, d-0100): a server with no GitHub
-    // project and no run, or off Windows, never opens it.
-    const secrets =
-      ports.secrets ??
-      createLazySecretStore(() =>
-        createDpapiSecretStore({ dir: layout.data.secretsDir }),
-      );
 
     // Both are built below; no run starts before the server listens.
     let buildCheck: (runId: string) => Promise<void> = async () => undefined;
@@ -143,6 +135,7 @@ export async function assembleServer(
         secrets,
       },
       log,
+      trace.enabled ? trace.sink : undefined,
     );
 
     const { compat, policy, checkBuild } = await composeHarnessGuard({
@@ -188,6 +181,7 @@ export async function assembleServer(
       toolCatalogued: (tool) => policy.toolCatalogued(tool),
       onTickRequested: ticker.requestTick,
       projectEvents,
+      trace: trace.sink,
       log,
     });
 
@@ -239,7 +233,12 @@ export async function assembleServer(
         shutdown: streams.signal,
       },
       auth,
-      { webRoot: ports.webRoot, port: () => address?.port, log },
+      {
+        webRoot: ports.webRoot,
+        port: () => address?.port,
+        log,
+        ...(trace.enabled ? { trace: trace.sink } : {}),
+      },
     );
 
     let stopping: Promise<void> | null = null;
@@ -287,7 +286,7 @@ export async function assembleServer(
         drainMs: async () => (await config.company()).config.engine.shutdown_drain_ms,
         graceMs: settings.shutdownGraceMs,
         log,
-      });
+      }).finally(() => trace.close());
 
       return stopping;
     }
@@ -295,6 +294,7 @@ export async function assembleServer(
     return handle;
   } catch (error) {
     await storage.close().catch(() => undefined);
+    await trace.close();
     throw error;
   }
 }

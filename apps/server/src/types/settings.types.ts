@@ -7,7 +7,7 @@
  *   whole server from a literal without touching `process.env`. Config paths (the checkout)
  *   and data paths (the data home) are kept apart so nothing can write data into a repository.
  *
- * Exports: Layout, ServerSettings, HttpTuning.
+ * Exports: Layout, ServerSettings, HttpTuning, TraceSettings.
  * Depends on: @forge/core (DataHomeLayout, ForgeConfig, ProjectConfig). Types only.
  */
 
@@ -38,6 +38,14 @@ export interface HttpTuning {
   readonly projectHeartbeatMs?: number;
 }
 
+/** The debug trace log's resolved switches (d-0163). */
+export interface TraceSettings {
+  readonly enabled: boolean;
+  /** Absolute folder of the daily files and the `cards/` folder. */
+  readonly dir: string;
+  readonly keepDays: number;
+}
+
 export interface ServerSettings {
   readonly layout: Layout;
   readonly host: string;
@@ -51,4 +59,6 @@ export interface ServerSettings {
   readonly engine: 'acp' | 'cli';
   readonly shutdownGraceMs: number;
   readonly http: HttpTuning;
+  /** Absent means tracing is off (tests that build settings by hand). */
+  readonly trace?: TraceSettings;
 }

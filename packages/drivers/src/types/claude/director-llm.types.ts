@@ -7,7 +7,7 @@
  *   child starts in and the host env that carries the user's login. Everything else has a
  *   default that is safe for a Director step (no tools, no settings, a two minute ceiling).
  *
- * Exports: ClaudeDirectorLLMDeps.
+ * Exports: ClaudeDirectorLLMDeps, DirectorStepTrace.
  * Depends on: types/claude/driver-deps. Types only.
  */
 
@@ -19,6 +19,19 @@ import type {
   SpawnFn,
 } from '#/types/claude/driver-deps.types.js';
 import type { HarnessSource } from '#/types/claude/harness.types.js';
+
+/** What one finished step child said and was told, as plain text, for the debug trace (d-0163). */
+export interface DirectorStepTrace {
+  readonly step: string;
+  /** The exact text sent on stdin. */
+  readonly prompt: string;
+  /** Everything the child printed to stdout (the result document, or what came before a kill). */
+  readonly raw: string;
+  /** How the child ended, e.g. `code 0, signal null` or `killed`. */
+  readonly exit: string;
+  /** The tail of stderr plus stdout, as kept for diagnostics. */
+  readonly tail: string;
+}
 
 export interface ClaudeDirectorLLMDeps {
   readonly spawn: SpawnFn;
@@ -49,4 +62,6 @@ export interface ClaudeDirectorLLMDeps {
   /** Signals a POSIX process group on kill; defaults to `process.kill(-pid, signal)`. */
   readonly signalGroup?: (pid: number, signal: NodeJS.Signals) => void;
   readonly log?: Logger;
+  /** Called once per step whose child ran, with the prompt and raw output; a throwing callback is ignored. Absent means nothing is captured. */
+  readonly onTrace?: (trace: DirectorStepTrace) => void;
 }

@@ -18,7 +18,9 @@
  *   through `admit()` under the director grant and handed back as input on a second call
  *   (d-0131, d-0141 item 4), so this adapter never gets a tool. The call's dollar cost is
  *   handed to `opts.onCost` so the card can count Director spend (d-0143); a failing
- *   callback never changes the step result.
+ *   callback never changes the step result. `onTrace` hands the rendered prompt and the raw
+ *   stdout to the app for the debug trace (d-0163); it never receives secrets the adapter holds
+ *   (the child's env and credentials stay inside `runChild`).
  *
  * Exports: createClaudeDirectorLLM().
  * Depends on: @forge/core, adapters/claude/{process-tree,harness-resolver},
@@ -176,6 +178,18 @@ export function createClaudeDirectorLLM(deps: ClaudeDirectorLLMDeps): DirectorLL
 
       const timeoutMs = opts.timeoutMs ?? deps.timeoutMs ?? DEFAULT_TIMEOUT_MS;
       const raw = await runChild(deps, harness, args, prompt, timeoutMs);
+      try {
+        deps.onTrace?.({
+          step: name,
+          prompt,
+          raw: raw.stdout,
+          exit: raw.exit,
+          tail: raw.tail,
+        });
+      } catch {
+        // A trace callback must never change what a step returns.
+      }
+
       let error: StepError | undefined;
       if (raw.failure === 'timeout') {
         error = { kind: 'stall', message: raw.detail ?? 'claude timed out' };

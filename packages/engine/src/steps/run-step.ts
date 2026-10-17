@@ -9,12 +9,13 @@
  *   failing model is not re-spent on every 10 s tick.
  *
  * Exports: runStep(), rejectStep(), isHeld(), hold().
- * Depends on: @forge/core (DirectorLLM port, StepName, StepError), types/engine-state, types/run-step.
+ * Depends on: @forge/core (DirectorLLM port, StepName, StepError), shared/trace, types/engine-state, types/run-step.
  *   No IO of its own.
  */
 
 import type { Result, StepError, StepName } from '@forge/core';
 import type { ZodType } from 'zod';
+import { emitTrace } from '#/shared/trace.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { StepExtras } from '#/types/run-step.types.js';
 
@@ -43,6 +44,15 @@ export async function runStep<T>(
     i < config.engine.step_retries;
     i++
   ) {
+    emitTrace(ctx.deps, {
+      level: 'warn',
+      kind: 'engine',
+      step: name,
+      actor: 'engine',
+      message: `director step ${name} retry ${i + 1} after invalid output`,
+      data: { error: result.error },
+    });
+
     result = await llm.step(
       name,
       { ...input, previous_error: result.error.message },
@@ -78,6 +88,17 @@ export function rejectStep(
   const reason = `${error.kind}: ${error.message}`;
   ctx.report.rejectedSteps.push({ step: name, ticketId, reason });
   ctx.deps.log?.('warn', `director step ${name} rejected for ${ticketId}`, { reason });
+  emitTrace(ctx.deps, {
+    level: 'warn',
+    kind: 'engine',
+    step: name,
+    // Planning passes a card id here, every other step a ticket id.
+    ...(/-C\d+$/.test(ticketId) ? { card_id: ticketId } : { ticket_id: ticketId }),
+    actor: 'engine',
+    message: `director step ${name} rejected for ${ticketId}`,
+    data: { subject: ticketId, error },
+  });
+
   const reset =
     error.retryNotBefore === undefined ? NaN : Date.parse(error.retryNotBefore);
 

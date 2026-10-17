@@ -12,6 +12,7 @@
  *   IO: through config/data-home, the bootstrap file.
  */
 
+import { join } from 'node:path';
 import { InvalidInputError } from '@forge/core';
 import { loadDataHome } from '#/config/data-home.js';
 import { resolveEntrypoints } from '#/config/entrypoints.js';
@@ -62,5 +63,10 @@ export async function loadSettings(
     engine: env.FORGE_ENGINE,
     shutdownGraceMs: env.FORGE_SHUTDOWN_GRACE_MS,
     http: DEFAULT_HTTP,
+    trace: {
+      enabled: env.FORGE_TRACE,
+      dir: env.FORGE_TRACE_DIR ?? join(layout.data.logsDir, 'trace'),
+      keepDays: env.FORGE_TRACE_KEEP_DAYS,
+    },
   };
 }

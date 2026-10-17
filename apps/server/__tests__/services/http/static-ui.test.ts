@@ -59,6 +59,9 @@ beforeEach(async () => {
   await writeFile(join(root, 'assets', 'index-abc123.js'), 'console.log(1)');
   await writeFile(join(root, 'assets', 'index-abc123.css'), 'body{margin:0}');
   await writeFile(join(root, 'assets', 'plex-400.woff2'), 'font');
+  await writeFile(join(root, 'favicon.ico'), 'ico');
+  await writeFile(join(root, 'android-chrome-192x192.png'), 'png');
+  await writeFile(join(root, 'site.webmanifest'), '{"name":"Forge"}');
   await writeFile(join(root, 'favicon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
   await writeFile(join(dir, 'secret.txt'), SECRET);
 
@@ -77,6 +80,9 @@ describe('files', () => {
     ['/assets/index-abc123.css', 'text/css; charset=utf-8'],
     ['/assets/plex-400.woff2', 'font/woff2'],
     ['/favicon.svg', 'image/svg+xml'],
+    ['/favicon.ico', 'image/x-icon'],
+    ['/android-chrome-192x192.png', 'image/png'],
+    ['/site.webmanifest', 'application/manifest+json; charset=utf-8'],
   ])('serves %s as %s', async (path, type) => {
     const res = await rig.raw('GET', path);
 

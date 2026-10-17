@@ -9,11 +9,12 @@
  *   `aria-current` as well as colour.
  *
  * Exports: WizardFrame.
- * Depends on: react, components/ui/button, domain/wizard-steps, types/onboarding.types.
+ * Depends on: react, components/brand/forge-mark, components/ui/button, domain/wizard-steps, types/onboarding.types.
  */
 
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { ForgeMark } from '#/components/brand/forge-mark.js';
 import { Button } from '#/components/ui/button.js';
 import { stepIndex, WIZARD_STEPS } from '#/domain/wizard-steps.js';
 import type { WizardStepId } from '#/types/onboarding.types.js';
@@ -36,7 +37,10 @@ export function WizardFrame(props: {
   return (
     <div className="mx-auto grid min-h-dvh w-full max-w-3xl content-start gap-8 px-4 py-6 md:px-8 md:py-10">
       <header className="flex items-center justify-between gap-3">
-        <span className="text-sm font-semibold tracking-tight">Forge</span>
+        <span className="flex items-center gap-2.5 text-sm font-semibold tracking-tight">
+          <ForgeMark size={48} />
+          Forge
+        </span>
         <Button onClick={props.onFinishLater}>Finish later</Button>
       </header>
       <nav aria-label="Setup steps">

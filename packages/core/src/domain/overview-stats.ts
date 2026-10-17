@@ -10,13 +10,14 @@
  *   pin the rules that would otherwise mislead: money landing in the wrong project or bucket,
  *   this-month spend shifting with the range, or a quiet project looking active.
  *
- * Exports: computeOverviewStats(), overviewRunsSince(), ATTENTION_LIMIT.
- * Depends on: domain/bucketize, domain/stats-window, schemas/*, types/overview-stats-input.types. No IO.
+ * Exports: computeOverviewStats(), overviewRunsSince().
+ * Depends on: domain/bucketize, domain/overview-lists, domain/stats-window, schemas/*, types/overview-stats-input.types. No IO.
  */
 
 import { bucketKeyOf, bucketize } from '#/domain/bucketize.js';
 import { rateStat, statsWindow } from '#/domain/stats-window.js';
-import type { OverviewAttention, OverviewStats } from '#/schemas/overview-stats.js';
+import { attentionOf, byWaitingThenActivity } from '#/domain/overview-lists.js';
+import type { OverviewStats } from '#/schemas/overview-stats.js';
 import type { Run } from '#/schemas/run.js';
 import { STATS_RANGE_DAYS } from '#/schemas/stats-range.js';
 import type { StatsRange } from '#/schemas/stats-range.js';
@@ -24,9 +25,6 @@ import type {
   OverviewProjectInput,
   OverviewStatsInput,
 } from '#/types/overview-stats-input.types.js';
-
-/** How many needs-action items the Overview lists. */
-export const ATTENTION_LIMIT = 10;
 
 const DAY_MS = 86_400_000;
 
@@ -45,12 +43,16 @@ const monthStartMs = (nowMs: number): number => {
  * Earliest run start the server must read: the start of the previous period (for the change
  * figure) or of this month, whichever is earlier. `all` reads everything (undefined).
  */
-export function overviewRunsSince(range: StatsRange, nowMs: number): string | undefined {
+export function overviewRunsSince(
+  range: StatsRange,
+  nowMs: number,
+  utcOffsetMinutes = 0,
+): string | undefined {
   if (range === 'all') {
     return undefined;
   }
 
-  const { from } = statsWindow(range, nowMs);
+  const { from } = statsWindow(range, nowMs, undefined, utcOffsetMinutes);
   const prevFromMs = Date.parse(from) - STATS_RANGE_DAYS[range] * DAY_MS;
 
   return new Date(Math.min(prevFromMs, monthStartMs(nowMs))).toISOString();
@@ -72,25 +74,6 @@ function earliestMs(projects: readonly OverviewProjectInput[]): number | undefin
   return first;
 }
 
-/** Most waiting first, then most recent activity, then slug. */
-function byWaitingThenActivity(
-  a: OverviewStats['projects'][number],
-  b: OverviewStats['projects'][number],
-): number {
-  const lastA = a.last_activity ?? '';
-  const lastB = b.last_activity ?? '';
-
-  if (a.waiting_on_you !== b.waiting_on_you) {
-    return b.waiting_on_you - a.waiting_on_you;
-  }
-
-  if (lastA !== lastB) {
-    return lastA < lastB ? 1 : -1;
-  }
-
-  return a.slug < b.slug ? -1 : 1;
-}
-
 const zeros = (n: number): number[] => new Array<number>(n).fill(0);
 
 function slices(totals: Map<string, number>): { key: string; usd: number }[] {
@@ -104,39 +87,21 @@ const add = (map: Map<string, number>, key: string, amount: number): void => {
   map.set(key, (map.get(key) ?? 0) + amount);
 };
 
-function attentionOf(projects: readonly OverviewProjectInput[]): OverviewAttention[] {
-  return projects
-    .flatMap((p) => p.needsAction)
-    .sort(
-      (a, b) =>
-        (a.updated_at < b.updated_at ? 1 : a.updated_at > b.updated_at ? -1 : 0) ||
-        (a.id < b.id ? -1 : 1),
-    )
-    .slice(0, ATTENTION_LIMIT)
-    .map((i) => ({
-      id: i.id,
-      kind: i.kind,
-      project: i.project,
-      title: i.title,
-      ...(i.ticket_id ? { ticket_id: i.ticket_id } : {}),
-      ...(i.run_id ? { run_id: i.run_id } : {}),
-      updated_at: i.updated_at,
-    }));
-}
-
 export function computeOverviewStats(input: OverviewStatsInput): OverviewStats {
   const { range, group, nowMs, projects } = input;
+  const offset = input.utcOffsetMinutes ?? 0;
   const span = statsWindow(
     range,
     nowMs,
     range === 'all' ? earliestMs(projects) : undefined,
+    offset,
   );
 
   const window = { from: span.from, to: span.to };
 
-  const buckets = bucketize(window, group);
+  const buckets = bucketize(window, group, offset);
   const slot = new Map(buckets.map((key, i) => [key, i]));
-  const at = (iso: string): number => slot.get(bucketKeyOf(iso, group)) ?? -1;
+  const at = (iso: string): number => slot.get(bucketKeyOf(iso, group, offset)) ?? -1;
   const inWindow = (iso: string): boolean => iso >= window.from && iso <= window.to;
 
   const prevFrom =
@@ -145,6 +110,13 @@ export function computeOverviewStats(input: OverviewStatsInput): OverviewStats {
       : new Date(
           Date.parse(window.from) - STATS_RANGE_DAYS[range] * DAY_MS,
         ).toISOString();
+
+  // Today is compared with yesterday up to the same time of day, so a morning is not judged
+  // against a whole day's spend. Other ranges compare with the whole previous period.
+  const prevTo =
+    range === 'today' && prevFrom !== null
+      ? new Date(Date.parse(prevFrom) + (nowMs - Date.parse(window.from))).toISOString()
+      : window.from;
 
   const monthFrom = new Date(monthStartMs(nowMs)).toISOString();
 
@@ -201,7 +173,7 @@ export function computeOverviewStats(input: OverviewStatsInput): OverviewStats {
       if (cost !== undefined) {
         spendMonth += r.started_at >= monthFrom ? cost : 0;
         spendPrev +=
-          prevFrom !== null && r.started_at >= prevFrom && r.started_at < window.from
+          prevFrom !== null && r.started_at >= prevFrom && r.started_at < prevTo
             ? cost
             : 0;
       }

@@ -247,6 +247,11 @@ describe('no dead ends', () => {
     expect(NEEDS_YOU_ACTIONS.length).toBeGreaterThan(0);
   });
 
+  it('lists the budget stop actions, each a way forward (raise the cap, retry now)', () => {
+    expect(NEEDS_YOU_ACTIONS).toContain('raise_step_budget');
+    expect(NEEDS_YOU_ACTIONS).toContain('retry_step');
+  });
+
   it('holds for any combination (property)', () => {
     fc.assert(
       fc.property(

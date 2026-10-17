@@ -68,6 +68,22 @@ describe('stats ranges', () => {
     expect(defaultGroup('all')).toBe('month');
   });
 
+  it('knows today, which groups by hour', () => {
+    expect(defaultGroup('today')).toBe('hour');
+    expect(OverviewQuery.parse({ range: 'today' }).range).toBe('today');
+    expect(OverviewQuery.parse({ range: 'today', group: 'hour' }).group).toBe('hour');
+  });
+
+  it('allows the hour group only with today, and today only by the hour', () => {
+    expect(OverviewQuery.safeParse({ range: '7d', group: 'hour' }).success).toBe(false);
+    expect(OverviewQuery.safeParse({ group: 'hour' }).success).toBe(false);
+    expect(OverviewQuery.safeParse({ range: 'today', group: 'day' }).success).toBe(false);
+  });
+
+  it('keeps today off the per-project stats and cost endpoints', () => {
+    expect(StatsRangeQuery.safeParse({ range: 'today' }).success).toBe(false);
+  });
+
   it('defaults the overview query to 30 days, all projects, archived off', () => {
     expect(OverviewQuery.parse({})).toEqual({
       range: '30d',

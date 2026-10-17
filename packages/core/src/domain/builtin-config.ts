@@ -48,8 +48,9 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
     stall_ms: 300_000,
     rewake_cap: { max: 3, window_ms: 3_600_000 },
     step_retries: 1,
-    // Placeholder caps until the measured dry run (d-0060).
-    step_budget_usd: 0.5,
+    // The claude CLI's own system prompt and cache write cost about $0.50 per call on opus, so
+    // a planning step needs headroom well above that or it can never finish.
+    step_budget_usd: 2,
     confidence_threshold: 0.7,
     interaction_timeout_ms: 14_400_000,
     run_budget: { max_turns: 40, max_usd: 5, turn_ms: 600_000 },

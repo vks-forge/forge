@@ -66,6 +66,65 @@ describe('all time', () => {
   });
 });
 
+describe('today', () => {
+  const run = (started_at: string, cost_usd: number) =>
+    ({
+      id: started_at,
+      started_at,
+      status: 'success',
+      harness: 'claude',
+      lane: 'standard',
+      cost_usd,
+    }) as never;
+
+  const today = (runs: never[], utcOffsetMinutes = 330) =>
+    computeOverviewStats({
+      range: 'today',
+      group: 'hour',
+      nowMs: NOW,
+      utcOffsetMinutes,
+      projects: [{ ...base(), runs }],
+      unknown: [],
+    });
+
+  it('starts at the server local midnight and buckets by hour up to now', () => {
+    const stats = today([]);
+
+    // NOW is 17:30 in India; local midnight is 18:30 UTC the day before.
+    expect(stats.from).toBe('2026-10-15T18:30:00.000Z');
+    expect(stats.buckets).toHaveLength(18);
+    expect(stats.buckets[17]).toBe('2026-10-16T11:30:00.000Z');
+  });
+
+  it('counts a run in the hour it started and leaves the late-night run of yesterday out', () => {
+    const stats = today([
+      run('2026-10-16T11:45:00.000Z', 2),
+      run('2026-10-15T18:00:00.000Z', 9),
+    ]);
+
+    expect(stats.kpis.spend_usd).toBe(2);
+    expect(stats.spend_by_project[0]?.values[17]).toBe(2);
+  });
+
+  it('compares with yesterday up to the same time of day', () => {
+    const stats = today([
+      run('2026-10-16T11:45:00.000Z', 3),
+      run('2026-10-15T11:00:00.000Z', 1),
+      run('2026-10-15T12:30:00.000Z', 50),
+    ]);
+
+    expect(stats.kpis.spend_prev_usd).toBe(1);
+  });
+
+  it('reads runs back to the start of yesterday', () => {
+    expect(overviewRunsSince('today', NOW, 330)).toBe('2026-10-01T00:00:00.000Z');
+    // On the 1st of a month, yesterday starts before the month does.
+    expect(overviewRunsSince('today', Date.parse('2026-11-01T12:00:00.000Z'), 330)).toBe(
+      '2026-10-30T18:30:00.000Z',
+    );
+  });
+});
+
 describe('overviewRunsSince', () => {
   it('reaches back to the start of the previous period or the month, whichever is earlier', () => {
     expect(overviewRunsSince('7d', NOW)).toBe('2026-10-01T00:00:00.000Z');

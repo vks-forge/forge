@@ -1,61 +1,37 @@
 /**
- * Pins: project Home shows the readout, what waits on the user, tickets in progress with a
- * stage track and the graphs; a figure the server could not compute reads "No data" (never 0);
- * spend with no reported cost is not drawn as a row of zeros; the range switch refetches.
+ * Pins: project Home shows what waits on the user, tickets in progress with a stage track and
+ * the Overview's figures scoped to this project (KPIs without Active projects, spend over time
+ * as one series, harness and lane rings, cost coverage; no projects table, no cross-project
+ * list); a figure the server could not compute reads "No data" (never 0); spend with no
+ * reported cost is not drawn as a row of zeros. The Filter popover is pinned in
+ * home-filters.test.tsx.
  *
  * Why: Home is the first screen of every day. A null shown as 0% would read as a perfect or
- *   failing score, a spend chart over unreported cost would claim the work was free, and a
- *   range switch that did not refetch would show the wrong window under the right label.
+ *   failing score, a spend chart over unreported cost would claim the work was free, a Home
+ *   that showed other projects' money would mislead, and a filter that did not refetch would
+ *   show the wrong window under the right label.
  * Depends on: routes/home/*, helpers/render-work (fetch stub over the real http adapter).
  */
 
-import { screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { renderWork } from '#tests/helpers/render-work.js';
-import { inboxItem, statsBody, ticketSummary } from '#tests/helpers/work-fixtures.js';
+import {
+  homeRoutes as routes,
+  scopedOverview as scoped,
+} from '#tests/helpers/home-world.js';
+import { inboxItem, overviewBody } from '#tests/helpers/work-fixtures.js';
 
 const HOME = '/p/sample-service';
-const STATS = 'GET /projects/sample-service/stats';
+const OVERVIEW = 'GET /stats/overview';
 
 function tile(label: string): HTMLElement {
   return screen.getByText(label).closest('div') as HTMLElement;
 }
 
-function routes(stats = statsBody()) {
-  return {
-    [STATS]: { body: stats },
-    'GET /projects/sample-service/tickets': {
-      body: {
-        items: [
-          ticketSummary(),
-          ticketSummary({
-            id: 'SVC-5' as never,
-            title: 'Rotate keys',
-            state: 'review',
-            needs_you: true,
-          }),
-          ticketSummary({ id: 'SVC-9' as never, title: 'Old work', state: 'done' }),
-        ],
-        nextCursor: null,
-      },
-    },
-    'GET /projects/sample-service/inbox': {
-      body: { items: [inboxItem()], nextCursor: null },
-    },
-    'GET /projects/sample-service/inbox/counts': {
-      body: { needs_action: 1, unread: 1, all: 1, archived: 0 },
-    },
-  };
-}
-
 describe('Home', () => {
-  it('shows the readout, what waits on you and tickets with a stage track', async () => {
+  it('shows what waits on you and tickets with a stage track', async () => {
     renderWork(HOME, routes());
-
-    const line = await screen.findByLabelText('Project readout');
-    expect(within(line).getByText('Workers running').nextSibling).toHaveTextContent('1');
-    expect(within(line).getByText('Spend today').nextSibling).toHaveTextContent('$1.50');
 
     const waiting = await screen.findByRole('list', { name: 'Waiting on you' });
     expect(
@@ -106,81 +82,137 @@ describe('Home', () => {
 
     expect(within(row).getAllByRole('link')).toHaveLength(1);
   });
+});
 
-  it('shows a figure the server could not compute as No data, and a real zero as 0%', async () => {
+describe('Home: figures scoped to this project', () => {
+  it('asks the Overview endpoint for this project only, archived included', async () => {
+    const { stub } = renderWork(HOME, routes());
+
+    await screen.findByRole('region', { name: 'Key figures' });
+
+    const path = stub.callsTo(OVERVIEW)[0]?.path ?? '';
+
+    expect(path).toContain('projects=sample-service');
+    expect(path).toContain('archived=1');
+    expect(path).toContain('range=30d');
+  });
+
+  it('shows the key figures without Active projects', async () => {
+    renderWork(HOME, routes());
+
+    const kpis = await screen.findByRole('region', { name: 'Key figures' });
+
+    expect(within(kpis).getByText('Spend')).toBeInTheDocument();
+    expect(within(kpis).getByText('Spend this month')).toBeInTheDocument();
+    expect(within(kpis).getByText('Tickets done')).toBeInTheDocument();
+    expect(within(kpis).getByText('In progress')).toBeInTheDocument();
+    expect(within(kpis).getByText('Waiting on you')).toBeInTheDocument();
+    expect(within(kpis).getByText('Workers running')).toBeInTheDocument();
+    expect(within(kpis).getByText('G1 pass rate')).toBeInTheDocument();
+    expect(within(kpis).queryByText('Active projects')).not.toBeInTheDocument();
+  });
+
+  it('draws spend as one series, the harness and lane rings and the cost coverage', async () => {
+    renderWork(HOME, routes());
+
+    expect(
+      await screen.findByRole('img', { name: /Spend over time/ }),
+    ).toBeInTheDocument();
+
+    expect(screen.queryByText('Spend over time, by project')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: /Tickets done and started/ }),
+    ).toBeInTheDocument();
+
+    expect(screen.getByRole('img', { name: /Runs by outcome/ })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Spend by harness' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Spend by lane' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('list', { name: 'Spend by project' }),
+    ).not.toBeInTheDocument();
+
+    expect(screen.getByText(/runs reported a cost/)).toBeInTheDocument();
+  });
+
+  it('leaves out the projects table and the cross-project Needs attention list', async () => {
+    renderWork(HOME, routes());
+
+    await screen.findByRole('region', { name: 'Key figures' });
+
+    expect(screen.queryByText('Needs attention')).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: /Projects/ })).not.toBeInTheDocument();
+  });
+
+  it('orders the page: waiting and in progress, then figures, then charts', async () => {
+    renderWork(HOME, routes());
+
+    const waiting = await screen.findByRole('list', { name: 'Waiting on you' });
+    const kpis = await screen.findByRole('region', { name: 'Key figures' });
+    const charts = screen.getByRole('heading', { name: 'Spend and activity' });
+
+    expect(
+      waiting.compareDocumentPosition(kpis) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    expect(
+      kpis.compareDocumentPosition(charts) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('shows a figure the server could not compute as No data', async () => {
     renderWork(
       HOME,
       routes(
-        statsBody({
-          lead_time: { count: 0, median_ms: null, p90_ms: null },
-          rework_rate: { hits: 0, total: 3, rate: 0 },
-          gate_pass_rate: { hits: 0, total: 0, rate: null },
+        scoped({
+          kpis: {
+            ...overviewBody().kpis,
+            g1_pass_rate: { hits: 0, total: 0, rate: null },
+          },
         }),
       ),
     );
 
-    await screen.findByText('Lead time (median)');
+    await screen.findByRole('region', { name: 'Key figures' });
 
-    expect(within(tile('Lead time (median)')).getByText('No data')).toBeInTheDocument();
     expect(within(tile('G1 pass rate')).getByText('No data')).toBeInTheDocument();
-    expect(within(tile('Rework rate')).getByText('0%')).toBeInTheDocument();
-    expect(
-      within(tile('Rework rate')).getByText('0 of 3 new tickets sent back'),
-    ).toBeInTheDocument();
   });
 
   it('does not draw spend as zeros when no run reported a cost', async () => {
     renderWork(
       HOME,
-      routes(statsBody({ cost_coverage: { runs_total: 4, runs_with_cost: 0 } })),
+      routes(
+        scoped({
+          cost_coverage: { runs_total: 4, runs_with_cost: 0 },
+          spend_by_harness: [],
+          spend_by_lane: [],
+        }),
+      ),
     );
 
     expect(
-      await screen.findByText('No run reported a cost in this range.'),
-    ).toBeInTheDocument();
+      (await screen.findAllByText('No run reported a cost in this range.')).length,
+    ).toBeGreaterThan(0);
 
-    expect(screen.getAllByText('no cost reported').length).toBeGreaterThan(0);
-    expect(within(tile('Cost coverage')).getByText('0 of 4')).toBeInTheDocument();
-  });
+    const kpis = screen.getByRole('region', { name: 'Key figures' });
 
-  it('gives each graph a name, a summary and a data table', async () => {
-    renderWork(HOME, routes());
-
-    const chart = await screen.findByRole('img', { name: /Tickets done per day/ });
-
-    expect(chart).toHaveAccessibleDescription(/30 days from .* Total 2, peak 2/);
     expect(
-      screen.getByRole('table', { name: 'Tickets done per day per day' }),
+      within(within(kpis).getByText('Spend').closest('div') as HTMLElement).getByText(
+        'No data',
+      ),
     ).toBeInTheDocument();
   });
 
-  it('asks the server for the new range when the switch changes', async () => {
-    const user = userEvent.setup();
-    const { stub } = renderWork(HOME, routes());
-    await screen.findByLabelText('Project readout');
+  it('says there are no figures when the Overview does not know the project', async () => {
+    renderWork(HOME, routes(scoped({ projects_included: [], projects: [] })));
 
-    expect(stub.callsTo(STATS)[0]?.path).toContain('range=30d');
-
-    await user.click(
-      within(screen.getByRole('group', { name: 'Range' })).getByRole('button', {
-        name: '7d',
-      }),
-    );
-
-    await waitFor(() =>
-      expect(stub.callsTo(STATS).some((c) => c.path.includes('range=7d'))).toBe(true),
-    );
-
-    expect(screen.getByRole('button', { name: '7d' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    expect(await screen.findByText('No figures for this project')).toBeInTheDocument();
+    expect(await screen.findByRole('list', { name: 'In progress' })).toBeInTheDocument();
   });
 
-  it('says what went wrong when the stats call fails, and keeps the rest of Home', async () => {
+  it('says what went wrong when the figures call fails, and keeps the rest of Home', async () => {
     renderWork(HOME, {
       ...routes(),
-      [STATS]: {
+      [OVERVIEW]: {
         status: 500,
         body: { error: { code: 'boom', message: 'stats exploded' } },
       },
@@ -188,24 +220,5 @@ describe('Home', () => {
 
     expect(await screen.findByText('stats exploded')).toBeInTheDocument();
     expect(await screen.findByRole('list', { name: 'In progress' })).toBeInTheDocument();
-  });
-});
-
-describe('Home: starting work', () => {
-  it('has a New card button and no Ask the Director box', async () => {
-    renderWork(HOME, routes());
-
-    expect(await screen.findByRole('button', { name: 'New card' })).toBeEnabled();
-    expect(screen.queryByLabelText('Ask the Director')).not.toBeInTheDocument();
-    expect(screen.queryByText('Ask the Director')).not.toBeInTheDocument();
-  });
-
-  it('opens the New card popup from the button', async () => {
-    const user = userEvent.setup();
-    renderWork(HOME, routes());
-
-    await user.click(await screen.findByRole('button', { name: 'New card' }));
-
-    expect(await screen.findByRole('dialog', { name: 'New card' })).toBeInTheDocument();
   });
 });

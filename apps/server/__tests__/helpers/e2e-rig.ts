@@ -24,7 +24,7 @@ import { KNOWN_GOOD_BUILDS } from '@forge/drivers';
 import { createMemorySecretStore } from '@forge/secrets';
 import { assembleServer } from '#/services/assemble.js';
 import { bearer, readInstallToken } from '#tests/helpers/install-token.js';
-import type { ForgeServer, ServerAddress } from '#/types/server.types.js';
+import type { ExternalPorts, ForgeServer, ServerAddress } from '#/types/server.types.js';
 import type { ServerSettings } from '#/types/settings.types.js';
 import { createFixtureRepo, fixtureProjectBody } from '#tests/helpers/fixture-repo.js';
 import type { FixtureRepo } from '#tests/helpers/fixture-repo.js';
@@ -72,6 +72,10 @@ export interface E2eOptions {
   readonly register?: (fixture: FixtureRepo) => Record<string, unknown>;
   /** Saves `engine.shutdown_drain_ms` as a company setting before the first request (a restart keeps it). */
   readonly drainMs?: number;
+  /** The Director's model instead of the scripted Express one (a factory receives the trace callback). */
+  readonly llm?: ExternalPorts['llm'];
+  /** Extra environment variables for the server, such as `FORGE_TRACE`. */
+  readonly env?: Record<string, string>;
 }
 
 /**
@@ -116,6 +120,7 @@ export async function startE2eRig(
         FORGE_HOME: fixture.dataHome,
         FORGE_PORT: '0',
         NODE_ENV: 'test',
+        ...options.env,
       },
       fixture.root,
     );
@@ -129,7 +134,7 @@ export async function startE2eRig(
 
     server = await assembleServer(settings, {
       secrets,
-      llm: director.llm,
+      llm: options.llm ?? director.llm,
       // The fake worker's harness is a build the release shipped as verified, so its native
       // tools are approved at start-up and nothing is checked (d-0088).
       compat: {

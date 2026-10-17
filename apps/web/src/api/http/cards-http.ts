@@ -127,6 +127,10 @@ export function createCardsHttp(client: HttpClientOptions): CardsApi {
       requestJson(client, `/cards/${enc(id)}/start-planning`, Ignored, {
         method: 'POST',
       }),
+    retryPlanningStep: (id) =>
+      requestJson(client, `/cards/${enc(id)}/planning/retry`, Ignored, {
+        method: 'POST',
+      }),
     runAsExpress: (ticketId) =>
       requestJson(client, `/tickets/${enc(ticketId)}/run-as-express`, Ignored, {
         method: 'POST',

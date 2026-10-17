@@ -97,6 +97,8 @@ export const NEEDS_YOU_ACTIONS = [
   'request_changes',
   'start_planning',
   'run_as_express',
+  'raise_step_budget',
+  'retry_step',
 ] as const;
 const NeedsYouPayload = z
   .object({

@@ -11,7 +11,8 @@
  *   restart resumes at the right step. The phase moves only through `transitionCard()`. Cards of
  *   a Discussion type, or whose type files tickets at intake, never enter the flow (they chat).
  *   An owner's chat message during planning answers the open question rather than starting a
- *   second conversation. A step that fails is retried after its queued turn goes stale.
+ *   second conversation. A step that fails is retried after its queued turn goes stale, except
+ *   a step over its budget, which asks the owner to raise the cap or retry (never a silent loop).
  *
  * Exports: planningHandles(), runPlanningTurn().
  * Depends on: @forge/core (flow cursor, queue items), tick/planning-*, tick/plan-to-tickets,
@@ -218,6 +219,10 @@ async function runFlow(ctx: EngineCtx, cardId: CardId): Promise<FlowEnd> {
     if (outcome === 'stop') {
       return 'failed';
     }
+
+    if (outcome === 'blocked') {
+      return 'blocked';
+    }
   }
 
   return 'done';
@@ -226,7 +231,8 @@ async function runFlow(ctx: EngineCtx, cardId: CardId): Promise<FlowEnd> {
 /**
  * Runs one planning turn for a card: snapshots the flow on first contact, absorbs the owner's
  * chat messages, then walks the flow. `retry` means a step failed: the caller leaves the queued
- * turns claimed so they are taken again once the claim goes stale.
+ * turns claimed so they are taken again once the claim goes stale. A step blocked on its budget
+ * is `done`: the card already waits on the owner (Needs you), whose Retry queues a fresh turn.
  */
 export async function runPlanningTurn(
   ctx: EngineCtx,
@@ -245,6 +251,7 @@ export async function runPlanningTurn(
 
   const end = await runFlow(ctx, cardId);
 
+  // A blocked step is not retried by itself: the same cap would fail the same way.
   return end === 'failed' ? 'retry' : 'done';
 }
 

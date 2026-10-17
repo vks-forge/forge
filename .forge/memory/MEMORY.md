@@ -75,6 +75,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0157 — Archived projects listed under "Archived" in the switcher; Unarchive from switcher + project settings; archived opens read-only
 - d-0160 — (supersedes d-0158 hold) Card-first flow build RESUMED autonomously (S1 → S6), one commit+push per slice
 - d-0162 — Overview dashboard (d-0159) GO: build autonomously after card-first work
+- d-0163 — Debug trace log: everything (cards, chats, Director steps full prompt/output, Worker events) to JSONL files per day + per card, secrets redacted, on/off by env var
 - d-0159 — `/` = cross-project Overview dashboard (KPIs, charts by day/week/month, projects table, cost); amends d-0104; brief docs/briefs/forge-overview-dashboard.md
 - d-0122 — Web UI state in zustand + persist (localStorage), UI prefs/drafts only; server data stays in TanStack Query; never tokens/secrets
 - d-0123 — Web uses the real server API only: mock adapter/fixtures/switches removed; missing backends built with their screen; tests stub fetch in __tests__ only
@@ -176,7 +177,6 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - r-0007 — Self-hosted CI runner (no spare machine; work PC would slow down again)
 
 ## Approved proposals (now in `decisions/`, author=director, approved 2026-10-12)
-
 - x-0001 — Claude Code first `WorkerDriver`, then Codex, OpenCode, Pi, ACP
 - x-0002 — Own dispatch layer; lift specific Paperclip code only
 - x-0003 — Monorepo layout in `control-room-and-platform.md` §1
@@ -187,7 +187,6 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - x-0010 — Project slug `forge`, ticket prefix `FG`, memory dir `.forge/memory/forge/` (approved 2026-10-13 via d-0043)
 
 ## Pending proposals (need user approve / reject)
-
 - x-0011 — Agents (`.forge/agents/*.yaml`) and per-lane pipelines (`.forge/pipelines/*.yaml`) as config; engine = generic stage runner; fixed invariants (grill paused 2026-10-14 after Q16; decisions d-0065..d-0081; more discussion before the brief)
 - x-0012 — Director project context + live code graph (index of cards/tickets/runs/memory + incrementally updated code graph, read via tools) — to grill
 - x-0013 — Memory in the database with exact + relevance search (FTS first), tools instead of loading all files; reopens part of r-0001; needs research
@@ -195,4 +194,4 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 
 ## Outcomes
 - Older outcome pointers (2026-10-12 – 2026-10-16 overnight): `outcomes/ARCHIVE.md`
-- 2026-10-17 — Card-first S1–S4a + Overview dashboard (S4a built, uncommitted: suite stopped for low memory): `outcomes/2026-10/2026-10-17-card-first-s1-s4a-and-overview.md`
+- 2026-10-17 — Card-first S1–S4a + Overview dashboard (all committed, CI green): `outcomes/2026-10/2026-10-17-card-first-s1-s4a-and-overview.md`

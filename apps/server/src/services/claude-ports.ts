@@ -82,6 +82,7 @@ export function createClaudePorts(settings: ServerSettings, log: Logger): Extern
         claudeBinary,
         harness: wiring.harness,
         secrets: wiring.secrets,
+        ...(wiring.onTrace ? { onTrace: wiring.onTrace } : {}),
       }),
     harnessTest: (setup, live, secrets) =>
       testClaudeHarness(

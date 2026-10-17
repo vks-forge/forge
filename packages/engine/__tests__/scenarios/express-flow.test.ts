@@ -89,7 +89,7 @@ describe('Express flow', () => {
     await rig.tick();
     const [triage] = rig.llm.callsTo('triage');
     const [prompt] = rig.llm.callsTo('dispatch_prompt');
-    expect(triage!.opts).toEqual({ model: 'opus', budgetUsd: 0.5 });
+    expect(triage!.opts).toEqual({ model: 'opus', budgetUsd: 2 });
     expect(prompt!.opts.model).toBe('opus');
     expect(JSON.stringify(triage!.input)).toContain('d-0001');
     expect(JSON.stringify(prompt!.input)).toContain('r-0001');

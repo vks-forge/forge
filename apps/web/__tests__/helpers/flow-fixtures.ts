@@ -176,6 +176,7 @@ export function flowRoutes(options: FlowRoutesOptions = {}): Routes {
     'POST /cards/:id/plan/request-changes': answer('request_changes'),
     'PATCH /cards/:id/plan/:version/tickets': answer('edit_tickets'),
     'POST /cards/:id/start-planning': answer('start_planning'),
+    'POST /cards/:id/planning/retry': answer('retry_step'),
     'POST /tickets/:id/run-as-express': answer('run_as_express'),
   };
 }

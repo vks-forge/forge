@@ -228,6 +228,12 @@ export function createRouter(
       try {
         await handle(req, res);
       } catch (error) {
+        try {
+          options.onError?.(error, req);
+        } catch {
+          // An observer must never change the response.
+        }
+
         // A request body we refused to read must not keep the connection alive.
         if (!res.headersSent) {
           res.setHeader('connection', 'close');

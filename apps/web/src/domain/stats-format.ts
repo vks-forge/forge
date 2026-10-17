@@ -17,6 +17,7 @@ import type { StatsRange } from '@forge/core';
 export const RANGES: readonly StatsRange[] = ['7d', '30d', '90d'];
 
 const RANGE_WORDS: Readonly<Record<StatsRange, string>> = {
+  today: 'today',
   '7d': 'last 7 days',
   '30d': 'last 30 days',
   '90d': 'last 90 days',

@@ -8,30 +8,58 @@
  *   harness is added (d-0087).
  *
  * Exports: composeWorker().
- * Depends on: @forge/core, @forge/engine (Logger), services/driver-registry, types/server.
+ * Depends on: @forge/core, @forge/engine (Logger), services/driver-registry, services/trace/trace-llm,
+ *   types/server. With a trace sink the Director's model is wrapped so every step is logged (d-0163).
  *   IO: the driver's preflight.
  */
 
-import type { DirectorLLM, WorkerDriver } from '@forge/core';
+import type { DirectorLLM, TraceSink, WorkerDriver } from '@forge/core';
 import type { Logger } from '@forge/engine';
 import { createDriverRegistry } from '#/services/driver-registry.js';
-import type { DriverFactoryDeps, ExternalPorts } from '#/types/server.types.js';
+import { traceDirectorLLM } from '#/services/trace/trace-llm.js';
+import type {
+  DriverFactoryDeps,
+  ExternalPorts,
+  LlmWiring,
+} from '#/types/server.types.js';
 
 /** The driver, the model port and the registry of installed drivers; logs preflight issues. */
 export async function composeWorker(
   ports: ExternalPorts,
   deps: DriverFactoryDeps,
   log: Logger,
+  trace?: TraceSink,
 ): Promise<{
   driver: WorkerDriver;
   llm: DirectorLLM;
   drivers: ReturnType<typeof createDriverRegistry>;
 }> {
   const driver = ports.driver(deps);
-  const llm =
+  // The driver reports prompts and raw output through `onTrace` while it is being built, but the
+  // decorator that receives them needs the finished model, so the callback is bound afterwards.
+  let report: (t: Parameters<NonNullable<LlmWiring['onTrace']>>[0]) => void = () =>
+    undefined;
+
+  const built =
     typeof ports.llm === 'function'
-      ? ports.llm({ harness: deps.harness, secrets: deps.secrets })
+      ? ports.llm({
+          harness: deps.harness,
+          secrets: deps.secrets,
+          ...(trace ? { onTrace: (t) => report(t) } : {}),
+        })
       : ports.llm;
+
+  let llm = built;
+  if (trace) {
+    const traced = traceDirectorLLM(built, {
+      trace,
+      harness: driver.id,
+      now: () => Date.now(),
+    });
+
+    report = traced.onTrace;
+    llm = traced.llm;
+  }
 
   const preflight = await driver.preflight();
   if (!preflight.ok) {

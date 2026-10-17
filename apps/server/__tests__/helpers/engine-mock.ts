@@ -31,6 +31,7 @@ export function makeEngineMock(): EngineMock {
     requestPlanChanges: vi.fn(),
     editPlanTickets: vi.fn(),
     startPlanning: vi.fn(),
+    retryPlanningStep: vi.fn(),
     runAsExpress: vi.fn(),
     cardPlans: vi.fn(),
     cardPlan: vi.fn(),

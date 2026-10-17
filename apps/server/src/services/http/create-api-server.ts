@@ -10,7 +10,7 @@
  *
  * Exports: createApiServer().
  * Depends on: node:http, config/entrypoints, routes/routes, services/http/{host-policy,router,
- *   static-ui}, types/{auth,http,routes}. IO: none until it listens.
+ *   static-ui}, services/trace/http-trace, types/{auth,http,routes}. IO: none until it listens.
  */
 
 import { createServer } from 'node:http';
@@ -20,6 +20,7 @@ import { buildRoutes } from '#/routes/routes.js';
 import { createHostPolicy } from '#/services/http/host-policy.js';
 import { createRouter } from '#/services/http/router.js';
 import { createStaticUi } from '#/services/http/static-ui.js';
+import { beginHttpTrace, traceRouterError } from '#/services/trace/http-trace.js';
 import type { Auth } from '#/types/auth.types.js';
 import type { ApiServerOptions } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
@@ -40,9 +41,16 @@ export function createApiServer(
   const router = createRouter(buildRoutes(deps), auth.guard, {
     host: createHostPolicy(options.port),
     ...(webRoot ? { ui: createStaticUi(webRoot) } : {}),
+    ...(options.trace
+      ? { onError: (error, req) => traceRouterError({ trace: options.trace! }, error, req) }
+      : {}),
   });
 
   return createServer((req, res) => {
+    if (options.trace) {
+      beginHttpTrace({ trace: options.trace, now: Date.now }, req, res);
+    }
+
     void router.dispatch(req, res);
   });
 }

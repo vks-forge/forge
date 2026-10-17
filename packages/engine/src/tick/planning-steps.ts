@@ -54,14 +54,14 @@ import type {
   StepOutcome,
 } from '#/types/card-planning.types.js';
 
-/** The read-round loop of survey and verify; null when the step failed (already reported on the card). */
+/** The read-round loop of survey and verify; the failing outcome when the step failed (already reported on the card). */
 async function readStep<F>(
   pc: PlanCtx,
   planning: CardPlanningState,
   step: FlowStep,
   name: Extract<StepName, 'card_survey' | 'verify'>,
   schema: ZodType<ReadOutput<F>>,
-): Promise<ReadStepResult<F> | null> {
+): Promise<ReadStepResult<F> | 'stop' | 'blocked'> {
   const caps = pc.director.read_caps;
   const budget: ReadBudget = {
     filesLeft: caps.max_files,
@@ -83,7 +83,7 @@ async function readStep<F>(
     const call = await callStep(pc, step, name, schema, input);
     cost += call.cost;
     if (!call.ok) {
-      return null;
+      return call.outcome;
     }
 
     const out = call.value;
@@ -105,7 +105,7 @@ async function readStep<F>(
 
   await failedWithReads(pc, step, name);
 
-  return null;
+  return 'stop';
 }
 
 /** The step kept asking for reads after its last round: the answer is unusable, reported like any rejected step. */
@@ -163,8 +163,8 @@ export async function surveyStep(
     CardSurveyOutput,
   );
 
-  if (!r) {
-    return 'stop';
+  if (typeof r === 'string') {
+    return r;
   }
 
   const lane = predictedLane(pc, r.findings);
@@ -193,8 +193,8 @@ export async function verifyStep(
   await enterVerifying(pc);
   await startStep(pc, step);
   const r = await readStep<VerifyFindings>(pc, planning, step, 'verify', VerifyOutput);
-  if (!r) {
-    return 'stop';
+  if (typeof r === 'string') {
+    return r;
   }
 
   const head = await headOf(pc);
@@ -226,7 +226,7 @@ export async function enhanceStep(
   const input = await buildStepInput(pc, planning.grill, step, previous);
   const call = await callStep(pc, step, 'enhance', EnhanceOutput, input);
   if (!call.ok) {
-    return 'stop';
+    return call.outcome;
   }
 
   const out = call.value;
@@ -262,7 +262,7 @@ export async function customStep(
   const input = await buildStepInput(pc, planning.grill, step, null);
   const call = await callStep(pc, step, 'custom_step', CustomStepOutput, input);
   if (!call.ok) {
-    return 'stop';
+    return call.outcome;
   }
 
   const out = call.value;

@@ -18,6 +18,7 @@ import {
   bucketLabel,
   coverageSentence,
   spendChange,
+  totalSpend,
   stackedSpend,
 } from '#/domain/overview-view.js';
 
@@ -26,6 +27,35 @@ describe('bucketLabel', () => {
     expect(bucketLabel('2026-10-04', 'day', 'en-US')).toBe('Oct 4');
     expect(bucketLabel('2026-10-12', 'week', 'en-US')).toBe('Week of Oct 12');
     expect(bucketLabel('2026-10-01', 'month', 'en-US')).toBe('Oct 2026');
+  });
+});
+
+describe('bucketLabel by the hour', () => {
+  it('shows the start of the hour as a 24-hour clock time in the viewer zone', () => {
+    expect(bucketLabel('2026-10-16T14:00:00.000Z', 'hour', 'en-US', 'UTC')).toBe('14:00');
+    expect(bucketLabel('2026-10-16T08:30:00.000Z', 'hour', 'en-US', 'Asia/Kolkata')).toBe(
+      '14:00',
+    );
+  });
+});
+
+describe('spendChange for Today', () => {
+  it('names yesterday so far instead of the previous period', () => {
+    expect(spendChange(12, 10, true)).toBe('+20% vs yesterday so far');
+    expect(spendChange(10, 10, true)).toBe('Same as yesterday so far');
+    expect(spendChange(3, 0, true)).toBe('No spend yesterday so far');
+  });
+});
+
+describe('totalSpend', () => {
+  it('sums the projects bucket by bucket into one series', () => {
+    const [series] = totalSpend([
+      { project: 'a', values: [1, 0, 2] },
+      { project: 'b', values: [0.5, 0, 1] },
+    ]);
+
+    expect(series?.values).toEqual([1.5, 0, 3]);
+    expect(totalSpend([])[0]?.values).toEqual([]);
   });
 });
 

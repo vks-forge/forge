@@ -209,4 +209,18 @@ describe('the planning flow', () => {
 
     expect(screen.getByRole('button', { name: 'Save as version 3' })).toBeDisabled();
   });
+
+  it('leaves no tooltip behind after a move button reorders the row under the pointer', async () => {
+    const user = userEvent.setup();
+    renderSettings('/settings/director');
+    await screen.findByText('Planning flow');
+    const down = screen.getByRole('button', { name: 'Move Survey the code down' });
+    await user.hover(down);
+    await screen.findByRole('tooltip');
+
+    await user.click(down);
+    await user.pointer({ target: document.body });
+
+    expect(screen.queryByRole('tooltip')).toBeNull();
+  });
 });

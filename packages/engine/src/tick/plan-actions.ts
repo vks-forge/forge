@@ -1,5 +1,5 @@
 /**
- * Plan actions: request changes, edit tickets, start planning, and read the plan.
+ * Plan actions: request changes, start planning, retry a stopped step.
  *
  * Why: the owner stays in charge of every plan (d-0133). Request changes sends a ready plan back
  *   for a re-grill on the comment only, then the next version with a computed diff; Start planning
@@ -8,7 +8,10 @@
  *   only (an older one is `stale_plan`), so two tabs or a late click cannot act on a plan already
  *   replaced. Each queues the Director's next turn in the same transaction, so a restart loses nothing.
  *
- * Exports: grillIndex(), requestPlanChanges(), startPlanning().
+ *   Retry step is the way out of a Director step that ran out of its budget: the card waits on the
+ *   owner with the step unfinished, and the retry queues the turn that resumes at that same step.
+ *
+ * Exports: grillIndex(), requestPlanChanges(), startPlanning(), retryPlanningStep().
  * Depends on: @forge/core (flow and card types), tick/planning-state, tick/card-phase, tick/card-log,
  *   tick/card-notify, tick/tick-requests, types/card-planning. Writes storage.
  */
@@ -23,6 +26,7 @@ import { isPlannedType, logPlanEvent, setNeedsYou } from '#/tick/planning-state.
 import { requestTick } from '#/tick/tick-requests.js';
 import type {
   RequestChangesResult,
+  RetryPlanningResult,
   StartPlanningResult,
 } from '#/types/card-planning.types.js';
 import type { EngineState } from '#/types/engine-state.types.js';
@@ -180,6 +184,63 @@ export async function startPlanning(
   );
 
   if (result.status === 'started') {
+    requestTick(deps, state);
+    await notifyCard(deps, id.data);
+  }
+
+  return result;
+}
+
+/**
+ * `POST /cards/:id/planning/retry`: re-runs the planning step that stopped on its budget. Only a
+ * card still being shaped that waits on the owner (and has a flow, so a step has run) may retry;
+ * the turn resumes at the stored cursor, which a failed step never advanced.
+ */
+export async function retryPlanningStep(
+  deps: EngineDeps,
+  state: EngineState,
+  cardId: string,
+  author: string,
+): Promise<RetryPlanningResult> {
+  const id = CardId.safeParse(cardId);
+  if (!id.success) {
+    return { status: 'not_found' };
+  }
+
+  const at = iso(deps.clock.now());
+  const result = await deps.storage.transaction(
+    async (tx): Promise<RetryPlanningResult> => {
+      const card = await tx.cards.get(id.data);
+      if (!card) {
+        return { status: 'not_found' };
+      }
+
+      const planning = await tx.cardPlanning.get(card.id);
+      const events = await tx.cardEvents.list(card.id, { order: 'desc', limit: 20 });
+      const stopped = events.find((e) => e.kind === 'needs_you');
+      const budgetStop =
+        stopped?.kind === 'needs_you' && stopped.payload.actions.includes('retry_step');
+
+      const shaping = card.phase === 'grilling' || card.phase === 'verifying';
+      if (!shaping || !card.needs_you || planning.flow === null || !budgetStop) {
+        return { status: 'phase_mismatch' };
+      }
+
+      await setNeedsYou(tx, card.id, false, at);
+      await logPlanEvent(tx, card.id, at, {
+        kind: 'note',
+        payload: { text: `Step retried by ${author}.` },
+      });
+
+      const last = (await tx.cardEvents.list(card.id, { order: 'desc', limit: 1 }))[0];
+      // `start_planning` is the queue's plain "run the flow now" wake; the cursor decides the step.
+      await wake(state, card.id, tx, last?.seq ?? 0, 'start_planning', at);
+
+      return { status: 'retried', card: (await tx.cards.get(card.id)) ?? card };
+    },
+  );
+
+  if (result.status === 'retried') {
     requestTick(deps, state);
     await notifyCard(deps, id.data);
   }

@@ -158,6 +158,39 @@ describe('POST /cards/:id/start-planning', () => {
   });
 });
 
+describe('POST /cards/:id/planning/retry', () => {
+  const post = () => ctx.rig.json('POST', `/cards/${card.id}/planning/retry`);
+
+  it('retries the stopped step and answers the card', async () => {
+    mock['retryPlanningStep']!.mockResolvedValue({ status: 'retried', card });
+
+    const res = await post();
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ card: { id: card.id } });
+    expect(mock['retryPlanningStep']).toHaveBeenCalledWith(card.id, 'owner');
+  });
+
+  it.each([
+    [{ status: 'phase_mismatch' }, 409, 'phase_mismatch'],
+    [{ status: 'not_found' }, 404, 'card_not_found'],
+  ])('maps %j to %i %s', async (outcome, status, code) => {
+    mock['retryPlanningStep']!.mockResolvedValue(outcome);
+
+    const res = await post();
+
+    expect(res.status).toBe(status);
+    expect(errorOf(res).code).toBe(code);
+  });
+
+  it('rejects a malformed card id before calling the engine', async () => {
+    const res = await ctx.rig.json('POST', '/cards/nope/planning/retry');
+
+    expect(res.status).toBe(400);
+    expect(mock['retryPlanningStep']).not.toHaveBeenCalled();
+  });
+});
+
 describe('POST /tickets/:id/run-as-express', () => {
   const post = (id = 'FX-1') => ctx.rig.json('POST', `/tickets/${id}/run-as-express`);
 

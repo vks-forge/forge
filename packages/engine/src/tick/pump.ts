@@ -10,7 +10,8 @@
  *   never decides anything, the tick settles the run once the pump says it is done.
  *
  * Exports: startPump(), pumpResult().
- * Depends on: @forge/core (RunEvent, WorkerDriver port), tick/tick-requests, shared/time.
+ * Depends on: @forge/core (RunEvent, WorkerDriver port), tick/tick-requests, shared/{time,trace}.
+ *   Every event and the final result also go to the debug trace sink (d-0163), the one place run events enter the engine.
  */
 
 import type {
@@ -22,6 +23,7 @@ import type {
 } from '@forge/core';
 import { failureResult, familyOf } from '#/domain/results.js';
 import { iso } from '#/shared/time.js';
+import { emitTrace } from '#/shared/trace.js';
 import { requestTick } from '#/tick/tick-requests.js';
 import type { EngineState, Pump } from '#/types/engine-state.types.js';
 import type { EngineDeps } from '#/types/engine.types.js';
@@ -30,6 +32,16 @@ async function record(deps: EngineDeps, pump: Pump, event: RunEvent): Promise<vo
   if (event.type === 'ask') {
     pump.asks.set(event.interaction_id, { kind: event.kind, prompt: event.prompt });
   }
+
+  // The full normalised event, as the engine receives it, before storage touches it (d-0163).
+  emitTrace(deps, {
+    level: 'debug',
+    kind: 'run_event',
+    run_id: pump.runId,
+    actor: 'worker',
+    message: `${event.type}${'tool' in event && typeof event.tool === 'string' ? ` ${event.tool}` : ''}`,
+    data: event,
+  });
 
   const { seq: _seq, ...rest } = event;
   void _seq;
@@ -78,8 +90,24 @@ export function startPump(
       }
 
       pump.result = await driver.result(handle);
+      emitTrace(deps, {
+        level: 'info',
+        kind: 'run',
+        run_id: runId,
+        actor: 'worker',
+        message: `run result ${pump.result.status}`,
+        data: pump.result,
+      });
     } catch (e) {
       pump.error = e;
+      emitTrace(deps, {
+        level: 'error',
+        kind: 'run',
+        run_id: runId,
+        actor: 'worker',
+        message: 'run stream failed',
+        data: { error: String(e), family: familyOf(e) },
+      });
     } finally {
       pump.done = true;
       requestTick(deps, state);

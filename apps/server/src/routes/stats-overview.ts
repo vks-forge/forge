@@ -3,10 +3,12 @@
  *
  * Why: an owner running several projects needs one answer to "how is all the work going, what
  *   waits on me, what does it cost". The route reads each chosen project's rows, hands them to
- *   core's pure `computeOverviewStats` and returns the sums bucketed by day, week or month.
+ *   core's pure `computeOverviewStats` and returns the sums bucketed by hour, day, week or month.
  *   Nothing is stored: like Home and Cost it is computed on request, so it cannot drift from
- *   the board. `range` is 7d, 30d, 90d, 12m or all (default 30d) and `group` day, week or
- *   month (default follows the range); anything else is a 400. `projects` is a comma list of
+ *   the board. `range` is today, 7d, 30d, 90d, 12m or all (default 30d) and `group` hour,
+ *   day, week or month (default follows the range); anything else is a 400, and so is an hour
+ *   group on any range but today (or today on any group but hour). Today runs from the server's
+ *   local midnight to now, cut into local hours, so the offset is read from the server clock. `projects` is a comma list of
  *   slugs: unregistered ones are ignored and named in `unknown`, so a typo never looks like a
  *   quiet project. Without it every open project is included; `archived=1` adds archived
  *   ones. Naming an archived slug includes it whatever the flag says.
@@ -47,6 +49,8 @@ export function statsOverviewRoutes(deps: RouteDeps): Route[] {
 
         const query = parsed.data;
         const nowMs = deps.now();
+        // Minutes east of UTC on the server's clock at this moment; `today` starts at its midnight.
+        const utcOffsetMinutes = -new Date(nowMs).getTimezoneOffset();
         const known = await deps.storage.transaction((tx) => tx.projects.list());
         const bySlug = new Map(known.map((p) => [p.slug, p]));
         const chosen =
@@ -63,7 +67,7 @@ export function statsOverviewRoutes(deps: RouteDeps): Route[] {
           memory.set(p.slug, await deps.memory.reader.list(p.slug));
         }
 
-        const since = overviewRunsSince(query.range, nowMs);
+        const since = overviewRunsSince(query.range, nowMs, utcOffsetMinutes);
         const projects = await deps.storage.transaction(async (tx) => {
           const rows = [];
           for (const p of chosen) {
@@ -89,6 +93,7 @@ export function statsOverviewRoutes(deps: RouteDeps): Route[] {
             range: query.range,
             group: query.group ?? defaultGroup(query.range),
             nowMs,
+            utcOffsetMinutes,
             projects,
             unknown: query.projects.filter((slug) => !bySlug.has(slug)),
           }),
