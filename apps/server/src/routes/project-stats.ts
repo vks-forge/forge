@@ -1,16 +1,16 @@
 /**
- * `GET /projects/:slug/stats` and `GET /projects/:slug/cost`: the numbers behind Home and Cost.
+ * `GET /projects/:slug/cost`: the numbers behind the Cost page.
  *
- * Why: Home shows how one project is doing (d-0104) and Cost shows where its money went. Both
- *   are computed on request from tickets, runs and gate verdicts already stored, so they can
- *   never drift from the board and need no new tables. Spend is only what runs recorded: the
+ * Why: Cost shows where a project's money went. It is computed on request from the runs already
+ *   stored, so it can never drift from the board and needs no new tables. The per-project stats
+ *   route was removed (d-0166): the overview dashboard replaced Home's figures. Spend is only what runs recorded: the
  *   responses say how many runs carried a cost rather than guessing the rest. `range` is 7d,
  *   30d or 90d (default 30d); anything else is a 400, an unregistered slug is a 404. The two
  *   ranked cost tables (tickets, runs) page independently with `ticket_limit` / `ticket_offset`
  *   and `run_limit` / `run_offset` (limit 1..100, default 50 = the report's old top 50); the
  *   report's `by_ticket_total` and `by_run_total` count every row of the window.
  *
- * Exports: projectStatsRoutes().
+ * Exports: projectStatsRoutes() (now only the cost route).
  * Depends on: @forge/core (stats and cost rules and schemas), services/collect-pages,
  *   services/find-project, services/http/*, types/routes. IO: reads storage and settings.
  */
@@ -19,10 +19,8 @@ import {
   CostPageQuery,
   StatsRangeQuery,
   computeCostReport,
-  computeProjectStats,
   statsWindow,
 } from '@forge/core';
-import type { GateResult } from '@forge/core';
 import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
 import { collectRuns, collectTickets } from '#/services/collect-pages.js';
@@ -59,41 +57,6 @@ function costPageOf(params: URLSearchParams) {
 
 export function projectStatsRoutes(deps: RouteDeps): Route[] {
   return [
-    {
-      method: 'GET',
-      path: '/projects/:slug/stats',
-      async handle({ res, params, url }) {
-        const range = rangeOf(url.searchParams);
-        const nowMs = deps.now();
-
-        const stats = await deps.storage.transaction(async (tx) => {
-          const project = await findProject(tx, params['slug'] ?? '');
-          const { from } = statsWindow(range, nowMs);
-          const runs = await collectRuns(tx, { project: project.id, since: from });
-          const active = await collectRuns(tx, {
-            project: project.id,
-            statuses: ['starting', 'running'],
-          });
-
-          const gates: GateResult[] = [];
-          for (const ticketId of new Set(runs.map((r) => r.ticket_id))) {
-            gates.push(...(await tx.gateResults.listByTicket(ticketId)));
-          }
-
-          return computeProjectStats({
-            project: project.slug,
-            range,
-            nowMs,
-            tickets: await collectTickets(tx, project.id),
-            runs,
-            gates,
-            activeRuns: active.length,
-          });
-        });
-
-        sendJson(res, 200, stats);
-      },
-    },
     {
       method: 'GET',
       path: '/projects/:slug/cost',

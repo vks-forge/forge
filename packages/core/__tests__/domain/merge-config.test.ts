@@ -42,13 +42,22 @@ describe('Director step budget default', () => {
 
 describe('built-in defaults', () => {
   it('equal what .forge/config/forge.yaml parses to', () => {
-    const { director: _director, agents: _agents, ...builtin } = BUILTIN_FORGE_CONFIG;
+    const {
+      director: _director,
+      agents: _agents,
+      pipelines: _pipelines,
+      ...builtin
+    } = BUILTIN_FORGE_CONFIG;
+
     void _director;
     void _agents;
+    void _pipelines;
 
-    // `director` (d-0150) and `agents` are built in only; the yaml carries models and engine.
+    // `director` (d-0150), `agents` and `pipelines` are built in only; the yaml carries models and engine.
     expect(builtin).toEqual(
-      ForgeConfig.omit({ director: true, agents: true }).parse(yamlConfig()),
+      ForgeConfig.omit({ director: true, agents: true, pipelines: true }).parse(
+        yamlConfig(),
+      ),
     );
   });
 

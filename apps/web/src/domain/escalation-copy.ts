@@ -33,6 +33,8 @@ export const ACTION_LABEL: Readonly<Record<EscalationAction, string>> = {
   recheck: 'I fixed it, check again',
   approve: 'Approve and merge',
   sign_off: 'Sign off and merge',
+  // Settled by the engine when a held lane goes live; shown in history, never as a button.
+  pipeline_ready: 'Lane went live',
 };
 
 const LANE_WORD: Readonly<Record<string, string>> = {

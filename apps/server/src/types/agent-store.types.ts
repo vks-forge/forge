@@ -6,7 +6,7 @@
  *   store asks, the ports the app hands in) are named once so the routes and the services agree,
  *   and so a route test can hand the services fakes.
  *
- * Exports: AgentScope, AgentListing, ScopeState, AgentWriteMeta, AgentState, AgentReadiness, AgentPorts,
+ * Exports: PipelineUse, AgentScope, AgentListing, ScopeState, AgentWriteMeta, AgentState, AgentReadiness, AgentPorts,
  *   AgentStore, AgentDeps, AddAgent, AgentServices.
  * Depends on: @forge/core, @forge/tools (CatalogueStore), schemas/agent-api. Types only.
  */
@@ -20,6 +20,7 @@ import type {
   CompanyOverride,
   ConfigSource,
   ForgeConfig,
+  Lane,
   ProjectAgents,
   ProjectOverride,
   DirectorLLM,
@@ -159,4 +160,10 @@ export interface AgentServices {
   readonly readiness: AgentReadiness;
   readonly test: (body: AgentTestBody) => Promise<AgentTestResult>;
   readonly draft: (body: AgentDraftBody) => Promise<DraftAgentOutput>;
+}
+
+/** What names an agent: the lanes whose pipeline has a stage for it and the routing rules that add it. */
+export interface PipelineUse {
+  readonly lanes: Lane[];
+  readonly rules: string[];
 }

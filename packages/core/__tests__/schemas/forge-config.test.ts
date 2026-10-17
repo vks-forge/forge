@@ -18,7 +18,7 @@ import { parse } from 'yaml';
 import { EngineConfig, ForgeConfig, ModelMatrix } from '#/schemas/forge-config.js';
 
 /** The yaml carries the model matrix and engine limits; the `director` section is built in only (d-0150). */
-const YamlConfig = ForgeConfig.omit({ director: true, agents: true });
+const YamlConfig = ForgeConfig.omit({ director: true, agents: true, pipelines: true });
 
 const defaultYaml = (): unknown =>
   parse(

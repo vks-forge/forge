@@ -18,7 +18,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { WifiOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Outlet, useParams } from 'react-router';
+import { Outlet, useLocation, useParams } from 'react-router';
 import { describeError } from '#/api/describe-error.js';
 import {
   settingsKey,
@@ -79,6 +79,18 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
   }
 
   const stale = latest.version.project !== opened.version.project;
+  // Agents save through their own editor (its own versions, reason and conflict banner), so
+  // this tab shows neither the shared save bar nor a conflict about fields it does not hold.
+  const onAgents = useLocation().pathname === `${base}/agents`;
+
+  // An agent save moves the project's version. With nothing edited here there is nothing to
+  // conflict with, so follow the latest instead of showing a banner about no change. (Adjusted
+  // while rendering, not in an effect: it only re-renders this component, once.)
+  if (stale && !dirty && !save.isPending) {
+    setOpened(latest);
+    setDraft(draftFromSnapshot(latest));
+  }
+
   const issues = validateDraft(draft, opened);
   const project = projects.data?.find((p) => p.slug === slug);
   const holdReason = !online
@@ -179,7 +191,7 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
             </ul>
           ) : null}
 
-          {stale ? (
+          {stale && !onAgents ? (
             <ConflictBanner
               opened={opened}
               latest={latest}
@@ -189,19 +201,21 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
 
           <Outlet context={shared} />
 
-          <SaveBar
-            version={opened.version.project}
-            latest={opened.versions.at(-1)}
-            dirty={dirty}
-            reason={reason}
-            onReason={setReason}
-            holdReason={holdReason}
-            saving={save.isPending}
-            saveError={save.isError ? describeError(save.error).detail : null}
-            saved={dirty ? null : saved}
-            onSave={onSave}
-            onDiscard={() => restart(opened)}
-          />
+          {onAgents ? null : (
+            <SaveBar
+              version={opened.version.project}
+              latest={opened.versions.at(-1)}
+              dirty={dirty}
+              reason={reason}
+              onReason={setReason}
+              holdReason={holdReason}
+              saving={save.isPending}
+              saveError={save.isError ? describeError(save.error).detail : null}
+              saved={dirty ? null : saved}
+              onSave={onSave}
+              onDiscard={() => restart(opened)}
+            />
+          )}
         </div>
       </SettingsLayout>
     </div>

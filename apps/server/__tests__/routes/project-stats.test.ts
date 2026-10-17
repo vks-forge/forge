@@ -56,58 +56,6 @@ afterEach(async () => {
   await t.close();
 });
 
-describe('GET /projects/:slug/stats', () => {
-  it('computes the project figures and defaults to 30 days', async () => {
-    const res = await get('/projects/fixture/stats');
-
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({
-      range: '30d',
-      project: 'fixture',
-      tickets_by_state: { done: 1, review: 1, inbox: 0 },
-      active_workers: 1,
-      rework_rate: { hits: 1, total: 2, rate: 0.5 },
-      gate_pass_rate: { hits: 1, total: 1, rate: 1 },
-      cost_coverage: { runs_total: 2, runs_with_cost: 1 },
-    });
-
-    const body = res.body as {
-      throughput: { date: string; value: number }[];
-      spend_per_day: { value: number }[];
-    };
-
-    expect(body.throughput).toHaveLength(30);
-    expect(body.throughput.find((p) => p.date === '2026-10-15')?.value).toBe(1);
-    expect(body.spend_per_day.at(-1)?.value).toBe(2);
-  });
-
-  it('honours the range and rejects an unknown one', async () => {
-    const seven = (await get('/projects/fixture/stats?range=7d')).body as {
-      throughput: unknown[];
-    };
-
-    expect(seven.throughput).toHaveLength(7);
-    expect((await get('/projects/fixture/stats?range=1y')).status).toBe(400);
-  });
-
-  it('keeps projects apart, 404s an unknown one and needs the token', async () => {
-    const other = await get('/projects/other/stats');
-
-    expect(other.body).toMatchObject({
-      tickets_by_state: { done: 1 },
-      cost_coverage: { runs_total: 1 },
-    });
-
-    expect((await get('/projects/nope/stats')).status).toBe(404);
-
-    const open = await t.rig.json('GET', '/projects/fixture/stats', undefined, {
-      authorization: '',
-    });
-
-    expect(open.status).toBe(401);
-  });
-});
-
 describe('GET /projects/:slug/cost', () => {
   it('adds up recorded cost and tokens and returns the budgets settings hold', async () => {
     const res = await get('/projects/fixture/cost?range=7d');

@@ -77,7 +77,8 @@ export interface WakeOutcome {
   readonly wake?: WakeRequest;
 }
 
-export type DispatchKind = 'new' | 'retry' | 'resume';
+/** `stage` starts the next stage of the ticket's pipeline: a writer while in progress, a check while verifying. */
+export type DispatchKind = 'new' | 'retry' | 'resume' | 'stage';
 
 /** A ticket the dispatch phase will try to start, and the wake behind it if any. */
 export interface Candidate {
@@ -134,6 +135,8 @@ export interface SettleOptions {
   readonly parkBuild?: { readonly installed: string | null };
   /** The run's receipts, read before the settle transaction: the receipt log shares the writer lock, so it cannot be read inside it. */
   readonly receipts?: readonly Receipt[] | undefined;
+  /** The worktree's patch against its base, read before the transaction (a git call); kept as an artifact of the writer's stage. */
+  readonly diff?: string | undefined;
 }
 
 /** What differs between one run's start request and another's; the rest comes from the settings. */

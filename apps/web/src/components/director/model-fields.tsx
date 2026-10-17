@@ -6,25 +6,31 @@
  *   name and what the step does. Opus, Sonnet and Haiku cover almost every choice, so they are
  *   one click; any other model name can still be typed because harnesses name models their own
  *   way. A row never shows an empty choice: a step the server did not list yet reads as its
- *   built-in default until the owner picks one.
+ *   built-in default until the owner picks one. The choices are the models the harness
+ *   reports (`GET /agents/runs-on`, the same list the agent editor uses), so a model the build
+ *   adds shows up here too; until that list loads, or when no harness reports any, the
+ *   built-in Opus, Sonnet and Haiku stand in.
  *
  * Exports: ModelFields.
- * Depends on: react, components/settings/form-field, components/ui/picker,
- *   domain/director-settings, schemas/director-config, types/settings-fields.types.
+ * Depends on: react, api/use-agents, components/settings/form-field, components/ui/picker,
+ *   domain/agent-models, domain/director-settings, schemas/director-config,
+ *   types/settings-fields.types.
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useRunsOn } from '#/api/use-agents.js';
 import { TextInput } from '#/components/settings/form-field.js';
 import { Picker } from '#/components/ui/picker.js';
-import { MODEL_CHOICES, STEP_INFO } from '#/domain/director-settings.js';
+import { directorModelChoices } from '#/domain/agent-models.js';
+import { STEP_INFO } from '#/domain/director-settings.js';
 import { STEP_NAMES } from '#/schemas/director-config.js';
 import type { StepName } from '#/schemas/director-config.js';
+import type { PickerItem } from '#/types/picker.types.js';
 import type { FieldErrors } from '#/types/settings-fields.types.js';
-
-const COMMON: ReadonlySet<string> = new Set(['opus', 'sonnet', 'haiku']);
 
 function ModelRow(props: {
   step: StepName;
+  choices: readonly PickerItem[];
   model: string;
   error: string | undefined;
   onChange: (model: string) => void;
@@ -32,7 +38,9 @@ function ModelRow(props: {
   const { step, model } = props;
   const info = STEP_INFO[step];
   const [other, setOther] = useState(false);
-  const typed = other || !COMMON.has(model);
+  const typed =
+    other || !props.choices.some((c) => c.value === model && c.value !== 'custom');
+
   const id = `model-${step}`;
   const problem = model.trim() === '' ? 'Name a model.' : props.error;
 
@@ -48,7 +56,7 @@ function ModelRow(props: {
         id={id}
         aria-labelledby={`${id}-label`}
         aria-describedby={`${id}-hint`}
-        items={MODEL_CHOICES}
+        items={props.choices}
         value={typed ? 'custom' : model}
         error={problem !== undefined}
         onChange={(choice) => {
@@ -88,11 +96,15 @@ export function ModelFields(props: {
   errors: FieldErrors;
   onChange: (step: StepName, model: string) => void;
 }) {
+  const harnesses = useRunsOn();
+  const choices = useMemo(() => directorModelChoices(harnesses.data), [harnesses.data]);
+
   return (
     <div className="grid max-w-3xl gap-5 sm:grid-cols-2">
       {STEP_NAMES.map((step) => (
         <ModelRow
           key={step}
+          choices={choices}
           step={step}
           model={props.models[step] ?? ''}
           error={props.errors[`models.director.${step}`]}

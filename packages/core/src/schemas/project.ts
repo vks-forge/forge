@@ -11,7 +11,7 @@
  *
  * Exports: CheckRole, ProjectCheck, GateRules, GitHostConfig, ToolGrantConfig, ProjectConfigShape, ProjectConfig,
  *   ProjectStatus, Project.
- * Depends on: domain/legacy-project-doc, schemas/agent, schemas/director-config, schemas/ids, schemas/secret-name,
+ * Depends on: domain/legacy-project-doc, schemas/agent, schemas/director-config, schemas/ids, schemas/pipeline, schemas/secret-name,
  *   shared/deep-partial, types/config.types, zod. No IO.
  */
 
@@ -23,6 +23,7 @@ import {
 import { ProjectAgents } from '#/schemas/agent.js';
 import { DirectorConfig } from '#/schemas/director-config.js';
 import { ProjectPrefix } from '#/schemas/ids.js';
+import { ProjectPipelines } from '#/schemas/pipeline.js';
 import { SecretName } from '#/schemas/secret-name.js';
 import { deepPartial } from '#/shared/deep-partial.js';
 import type { DeepPartial } from '#/types/config.types.js';
@@ -192,6 +193,8 @@ export const ProjectConfigShape = z.object({
   director: DirectorOverride.optional(),
   /** This project's own agents, overrides of company agents' instructions and runs_on, and agents switched off here (d-0149). */
   agents: ProjectAgents.optional(),
+  /** This project's own lane pipelines and routing rules; a lane it names replaces the company's whole (d-0151). */
+  pipelines: ProjectPipelines.optional(),
 });
 
 /**

@@ -17,6 +17,7 @@ import {
   Brain,
   CircleDot,
   Cpu,
+  Bot,
   Folder,
   Coins,
   Gauge,
@@ -58,6 +59,7 @@ const ICONS: Readonly<Record<string, LucideIcon>> = {
   harnesses: Cpu,
   github: Plug,
   limits: Gauge,
+  agents: Bot,
   general: Folder,
 };
 

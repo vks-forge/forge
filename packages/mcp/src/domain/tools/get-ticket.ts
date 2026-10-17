@@ -5,14 +5,16 @@
  *   but must not browse the whole backlog; unrelated tickets may hold other projects'
  *   plans or secrets. Access is limited to the run's own ticket, its parent and its
  *   blockers, and only the own ticket carries relations and runs, so a chain of
- *   lookups cannot walk the dependency graph. The answer is plain JSON the model can quote.
+ *   lookups cannot walk the dependency graph. A check agent (reviewer, researcher) gets no `runs`
+ *   at all, so it cannot find the writer's session. The answer is plain JSON the model can quote.
  *
  * Exports: getTicketTool.
- * Depends on: @forge/core, shared/define-tool, schemas/tool-inputs. IO: storage read.
+ * Depends on: @forge/core, domain/check-run, shared/define-tool, schemas/tool-inputs. IO: storage read.
  */
 
 import { PolicyDeniedError, UnknownForgeError } from '@forge/core';
 import type { Ticket } from '@forge/core';
+import { isCheckRun } from '#/domain/check-run.js';
 import { GetTicketInput } from '#/schemas/tool-inputs.js';
 import { defineTool } from '#/shared/define-tool.js';
 
@@ -54,7 +56,9 @@ export const getTicketTool = defineTool({
         ? await Promise.all(ticket.blocked_by.map((b) => tx.tickets.get(b)))
         : [];
 
-      const runs = isOwn ? await tx.runs.listByTicket(own.id) : [];
+      // A check agent never sees the ticket's runs: they lead to the writer's own account.
+      const showRuns = isOwn && !(await isCheckRun(tx, ctx.run));
+      const runs = showRuns ? await tx.runs.listByTicket(own.id) : [];
 
       return JSON.stringify({
         ticket: {
@@ -74,12 +78,16 @@ export const getTicketTool = defineTool({
           parent: parent ? brief(parent) : null,
           blocked_by: blockers.filter((b): b is Ticket => b !== null).map(brief),
         },
-        runs: runs.map((r) => ({
-          id: r.id,
-          status: r.status,
-          harness: r.harness,
-          started_at: r.started_at,
-        })),
+        ...(isOwn && !showRuns
+          ? {}
+          : {
+              runs: runs.map((r) => ({
+                id: r.id,
+                status: r.status,
+                harness: r.harness,
+                started_at: r.started_at,
+              })),
+            }),
       });
     });
   },

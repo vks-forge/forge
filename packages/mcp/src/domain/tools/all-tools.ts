@@ -14,6 +14,7 @@ import { askDirectorTool, reportBlockedTool } from '#/domain/tools/ask-director.
 import { docsLookupTool } from '#/domain/tools/docs-lookup.js';
 import { finishTool } from '#/domain/tools/finish.js';
 import { getTicketTool } from '#/domain/tools/get-ticket.js';
+import { submitReviewTool } from '#/domain/tools/submit-review.js';
 import { webFetchTool } from '#/domain/tools/web-fetch.js';
 import { webSearchTool } from '#/domain/tools/web-search.js';
 import type { ForgeToolSpec } from '#/types/tool-spec.types.js';
@@ -24,6 +25,7 @@ export const FORGE_TOOLS: readonly ForgeToolSpec[] = [
   askDirectorTool,
   reportBlockedTool,
   finishTool,
+  submitReviewTool,
   webSearchTool,
   docsLookupTool,
   webFetchTool,

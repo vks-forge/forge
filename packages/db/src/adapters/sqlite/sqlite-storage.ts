@@ -40,6 +40,9 @@ import { createHarnessStateRepository } from '#/adapters/sqlite/harness-state-re
 import { createHarnessRepository } from '#/adapters/sqlite/harnesses-repository.js';
 import { createProjectRepository } from '#/adapters/sqlite/projects-repository.js';
 import { createSqliteReceiptLog } from '#/adapters/sqlite/receipt-log.js';
+import { createStageArtifactRepository } from '#/adapters/sqlite/stage-artifacts-repository.js';
+import { createStageRunRepository } from '#/adapters/sqlite/stage-runs-repository.js';
+import { createTicketPipelineRepository } from '#/adapters/sqlite/ticket-pipelines-repository.js';
 import { createRunInboxRepository } from '#/adapters/sqlite/run-inbox-repository.js';
 import { createRunTokenRepository } from '#/adapters/sqlite/run-tokens-repository.js';
 import { createRunEventRepository } from '#/adapters/sqlite/run-events-repository.js';
@@ -87,6 +90,9 @@ export function createStorageOnDriver(
     cardRelations: createCardRelationRepository(driver),
     cardReplyQueue: createCardReplyQueueRepository(driver),
     cardPlanning: createCardPlanningRepository(driver),
+    ticketPipelines: createTicketPipelineRepository(driver),
+    stageRuns: createStageRunRepository(driver),
+    stageArtifacts: createStageArtifactRepository(driver),
   };
 
   return {

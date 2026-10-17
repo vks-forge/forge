@@ -50,7 +50,7 @@ export {
 };
 
 /** `ForgeConfig` as an older server sends it: no `director`, and only the first four Director models. */
-const LenientForgeConfig = z.object({
+const LenientForgeConfig = z.looseObject({
   models: z.object({
     director: ModelMatrix.shape.director.partial({
       card_survey: true,
@@ -74,12 +74,18 @@ const LenientForgeConfig = z.object({
 
 type LenientForgeConfig = z.infer<typeof LenientForgeConfig>;
 
-/** The full config, with built-in stand-ins for whatever an older server left out. */
+/**
+ * The full config, with built-in stand-ins for whatever an older server left out. A section
+ * newer than this screen (the server adds them before the web learns to show them) rides along
+ * unread, so a save validates the whole document the server sent instead of a trimmed copy.
+ */
 export function withDirectorDefaults(raw: LenientForgeConfig): ForgeConfig {
-  const d = raw.models.director;
+  const { models, engine, director, agents, ...newer } = raw;
+  const d = models.director;
   const fallback = FALLBACK_STEP_MODELS;
 
   return {
+    ...newer,
     models: {
       director: {
         triage: d.triage,
@@ -97,12 +103,12 @@ export function withDirectorDefaults(raw: LenientForgeConfig): ForgeConfig {
         ticket_recover: d.ticket_recover ?? fallback.ticket_recover,
         draft_agent: d.draft_agent ?? fallback.draft_agent,
       },
-      worker: raw.models.worker,
+      worker: models.worker,
     },
-    engine: raw.engine,
-    director: raw.director ?? FALLBACK_DIRECTOR,
-    agents: raw.agents ?? {},
-  };
+    engine,
+    director: director ?? FALLBACK_DIRECTOR,
+    agents: agents ?? {},
+  } as ForgeConfig;
 }
 
 /** `GET /settings/company`'s `{ config, version }`, with `serverHasDirector` false for an older server. */

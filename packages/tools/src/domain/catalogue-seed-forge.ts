@@ -92,6 +92,21 @@ export const FORGE_SEED: readonly Record<string, unknown>[] = [
     },
   },
   {
+    id: 'mcp__forge__submit_review',
+    kind: 'factory-core',
+    version: '1',
+    risk: 'read',
+    exposure: 'direct',
+    schema_hash:
+      'sha256:cd07d22d4c86c1227c3a534f9796fb55c10090ed078e1a9a0fdd557601e8ea91',
+    support: {
+      '*': {
+        mechanism: 'mcp',
+        enforced: 'server',
+      },
+    },
+  },
+  {
     id: 'mcp__forge__docs_lookup',
     kind: 'factory-capability',
     version: '1',

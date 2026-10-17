@@ -12,7 +12,7 @@
  *   domain/nav-entries, types/settings-layout.types.
  */
 
-import { Cpu, Folder, Gauge, Plug, Workflow } from 'lucide-react';
+import { Bot, Cpu, Folder, Gauge, Plug, Workflow } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Outlet } from 'react-router';
 import { SettingsLayout } from '#/components/settings/settings-layout.js';
@@ -22,6 +22,7 @@ import type { SettingsTab } from '#/types/settings-layout.types.js';
 const ICONS: Readonly<Record<string, LucideIcon>> = {
   general: Folder,
   director: Workflow,
+  agents: Bot,
   limits: Gauge,
   harnesses: Cpu,
   github: Plug,

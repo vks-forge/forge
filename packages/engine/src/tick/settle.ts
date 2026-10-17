@@ -10,7 +10,7 @@
  *   with an open ticket. The worktree is kept for the PR step; it goes on Done or Cancelled.
  *
  * Exports: settleRun().
- * Depends on: @forge/core, domain/results, tick/card-budget, tick/outcome, shared/time. Reads git and receipts via ports.
+ * Depends on: @forge/core, domain/results, tick/card-budget, tick/outcome, tick/stage-artifacts, shared/time. Reads git and receipts via ports.
  */
 
 import type { ErrorFamily, Run, RunResult, TicketId } from '@forge/core';
@@ -19,6 +19,7 @@ import { emitTrace } from '#/shared/trace.js';
 import { warnOnBudget } from '#/tick/card-budget.js';
 import { applyOutcome } from '#/tick/outcome.js';
 import { runtimeFor } from '#/tick/project-runtime.js';
+import { pipelineHasChecks } from '#/tick/stage-artifacts.js';
 import type { EngineCtx, Pump } from '#/types/engine-state.types.js';
 import type { SettleOptions } from '#/types/tick.types.js';
 
@@ -57,6 +58,7 @@ export async function settleRun(
   }
 
   let files = [...result.filesTouched];
+  let diff: string | undefined;
   const baseSha = state.baseShas.get(run.id);
   if (baseSha) {
     try {
@@ -74,6 +76,15 @@ export async function settleRun(
       }
 
       files = await runtime.worktrees.changedFiles(run.cwd, baseSha);
+      // A pipeline with checks keeps what each writer left as an artifact: the patch is read here,
+      // outside the transaction, because it is a git call.
+      const snapshot = await deps.storage.transaction((tx) =>
+        tx.ticketPipelines.get(run.ticket_id),
+      );
+
+      if (snapshot && pipelineHasChecks(snapshot)) {
+        diff = (await runtime.worktrees.diff(run.cwd, baseSha)).patch;
+      }
     } catch (e) {
       deps.log?.('warn', `could not list changed files for ${run.id}`, {
         error: String(e),
@@ -110,6 +121,7 @@ export async function settleRun(
     await applyOutcome(ctx, tx, run, result, family, pump, {
       ...opts,
       receipts: opts.receipts ?? receipts,
+      diff,
     });
 
     // The run's cost is now on its row: a card crossing its budget cap is warned, never stopped (d-0143).

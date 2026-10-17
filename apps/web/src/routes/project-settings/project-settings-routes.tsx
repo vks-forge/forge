@@ -12,6 +12,7 @@
 
 import {
   Archive,
+  Bot,
   Clock,
   FolderGit2,
   Info,
@@ -24,6 +25,7 @@ import { Navigate } from 'react-router';
 import type { RouteObject } from 'react-router';
 import { NotFound } from '#/routes/not-found.js';
 import {
+  AgentsTab,
   ChecksTab,
   DangerTab,
   DirectorTab,
@@ -44,6 +46,7 @@ export const PROJECT_SETTINGS_SECTIONS: readonly {
   { segment: 'checks', label: 'Checks', icon: ListChecks },
   { segment: 'repository', label: 'Repository', icon: FolderGit2 },
   { segment: 'director', label: 'Director', icon: Workflow },
+  { segment: 'agents', label: 'Agents', icon: Bot },
   { segment: 'history', label: 'History', icon: Clock },
   { segment: 'danger', label: 'Archive and delete', icon: Archive },
 ];
@@ -55,6 +58,7 @@ export const projectSettingsRoutes: RouteObject[] = [
   { path: 'checks', element: <ChecksTab /> },
   { path: 'repository', element: <RepositoryTab /> },
   { path: 'director', element: <DirectorTab /> },
+  { path: 'agents', element: <AgentsTab /> },
   { path: 'history', element: <HistoryTab /> },
   { path: 'danger', element: <DangerTab /> },
   { path: '*', element: <NotFound /> },

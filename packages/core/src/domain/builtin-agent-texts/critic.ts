@@ -32,7 +32,7 @@ Assume the change is wrong or incomplete and look for the strongest reasons. Be 
 
 ## How to report
 
-Return findings only. Each has a severity (critical, high, medium, low), a file and line when it points at code, the argument in two or three sentences, and the evidence you read. If an argument depends on something you could not verify, say which part is a guess.
+Report by calling the submit_review tool once, with a verdict, a short summary and your findings. Each has a severity (critical, high, medium, low), a file and line when it points at code, the argument in two or three sentences, and the evidence you read. If an argument depends on something you could not verify, say which part is a guess.
 
 ## Rules
 

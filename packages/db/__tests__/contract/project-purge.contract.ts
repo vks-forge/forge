@@ -6,13 +6,15 @@
  *   never reach into another project, or deleting one repository would destroy a
  *   neighbour's history. Both backends are held to the same walk: tickets and what hangs
  *   off them, runs and their records, cards with their history, relations, queued replies,
- *   plan versions and card questions, inbox marks, the project row.
+ *   plan versions and card questions, inbox marks, pipeline snapshots with their stage rows and
+ *   artifacts, the project row.
  *
  * Exports: describeProjectPurgeContract().
  * Depends on: vitest, @forge/core, helpers/fixtures. IO only through the adapter under test.
  */
 
 import { describe, expect, it } from 'vitest';
+import { BUILTIN_PIPELINES } from '@forge/core';
 import type { CardId, StorageAdapter, TicketId } from '@forge/core';
 import {
   T0,
@@ -134,6 +136,40 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
       });
 
       await t.inboxStates.upsert({ project: slug, kind: 'question', item_id: 'i' });
+
+      // The pipeline footprint of the ticket: snapshot, one stage attempt, one artifact.
+      await t.ticketPipelines.insert({
+        ticket_id: ticket.id,
+        lane: 'express',
+        definition: BUILTIN_PIPELINES.express,
+        roles: { implementer: 'writer' },
+        hash: HASH,
+        config_version: 'c0:p0',
+        routed: [],
+        created_at: T0,
+        updated_at: T0,
+      });
+
+      const stageRun = await t.stageRuns.start({
+        ticket_id: ticket.id,
+        stage_id: 'implementer',
+        member_id: '',
+        cycle: 0,
+        kind: 'agent',
+        status: 'passed',
+        run_id: runId,
+        started_at: T0,
+      });
+
+      await t.stageArtifacts.add({
+        ticket_id: ticket.id,
+        stage_run_id: stageRun as number,
+        kind: 'diff',
+        content: 'd',
+        truncated: false,
+        sha256: HASH,
+        created_at: T0,
+      });
     });
   }
 
@@ -163,6 +199,9 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
       cardPlans: await t.cardPlanning.listPlans(cardIdOf(slug)),
       cardEvents: await t.cardEvents.list(cardIdOf(slug), { limit: 10 }),
       mark: await t.inboxStates.get(slug, 'question', 'i'),
+      pipeline: await t.ticketPipelines.get(ticketId),
+      stageRuns: await t.stageRuns.listByTicket(ticketId),
+      artifacts: await t.stageArtifacts.listByTicket(ticketId),
     }));
   }
 
@@ -192,6 +231,9 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
         cardPlans: [],
         cardEvents: [],
         mark: null,
+        pipeline: null,
+        stageRuns: [],
+        artifacts: [],
       });
     });
 

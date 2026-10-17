@@ -6,7 +6,7 @@
  *   A builder per shape lets a test say only what matters ("lead time is null") and keeps the
  *   rest valid, so a failure points at the behaviour under test and not at a malformed fixture.
  *
- * Exports: day(), statsBody(), overviewBody(), costBody(), inboxItem(), runSummary(), runDetail(), ticketSummary(),
+ * Exports: day(), overviewBody(), costBody(), inboxItem(), runSummary(), runDetail(), ticketSummary(),
  *   PROJECTS_REPLY.
  * Depends on: @forge/core (types only). No IO.
  */
@@ -15,7 +15,6 @@ import type {
   CostReport,
   InboxItem,
   OverviewStats,
-  ProjectStats,
   RunDetail,
   RunSummary,
   TicketSummary,
@@ -42,38 +41,6 @@ export function day(n: number, value: (i: number) => number = () => 0) {
 
     return { date: d.toISOString().slice(0, 10), value: value(i) };
   });
-}
-
-const TICKET_STATES = {
-  inbox: 0,
-  planned: 1,
-  in_progress: 2,
-  blocked: 0,
-  waiting_human: 1,
-  verifying: 0,
-  review: 0,
-  needs_signoff: 0,
-  done: 4,
-  cancelled: 0,
-};
-
-export function statsBody(over: Partial<ProjectStats> = {}): ProjectStats {
-  return {
-    range: '30d',
-    from: '2026-09-17T00:00:00.000Z',
-    to: NOW,
-    project: 'sample-service',
-    tickets_by_state: TICKET_STATES,
-    throughput: day(30, (i) => (i === 29 ? 2 : 0)),
-    lead_time: { count: 4, median_ms: 7_200_000, p90_ms: 18_000_000 },
-    rework_rate: { hits: 1, total: 5, rate: 0.2 },
-    gate_pass_rate: { hits: 3, total: 4, rate: 0.75 },
-    runs_per_day: day(30, (i) => i % 3),
-    active_workers: 1,
-    spend_per_day: day(30, (i) => (i === 29 ? 1.5 : 0)),
-    cost_coverage: { runs_total: 6, runs_with_cost: 5 },
-    ...over,
-  };
 }
 
 const TOKENS = { in: 12_000, out: 3_000, cached_in: 40_000, cache_write: 0 };

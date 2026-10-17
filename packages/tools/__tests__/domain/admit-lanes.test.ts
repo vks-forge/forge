@@ -34,6 +34,7 @@ describe('Express defaults (unattended: ask becomes deny)', () => {
     [sh('pnpm add zod'), 'deny', 'rule_deny'],
     [call('mcp__forge__get_ticket', {}), 'allow', 'rule_allow'],
     [call('mcp__forge__finish', {}), 'allow', 'rule_allow'],
+    [call('mcp__forge__submit_review', {}), 'allow', 'rule_allow'],
     [call('mcp__forge__docs_lookup', { query: 'zod' }), 'allow', 'rule_allow'],
     [call('mcp__forge__web_search', { query: 'x' }), 'deny', 'not_granted'],
     [call('mcp__forge__web_fetch', { url: 'https://docs.x.com' }), 'deny', 'not_granted'],

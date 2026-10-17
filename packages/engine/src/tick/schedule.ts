@@ -4,7 +4,7 @@
  * Why: which ticket gets the next slot depends on facts spread over several tables (waiting
  *   tickets and due wakes, live runs, parked harnesses, project status) and on the settings
  *   of this tick (the layered limits, each project's own cap and fallback harnesses, and the
- *   harness and fallback list of the ticket's agent). Both
+ *   harness and fallback list of the agent its next pipeline stage names). Both
  *   the dispatch phase and the ticket page's "why is this waiting?" need that same picture;
  *   building it in one place, from one transaction, means the page can only ever explain what
  *   dispatch would do. Only a project that is ready takes a slot: archived ones are history
@@ -13,7 +13,7 @@
  *
  * Exports: planDispatch(), pickFrom().
  * Depends on: @forge/core, domain/pick-next, domain/harness-choice, domain/ticket-numbers,
- *   tick/run-agent, tick/wake-candidates, tick/tick-config, shared/time. IO only through the open transaction.
+ *   tick/stage-agent, tick/wake-candidates, tick/tick-config, shared/time. IO only through the open transaction.
  */
 
 import { PLANNING_PHASES } from '@forge/core';
@@ -22,7 +22,7 @@ import { chooseHarness } from '#/domain/harness-choice.js';
 import { pickNext } from '#/domain/pick-next.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { FAR_FUTURE } from '#/shared/time.js';
-import { resolveAgent } from '#/tick/run-agent.js';
+import { peekAgent } from '#/tick/stage-agent.js';
 import { classifyWake, wakeIsDue } from '#/tick/wake-candidates.js';
 import { isUnservable, projectSettings } from '#/tick/tick-config.js';
 import type {
@@ -118,7 +118,7 @@ export async function planDispatch(
     const slug = slugOf.get(c.ticket.project) ?? c.ticket.project;
     const settings = projectSettings(view.config, slug);
     // The ticket's agent names its own harness; its fallback list, when it has one, replaces the company's (quota and harness-down only).
-    const agent = resolveAgent(view.config, slug, c.ticket.lane);
+    const agent = await peekAgent(view, tx, c.ticket, slug);
     const fallbacks =
       agent.fallbackHarnesses.length > 0
         ? agent.fallbackHarnesses
@@ -132,7 +132,8 @@ export async function planDispatch(
       priority: c.ticket.priority,
       number: ticketNumber(c.ticket.id),
       wake: c.wake !== undefined,
-      entering: c.ticket.status !== 'in_progress',
+      // A check of a verifying ticket takes a Worker slot but does not enter In Progress.
+      entering: c.ticket.status !== 'in_progress' && c.ticket.status !== 'verifying',
       blockedBy: blockers.get(c.ticket.id) ?? [],
       awaitsPlan:
         c.ticket.status === 'planned' &&

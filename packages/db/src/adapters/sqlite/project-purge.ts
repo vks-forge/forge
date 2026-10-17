@@ -1,7 +1,7 @@
 /**
  * SQLite purge of everything a project owns, in foreign-key-safe order.
  *
- * Why: deleting a project must leave no ticket, run, receipt, card or plan version behind, or re-adding
+ * Why: deleting a project must leave no ticket, run, receipt, card, plan version or pipeline stage behind, or re-adding
  *   the same folder and slug would show another project's old history under it. Most tables
  *   point at a project only through a ticket or a run, so the rows are found by walking
  *   project -> tickets -> runs -> per-run records and removed leaf-first. The settings
@@ -48,6 +48,10 @@ export function purgeProject(driver: SqlDriver, slug: string): boolean {
     `DELETE FROM interactions WHERE ticket_id IN (${TICKETS}) OR run_id IN (${RUNS}) OR card_id IN (${CARDS})`,
   );
 
+  // Artifacts point at stage rows, which point at tickets: leaf first.
+  del(`DELETE FROM stage_artifacts WHERE ticket_id IN (${TICKETS})`);
+  del(`DELETE FROM stage_runs WHERE ticket_id IN (${TICKETS})`);
+  del(`DELETE FROM ticket_pipelines WHERE ticket_id IN (${TICKETS})`);
   del(`DELETE FROM wake_requests WHERE ticket_id IN (${TICKETS})`);
   del(
     `DELETE FROM ticket_relations WHERE from_id IN (${TICKETS}) OR to_id IN (${TICKETS})`,

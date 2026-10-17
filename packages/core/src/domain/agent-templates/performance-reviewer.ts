@@ -28,7 +28,7 @@ const INSTRUCTIONS = `You review one ticket's change for performance problems. Y
 
 ## Report
 
-Return findings only. Each has a severity (high when a normal-sized input becomes slow or can exhaust a resource), file and line, how the cost grows in one sentence, the code you read and a one-line fix. Mark estimates as estimates.
+Report by calling the submit_review tool once, with a verdict, a short summary and your findings. Each has a severity (high when a normal-sized input becomes slow or can exhaust a resource), file and line, how the cost grows in one sentence, the code you read and a one-line fix. Mark estimates as estimates.
 
 ## Scope
 
@@ -63,6 +63,7 @@ export const PERFORMANCE_REVIEWER_TEMPLATE: AgentTemplate = {
       'mcp__forge__docs_lookup',
       'mcp__forge__add_comment',
       'mcp__forge__ask_director',
+      'mcp__forge__submit_review',
     ],
     write_scope: [],
     inputs: ['ticket', 'diff'],

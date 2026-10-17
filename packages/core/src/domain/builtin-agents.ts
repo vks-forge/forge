@@ -30,6 +30,7 @@ const READ_TOOLS = [
   'mcp__forge__docs_lookup',
   'mcp__forge__add_comment',
   'mcp__forge__ask_director',
+  'mcp__forge__submit_review',
 ];
 
 function reviewer(

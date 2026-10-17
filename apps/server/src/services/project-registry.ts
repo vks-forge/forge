@@ -18,8 +18,8 @@
  *   (its tickets park) and is retried on the next refresh.
  *
  * Exports: createProjectRegistry().
- * Depends on: node:path, @forge/core, @forge/engine (ProjectRuntime), @forge/git
- *   (createGitWorktreeManager), services/git-host, types/project-registry.
+ * Depends on: node:path, @forge/core, @forge/engine (ProjectRuntime), @forge/gates
+ *   (createScriptGateRunner), @forge/git (createGitWorktreeManager), services/git-host, types/project-registry.
  *   IO: reads storage and settings in load/register; building a runtime only creates objects.
  */
 
@@ -32,6 +32,7 @@ import type {
   ProjectSettings,
 } from '@forge/core';
 import type { ProjectRuntime } from '@forge/engine';
+import { createScriptGateRunner } from '@forge/gates';
 import { createGitWorktreeManager } from '@forge/git';
 import { createProjectGitHost } from '#/services/git-host.js';
 import type {
@@ -87,6 +88,8 @@ export function createProjectRegistry(deps: ProjectRegistryDeps): ProjectRegistr
         connection,
       }),
       gates: deps.gates(worktrees),
+      // Script gates and the red proof run owner commands with the same stripped environment as G1.
+      scriptGates: createScriptGateRunner({ worktrees, env: process.env }),
       worktrees,
       baseRef: config.git_host?.base_branch ?? DEFAULT_BASE,
     };

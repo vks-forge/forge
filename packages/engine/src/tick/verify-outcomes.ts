@@ -2,8 +2,8 @@
  * What verify decides when it cannot merge: rework, park, or try again later.
  *
  * Why: a verify cycle that does not end in a merge ends in one of three ways, and each
- *   must be bounded. A failed gate sends the Worker back with the findings, but only twice
- *   (the state machine's cap), then a human decides. An infrastructure fault (the host
+ *   must be bounded. A failed stage sends the Worker back with the findings (tick/stage-send-back),
+ *   but only twice (the state machine's cap), then a human decides. An infrastructure fault (the host
  *   refused a push, a gate could not run) is not the Worker's fault: transient families
  *   wait and retry under the same backoff and hourly re-wake cap as run failures, and the
  *   ones a retry cannot fix (auth, a merge conflict, a denied action) go straight to a
@@ -12,15 +12,14 @@
  *   Verifying: it neither spends a rework nor, on release, restarts the Worker; the human's
  *   release returns the ticket to Verifying to publish, gate and merge again.
  *
- * Exports: recordVerified(), reworkOrPark(), parkVerifying(), handleVerifyFailure().
- * Depends on: @forge/core (MAX_AUTO_REWORKS, classifyPark), domain/{failure-policy,gate-rows,results},
+ * Exports: recordVerified(), raiseFailure(), parkVerifyingTx(), parkVerifying(), handleVerifyFailure().
+ * Depends on: @forge/core (classifyPark), domain/{failure-policy,results},
  *   steps/run-step, tick/escalation-raise, tick/ticket-moves, tick/wakes.
  */
 
-import { MAX_AUTO_REWORKS, classifyPark } from '@forge/core';
-import type { GateVerdict, StorageTx, Ticket } from '@forge/core';
+import { classifyPark } from '@forge/core';
+import type { StorageTx, Ticket } from '@forge/core';
 import { decideFailure } from '#/domain/failure-policy.js';
-import { describeFailures } from '#/domain/gate-rows.js';
 import { familyOf } from '#/domain/results.js';
 import { hold } from '#/steps/run-step.js';
 import { attemptsOf, raiseEscalation, stageFor } from '#/tick/escalation-raise.js';
@@ -37,7 +36,7 @@ import type {
 /** Adds one entry to `TickReport.verified`. */
 export function recordVerified(
   ctx: EngineCtx,
-  t: VerifyTarget,
+  t: Pick<VerifyTarget, 'ticket' | 'run'>,
   outcome: VerifyOutcome,
   rows: GateRows,
   extra: Partial<Pick<VerifiedTicket, 'detail' | 'errorFamily'>> = {},
@@ -52,7 +51,7 @@ export function recordVerified(
 }
 
 /** Raises the failure escalation of a parked ticket: its cause read off the reason, the Director looking first. */
-async function raiseFailure(
+export async function raiseFailure(
   ctx: EngineCtx,
   tx: StorageTx,
   ticket: Ticket,
@@ -78,115 +77,65 @@ async function raiseFailure(
   );
 }
 
-/** Parks a Verifying ticket in WaitingHuman with `reason`; its rework count is untouched and a release returns it to Verifying. */
-export async function parkVerifying(
+/**
+ * Parks a Verifying ticket in WaitingHuman with `reason` inside `tx`; its rework count is untouched and a
+ * release returns it to Verifying. `also` writes more rows in the same transaction. False when the ticket
+ * was not verifying (nothing is written).
+ */
+export async function parkVerifyingTx(
   ctx: EngineCtx,
-  t: VerifyTarget,
+  tx: StorageTx,
+  t: Pick<VerifyTarget, 'ticket' | 'run'>,
   reason: string,
   rows: GateRows = [],
   errorFamily?: VerifiedTicket['errorFamily'],
-): Promise<void> {
-  const moved = await ctx.deps.storage.transaction(async (tx) => {
-    const parked = await moveTicketTx(tx, t.ticket.id, ctx.nowIso, (cur) => {
-      if (cur.status !== 'verifying') {
-        return null;
-      }
-
-      // Not a gate finding: `parked` leaves rework_count alone and remembers Verifying, so
-      // a release resumes publish, gates and merge on this run instead of dispatching a Worker.
-      return { events: [{ type: 'parked', reason }] };
-    });
-
-    if (parked.ok) {
-      await raiseFailure(ctx, tx, parked.ticket, reason, errorFamily);
+  also?: (tx: StorageTx) => Promise<void>,
+): Promise<boolean> {
+  const parked = await moveTicketTx(tx, t.ticket.id, ctx.nowIso, (cur) => {
+    if (cur.status !== 'verifying') {
+      return null;
     }
 
-    return parked;
+    // Not a gate finding: `parked` leaves rework_count alone and remembers Verifying, so
+    // a release resumes publish, gates and merge on this run instead of dispatching a Worker.
+    return { events: [{ type: 'parked', reason }] };
   });
 
-  if (!moved.ok) {
-    ctx.deps.log?.('error', `could not park ${t.ticket.id}`, { reason: moved.reason });
+  if (!parked.ok) {
+    ctx.deps.log?.('error', `could not park ${t.ticket.id}`, { reason: parked.reason });
 
-    return;
+    return false;
   }
 
+  await raiseFailure(ctx, tx, parked.ticket, reason, errorFamily);
+  await also?.(tx);
   ctx.report.parked.push({ ticketId: t.ticket.id, reason });
   recordVerified(ctx, t, 'parked', rows, {
     detail: reason,
     ...(errorFamily ? { errorFamily } : {}),
   });
+
+  return true;
 }
 
-/** A failed gate: send the Worker back with the findings, or park at the rework cap. */
-export async function reworkOrPark(
+/** {@link parkVerifyingTx} in its own transaction. */
+export async function parkVerifying(
   ctx: EngineCtx,
-  t: VerifyTarget,
-  rows: GateRows,
-  verdicts: ReadonlyMap<string, GateVerdict>,
+  t: Pick<VerifyTarget, 'ticket' | 'run'>,
+  reason: string,
+  rows: GateRows = [],
+  errorFamily?: VerifiedTicket['errorFamily'],
+  also?: (tx: StorageTx) => Promise<void>,
 ): Promise<void> {
-  const findings = describeFailures(rows, verdicts);
-  const names = rows
-    .filter((r) => r.status === 'failed')
-    .map((r) => r.gate)
-    .join(', ');
-
-  const { deps } = ctx;
-  const outcome = await deps.storage.transaction(async (tx) => {
-    const moved = await moveTicketTx(tx, t.ticket.id, ctx.nowIso, (cur) =>
-      cur.status === 'verifying' ? { events: [{ type: 'gate_failed' }] } : null,
-    );
-
-    if (!moved.ok || moved.ticket.status !== 'in_progress') {
-      return moved;
-    }
-
-    // The findings travel in the wake's reason, which is durable: the next run's prompt
-    // is built from it even if the server restarts in between.
-    await requestWakeTx(tx, deps, {
-      ticketId: t.ticket.id,
-      kind: 'continuation',
-      reason: `gate_failed: ${findings}`,
-      key: t.run.id,
-    });
-
-    return moved;
-  });
-
-  if (!outcome.ok) {
-    deps.log?.('error', `could not apply gate_failed to ${t.ticket.id}`, {
-      reason: outcome.reason,
-    });
-
-    return;
-  }
-
-  if (outcome.ticket.status === 'in_progress') {
-    recordVerified(ctx, t, 'rework', rows, { detail: findings });
-
-    return;
-  }
-
-  const reason = `gate ${names} failed after ${MAX_AUTO_REWORKS} automatic reworks; needs you. ${findings}`;
-  await deps.storage.transaction(async (tx) => {
-    const parked = await moveTicketTx(tx, t.ticket.id, ctx.nowIso, (cur) =>
-      cur.status === 'waiting_human'
-        ? { events: [], fields: { blocked_reason: reason } }
-        : null,
-    );
-
-    if (parked.ok) {
-      await raiseFailure(ctx, tx, parked.ticket, reason);
-    }
-  });
-
-  ctx.report.parked.push({ ticketId: t.ticket.id, reason });
-  recordVerified(ctx, t, 'parked', rows, { detail: reason });
+  await ctx.deps.storage.transaction((tx) =>
+    parkVerifyingTx(ctx, tx, t, reason, rows, errorFamily, also),
+  );
 }
 
 /** An infrastructure fault during verify: retry later by family and cap, or park for a human. */
 export async function handleVerifyFailure(
   ctx: EngineCtx,
-  t: VerifyTarget,
+  t: Pick<VerifyTarget, 'ticket' | 'run'>,
   error: unknown,
 ): Promise<void> {
   const { deps } = ctx;

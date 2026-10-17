@@ -29,7 +29,7 @@ const INSTRUCTIONS = `You review one ticket's interface change for accessibility
 
 ## Report
 
-Return findings only. Each has a severity (high when a user cannot complete the task), file and line, who is affected and how in one sentence, the code you read and a one-line fix.
+Report by calling the submit_review tool once, with a verdict, a short summary and your findings. Each has a severity (high when a user cannot complete the task), file and line, who is affected and how in one sentence, the code you read and a one-line fix.
 
 ## Scope
 
@@ -64,6 +64,7 @@ export const ACCESSIBILITY_REVIEWER_TEMPLATE: AgentTemplate = {
       'mcp__forge__docs_lookup',
       'mcp__forge__add_comment',
       'mcp__forge__ask_director',
+      'mcp__forge__submit_review',
     ],
     write_scope: [],
     inputs: ['ticket', 'diff'],

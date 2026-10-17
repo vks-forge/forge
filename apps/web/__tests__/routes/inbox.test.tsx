@@ -157,8 +157,13 @@ describe('Inbox', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Could not archive it');
     expect(alert).toHaveTextContent('disk is full');
-    expect(screen.getByText('Worker asks about migrations')).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /Needs action/ })).toHaveTextContent('2');
+
+    // The alert shows as soon as the mutation rejects; the rollback and the refetch that
+    // restores the list and counts settle around it, so wait on their outcome.
+    await waitFor(() => {
+      expect(screen.getByText('Worker asks about migrations')).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /Needs action/ })).toHaveTextContent('2');
+    });
   });
 
   it('marks an item unread and read', async () => {

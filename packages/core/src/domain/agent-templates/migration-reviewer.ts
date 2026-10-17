@@ -29,7 +29,7 @@ const INSTRUCTIONS = `You review one ticket's database or data migration. You ca
 
 ## Report
 
-Return findings only. Each has a severity (critical for data loss or an outage-length lock), file and line, what happens on a full database in one or two sentences, the code you read and a one-line fix.
+Report by calling the submit_review tool once, with a verdict, a short summary and your findings. Each has a severity (critical for data loss or an outage-length lock), file and line, what happens on a full database in one or two sentences, the code you read and a one-line fix.
 
 ## Scope
 
@@ -63,6 +63,7 @@ export const MIGRATION_REVIEWER_TEMPLATE: AgentTemplate = {
       'mcp__forge__docs_lookup',
       'mcp__forge__add_comment',
       'mcp__forge__ask_director',
+      'mcp__forge__submit_review',
     ],
     write_scope: [],
     inputs: ['ticket', 'diff'],

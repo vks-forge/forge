@@ -1,5 +1,5 @@
 /**
- * The `http` side of the work resources: stats, cost, inbox and runs (including steering a run).
+ * The `http` side of the work resources: cost, inbox and runs (including steering a run).
  *
  * Why: Home, Inbox, Runs and Cost answer "what is happening and what did it cost?" and must
  *   show exactly what the server computed. This is the only place that knows those paths and
@@ -18,7 +18,6 @@ import {
   InboxItem,
   InboxPage,
   OverviewStats,
-  ProjectStats,
   RunDetail,
   RunListPage,
 } from '@forge/core';
@@ -50,19 +49,10 @@ function query(params: QueryParams): string {
 
 export function createWorkHttp(
   client: HttpClientOptions,
-): Pick<ResourceApis, 'stats' | 'overview' | 'cost' | 'inbox' | 'runs'> {
+): Pick<ResourceApis, 'overview' | 'cost' | 'inbox' | 'runs'> {
   const project = (slug: string, rest: string): string => `/projects/${enc(slug)}${rest}`;
 
   return {
-    stats: {
-      get: (slug, range, options) =>
-        requestJson(
-          client,
-          project(slug, `/stats${query({ range })}`),
-          ProjectStats,
-          options,
-        ),
-    },
     overview: {
       get: (request, options) =>
         requestJson(

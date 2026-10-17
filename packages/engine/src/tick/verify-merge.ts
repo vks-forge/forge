@@ -10,67 +10,26 @@
  *   the head moved, nothing merges and the caller gates the new head. The tier comes from
  *   the real diff against the project's tier-C globs, not from the triage guess, and must
  *   still match what `gate_passed` recorded. Tier B and C stop in Review / NeedsSignoff for
- *   a human. The merge is resumable: if the server died after the host merged but before the
+ *   a human, and so does tier A when the pipeline has a human stage (`hold`). The merge is resumable: if the server died after the host merged but before the
  *   ticket moved, the PR already reads as merged and only the ticket event is missing.
  *   Cleanup after Done is best effort and never undoes the merge. The owner's approval of tier B
  *   (or sign-off of tier C) comes through `mergeReviewed()`, the same door with the same checks.
  *
  * Exports: passAndMerge(), mergeReviewed(), MergeOutcome.
- * Depends on: @forge/core (errors), domain/{gate-rows,tier-actual}, tick/ticket-moves,
- *   tick/verify-outcomes. IO only through GitHost and worktree ports.
+ * Depends on: @forge/core (errors), domain/gate-rows, tick/{stage-records,ticket-moves,verify-merge-steps,
+ *   verify-outcomes}. IO only through GitHost and worktree ports.
  */
 
 import { HeadMovedError, PolicyDeniedError, RateLimitError } from '@forge/core';
-import type { PrStatus, Ticket, Tier } from '@forge/core';
+import type { PrStatus } from '@forge/core';
 import { gatedHeadOf } from '#/domain/gate-rows.js';
-import { computeTierActual } from '#/domain/tier-actual.js';
 import { logCardEvent } from '#/tick/card-log.js';
+import { holdForHuman } from '#/tick/stage-records.js';
 import { moveTicket, moveTicketTx } from '#/tick/ticket-moves.js';
-import { projectSettings } from '#/tick/tick-config.js';
+import { cleanup, recordPass, tierOfDiff } from '#/tick/verify-merge-steps.js';
 import { recordVerified } from '#/tick/verify-outcomes.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { GateRows, MergeOutcome, VerifyTarget } from '#/types/verify.types.js';
-
-/** The tier the current diff implies. */
-async function tierOfDiff(ctx: EngineCtx, t: VerifyTarget): Promise<Tier> {
-  const diff = await t.runtime.worktrees.diff(t.worktree, t.baseSha);
-  const paths = diff.files.flatMap((f) => (f.oldPath ? [f.path, f.oldPath] : [f.path]));
-
-  return computeTierActual(
-    t.ticket.tier_predicted,
-    projectSettings(ctx.config, t.project.slug).tier_c_globs,
-    paths,
-  );
-}
-
-/** Records `gate_passed` with `tier` (once per cycle). */
-async function recordPass(ctx: EngineCtx, t: VerifyTarget, tier: Tier): Promise<Ticket> {
-  const moved = await moveTicket(ctx.deps.storage, t.ticket.id, ctx.nowIso, (cur) =>
-    cur.status === 'verifying' && cur.tier_actual === undefined
-      ? { events: [{ type: 'gate_passed', tier_actual: tier }] }
-      : null,
-  );
-
-  if (!moved.ok) {
-    throw new Error(`could not record gate_passed on ${t.ticket.id}: ${moved.reason}`);
-  }
-
-  return moved.ticket;
-}
-
-/** Best-effort removal of the worktree and the merged branch. */
-async function cleanup(ctx: EngineCtx, t: VerifyTarget): Promise<void> {
-  const { deps } = ctx;
-  await t.runtime.worktrees.remove(t.worktree).catch((e: unknown) => {
-    deps.log?.('warn', `could not remove worktree of ${t.ticket.id}`, {
-      error: String(e),
-    });
-  });
-
-  await t.runtime.gitHost.deleteBranch(t.branch).catch((e: unknown) => {
-    deps.log?.('warn', `could not delete branch ${t.branch}`, { error: String(e) });
-  });
-}
 
 async function mergeTierA(
   ctx: EngineCtx,
@@ -148,11 +107,15 @@ export async function mergeReviewed(
 ): Promise<'done' | 'head_moved'> {
   const { ticket } = t;
   const prNumber = ticket.pr_number;
-  const wanted = ticket.status === 'review' ? 'B' : 'C';
-  // Fail closed: only finished work in review (B) or sign-off (C), with a PR, merges here.
+  // Fail closed: only finished work in review (B, or A held by a human stage) or sign-off (C), with a PR, merges here.
+  const tierOk =
+    ticket.status === 'review'
+      ? ticket.tier_actual === 'A' || ticket.tier_actual === 'B'
+      : ticket.tier_actual === 'C';
+
   if (
     (ticket.status !== 'review' && ticket.status !== 'needs_signoff') ||
-    ticket.tier_actual !== wanted ||
+    !tierOk ||
     prNumber === undefined
   ) {
     throw new PolicyDeniedError(`${ticket.id} is not eligible to merge`);
@@ -248,6 +211,7 @@ export async function passAndMerge(
   ctx: EngineCtx,
   t: VerifyTarget,
   rows: GateRows,
+  hold = false,
 ): Promise<MergeOutcome> {
   const gatedSha = gatedHeadOf(rows);
   const prNumber = t.ticket.pr_number;
@@ -266,7 +230,7 @@ export async function passAndMerge(
 
   const tier = await tierOfDiff(ctx, t);
   const ticket =
-    t.ticket.tier_actual === undefined ? await recordPass(ctx, t, tier) : t.ticket;
+    t.ticket.tier_actual === undefined ? await recordPass(ctx, t, tier, hold) : t.ticket;
 
   // A re-gated head may touch other files than the ones `gate_passed` was recorded for.
   if (ticket.tier_actual !== tier) {
@@ -275,8 +239,13 @@ export async function passAndMerge(
     );
   }
 
-  if (tier === 'B' || tier === 'C') {
-    recordVerified(ctx, t, tier === 'B' ? 'review' : 'needs_signoff', rows);
+  if (tier === 'B' || tier === 'C' || hold) {
+    // The pipeline's human stage begins: the owner's review is a row, so the ticket page shows it.
+    if (hold) {
+      await ctx.deps.storage.transaction((tx) => holdForHuman(tx, ctx.nowIso, ticket.id));
+    }
+
+    recordVerified(ctx, t, tier === 'C' ? 'needs_signoff' : 'review', rows);
 
     return 'done';
   }

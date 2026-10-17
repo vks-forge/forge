@@ -3,7 +3,7 @@
  *
  * Why: engine and server tests run on this backend, so deleting a project must clear the
  *   same rows the SQLite purge clears (tickets, relations, intake, wakes, runs and their
- *   events, inbox, tokens, gates and interactions, cards, their history, relations, queued replies, planning state and plan versions, inbox marks),
+ *   events, inbox, tokens, gates and interactions, cards, their history, relations, queued replies, planning state and plan versions, inbox marks, pipeline snapshots, stage rows and artifacts),
  *   or a test that re-adds a deleted project would pass here and fail in production. Tool
  *   receipts live in the receipt log, not in this state, so they are outside this purge.
  *
@@ -28,6 +28,12 @@ export function purgeProjectState(state: MemoryState, slug: string): boolean {
   const cardIds = new Set(
     [...state.cards.values()].filter((c) => c.project === slug).map((c) => c.id),
   );
+
+  state.stageArtifacts = state.stageArtifacts.filter((a) => !ticketIds.has(a.ticket_id));
+  state.stageRuns = state.stageRuns.filter((r) => !ticketIds.has(r.ticket_id));
+  for (const id of ticketIds) {
+    state.ticketPipelines.delete(id);
+  }
 
   for (const id of runIds) {
     state.runs.delete(id);

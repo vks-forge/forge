@@ -9,16 +9,48 @@
  *   not is consumed and dropped, never left to fire later. A read-only caller (the ticket
  *   page's wait explanation) asks for the same verdict without consuming anything.
  *
+ *   A `stage` wake starts the next stage of the ticket's pipeline. It is acted on only when the
+ *   rows say that stage is ready (a writer while the ticket is in progress, a check while it is
+ *   verifying); until then it waits, never dropped, because the red proof of a test-writer runs
+ *   between the writer and the next stage and the wake is what keeps the ticket explained.
+ *
  * Exports: classifyWake(), wakeIsDue().
- * Depends on: @forge/core (TERMINAL_STATUSES), types/engine-state, types/tick. IO only through the open transaction.
+ * Depends on: @forge/core (TERMINAL_STATUSES), tick/stage-state, types/engine-state, types/tick. IO only through the open transaction.
  */
 
 import { TERMINAL_STATUSES } from '@forge/core';
-import type { StorageTx, TicketId, WakeRequest } from '@forge/core';
+import type { StorageTx, Ticket, TicketId, WakeRequest } from '@forge/core';
+import { readStageState } from '#/tick/stage-state.js';
 import type { Candidate, WakeView } from '#/types/tick.types.js';
 
 export const wakeIsDue = (w: WakeRequest, now: number): boolean =>
   w.not_before === undefined || Date.parse(w.not_before) <= now;
+
+/** A stage wake's candidate: only when the rows say its stage is ready; otherwise it keeps waiting. */
+async function stageCandidate(
+  view: WakeView,
+  tx: StorageTx,
+  ticket: Ticket,
+  w: WakeRequest,
+  drop: (why: string) => Promise<null>,
+): Promise<Candidate | null> {
+  if (ticket.status !== 'in_progress' && ticket.status !== 'verifying') {
+    return drop(`stage wake does not apply to a ${ticket.status} ticket`);
+  }
+
+  if (
+    ticket.status === 'in_progress' &&
+    ticket.assignee_run_id &&
+    view.state.pumps.has(ticket.assignee_run_id)
+  ) {
+    return null;
+  }
+
+  const state = await readStageState(tx, ticket.id);
+  const ready = ticket.status === 'in_progress' ? 'run_writer' : 'run_checks';
+
+  return state?.cursor.kind === ready ? { ticket, kind: 'stage', wake: w } : null;
+}
 
 /**
  * The candidate behind a due wake, or null when the wake is stale. With `consume`, a stale
@@ -52,10 +84,14 @@ export async function classifyWake(
     ? await tx.runs.get(ticket.assignee_run_id)
     : null;
 
-  // A continuation wake is the rework request after a failed gate: the run it follows
-  // did report done, which is exactly why the Worker is being sent back.
-  if (assigned?.status === 'success' && w.kind !== 'continuation') {
+  // A continuation wake is the rework request after a failed gate, and a stage wake the start
+  // of the next stage: the run each follows did report done, which is exactly why they exist.
+  if (assigned?.status === 'success' && w.kind !== 'continuation' && w.kind !== 'stage') {
     return drop('its run already reported done');
+  }
+
+  if (w.kind === 'stage') {
+    return stageCandidate(view, tx, ticket, w, drop);
   }
 
   if (ticket.assignee_run_id && view.state.pumps.has(ticket.assignee_run_id)) {

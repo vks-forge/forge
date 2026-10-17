@@ -7,6 +7,8 @@
  *   failure is either retried later through a wake or handed to a human, by the family
  *   table and the hourly re-wake cap (execution-plane.md §8). A run that ended out of quota
  *   is neither: it parks its harness until the reset and the ticket waits (tick/quota, d-0097).
+ *   A run that carries a pipeline stage is applied by tick/stage-outcome: a writer passes its stage
+ *   and the cursor says what is next, a check applies the review it submitted.
  *   Every ticket change goes
  *   through `transition()`; nothing here writes a status directly, and a run that is no
  *   longer the ticket's current run (a late settle) changes nothing. A pause and a park each
@@ -16,7 +18,8 @@
  *
  * Exports: applyOutcome().
  * Depends on: @forge/core (isRunActive, TERMINAL_STATUSES), domain/failure-policy,
- *   tick/outcome-escalate, tick/quota, tick/ticket-moves, tick/wakes. Writes inside the caller's transaction.
+ *   tick/outcome-escalate, tick/quota, tick/stage-{outcome,records,state}, tick/ticket-moves, tick/wakes.
+ *   Writes inside the caller's transaction.
  */
 
 import { TERMINAL_STATUSES, isRunActive } from '@forge/core';
@@ -24,6 +27,9 @@ import type { ErrorFamily, Run, RunResult, StorageTx, Ticket } from '@forge/core
 import { decideFailure } from '#/domain/failure-policy.js';
 import { ensureQuestion, parkRun, setupCauseOfRun } from '#/tick/outcome-escalate.js';
 import { parkHarnessForQuota, requestQuotaWake } from '#/tick/quota.js';
+import { afterWriterSuccessTx, applyCheckOutcome } from '#/tick/stage-outcome.js';
+import { finishStageRun } from '#/tick/stage-records.js';
+import { isCheckRow, readStageState } from '#/tick/stage-state.js';
 import { moveTicketTx } from '#/tick/ticket-moves.js';
 import { requestWakeTx } from '#/tick/wakes.js';
 import type { EngineCtx, Pump } from '#/types/engine-state.types.js';
@@ -44,7 +50,10 @@ export async function applyOutcome(
   result: RunResult,
   family: ErrorFamily | undefined,
   pump?: Pump,
-  opts: Pick<SettleOptions, 'retryReason' | 'parkReason' | 'parkBuild' | 'receipts'> = {},
+  opts: Pick<
+    SettleOptions,
+    'retryReason' | 'parkReason' | 'parkBuild' | 'receipts' | 'diff'
+  > = {},
 ): Promise<void> {
   const ticket = await tx.tickets.get(run.ticket_id as Ticket['id']);
   if (!ticket || TERMINAL_STATUSES.includes(ticket.status) || pump?.cancelled) {
@@ -60,6 +69,20 @@ export async function applyOutcome(
   }
 
   const { log } = ctx.deps;
+  // A run that carries a pipeline stage: a check applies its verdict, a writer passes its stage
+  // and the cursor says what is next. A run with no stage row (from before pipelines) is the old path.
+  const row = await tx.stageRuns.getByRun(run.id);
+  const staged = row ? await readStageState(tx, ticket.id) : null;
+  if (row && staged) {
+    if (isCheckRow(staged.snapshot, row)) {
+      return applyCheckOutcome(ctx, tx, ticket, run, result, family, row, staged);
+    }
+
+    if (result.status === 'success') {
+      return afterWriterSuccessTx(ctx, tx, ticket, run, row, staged.snapshot, opts);
+    }
+  }
+
   if (result.status === 'success') {
     const m = await moveTicketTx(tx, ticket.id, ctx.nowIso, () => ({
       events: [{ type: 'verifying' }],
@@ -83,6 +106,17 @@ export async function applyOutcome(
     }
 
     return;
+  }
+
+  if (row && staged) {
+    // The writer's attempt stays open for the retry (dispatch takes it over), marked as an error.
+    await finishStageRun(
+      tx,
+      row.id,
+      'error',
+      { note: family ?? result.status },
+      ctx.nowIso,
+    );
   }
 
   if (family === 'quota') {

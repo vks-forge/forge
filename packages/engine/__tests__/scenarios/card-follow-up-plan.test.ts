@@ -45,7 +45,7 @@ describe('follow-up plan on a done card', () => {
     const rig = await planningRig();
     const v1 = todoPlan({
       tickets: [
-        ticketPlan('t1', 'standard', ['src/a.ts']),
+        ticketPlan('t1', 'full', ['src/a.ts']),
         ticketPlan('t2', 'express', ['src/b.ts']),
       ],
     });

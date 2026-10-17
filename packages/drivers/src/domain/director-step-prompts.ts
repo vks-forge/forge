@@ -29,7 +29,12 @@ export const STEP_INSTRUCTIONS: Readonly<Record<StepName, string>> = {
   dispatch_prompt:
     'You are the dispatch step of a software delivery system. From the ticket below, write ' +
     'the prompt a coding worker will receive: the goal, the constraints and what done looks ' +
-    'like. Do not invent requirements the ticket does not contain.',
+    'like. Do not invent requirements the ticket does not contain. When `input.agent` is ' +
+    'present the worker is that agent (its `role` and `instructions` say what it is for): ' +
+    'write the brief for that role and nothing else, so a `tester` is told to write failing ' +
+    'tests only and never the fix, and a `writer` that is not the default implementer is told ' +
+    'to stay inside its own job. When `input.wake.kind` is `stage`, earlier stages of the ' +
+    'ticket pipeline already changed the worktree: tell the worker to continue from there.',
   steer_reply:
     'You are the steering step of a software delivery system. A person replied about a ' +
     'ticket whose worker may be running. Decide whether the reply should steer the worker, ' +

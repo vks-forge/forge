@@ -179,7 +179,7 @@ export interface TickReport {
   readonly dispatched: {
     ticketId: string;
     runId: string;
-    kind: 'new' | 'retry' | 'resume';
+    kind: 'new' | 'retry' | 'resume' | 'stage';
   }[];
   readonly steered: { ticketId: string; runId: string; mode: string }[];
   readonly verified: VerifiedTicket[];

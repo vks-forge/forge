@@ -23,6 +23,7 @@ import type {
   ProjectConfig,
   Run,
   Ticket,
+  ScriptGateRunner,
   WorktreeManager,
 } from '@forge/core';
 
@@ -38,6 +39,8 @@ export interface ProjectRuntime {
   readonly worktrees: WorktreeManager;
   /** Base used when the project's settings name no git host. */
   readonly baseRef: string;
+  /** Runs owner-written script gates and the red proof; absent means those stages cannot run (a script gate parks, a red proof is skipped). */
+  readonly scriptGates?: ScriptGateRunner;
 }
 
 /** A runtime that can publish: verifying needs a git host. */

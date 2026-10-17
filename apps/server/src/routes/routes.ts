@@ -25,7 +25,9 @@ import { githubConnectionRoutes } from '#/routes/github-connections.js';
 import { hookRoute } from '#/routes/hook.js';
 import { intakeRoute } from '#/routes/intake.js';
 import { memoryRoutes } from '#/routes/memory.js';
+import { pipelineRoutes } from '#/routes/pipelines.js';
 import { projectAgentRoutes } from '#/routes/project-agents.js';
+import { projectPipelineRoutes } from '#/routes/project-pipelines.js';
 import { projectEventsRoute } from '#/routes/project-events.js';
 import { projectStatsRoutes } from '#/routes/project-stats.js';
 import { statsOverviewRoutes } from '#/routes/stats-overview.js';
@@ -38,6 +40,7 @@ import { runsRoutes } from '#/routes/runs.js';
 import { settingsRoutes } from '#/routes/settings.js';
 import { systemRoutes } from '#/routes/system.js';
 import { ticketListRoute } from '#/routes/ticket-list.js';
+import { ticketPipelineRoutes } from '#/routes/ticket-pipeline.js';
 import { ticketRoute } from '#/routes/tickets.js';
 import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
@@ -47,6 +50,7 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     intakeRoute(deps),
     ticketRoute(deps),
     ticketListRoute(deps),
+    ...ticketPipelineRoutes(deps),
     ...cardRoutes(deps),
     ...cardPlanRoutes(deps),
     answerRoute(deps),
@@ -61,6 +65,8 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ...settingsRoutes(deps),
     ...agentRoutes(deps),
     ...projectAgentRoutes(deps),
+    ...pipelineRoutes(deps),
+    ...projectPipelineRoutes(deps),
     ...harnessRoutes(deps),
     ...folderRoutes(deps),
     folderPickRoute(deps),

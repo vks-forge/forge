@@ -132,8 +132,13 @@ function decide(t: Ticket, e: TicketEvent): Result<TicketDelta, TransitionError>
         return err(illegal(t, e));
       }
 
-      // Tier A stays in Verifying until the merge event; B/C wait on a human.
-      const status = { A: 'verifying', B: 'review', C: 'needs_signoff' } as const;
+      // Tier A stays in Verifying until the merge event; B/C wait on a human. A pipeline with a
+      // human stage holds tier A for the owner too (`hold`): it waits in Review like tier B.
+      const status = {
+        A: e.hold === true ? 'review' : 'verifying',
+        B: 'review',
+        C: 'needs_signoff',
+      } as const;
 
       return ok({ status: status[e.tier_actual], tier_actual: e.tier_actual });
     }

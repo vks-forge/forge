@@ -1,7 +1,7 @@
 /**
  * Wake delta: what changed since the last run, as the prompt step is told.
  *
- * Why: a Worker started again must be told why: a new ticket, an answer to its question, a rework
+ * Why: a Worker started again must be told why: a new ticket, the next stage of its pipeline, an answer to its question, a rework
  *   after failed gates or after the owner sent finished work back, or a retry (with the note the
  *   owner or the Director attached). The delta is built from the wake that started it, so the
  *   resumed Worker gets the owner's words and the gate findings exactly as stored, never a
@@ -19,9 +19,19 @@ import type { Candidate } from '#/types/tick.types.js';
 export function wakeDelta(
   c: Candidate,
   answered: Interaction | null,
+  stage?: { readonly id: string; readonly label: string },
 ): Record<string, unknown> {
   if (c.kind === 'new') {
     return { kind: 'new_ticket' };
+  }
+
+  // The next stage of the pipeline: earlier stages already changed this worktree.
+  if (c.kind === 'stage') {
+    return {
+      kind: 'stage',
+      stage: stage?.label ?? stage?.id ?? 'the next stage',
+      note: 'Earlier stages of this ticket have already passed and changed this worktree (see the changes since the base). Continue from there; do not redo them.',
+    };
   }
 
   if (c.kind === 'resume') {

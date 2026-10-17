@@ -45,6 +45,7 @@ describe('Forge settings tabs', () => {
     expect(links.map((link) => link.textContent)).toEqual([
       'General',
       'Director',
+      'Agents',
       'Limits',
       'Harnesses',
       'GitHub',
@@ -136,6 +137,7 @@ describe('project settings tabs', () => {
     ['checks', 'Checks'],
     ['repository', 'Repository'],
     ['director', 'Director for this project'],
+    ['agents', 'Agents for this project'],
     ['history', 'History'],
     ['danger', 'Archive project'],
   ])('shows the %s section at its own URL', async (segment, heading) => {

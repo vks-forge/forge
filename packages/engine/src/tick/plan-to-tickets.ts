@@ -8,10 +8,10 @@
  *   and gives each ticket its `triaged` event with the stricter of the plan's lane and the
  *   deterministic pre-check, so a ticket can only be raised, never lowered (d-0141 item 9), and
  *   a ticket touching a Tier C path is Tier C. It is idempotent per (card, version): a double
- *   click or a retry returns the tickets already made. Only Express runs today, so a planned
- *   Standard or Full ticket is held with the wait reason `pipeline_pending` and a lane-hold
- *   escalation offering "Run as Express", Re-plan or Cancel, so the owner always has a way
- *   forward until pipelines exist (d-0135). Approving a later version of a re-planned card
+ *   click or a retry returns the tickets already made. A planned ticket whose lane has no
+ *   runner yet (Full, until its pipeline goes live) is held with the wait reason `pipeline_pending`
+ *   and a lane-hold escalation offering "Run as Express", Re-plan or Cancel, so the owner always
+ *   has a way forward (d-0135); Express and Standard tickets run their lane pipeline. Approving a later version of a re-planned card
  *   also cancels, through `transition()`, the earlier plan's tickets that have not started
  *   (inbox, planned, waiting, blocked); finished and running tickets stay, and the plan keys are
  *   recorded next to the ticket ids so the new plan can tell what already exists.
@@ -31,6 +31,7 @@ import type {
   Ticket,
   TicketId,
 } from '@forge/core';
+import { isLive } from '#/domain/live-lanes.js';
 import { iso } from '#/shared/time.js';
 import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
 import { moveCardTx } from '#/tick/card-phase.js';
@@ -223,8 +224,9 @@ export async function approvePlanTx(
     );
 
     const tierC = t.files.some((f) => tierCGlobs.some((g) => globMatch(g, f, true)));
-    const held = lane !== 'express';
-    const reason = `${PIPELINE_PENDING}: the ${lane} lane has no pipeline yet. Run it as Express to start it now.`;
+    // Only a lane with no runner yet is held; the engine releases the hold once the lane is live.
+    const held = !isLive(lane);
+    const reason = `${PIPELINE_PENDING}: the ${lane} lane goes live in the next update. Run it as Express to start it now.`;
     const moved = await moveTicketTx(tx, id, at, () => ({
       events: [
         { type: 'triaged', lane, tier_predicted: tierC ? 'C' : 'A' },

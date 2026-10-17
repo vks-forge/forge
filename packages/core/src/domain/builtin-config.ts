@@ -9,11 +9,13 @@
  *   default and every install that never overrode it picks it up.
  *
  * Exports: BUILTIN_FORGE_CONFIG, BUILTIN_PROJECT_SETTINGS, BUILTIN_CONFIG.
- * Depends on: domain/builtin-agents, domain/builtin-director, schemas/config-override, schemas/forge-config. No IO.
+ * Depends on: domain/builtin-agents, domain/builtin-director, domain/builtin-pipelines, schemas/config-override,
+ *   schemas/forge-config. No IO.
  */
 
 import { BUILTIN_AGENTS } from '#/domain/builtin-agents.js';
 import { BUILTIN_DIRECTOR_CONFIG } from '#/domain/builtin-director.js';
+import { BUILTIN_PIPELINES } from '#/domain/builtin-pipelines.js';
 import type { EffectiveConfig, ProjectSettings } from '#/schemas/config-override.js';
 import type { ForgeConfig } from '#/schemas/forge-config.js';
 
@@ -69,6 +71,7 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
   },
   director: BUILTIN_DIRECTOR_CONFIG,
   agents: { ...BUILTIN_AGENTS },
+  pipelines: BUILTIN_PIPELINES,
 };
 
 /** What a project gets until it overrides: no checks (any role may be absent), no ecosystems (the gates detect them), the safe Tier C set. */

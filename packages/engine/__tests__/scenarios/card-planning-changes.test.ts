@@ -189,7 +189,7 @@ describe('held tickets', () => {
   it('holds a planned non-Express ticket with a Run as Express action and releases it', async () => {
     const rig = await planningRig();
     const heavy = todoPlan();
-    (heavy['tickets'] as { lane: string }[])[1]!.lane = 'standard';
+    (heavy['tickets'] as { lane: string }[])[1]!.lane = 'full';
     scriptTodo(rig, { write_plan: [heavy] });
 
     const id = await planUntilDecision(rig);
@@ -197,7 +197,7 @@ describe('held tickets', () => {
 
     expect(['planned', 'in_progress']).toContain(first?.status);
     expect(first?.lane).toBe('express');
-    expect(second).toMatchObject({ status: 'waiting_human', lane: 'standard' });
+    expect(second).toMatchObject({ status: 'waiting_human', lane: 'full' });
     expect(second?.blocked_reason).toMatch(/^pipeline_pending/);
 
     // The hold is an owner-stage lane-hold escalation, not a card-level needs_you note.
@@ -209,7 +209,7 @@ describe('held tickets', () => {
     expect(held[0]).toMatchObject({
       kind: 'failure',
       status: 'pending',
-      payload: { kind: 'failure', cause: 'lane_hold', lane: 'standard' },
+      payload: { kind: 'failure', cause: 'lane_hold', lane: 'full' },
     });
 
     expect(held[0]?.escalated_at).toBeDefined();

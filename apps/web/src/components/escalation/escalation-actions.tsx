@@ -47,7 +47,12 @@ export function EscalationActions(props: {
 
   const [noting, setNoting] = useState(false);
   const [note, setNote] = useState('');
-  const actions = props.actions.filter((action) => action !== 'answer');
+  // `pipeline_ready` is engine-only (a held lane went live) and never offered to the owner.
+  const actions = props.actions.filter(
+    (action): action is Exclude<EscalationAction, 'answer' | 'pipeline_ready'> =>
+      action !== 'answer' && action !== 'pipeline_ready',
+  );
+
   const busy = controls.pending !== null;
   const open = (which: 'replan' | 'rework' | 'cancel' | 'approve' | 'sign_off'): void => {
     controls.reset();
@@ -70,7 +75,7 @@ export function EscalationActions(props: {
     return index === 0 && props.lead === undefined ? 'primary' : 'quiet';
   };
 
-  const button = (action: EscalationAction, index: number): ReactNode => {
+  const button = (action: (typeof actions)[number], index: number): ReactNode => {
     const common = {
       variant: style(action, index),
       disabled: busy && controls.pending !== action,

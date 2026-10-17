@@ -24,18 +24,18 @@ import { latestPerGate, summarizeGates } from '#/domain/gate-rows.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { isHeld } from '#/steps/run-step.js';
 import { jobKey, pruneGateJobs, startGateJob } from '#/tick/gate-jobs.js';
+import { pruneStageJobs } from '#/tick/stage-script-jobs.js';
 import { baseRefFor, runtimeFor } from '#/tick/project-runtime.js';
+import { driveStages } from '#/tick/stage-runner.js';
+import { reworkOrPark } from '#/tick/stage-send-back.js';
 import { isUnservable } from '#/tick/tick-config.js';
 import { readClaims } from '#/tick/verify-gates.js';
 import { passAndMerge } from '#/tick/verify-merge.js';
-import {
-  handleVerifyFailure,
-  parkVerifying,
-  reworkOrPark,
-} from '#/tick/verify-outcomes.js';
+import { handleVerifyFailure, parkVerifying } from '#/tick/verify-outcomes.js';
 import { publishBranch } from '#/tick/verify-publish.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
-import type { GateRun, VerifyTarget } from '#/types/verify.types.js';
+import type { G1Result } from '#/types/stage-runner.types.js';
+import type { GateRows, GateRun, VerifyTarget } from '#/types/verify.types.js';
 
 /** A branch that keeps moving under the gates is not going to settle by itself. */
 const MAX_REGATES = 3;
@@ -112,7 +112,8 @@ function consumeJob(ctx: EngineCtx, t: VerifyTarget): GateRun | null {
   return job.outcome.run;
 }
 
-async function verifyTarget(ctx: EngineCtx, t: VerifyTarget): Promise<void> {
+/** The G1 stage: publish and gate, or read the stored verdicts. `pass` means G1 passed on this run; anything else was handled. */
+async function runG1(ctx: EngineCtx, t: VerifyTarget): Promise<G1Result> {
   const { gates } = t.runtime;
   if (gates.length === 0) {
     throw new PolicyDeniedError(
@@ -125,16 +126,12 @@ async function verifyTarget(ctx: EngineCtx, t: VerifyTarget): Promise<void> {
   if (running && running.outcome === undefined) {
     ctx.deps.log?.('debug', `${t.ticket.id} waits for its gates to finish`);
 
-    return;
+    return { kind: 'handled' };
   }
 
   const finished = consumeJob(ctx, t);
   const verdicts: ReadonlyMap<string, GateVerdict> = finished?.verdicts ?? new Map();
-  const stored = await ctx.deps.storage.transaction((tx) =>
-    tx.gateResults.listByTicket(t.ticket.id),
-  );
-
-  const rows = latestPerGate(stored.filter((r) => r.run_id === t.run.id));
+  const rows = await gateRows(ctx, t);
   const summary = summarizeGates(rows, gates);
 
   if (summary.kind === 'error') {
@@ -146,16 +143,53 @@ async function verifyTarget(ctx: EngineCtx, t: VerifyTarget): Promise<void> {
     }
 
     // No usable verdicts for this run yet (or a gate could not run last time): gate again.
-    return startGating(ctx, t);
+    await startGating(ctx, t);
+
+    return { kind: 'handled' };
   }
 
   if (summary.kind === 'fail') {
-    return reworkOrPark(ctx, t, rows, verdicts);
+    const g1 = await ctx.deps.storage.transaction((tx) =>
+      tx.ticketPipelines.get(t.ticket.id),
+    );
+
+    const stage = g1?.definition.stages.find(
+      (s) => s.kind === 'script_gate' && 'builtin' in s.run,
+    );
+
+    await reworkOrPark(ctx, t, rows, verdicts, stage?.id ?? 'g1');
+
+    return { kind: 'handled' };
   }
 
-  if ((await passAndMerge(ctx, t, rows)) === 'regate') {
-    return regate(ctx, t, key);
+  const report = [...verdicts.values()].map((v) => v.report).join('\n\n');
+
+  return { kind: 'pass', rows, ...(report === '' ? {} : { report }) };
+}
+
+/** The latest gate row per gate for the target's run. */
+async function gateRows(ctx: EngineCtx, t: VerifyTarget): Promise<GateRows> {
+  const stored = await ctx.deps.storage.transaction((tx) =>
+    tx.gateResults.listByTicket(t.ticket.id),
+  );
+
+  return latestPerGate(stored.filter((r) => r.run_id === t.run.id));
+}
+
+/** The merge door for a ticket whose stages all passed: merges tier A, holds B/C or a human stage, re-gates a moved head. */
+async function mergeStep(
+  ctx: EngineCtx,
+  t: VerifyTarget,
+  rows: GateRows,
+  hold: boolean,
+): Promise<void> {
+  if ((await passAndMerge(ctx, t, rows, hold)) === 'regate') {
+    return regate(ctx, t, jobKey(t.ticket.id, t.run.id));
   }
+}
+
+async function verifyTarget(ctx: EngineCtx, t: VerifyTarget): Promise<void> {
+  await driveStages(ctx, t, { g1: runG1, rows: gateRows, merge: mergeStep });
 }
 
 /** The head moved after the gates passed: judge the new head, a bounded number of times. */
@@ -188,6 +222,7 @@ export async function verifyReady(ctx: EngineCtx): Promise<void> {
   ).sort((a, b) => ticketNumber(a.id) - ticketNumber(b.id));
 
   pruneGateJobs(ctx, new Set(tickets.map((x) => x.id)));
+  pruneStageJobs(ctx, new Set(tickets.map((x) => x.id)));
 
   let worked = 0;
   for (const ticket of tickets) {

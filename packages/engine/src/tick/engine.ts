@@ -4,8 +4,8 @@
  * Why: the Director's guarantee is that no ticket is silently lost and no run is started
  *   twice. That rests on a single place where the sequence is decided. Each tick runs
  *   reconcile (restart, stalls, finished runs, expired questions), refresh (triage new
- *   tickets, deliver steering replies), verify (publish, gate and merge finished work),
- *   then dispatch (start what is ready), and ends with
+ *   tickets, deliver steering replies), release lane holds, verify (publish, gate, check and merge finished work),
+ *   advance stages (the red proof), then dispatch (start what is ready), and ends with
  *   the invariant sweep. Ticks are single-flight, and the engine owns no timers: the app
  *   calls `tick()` on its clock and whenever the engine asks through `onTickRequested`
  *   (an intake event, a run event, a settled run), so the same code runs under a real
@@ -28,6 +28,7 @@ import { closeCardWork, sweepClosedCards } from '#/tick/card-close.js';
 import { sweepCardPhases } from '#/tick/card-sweep.js';
 import { createCard, setCardRelations } from '#/tick/card-create.js';
 import { dispatchReady } from '#/tick/dispatch.js';
+import { releaseLaneHolds } from '#/tick/lane-hold-release.js';
 import { backfillEscalations } from '#/tick/escalation-backfill.js';
 import { actOnEscalation, actOnTicket } from '#/tick/escalation-act.js';
 import { sweepEscalations } from '#/tick/escalation-director.js';
@@ -48,6 +49,7 @@ import { runAsExpress } from '#/tick/run-as-express.js';
 import { answerGrill, grillShortcut } from '#/tick/planning-owner.js';
 import { sweepPlanning } from '#/tick/planning-sweep.js';
 import { cancelStalled, settleFinishedPumps } from '#/tick/reconcile.js';
+import { advanceStages } from '#/tick/stage-advance.js';
 import { reconcileRestart, resumeInterrupted } from '#/tick/restart.js';
 import { steerRun } from '#/tick/steer-run.js';
 import { deliverReplies } from '#/tick/steering.js';
@@ -146,8 +148,12 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
   await phase(ctx, 'setup recheck', async (c) => void (await resumeFixedSetups(c)));
   await phase(ctx, 'planning sweep', sweepPlanning);
   await phase(ctx, 'card chat', runCardChats);
+  // A ticket held for a lane that is live now is released before anything else looks at it.
+  await phase(ctx, 'lane holds', releaseLaneHolds);
   await phase(ctx, 'triage', triageInbox);
   await phase(ctx, 'verify', verifyReady);
+  // The red proof of a test-writer, and a ticket done writing, move on before dispatch.
+  await phase(ctx, 'stage advance', advanceStages);
   // A park that verify just made gets its first look in the same tick, so a Director retry can dispatch now.
   await phase(ctx, 'escalations after verify', sweepEscalations);
   await phase(ctx, 'dispatch', dispatchReady);
@@ -169,6 +175,8 @@ export function createEngine(deps: EngineDeps): Engine {
     holds: new Map(),
     baseShas: new Map(),
     gateJobs: new Map(),
+    stageJobs: new Map(),
+    diffRouted: new Set(),
     regates: new Map(),
     replies: [],
     chat: { pending: new Set(), busy: new Set(), errors: new Map() },
@@ -236,7 +244,9 @@ export function createEngine(deps: EngineDeps): Engine {
     liveRunIds: () => [...state.pumps.keys()],
     unservableProjects: () => new Map(state.unservable),
     gateJobsInFlight: () =>
-      [...state.gateJobs.values()].filter((j) => j.outcome === undefined).length,
+      [...state.gateJobs.values(), ...state.stageJobs.values()].filter(
+        (j) => j.outcome === undefined,
+      ).length,
   };
 
   return engine;

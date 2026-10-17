@@ -12,7 +12,7 @@
  *   routes/ticket/*, components/thread/*.
  */
 
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { json, refusal } from '#tests/helpers/fetch-stub.js';
@@ -56,6 +56,12 @@ describe('Message the Worker', () => {
     const { forge } = renderApp({ path: ticketPath('SVC-3') });
     expect(await screen.findByText('Live')).toBeInTheDocument();
 
+    // The stream replays the run's history on a timer after it opens, and the thread drops any
+    // event older than the newest it has seen. Wait for the replay to land, so the pushed
+    // frame is never raced by (and never drops) the scripted ones on a slow machine.
+    await screen.findByText(/Editing the exporter now/);
+
+    await waitFor(() => expect(forge.streams.sources.length).toBeGreaterThan(0));
     forge.streams.sources[0]!.emit('user_message', {
       type: 'user_message',
       seq: 900,

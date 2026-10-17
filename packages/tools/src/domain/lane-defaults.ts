@@ -36,6 +36,7 @@ const CORE_TOOLS = [
   'mcp__forge__ask_director',
   'mcp__forge__report_blocked',
   'mcp__forge__finish',
+  'mcp__forge__submit_review',
 ];
 
 const EXPRESS_TOOLS = [...READ_TOOLS, ...CORE_TOOLS, 'edit', 'write', 'shell'];

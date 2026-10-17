@@ -22,6 +22,7 @@ const FORGE_TOOLS = [
   'finish',
   'get_ticket',
   'report_blocked',
+  'submit_review',
   'web_fetch',
   'web_search',
 ].map((t) => `mcp__forge__${t}`);
@@ -33,7 +34,7 @@ describe('built-in catalogue', () => {
     expect(state.status).toBe('verified');
   });
 
-  it('lists the eight forge tools and the native tools', () => {
+  it('lists the nine forge tools and the native tools', () => {
     if (state.status !== 'verified') {
       throw new Error('not verified');
     }

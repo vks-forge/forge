@@ -31,6 +31,8 @@ export interface FakeWorktrees extends WorktreeManager {
   readonly commits: { path: string; message: string }[];
   /** Files `changedFiles` reports for every worktree. */
   changed: string[];
+  /** The unified patch `diff` reports for every worktree. */
+  patch: string;
   /** The commit every worktree reports as its head. */
   headSha: string;
   failCreate: Error | null;
@@ -43,6 +45,7 @@ export function createFakeWorktrees(): FakeWorktrees {
     removed: [],
     commits: [],
     changed: ['src/a.ts'],
+    patch: '',
     headSha: 'head-sha-1',
     failCreate: null,
     async create(ticketId: TicketId, branch, baseRef) {
@@ -66,7 +69,7 @@ export function createFakeWorktrees(): FakeWorktrees {
     changedFiles: async () => [...fake.changed],
     diff: async () => ({
       files: fake.changed.map((path) => ({ status: 'M' as const, path })),
-      patch: '',
+      patch: fake.patch,
     }),
     async commitAll(path, message) {
       fake.commits.push({ path, message });

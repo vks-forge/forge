@@ -4,10 +4,10 @@
  * Why: every request is judged before any Worker starts (d-0025): a deterministic
  *   pre-check, then the `triage` step, then the lane rule that lets the pre-check and the
  *   user's hint have the last word over the model. The result names the real title, type,
- *   lane and tier, and the ticket becomes `planned`. M0 only runs Express: a ticket that
- *   needs a heavier lane parks in WaitingHuman with a plain reason instead of silently
- *   running with too little process (d-0059, brief E1), and the park is a lane-hold
- *   escalation so the owner has a way forward. A rejected triage leaves the
+ *   lane and tier, and the ticket becomes `planned`. A ticket whose lane has no runner yet
+ *   (Full, until its pipeline goes live) parks in WaitingHuman with a plain reason instead of
+ *   silently running with too little process (d-0059, brief E1), and the park is a lane-hold
+ *   escalation so the owner has a way forward; the engine lifts it when the lane goes live. A rejected triage leaves the
  *   ticket in the inbox and is not retried until its hold passes.
  *
  * Exports: triageInbox().
@@ -18,6 +18,7 @@
 import { NewRequestPayload, TriageOutput, preCheckLane } from '@forge/core';
 import type { Ticket } from '@forge/core';
 import { decideLane } from '#/domain/lane-rules.js';
+import { isLive } from '#/domain/live-lanes.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { hold, isHeld, rejectStep, runStep } from '#/steps/run-step.js';
 import { isUnservable, projectSettings } from '#/tick/tick-config.js';
@@ -98,8 +99,9 @@ async function triageOne(ctx: EngineCtx, ticket: Ticket): Promise<void> {
     tierCGlobs: globs,
   });
 
-  const parked = decision.lane !== 'express';
-  const reason = `lane not enabled in M0: triage chose ${decision.lane}${
+  // Only a lane with no runner yet is held; the engine releases the hold itself once it is live.
+  const parked = !isLive(decision.lane);
+  const reason = `pipeline_pending: triage chose the ${decision.lane} lane, which goes live in the next update. Run it as Express to start it now${
     decision.reasons.length ? ` (${decision.reasons.join('; ')})` : ''
   }`;
 

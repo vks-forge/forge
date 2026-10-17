@@ -6,16 +6,24 @@
  *   run budget key by key, its fallback list replaces the company one, its tools and write
  *   scope narrow what policy admits. The engine must read all of that from one place at one
  *   moment, the tick's settings snapshot, so the run request, the run row and the scheduler's
- *   harness choice agree and a save mid-tick applies to the next tick as a whole. Until lane
- *   pipelines exist every lane runs the implementer; its built-in definition reproduces the
- *   pre-agent run request exactly (project harness, lane matrix model, no instructions).
+ *   harness choice agree and a save mid-tick applies to the next tick as a whole. A pipeline
+ *   stage names its agent: `resolveStageAgent` answers null when that agent cannot run, and the
+ *   caller stops the ticket visibly instead of running someone else (fail closed). Work that
+ *   names no stage (a run from before pipelines, a resume) continues on the agent it used, else
+ *   the implementer, whose built-in definition reproduces the pre-agent run request exactly
+ *   (project harness, lane matrix model, no instructions).
  *
- * Exports: agentViews(), resolveAgent(), modelFor().
- * Depends on: @forge/core (effectiveAgents, laneAgent, Lane), tick/tick-config, types/run-agent,
- *   types/tick. No IO.
+ * Exports: agentViews(), resolveAgent(), resolveStageAgent(), modelFor().
+ * Depends on: @forge/core (effectiveAgents, stageAgent, shippedImplementer, Lane), tick/tick-config,
+ *   types/run-agent, types/tick. No IO.
  */
 
-import { effectiveAgents, laneAgent } from '@forge/core';
+import {
+  IMPLEMENTER_ID,
+  effectiveAgents,
+  shippedImplementer,
+  stageAgent,
+} from '@forge/core';
 import type { AgentView, HarnessRef, Lane, ModelChoice } from '@forge/core';
 import { projectSettings } from '#/tick/tick-config.js';
 import type { ResolvedAgent } from '#/types/run-agent.types.js';
@@ -39,29 +47,7 @@ export function agentViews(config: TickConfig, slug: string): AgentView[] {
 const harnessOf = (ref: HarnessRef, projectDefault: string): string =>
   ref === 'project_default' ? projectDefault : ref;
 
-/**
- * The agent for a ticket of `slug` in `lane`. `agentId` names the agent an earlier run of the
- * ticket used (a resume continues on it); it is honoured while that agent is still usable, else
- * the lane's agent answers.
- */
-export function resolveAgent(
-  config: TickConfig,
-  slug: string,
-  lane: Lane,
-  agentId?: string,
-): ResolvedAgent {
-  const views = agentViews(config, slug);
-  const named =
-    agentId === undefined
-      ? undefined
-      : views.find(
-          (v) =>
-            v.id === agentId &&
-            !v.tags.includes('disabled') &&
-            !v.tags.includes('archived'),
-        );
-
-  const view = named ?? laneAgent(views, lane);
+function resolved(config: TickConfig, slug: string, view: AgentView): ResolvedAgent {
   const projectDefault = projectSettings(config, slug).default_harness;
   const { runs_on } = view.definition;
 
@@ -73,6 +59,38 @@ export function resolveAgent(
     modelChoice: runs_on.model,
     fallbackHarnesses: runs_on.fallbacks.map((f) => harnessOf(f.harness, projectDefault)),
   };
+}
+
+/**
+ * The agent for work of `slug` that names no pipeline stage. `agentId` names the agent an earlier
+ * run of the ticket used (a resume continues on it); it is honoured while that agent is still
+ * usable, else the implementer answers (the shipped one when the stored one is unusable).
+ */
+export function resolveAgent(
+  config: TickConfig,
+  slug: string,
+  _lane: Lane,
+  agentId?: string,
+): ResolvedAgent {
+  const views = agentViews(config, slug);
+  const named = agentId === undefined ? undefined : stageAgent(views, agentId);
+
+  return resolved(
+    config,
+    slug,
+    named ?? stageAgent(views, IMPLEMENTER_ID) ?? shippedImplementer(),
+  );
+}
+
+/** The agent a pipeline stage names, or null when it does not exist or is disabled or archived. */
+export function resolveStageAgent(
+  config: TickConfig,
+  slug: string,
+  agentId: string,
+): ResolvedAgent | null {
+  const view = stageAgent(agentViews(config, slug), agentId);
+
+  return view ? resolved(config, slug, view) : null;
 }
 
 function modelOfChoice(

@@ -1,12 +1,12 @@
 /**
- * The work resources of the ForgeApi port: stats, inbox, runs, cost and the ticket list.
+ * The work resources of the ForgeApi port: inbox, runs, cost and the ticket list.
  *
  * Why: Home, Inbox, Runs and Cost read what the Director and Workers did. Their endpoints
  *   exist on the real server (W5b), so these resources have no fixture twin: a screen
  *   that showed invented runs or spend would be believed (d-0123). Response and query types
  *   come from `@forge/core`, so the UI and server cannot disagree about a field.
  *
- * Exports: QueryParams, StatsApi, OverviewApi, CostApi, CostPaging, InboxApi, RunsApi, InboxMarkName, InboxListArgs,
+ * Exports: QueryParams, OverviewApi, CostApi, CostPaging, InboxApi, RunsApi, InboxMarkName, InboxListArgs,
  *   RunListArgs.
  * Depends on: @forge/core (types only), types/api.types.
  */
@@ -18,7 +18,6 @@ import type {
   InboxPage,
   InboxView,
   OverviewStats,
-  ProjectStats,
   RunDetail,
   RunListPage,
   RunStatus,
@@ -43,10 +42,6 @@ export interface RunListArgs {
   readonly status?: readonly RunStatus[] | undefined;
   readonly cursor?: string | undefined;
   readonly limit?: number | undefined;
-}
-
-export interface StatsApi {
-  get(slug: string, range: StatsRange, options?: RequestOptions): Promise<ProjectStats>;
 }
 
 export interface OverviewApi {

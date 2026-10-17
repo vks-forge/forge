@@ -198,7 +198,7 @@ describe('crash past the retry cap', () => {
 
 describe('a held lane', () => {
   const standard = {
-    lane: 'standard',
+    lane: 'full',
     confidence: 0.95,
     predicted_files: ['src/a.ts'],
     questions: [],
@@ -220,7 +220,7 @@ describe('a held lane', () => {
     expect(row!.payload).toMatchObject({
       kind: 'failure',
       cause: 'lane_hold',
-      lane: 'standard',
+      lane: 'full',
     });
 
     expect(

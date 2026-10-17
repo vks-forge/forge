@@ -8,7 +8,9 @@
  * Pins: happy paths Inbox -> Done per tier, tier B/C routing to review/needs_signoff,
  *   purity, block/ask loops, tier-C signer, lane only escalates, errors returned not
  *   thrown, CAS stale version, terminal states and the 2-rework cap (director-core.md
- *   §3-§4, v1-scope-review.md §4.9). Properties are in state-machine-properties.test.ts.
+ *   §3-§4, v1-scope-review.md §4.9), and `gate_passed {hold}` (a pipeline with a human stage
+ *   sends tier A to review; B stays in review, C stays at needs_signoff).
+ *   Properties are in state-machine-properties.test.ts.
  * Depends on: src/domain/state-machine, src/schemas/ticket, helpers/fixtures,
  *   helpers/transition-events, vitest.
  */
@@ -40,6 +42,28 @@ describe('transition: happy paths', () => {
     const base = makeTicket({ status: 'verifying' });
     expect(apply(base, ev.passB).status).toBe('review');
     expect(apply(base, ev.passC).status).toBe('needs_signoff');
+  });
+
+  it('sends tier A to review when the pass carries hold, and leaves tiers B and C where they were', () => {
+    const base = makeTicket({ status: 'verifying' });
+    const hold = (tier: 'A' | 'B' | 'C') =>
+      apply(base, { type: 'gate_passed', at: T1, tier_actual: tier, hold: true });
+
+    expect(hold('A')).toMatchObject({ status: 'review', tier_actual: 'A' });
+    expect(hold('B').status).toBe('review');
+    expect(hold('C').status).toBe('needs_signoff');
+    // Without hold, tier A still waits in verifying for the merge event.
+    expect(apply(base, ev.passA).status).toBe('verifying');
+  });
+
+  it('lets the owner approve tier A work held in review: done, no merge event needed', () => {
+    const t = apply(
+      makeTicket({ status: 'verifying' }),
+      { type: 'gate_passed', at: T1, tier_actual: 'A', hold: true },
+      { type: 'done', at: T1 },
+    );
+
+    expect(t.status).toBe('done');
   });
 
   it('does not mutate its input', () => {

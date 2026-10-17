@@ -13,7 +13,8 @@
  *   assembles them and owns the transaction. Nothing persists, so it is not a production
  *   backend.
  *
- * Cards, their history, relations, the reply queue, planning state with plan versions and the card type registry (seeded with the built-in types) live here too.
+ * Cards, their history, relations, the reply queue, planning state with plan versions and the card type registry (seeded with the built-in types) live here too,
+ * as do ticket pipeline snapshots, stage attempts and stage artifacts.
  *
  * Exports: createMemoryStorage().
  * Depends on: adapters/memory/*, shared/db-errors, shared/mutex, types/memory-state. No IO.
@@ -44,6 +45,11 @@ import {
   memoryHarnessVersions,
 } from '#/adapters/memory/harness-compat.js';
 import { memoryRunTokens } from '#/adapters/memory/run-tokens.js';
+import {
+  memoryStageArtifacts,
+  memoryStageRuns,
+  memoryTicketPipelines,
+} from '#/adapters/memory/stage-runner.js';
 import { memoryRunEvents, memoryRunInbox, memoryRuns } from '#/adapters/memory/runs.js';
 import { memoryTicketRelations, memoryTickets } from '#/adapters/memory/tickets.js';
 import {
@@ -82,6 +88,11 @@ const emptyState = (): MemoryState => ({
   cardReplySeq: 0,
   cardPlanning: new Map(),
   cardPlans: new Map(),
+  ticketPipelines: new Map(),
+  stageRuns: [],
+  stageRunSeq: 0,
+  stageArtifacts: [],
+  stageArtifactSeq: 0,
   // Same rows migration 0019 seeds, so a fresh memory store routes intake like a fresh database.
   cardTypes: new Map(BUILTIN_CARD_TYPES.map((t) => [t.name, structuredClone(t)])),
 });
@@ -111,6 +122,9 @@ function buildTx(state: MemoryState): StorageTx {
     cardRelations: memoryCardRelations(state),
     cardReplyQueue: memoryCardReplyQueue(state),
     cardPlanning: memoryCardPlanning(state),
+    ticketPipelines: memoryTicketPipelines(state),
+    stageRuns: memoryStageRuns(state),
+    stageArtifacts: memoryStageArtifacts(state),
   };
 }
 

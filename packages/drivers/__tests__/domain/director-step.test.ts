@@ -50,6 +50,7 @@ describe('buildStepPrompt', () => {
   });
 
   it.each([
+    ['dispatch_prompt', ['input.agent', 'role', 'tester', 'failing tests', 'stage']],
     ['card_survey', ['read_requests', 'findings', 'input.playbook']],
     ['verify', ['read_requests', 'findings', 'input.playbook']],
     ['grill_turn', ['done', 'question', 'open_points', 'assumptions', 'input.playbook']],

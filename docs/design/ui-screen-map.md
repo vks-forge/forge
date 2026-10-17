@@ -27,7 +27,8 @@ Left sidebar (always visible)
     ├─ GitHub .......... connections, installations, rotate key
     ├─ Models & budgets
     ├─ Limits & queue .. global / per-project / per-harness
-    ├─ Agents · Pipelines · Skills   (editors, after x-0011)
+    ├─ Agents .......... roster, editor, templates, Director drafts (S5a)
+    ├─ Pipelines · Skills   (editors, after x-0011)
     ├─ Tools ........... catalogue, changed-tool approvals
     └─ Notifications
 
@@ -109,11 +110,31 @@ Amended by the UI pass U1 (shared surfaces, d-0164):
   ticket (id, title, card, lane, state chip, cost, updated) with state and lane filters,
   debounced search, sort and server-side pages (10/25/50), all in the URL; a row opens
   `/p/:slug/tickets/:id`.
-- **Settings use left tabs**: Forge settings (General, Director, Limits, Harnesses, GitHub)
+- **Settings use left tabs**: Forge settings (General, Director, Agents, Limits, Harnesses, GitHub)
   and project settings (`/p/:slug/settings/<section>`: project, workers, checks, repository,
-  director, history, danger) are a sticky vertical tab list beside the section; below 768 px
+  director, agents, history, danger) are a sticky vertical tab list beside the section; below 768 px
   the tabs become a picker. One draft and one save bar span the project tabs; switching tabs
   keeps edits, leaving settings still asks.
+- **Agents** (S5a-B): Forge settings → Agents (`/settings/agents`) and a project's Agents tab
+  (`/p/:slug/settings/agents`, which has no shared save bar) show a roster, one row per agent: name,
+  tags (built-in, edited / overridden, project, disabled, archived), role, description, and a
+  Runs on line with a readiness dot that says in words whether the harness can run now. **New
+  agent** is one menu: From scratch, From template (a gallery dialog), Describe it to the Director
+  (a dialog with progress and Cancel; the draft opens in the editor with the Director's rationale
+  and open questions, and nothing is saved until Create). A row has Edit (Override on a project's
+  view of a company agent) and a more-actions menu: Duplicate (name, reason, and on a project
+  whether the copy is the project's or the company's), Archive / Unarchive, Reset (built-in
+  edited, or a project override; danger confirm), Disable here / Enable here (the implementer
+  says why it cannot be switched off). Every state change takes a reason, pre-filled. The
+  **editor** is one form for every source: Identity, Instructions (write / preview), Runs on
+  (harness picker where a harness that cannot run is disabled with its reason and a Fix in
+  settings link; model picker grouped by what is recommended for the role, with Harness default,
+  Forge default for the implementer only, and a custom id; up to five fallbacks with move buttons),
+  Tools (by role: write tools greyed with the reason for reviewers and researchers), Write scope,
+  Inputs and output, Skills and memory, Budget, Test agent (the cost note comes first), History,
+  and a sticky save bar (reason of 3 to 500 characters, a conflict choice on 409, unsaved-changes
+  guard). A project override edits only Instructions and Runs on. The Director page's model rows
+  use the models the harness reports.
 - **Unsaved dot**: a project-settings tab whose fields differ from the saved version shows a
   small amber dot (spoken as "unsaved changes"; "(unsaved)" in the phone picker).
 - **Empty states** are one component (centred, quiet icon, title, one help line, actions;
@@ -139,7 +160,8 @@ springs). Prototype: https://claude.ai/artifact/1bdAeov3SxXfQYydSrgWrP
 | 4 | Project Board + Ticket (live thread) + Chat |
 | 5 | Company Settings: Harnesses, GitHub, Limits, General |
 | 6 | Project Settings, Memory, Runs, Cost |
-| later | Agents, Pipelines, Skills editors (after x-0011) |
+| 5a | Agents: company roster and editor, project overrides (S5a-B) |
+| later | Pipelines, Skills editors (after x-0011) |
 
 Screens run on mock data behind the API shapes of build-plan batches B3–B12
 and switch to the real endpoints as they land.

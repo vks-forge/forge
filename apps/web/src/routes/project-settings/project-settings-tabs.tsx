@@ -1,6 +1,6 @@
 /**
- * The seven tabs of project settings: Project, Workers, Checks, Repository, Director,
- * History, Archive and delete.
+ * The eight tabs of project settings: Project, Workers, Checks, Repository, Director,
+ * Agents, History, Archive and delete.
  *
  * Why: one long page made an owner scroll past everything to reach the one thing they came
  *   for, and hid how much there is. Each tab here is a thin view over the editor's shared
@@ -8,10 +8,12 @@
  *   facts, inherited-versus-overridden fields, the Director override and the destructive
  *   actions each get their own URL, so a link can point at the exact section.
  *
- * Exports: ProjectTab, WorkersTab, ChecksTab, RepositoryTab, DirectorTab, HistoryTab, DangerTab.
+ * Exports: ProjectTab, WorkersTab, ChecksTab, RepositoryTab, DirectorTab, AgentsTab, HistoryTab,
+ *   DangerTab.
  * Depends on: routes/project-settings/*.
  */
 
+import { AgentsSection } from '#/routes/project-settings/agents-section.js';
 import { ArchiveSection } from '#/routes/project-settings/archive-section.js';
 import { DeleteSection } from '#/routes/project-settings/delete-section.js';
 import { DirectorOverride } from '#/routes/project-settings/director-override.js';
@@ -76,6 +78,10 @@ export function DirectorTab() {
       />
     </section>
   );
+}
+
+export function AgentsTab() {
+  return <AgentsSection />;
 }
 
 export function HistoryTab() {

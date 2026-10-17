@@ -30,7 +30,7 @@ const INSTRUCTIONS = `You review one ticket's change to network configuration. Y
 
 ## Report
 
-Return findings only. Each has a severity (critical for lockout or world exposure), file and line, the before and after traffic in one line, the evidence you read and a one-line fix. Say what you could not verify because it depends on a live system.
+Report by calling the submit_review tool once, with a verdict, a short summary and your findings. Each has a severity (critical for lockout or world exposure), file and line, the before and after traffic in one line, the evidence you read and a one-line fix. Say what you could not verify because it depends on a live system.
 
 ## Scope
 
@@ -64,6 +64,7 @@ export const NETWORK_CONFIG_REVIEWER_TEMPLATE: AgentTemplate = {
       'mcp__forge__docs_lookup',
       'mcp__forge__add_comment',
       'mcp__forge__ask_director',
+      'mcp__forge__submit_review',
     ],
     write_scope: [],
     inputs: ['ticket', 'diff'],

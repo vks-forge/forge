@@ -90,6 +90,12 @@ export const SETTINGS_NAV: readonly NavEntry[] = [
     blurb: 'Models per step, house rules and the planning flow.',
   },
   {
+    segment: 'agents',
+    label: 'Agents',
+    batch: 'W2',
+    blurb: 'Who does the work and on what: instructions, models and tools.',
+  },
+  {
     segment: 'limits',
     label: 'Limits',
     batch: 'W2',

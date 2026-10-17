@@ -18,7 +18,6 @@
  */
 
 import {
-  IMPLEMENTER_ID,
   addCompanyAgent,
   addProjectAgent,
   agentHistory,
@@ -36,6 +35,7 @@ import type {
   ProjectOverride,
 } from '@forge/core';
 import { copyAgent } from '#/services/agent-duplicate.js';
+import { agentPipelineUse } from '#/services/agent-pipeline-use.js';
 import { createAgentState } from '#/services/agent-state.js';
 import {
   assertForgeDefault,
@@ -101,6 +101,30 @@ export function createAgentStore(deps: AgentDeps): AgentStore {
     }
 
     return found;
+  }
+
+  /** 409 `agent_in_pipeline` (with the lanes and rules that name it) while a pipeline or routing rule uses the agent. */
+  async function assertNotInPipeline(
+    scope: AgentScope,
+    id: string,
+    what: 'archived' | 'disabled',
+  ): Promise<void> {
+    const use = await agentPipelineUse(deps, scope, id);
+    if (use.lanes.length === 0 && use.rules.length === 0) {
+      return;
+    }
+
+    const where = [
+      ...(use.lanes.length > 0 ? [`the ${use.lanes.join(', ')} pipeline`] : []),
+      ...(use.rules.length > 0 ? [`routing rule ${use.rules.join(', ')}`] : []),
+    ].join(' and ');
+
+    throw new HttpError(
+      409,
+      'agent_in_pipeline',
+      `${id} cannot be ${what}: ${where} names it. Change the pipeline or rule first.`,
+      { details: { lanes: use.lanes, rules: use.rules } },
+    );
   }
 
   const store: AgentStore = {
@@ -207,20 +231,16 @@ export function createAgentStore(deps: AgentDeps): AgentStore {
       }
 
       const current = stored(at, id);
-      if (archived && id === IMPLEMENTER_ID) {
-        throw new HttpError(
-          409,
-          'agent_required',
-          'the implementer runs every lane and cannot be archived',
-        );
-      }
-
       if (archived && current.origin === 'builtin') {
         throw new HttpError(
           409,
           'builtin_locked',
           'built-in agents cannot be archived; edit or reset them',
         );
+      }
+
+      if (archived) {
+        await assertNotInPipeline(scope, id, 'archived');
       }
 
       if (current.archived === archived) {
@@ -243,12 +263,8 @@ export function createAgentStore(deps: AgentDeps): AgentStore {
         throw notFound(id);
       }
 
-      if (disabled && id === IMPLEMENTER_ID) {
-        throw new HttpError(
-          409,
-          'agent_required',
-          'the implementer runs every lane and cannot be disabled',
-        );
+      if (disabled) {
+        await assertNotInPipeline({ scope: 'project', slug }, id, 'disabled');
       }
 
       if ((at.project?.disabled.includes(id) ?? false) === disabled) {

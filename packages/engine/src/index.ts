@@ -6,7 +6,7 @@
  *   decision, failure policy, invariant check). Everything else in the package is internal
  *   so the tick phases can be reorganised without touching callers (d-0058).
  *
- * Exports: createEngine, createIdSource, createOwnerId, createJsonLogger, requestWake, decideLane, decideFailure, findViolations,
+ * Exports: LIVE_LANES, isLive, createEngine, createIdSource, createOwnerId, createJsonLogger, requestWake, decideLane, decideFailure, findViolations,
  *   pickNext, orderCandidates, chooseHarness, describeWait, nextTicketNumber, ProjectRuntime and the engine types.
  * Depends on: tick/engine, tick/wakes, domain/*, types/*. No IO.
  */
@@ -15,6 +15,7 @@ export { decideFailure } from '#/domain/failure-policy.js';
 export { findViolations } from '#/domain/invariants.js';
 export { chooseHarness } from '#/domain/harness-choice.js';
 export { decideLane } from '#/domain/lane-rules.js';
+export { LIVE_LANES, isLive } from '#/domain/live-lanes.js';
 export { orderCandidates, pickNext } from '#/domain/pick-next.js';
 export { nextTicketNumber } from '#/domain/ticket-numbers.js';
 export { clockUtc, describeWait } from '#/domain/wait-reason.js';

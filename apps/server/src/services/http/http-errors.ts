@@ -17,7 +17,7 @@
 import { ForgeError } from '@forge/core';
 import type { ErrorFamily } from '@forge/core';
 import { ZodError } from 'zod';
-import type { ErrorBody, ErrorIssue } from '#/types/http.types.js';
+import type { ErrorBody, ErrorDetails, ErrorIssue } from '#/types/http.types.js';
 
 /** An error that carries its HTTP status: 404, 405, 409, 413, 415 and friends. */
 export class HttpError extends ForgeError {
@@ -26,13 +26,8 @@ export class HttpError extends ForgeError {
   readonly issues?: readonly ErrorIssue[];
   /** The ids of a dependency loop, for `dependency_cycle` (a closed path: the first id is also the last). */
   readonly cycle?: readonly string[];
-  /** Extra facts a client acts on: the ticket `key` and its `dependents` of `ticket_has_dependents`, the `detail` of `still_broken`, what `settled` a `not_pending` wait. */
-  readonly details?: Readonly<{
-    key?: string;
-    dependents?: readonly string[];
-    detail?: string;
-    settled?: unknown;
-  }>;
+  /** Extra facts a client acts on: the ticket `key` and its `dependents` of `ticket_has_dependents`, the `detail` of `still_broken`, what `settled` a `not_pending` wait, the `problems` of an invalid pipeline, the `lanes` and `rules` that lock an agent. */
+  readonly details?: ErrorDetails;
 
   constructor(
     status: number,
@@ -42,12 +37,7 @@ export class HttpError extends ForgeError {
       family?: ErrorFamily;
       issues?: readonly ErrorIssue[];
       cycle?: readonly string[];
-      details?: Readonly<{
-        key?: string;
-        dependents?: readonly string[];
-        detail?: string;
-        settled?: unknown;
-      }>;
+      details?: ErrorDetails;
     } = {},
   ) {
     super(options.family ?? 'invalid_input', message);

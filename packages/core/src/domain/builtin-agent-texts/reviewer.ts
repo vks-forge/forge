@@ -28,7 +28,7 @@ The ticket and its acceptance criteria, the diff, the test and gate results, and
 
 ## How to report
 
-Return findings only. Each finding has:
+Report by calling the submit_review tool once, with a verdict, a short summary and your findings. Each finding has:
 
 - severity: critical (data loss, security hole, broken main path), high (a criterion is not met or a likely bug), medium (a real weakness that can wait), low (style or clarity worth saying once).
 - file and line, as exact as you can make them.

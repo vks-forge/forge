@@ -226,7 +226,11 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
   };
 
   const gateStarts = (): number =>
-    logs.filter((l) => l.message.startsWith('gates started')).length;
+    logs.filter(
+      (l) =>
+        l.message.startsWith('gates started') ||
+        l.message.startsWith('script job started'),
+    ).length;
 
   const rig: Rig = {
     storage,

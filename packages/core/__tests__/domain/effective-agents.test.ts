@@ -1,22 +1,26 @@
 /**
- * Pins the agent roster a scope sees and the agent a lane runs.
+ * Pins the agent roster a scope sees and the agent a pipeline stage gets.
  *
  * Why: screens and the engine must agree on which agents exist, which are switched off or
- *   archived, and what a project override adds up to. A disabled or archived agent that a lane
- *   still picked would run work the owner turned off, and a lane with no writer could not run
- *   at all, so the implementer must always resolve.
+ *   archived, and what a project override adds up to. A disabled or archived agent that a stage
+ *   still got would run work the owner turned off, and a stage whose agent is switched off must
+ *   stop the ticket instead of running someone else.
  *
  * Pins: every tag combination (built-in, company, edited, overridden, project, disabled,
  *   archived), list order, override layering and `base`, hash follows the effective
- *   definition, readiness comes from the lookup, laneAgent skips disabled and archived agents
- *   and always returns the implementer.
+ *   definition, readiness comes from the lookup, stageAgent skips disabled and archived agents
+ *   and stands nothing in for them, and the shipped implementer is always available.
  * Depends on: src/domain/effective-agents, src/domain/builtin-agents, vitest.
  */
 
 import { describe, expect, it } from 'vitest';
 import { agentHash } from '#/domain/agent-rules.js';
 import { BUILTIN_AGENTS } from '#/domain/builtin-agents.js';
-import { effectiveAgents, laneAgent } from '#/domain/effective-agents.js';
+import {
+  effectiveAgents,
+  shippedImplementer,
+  stageAgent,
+} from '#/domain/effective-agents.js';
 import type { AgentDefinition, ProjectAgents } from '#/schemas/agent.js';
 
 const ready = (): { ready: boolean; reasons: string[] } => ({ ready: true, reasons: [] });
@@ -162,56 +166,56 @@ describe('effectiveAgents, project scope', () => {
   });
 });
 
-describe('laneAgent', () => {
-  it('returns the implementer for every lane', () => {
+describe('stageAgent', () => {
+  it('finds a usable agent by id', () => {
     const views = effectiveAgents(company(), empty, ready);
 
-    for (const lane of ['express', 'standard', 'full']) {
-      expect(laneAgent(views, lane).id).toBe('implementer');
-    }
+    expect(stageAgent(views, 'reviewer')?.id).toBe('reviewer');
+    expect(stageAgent(views, 'implementer')?.definition).toEqual(
+      BUILTIN_AGENTS['implementer'],
+    );
   });
 
-  it('never returns a disabled or archived agent: the shipped implementer answers instead', () => {
+  it('answers undefined for an agent that is disabled, archived or unknown: nothing stands in for it', () => {
     const disabled = effectiveAgents(
       company(),
-      { ...empty, disabled: ['implementer'] },
+      { ...empty, disabled: ['reviewer'] },
       ready,
     );
 
     const archived = effectiveAgents(
       {
         ...company(),
-        implementer: {
-          ...(BUILTIN_AGENTS['implementer'] as AgentDefinition),
-          archived: true,
-        },
+        reviewer: { ...(BUILTIN_AGENTS['reviewer'] as AgentDefinition), archived: true },
       },
       undefined,
       ready,
     );
 
-    for (const views of [disabled, archived]) {
-      const picked = laneAgent(views, 'express');
-
-      expect(picked.id).toBe('implementer');
-      expect(picked.tags).not.toContain('disabled');
-      expect(picked.tags).not.toContain('archived');
-      expect(picked.definition).toEqual(BUILTIN_AGENTS['implementer']);
-    }
+    expect(stageAgent(disabled, 'reviewer')).toBeUndefined();
+    expect(stageAgent(archived, 'reviewer')).toBeUndefined();
+    expect(stageAgent(disabled, 'nobody')).toBeUndefined();
+    expect(stageAgent([], 'implementer')).toBeUndefined();
   });
 
-  it('resolves the implementer even from an empty roster', () => {
-    expect(laneAgent([], 'full').definition).toEqual(BUILTIN_AGENTS['implementer']);
-  });
-
-  it('uses a project override of the implementer', () => {
+  it('uses a project override of the agent', () => {
     const project: ProjectAgents = {
       ...empty,
       overrides: { implementer: { instructions: 'House style.' } },
     };
 
-    const picked = laneAgent(effectiveAgents(company(), project, ready), 'express');
+    const picked = stageAgent(effectiveAgents(company(), project, ready), 'implementer');
 
-    expect(picked.definition.instructions).toBe('House style.');
+    expect(picked?.definition.instructions).toBe('House style.');
+  });
+});
+
+describe('shippedImplementer', () => {
+  it('is the built-in implementer whatever the stored roster says', () => {
+    const view = shippedImplementer();
+
+    expect(view).toMatchObject({ id: 'implementer', tags: ['builtin'] });
+    expect(view.definition).toEqual(BUILTIN_AGENTS['implementer']);
+    expect(view.hash).toBe(agentHash(BUILTIN_AGENTS['implementer']));
   });
 });

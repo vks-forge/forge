@@ -33,7 +33,9 @@ describe('titleOf', () => {
   });
 
   it('says a lane hold in words', () => {
-    expect(titleOf(failure('lane_hold'))).toBe('Held: the lane has no pipeline yet');
+    expect(titleOf(failure('lane_hold'))).toBe(
+      'Held: the lane goes live in the next update',
+    );
   });
 
   it('uses the question text, clipped to one line', () => {

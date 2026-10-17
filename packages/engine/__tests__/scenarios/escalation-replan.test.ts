@@ -44,12 +44,12 @@ const ticketPlan = (key: string, lane: string, files: string[]) => ({
   files,
 });
 
-/** A card with t1 held (standard lane), t2 running and t3 waiting for the one project slot. */
+/** A card with t1 held (full lane), t2 running and t3 waiting for the one project slot. */
 async function stuckCard() {
   const rig = await planningRig();
   const v1 = todoPlan({
     tickets: [
-      ticketPlan('t1', 'standard', ['src/a.ts']),
+      ticketPlan('t1', 'full', ['src/a.ts']),
       ticketPlan('t2', 'express', ['src/b.ts']),
       ticketPlan('t3', 'express', ['src/c.ts']),
     ],

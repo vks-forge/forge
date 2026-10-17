@@ -42,7 +42,7 @@ async function closeInStorage(rig: Rig, card: CardId): Promise<void> {
 async function heldCard() {
   const rig = await planningRig();
   const plan = todoPlan();
-  (plan['tickets'] as { lane: string }[])[0]!.lane = 'standard';
+  (plan['tickets'] as { lane: string }[])[0]!.lane = 'full';
   scriptTodo(rig, { write_plan: [plan] });
   const card = await planUntilDecision(rig);
   const [t1, t2] = await tickets(rig, card);

@@ -33,7 +33,7 @@ export type TicketEvent =
   | (EventBase & { type: 'unparked' })
   | (EventBase & { type: 'verifying' })
   | (EventBase & { type: 'gate_failed' })
-  | (EventBase & { type: 'gate_passed'; tier_actual: Tier })
+  | (EventBase & { type: 'gate_passed'; tier_actual: Tier; hold?: true })
   | (EventBase & { type: 'merged' })
   | (EventBase & { type: 'done'; signer?: string })
   | (EventBase & { type: 'cancelled' })

@@ -30,7 +30,7 @@ const INSTRUCTIONS = `You review one ticket's change for security problems only.
 
 ## Report
 
-Return findings only. Each has a severity (critical, high, medium, low), file and line, the attack in one or two sentences ("an attacker who can set X can do Y"), the code you read as evidence, and a one-line fix. If you checked an area and it was sound, do not list it as a finding.
+Report by calling the submit_review tool once, with a verdict, a short summary and your findings. Each has a severity (critical, high, medium, low), file and line, the attack in one or two sentences ("an attacker who can set X can do Y"), the code you read as evidence, and a one-line fix. If you checked an area and it was sound, do not list it as a finding.
 
 ## Scope
 
@@ -65,6 +65,7 @@ export const SECURITY_REVIEWER_TEMPLATE: AgentTemplate = {
       'mcp__forge__docs_lookup',
       'mcp__forge__add_comment',
       'mcp__forge__ask_director',
+      'mcp__forge__submit_review',
     ],
     write_scope: [],
     inputs: ['ticket', 'diff'],

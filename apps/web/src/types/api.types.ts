@@ -17,6 +17,7 @@
 import type { TicketListPage, TicketStatus } from '@forge/core';
 import type { ProjectView } from '#/schemas/projects.js';
 import type { GithubApi, HarnessesApi, SettingsApi } from '#/types/settings-api.types.js';
+import type { AgentsApi } from '#/types/agents-api.types.js';
 import type { MemoryApi } from '#/types/memory.types.js';
 import type { OnboardingApi } from '#/types/onboarding.types.js';
 import type { ProjectSettingsApi } from '#/types/project-settings.types.js';
@@ -24,13 +25,7 @@ import type { AnswerReply, IngestReply, TicketDetail } from '#/schemas/tickets.j
 import type { CardsApi } from '#/types/cards-api.types.js';
 import type { TicketsTableApi } from '#/types/tickets-table.types.js';
 import type { EscalationsApi } from '#/types/escalations-api.types.js';
-import type {
-  CostApi,
-  InboxApi,
-  OverviewApi,
-  RunsApi,
-  StatsApi,
-} from '#/types/work-api.types.js';
+import type { CostApi, InboxApi, OverviewApi, RunsApi } from '#/types/work-api.types.js';
 import type {
   ProjectEventsWatch,
   ProjectEventsWatchOptions,
@@ -106,7 +101,6 @@ export interface ResourceApis {
   readonly runEvents: RunEventsApi;
   readonly projectEvents: ProjectEventsApi;
   readonly intake: IntakeApi;
-  readonly stats: StatsApi;
   readonly overview: OverviewApi;
   readonly cost: CostApi;
   readonly inbox: InboxApi;
@@ -114,6 +108,7 @@ export interface ResourceApis {
   readonly onboarding: OnboardingApi;
   readonly cards: CardsApi;
   readonly escalations: EscalationsApi;
+  readonly agents: AgentsApi;
 }
 
 export type ResourceName = keyof ResourceApis;

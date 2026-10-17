@@ -7,7 +7,7 @@
  *   archived nor switched off. Each refusal has its own code so the screen can say why.
  *
  * Pins: reset removes the stored edits; 409 not_overridden and not_builtin and 404; archive and
- *   unarchive of a custom agent keep it listed; 409 builtin_locked and agent_required.
+ *   unarchive of a custom agent keep it listed; 409 builtin_locked for every built-in (the implementer included).
  * Depends on: helpers/agent-rig. IO: a loopback socket.
  */
 
@@ -108,14 +108,14 @@ describe('reset, archive and unarchive', () => {
     expect(tags(back)).toEqual(['company']);
   });
 
-  it('refuses to archive a built-in (builtin_locked) and the implementer above all (agent_required)', async () => {
+  it('refuses to archive a built-in, the implementer included (builtin_locked)', async () => {
     const reviewer = await act('/settings/agents/reviewer/archive', 0);
     const implementer = await act('/settings/agents/implementer/archive', 0);
 
     expect([reviewer.status, errorOf(reviewer).code]).toEqual([409, 'builtin_locked']);
     expect([implementer.status, errorOf(implementer).code]).toEqual([
       409,
-      'agent_required',
+      'builtin_locked',
     ]);
   });
 });

@@ -10,7 +10,7 @@
  * Pins: GET with both version counters and 404 project_not_found; POST creates a project agent;
  *   PUT of a company agent stores a trimmed override and 400 override_fields for anything else;
  *   PUT of a project agent replaces it; reset-override 409 not_overridden; disable and enable
- *   with 409 agent_required for the implementer; archive of a project agent and 409
+ *   with 409 agent_in_pipeline for an agent a lane pipeline names (the implementer); archive of a project agent and 409
  *   builtin_locked for a company one; 409 version_conflict.
  * Depends on: helpers/agent-rig. IO: a loopback socket.
  */
@@ -225,25 +225,39 @@ describe('overrides of a company agent', () => {
   });
 });
 
+/** The project's Full lane without the critic, so the critic is named by nothing and can be switched off (project version 0 to 1). */
+const freeTheCritic = () =>
+  call('PUT', '/settings/projects/demo/pipelines/full', {
+    pipeline: {
+      stages: [
+        { id: 'implementer', kind: 'agent', label: 'Implement', agent: 'implementer' },
+        { id: 'g1', kind: 'script_gate', label: 'G1', run: { builtin: 'g1' } },
+        { id: 'merge', kind: 'merge', label: 'Merge', locked: true },
+      ],
+    },
+    ...at(0),
+  });
+
 describe('disable, enable and archive of company agents', () => {
   it('switches a company agent off for the project and back on, keeping it listed', async () => {
-    const off = await call('POST', `${base}/critic/disable`, at(0));
+    await freeTheCritic();
+    const off = await call('POST', `${base}/critic/disable`, at(1));
 
     expect(agentsOf(off).find((a) => a.id === 'critic')?.tags).toEqual([
       'builtin',
       'disabled',
     ]);
 
-    const on = await call('POST', `${base}/critic/enable`, at(1));
+    const on = await call('POST', `${base}/critic/enable`, at(2));
 
     expect(agentsOf(on).find((a) => a.id === 'critic')?.tags).toEqual(['builtin']);
   });
 
-  it('refuses to disable the implementer with 409 agent_required', async () => {
+  it('refuses to disable the implementer, which every lane names, with 409 agent_in_pipeline', async () => {
     const res = await call('POST', `${base}/implementer/disable`, at(0));
 
     expect(res.status).toBe(409);
-    expect(errorOf(res).code).toBe('agent_required');
+    expect(errorOf(res).code).toBe('agent_in_pipeline');
   });
 
   it('refuses to archive a company agent from a project with 409 builtin_locked', async () => {
@@ -269,7 +283,8 @@ describe('disable, enable and archive of company agents', () => {
   });
 
   it('reads one agent history in the project scope', async () => {
-    await call('POST', `${base}/critic/disable`, at(0));
+    await freeTheCritic();
+    await call('POST', `${base}/critic/disable`, at(1));
     const res = await call('GET', `${base}/critic/history`);
 
     expect(

@@ -206,7 +206,11 @@ describe('a harness build that changed', () => {
 });
 
 describe('the start-up sweep', () => {
-  async function parkedBefore(reason: string, status: 'waiting_human' | 'blocked') {
+  async function parkedBefore(
+    reason: string,
+    status: 'waiting_human' | 'blocked',
+    lane: 'express' | 'full' = 'express',
+  ) {
     const rig = await makeRig();
     const id = await rig.request('Old ticket');
     // The state an old database holds: waiting, a reason text, no interaction.
@@ -215,6 +219,7 @@ describe('the start-up sweep', () => {
       tx.tickets.updateTicketCas(t.id, t.status_version, {
         status,
         blocked_reason: reason,
+        lane,
       }),
     );
 
@@ -225,8 +230,9 @@ describe('the start-up sweep', () => {
 
   it('gives a DCP-1 held ticket a lane hold, and Run as Express releases it', async () => {
     const { rig, id } = await parkedBefore(
-      'lane not enabled in M0: triage chose standard',
+      'lane not enabled in M0: triage chose full',
       'waiting_human',
+      'full',
     );
 
     const [row] = await pendingOf(rig, id, 'failure');

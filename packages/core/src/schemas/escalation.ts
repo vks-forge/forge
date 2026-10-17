@@ -130,6 +130,8 @@ export const ESCALATION_ACTIONS = [
   'recheck',
   'approve',
   'sign_off',
+  /** Engine only: a held ticket's lane went live and the hold lifted by itself; never offered as a button. */
+  'pipeline_ready',
 ] as const;
 export const EscalationAction = z.enum(ESCALATION_ACTIONS);
 export type EscalationAction = z.infer<typeof EscalationAction>;

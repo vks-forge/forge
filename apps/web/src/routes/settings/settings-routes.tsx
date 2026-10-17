@@ -1,7 +1,7 @@
 /**
  * The route table of the Forge settings area (`/settings/*`).
  *
- * Why: Harnesses, GitHub, Limits, Director and General are Forge-wide, outside any project (d-0104);
+ * Why: Harnesses, GitHub, Limits, Director, Agents and General are Forge-wide, outside any project (d-0104);
  *   keeping their routes in one file lets the main route table take them as a block and
  *   keeps batch W2 from editing it beyond one line. A harness has its own page under
  *   `/settings/harnesses/:id`.
@@ -13,6 +13,7 @@
 import { Navigate } from 'react-router';
 import type { RouteObject } from 'react-router';
 import { ForgeSettingsLayout } from '#/routes/settings/forge-settings-layout.js';
+import { AgentsPage } from '#/routes/settings/agents-page.js';
 import { DirectorPage } from '#/routes/settings/director-page.js';
 import { GeneralPage } from '#/routes/settings/general-page.js';
 import { GithubPage } from '#/routes/settings/github-page.js';
@@ -27,6 +28,7 @@ export const settingsRoutes: RouteObject[] = [
     children: [
       { path: 'general', element: <GeneralPage /> },
       { path: 'director', element: <DirectorPage /> },
+      { path: 'agents', element: <AgentsPage /> },
       { path: 'limits', element: <LimitsPage /> },
       { path: 'harnesses', element: <HarnessesPage /> },
       { path: 'harnesses/:id', element: <HarnessDetailPage /> },

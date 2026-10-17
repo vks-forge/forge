@@ -9,7 +9,7 @@
  *   version behind the page's back) through the same API the screens use.
  *
  * Exports: installFakeForge(), FakeForge, Scenario.
- * Depends on: helpers/fetch-stub, helpers/event-source-stub, helpers/fake-forge/*-routes,
+ * Depends on: helpers/fetch-stub, helpers/event-source-stub, helpers/fake-forge/*-routes (agents included),
  *   helpers/forge-data, api/http/http-adapter.
  */
 
@@ -18,6 +18,7 @@ import { createHttpAdapter } from '#/api/http/http-adapter.js';
 import type { ForgeApi } from '#/types/api.types.js';
 import { stubEventSource } from '#tests/helpers/event-source-stub.js';
 import type { EventSourceStub } from '#tests/helpers/event-source-stub.js';
+import { agentRoutes } from '#tests/helpers/fake-forge/agent-routes.js';
 import { cardRoutes } from '#tests/helpers/fake-forge/card-routes.js';
 import { overviewRoutes } from '#tests/helpers/fake-forge/overview-routes.js';
 import { memoryRoutes } from '#tests/helpers/fake-forge/memory-routes.js';
@@ -58,6 +59,7 @@ export function installFakeForge(
     ...ticketRoutes({ empty }),
     ...cardRoutes({ empty }),
     ...overviewRoutes(),
+    ...agentRoutes(),
   };
 
   const routes: Routes =

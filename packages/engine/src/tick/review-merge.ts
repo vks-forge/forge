@@ -12,7 +12,7 @@
  *
  * Exports: approveAndMerge().
  * Depends on: @forge/core (ForgeError), domain/gate-rows, tick/{verify, verify-merge, tick-config,
- *   tick-report, card-notify, tick-requests}. IO through the git host and worktree ports.
+ *   tick-report, card-notify, stage-records, tick-requests}. IO through the git host and worktree ports.
  */
 
 import { ForgeError } from '@forge/core';
@@ -20,6 +20,7 @@ import type { Ticket } from '@forge/core';
 import { latestPerGate, summarizeGates } from '#/domain/gate-rows.js';
 import { iso } from '#/shared/time.js';
 import { notifyCard } from '#/tick/card-notify.js';
+import { approveHuman } from '#/tick/stage-records.js';
 import { loadTickConfig } from '#/tick/tick-config.js';
 import { emptyReport } from '#/tick/tick-report.js';
 import { requestTick } from '#/tick/tick-requests.js';
@@ -69,6 +70,11 @@ export async function approveAndMerge(
     }
 
     const end = await mergeReviewed(ctx, target, rows, signer);
+    if (end === 'done') {
+      // The owner's approval passes the pipeline's human stage.
+      await deps.storage.transaction((tx) => approveHuman(tx, ctx.nowIso, ticket.id));
+    }
+
     requestTick(deps, state);
     if (ticket.card_id) {
       await notifyCard(deps, ticket.card_id);

@@ -96,8 +96,8 @@ Director flow and playbooks); a cross-project Overview at `/`. UI
 preferences persist across reloads.
 
 **Not yet:** GitHub Issues intake and the Issues page (P5); the card Director
-cannot yet pause or restart tickets; only the Express lane runs Workers (agents
-and lane pipelines are S5); not packaged or published.
+cannot yet pause or restart tickets; Express and Standard lanes run Workers
+through their pipelines, Full is editable but held until S5c; not packaged or published.
 
 **Known limits:** Workers and project checks run as the user's own Windows
 account, so code a Worker writes (a test, a script) can read Forge's data
@@ -121,6 +121,7 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-18: Agents screens and stage runner (S5a-B, S5b-A): Forge and project settings get an Agents area (roster with tags, one editor for every agent with Runs on, tools by role, write scope, budget, Test agent, template gallery and Describe it to the Director); tickets now run through snapshot lane pipelines, Standard is live (test-writer with red proof, implementer, G1, an independent read-only reviewer whose blocking findings send work back for rework up to the cap, d-0165), held tickets of live lanes resume by themselves, Full stays held; the unused project stats route is removed (d-0166).
 - 2026-10-17: Agents backend S5a-A: agents are config rows (four built-ins: implementer, test-writer, reviewer, critic; six templates) with company and per-project scopes (override, disable, own agents), role bounds that keep reviewers read-only, a per-agent tool grant that can only narrow what a run may do, "Runs on" harness and model per agent with readiness, Test agent (one capped call) and Describe it to the Director drafting; runs record the agent id and hash, and Express dispatch is pinned byte-for-byte to today's request. The web Agents screens land with S5a-B.
 - 2026-10-17: UI pass U1 (pages): card and ticket pages are tabbed with the tab in the URL (card: Conversation, Plan, Tickets, Details; ticket: Conversation, Review when it waits on you, Runs, Details), chat has a composer docked at the bottom with narrow quiet bubbles grouped by author and day, and cost shows on headers, Board tiles and lists with a full breakdown on Details.
 - 2026-10-17: UI pass U1 (shared): cost per card (Director plus tickets) and per ticket in the API, a project Tickets page in the sidebar (filters, search, sort, server-side paging), Cost page Top tickets and Top runs paged on the server, chart bars with the app tooltip, one redesigned empty state everywhere, thin themed scroll areas, Forge and project settings as left-tab layouts with a URL per section, and Inbox alerts (toast, badge, tab title count, optional browser notification).

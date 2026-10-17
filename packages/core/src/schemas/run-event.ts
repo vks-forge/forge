@@ -8,11 +8,12 @@
  *   untrusted harness output is parsed before anything acts on it (execution-plane.md §3).
  *
  * Exports: InteractionKind, PermissionDecision, RunEvent (and their types).
- * Depends on: schemas/errors, schemas/usage, schemas/run-inbox-events, zod. No IO.
+ * Depends on: schemas/errors, schemas/stage-run, schemas/usage, schemas/run-inbox-events, zod. No IO.
  */
 
 import { z } from 'zod';
 import { ErrorFamily } from '#/schemas/errors.js';
+import { ReviewSubmission } from '#/schemas/stage-run.js';
 import { InboxDeliveredEvent, UserMessageEvent } from '#/schemas/run-inbox-events.js';
 import { SessionRef, UsageReport } from '#/schemas/usage.js';
 
@@ -84,6 +85,8 @@ export const RunEvent = z.discriminatedUnion('type', [
     message: z.string(),
   }),
   z.object({ type: z.literal('usage'), ...eventBase, usage: UsageReport }),
+  /** A check agent's typed review (`submit_review`); the last one of a run stands. */
+  z.object({ type: z.literal('review'), ...eventBase, review: ReviewSubmission }),
   z.object({
     type: z.literal('permission'),
     ...eventBase,

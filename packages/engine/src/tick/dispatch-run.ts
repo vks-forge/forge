@@ -1,46 +1,45 @@
 /**
- * Starts one Worker run for one ticket: worktree, prompt, run row, token, driver, ticket.
+ * Starts one Worker run for one ticket: stage, worktree, prompt, run row, token, driver, ticket.
  *
  * Why: dispatch is the moment the Director commits spend and risk, so its order matters.
- *   The worktree comes first (d-0059: a Worker never runs in the main checkout), then the
- *   `dispatch_prompt` step renders the brief from the ticket, project memory and what
- *   changed since the last run, plus the Worker contract (shell rules, typed claims for
- *   every edit), which is also appended to the returned prompt verbatim so a paraphrase
- *   cannot drop it. The ticket's agent (its instructions, harness, model, budget; the implementer
- *   until lane pipelines exist) is resolved from the tick's settings and recorded on the run row
- *   with the hash of its definition; its instructions go between the brief and the rules. The run row and the per-run token (stored only as a hash)
- *   are written together before the harness starts, so a crash after start leaves a run the
- *   restart rule can find and revoke (d-0054). The ticket moves to `in_progress` only once
- *   the harness accepted the run; a start that throws settles the run as a failure and the
- *   family decides retry or park. The redacted brief is stored as the run's first `prompt`
- *   event in the same transaction as the run row. A resume is a NEW run that names the old one in
- *   `retry_of` (d-0055): an ended run is never reopened.
+ *   The ticket's pipeline snapshot comes first (taken at the first dispatch, checked against the
+ *   roster as it is now), and its stage cursor says which writer runs: the stage's agent, not a
+ *   lane default; a stage whose agent cannot run parks the ticket visibly instead of running
+ *   someone else (fail closed). A `stage` wake on a verifying ticket starts a check instead
+ *   (tick/dispatch-check). The worktree comes next (d-0059: a Worker never runs in the main
+ *   checkout), then the `dispatch_prompt` step renders the brief from the ticket, project memory
+ *   and what changed since the last run, plus the Worker contract (shell rules, typed claims for
+ *   every edit), which is also appended to the returned prompt verbatim so a paraphrase cannot drop it.
+ *   An agent other than the built-in implementer is named to the step so the brief is written for
+ *   its role (a tester writes failing tests only); its instructions go between the brief and the
+ *   rules. The run row, the stage attempt it carries and the per-run token are written together
+ *   (tick/launch-run) before the harness starts. The ticket moves to `in_progress` only once the
+ *   harness accepted the run; a start that throws settles the run as a failure and the family
+ *   decides retry or park. A resume is a NEW run that names the old one in `retry_of` (d-0055):
+ *   an ended run is never reopened.
  *
  * Exports: startRun().
- * Depends on: @forge/core (branchName, DispatchPromptOutput), @forge/tools (sha256Hex),
- *   steps/run-step, domain/worker-contract, tick/agent-prompt, tick/project-runtime, tick/run-agent, tick/dispatch-park, tick/pump, tick/settle, tick/ticket-moves, domain/results.
+ * Depends on: @forge/core (branchName, DispatchPromptOutput, IMPLEMENTER_ID), steps/run-step,
+ *   domain/worker-contract, tick/{agent-prompt,project-runtime,dispatch-park,dispatch-check,dispatch-stage,
+ *   launch-run,stage-records,ticket-moves,wake-delta}, shared/trace.
  */
 
 import {
   DispatchPromptOutput,
-  HarnessChangedError,
+  IMPLEMENTER_ID,
   InvalidInputError,
   branchName,
 } from '@forge/core';
-import type { Run, Ticket, Worktree, WorkerDriver } from '@forge/core';
-import { scrubSecrets, sha256Hex } from '@forge/tools';
-import { familyOf, failureResult } from '#/domain/results.js';
+import type { Ticket, Worktree, WorkerDriver } from '@forge/core';
 import { renderWorkerContract, workerContract } from '#/domain/worker-contract.js';
 import { hold, rejectStep, runStep } from '#/steps/run-step.js';
 import { workerPrompt } from '#/tick/agent-prompt.js';
+import { startChecks } from '#/tick/dispatch-check.js';
+import { chooseWriter } from '#/tick/dispatch-stage.js';
 import { parkDispatch, parkForHarness } from '#/tick/dispatch-park.js';
+import { launchRun } from '#/tick/launch-run.js';
 import { baseRefFor, driverFor, runtimeFor } from '#/tick/project-runtime.js';
-import { resolveAgent } from '#/tick/run-agent.js';
-import { configVersionRef } from '#/tick/tick-config.js';
-import { emitTrace } from '#/shared/trace.js';
-import { startPump } from '#/tick/pump.js';
-import { buildRunRequest } from '#/tick/run-request.js';
-import { settleRun } from '#/tick/settle.js';
+import { beginStageRun } from '#/tick/stage-records.js';
 import { moveTicket } from '#/tick/ticket-moves.js';
 import { wakeDelta } from '#/tick/wake-delta.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
@@ -74,7 +73,7 @@ async function tryStart(
   c: Candidate,
   harnessId?: string,
 ): Promise<boolean> {
-  const { deps, state } = ctx;
+  const { deps } = ctx;
   const { ticket } = c;
   const { project, previous, answered } = await deps.storage.transaction(async (tx) => {
     const prevId = c.kind === 'retry' ? c.wake?.idempotency_key : undefined;
@@ -100,13 +99,21 @@ async function tryStart(
     throw new Error(`ticket ${ticket.id} names unknown project ${ticket.project}`);
   }
 
+  if (c.kind === 'stage' && ticket.status === 'verifying') {
+    return startChecks(ctx, c, project, harnessId);
+  }
+
   const runtime = runtimeFor(ctx, project.slug);
   if (!runtime) {
     throw new Error(`project ${project.slug} has no runtime on this server`);
   }
 
-  // A retry or resume continues on the agent the ticket's earlier run used, while it is usable.
-  const agent = resolveAgent(ctx.config, project.slug, ticket.lane, previous?.agent_id);
+  const choice = await chooseWriter(ctx, ticket, project.slug, previous);
+  if (choice.kind === 'stop') {
+    return false;
+  }
+
+  const { agent, stage, state } = choice;
   const harness = harnessId ?? agent.harnessId;
   let driver: WorkerDriver;
   try {
@@ -151,9 +158,19 @@ async function tryStart(
       },
       memory: slice,
       worktree: { path: wt.path, branch },
-      wake: wakeDelta(c, answered),
+      wake: wakeDelta(c, answered, stage),
       // The Worker must finish with typed claims for every edit (G1 fails a finish without).
       worker_contract: contract,
+      // The step writes the brief for the agent's role; the implementer needs no naming.
+      ...(agent.id === IMPLEMENTER_ID
+        ? {}
+        : {
+            agent: {
+              id: agent.id,
+              role: agent.definition.role,
+              instructions: agent.definition.instructions,
+            },
+          }),
     },
     DispatchPromptOutput,
   );
@@ -172,98 +189,44 @@ async function tryStart(
     renderWorkerContract(contract),
   );
 
-  const promptHash = sha256Hex(prompt);
-
-  const runId = deps.ids.runId();
-  const token = deps.ids.token();
-  const run: Run = {
-    id: runId,
-    ticket_id: ticket.id,
-    project: ticket.project,
-    harness: driver.id,
-    driver_version: 'unversioned',
-    cwd: wt.path,
-    lane: ticket.lane,
-    started_at: ctx.nowIso,
-    status: 'starting',
-    owner: deps.owner,
-    ...(previous ? { retry_of: previous.id } : {}),
-    prompt_hash: promptHash,
-    catalogue_hash: await deps.catalogueHash(driver.id),
-    config_version: configVersionRef(ctx.config, project.slug),
-    agent_id: agent.id,
-    agent_hash: agent.hash,
-  };
-
-  await deps.storage.transaction(async (tx) => {
-    await tx.runs.insert(run);
-    // The brief is the first event of the run: the thread shows what the Worker was told.
-    await tx.runEvents.append(runId, {
-      type: 'prompt',
-      ts: ctx.nowIso,
-      text: scrubSecrets(prompt, []),
-    });
-
-    await tx.runTokens.issue(runId, sha256Hex(token), ctx.nowIso);
-    if (c.wake) {
-      await tx.wakeRequests.markConsumed(c.wake.id, ctx.nowIso);
-    }
-  });
-
-  state.baseShas.set(runId, wt.baseSha);
-
   const resumeSession =
     // A session belongs to the harness that made it: a fallback harness starts fresh.
     c.kind === 'resume' && driver.capabilities().resume && previous?.harness === driver.id
       ? previous?.session_ref
       : undefined;
 
-  const req = buildRunRequest(ctx, {
-    runId,
+  const launched = await launchRun(ctx, {
     ticket,
     agent,
-    harnessId: harness,
-    cwd: wt.path,
+    harness,
+    driver,
+    wt,
     prompt,
-    promptHash,
-    token,
-    ...(resumeSession ? { resume: resumeSession } : {}),
+    previous,
+    resumeSession,
+    wake: c.wake,
+    inTx:
+      stage && state
+        ? async (tx, runId) => {
+            await beginStageRun(tx, ctx.nowIso, {
+              ticket_id: ticket.id,
+              stage_id: stage.id,
+              member_id: '',
+              cycle: state.cycle,
+              kind: 'agent',
+              agent_id: agent.id,
+              agent_hash: agent.hash,
+              run_id: runId,
+            });
+          }
+        : undefined,
   });
 
-  emitTrace(deps, {
-    level: 'info',
-    kind: 'run',
-    project: ticket.project,
-    ticket_id: ticket.id,
-    run_id: runId,
-    actor: 'engine',
-    message: `run start ${runId} for ${ticket.id} on ${driver.id}`,
-    // The request carries the run token and env; the trace's redaction pass removes them.
-    data: { harness: driver.id, resume: resumeSession ?? null, request: req },
-  });
-
-  let handle;
-  try {
-    handle = await driver.start(req);
-  } catch (e) {
-    deps.log?.('error', `driver.start failed for ${runId}`, { error: msg(e) });
-    // A build that changed under the approvals parks the ticket with that reason, not a generic one.
-    await settleRun(
-      ctx,
-      run,
-      failureResult(familyOf(e)),
-      undefined,
-      e instanceof HarnessChangedError
-        ? { parkReason: msg(e), parkBuild: { installed: e.installed } }
-        : {},
-    );
-
+  if (!launched) {
     return false;
   }
 
-  startPump(deps, state, runId, handle, driver);
-  await deps.storage.transaction((tx) => tx.runs.update(runId, { status: 'running' }));
-
+  const { runId, handle } = launched;
   const fields = { assignee_run_id: runId, branch, worktree: wt.path };
   const moved = await moveTicket(deps.storage, ticket.id, ctx.nowIso, (t: Ticket) => {
     if (t.status === 'planned') {

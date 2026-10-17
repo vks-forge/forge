@@ -23,7 +23,7 @@ import type {
 const TITLE_MAX = 120;
 
 const FAILURE_TITLES: Readonly<Record<FailureCause, string>> = {
-  lane_hold: 'Held: the lane has no pipeline yet',
+  lane_hold: 'Held: the lane goes live in the next update',
   rework_cap: 'Stopped: automatic rework limit reached',
   retry_cap: 'Stopped: the ticket failed too many times',
   rewake_cap: 'Stopped: too many automatic restarts in an hour',

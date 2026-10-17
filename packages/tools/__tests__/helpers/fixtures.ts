@@ -69,6 +69,7 @@ export const ENTRIES: Record<string, unknown>[] = [
   forge('ask_director'),
   forge('report_blocked'),
   forge('finish'),
+  forge('submit_review'),
   forge('docs_lookup'),
   forge('code_graph'),
   forge('web_search', {

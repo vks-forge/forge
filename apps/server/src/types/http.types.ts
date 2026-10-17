@@ -7,12 +7,12 @@
  *   SSE sink is an interface so the replay-then-live logic can be tested without a socket.
  *
  * Exports: HttpMethod, RouteContext, RouteHandler, Route, Router, RouterOptions, ApiServerOptions, HostPolicy, StaticUi,
- *   SseSink, ErrorIssue, ErrorBody.
+ *   SseSink, ErrorIssue, ErrorDetails, ErrorBody.
  * Depends on: node:http, @forge/engine (Logger type), types/auth. Types only.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { TraceSink } from '@forge/core';
+import type { PipelineProblem, TraceSink } from '@forge/core';
 import type { Logger } from '@forge/engine';
 import type { RouteAccess } from '#/types/auth.types.js';
 
@@ -93,6 +93,20 @@ export interface ErrorIssue {
   readonly message: string;
 }
 
+/** Extra facts an error may carry beyond its code and message (spread into the error body). */
+export interface ErrorDetails {
+  readonly key?: string;
+  readonly dependents?: readonly string[];
+  readonly detail?: string;
+  readonly settled?: unknown;
+  /** `pipeline_invalid` and `routing_invalid`: every rule the list breaks. */
+  readonly problems?: readonly PipelineProblem[];
+  /** `agent_in_pipeline`: the lanes whose pipeline names the agent. */
+  readonly lanes?: readonly string[];
+  /** `agent_in_pipeline`: the ids of the routing rules that add the agent. */
+  readonly rules?: readonly string[];
+}
+
 /** JSON body of every error response. */
 export interface ErrorBody {
   readonly error: {
@@ -104,5 +118,8 @@ export interface ErrorBody {
     /** Present on `ticket_has_dependents`: the ticket key and the keys that depend on it. */
     readonly key?: string;
     readonly dependents?: readonly string[];
+    readonly problems?: readonly PipelineProblem[];
+    readonly lanes?: readonly string[];
+    readonly rules?: readonly string[];
   };
 }

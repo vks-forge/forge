@@ -15,13 +15,14 @@
 
 import { z } from 'zod';
 
-/** Why the Director is waking a ticket (director-core.md §3 `wake_requests.kind`). */
+/** Why the Director is waking a ticket (director-core.md §3 `wake_requests.kind`); `stage` starts the next stage of its pipeline. */
 export const WakeKind = z.enum([
   'retry',
   'response_wake',
   'delegated',
   'monitor',
   'continuation',
+  'stage',
 ]);
 export type WakeKind = z.infer<typeof WakeKind>;
 

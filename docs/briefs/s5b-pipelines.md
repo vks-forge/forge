@@ -401,3 +401,111 @@ or worktrees. LF. READMEs current. PRODUCT.md is left to the orchestrator.
 6. **Lane model matrix.** Default: unchanged.
 7. **Replay and canary (d-0075).** Default: not in S5b; tickets record pipeline hash + config version.
 8. **Routing scope.** Default: project-level only, check agents only, before human/merge.
+
+## S5b-A contract (as built)
+
+Everything in "Contract (shared, binding)" holds unless listed under **Deviations**. Error envelope
+as S5a: `{ error: { code, message, issues?, ...details } }`; `pipeline_invalid` and `routing_invalid`
+carry `error.problems: PipelineProblem[]`, `agent_in_pipeline` carries `error.lanes: Lane[]` and
+`error.rules: string[]`. Every write answers 200 with the fresh views. Writes are authored `owner`.
+Owner decision d-0165: built-in check stages use `on_blocking: 'rework'`; `hold` is per stage.
+
+### Shared shapes (core `@forge/core`; mirror in the web)
+
+- `schemas/pipeline.ts`: `StageId`, `Severity`, `CheckPolicy`, `AgentStage`, `ScriptGateStage`,
+  `GroupStage`, `HumanStage`, `MergeStage`, `Stage`, `PipelineDefinition`, `LanePipelines`,
+  `RoutingRule`, `ProjectPipelines` (`routing` defaults `[]`), `PIPELINE_PROBLEM_CODES`,
+  `PipelineProblem`, `PipelineTag`, `PipelineView`. All stage objects are strict. A group member may
+  carry its own `on_blocking` / `blocking`; the group's `rework_to` governs. Defaults are applied at
+  read (`checkPolicy()`), never stored: `on_blocking` rework, `blocking` critical and high.
+- `schemas/stage-run.ts`: `Finding`, `ReviewSubmission`, `StageRunStatus`, `StageOutcome`, `StageRun`,
+  `StageArtifact`, `RoutedStage`, `TicketPipeline` (adds `roles: Record<AgentId, AgentRole>`),
+  `StageViewSchema`, `TicketPipelineView`; `StageView` (type, `types/stage-view.types.ts`).
+- Problem codes: the brief's list plus `review_tool_missing` (a check agent whose tools lack
+  `mcp__forge__submit_review`); routing problems: `routing_writer`, `unknown_agent`,
+  `agent_unavailable`, `duplicate_rule_id`, `review_tool_missing`.
+- `PipelineView.tags`: company scope is `['builtin']` or `['edited']`; project scope appends
+  `'project'` (the project's own list) or `'company'` (inherited). `changed` (project views) is true
+  only for a lane with a project list. Builtins carry no `description`.
+- Escalation settled action `pipeline_ready` (by `auto`) is new in `EscalationAction`; web copy and
+  `escalation-actions.tsx` must accept it (it currently breaks the web typecheck at
+  `components/escalation/escalation-actions.tsx:117` and `domain/escalation-copy.ts:26`). The lane-hold
+  title is now "Held: the lane goes live in the next update"; hold reasons start `pipeline_pending:`.
+- `RunEvent` `review`, `WakeKind` `stage`, `TicketEvent gate_passed {hold?: true}`, `LIVE_LANES`
+  (`@forge/engine`: express, standard).
+
+### Routes
+
+| Route | Body | 200 | Errors |
+|---|---|---|---|
+| `GET /settings/pipelines` | none | `{ pipelines: Record<Lane, PipelineView>, version: number }` | none |
+| `PUT /settings/pipelines/:lane` | `{ pipeline, expected_version, reason }` | same shape | 404 `lane_unknown`; 400 `invalid_request` (+`issues`), `pipeline_invalid` (+`problems`); 409 `version_conflict` |
+| `POST /settings/pipelines/:lane/reset` | `{ expected_version, reason }` | same shape | 404 `lane_unknown`; 409 `not_overridden`, `version_conflict` |
+| `POST /settings/pipelines/validate` | `{ lane, pipeline, project? }` | `{ problems, warnings }` (writes nothing) | 400 `invalid_request` (also a bad lane); 404 `project_not_found` |
+| `GET /settings/projects/:slug/pipelines` | none | `{ pipelines: Record<Lane, PipelineView & {changed}>, routing: RoutingRule[], version: { company, project } }` | 404 `project_not_found` |
+| `PUT /settings/projects/:slug/pipelines/:lane` | as company | same as project GET | as company + 404 `project_not_found` |
+| `POST /settings/projects/:slug/pipelines/:lane/reset` | as company | same | 409 `not_overridden` |
+| `PUT /settings/projects/:slug/routing` | `{ rules: RoutingRule[] (<=20), expected_version, reason }` | same | 400 `routing_invalid` (+`problems`) |
+| `GET /tickets/:id/pipeline` | none | `{ pipeline: TicketPipelineView \| null }` (null before the first dispatch) | 404 `ticket_not_found` |
+| `GET /tickets/:id/artifacts/:artifactId` | none | `StageArtifact` with content (narrative included, the owner may read it) | 404 `artifact_not_found` (unknown, not a positive int, or another ticket's) |
+
+`expected_version` is the scope's own (company number; project number for project writes). A list
+equal to the shipped list (company) or the company list (project) is not stored: the save succeeds and
+the lane reads `builtin` / not `changed`, so Reset then answers 409 `not_overridden`. A list is validated
+against the scope's effective roster (disabled and archived agents are problems).
+Agent routes: disable and archive answer 409 `agent_in_pipeline` (`lanes`, `rules`) when any effective
+pipeline or routing rule names the agent (company archive also checks every project's own lists);
+`agent_required` is gone, archiving a built-in is `builtin_locked`.
+
+### Query keys and live updates
+
+`['pipelines','company']`, `['pipelines','project',slug]` (mutations also invalidate
+`['settings','company']` / `['project-settings',slug]`), `['ticket-pipeline',id]`,
+`['ticket-artifact',id,artifactId]`. **The engine does not yet publish `['ticket-pipeline', id]` on the
+SSE stream**: the strip should refetch on the existing `['tickets', id]` invalidation. Left for the
+orchestrator.
+
+### Stage rows as the web reads them
+
+`StageView.status`: `pending` (no row, or a restarted stage), `running`, `passed`, `failed`, `error`,
+`waiting` (human stage waiting, or a check held for the owner), `adopted`, `skipped`. A failed or held
+attempt stays visible after a rework until the stage runs again. Merge reads `passed` only when the ticket
+is done. A tester's red proof is a hidden row (`member_id: 'proof'`) whose `test_report` artifact hangs off
+the tester stage's view; group members have `member_id` = member id under `stage_id` = group id.
+`rework.cap` is 2.
+
+### Behaviour the web should word
+
+Standard now runs (test-writer with red proof, implementer, G1, reviewer). Full is editable but held
+(`live: false`) with Run as Express; the engine releases holds of live lanes by itself. A human stage puts
+even a tier A ticket in `review`; approve ends it done. A reviewer that never calls `submit_review`, a
+script that cannot run, or a stage agent that is missing parks the ticket with a failure escalation (Retry
+re-runs that stage). A held check (`on_blocking: hold`) parks from verifying; Retry runs it again.
+
+### Removed (d-0166)
+
+`GET /projects/:slug/stats` (handler, tests, README line). `GET /projects/:slug/cost` stays in
+`routes/project-stats.ts`. Web call site still using it: `apps/web/src/api/http/work-http.ts`
+(`stats.get`, `project(slug, '/stats?range=...')`) with the `ProjectStats` types in
+`types/work-api.types.ts` and `__tests__/helpers/work-fixtures.ts`.
+
+### Deviations from the brief
+
+1. Body validation failures answer 400 `invalid_request` (the server's envelope), not `invalid_body`;
+   a malformed ticket id on the two ticket routes is 404 `ticket_not_found`.
+2. Unusable stage agent: fail closed. A stage whose agent is missing, disabled or archived parks the
+   ticket at dispatch or in verifying; S5a's "falls back to the shipped implementer" test now pins the park.
+3. `TicketPipeline` stores `roles` (the cursor needs writer vs check without the roster); `Cursor` adds
+   `run_proof` and `cycle`; `currentCycle()`, `cycleStart()`, `PROOF_MEMBER` are exported; the cursor
+   functions live in `stage-cursor.ts`, `stage-policy.ts`, `stage-kinds.ts`.
+4. No merge stage row is written (Express writes exactly one snapshot and two stage rows); the view derives
+   it. Artifacts are stored only for pipelines with a check agent (Express writes none).
+5. A held check records a `waiting` row; after release the cursor restarts that check in a new cycle. The
+   owner's rework from review is a `failed` human row (or against `merge` when there is no human stage).
+6. `invariants.ts` and `restart.ts` needed no edit: a pending `stage` wake already explains an in-progress
+   ticket, and a crash-settled check run is retried by a stage wake onto the same attempt row.
+7. `submit_review` joins the built-in reviewer, critic and template tool lists; catalogue hash in the seed.
+8. A lane raised mid-run adopts the heavier lane's earlier writers instead of running them out of order.
+9. Existing tests that used a Standard ticket as the "held" fixture now use Full; `laneAgent()` is replaced
+   by `stageAgent()` / `shippedImplementer()`.
+10. `ProjectRuntime.scriptGates` (optional) carries the script runner; `project-registry.ts` wires it.

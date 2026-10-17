@@ -31,8 +31,11 @@ import type {
   Run,
   RunEvent,
   RunInboxMessage,
+  StageArtifact,
+  StageRun,
   StoredIntakeEvent,
   Ticket,
+  TicketPipeline,
   TicketRelation,
   WakeRequest,
 } from '@forge/core';
@@ -85,4 +88,14 @@ export interface MemoryState {
   cardPlanning: Map<string, CardPlanningState>;
   /** Plan versions per card id, in write order (reads sort by version). */
   cardPlans: Map<string, PlanVersion[]>;
+  /** Pipeline snapshots keyed by ticket id. */
+  ticketPipelines: Map<string, TicketPipeline>;
+  /** Stage attempts in id order; (ticket, stage, member, cycle) is unique. */
+  stageRuns: StageRun[];
+  /** Last stage run id handed out (SQLite AUTOINCREMENT stand-in). */
+  stageRunSeq: number;
+  /** Stage artifacts in id order. */
+  stageArtifacts: StageArtifact[];
+  /** Last stage artifact id handed out. */
+  stageArtifactSeq: number;
 }

@@ -8,10 +8,9 @@
  *   way it is (built in, edited, overridden here, disabled, archived), hashes the effective
  *   definition so a run can name exactly what it used, and attaches whether the harness it
  *   names can start a run today. Disabled and archived agents stay listed so they can be
- *   restored; the lane never picks them. Until lane pipelines exist every lane runs the
- *   implementer, and it always resolves, because a lane with no writer could not run at all.
+ *   restored; a pipeline stage never gets them (stageAgent answers undefined).
  *
- * Exports: effectiveAgents(), laneAgent(), isRunnable().
+ * Exports: effectiveAgents(), stageAgent(), shippedImplementer(), isRunnable().
  * Depends on: domain/agent-rules (agentHash), domain/builtin-agents, schemas/agent,
  *   schemas/agent-api, types/effective-agents. No IO.
  */
@@ -117,18 +116,22 @@ export function isRunnable(v: AgentView): boolean {
 }
 
 /**
- * The agent a lane runs. Until lane pipelines exist (S5b) every lane runs the implementer.
- * It always resolves: when the stored implementer is unusable the shipped one answers, so a
- * ticket is never left without a writer.
+ * The usable agent with id `agentId`, or undefined when it does not exist or is disabled or
+ * archived. A pipeline stage names its agent, and a stage whose agent cannot run must stop the
+ * ticket visibly, not run something else in its place (fail closed).
  */
-export function laneAgent(views: readonly AgentView[], lane: string): AgentView {
-  // Every lane runs the implementer until pipelines can name a writer per lane (S5b).
-  void lane;
-  const found = views.find((v) => v.id === IMPLEMENTER_ID && isRunnable(v));
-  if (found) {
-    return found;
-  }
+export function stageAgent(
+  views: readonly AgentView[],
+  agentId: string,
+): AgentView | undefined {
+  return views.find((v) => v.id === agentId && isRunnable(v));
+}
 
+/**
+ * The shipped implementer as a view, for work that names no stage (a run from before pipelines
+ * existed continues on it). It never depends on the stored roster.
+ */
+export function shippedImplementer(): AgentView {
   const shipped = BUILTIN_AGENTS[IMPLEMENTER_ID] as AgentDefinition;
 
   return {

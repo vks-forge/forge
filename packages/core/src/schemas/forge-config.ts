@@ -9,12 +9,13 @@
  *   file is the app's job (no IO here).
  *
  * Exports: ModelMatrix, RetryPolicy, EngineConfig, ForgeConfig.
- * Depends on: schemas/agent, schemas/director-config, schemas/ticket, zod. No IO.
+ * Depends on: schemas/agent, schemas/director-config, schemas/pipeline, schemas/ticket, zod. No IO.
  */
 
 import { z } from 'zod';
 import { AgentsRecord } from '#/schemas/agent.js';
 import { DirectorConfig } from '#/schemas/director-config.js';
+import { LanePipelines } from '#/schemas/pipeline.js';
 import { TicketStatus } from '#/schemas/ticket.js';
 
 const Model = z.string().min(1);
@@ -92,12 +93,14 @@ export const EngineConfig = z.object({
 });
 export type EngineConfig = z.infer<typeof EngineConfig>;
 
-/** The whole file: the model matrix, the engine limits, the Director's planning settings (d-0150) and the agents. */
+/** The whole file: the model matrix, the engine limits, the Director's planning settings (d-0150), the agents and the lane pipelines. */
 export const ForgeConfig = z.object({
   models: ModelMatrix,
   engine: EngineConfig,
   director: DirectorConfig,
   /** The company's agents: the built-ins merged with the owner's edits and custom agents (d-0147). */
   agents: AgentsRecord,
+  /** The company's lane pipelines: the shipped lists with the owner's replacements (d-0151). */
+  pipelines: LanePipelines,
 });
 export type ForgeConfig = z.infer<typeof ForgeConfig>;

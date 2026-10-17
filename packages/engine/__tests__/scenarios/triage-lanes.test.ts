@@ -1,17 +1,17 @@
 /**
- * Scenario: triage decides the lane, M0 runs only Express, and a bad model answer is contained.
+ * Scenario: triage decides the lane, only a lane with a runner starts, and a bad model answer is contained.
  *
  * Why: triage is the gate between "someone asked" and "a Worker spends money". In M0 only
- *   the Express lane is wired, so any ticket the rules put in a heavier lane must stop in
- *   front of a human with a plain reason, not run with too little process (d-0059, brief
- *   E1). And because the model can answer off-schema or be down, a bad answer is retried
+ *   the Express and Standard lanes are wired, so a ticket the rules put in the Full lane must
+ *   stop in front of a human with a plain reason, not run with too little process (d-0059,
+ *   brief E1). And because the model can answer off-schema or be down, a bad answer is retried
  *   once with the validation error, then rejected without writing anything, and not
  *   re-spent on every tick.
  *
  * Pins: the requester's hint, title and type survive a restart (read from the stored intake
- *   event); a Standard or Full lane parks the ticket in waiting_human with "lane not enabled in
- *   M0" and starts nothing; low confidence moves Express to Standard and parks; a quick hint
- *   on a clean ticket runs as Express; a predicted tier-C path parks as Full; invalid output
+ *   event); a Full lane parks the ticket in waiting_human with a "goes live in the next update"
+ *   reason and starts nothing; a Standard lane runs; low confidence moves Express to Standard
+ *   and runs it; a quick hint on a clean ticket runs as Express; a predicted tier-C path parks as Full; invalid output
  *   is retried once with previous_error and then used; invalid twice is rejected, logged,
  *   leaves the ticket in the inbox and is held off until the next window; a rate-limited step
  *   waits for its reset time.
@@ -33,36 +33,51 @@ const triageAnswer = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-describe('non-Express lanes are parked in M0', () => {
-  it.each(['standard', 'full'] as const)(
-    'parks a %s ticket with a clear reason and starts nothing',
-    async (lane) => {
-      const rig = await makeRig();
-      rig.llm.script('triage', triageAnswer({ lane }));
-      const id = await rig.request('Rework the whole thing');
+describe('lanes without a runner are parked, lanes with one run', () => {
+  it('parks a full ticket with a clear reason and starts nothing', async () => {
+    const rig = await makeRig();
+    rig.llm.script('triage', triageAnswer({ lane: 'full' }));
+    const id = await rig.request('Rework the whole thing');
 
-      const report = await rig.tick();
+    const report = await rig.tick();
 
-      expect(report.triaged).toEqual([{ ticketId: id, lane, parked: true }]);
-      expect(report.parked).toEqual([
-        { ticketId: id, reason: expect.stringContaining('lane not enabled in M0') },
-      ]);
+    expect(report.triaged).toEqual([{ ticketId: id, lane: 'full', parked: true }]);
+    expect(report.parked).toEqual([
+      { ticketId: id, reason: expect.stringContaining('goes live in the next update') },
+    ]);
 
-      const t = await rig.ticket(id);
-      expect(t).toMatchObject({ status: 'waiting_human', lane });
-      expect(t.blocked_reason).toContain('lane not enabled in M0');
-      expect(rig.driver.starts).toEqual([]);
-      expect(rig.worktrees.created).toEqual([]);
-      expect(report.violations).toEqual([]);
-    },
-  );
+    const t = await rig.ticket(id);
+    expect(t).toMatchObject({ status: 'waiting_human', lane: 'full' });
+    expect(t.blocked_reason).toMatch(/^pipeline_pending/);
+    expect(rig.driver.starts).toEqual([]);
+    expect(rig.worktrees.created).toEqual([]);
+    expect(report.violations).toEqual([]);
+  });
 
-  it('moves a low-confidence Express proposal one lane up and parks it', async () => {
+  it('runs a standard ticket on its pipeline, starting with the test-writer', async () => {
+    const rig = await makeRig();
+    rig.llm.script('triage', triageAnswer({ lane: 'standard' }));
+    const id = await rig.request('Rework a medium thing');
+
+    const report = await rig.tick();
+
+    expect(report.triaged).toEqual([{ ticketId: id, lane: 'standard', parked: false }]);
+    expect(report.parked).toEqual([]);
+    expect(await rig.ticket(id)).toMatchObject({
+      status: 'in_progress',
+      lane: 'standard',
+    });
+
+    const run = await rig.storage.transaction((tx) => tx.runs.get('run-1'));
+    expect(run?.agent_id).toBe('test-writer');
+  });
+
+  it('moves a low-confidence Express proposal one lane up and runs it as Standard', async () => {
     const rig = await makeRig();
     rig.llm.script('triage', triageAnswer({ confidence: 0.4 }));
     const id = await rig.request('Maybe a small thing');
     const report = await rig.tick();
-    expect(report.triaged).toEqual([{ ticketId: id, lane: 'standard', parked: true }]);
+    expect(report.triaged).toEqual([{ ticketId: id, lane: 'standard', parked: false }]);
   });
 
   it('parks a ticket whose predicted files touch a tier-C path as Full, tier C', async () => {

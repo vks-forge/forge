@@ -26,6 +26,7 @@ import { settleEscalation } from '#/tick/escalation-settle.js';
 import { grillIndex } from '#/tick/plan-actions.js';
 import { setNeedsYou } from '#/tick/planning-state.js';
 import { moveTicketTx } from '#/tick/ticket-moves.js';
+import { sendBackFromHuman } from '#/tick/stage-records.js';
 import { requestWakeTx } from '#/tick/wakes.js';
 import type { EngineDeps } from '#/types/engine.types.js';
 import type { EffectEnd } from '#/types/escalation.types.js';
@@ -199,6 +200,8 @@ export async function reworkTx(
     return false;
   }
 
+  // The owner's send-back ends the pipeline's cycle: the next one restarts at the writer.
+  await sendBackFromHuman(tx, nowIso, ticketId);
   await requestWakeTx(tx, deps, {
     ticketId,
     kind: 'continuation',

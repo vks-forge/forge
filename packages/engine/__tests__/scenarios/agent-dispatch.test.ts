@@ -11,8 +11,8 @@
  * Pins: project override instructions appear as "## Agent instructions" between the brief and
  *   the rules; the run row names agent and hash; harness default sends no model; a named model
  *   and budget keys reach the request; an agent fallback list replaces the company list on
- *   quota; the agent's memory filter reaches the memory source; an archived implementer falls
- *   back to the shipped one.
+ *   quota; the agent's memory filter reaches the memory source; an archived stage agent parks the
+ *   ticket instead of running another agent (fail closed).
  * Depends on: helpers/rig, helpers/scheduling-rig, @forge/core, vitest.
  */
 
@@ -154,16 +154,17 @@ describe('agent behind a run', () => {
     });
   });
 
-  it('falls back to the shipped implementer when the stored one is archived', async () => {
+  it('refuses to run someone else when the stage agent is archived: the ticket is parked with the reason', async () => {
     const rig = await makeRig();
     await editCompany(rig, { implementer: { archived: true } });
+    const id = await rig.request('Fix the doctor check');
 
-    await dispatch(rig);
+    await rig.tick();
 
-    const run = await rig.storage.transaction((tx) => tx.runs.get('run-1'));
-
-    expect(run?.agent_id).toBe('implementer');
-    expect(run?.agent_hash).toBe(agentHash(shipped));
+    expect(rig.driver.starts).toEqual([]);
+    const t = await rig.ticket(id);
+    expect(t.status).toBe('waiting_human');
+    expect(t.blocked_reason).toContain('disabled or archived');
   });
 });
 

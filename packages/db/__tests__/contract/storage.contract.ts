@@ -16,7 +16,8 @@
  *   backend runs them: tickets (and the project ticket list), transactions, runs, run events, run tokens, ticket
  *   relations and the ticket fields derived from them, the run lifecycle, interaction answer/expire CAS, intake ids and ticket mapping, wake requests,
  *   the run inbox, gate results, projects and GitHub connections (ports batch C), the harness registry, cards with their
- *   history and type registry, card planning (flow snapshot, grill state, plan versions).
+ *   history and type registry, card planning (flow snapshot, grill state, plan versions), ticket pipeline
+ *   snapshots, stage rows and stage artifacts.
  *
  * Also pinned: optional columns can be cleared (a patch from `transition()` leaves no stale
  *   `blocked_reason` / `tier_actual`), the CAS owns `status_version`, a transaction
@@ -55,6 +56,9 @@ import { describeHarnessCompatContract } from './harness-compat.contract.js';
 import { describeHarnessStateContract } from './harness-state.contract.js';
 import { describeHarnessesContract } from './harnesses.contract.js';
 import { describeProjectPurgeContract } from './project-purge.contract.js';
+import { describeStageArtifactsContract } from './stage-artifacts.contract.js';
+import { describeStageRunnerContract } from './stage-runner.contract.js';
+import { describeTicketPipelinesContract } from './ticket-pipelines.contract.js';
 import { describeWorkQueuesContract } from './work-queues.contract.js';
 
 /** Register the shared contract; `makeAdapter` must return a fresh, empty adapter each call. */
@@ -79,6 +83,9 @@ export function describeStorageContract(
     describeWakeRequestsContract(() => db);
     describeWorkQueuesContract(() => db);
     describeProjectPurgeContract(() => db);
+    describeTicketPipelinesContract(() => db);
+    describeStageRunnerContract(() => db);
+    describeStageArtifactsContract(() => db);
     describeHarnessesContract(() => db);
     describeHarnessStateContract(() => db);
     describeConnectionsContract(() => db);
