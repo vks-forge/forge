@@ -19,7 +19,7 @@ import { TicketStatus, makeTicketId } from '@forge/core';
 import type { Project, StorageTx, Ticket } from '@forge/core';
 import { nextTicketNumber } from '#/domain/ticket-numbers.js';
 import { logCardEvent } from '#/tick/card-log.js';
-import { moveCardTx } from '#/tick/card-phase.js';
+import { syncCardWithTickets } from '#/tick/card-phase.js';
 import type { NewInboxTicket } from '#/types/ticket-insert.types.js';
 
 async function allTicketIds(tx: StorageTx): Promise<string[]> {
@@ -70,12 +70,9 @@ export async function insertInboxTicket(
     payload: { ticket_id: id, title: input.title },
   });
 
-  // A finished card that gets new work is live again (through the one card door), so the Board
-  // does not show a Done card with open tickets.
-  const card = await tx.cards.get(input.cardId);
-  if (card?.phase === 'done') {
-    await moveCardTx(tx, card.id, { type: 'resume_work' }, input.at);
-  }
+  // A finished card that gets new work is live again, through the same follow every ticket
+  // move uses, so the Board does not show a Done card with open tickets.
+  await syncCardWithTickets(tx, input.cardId, input.at);
 
   return ticket;
 }

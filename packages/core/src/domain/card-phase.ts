@@ -31,7 +31,8 @@ export const CARD_MOVES: Readonly<
   start_verifying: { from: ['grilling'], to: 'verifying' },
   plan_written: { from: ['grilling', 'verifying'], to: 'plan_ready' },
   regrill: {
-    from: ['verifying', 'plan_ready', 'approved', 'queued', 'in_progress'],
+    // From `done` too: the owner asks for more work and the Director chooses to re-plan.
+    from: ['verifying', 'plan_ready', 'approved', 'queued', 'in_progress', 'done'],
     to: 'grilling',
   },
   approve: { from: ['plan_ready'], to: 'approved' },

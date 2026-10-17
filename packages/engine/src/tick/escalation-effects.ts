@@ -108,7 +108,8 @@ export async function replanTx(
     return 'stale';
   }
 
-  if (card.phase === 'done' || card.phase === 'closed') {
+  // A done card may be re-planned: the owner asks for more work and the Director re-grills.
+  if (card.phase === 'closed') {
     return 'stale';
   }
 

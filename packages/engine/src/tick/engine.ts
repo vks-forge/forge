@@ -25,6 +25,7 @@ import { emitTrace } from '#/shared/trace.js';
 import { runCardChats } from '#/tick/card-chat.js';
 import { cardDirectorStatus, postCardMessage } from '#/tick/card-chat-post.js';
 import { closeCardWork, sweepClosedCards } from '#/tick/card-close.js';
+import { sweepCardPhases } from '#/tick/card-sweep.js';
 import { createCard, setCardRelations } from '#/tick/card-create.js';
 import { dispatchReady } from '#/tick/dispatch.js';
 import { backfillEscalations } from '#/tick/escalation-backfill.js';
@@ -121,6 +122,8 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
   const ctx: EngineCtx = { deps, state, report, config, now, nowIso: iso(now) };
   // Work of a closed card is cancelled before anything can raise a wait for it or run it.
   await phase(ctx, 'closed cards', async (c) => void (await sweepClosedCards(c)));
+  // Cards that disagree with their tickets (a Done card with open work) are repaired here.
+  await phase(ctx, 'card phases', async (c) => void (await sweepCardPhases(c)));
   if (state.firstTick) {
     await phase(ctx, 'restart reconcile', reconcileRestart);
     // Tickets parked before escalations existed get one to act on, once, at start.

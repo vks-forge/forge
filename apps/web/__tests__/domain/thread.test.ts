@@ -105,6 +105,74 @@ describe('applyEvent', () => {
     });
   });
 
+  it('pairs a steering message with its delivery by inbox_seq', () => {
+    const sent = applyEvent(
+      EMPTY_THREAD,
+      ev(1, {
+        type: 'user_message',
+        inbox_seq: 7,
+        mode: 'steer',
+        author: 'director',
+        text: 'Use the existing helper.',
+      }),
+    );
+
+    expect(sent.items[0]).toMatchObject({
+      kind: 'user',
+      inboxSeq: 7,
+      author: 'director',
+      delivered: false,
+    });
+
+    const done = applyEvent(
+      sent,
+      ev(2, { type: 'inbox_delivered', inbox_seq: 7, mode: 'steer' }),
+    );
+
+    expect(done.items).toHaveLength(1);
+    expect(done.items[0]).toMatchObject({ kind: 'user', delivered: true });
+    expect(done.lastSeq).toBe(2);
+  });
+
+  it('marks only the message whose inbox_seq was delivered', () => {
+    const state = applyEvents(EMPTY_THREAD, [
+      ev(1, {
+        type: 'user_message',
+        inbox_seq: 1,
+        mode: 'steer',
+        author: 'owner',
+        text: 'a',
+      }),
+      ev(2, {
+        type: 'user_message',
+        inbox_seq: 2,
+        mode: 'steer',
+        author: 'owner',
+        text: 'b',
+      }),
+      ev(3, { type: 'inbox_delivered', inbox_seq: 2, mode: 'steer' }),
+    ]);
+
+    expect(state.items.map((i) => (i.kind === 'user' ? i.delivered : null))).toEqual([
+      false,
+      true,
+    ]);
+  });
+
+  it('shows a plain line for a delivery whose message is not in the thread', () => {
+    const state = applyEvent(
+      EMPTY_THREAD,
+      ev(5, { type: 'inbox_delivered', inbox_seq: 3, mode: 'follow_up' }),
+    );
+
+    expect(state.items).toEqual([
+      expect.objectContaining({
+        kind: 'status',
+        label: 'Steering message #3 delivered',
+      }),
+    ]);
+  });
+
   it('shows the prompt event as the brief item', () => {
     const state = applyEvents(EMPTY_THREAD, [ev(0, { type: 'prompt', text: 'Do it.' })]);
 

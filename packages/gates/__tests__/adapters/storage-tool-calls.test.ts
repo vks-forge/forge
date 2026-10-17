@@ -153,4 +153,54 @@ describe('createStorageToolCallLister', () => {
       expect(await listed(events, 2)).toEqual([]);
     },
   );
+
+  describe('calls the harness rejected before running them', () => {
+    const rejection = (id: string, output: unknown, isError = true): RunEvent => ({
+      type: 'tool_result',
+      seq: seq++,
+      ts: TS,
+      call_id: id,
+      output,
+      is_error: isError,
+    });
+
+    const text = '<tool_use_error>File has not been read yet.</tool_use_error>';
+
+    it('drops an Edit whose result is a <tool_use_error>: it never ran, no receipt is owed', async () => {
+      const events = [live(), call('bad', 'Edit'), rejection('bad', text)];
+
+      expect(await listed(events)).toEqual([]);
+    });
+
+    it('drops it when the error text sits in a content-block array', async () => {
+      const events = [
+        live(),
+        call('bad', 'Edit'),
+        rejection('bad', [{ type: 'text', text }]),
+      ];
+
+      expect(await listed(events)).toEqual([]);
+    });
+
+    it('keeps an executed call that failed for another reason', async () => {
+      const events = [live(), call('ran', 'Bash'), rejection('ran', 'exit code 1')];
+
+      expect(await listed(events)).toEqual([{ callId: 'ran', name: 'Bash' }]);
+    });
+
+    it('keeps a call whose successful output merely mentions the tag', async () => {
+      const events = [live(), call('ran', 'Bash'), rejection('ran', text, false)];
+
+      expect(await listed(events)).toEqual([{ callId: 'ran', name: 'Bash' }]);
+    });
+
+    it('keeps a failed call whose output only quotes the tag after other text', async () => {
+      const out = `exit 1
+${text}`;
+
+      const events = [live(), call('ran', 'Bash'), rejection('ran', out)];
+
+      expect(await listed(events)).toEqual([{ callId: 'ran', name: 'Bash' }]);
+    });
+  });
 });

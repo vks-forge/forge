@@ -10,8 +10,9 @@
  *   longer knows (left by a crash or a wiped database).
  *
  * Pins: kept for starting, running, settling and interrupted runs and for a successful run
- *   whose ticket is still gating it; retired for every other outcome, for a run whose ticket
- *   moved on, and for unknown runs; a failing store is logged and does not throw.
+ *   while its ticket is open (a rework run re-verifies its chain as evidence for the files it
+ *   edited); retired for every other outcome, once the ticket is done or cancelled, and for
+ *   unknown runs; a failing store is logged and does not throw.
  * Depends on: src/services/secret-retirement, @forge/db (memory), @forge/hooks, @forge/secrets.
  *   No IO.
  */
@@ -123,7 +124,22 @@ describe('secret retirement', () => {
     },
   );
 
-  it.each(['done', 'cancelled', 'in_progress', 'waiting_human'] as const)(
+  it.each(['in_progress', 'waiting_human', 'planned'] as const)(
+    'keeps a successful run while its ticket is open (%s): a rework run verifies it as evidence',
+    async (status) => {
+      const { retirement, store } = await rig([
+        {
+          run: run('run-1', { status: 'success', ended_at: T }),
+          ticket: { status, assignee_run_id: 'run-1' },
+        },
+      ]);
+
+      expect(await retirement.sweep()).toBe(0);
+      expect(await store.list('run/')).toEqual(['run/run-1/secret-g1']);
+    },
+  );
+
+  it.each(['done', 'cancelled'] as const)(
     'retires a successful run once its ticket is %s',
     async (status) => {
       const { retirement, store } = await rig([
@@ -138,7 +154,7 @@ describe('secret retirement', () => {
     },
   );
 
-  it('retires a successful run whose ticket is gating a later run', async () => {
+  it('keeps an earlier successful run while its ticket is gating a later run', async () => {
     const { retirement, store } = await rig([
       {
         run: run('run-1', { status: 'success', ended_at: T }),
@@ -146,8 +162,8 @@ describe('secret retirement', () => {
       },
     ]);
 
-    expect(await retirement.sweep()).toBe(1);
-    expect(await store.list('run/')).toEqual([]);
+    expect(await retirement.sweep()).toBe(0);
+    expect(await store.list('run/')).toEqual(['run/run-1/secret-g1']);
   });
 
   it('retires every generation of a run, and the secrets of runs the database does not know', async () => {

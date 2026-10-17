@@ -49,6 +49,7 @@ describe('transitionCard: moves', () => {
     ['done', 'resume_work', 'in_progress'],
     ['plan_ready', 'regrill', 'grilling'],
     ['in_progress', 'regrill', 'grilling'],
+    ['done', 'regrill', 'grilling'],
     ['grilling', 'close', 'closed'],
     ['done', 'close', 'closed'],
   ] as const)('moves %s with %s to %s and bumps the version', (from, type, to) => {

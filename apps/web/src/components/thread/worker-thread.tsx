@@ -63,7 +63,10 @@ export function WorkerThread(props: {
   const live = connection === 'live';
 
   return (
-    <section aria-label="Worker thread" className="grid gap-2">
+    <section
+      aria-label="Worker thread"
+      className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2"
+    >
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <h2 className="text-sm font-semibold">Worker thread</h2>
         <p
@@ -104,7 +107,7 @@ export function WorkerThread(props: {
         </p>
       ) : null}
 
-      <div className="relative">
+      <div className="relative min-w-0">
         <div
           ref={scroller}
           onScroll={onScroll}
@@ -121,7 +124,10 @@ export function WorkerThread(props: {
                 : 'Waiting for the Worker’s first message…'}
             </p>
           ) : windowed ? (
-            <div className="relative" style={{ height: virtualizer.getTotalSize() }}>
+            <div
+              className="relative min-w-0"
+              style={{ height: virtualizer.getTotalSize() }}
+            >
               {virtualizer.getVirtualItems().map((row) => {
                 const item = items[row.index] as ThreadItem;
 
@@ -130,7 +136,7 @@ export function WorkerThread(props: {
                     key={row.key}
                     ref={virtualizer.measureElement}
                     data-index={row.index}
-                    className="absolute inset-x-0 top-0 pb-3"
+                    className="absolute inset-x-0 top-0 min-w-0 pb-3"
                     style={{ transform: `translateY(${row.start}px)` }}
                   >
                     <ThreadItemView
@@ -143,9 +149,9 @@ export function WorkerThread(props: {
               })}
             </div>
           ) : (
-            <ol className="grid gap-3">
+            <ol className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
               {items.map((item) => (
-                <li key={item.seq}>
+                <li key={item.seq} className="min-w-0">
                   <ThreadItemView
                     item={item}
                     expandTools={expandTools}

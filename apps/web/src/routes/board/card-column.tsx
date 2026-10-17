@@ -47,7 +47,6 @@ export function CardColumnView(props: {
         items={cards}
         getKey={(card) => card.id}
         label={`${column.title} cards`}
-        className="max-h-[68dvh] pr-1"
         renderItem={(card) => (
           <CardTile
             card={card}

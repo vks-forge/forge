@@ -17,6 +17,13 @@
  *   `Bash` or `PowerShell` call might have run before the process died, so its receipt stays
  *   owed and G1 fails on its absence rather than trusting the gap.
  *
+ *   The other left-out kind is a call Claude Code rejected in its own validation (an Edit of a
+ *   file not read yet, an ambiguous old string): it answers with an error result that is wholly
+ *   a `<tool_use_error>` wrapper, before PreToolUse runs, so the tool never executed and no
+ *   receipt exists (live ticket DCP-6 failed every G1 on these). Only an error result that
+ *   starts with the wrapper counts; a success, or a failure that merely quotes the tag after
+ *   other output (a shell that ran), keeps its receipt owed.
+ *
  * Exports: createStorageToolCallLister().
  * Depends on: @forge/core (StorageAdapter, RunEvent), types/g1-deps. IO: reads storage (run events, run generation).
  */
@@ -58,6 +65,40 @@ function abandonedByRestart(
   return abandoned;
 }
 
+/** The text of a tool result: a string, or the text blocks of a content array. */
+function resultTexts(output: unknown): string[] {
+  if (typeof output === 'string') {
+    return [output];
+  }
+
+  if (Array.isArray(output)) {
+    return output.flatMap((b: unknown) => {
+      if (typeof b === 'string') {
+        return [b];
+      }
+
+      const text = (b as { text?: unknown } | null)?.text;
+
+      return typeof text === 'string' ? [text] : [];
+    });
+  }
+
+  return [];
+}
+
+/** Ids of calls whose result is an error made entirely of Claude Code's own validation wrapper. */
+function rejectedByHarness(events: readonly RunEvent[]): ReadonlySet<string> {
+  return new Set(
+    events.flatMap((e) =>
+      e.type === 'tool_result' &&
+      e.is_error &&
+      resultTexts(e.output).some((t) => t.trimStart().startsWith('<tool_use_error>'))
+        ? [e.call_id]
+        : [],
+    ),
+  );
+}
+
 /** `listToolCalls` for G1 over the run events in `storage`. */
 export function createStorageToolCallLister(
   storage: StorageAdapter,
@@ -69,9 +110,10 @@ export function createStorageToolCallLister(
     }));
 
     const abandoned = abandonedByRestart(events, generation);
+    const rejected = rejectedByHarness(events);
 
     return events.flatMap((e) =>
-      e.type === 'tool_call' && !abandoned.has(e.call_id)
+      e.type === 'tool_call' && !abandoned.has(e.call_id) && !rejected.has(e.call_id)
         ? [{ callId: e.call_id, name: e.name }]
         : [],
     );

@@ -66,6 +66,10 @@ export interface UserItem extends ItemBase {
   readonly kind: 'user';
   readonly author: string;
   readonly text: string;
+  /** The inbox row number; the later `inbox_delivered` event names the same one. */
+  readonly inboxSeq: number;
+  /** True once the driver reported the harness took the message. */
+  readonly delivered: boolean;
 }
 
 export type ThreadItem =

@@ -64,16 +64,19 @@ function TicketBody(props: {
         detail={detail}
         streamedPrompt={(id) => pendingAsk(thread.items, id)}
       />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
         {runId === undefined ? (
-          <section aria-label="Worker thread" className="grid content-start gap-2">
+          <section
+            aria-label="Worker thread"
+            className="grid min-w-0 content-start gap-2"
+          >
             <h2 className="text-sm font-semibold">Worker thread</h2>
             <p className="text-sm text-muted">
               No Worker has started on this ticket, so there is nothing to follow yet.
             </p>
           </section>
         ) : (
-          <div className="grid content-start gap-3">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-3">
             <WorkerThread
               items={thread.items}
               connection={thread.connection}
@@ -151,7 +154,7 @@ export function TicketPage() {
   const runId = chosen ?? detail.ticket.assignee_run_id ?? newest?.id;
 
   return (
-    <section className="grid gap-6">
+    <section className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
       <TicketHeader slug={slug} detail={detail} />
       {!online ? (
         <p role="status" className="rounded-xl bg-attn-soft p-3 text-sm">

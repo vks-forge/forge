@@ -43,10 +43,10 @@ export interface G1Deps {
   /** The run's tool-call events, in order. */
   readonly listToolCalls: (runId: string) => Promise<readonly ToolCallRef[]>;
   /**
-   * Ids of the ticket's earlier runs (rework and resume chain, oldest first). Their receipts
-   * count as evidence for `edited` claims only (a rework run that only fixes its claims has
-   * made no edit of its own); ran_tests, read and added_test need the run's own evidence,
-   * and the receipt chain that is verified stays the run's own.
+   * Ids of the ticket's earlier runs (rework and resume chain, oldest first). Once their own
+   * chains verify under their own secrets, their receipts cover the files they edited (the
+   * rework branch holds those edits) and back `edited` and `read` claims; ran_tests and
+   * added_test need the run's own evidence, and the chain that gates the verdict stays the run's.
    */
   readonly earlierRunIds?: (run: Run) => Promise<readonly string[]>;
   /**

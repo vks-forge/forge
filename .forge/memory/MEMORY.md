@@ -76,6 +76,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0160 — (supersedes d-0158 hold) Card-first flow build RESUMED autonomously (S1 → S6), one commit+push per slice
 - d-0162 — Overview dashboard (d-0159) GO: build autonomously after card-first work
 - d-0163 — Debug trace log: everything (cards, chats, Director steps full prompt/output, Worker events) to JSONL files per day + per card, secrets redacted, on/off by env var
+- d-0164 — (amends d-0160) Continue the plan S5a → S6 autonomously after the live-test fixes; on low memory lower test workers or defer suites, never stop
 - d-0159 — `/` = cross-project Overview dashboard (KPIs, charts by day/week/month, projects table, cost); amends d-0104; brief docs/briefs/forge-overview-dashboard.md
 - d-0122 — Web UI state in zustand + persist (localStorage), UI prefs/drafts only; server data stays in TanStack Query; never tokens/secrets
 - d-0123 — Web uses the real server API only: mock adapter/fixtures/switches removed; missing backends built with their screen; tests stub fetch in __tests__ only
@@ -194,4 +195,3 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 
 ## Outcomes
 - Older outcome pointers (2026-10-12 – 2026-10-16 overnight): `outcomes/ARCHIVE.md`
-- 2026-10-17 — Card-first S1–S4a + Overview dashboard (all committed, CI green): `outcomes/2026-10/2026-10-17-card-first-s1-s4a-and-overview.md`

@@ -6,7 +6,7 @@
  *   run secret must fail the gate so the engine never merges on unverified evidence
  *   and the rework starts a fresh run instead of parking on the same missing secret.
  *
- * Pins: earlier runs support only edited claims (not ran_tests or read), planted false claim fails, honest run passes with a readable report, missing
+ * Pins: earlier runs support edited and read claims (not ran_tests), planted false claim fails, honest run passes with a readable report, missing
  *   secret fails with a restart finding, ignored tool calls, failing command fails, diff read against base.
  * Depends on: domain/g1-gate, helpers/fixtures.
  */
@@ -115,7 +115,7 @@ describe('createG1Gate', () => {
     expect(chained.status).toBe('passed');
   });
 
-  it('does not let an earlier run satisfy ran_tests or read for a rework run', async () => {
+  it('does not let an earlier run satisfy ran_tests for a rework run, but lets it back read', async () => {
     const earlier = chain([
       { id: 'p1', tool: 'edit', resource: 'src/a.ts' },
       { id: 'p2', tool: 'shell', resource: 'pnpm test' },
@@ -140,10 +140,7 @@ describe('createG1Gate', () => {
     );
 
     expect(verdict.status).toBe('failed');
-    expect(verdict.findings.map((f) => f.claim?.kind).sort()).toEqual([
-      'ran_tests',
-      'read',
-    ]);
+    expect(verdict.findings.map((f) => f.claim?.kind)).toEqual(['ran_tests']);
   });
 
   it('still fails a claim that no run of the ticket has a receipt for', async () => {

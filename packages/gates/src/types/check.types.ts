@@ -7,12 +7,12 @@
  *   engine and a markdown section for the Worker's rework prompt. A shared shape is what
  *   lets the gate add a check without touching how verdicts are combined.
  *
- * Exports: CheckOutcome, PatchFile, PatchDraft, ClaimEvidence, ProjectCheckInput, ProjectCheckSteps, AllowedCall.
+ * Exports: CheckOutcome, PatchFile, PatchDraft, ClaimEvidence, EarlierRunEvidence, UnverifiedEarlierRun, RawEarlierRun, Coverage, ProjectCheckInput, ProjectCheckSteps, AllowedCall.
  * Depends on: @forge/core, @forge/tools, types/g1-deps. Types only.
  */
 
 import type { GateFinding, GateStatus, ProjectConfig, WorktreeDiff } from '@forge/core';
-import type { DecisionReceipt, Receipt } from '@forge/tools';
+import type { DecisionReceipt, HmacKey, Receipt } from '@forge/tools';
 import type { ResolvedRules } from '#/types/ecosystem.types.js';
 import type { RunCommand } from '#/types/g1-deps.types.js';
 
@@ -47,16 +47,43 @@ export interface PatchDraft {
   removed: string[];
 }
 
+/** One earlier run of the ticket with its verified receipts. */
+export interface EarlierRunEvidence {
+  readonly runId: string;
+  readonly receipts: readonly Receipt[];
+}
+
+/** An earlier run as read from storage: its receipts and the secrets still held for it. */
+export interface RawEarlierRun {
+  readonly runId: string;
+  readonly receipts: readonly Receipt[];
+  readonly secrets: ReadonlyMap<number, HmacKey>;
+}
+
+/** What coverage found: findings, and which earlier run covered which unclaimed file. */
+export interface Coverage {
+  readonly findings: GateFinding[];
+  readonly coveredByEarlier: ReadonlyMap<string, string>;
+}
+
+/** An earlier run G1 set aside because its chain did not verify. */
+export interface UnverifiedEarlierRun {
+  readonly runId: string;
+  readonly reason: string;
+}
+
 /** The evidence the claim matcher compares claims against. */
 export interface ClaimEvidence {
   /** The gated run's own receipts: the only evidence for read, ran_tests and added_test. */
   readonly receipts: readonly Receipt[];
   /**
-   * Receipts of the ticket's earlier runs. They support `edited` claims only: the edit is
-   * in the branch diff already, but tests or reads from before a rework prove nothing
-   * about the reworked code.
+   * Earlier runs of the ticket whose receipt chains verified. They back `edited` and `read`
+   * claims and cover files they edited (those edits are in the branch already); tests run
+   * before a rework prove nothing about the reworked code, so ran_tests ignores them.
    */
-  readonly earlierReceipts?: readonly Receipt[];
+  readonly earlierRuns?: readonly EarlierRunEvidence[];
+  /** Earlier runs whose chain could not be verified; they back nothing, and the report says why. */
+  readonly unverifiedEarlierRuns?: readonly UnverifiedEarlierRun[];
   readonly diff: WorktreeDiff;
   readonly patch: readonly PatchFile[];
   /** Commands of every test-role check; a shell receipt matching any of them backs `ran_tests`. */

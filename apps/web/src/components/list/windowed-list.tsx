@@ -1,5 +1,5 @@
 /**
- * WindowedList: a scrolling list that stays fast at any length.
+ * WindowedList: a list that grows with its items and stays fast at any length.
  *
  * Why: a Board column can hold hundreds of tickets (a long-finished project's Done column).
  *   Drawing every card costs layout and memory the user never sees, so past a threshold only
@@ -45,8 +45,12 @@ export function WindowedList<T>(props: {
     getItemKey: (index) => getKey(items[index] as T),
   });
 
+  // A short list grows to its full height so the page scrolls, not the column; only a windowed
+  // list needs its own bounded scroll box for the virtualiser to measure against.
+  const box = windowed ? `max-h-[68dvh] overflow-y-auto pr-1 ${className}` : className;
+
   return (
-    <div ref={scroller} className={`overflow-y-auto ${className}`}>
+    <div ref={scroller} className={box}>
       {windowed ? (
         <ul
           aria-label={label}

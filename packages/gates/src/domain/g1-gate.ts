@@ -13,11 +13,14 @@
  *   A run that was resumed after a restart is verified generation by generation, each segment
  *   with its own secret (d-0100); a missing secret or link fails the gate.
  *
- *   Earlier runs of the ticket count only for `edited` claims; tests run or files read
- *   before a rework say nothing about the reworked code, and the chain check is own-run only.
+ *   A rework run reuses the ticket's branch, so earlier runs of the ticket count too, once
+ *   their own chains verify (domain/earlier-runs): their edit receipts cover files they
+ *   changed and back `edited` and `read` claims. Tests run before a rework say nothing about
+ *   the reworked code, so ran_tests needs this run's own receipt, and the chain check that
+ *   gates the verdict is this run's.
  *
  * Exports: buildG1Gate().
- * Depends on: @forge/core (Gate), @forge/tools (Receipt type), domain/* (gate-rules picks the ecosystem rules), types/g1-deps. No IO; every side effect is an injected dep.
+ * Depends on: @forge/core (Gate), @forge/tools (Receipt type), domain/* (earlier-runs verifies earlier chains, gate-rules picks the ecosystem rules), types/g1-deps. No IO; every side effect is an injected dep.
  */
 
 import type { Gate, GateContext, GateFinding, GateVerdict } from '@forge/core';
@@ -25,12 +28,13 @@ import { checkChain, recordedGenerations } from '#/domain/chain-check.js';
 import { checkClaims } from '#/domain/claim-check.js';
 import { checkGateConfig } from '#/domain/config-guard.js';
 import { resolveRules } from '#/domain/gate-rules.js';
+import { verifyEarlierRuns } from '#/domain/earlier-runs.js';
 import { parsePatch } from '#/domain/patch.js';
 import { DEFAULT_COMMAND_TIMEOUT_MS, runProjectChecks } from '#/domain/project-checks.js';
 import { checkScope } from '#/domain/scope-check.js';
 import { renderReport } from '#/domain/report.js';
 import { checkTestDiff } from '#/domain/test-diff.js';
-import type { HmacKey, Receipt } from '@forge/tools';
+import type { HmacKey } from '@forge/tools';
 import type { CheckOutcome } from '#/types/check.types.js';
 import type { G1CoreDeps } from '#/types/g1-deps.types.js';
 
@@ -42,12 +46,25 @@ function combine(outcomes: readonly CheckOutcome[]): GateVerdict['status'] {
   return outcomes.some((o) => o.status === 'error') ? 'error' : 'passed';
 }
 
-/** Receipts of the ticket's earlier runs; they back a rework run's `edited` claims only. */
-async function earlierReceipts(deps: G1CoreDeps, ctx: GateContext): Promise<Receipt[]> {
+/** The ticket's earlier runs with their receipts, chain-verified under their own secrets. */
+async function earlierRuns(
+  deps: G1CoreDeps,
+  ctx: GateContext,
+): Promise<ReturnType<typeof verifyEarlierRuns>> {
   const ids = deps.earlierRunIds ? await deps.earlierRunIds(ctx.run) : [];
-  const lists = await Promise.all(ids.map((id) => deps.receipts.list(id)));
+  const raw = await Promise.all(
+    ids.map(async (runId) => {
+      const receipts = await deps.receipts.list(runId);
 
-  return lists.flat();
+      return {
+        runId,
+        receipts,
+        secrets: await generationSecrets(deps, runId, recordedGenerations(receipts)),
+      };
+    }),
+  );
+
+  return verifyEarlierRuns(raw);
 }
 
 /** The secret of every generation the run reached (its row's and its chain's), where one exists. */
@@ -81,7 +98,7 @@ export function buildG1Gate(deps: G1CoreDeps): Gate {
         deps.receipts.list(runId),
         deps.listToolCalls(runId),
         deps.worktrees.diff(ctx.worktreePath, ctx.baseSha),
-        earlierReceipts(deps, ctx),
+        earlierRuns(deps, ctx),
       ]);
 
       const runGeneration = ctx.run.generation ?? 1;
@@ -104,7 +121,8 @@ export function buildG1Gate(deps: G1CoreDeps): Gate {
         checkChain(receipts, toolCalls, secrets, runGeneration),
         checkClaims(ctx.claims, {
           receipts,
-          earlierReceipts: earlier,
+          earlierRuns: earlier.verified,
+          unverifiedEarlierRuns: earlier.unverified,
           diff,
           patch,
           testCommands: ctx.project.checks

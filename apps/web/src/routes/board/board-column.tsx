@@ -41,7 +41,6 @@ export function BoardColumnView(props: {
         items={tickets}
         getKey={(ticket) => ticket.id}
         label={`${column.title} tickets`}
-        className="max-h-[68dvh] pr-1"
         renderItem={(ticket) => (
           <TicketCard ticket={ticket} now={now} showState={column.states.length > 1} />
         )}

@@ -13,23 +13,27 @@
  *                in this run or, for a rework, an earlier run of the ticket (that edit is
  *                in the branch already), and P is in the diff (paths folded: slashes,
  *                case, worktree prefix).
- *   read P       allowed `read` decision on P with a `read_completed` effect.
+ *   read P       allowed `read` decision on P with a `read_completed` effect, in this run or
+ *                an earlier verified run of the ticket (the Worker's session may be resumed).
  *   ran_tests    allowed `shell` decision with a completed effect (`mutation_committed`,
  *                or `uncertain` for a failed run, which still ran; the report says so)
  *                one of whose segments starts with the command of ANY test-role check (see shell-match).
  *   added_test N an added line of a test file declares a test (`it(`, `def test_`, `func Test`, `fn`, ...,
  *                per active ecosystem) whose title or name contains N; comments and strings do not count.
  *
- * Coverage (no vacuous pass): a non-empty diff with no claims at all is a finding, and every
- * changed file other than lockfiles and deletions must be named by an `edited` claim.
+ * Coverage (no vacuous pass, domain/claim-coverage): a non-empty diff with no claims at all is
+ * a finding, and every changed file other than lockfiles and deletions must be named by an
+ * `edited` claim or edited by an earlier verified run of the ticket. Earlier runs reach this
+ * check already verified (domain/earlier-runs), never raw.
  *
  * Exports: checkClaims().
- * Depends on: @forge/core (Claim), @forge/tools (Receipt), domain/{test-files,shell-match,gate-rules}, shared/paths. No IO.
+ * Depends on: @forge/core (Claim), domain/{test-files,shell-match,gate-rules,receipt-calls,claim-coverage}, shared/paths. No IO.
  */
 
 import type { Claim, GateFinding } from '@forge/core';
-import type { Receipt } from '@forge/tools';
+import { coverage, EDIT_TOOLS } from '#/domain/claim-coverage.js';
 import { ALL_RULES } from '#/domain/gate-rules.js';
+import { allowedCalls, touchedPath } from '#/domain/receipt-calls.js';
 import { runsAnyTestCommand } from '#/domain/shell-match.js';
 import { declaresTest, isTestPatch } from '#/domain/test-files.js';
 import { foldPath } from '#/shared/paths.js';
@@ -39,45 +43,7 @@ import type {
   ClaimEvidence,
 } from '#/types/check.types.js';
 
-const EDIT_TOOLS = new Set(['edit', 'write']);
 const SHELL_DONE = new Set(['mutation_committed', 'uncertain']);
-
-function allowedCalls(receipts: readonly Receipt[]): Allowed[] {
-  const states = new Map<string, string>();
-  for (const r of receipts) {
-    if (r.kind === 'effect') {
-      states.set(r.decision_id, r.state);
-    }
-  }
-
-  const out: Allowed[] = [];
-  for (const r of receipts) {
-    if (r.kind === 'decision' && r.decision === 'allow') {
-      out.push({ decision: r, state: states.get(r.id) });
-    }
-  }
-
-  return out;
-}
-
-function touchedPath(
-  calls: readonly Allowed[],
-  tools: ReadonlySet<string>,
-  state: ReadonlySet<string>,
-  path: string,
-  worktreePath: string,
-): boolean {
-  const wanted = foldPath(path, worktreePath);
-
-  return calls.some(
-    (c) =>
-      tools.has(c.decision.tool) &&
-      c.state !== undefined &&
-      state.has(c.state) &&
-      c.decision.resource !== null &&
-      foldPath(c.decision.resource, worktreePath) === wanted,
-  );
-}
 
 function unsupported(claim: Claim, why: string): GateFinding {
   return {
@@ -101,7 +67,7 @@ function testRuns(calls: readonly Allowed[], testCommands: readonly string[]): A
 function judge(
   claim: Claim,
   calls: readonly Allowed[],
-  editCalls: readonly Allowed[],
+  provenCalls: readonly Allowed[],
   ev: ClaimEvidence,
 ): string | null {
   switch (claim.kind) {
@@ -113,7 +79,7 @@ function judge(
 
       if (
         !touchedPath(
-          editCalls,
+          provenCalls,
           EDIT_TOOLS,
           new Set(['mutation_committed']),
           claim.path,
@@ -128,7 +94,7 @@ function judge(
 
     case 'read':
       return touchedPath(
-        calls,
+        provenCalls,
         new Set(['read']),
         new Set(['read_completed']),
         claim.path,
@@ -161,61 +127,32 @@ function judge(
   }
 }
 
-const LOCKFILE =
-  /(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|bun\.lockb|cargo\.lock|poetry\.lock)$/;
-
-/** Findings for a diff nobody claimed: no claims at all, or files no `edited` claim names. */
-function coverage(claims: readonly Claim[], ev: ClaimEvidence): GateFinding[] {
-  const files = ev.diff.files.filter((f) => f.status !== 'D');
-  if (claims.length === 0) {
-    return ev.diff.files.length === 0
-      ? []
-      : [
-          {
-            check: 'claims',
-            message: `finish carried no claims for ${ev.diff.files.length} changed files; the Worker must say what it did`,
-          },
-        ];
-  }
-
-  const claimed = new Set(
-    claims.flatMap((c) =>
-      c.kind === 'edited' ? [foldPath(c.path, ev.worktreePath)] : [],
-    ),
-  );
-
-  const missing = files
-    .map((f) => f.path)
-    .filter(
-      (p) => !LOCKFILE.test(foldPath(p)) && !claimed.has(foldPath(p, ev.worktreePath)),
-    );
-
-  return missing.length === 0
-    ? []
-    : [
-        {
-          check: 'claims',
-          message: `changed files not covered by any edited claim: ${missing.join(', ')}`,
-        },
-      ];
-}
-
 /** Every claim must be supported and the diff covered; each failure is a finding. */
 export function checkClaims(claims: readonly Claim[], ev: ClaimEvidence): CheckOutcome {
   const calls = allowedCalls(ev.receipts);
-  // Earlier runs' receipts feed `edited` only; every other kind needs this run's own.
-  const editCalls = [...allowedCalls(ev.earlierReceipts ?? []), ...calls];
+  // Verified earlier runs of the ticket back `edited` and `read`; ran_tests and added_test
+  // say something about the code as it is now and need this run's own evidence.
+  const provenCalls = [
+    ...(ev.earlierRuns ?? []).flatMap((r) => allowedCalls(r.receipts)),
+    ...calls,
+  ];
+
   const findings: GateFinding[] = [];
   for (const claim of claims) {
-    const why = judge(claim, calls, editCalls, ev);
+    const why = judge(claim, calls, provenCalls, ev);
     if (why !== null) {
       findings.push(unsupported(claim, why));
     }
   }
 
-  findings.push(...coverage(claims, ev));
+  const covered = coverage(claims, ev);
+  findings.push(...covered.findings);
 
   const notes: string[] = [];
+  for (const [path, runId] of covered.coveredByEarlier) {
+    notes.push(`${path} covered by the verified edit receipts of earlier run ${runId}.`);
+  }
+
   const claimedTests = claims.some((c) => c.kind === 'ran_tests');
   if (claimedTests && ev.testCommands.length > 0) {
     const runs = testRuns(calls, ev.testCommands);

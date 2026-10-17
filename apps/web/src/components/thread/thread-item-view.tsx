@@ -6,12 +6,16 @@
  *   running/ok/failed mark) that expands to the full input and output, because most calls
  *   are noise until something goes wrong; permission denials are red and always visible;
  *   questions are amber and say whether they are still waiting; finish and error end the
- *   run in plain words; a message the user sent to the Worker is a right-aligned line labelled
- *   with who wrote it. Text is rendered as text, never as HTML or markdown, because it is
- *   untrusted model output.
+ *   run in plain words; a message sent to the Worker is a right-aligned bubble labelled
+ *   with who wrote it ("Director → Worker", "You → Worker") and whether the harness has taken it
+ *   yet ("Delivered" / "Waiting to be delivered"), so the owner sees what was said. Worker messages draw a safe markdown subset (never HTML); every
+ *   other text is plain text, because it is untrusted model output. Every row can shrink
+ *   below its content width (min-w-0, single minmax(0,1fr) track, wrapping text) so a long
+ *   path or summary never pushes the thread under the Runs column.
  *
  * Exports: ThreadItemView.
- * Depends on: react, lucide-react, domain/relative-time, types/thread.types.
+ * Depends on: react, lucide-react, components/thread/markdown-text, domain/relative-time,
+ *   types/thread.types.
  */
 
 import {
@@ -26,6 +30,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useState } from 'react';
+import { MarkdownText } from '#/components/thread/markdown-text.js';
 import { clockTime } from '#/domain/relative-time.js';
 import type { BriefItem, ThreadItem, ToolItem } from '#/types/thread.types.js';
 
@@ -78,19 +83,19 @@ function ToolLine(props: { item: ToolItem; expandAll: boolean }) {
   const Mark = !item.done ? LoaderCircle : failed ? CircleX : CircleCheck;
 
   return (
-    <div className="rounded-lg border border-line bg-surface">
+    <div className="min-w-0 rounded-lg border border-line bg-surface">
       <button
         type="button"
         aria-expanded={expanded}
         onClick={() => setOpen(!expanded)}
-        className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-sm hover:bg-hover"
+        className="flex min-h-9 w-full min-w-0 items-center gap-2 rounded-lg px-2 text-left text-sm hover:bg-hover"
       >
         <ChevronRight
           aria-hidden="true"
           className={`size-4 shrink-0 text-muted transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}
         />
         <Wrench aria-hidden="true" className="size-4 shrink-0 text-muted" />
-        <span className="font-medium">{item.name}</span>
+        <span className="shrink-0 font-medium">{item.name}</span>
         <span className="min-w-0 flex-1 truncate font-data text-xs text-muted">
           {hint(item.input)}
         </span>
@@ -103,15 +108,15 @@ function ToolLine(props: { item: ToolItem; expandAll: boolean }) {
         </span>
       </button>
       {expanded ? (
-        <div className="grid gap-2 border-t border-line p-2">
-          <div>
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-2 border-t border-line p-2">
+          <div className="min-w-0">
             <p className="text-xs font-medium text-muted">Input</p>
             <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words font-data text-xs">
               {show(item.input) || '(none)'}
             </pre>
           </div>
           {item.done ? (
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-medium text-muted">
                 {failed ? 'Error output' : 'Output'}
               </p>
@@ -132,7 +137,7 @@ function BriefLine(props: { item: BriefItem }) {
   const { item } = props;
 
   return (
-    <details className="rounded-lg border border-line bg-surface">
+    <details className="min-w-0 rounded-lg border border-line bg-surface">
       <summary className="flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm hover:bg-hover">
         <FileText aria-hidden="true" className="size-4 shrink-0 text-muted" />
         <span className="font-medium">Brief sent to the Worker</span>
@@ -145,6 +150,19 @@ function BriefLine(props: { item: BriefItem }) {
       </pre>
     </details>
   );
+}
+
+/** Who sent a steering message, and to whom: always the Worker. */
+function senderLabel(author: string): string {
+  if (author === 'owner') {
+    return 'You → Worker';
+  }
+
+  if (author === 'director') {
+    return 'Director → Worker';
+  }
+
+  return `${author} → Worker`;
 }
 
 export function ThreadItemView(props: {
@@ -160,22 +178,23 @@ export function ThreadItemView(props: {
       return <BriefLine item={item} />;
     case 'message':
       return (
-        <div className="grid gap-0.5">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-0.5">
           <Time ts={item.ts} />
-          <p className="whitespace-pre-wrap break-words text-sm">{item.text}</p>
+          <MarkdownText text={item.text} />
         </div>
       );
     case 'user':
       return (
-        <div className="grid justify-items-end gap-0.5">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] justify-items-end gap-0.5">
           <p className="flex items-center gap-2 text-xs text-muted">
-            <span className="font-medium text-fg">
-              {item.author === 'owner' ? 'You' : item.author}
-            </span>
+            <span className="font-medium text-fg">{senderLabel(item.author)}</span>
             <Time ts={item.ts} />
           </p>
-          <p className="max-w-[88%] whitespace-pre-wrap break-words rounded-2xl bg-signal-soft px-3 py-2 text-sm">
+          <p className="max-w-[88%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl bg-signal-soft px-3 py-2 text-sm">
             {item.text}
+          </p>
+          <p className="text-xs text-muted">
+            {item.delivered ? 'Delivered' : 'Waiting to be delivered'}
           </p>
         </div>
       );
@@ -202,7 +221,7 @@ export function ThreadItemView(props: {
       const waiting = props.pending.has(item.interactionId);
 
       return (
-        <div className="grid gap-1 rounded-xl border border-attn bg-attn-soft p-3">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 rounded-xl border border-attn bg-attn-soft p-3">
           <p className="flex items-center gap-2 text-sm font-medium">
             <CircleAlert aria-hidden="true" className="size-4 text-attn" />
             The Worker asked
@@ -210,7 +229,9 @@ export function ThreadItemView(props: {
               {waiting ? 'Waiting for your answer' : 'Answered'}
             </span>
           </p>
-          <p className="whitespace-pre-wrap break-words text-sm">{item.prompt}</p>
+          <p className="whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">
+            {item.prompt}
+          </p>
         </div>
       );
     }
@@ -228,7 +249,7 @@ export function ThreadItemView(props: {
       return (
         <div
           role={item.tone === 'danger' ? 'alert' : undefined}
-          className={`grid gap-1 rounded-xl border p-3 ${tone}`}
+          className={`grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 rounded-xl border p-3 ${tone}`}
         >
           <p className="flex items-center gap-2 text-sm font-medium">
             <Icon aria-hidden="true" className="size-4" />
@@ -238,7 +259,7 @@ export function ThreadItemView(props: {
             </span>
           </p>
           {item.detail ? (
-            <p className="whitespace-pre-wrap break-words text-sm text-muted">
+            <p className="whitespace-pre-wrap text-sm text-muted [overflow-wrap:anywhere]">
               {item.detail}
             </p>
           ) : null}

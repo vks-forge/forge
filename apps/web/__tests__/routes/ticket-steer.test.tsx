@@ -69,7 +69,7 @@ describe('Message the Worker', () => {
     const log = await screen.findByRole('log', { name: 'Worker messages' });
 
     expect(await within(log).findByText('Stream in 64 KB chunks')).toBeInTheDocument();
-    expect(within(log).getByText('You')).toBeInTheDocument();
+    expect(within(log).getByText('You → Worker')).toBeInTheDocument();
   });
 
   it.each([

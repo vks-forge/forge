@@ -26,7 +26,10 @@ export function ReviewFacts(props: { detail: TicketDetail }) {
   const g1 = latestGates(gates).find((g) => g.gate === 'G1');
 
   return (
-    <dl aria-label="What will be merged" className="grid gap-1 text-sm">
+    <dl
+      aria-label="What will be merged"
+      className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 text-sm"
+    >
       {review === null ? null : (
         <div className="flex flex-wrap items-center gap-x-2">
           <dt className="flex items-center gap-1 font-medium">
@@ -49,7 +52,9 @@ export function ReviewFacts(props: { detail: TicketDetail }) {
       {g1?.report_ref === undefined ? null : (
         <div className="flex flex-wrap items-center gap-x-2">
           <dt className="font-medium">G1 report</dt>
-          <dd className="font-data min-w-0 break-all text-xs">{g1.report_ref}</dd>
+          <dd className="min-w-0 max-w-full font-data text-xs [overflow-wrap:anywhere]">
+            {g1.report_ref}
+          </dd>
         </div>
       )}
       {ticket.pr_url === undefined ? null : (
