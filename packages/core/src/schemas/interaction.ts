@@ -7,7 +7,9 @@
  *   asked, when it times out, what the human answered. The Director's invariant that
  *   every open ticket has a live run, a durable reason to wait or a visible blocking
  *   status depends on it; without the row a parked ticket looks like a lost one and the
- *   control room's "Needs you" pane has nothing to show (director-core.md §3, §8).
+ *   control room's "Needs you" pane has nothing to show (director-core.md §3, §8). Every owner
+ *   wait on a ticket is one pending interaction (a question, a failure or a setup, see
+ *   schemas/escalation); `escalated_at` says whether the owner may see it yet.
  *
  * Exports: InteractionStatus, Interaction.
  * Depends on: schemas/ids, schemas/run, zod. No IO.
@@ -32,8 +34,10 @@ export const Interaction = z.object({
   ticket_id: z.string().min(1),
   run_id: z.string().min(1).optional(),
   kind: InteractionKind,
-  /** The card this question belongs to when it is asked of the owner about the card itself (d-0141 item 8); absent for a ticket's own question. */
+  /** The card the ticket belongs to; set for every ticket escalation, so the card page and the Board can find it (d-0141 item 8). */
   card_id: CardId.optional(),
+  /** When it moved from the Director's first look to the owner (the owner stage); absent while the Director is looking, and the owner never sees it until set. */
+  escalated_at: z.iso.datetime().optional(),
   payload: z.unknown(),
   status: InteractionStatus,
   asked_at: z.iso.datetime(),

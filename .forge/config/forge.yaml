@@ -18,6 +18,9 @@ models:
     write_plan: opus
     approve_plan: opus
     custom_step: sonnet
+    # Escalation steps: the Director's first look at a Worker question and at a failure.
+    ticket_answer: sonnet
+    ticket_recover: opus
   # Workers: sonnet in every lane until changed in Settings.
   worker:
     express: sonnet

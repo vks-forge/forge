@@ -5,7 +5,9 @@
  *   answer is accepted exactly once: the engine answers by compare-and-swap, so a double
  *   click or a retry after a timeout gets 409 instead of waking the ticket twice. An
  *   unknown id is 404, which tells the caller their id is wrong rather than that someone
- *   else got there first.
+ *   else got there first. This is the older route: it stays for callers that only answer, and
+ *   settles the answer the same way `POST /interactions/:id/act` does (the owner's typed answer),
+ *   but at any stage.
  *
  * Exports: answerRoute().
  * Depends on: schemas/api, services/http/body, services/http/http-errors,
@@ -32,6 +34,8 @@ export function answerRoute(deps: RouteDeps): Route {
         throw new HttpError(404, 'interaction_not_found', `no interaction ${id}`);
       }
 
+      // The same settle as `act` with an answer (a typed owner answer, the same wake), but taken at
+      // any stage: this older route never learned that the Director may still be looking.
       if (!(await deps.engine.answerInteraction(id, answer))) {
         throw new HttpError(409, 'not_pending', `interaction ${id} is not pending`);
       }

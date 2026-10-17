@@ -133,8 +133,19 @@ describe('pause and resume', () => {
     const t = await rig.ticket(id);
     expect(t.status).toBe('blocked');
     expect(t.blocked_reason).toMatch(/timed out/);
+
+    // The question is closed; the owner is offered a way forward (retry, re-plan, cancel).
     const pending = await rig.storage.transaction((tx) => tx.interactions.listPending());
-    expect(pending).toEqual([]);
+    expect(pending).toHaveLength(1);
+    expect(pending[0]).toMatchObject({
+      kind: 'failure',
+      payload: { kind: 'failure', cause: 'question_timeout' },
+    });
+
+    expect(pending[0]?.escalated_at).toBeDefined();
+    expect(
+      (await rig.storage.transaction((tx) => tx.interactions.get('int-q1')))?.status,
+    ).toBe('timed_out');
   });
 
   it('treats a chat reply to a waiting ticket as the answer to its one pending question', async () => {

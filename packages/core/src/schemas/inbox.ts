@@ -12,10 +12,11 @@
  *
  * Exports: INBOX_KINDS, InboxKind, InboxView, InboxItem, InboxListQuery, InboxPage,
  *   InboxCounts, InboxStateRow, INBOX_DEFAULT_LIMIT, INBOX_MAX_LIMIT.
- * Depends on: zod. No IO.
+ * Depends on: schemas/escalation, zod. No IO.
  */
 
 import { z } from 'zod';
+import { EscalationView } from '#/schemas/escalation.js';
 
 /** What an item stands for; the `id` of an item is `<kind>:<source id>`. */
 export const INBOX_KINDS = [
@@ -48,6 +49,8 @@ export const InboxItem = z.object({
   detail: z.string().optional(),
   ticket_id: z.string().min(1).optional(),
   run_id: z.string().min(1).optional(),
+  /** For a `question` item: the escalation behind it (a question, a failure or a setup), so the Inbox can act on it in place. Owner stage only. */
+  escalation: EscalationView.optional(),
   /** Waits on a decision from the person (as opposed to merely informing). */
   needs_action: z.boolean(),
   /** When the source last changed; a mark older than this no longer counts. */

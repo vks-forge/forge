@@ -5,13 +5,16 @@
  *   descriptor gives every one the same label, hint, unit and inline error without thirty
  *   hand-written inputs, and keeps the number-in-the-person's-unit logic (seconds for a value
  *   stored in milliseconds) in one place. An emptied number field becomes NaN in the draft,
- *   which the schema rejects with "Enter a number", so a blank can never be saved as 0.
+ *   which the schema rejects with "Enter a number", so a blank can never be saved as 0. An on/off
+ *   setting is a switch with its label and hint beside it.
  *
  * Exports: ConfigFields.
- * Depends on: domain/config-path, components/settings/form-field, types/settings-fields.types.
+ * Depends on: domain/config-path, components/settings/form-field, components/ui/field,
+ *   types/settings-fields.types.
  */
 
 import { FormField, TextInput } from '#/components/settings/form-field.js';
+import { Switch } from '#/components/ui/field.js';
 import { getAt } from '#/domain/config-path.js';
 import type { FieldErrors, FieldSpec } from '#/types/settings-fields.types.js';
 
@@ -29,6 +32,22 @@ function Field(props: {
   const { spec, config, error } = props;
   const id = idOf(spec.path);
   const raw = getAt(config, spec.path);
+
+  if (spec.kind === 'switch') {
+    return (
+      <div className="flex items-start gap-3">
+        <Switch
+          checked={raw === true}
+          label={spec.label}
+          onChange={(next) => props.onChange(spec.path, next)}
+        />
+        <div className="grid gap-0.5">
+          <p className="text-sm font-medium">{spec.label}</p>
+          {spec.hint ? <p className="text-xs text-muted">{spec.hint}</p> : null}
+        </div>
+      </div>
+    );
+  }
 
   if (spec.kind === 'text') {
     return (

@@ -31,9 +31,18 @@ const t = (n: number, status: Ticket['status']) => ({
   status,
 });
 
+const OWNER_SINCE = '2026-10-17T00:00:00.000Z';
+
 const asked = (ticketId: string, status = 'pending' as const) => ({
   ticket_id: ticketId,
   status,
+  escalated_at: OWNER_SINCE,
+});
+
+/** A question the Director is still looking at: not yet the owner's. */
+const withDirector = (ticketId: string) => ({
+  ticket_id: ticketId,
+  status: 'pending' as const,
 });
 
 describe('rollupCardColumn', () => {
@@ -59,7 +68,7 @@ describe('rollupCardColumn', () => {
     },
   );
 
-  it.each(['waiting_human', 'review', 'needs_signoff'] as const)(
+  it.each(['waiting_human', 'blocked', 'review', 'needs_signoff'] as const)(
     'puts an in_progress card with a %s ticket in needs_you',
     (status) => {
       expect(rollupCardColumn(card('in_progress'), [t(1, status)], [])).toBe('needs_you');
@@ -69,6 +78,34 @@ describe('rollupCardColumn', () => {
   it('puts a card in needs_you for a pending question even when the ticket looks busy', () => {
     expect(
       rollupCardColumn(card('in_progress'), [t(1, 'in_progress')], [asked('SF-1')]),
+    ).toBe('needs_you');
+  });
+
+  it('does not count a question the Director is still looking at', () => {
+    expect(
+      rollupCardColumn(
+        card('in_progress'),
+        [t(1, 'in_progress')],
+        [withDirector('SF-1')],
+      ),
+    ).toBe('in_progress');
+
+    expect(
+      rollupCardColumn(
+        card('in_progress'),
+        [t(1, 'waiting_human')],
+        [withDirector('SF-1')],
+      ),
+    ).toBe('in_progress');
+  });
+
+  it('counts a waiting ticket once one of its questions is with the owner', () => {
+    expect(
+      rollupCardColumn(
+        card('in_progress'),
+        [t(1, 'waiting_human')],
+        [withDirector('SF-1'), asked('SF-1')],
+      ),
     ).toBe('needs_you');
   });
 
@@ -114,6 +151,10 @@ describe('cardNeedsYou', () => {
     ).toBe(true);
 
     expect(cardNeedsYou({ needs_you: false }, [t(1, 'in_progress')], [])).toBe(false);
+  });
+
+  it('counts a blocked ticket (a question that timed out) as needing the owner', () => {
+    expect(cardNeedsYou({ needs_you: false }, [t(1, 'blocked')], [])).toBe(true);
   });
 });
 

@@ -24,7 +24,7 @@ import {
   InvalidInputError,
   branchName,
 } from '@forge/core';
-import type { Interaction, Run, Ticket, Worktree, WorkerDriver } from '@forge/core';
+import type { Run, Ticket, Worktree, WorkerDriver } from '@forge/core';
 import { sha256Hex } from '@forge/tools';
 import { familyOf, failureResult } from '#/domain/results.js';
 import { renderWorkerContract, workerContract } from '#/domain/worker-contract.js';
@@ -36,41 +36,11 @@ import { startPump } from '#/tick/pump.js';
 import { buildRunRequest } from '#/tick/run-request.js';
 import { settleRun } from '#/tick/settle.js';
 import { moveTicket } from '#/tick/ticket-moves.js';
+import { wakeDelta } from '#/tick/wake-delta.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { Candidate } from '#/types/tick.types.js';
 
 const msg = (e: unknown): string => String(e instanceof Error ? e.message : e);
-
-/** What changed since the last run, for the prompt step. */
-function wakeDelta(c: Candidate, answered: Interaction | null): Record<string, unknown> {
-  if (c.kind === 'new') {
-    return { kind: 'new_ticket' };
-  }
-
-  if (c.kind === 'resume') {
-    return {
-      kind: 'response_wake',
-      reason: c.wake?.reason ?? 'answered',
-      interaction_id: answered?.id ?? null,
-      question: answered?.payload ?? null,
-      answer: answered?.answer ?? null,
-    };
-  }
-
-  if (c.wake?.kind === 'continuation') {
-    return {
-      kind: 'rework',
-      previous_run: c.wake.idempotency_key,
-      gate_findings: c.wake.reason.replace(/^gate_failed: /, ''),
-    };
-  }
-
-  return {
-    kind: 'retry',
-    reason: c.wake?.reason ?? 'retry',
-    previous_run: c.wake?.idempotency_key ?? null,
-  };
-}
 
 /**
  * Starts a run for `c` on `harnessId` (the project's own harness unless the scheduler
@@ -246,7 +216,9 @@ async function tryStart(
       run,
       failureResult(familyOf(e)),
       undefined,
-      e instanceof HarnessChangedError ? { parkReason: msg(e) } : {},
+      e instanceof HarnessChangedError
+        ? { parkReason: msg(e), parkBuild: { installed: e.installed } }
+        : {},
     );
 
     return false;

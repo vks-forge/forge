@@ -9,8 +9,8 @@
  *   tickets; inside each group the projects take turns, starting after the project that got
  *   the last slot, so with any slot at all every project with work reaches the front within
  *   as many ticks as there are projects; inside a project the highest priority goes first,
- *   then the lowest ticket number. A candidate is skipped, with a stated reason, when it has
- *   unfinished blockers, its harness is parked until a quota reset, or starting it would
+ *   then the lowest ticket number. A candidate is skipped, with a stated reason, when its card is
+ *   being re-planned (the new plan may replace it), when it has unfinished blockers, its harness is parked until a quota reset, or starting it would
  *   exceed the global, per-project, per-harness or In Progress limit. The same call answers
  *   the ticket page's "why is this waiting?", so the explanation can never disagree with
  *   what dispatch does.
@@ -85,6 +85,10 @@ export function pickNext(
   // Unfinished blockers and a parked harness hold a ticket back whatever else is free, so
   // those tickets sit out of the rotation: they must not use up a project's turn.
   const staticWait = (c: PickCandidate): WaitReason | null => {
+    if (c.awaitsPlan === true) {
+      return { kind: 'plan' };
+    }
+
     if (c.blockedBy.length > 0) {
       return { kind: 'deps', ids: c.blockedBy };
     }

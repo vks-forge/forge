@@ -25,6 +25,8 @@ export const FALLBACK_STEP_MODELS = {
   write_plan: 'opus',
   approve_plan: 'opus',
   custom_step: 'sonnet',
+  ticket_answer: 'sonnet',
+  ticket_recover: 'opus',
 } as const;
 
 export const DEFAULT_FLOW: readonly FlowStep[] = [
@@ -102,5 +104,8 @@ export const FALLBACK_DIRECTOR: DirectorConfig = {
     write_plan: 420_000,
     approve_plan: 120_000,
     custom_step: 180_000,
+    ticket_answer: 180_000,
+    ticket_recover: 180_000,
   },
+  escalation: { director_first: true, answer_confidence: 0.8, max_director_retries: 1 },
 };

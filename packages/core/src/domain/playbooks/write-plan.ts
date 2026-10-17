@@ -28,7 +28,7 @@ export const WRITE_PLAN_PLAYBOOK: DirectorPlaybook = {
     '',
     '## Inputs',
     '',
-    '`card`, `grill_decisions` (every question and answer), `grill.assumptions`, `survey`, `verify`, the enhance report in `previous_steps`, `project_rules`, `lane_hint`. On `changes_requested` also its `comment` and `previous_plan`.',
+    '`card`, `grill_decisions` (every question and answer), `grill.assumptions`, `survey`, `verify`, the enhance report in `previous_steps`, `project_rules`, `lane_hint`. On `changes_requested` also its `comment` and `previous_plan`. When the card already has tickets, `existing_tickets` lists each with its status and plan key: tickets that are done or running stay as they are, so plan only the work that is still missing and never plan them again. Tickets that have not started are replaced when this plan is approved.',
     '',
     '## Fields you write',
     '',

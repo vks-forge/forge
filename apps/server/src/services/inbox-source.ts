@@ -16,12 +16,13 @@
  *
  * Exports: gatherInboxCandidates().
  * Depends on: @forge/core (inbox rules, StorageTx, memory entries), services/collect-pages,
- *   services/current-harness-build.
+ *   services/current-harness-build, services/escalation-view.
  *   IO: reads storage.
  */
 
 import { TERMINAL_STATUSES, inboxItemId } from '@forge/core';
 import type {
+  EscalationView,
   GateResult,
   InboxCandidate,
   MemoryListEntry,
@@ -31,23 +32,18 @@ import type {
 } from '@forge/core';
 import { collectRuns, collectTickets } from '#/services/collect-pages.js';
 import { currentHarnessBuilds } from '#/services/current-harness-build.js';
+import { escalationViews } from '#/services/escalation-view.js';
 
 const EPOCH = '1970-01-01T00:00:00.000Z';
 const clip = (text: string, max = 140): string =>
   text.length > max ? `${text.slice(0, max - 1)}…` : text;
 
-/** The question text of an interaction payload, when it carries one. */
-function promptOf(payload: unknown): string | undefined {
-  if (typeof payload !== 'object' || payload === null) {
-    return undefined;
-  }
+/** The line an escalation shows in the Inbox: the question, or what went wrong. */
+function titleOf(view: EscalationView): string {
+  const text =
+    view.payload.kind === 'question' ? view.payload.text : view.payload.summary;
 
-  const o = payload as Record<string, unknown>;
-  const text = [o['prompt'], o['question'], o['message'], o['reason']].find(
-    (v): v is string => typeof v === 'string' && v.trim() !== '',
-  );
-
-  return text === undefined ? undefined : clip(text.trim());
+  return clip(text.replace(/\s+/g, ' ').trim());
 }
 
 const ticketItems = (
@@ -114,24 +110,38 @@ export async function gatherInboxCandidates(
   const byId = new Map(tickets.map((t) => [t.id as string, t]));
   const items: InboxCandidate[] = [];
 
+  // Every pending wait explains its ticket; only the ones already with the owner are listed
+  // (a wait the Director is still looking at stays out of the Inbox).
   const pending = new Set<string>();
-  for (const i of await tx.interactions.listPending()) {
-    const ticket = byId.get(i.ticket_id);
-    if (!ticket) {
+  const mine = (await tx.interactions.listPending()).filter((i) => byId.has(i.ticket_id));
+  const views = new Map(
+    (
+      await escalationViews(
+        tx,
+        mine.filter((i) => i.escalated_at !== undefined),
+      )
+    ).map((v) => [v.id, v]),
+  );
+
+  for (const i of mine) {
+    const ticket = byId.get(i.ticket_id) as Ticket;
+    const view = views.get(i.id);
+    pending.add(i.ticket_id);
+    if (!view) {
       continue;
     }
 
-    pending.add(i.ticket_id);
     items.push({
       id: inboxItemId('question', i.id),
       kind: 'question',
       project: slug,
-      title: promptOf(i.payload) ?? `${i.kind.replace('_', ' ')} on ${ticket.id}`,
+      title: titleOf(view),
       detail: ticket.title,
       ticket_id: ticket.id,
       ...(i.run_id === undefined ? {} : { run_id: i.run_id }),
+      escalation: view,
       needs_action: true,
-      updated_at: i.asked_at,
+      updated_at: i.escalated_at ?? i.asked_at,
     });
   }
 

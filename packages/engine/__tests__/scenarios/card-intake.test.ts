@@ -253,10 +253,16 @@ describe('card intake', () => {
     await rig.flush();
     await rig.tick();
 
-    const tail = (await history(rig, C1)).slice(-2);
+    const events = await history(rig, C1);
+    const opened = events.findIndex((e) => e.kind === 'interaction_opened');
+    const waiting = events.findIndex(
+      (e) => e.kind === 'ticket_state' && e.payload.to === 'waiting_human',
+    );
 
-    expect(tail.map((e) => e.kind)).toEqual(['interaction_opened', 'ticket_state']);
-    expect(tail[0]?.payload).toEqual({
+    // The question opens before the ticket waits; the Director's first look follows both.
+    expect(opened).toBeGreaterThan(-1);
+    expect(opened).toBeLessThan(waiting);
+    expect(events[opened]?.payload).toEqual({
       ticket_id: 'FG-1',
       interaction_id: 'int-q1',
       interaction_kind: 'question',

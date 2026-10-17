@@ -34,6 +34,8 @@ export function makeEngineMock(): EngineMock {
     runAsExpress: vi.fn(),
     cardPlans: vi.fn(),
     cardPlan: vi.fn(),
+    actOnEscalation: vi.fn(),
+    actOnTicket: vi.fn(),
     cardDirector: vi.fn(() => ({ state: 'idle' })),
     cancelTicket: vi.fn(),
     explainWait: vi.fn(async () => null),

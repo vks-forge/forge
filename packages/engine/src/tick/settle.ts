@@ -104,16 +104,7 @@ export async function settleRun(
     });
 
     await tx.runTokens.revoke(run.id, ctx.nowIso);
-    await applyOutcome(
-      ctx,
-      tx,
-      run,
-      result,
-      family,
-      pump,
-      opts.retryReason,
-      opts.parkReason,
-    );
+    await applyOutcome(ctx, tx, run, result, family, pump, opts);
 
     // The run's cost is now on its row: a card crossing its budget cap is warned, never stopped (d-0143).
     const ticket = await tx.tickets.get(run.ticket_id as TicketId);

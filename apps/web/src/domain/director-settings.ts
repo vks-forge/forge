@@ -1,7 +1,7 @@
 /**
  * What the Director page says: step names, model choices, locked rules and number fields.
  *
- * Why: the Director page edits eleven per-step models, a handful of limits and a flow, and
+ * Why: the Director page edits thirteen per-step models, a handful of limits and a flow, and
  *   shows the rules no setting can switch off. Each needs words an owner understands (what the
  *   step is for, what a limit does when it is reached, why a rule is locked), kept as data so
  *   a new Director step is a line here and the screens stay thin. The locked list is the set
@@ -40,6 +40,14 @@ export const STEP_INFO: Readonly<Record<StepName, StepInfo>> = {
     hint: 'Decides whether a plan may start without you.',
   },
   custom_step: { label: 'Custom step', hint: 'Runs the steps you add to the flow.' },
+  ticket_answer: {
+    label: 'Answer a Worker',
+    hint: 'Looks at a Worker’s question first and answers it when it is sure.',
+  },
+  ticket_recover: {
+    label: 'Recover a failure',
+    hint: 'Diagnoses a stopped ticket and retries it once before asking you.',
+  },
 };
 
 /** Common models offered first; anything else is typed in. */
@@ -145,6 +153,27 @@ const DIRECTOR_FIELD_LIST: Readonly<
       unit: 'KB',
       scale: 1000,
       hint: 'Reads stop at this total; the step works with what it has.',
+    },
+  ],
+  escalation: [
+    {
+      kind: 'switch',
+      path: 'director.escalation.director_first',
+      label: 'The Director looks first',
+      hint: 'When off, every waiting ticket goes straight to you.',
+    },
+    {
+      kind: 'number',
+      path: 'director.escalation.answer_confidence',
+      label: 'Answer a Worker alone at confidence',
+      step: 0.05,
+      hint: 'From 0 to 1. Below it the Director asks you instead. Tier C tickets, tools and logins are always yours.',
+    },
+    {
+      kind: 'number',
+      path: 'director.escalation.max_director_retries',
+      label: 'Retries before asking you',
+      hint: 'How many times the Director retries one failure of one ticket by itself.',
     },
   ],
   step_timeouts_ms: (Object.keys(STEP_INFO) as StepName[]).map((name): FieldSpec => ({

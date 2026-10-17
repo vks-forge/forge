@@ -14,10 +14,11 @@
  *   the view follows the newest line only while the user is at the bottom. The Director's
  *   planning flow lives in the same log: grill questions the owner answers with one click (only
  *   the newest open one, and only while the card is grilling), finished steps, ready plans and
- *   system lines; a running step shows as "thinking" with its label.
+ *   system lines; a running step shows as "thinking" with its label. A ticket that waits on the
+ *   owner is drawn from the card's live escalations, so it shows as settled once acted on anywhere.
  *
  * Exports: CardChat.
- * Depends on: react, motion/react, lucide-react, api/use-card, api/use-plan, api/describe-error,
+ * Depends on: react, motion/react, lucide-react, api/use-card, api/use-escalations, api/use-plan, api/describe-error,
  *   components/card/*, components/thread/use-stick-to-bottom, domain/card-chat,
  *   domain/director-flow, domain/flow-errors, domain/owner, state/message-draft, schemas/cards (types).
  */
@@ -28,6 +29,7 @@ import { useMemo, useRef, useState } from 'react';
 import { ApiError } from '#/api/api-error.js';
 import { describeError } from '#/api/describe-error.js';
 import { useCardEvents, useLoadOlderEvents, useSendCardMessage } from '#/api/use-card.js';
+import { useCardEscalations } from '#/api/use-escalations.js';
 import { useAnswerGrill, useGrillShortcut } from '#/api/use-plan.js';
 import { DirectorStatus } from '#/components/card/director-status.js';
 import { ChatLineView } from '#/components/card/chat-line-view.js';
@@ -69,6 +71,7 @@ export function CardChat(props: {
 }) {
   const { card } = props;
   const history = useCardEvents(card.id);
+  const escalations = useCardEscalations(card.id);
   const send = useSendCardMessage(card.id);
   const [unsent, setUnsent] = useState<{ id: string; text: string; at: string }[]>([]);
   const older = useLoadOlderEvents(card.id);
@@ -192,6 +195,7 @@ export function CardChat(props: {
                   line={line}
                   slug={card.project}
                   flow={flow}
+                  escalations={escalations.data?.items}
                   onSuggestClose={closed ? undefined : props.onSuggestClose}
                 />
               ))

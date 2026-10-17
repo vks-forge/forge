@@ -8,7 +8,7 @@
  *   only (an older one is `stale_plan`), so two tabs or a late click cannot act on a plan already
  *   replaced. Each queues the Director's next turn in the same transaction, so a restart loses nothing.
  *
- * Exports: requestPlanChanges(), startPlanning().
+ * Exports: grillIndex(), requestPlanChanges(), startPlanning().
  * Depends on: @forge/core (flow and card types), tick/planning-state, tick/card-phase, tick/card-log,
  *   tick/card-notify, tick/tick-requests, types/card-planning. Writes storage.
  */
@@ -31,7 +31,7 @@ import type { EngineDeps } from '#/types/engine.types.js';
 const MIN_COMMENT = 5;
 
 /** Where a re-grill resumes: the first enabled grill step of the card's flow snapshot, else the start. */
-function grillIndex(flow: DirectorFlow | null): number {
+export function grillIndex(flow: DirectorFlow | null): number {
   const at = flow?.findIndex((s) => s.kind === 'grill' && s.enabled) ?? -1;
 
   return Math.max(0, at);

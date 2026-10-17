@@ -12,7 +12,7 @@
  *
  * Exports: AnswerGrillInput, AnswerGrillResult, GrillShortcutKind, GrillShortcutResult,
  *   ApprovePlanResult, RequestChangesResult, TicketEdit, EditPlanInput, EditPlanResult,
- *   StartPlanningResult, RunAsExpressResult, PlanReadResult, PlanVersionResult, PlanCtx,
+ *   StartPlanningResult, RunAsExpressResult, PlanReadResult, PlanVersionResult, PlanCtx, ReadCtx,
  *    StepOutcome, PlanEvent, FloorFacts, FlowEnd, ReadResult, ReadBudget, ModelCall, StepFinish,
  *   ReadOutput, ReadStepResult, PlanningDoors, OpenExtras.
  * Depends on: @forge/core (card, plan, ticket and config types), types/engine-state. Types only.
@@ -150,6 +150,9 @@ export interface PlanCtx {
   readonly root: string | null;
   readonly tierCGlobs: readonly string[];
 }
+
+/** What a read needs of its caller: the tick (for the repo reader) and the project folder; a planning step and a Worker's question both qualify. */
+export type ReadCtx = Pick<PlanCtx, 'ctx' | 'root'>;
 
 /** What a step runner tells the flow loop: go on, wait for the owner, stop (done or failed). */
 export type StepOutcome = 'continue' | 'wait' | 'stop';

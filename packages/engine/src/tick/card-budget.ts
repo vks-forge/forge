@@ -8,7 +8,7 @@
  *   event goes to the card history; the event is the record of "already told", so a later
  *   check, a restart or a second writer never repeats it.
  *
- * Exports: BUDGET_THRESHOLDS, warnOnBudget().
+ * Exports: BUDGET_THRESHOLDS, warnOnBudget(), addDirectorSpend().
  * Depends on: @forge/core (card event schemas, card planning state), tick/card-chat-context (cardSpend), tick/card-log.
  *   Writes inside the caller's transaction.
  */
@@ -87,4 +87,31 @@ export async function warnOnBudget(
       payload: { threshold, spent_usd: spent, cap_usd: cap },
     });
   }
+}
+
+/**
+ * Adds the dollars a Director step spent for a card to its planning spend and warns if a
+ * threshold was crossed. Used by the escalation steps, whose cost counts on the card like a
+ * planning step's (d-0143); a step on a ticket with no card spends nothing anyone tracks.
+ */
+export async function addDirectorSpend(
+  tx: StorageTx,
+  cardId: CardId | undefined,
+  usd: number,
+  at: string,
+  fallbackCapUsd?: number,
+): Promise<void> {
+  if (cardId === undefined || usd <= 0) {
+    return;
+  }
+
+  const planning = await tx.cardPlanning.get(cardId);
+  await tx.cardPlanning.update(cardId, {
+    grill: {
+      ...planning.grill,
+      director_spend_usd: planning.grill.director_spend_usd + usd,
+    },
+  });
+
+  await warnOnBudget(tx, cardId, at, fallbackCapUsd);
 }

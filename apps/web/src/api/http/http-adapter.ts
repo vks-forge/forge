@@ -7,12 +7,13 @@
  *   `ForgeApi` type makes the compiler refuse an adapter that forgets a resource.
  *
  * Exports: createHttpAdapter().
- * Depends on: @forge/core (TicketListPage), api/http/cards-http, api/http/request-json,
+ * Depends on: @forge/core (TicketListPage), api/http/cards-http, api/http/escalations-http, api/http/request-json,
  *   api/sse/watch-run-events, api/sse/watch-project-events,
  *   schemas/projects, schemas/tickets, types/api.types.
  */
 
 import { createCardsHttp } from '#/api/http/cards-http.js';
+import { createEscalationsHttp } from '#/api/http/escalations-http.js';
 import { createMemoryHttp } from '#/api/http/memory-http.js';
 import { createOnboardingHttp } from '#/api/http/onboarding-http.js';
 import { createProjectSettingsHttp } from '#/api/http/project-settings-http.js';
@@ -51,6 +52,7 @@ export function createHttpAdapter(client: HttpClientOptions): ForgeApi {
     ...createSettingsHttp(client),
     ...createWorkHttp(client),
     cards: createCardsHttp(client),
+    escalations: createEscalationsHttp(client),
     memory: createMemoryHttp(client),
     onboarding: createOnboardingHttp(client),
     projectSettings: createProjectSettingsHttp(client),

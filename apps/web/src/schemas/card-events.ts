@@ -10,7 +10,8 @@
  *
  * Exports: GrillOption, GrillQuestion, GrillAnswer, GrillDone, PlanReady, PlanApproved,
  *   PlanChangesRequested, NeedsYou, StepStarted, StepFinished, NEEDS_YOU_ACTIONS,
- *   NeedsYouAction (schemas and inferred types).
+ *   NeedsYouAction, EscalationRaised, EscalationSettledEvent, ReplanRequested (schemas and
+ *   inferred types).
  * Depends on: zod.
  */
 
@@ -89,6 +90,32 @@ export const NeedsYou = z.object({
   ticket_id: z.string().optional(),
 });
 export type NeedsYou = z.infer<typeof NeedsYou>;
+
+/** A ticket escalation reached the owner. The chat draws it from the live view, not this payload. */
+export const EscalationRaised = z.object({
+  interaction_id: z.string().min(1),
+  ticket_id: z.string().min(1),
+  escalation_kind: z.string().default('question'),
+  title: z.string().default('A ticket needs you'),
+});
+export type EscalationRaised = z.infer<typeof EscalationRaised>;
+
+/** An escalation was settled, by the owner, the Director or by itself. */
+export const EscalationSettledEvent = z.object({
+  interaction_id: z.string().min(1),
+  ticket_id: z.string().min(1),
+  action: z.string(),
+  by: z.enum(['owner', 'director', 'auto']).catch('owner'),
+  note: z.string().optional(),
+});
+export type EscalationSettledEvent = z.infer<typeof EscalationSettledEvent>;
+
+/** The owner sent the card back to planning from a stopped ticket. */
+export const ReplanRequested = z.object({
+  ticket_id: z.string().optional(),
+  comment: z.string().default(''),
+});
+export type ReplanRequested = z.infer<typeof ReplanRequested>;
 
 export const StepStarted = z.object({
   step_id: z.string().min(1),

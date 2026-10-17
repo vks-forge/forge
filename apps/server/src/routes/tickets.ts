@@ -8,13 +8,18 @@
  *   that has not started also says why in `wait_reason` (`quota: claude-code until 14:20 UTC`,
  *   `cap: per-project 1/1`, `deps: PAY-231`), computed by the scheduler's own decision so the
  *   page cannot disagree with dispatch; it is null when nothing holds the ticket back.
+ *   Every pending wait is also returned as an escalation view (any stage), and `wait_actions`
+ *   lists what the owner can do about the ticket's own wait where no escalation applies (rework
+ *   or cancel for finished work, cancel for a ticket the scheduler holds back); the owner acts
+ *   through `POST /tickets/:id/act`.
  *
  * Exports: ticketRoute().
- * Depends on: @forge/core (TicketId), services/http/http-errors, services/http/respond,
+ * Depends on: @forge/core (TicketId), services/escalation-view, services/http/http-errors, services/http/respond,
  *   types/routes. IO: reads storage and the engine's read-only wait explanation.
  */
 
 import { TicketId } from '@forge/core';
+import { escalationViews, waitActionsFor } from '#/services/escalation-view.js';
 import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
 import type { Route } from '#/types/http.types.js';
@@ -54,10 +59,21 @@ export function ticketRoute(deps: RouteDeps): Route {
         throw new HttpError(404, 'ticket_not_found', `no ticket ${id.data}`);
       }
 
-      sendJson(res, 200, {
-        ...found,
-        wait_reason: await deps.engine.explainWait(found.ticket.id),
+      const waitReason = await deps.engine.explainWait(found.ticket.id);
+      const waits = await deps.storage.transaction(async (tx) => {
+        const rows = (await tx.interactions.listByTicket(found.ticket.id)).filter(
+          (i) => i.status === 'pending',
+        );
+
+        const escalations = await escalationViews(tx, rows);
+
+        return {
+          escalations,
+          wait_actions: await waitActionsFor(tx, found.ticket, escalations, waitReason),
+        };
       });
+
+      sendJson(res, 200, { ...found, wait_reason: waitReason, ...waits });
     },
   };
 }

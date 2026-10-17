@@ -197,6 +197,17 @@ export interface InteractionRepository {
   answer(id: string, answer: unknown, at: string): Promise<boolean>;
   // Same CAS to `timed_out`, only once `timeout_at <= at`. false when not pending or not due.
   expire(id: string, at: string): Promise<boolean>;
+  // Moves a pending interaction from the Director's stage to the owner's: replaces `payload` and
+  // sets `escalated_at` (`patch.escalated_at`, else `at`). CAS on `status = 'pending' AND
+  // escalated_at IS NULL`: false when it is unknown, answered, timed out, cancelled or already
+  // escalated, so a late escalation never overwrites an answer and never moves the date.
+  escalate(
+    id: string,
+    patch: { payload: unknown; escalated_at?: string },
+    at: string,
+  ): Promise<boolean>;
+  // The card's pending interactions (any stage), oldest first.
+  listPendingByCard(cardId: string): Promise<Interaction[]>;
 }
 
 /** Durable "look at this ticket again" queue (director-core.md §3). */

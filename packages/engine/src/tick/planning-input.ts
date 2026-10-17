@@ -11,33 +11,35 @@
  *   exception by design (d-0141 item 6): it sees only the plan, the typed findings and the
  *   floor result, so text from the repository or the chat cannot talk it into approving.
  *
- * Exports: REPO_RULE_FILES, buildStepInput(), buildApprovalInput().
- * Depends on: @forge/core (grill and plan types), tick/planning-state, types/card-planning. Reads the
- *   memory and repo ports.
+ * Exports: REPO_RULE_FILES, readRepoRules(), buildStepInput(), buildApprovalInput().
+ * Depends on: @forge/core (grill and plan types), tick/plan-keys, tick/planning-state, types/card-planning.
+ *   Reads the memory and repo ports and the card's tickets.
  */
 
 import type { FloorResult, GrillState, PlanVersion } from '@forge/core';
 import type { FlowStep } from '@forge/core';
+import { ticketPlanKeys } from '#/tick/plan-keys.js';
 import type { PlanCtx } from '#/types/card-planning.types.js';
+import type { EngineCtx } from '#/types/engine-state.types.js';
 
 /** Repo files that hold the project's own rules for agents, read at HEAD and capped. */
 export const REPO_RULE_FILES = ['CLAUDE.md', 'AGENTS.md'] as const;
 
 const RULES_CAP_BYTES = 12_000;
 
-async function repoRules(pc: PlanCtx): Promise<{ path: string; content: string }[]> {
-  if (pc.root === null) {
+/** The project's own rule files read at HEAD (those the repository tracks), for any Director step that must respect them. */
+export async function readRepoRules(
+  ctx: EngineCtx,
+  root: string | null,
+): Promise<{ path: string; content: string }[]> {
+  if (root === null) {
     return [];
   }
 
   const out: { path: string; content: string }[] = [];
   for (const path of REPO_RULE_FILES) {
     try {
-      const file = await pc.ctx.deps.repoReader.readAtHead(
-        pc.root,
-        path,
-        RULES_CAP_BYTES,
-      );
+      const file = await ctx.deps.repoReader.readAtHead(root, path, RULES_CAP_BYTES);
 
       out.push({ path, content: file.content });
     } catch {
@@ -46,6 +48,21 @@ async function repoRules(pc: PlanCtx): Promise<{ path: string; content: string }
   }
 
   return out;
+}
+
+/** The card's tickets so far with their status and the plan key they came from; empty before the first approval. */
+async function existingTickets(pc: PlanCtx): Promise<Record<string, unknown>[]> {
+  return pc.ctx.deps.storage.transaction(async (tx) => {
+    const keys = await ticketPlanKeys(tx, pc.card.id);
+
+    return (await tx.tickets.listByCard(pc.card.id)).map((t) => ({
+      id: t.id,
+      title: t.title,
+      status: t.status,
+      plan_key: keys.get(t.id)?.key ?? null,
+      plan_version: keys.get(t.id)?.version ?? null,
+    }));
+  });
 }
 
 function playbookOf(pc: PlanCtx, step: FlowStep): Record<string, unknown> | null {
@@ -75,6 +92,7 @@ export async function buildStepInput(
 ): Promise<Record<string, unknown>> {
   const memory = await pc.ctx.deps.memory.slice(pc.project.slug);
   const { card } = pc;
+  const existing = await existingTickets(pc);
 
   return {
     step: stepOf(step),
@@ -83,7 +101,7 @@ export async function buildStepInput(
     project_rules: {
       decisions: memory.decisions,
       rejected: memory.rejected,
-      repo_rules: await repoRules(pc),
+      repo_rules: await readRepoRules(pc.ctx, pc.root),
     },
     card: {
       id: card.id,
@@ -116,6 +134,8 @@ export async function buildStepInput(
       grill.pending_changes === null
         ? null
         : { ...grill.pending_changes, previous_plan: previousPlan },
+    // After a re-plan the card already has tickets: done and running ones stay and must not be planned twice.
+    ...(existing.length === 0 ? {} : { existing_tickets: existing }),
     ...extra,
   };
 }

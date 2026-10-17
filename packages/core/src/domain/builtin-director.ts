@@ -6,17 +6,20 @@
  *   install reads the flow and playbooks at config version 0 and a later release can improve a
  *   playbook for everyone who never edited it. The default flow is survey, grill, verify,
  *   enhance (Standard and Full lanes only), then the two locked steps: write the plan and
- *   approve it (d-0146). Each step names the playbook that carries its method; the six
- *   playbooks are real, usable method text, kept one per file under `playbooks/`.
+ *   approve it (d-0146). Each step names the playbook that carries its method; the eight
+ *   playbooks (six for planning, two for the escalation steps) are real, usable method text,
+ *   kept one per file under `playbooks/`. The escalation dials default to "Director first".
  *
  * Exports: BUILTIN_DIRECTOR_CONFIG, DIRECTOR_STEP_TIMEOUTS_MS.
  * Depends on: domain/playbooks/*, schemas/director-config. No IO.
  */
 
+import { ANSWER_WORKER_PLAYBOOK } from '#/domain/playbooks/answer-worker.js';
 import { APPROVE_PLAN_PLAYBOOK } from '#/domain/playbooks/approve-plan.js';
 import { ENHANCE_DECISIONS_PLAYBOOK } from '#/domain/playbooks/enhance-decisions.js';
 import { PLAN_GRILL_PLAYBOOK } from '#/domain/playbooks/plan-grill.js';
 import { PLAN_TO_TICKETS_PLAYBOOK } from '#/domain/playbooks/plan-to-tickets.js';
+import { RECOVER_FAILURE_PLAYBOOK } from '#/domain/playbooks/recover-failure.js';
 import { VERIFY_PLAN_PLAYBOOK } from '#/domain/playbooks/verify-plan.js';
 import { WRITE_PLAN_PLAYBOOK } from '#/domain/playbooks/write-plan.js';
 import type { DirectorConfig } from '#/schemas/director-config.js';
@@ -34,6 +37,8 @@ export const DIRECTOR_STEP_TIMEOUTS_MS: DirectorConfig['step_timeouts_ms'] = {
   write_plan: 420_000,
   approve_plan: 120_000,
   custom_step: 180_000,
+  ticket_answer: 180_000,
+  ticket_recover: 180_000,
 };
 
 export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {
@@ -103,6 +108,8 @@ export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {
     'write-plan': WRITE_PLAN_PLAYBOOK,
     'plan-to-tickets': PLAN_TO_TICKETS_PLAYBOOK,
     'approve-plan': APPROVE_PLAN_PLAYBOOK,
+    'answer-worker': ANSWER_WORKER_PLAYBOOK,
+    'recover-failure': RECOVER_FAILURE_PLAYBOOK,
   },
   house_rules: '',
   approval_mode: 'director_or_user',
@@ -110,4 +117,5 @@ export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {
   budget_warning_usd: 5,
   read_caps: { max_files: 40, max_bytes: 400_000 },
   step_timeouts_ms: DIRECTOR_STEP_TIMEOUTS_MS,
+  escalation: { director_first: true, answer_confidence: 0.8, max_director_retries: 1 },
 };

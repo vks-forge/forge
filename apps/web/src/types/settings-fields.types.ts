@@ -5,7 +5,7 @@
  *   unit, inline error). Describing each field as data keeps the screens short and makes a
  *   new setting a one-line addition instead of new form code.
  *
- * Exports: NumberFieldSpec, TextFieldSpec, FieldSpec, FieldGroup, FieldErrors, FieldSetter.
+ * Exports: NumberFieldSpec, TextFieldSpec, SwitchFieldSpec, FieldSpec, FieldGroup, FieldErrors, FieldSetter.
  * Depends on: nothing. Types only.
  */
 
@@ -29,7 +29,12 @@ export interface TextFieldSpec extends BaseSpec {
   readonly kind: 'text';
 }
 
-export type FieldSpec = NumberFieldSpec | TextFieldSpec;
+/** An on/off setting; the stored value is a boolean. */
+export interface SwitchFieldSpec extends BaseSpec {
+  readonly kind: 'switch';
+}
+
+export type FieldSpec = NumberFieldSpec | TextFieldSpec | SwitchFieldSpec;
 
 export interface FieldGroup {
   readonly id: string;

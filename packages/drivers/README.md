@@ -22,6 +22,8 @@ Workers run inside third-party harnesses (Claude Code first; Codex, OpenCode, Pi
 - `testClaudeHarness(deps, { live })` is the Settings "Test environment": resolve, `--version`, `claude auth status --json` run with the run's env (`account_kind` `account|api_key|oauth_token|none`, flagged when it does not match the auth mode), and one real one-word `claude -p` call (`--max-budget-usd 0.05`) only when `live` is true.
 - Probes (`__tests__/probes/`): live checks against the real `claude` CLI and ACP adapter on the user's subscription. Results: `__tests__/probes/RESULTS.md`. Probe 3 also asserts (Windows, via CIM) that the adapter's child process is the installed `claude`, not an SDK-bundled one. Probe 6 passed; probe 7 (the DirectorLLM on the real CLI) is written but not yet run.
 
+- The two escalation steps (`ticket_answer`, `ticket_recover`) use the same prompt template as the planning steps: a short role paragraph naming the answer keys (`decision`, `grounds`, `confidence`, `read_requests` for the first; `decision`, `note`, `diagnosis` for the second), the method as text in `input.playbook`, and all input as data. They stay tool-less; reads are run engine-side.
+
 ## Why this approach
 
 - ACP-first (d-0035, d-0049): live steering and resume; the CLI is the explicit fallback. The adapter still reads the user's settings, so the mode is forced to `default` after every new/load and every tool call is decided by the hook's receipt, never by harness-side settings. Bypass-permissions is rejected (r-0005).

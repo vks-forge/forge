@@ -179,7 +179,12 @@ describe('trackProjectWrites', () => {
 
     await storage.transaction((tx) => tx.tickets.insert(ticket(1)));
 
-    expect(seen[0]?.keys.sort()).toEqual(['cards:dcp', 'inbox:dcp', 'tickets:dcp']);
+    expect(seen[0]?.keys.sort()).toEqual([
+      'cards:dcp',
+      'inbox:dcp',
+      'ticket:FX-1',
+      'tickets:dcp',
+    ]);
   });
 
   it('announces a question on insert, answer and expire, through its ticket and card', async () => {

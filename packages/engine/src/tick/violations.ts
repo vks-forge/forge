@@ -21,6 +21,7 @@ export async function checkInvariants(ctx: EngineCtx): Promise<void> {
     const tickets = [
       ...(await tx.tickets.listByStatus('in_progress')),
       ...(await tx.tickets.listByStatus('waiting_human')),
+      ...(await tx.tickets.listByStatus('blocked')),
     ];
 
     const runs = new Map(

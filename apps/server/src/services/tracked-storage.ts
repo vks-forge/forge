@@ -10,7 +10,8 @@
  *   query keys inside the same transaction (before the commit, so the reads see the rows),
  *   and only after the commit succeeds tells the hub. A rolled-back transaction announces
  *   nothing. Keys follow the web client's: `["cards", slug]`, `["card", id]`,
- *   `["tickets", slug]`, `["inbox", slug]`.
+ *   `["tickets", slug]`, `["inbox", slug]`. The ticket page's `["ticket", id]` is touched
+ *   by every ticket and interaction write, and `["card", id]` covers the card's events and escalations by prefix.
  *
  * Exports: trackProjectWrites().
  * Depends on: @forge/core (storage ports), types/project-events, types/tracked-storage. IO: extra
@@ -108,6 +109,7 @@ function track(tx: StorageTx, touches: Touch[]): StorageTx {
       update: interaction,
       answer: interaction,
       expire: interaction,
+      escalate: interaction,
     }),
     inboxStates: watch(tx.inboxStates, touches, {
       upsert: (a) => ({ kind: 'inbox', project: (a[0] as { project: string }).project }),
@@ -172,7 +174,13 @@ async function resolve(tx: StorageTx, touches: readonly Touch[]): Promise<Resolv
 
         if (ticket) {
           const slug = await slugOf(ticket.project);
-          await add(ticket.project, ['tickets', slug], ['cards', slug], ['inbox', slug]);
+          await add(
+            ticket.project,
+            ['ticket', ticket.id],
+            ['tickets', slug],
+            ['cards', slug],
+            ['inbox', slug],
+          );
 
           if (ticket.card_id) {
             await addCard(ticket.card_id, false);

@@ -10,20 +10,24 @@
  *   words are untrusted model output. An unsent line says so and is dimmed. The planning flow's
  *   lines are blocks: a grill question with its answer buttons, a finished Director step that
  *   expands to the files it read, and a ready plan with its Review button; an answer given by
- *   the Director's recommendation says so, so the owner can tell whose choice it was.
+ *   the Director's recommendation says so, so the owner can tell whose choice it was. A ticket
+ *   that waits on the owner is the live escalation card, so acting on it here settles the Ticket
+ *   page and the Inbox too.
  *
  * Exports: ChatLineView.
  * Depends on: react, react-router, lucide-react, components/ticket/ticket-link,
- *   components/card/question-block, step-line, plan-ready-card, domain/relative-time,
- *   types/cards-ui.types.
+ *   components/card/question-block, step-line, plan-ready-card, components/escalation/escalation-line,
+ *   domain/relative-time, schemas/escalation (type), types/cards-ui.types.
  */
 
 import { Check, Dot, X } from 'lucide-react';
 import { PlanReadyCard } from '#/components/card/plan-ready-card.js';
+import { EscalationLine } from '#/components/escalation/escalation-line.js';
 import { QuestionBlock } from '#/components/card/question-block.js';
 import { StepLine } from '#/components/card/step-line.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
 import { clockTime } from '#/domain/relative-time.js';
+import type { EscalationView } from '#/schemas/escalation.js';
 import { Button } from '#/components/ui/button.js';
 import type { ChatAction, ChatLine, FlowHandlers } from '#/types/cards-ui.types.js';
 
@@ -55,10 +59,26 @@ export function ChatLineView(props: {
   line: ChatLine;
   slug: string;
   flow: FlowHandlers;
+  /** The card's live escalations, for the block of a raised one; absent until they load. */
+  escalations?: readonly EscalationView[] | undefined;
   /** Opens the close dialog with the reason; absent when the card is already closed. */
   onSuggestClose?: ((reason: string) => void) | undefined;
 }) {
   const { line, flow } = props;
+
+  if (line.block?.kind === 'escalation') {
+    const { interactionId } = line.block;
+
+    return (
+      <EscalationLine
+        title={line.block.title}
+        ticketId={line.block.ticketId}
+        slug={props.slug}
+        view={props.escalations?.find((item) => item.id === interactionId)}
+        loading={props.escalations === undefined}
+      />
+    );
+  }
 
   if (line.block?.kind === 'step') {
     return (

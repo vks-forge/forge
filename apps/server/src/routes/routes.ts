@@ -16,6 +16,7 @@ import { cardRoutes } from '#/routes/cards.js';
 import { folderPickRoute } from '#/routes/folder-pick.js';
 import { folderRoutes } from '#/routes/folders.js';
 import { harnessRoutes } from '#/routes/harnesses.js';
+import { escalationRoutes } from '#/routes/escalations.js';
 import { answerRoute } from '#/routes/interactions.js';
 import { healthRoute } from '#/routes/health.js';
 import { inboxRoutes } from '#/routes/inbox.js';
@@ -47,6 +48,7 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ...cardRoutes(deps),
     ...cardPlanRoutes(deps),
     answerRoute(deps),
+    ...escalationRoutes(deps),
     runEventsRoute(deps),
     projectEventsRoute(deps),
     runSteerRoute(deps),

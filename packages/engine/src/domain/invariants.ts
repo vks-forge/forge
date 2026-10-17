@@ -15,9 +15,10 @@ import type { Violation } from '#/types/engine.types.js';
 import type { InvariantInput } from '#/types/invariants.types.js';
 
 /**
- * Open assigned tickets that nothing explains: `in_progress` and `waiting_human` only.
- * A pending wake also explains a `waiting_human` ticket: an answered question waits for
- * its response wake to be dispatched.
+ * Open assigned tickets that nothing explains: `in_progress`, `waiting_human` and `blocked`.
+ * A waiting or blocked ticket needs a pending interaction (the escalation the owner acts on); a
+ * reason text alone does not count, because nobody can click on text. A pending wake also
+ * explains a waiting ticket: an answered question waits for its response wake to be dispatched.
  */
 export function findViolations(input: InvariantInput): Violation[] {
   const out: Violation[] = [];
@@ -40,17 +41,18 @@ export function findViolations(input: InvariantInput): Violation[] {
           message: `${t.id} is in_progress with no active run, pending interaction or pending wake`,
         });
       }
-    } else if (t.status === 'waiting_human') {
+    } else if (t.status === 'waiting_human' || t.status === 'blocked') {
       const explained =
-        input.pendingInteractionTickets.has(t.id) ||
-        input.wakeTickets.has(t.id) ||
-        (t.blocked_reason !== undefined && t.blocked_reason !== '');
+        input.pendingInteractionTickets.has(t.id) || input.wakeTickets.has(t.id);
 
       if (!explained) {
         out.push({
           ticketId: t.id,
-          rule: 'waiting_human_without_reason',
-          message: `${t.id} is waiting_human with no pending interaction or blocked_reason`,
+          rule:
+            t.status === 'blocked'
+              ? 'blocked_without_reason'
+              : 'waiting_human_without_reason',
+          message: `${t.id} is ${t.status} with no pending interaction or wake`,
         });
       }
     }

@@ -32,6 +32,9 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
       write_plan: 'opus',
       approve_plan: 'opus',
       custom_step: 'sonnet',
+      // Escalation steps (d-0141 item 8): answering a Worker is a quick turn, diagnosing a failure is judging.
+      ticket_answer: 'sonnet',
+      ticket_recover: 'opus',
     },
     worker: { express: 'sonnet', standard: 'sonnet', full: 'sonnet' },
   },

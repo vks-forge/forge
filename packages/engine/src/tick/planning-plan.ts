@@ -209,6 +209,7 @@ export async function approveStep(
     after: async (tx) => {
       const out = await approvePlanTx(
         tx,
+        pc.ctx.deps,
         pc.card.id,
         plan.version,
         'director',

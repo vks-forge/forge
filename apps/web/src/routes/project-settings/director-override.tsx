@@ -69,6 +69,15 @@ const ROWS: readonly DirectorRow[] = [
     words: (d) => `${d.read_caps.max_files} files, ${d.read_caps.max_bytes / 1000} KB`,
   },
   {
+    key: 'escalation',
+    label: 'Director on waiting tickets',
+    hint: 'Whether the Director looks first, how sure it must be to answer a Worker, and how often it retries.',
+    words: (d) =>
+      d.escalation.director_first
+        ? `Looks first, answers at ${Math.round(d.escalation.answer_confidence * 100)}% confidence, ${d.escalation.max_director_retries} retries`
+        : 'Everything goes to you',
+  },
+  {
     key: 'step_timeouts_ms',
     label: 'Director step timeouts',
     hint: 'How long each step may run.',

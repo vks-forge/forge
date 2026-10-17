@@ -70,6 +70,7 @@ beforeEach(async () => {
       payload: { prompt: 'Which database?' },
       status: 'pending',
       asked_at: '2026-10-16T05:00:00.000Z',
+      escalated_at: '2026-10-16T05:00:00.000Z',
       timeout_at: '2026-10-17T00:00:00.000Z',
     });
 

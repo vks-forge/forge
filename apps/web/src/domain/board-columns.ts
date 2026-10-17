@@ -4,9 +4,10 @@
  *
  * Why: a user opens the Board to answer "what needs me, what is moving, what is finished".
  *   Ten states would bury that, so they collapse into six columns. Everything that waits on a
- *   person (`waiting_human`, `review`, `needs_signoff`; core's NEEDS_YOU_STATUSES) shares one
- *   amber column so it is never missed; `blocked` sits with `cancelled` because both are
- *   stopped, not progressing. Each state belongs to exactly one column, so a ticket can never
+ *   person (`waiting_human`, `blocked`, `review`, `needs_signoff`; core's NEEDS_YOU_STATUSES)
+ *   shares one amber column so it is never missed: a ticket that stopped (a question nobody
+ *   answered, a failure) waits on a person to retry, re-plan or cancel it, so it is not tucked
+ *   away with the cancelled ones. Each state belongs to exactly one column, so a ticket can never
  *   be missing or shown twice. Order within a column is the server's (newest change first).
  *
  * Exports: BOARD_COLUMNS, columnOf(), STATE_LABEL, filterTickets(), groupByColumn(), EMPTY_FILTER, isFilterActive().
@@ -34,8 +35,8 @@ export const BOARD_COLUMNS: readonly BoardColumn[] = [
   {
     id: 'needs_you',
     title: 'Needs you',
-    hint: 'A question, a review or a sign-off',
-    states: ['waiting_human', 'review', 'needs_signoff'],
+    hint: 'A question, a stopped ticket, a review or a sign-off',
+    states: ['waiting_human', 'blocked', 'review', 'needs_signoff'],
     tone: 'attn',
   },
   {
@@ -54,9 +55,9 @@ export const BOARD_COLUMNS: readonly BoardColumn[] = [
   },
   {
     id: 'closed',
-    title: 'Blocked and cancelled',
-    hint: 'Stopped, not moving',
-    states: ['blocked', 'cancelled'],
+    title: 'Cancelled',
+    hint: 'Stopped for good',
+    states: ['cancelled'],
     tone: 'muted',
   },
 ];

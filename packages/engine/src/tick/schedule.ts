@@ -15,7 +15,8 @@
  *   tick/wake-candidates, tick/tick-config, shared/time. IO only through the open transaction.
  */
 
-import type { StorageTx, Ticket, TicketId } from '@forge/core';
+import { PLANNING_PHASES } from '@forge/core';
+import type { CardId, StorageTx, Ticket, TicketId } from '@forge/core';
 import { chooseHarness } from '#/domain/harness-choice.js';
 import { pickNext } from '#/domain/pick-next.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
@@ -100,6 +101,15 @@ export async function planDispatch(
   const paused = await pausedHarnesses(tx, view.now, consume);
   const installed = (id: string): boolean => view.deps.drivers.get(id) !== null;
 
+  // Cards back in shaping (a re-plan) hold their not-started tickets: the new plan may replace them.
+  const shaping = new Set<CardId>();
+  for (const id of new Set(found.flatMap((c) => c.ticket.card_id ?? []))) {
+    const card = await tx.cards.get(id);
+    if (card && PLANNING_PHASES.includes(card.phase)) {
+      shaping.add(id);
+    }
+  }
+
   const byId = new Map<string, Candidate>();
   const pickable: PickCandidate[] = [];
   for (const c of found.filter((x) => ready.has(x.ticket.project))) {
@@ -122,6 +132,10 @@ export async function planDispatch(
       wake: c.wake !== undefined,
       entering: c.ticket.status !== 'in_progress',
       blockedBy: blockers.get(c.ticket.id) ?? [],
+      awaitsPlan:
+        c.ticket.status === 'planned' &&
+        c.ticket.card_id !== undefined &&
+        shaping.has(c.ticket.card_id),
     });
   }
 

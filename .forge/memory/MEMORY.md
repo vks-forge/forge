@@ -195,3 +195,4 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 
 ## Outcomes
 - Older outcome pointers (2026-10-12 – 2026-10-16 overnight): `outcomes/ARCHIVE.md`
+- 2026-10-17 — Card-first S1–S4a + Overview dashboard (S4a built, uncommitted: suite stopped for low memory): `outcomes/2026-10/2026-10-17-card-first-s1-s4a-and-overview.md`

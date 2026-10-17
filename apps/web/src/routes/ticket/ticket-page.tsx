@@ -61,8 +61,7 @@ function TicketBody(props: {
   return (
     <>
       <AnswerPanel
-        ticketId={detail.ticket.id}
-        interactions={detail.interactions}
+        detail={detail}
         streamedPrompt={(id) => pendingAsk(thread.items, id)}
       />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">

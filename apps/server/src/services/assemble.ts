@@ -185,6 +185,7 @@ export async function assembleServer(
       ids: ports.ids ?? createIdSource(),
       owner,
       catalogueHash: () => policy.catalogueHash(),
+      toolCatalogued: (tool) => policy.toolCatalogued(tool),
       onTickRequested: ticker.requestTick,
       projectEvents,
       log,

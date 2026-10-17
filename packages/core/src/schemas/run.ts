@@ -162,12 +162,14 @@ export type RunResult = z.infer<typeof RunResult>;
 
 const eventBase = { seq: z.number().int().nonnegative(), ts: Timestamp };
 
-/** Kinds of blocking interaction (director-core.md §3); `blocked` is a Worker's `report_blocked`. */
+/** Kinds of blocking interaction (director-core.md §3): `blocked` is a Worker's `report_blocked`; `failure` and `setup` are raised by Forge (schemas/escalation). */
 export const InteractionKind = z.enum([
   'question',
   'plan_confirm',
   'permission',
   'blocked',
+  'failure',
+  'setup',
 ]);
 export type InteractionKind = z.infer<typeof InteractionKind>;
 

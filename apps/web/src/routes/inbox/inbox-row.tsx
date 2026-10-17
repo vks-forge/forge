@@ -6,10 +6,11 @@
  *   carry a dot (a shape, not just colour); the controls are icon buttons each named with the
  *   item so a screen reader hears "Archive: Worker asks about migrations". Controls are 44 px
  *   on a phone. They are held while offline, because a mark that cannot be saved would only
- *   bounce back.
+ *   bounce back. An item that carries an escalation (a ticket waiting on the owner) gets a primary
+ *   "Respond" button that opens the escalation card, so the owner can act without leaving the list.
  *
  * Exports: InboxRow, INBOX_ROW_HEIGHT.
- * Depends on: react-router, lucide-react, @forge/core (type), components/inbox/kind-chip, components/ui/tooltip,
+ * Depends on: react-router, lucide-react, @forge/core (type), components/inbox/kind-chip, components/ui/button, components/ui/tooltip,
  *   domain/inbox-links, domain/format-time, types/work-api.types.
  */
 
@@ -18,6 +19,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { InboxItem } from '@forge/core';
 import { KindChip } from '#/components/inbox/kind-chip.js';
+import { Button } from '#/components/ui/button.js';
 import { Tooltip } from '#/components/ui/tooltip.js';
 import { formatWhen } from '#/domain/format-time.js';
 import { inboxLink } from '#/domain/inbox-links.js';
@@ -53,6 +55,8 @@ export function InboxRow(props: {
   slug: string;
   item: InboxItem;
   onMark: (item: InboxItem, mark: InboxMarkName) => void;
+  /** Opens the escalation card for an item that carries one. */
+  onRespond: (item: InboxItem) => void;
   marksDisabled: boolean;
 }) {
   const { item } = props;
@@ -81,6 +85,15 @@ export function InboxRow(props: {
             .join(' · ')}
         </p>
       </div>
+      {item.escalation ? (
+        <Button
+          variant="primary"
+          aria-label={`Respond: ${item.title}`}
+          onClick={() => props.onRespond(item)}
+        >
+          Respond
+        </Button>
+      ) : null}
       {item.read ? (
         <IconButton
           label={`Mark unread: ${item.title}`}

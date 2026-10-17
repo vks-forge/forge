@@ -46,14 +46,13 @@ describe('Board, Tickets view', () => {
 
     await userEvent
       .setup()
-      .click(
-        await screen.findByRole('button', { name: /^Blocked and cancelled, 2 tickets/ }),
-      );
+      .click(await screen.findByRole('button', { name: /^Cancelled, 1 ticket/ }));
 
-    const closed = await column('Blocked and cancelled');
-    expect(closed.getByText('Blocked')).toBeInTheDocument();
+    const closed = await column('Cancelled');
     expect(closed.getByText('Cancelled')).toBeInTheDocument();
-    expect(closed.getByText('Waits for SVC-5 to merge')).toBeInTheDocument();
+
+    // A stopped ticket waits on the owner, so it sits in Needs you with the reason it stopped.
+    expect(needsYou.getByText('Waits for SVC-5 to merge')).toBeInTheDocument();
   });
 
   it('links every card to its ticket page', async () => {

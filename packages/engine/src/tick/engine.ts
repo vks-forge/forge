@@ -13,15 +13,20 @@
  *
  * Exports: createEngine().
  * Depends on: tick/* phases, types/engine, types/engine-state. IO only through EngineDeps ports.
+ *
+ *   The escalation phases run between expiring questions and the planning sweep: the Director's
+ *   first look at every new wait, then the automatic resume of fixed setups; at the first tick
+ *   the backfill gives tickets parked before escalations existed one to act on.
  */
 
-import { TERMINAL_STATUSES } from '@forge/core';
-import type { Ticket } from '@forge/core';
 import { iso } from '#/shared/time.js';
 import { runCardChats } from '#/tick/card-chat.js';
 import { cardDirectorStatus, postCardMessage } from '#/tick/card-chat-post.js';
 import { createCard, setCardRelations } from '#/tick/card-create.js';
 import { dispatchReady } from '#/tick/dispatch.js';
+import { backfillEscalations } from '#/tick/escalation-backfill.js';
+import { actOnEscalation, actOnTicket } from '#/tick/escalation-act.js';
+import { sweepEscalations } from '#/tick/escalation-director.js';
 import { explainWait } from '#/tick/explain.js';
 import { answerInteraction, expireInteractions } from '#/tick/interactions.js';
 import { ingest } from '#/tick/intake.js';
@@ -29,7 +34,8 @@ import { interruptRun } from '#/tick/interrupt.js';
 import { requestPlanChanges, startPlanning } from '#/tick/plan-actions.js';
 import { editPlanTickets } from '#/tick/plan-edit.js';
 import { cardPlan, cardPlans } from '#/tick/plan-reads.js';
-import { approvePlan, runAsExpress } from '#/tick/plan-to-tickets.js';
+import { approvePlan } from '#/tick/plan-to-tickets.js';
+import { runAsExpress } from '#/tick/run-as-express.js';
 import { answerGrill, grillShortcut } from '#/tick/planning-owner.js';
 import { sweepPlanning } from '#/tick/planning-sweep.js';
 import { cancelStalled, settleFinishedPumps } from '#/tick/reconcile.js';
@@ -37,7 +43,8 @@ import { reconcileRestart, resumeInterrupted } from '#/tick/restart.js';
 import { steerRun } from '#/tick/steer-run.js';
 import { deliverReplies } from '#/tick/steering.js';
 import { beginTick, endTick, requestTick } from '#/tick/tick-requests.js';
-import { moveTicket } from '#/tick/ticket-moves.js';
+import { resumeFixedSetups } from '#/tick/setup-recheck.js';
+import { cancelTicketsTx, stopCancelled } from '#/tick/ticket-cancel.js';
 import { loadTickConfig } from '#/tick/tick-config.js';
 import { triageInbox } from '#/tick/triage.js';
 import { verifyReady } from '#/tick/verify.js';
@@ -112,6 +119,13 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
   const ctx: EngineCtx = { deps, state, report, config, now, nowIso: iso(now) };
   if (state.firstTick) {
     await phase(ctx, 'restart reconcile', reconcileRestart);
+    // Tickets parked before escalations existed get one to act on, once, at start.
+    await phase(
+      ctx,
+      'escalation backfill',
+      async (c) => void (await backfillEscalations(c)),
+    );
+
     state.firstTick = false;
   }
 
@@ -121,10 +135,14 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
   await phase(ctx, 'stall scan', cancelStalled);
   await phase(ctx, 'expire interactions', expireInteractions);
   await phase(ctx, 'deliver replies', deliverReplies);
+  await phase(ctx, 'escalations first look', sweepEscalations);
+  await phase(ctx, 'setup recheck', async (c) => void (await resumeFixedSetups(c)));
   await phase(ctx, 'planning sweep', sweepPlanning);
   await phase(ctx, 'card chat', runCardChats);
   await phase(ctx, 'triage', triageInbox);
   await phase(ctx, 'verify', verifyReady);
+  // A park that verify just made gets its first look in the same tick, so a Director retry can dispatch now.
+  await phase(ctx, 'escalations after verify', sweepEscalations);
   await phase(ctx, 'dispatch', dispatchReady);
   await phase(ctx, 'invariants', checkInvariants);
 
@@ -147,6 +165,7 @@ export function createEngine(deps: EngineDeps): Engine {
     regates: new Map(),
     replies: [],
     chat: { pending: new Set(), busy: new Set(), errors: new Map() },
+    escalating: new Set(),
   };
 
   const engine: Engine = {
@@ -185,40 +204,22 @@ export function createEngine(deps: EngineDeps): Engine {
     cardDirector: (cardId) => cardDirectorStatus(state, cardId),
     async cancelTicket(ticketId) {
       const nowIso = iso(deps.clock.now());
-      const moved = await moveTicket(deps.storage, ticketId, nowIso, (t: Ticket) =>
-        TERMINAL_STATUSES.includes(t.status) ? null : { events: [{ type: 'cancelled' }] },
+      const [cancelled] = await deps.storage.transaction((tx) =>
+        cancelTicketsTx(tx, [ticketId], nowIso),
       );
 
-      if (!moved.ok) {
+      if (!cancelled) {
         return false;
       }
 
-      const runId = moved.ticket.assignee_run_id;
-      const pump = runId ? state.pumps.get(runId) : undefined;
-      if (pump) {
-        pump.cancelled = true;
-        await pump.driver.cancel(pump.handle).catch((e: unknown) => {
-          deps.log?.('error', `cancel of ${pump.runId} failed`, { error: String(e) });
-        });
-      }
-
-      const settings = await deps.config
-        .project(moved.ticket.project)
-        .catch(() => undefined);
-
-      const runtime = deps.project(moved.ticket.project, settings);
-      if (moved.ticket.worktree && runtime) {
-        await runtime.worktrees.remove(moved.ticket.worktree).catch((e: unknown) => {
-          deps.log?.('warn', `could not remove worktree of ${ticketId}`, {
-            error: String(e),
-          });
-        });
-      }
-
+      await stopCancelled(deps, state, cancelled);
       requestTick(deps, state);
 
       return true;
     },
+    actOnEscalation: (id, body, author) => actOnEscalation(deps, state, id, body, author),
+    actOnTicket: (ticketId, body, author) =>
+      actOnTicket(deps, state, ticketId, body, author),
     explainWait: (ticketId) => explainWait(deps, state, ticketId),
     interruptRun: (runId) => interruptRun(deps, state, runId),
     liveRunIds: () => [...state.pumps.keys()],

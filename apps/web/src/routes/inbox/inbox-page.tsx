@@ -8,20 +8,26 @@
  *   with a few seconds to Undo an archive and a plain message if the server refuses, in which
  *   case the item is put back. Items whose source changes resurface as unread, so archiving
  *   never hides something that has since moved. Long histories load 50 at a time and are
- *   windowed. Loading, empty, error and offline each have their own state.
+ *   windowed. A ticket waiting on the owner has a "Respond" button that opens its escalation card
+ *   in a drawer (rows are fixed-height for the windowed list, so the card does not grow the row);
+ *   acting settles the card, the chat and the Ticket page. Loading, empty, error and offline each
+ *   have their own state.
  *
  * Exports: InboxPage.
- * Depends on: react, react-router, api/*, components/*, routes/inbox/*, state/* (notify).
+ * Depends on: react, react-router, api/*, components/* (incl. the escalation card), routes/inbox/*,
+ *   state/* (notify).
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import type { InboxItem } from '@forge/core';
 import { describeError } from '#/api/describe-error.js';
 import { useInboxCounts, useInboxList, useMarkInbox } from '#/api/use-inbox.js';
+import { EscalationCard } from '#/components/escalation/escalation-card.js';
 import { OfflineNotice } from '#/components/status/offline-notice.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { Button } from '#/components/ui/button.js';
+import { SideDrawer } from '#/components/ui/side-drawer.js';
 import { WindowedList } from '#/components/ui/windowed-list.js';
 import { undoOf } from '#/domain/inbox-marks.js';
 import { InboxRow, INBOX_ROW_HEIGHT } from '#/routes/inbox/inbox-row.js';
@@ -57,6 +63,8 @@ export function InboxPage() {
   const list = useInboxList(slug, view);
   const marks = useMarkInbox(slug);
   const notify = useNotify();
+  // The item being answered, kept whole so the card survives the list dropping it once settled.
+  const [responding, setResponding] = useState<InboxItem | null>(null);
 
   useEffect(() => {
     document.title = 'Inbox · Forge';
@@ -144,6 +152,7 @@ export function InboxPage() {
                 slug={slug}
                 item={item}
                 onMark={(target, name) => void mark(target, name)}
+                onRespond={setResponding}
                 marksDisabled={!online}
               />
             )}
@@ -167,6 +176,29 @@ export function InboxPage() {
           </p>
         ) : null}
       </div>
+
+      <SideDrawer
+        open={responding !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResponding(null);
+          }
+        }}
+        title={responding?.title ?? 'Waiting on you'}
+        {...(responding?.ticket_id ? { eyebrow: responding.ticket_id } : {})}
+      >
+        {responding?.escalation ? (
+          <EscalationCard
+            key={responding.escalation.id}
+            view={
+              items.find((item) => item.id === responding.id)?.escalation ??
+              responding.escalation
+            }
+            variant="plain"
+            showTicket={false}
+          />
+        ) : null}
+      </SideDrawer>
     </section>
   );
 }

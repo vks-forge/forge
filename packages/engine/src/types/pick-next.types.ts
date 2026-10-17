@@ -28,6 +28,11 @@ export interface PickCandidate {
   readonly entering: boolean;
   /** Ids of blockers that are not done; a ticket with any is never picked. */
   readonly blockedBy: readonly string[];
+  /**
+   * The ticket's card is being re-planned (back in grilling, verifying or plan ready): the new
+   * plan may replace this ticket, so it does not start meanwhile. Absent means false.
+   */
+  readonly awaitsPlan?: boolean;
 }
 
 /** One live run: which project and harness it occupies. */
@@ -61,6 +66,7 @@ export interface PickCaps {
 /** Why a candidate was not picked this tick. */
 export type WaitReason =
   | { readonly kind: 'deps'; readonly ids: readonly string[] }
+  | { readonly kind: 'plan' }
   | {
       readonly kind: 'quota';
       readonly harness: string;

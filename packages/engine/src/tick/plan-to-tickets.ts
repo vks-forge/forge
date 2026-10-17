@@ -1,5 +1,5 @@
 /**
- * Plan to tickets: approving a plan files its tickets, and a held ticket can be run as Express.
+ * Plan to tickets: approving a plan files its tickets (and replaces an earlier plan's not-started ones).
  *
  * Why: approval is the only way tickets come to exist under the card-first flow (d-0129,
  *   d-0133), so it is one function whatever approves (the Director behind the floor, or the
@@ -9,34 +9,37 @@
  *   deterministic pre-check, so a ticket can only be raised, never lowered (d-0141 item 9), and
  *   a ticket touching a Tier C path is Tier C. It is idempotent per (card, version): a double
  *   click or a retry returns the tickets already made. Only Express runs today, so a planned
- *   Standard or Full ticket is held with the wait reason `pipeline_pending` and an event offering
- *   "Run as Express", so the owner always has a way forward until pipelines exist (d-0135).
+ *   Standard or Full ticket is held with the wait reason `pipeline_pending` and a lane-hold
+ *   escalation offering "Run as Express", Re-plan or Cancel, so the owner always has a way
+ *   forward until pipelines exist (d-0135). Approving a later version of a re-planned card
+ *   also cancels, through `transition()`, the earlier plan's tickets that have not started
+ *   (inbox, planned, waiting, blocked); finished and running tickets stay, and the plan keys are
+ *   recorded next to the ticket ids so the new plan can tell what already exists.
  *
- * Exports: PIPELINE_PENDING, approvePlanTx(), approvePlan(), runAsExpress().
+ * Exports: PIPELINE_PENDING, approvePlanTx(), approvePlan().
  * Depends on: @forge/core (plan, lane and phase rules), tick/ticket-insert, tick/ticket-moves,
- *   tick/card-phase, tick/card-log, tick/planning-state, types/card-planning. Writes storage.
+ *   tick/card-phase, tick/card-log, tick/escalation-raise, tick/escalation-settle,
+ *   types/card-planning. Writes storage.
  */
 
-import { CardId, maxLane, orderPlanTickets, preCheckLane, globMatch } from '@forge/core';
+import { CardId, globMatch, maxLane, orderPlanTickets, preCheckLane } from '@forge/core';
 import type {
   CardActor,
   PlanTicket,
   PlanVersion,
   StorageTx,
+  Ticket,
   TicketId,
 } from '@forge/core';
 import { iso } from '#/shared/time.js';
 import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
 import { moveCardTx } from '#/tick/card-phase.js';
 import { notifyCard } from '#/tick/card-notify.js';
-import { logPlanEvent } from '#/tick/planning-state.js';
+import { raiseEscalation } from '#/tick/escalation-raise.js';
 import { insertInboxTicket } from '#/tick/ticket-insert.js';
-import { moveTicket, moveTicketTx } from '#/tick/ticket-moves.js';
+import { moveTicketTx } from '#/tick/ticket-moves.js';
 import { requestTick } from '#/tick/tick-requests.js';
-import type {
-  ApprovePlanResult,
-  RunAsExpressResult,
-} from '#/types/card-planning.types.js';
+import type { ApprovePlanResult } from '#/types/card-planning.types.js';
 import type { EngineState } from '#/types/engine-state.types.js';
 import type { EngineDeps } from '#/types/engine.types.js';
 
@@ -45,6 +48,46 @@ export const PIPELINE_PENDING = 'pipeline_pending';
 
 const PRIORITY = { urgent: 3, high: 2, normal: 1, low: 0 } as const;
 const PAGE = 200;
+
+/** Tickets of an earlier plan that a newer approved plan replaces: nothing of them has started or finished. */
+const REPLACEABLE: readonly Ticket['status'][] = [
+  'inbox',
+  'planned',
+  'waiting_human',
+  'blocked',
+];
+
+/** Cancels the earlier plan's not-started tickets through `transition()` and says so on the card. */
+async function cancelReplaced(
+  tx: StorageTx,
+  cardId: CardId,
+  tickets: readonly Ticket[],
+  version: number,
+  at: string,
+  actor: CardActor,
+): Promise<void> {
+  const cancelled: string[] = [];
+  for (const t of tickets) {
+    const moved = await moveTicketTx(tx, t.id, at, (cur) =>
+      REPLACEABLE.includes(cur.status) ? { events: [{ type: 'cancelled' }] } : null,
+    );
+
+    if (moved.ok) {
+      cancelled.push(t.id);
+    }
+  }
+
+  if (cancelled.length > 0) {
+    await logCardEvent(tx, cardId, {
+      kind: 'note',
+      at,
+      actor,
+      payload: {
+        text: `Replaced by plan v${version}: cancelled ${cancelled.join(', ')}.`,
+      },
+    });
+  }
+}
 
 /** The ticket text a Worker reads: the plan's body, what done looks like and where to look. */
 function ticketBody(t: PlanTicket, plan: PlanVersion): string {
@@ -96,6 +139,7 @@ async function approvedBefore(
  */
 export async function approvePlanTx(
   tx: StorageTx,
+  deps: Pick<EngineDeps, 'ids'>,
   cardId: CardId,
   version: number,
   by: 'director' | 'owner',
@@ -129,6 +173,11 @@ export async function approvePlanTx(
 
   const actor: CardActor = by === 'owner' ? { type: 'user', id: actorId } : ENGINE_ACTOR;
 
+  // A re-plan: tickets of the earlier plan that have not started are replaced by this one.
+  const replaced = (await tx.tickets.listByCard(cardId)).filter((t) =>
+    REPLACEABLE.includes(t.status),
+  );
+
   const made = new Map<string, TicketId>();
   const created: { plan: PlanTicket; id: TicketId }[] = [];
   for (const t of orderPlanTickets(plan.tickets)) {
@@ -157,8 +206,10 @@ export async function approvePlanTx(
     kind: 'plan_approved',
     at,
     actor,
-    payload: { version, by, ticket_ids: ids },
+    payload: { version, by, ticket_ids: ids, plan_keys: plan.tickets.map((t) => t.key) },
   });
+
+  await cancelReplaced(tx, cardId, replaced, version, at, actor);
 
   for (const { plan: t, id } of created) {
     const lane = maxLane(
@@ -174,18 +225,24 @@ export async function approvePlanTx(
     const tierC = t.files.some((f) => tierCGlobs.some((g) => globMatch(g, f, true)));
     const held = lane !== 'express';
     const reason = `${PIPELINE_PENDING}: the ${lane} lane has no pipeline yet. Run it as Express to start it now.`;
-    await moveTicketTx(tx, id, at, () => ({
+    const moved = await moveTicketTx(tx, id, at, () => ({
       events: [
         { type: 'triaged', lane, tier_predicted: tierC ? 'C' : 'A' },
         ...(held ? [{ type: 'parked' as const, reason }] : []),
       ],
     }));
 
-    if (held) {
-      await logPlanEvent(tx, cardId, at, {
-        kind: 'needs_you',
-        payload: { reason, actions: ['run_as_express'], ticket_id: id },
-      });
+    // The hold is an escalation the owner acts on (run as Express, re-plan, cancel), replacing
+    // the card-level needs_you note this used to write.
+    if (held && moved.ok) {
+      await raiseEscalation(
+        tx,
+        deps,
+        at,
+        moved.ticket,
+        { kind: 'failure', cause: 'lane_hold', summary: reason, attempts: [], lane },
+        'owner',
+      );
     }
   }
 
@@ -222,7 +279,7 @@ export async function approvePlan(
   const globs = (await deps.config.project(slug)).config.project.tier_c_globs;
   const at = iso(deps.clock.now());
   const result = await deps.storage.transaction((tx) =>
-    approvePlanTx(tx, id.data, version, 'owner', at, globs, author),
+    approvePlanTx(tx, deps, id.data, version, 'owner', at, globs, author),
   );
 
   if (result.status === 'approved') {
@@ -231,47 +288,4 @@ export async function approvePlan(
   }
 
   return result;
-}
-
-/** `POST /tickets/:id/run-as-express`: releases a ticket held for a pipeline into the Express lane, through `transition()`. */
-export async function runAsExpress(
-  deps: EngineDeps,
-  state: EngineState,
-  ticketId: string,
-  author: string,
-): Promise<RunAsExpressResult> {
-  const at = iso(deps.clock.now());
-  const existing = await deps.storage.transaction((tx) =>
-    tx.tickets.get(ticketId as TicketId),
-  );
-
-  if (!existing) {
-    return { status: 'not_found' };
-  }
-
-  const moved = await moveTicket(deps.storage, ticketId, at, (t) =>
-    t.status === 'waiting_human' && (t.blocked_reason ?? '').startsWith(PIPELINE_PENDING)
-      ? { events: [{ type: 'unparked' }], fields: { lane: 'express' } }
-      : null,
-  );
-
-  if (!moved.ok) {
-    return { status: 'not_held' };
-  }
-
-  await deps.storage.transaction((tx) =>
-    logCardEvent(tx, moved.ticket.card_id, {
-      kind: 'note',
-      at,
-      actor: { type: 'user', id: author },
-      payload: { text: `${ticketId} was released to run as Express.` },
-    }),
-  );
-
-  requestTick(deps, state);
-  if (moved.ticket.card_id) {
-    await notifyCard(deps, moved.ticket.card_id);
-  }
-
-  return { status: 'released', ticket: moved.ticket };
 }

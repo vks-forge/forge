@@ -1,9 +1,14 @@
 /**
- * AnswerPanel: the Worker's open questions, prominent, with an answer form.
+ * AnswerPanel: everything on the Ticket page that waits on the owner, prominent, with the way
+ *   to act on it.
  *
- * Why: when a run asks the user something it is parked until they answer, so this is the most
+ * Why: when a ticket cannot go on it is parked until the owner acts, so this is the most
  *   important thing on the Ticket page and sits above the thread in amber (the only colour
- *   that means "needs you"). Sending is optimistic: the question leaves at once and a status
+ *   that means "needs you"). Escalations (a question, a failure, a setup to fix) draw as the same
+ *   card the chat and the Inbox use; while the Director is still looking at one, the panel says so
+ *   and offers nothing; a wait with no question (review, sign-off, a scheduler hold) shows its
+ *   actions below. A question from a server that predates escalations keeps the plain form below.
+ *   Sending is optimistic: the question leaves at once and a status
  *   line says it was sent. If the server refuses, the question returns with the user's words
  *   still in the box (the draft lives outside the form, state/answer-draft) and a plain
  *   explanation: a 409 means someone already answered, so retrying is pointless and the box
@@ -11,16 +16,22 @@
  *
  * Exports: AnswerPanel.
  * Depends on: react, lucide-react, api/use-tickets, api/describe-error, domain/interaction,
- *   state/answer-draft, components/ui/button, @forge/core (type).
+ *   state/answer-draft, components/ui/button, components/escalation/escalation-card,
+ *   routes/ticket/ticket-wait, schemas/tickets (type), @forge/core (type).
  */
 
 import type { Interaction } from '@forge/core';
 import { CircleAlert } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import { ApiError } from '#/api/api-error.js';
 import { describeError } from '#/api/describe-error.js';
 import { useAnswerInteraction } from '#/api/use-tickets.js';
+import { EscalationCard } from '#/components/escalation/escalation-card.js';
 import { Button } from '#/components/ui/button.js';
 import { KIND_LABEL, promptOf, quickReplies } from '#/domain/interaction.js';
+import { TicketWait } from '#/routes/ticket/ticket-wait.js';
+import type { EscalationView } from '#/schemas/escalation.js';
+import type { TicketDetail } from '#/schemas/tickets.js';
 import { useAnswerDraft, useClearAnswerDraft } from '#/state/answer-draft.js';
 
 function QuestionCard(props: {
@@ -97,12 +108,38 @@ function QuestionCard(props: {
 }
 
 export function AnswerPanel(props: {
-  ticketId: string;
-  interactions: readonly Interaction[];
+  detail: TicketDetail;
   /** The prompt the run streamed for an interaction, when seen. */
   streamedPrompt: (interactionId: string) => string | undefined;
 }) {
-  const answer = useAnswerInteraction(props.ticketId);
+  const { detail } = props;
+  const ticketId = detail.ticket.id;
+  // The server lists only pending escalations, so one settled by this click would vanish before
+  // the owner read "Answered by you". The card hands it back and the panel keeps it on screen.
+  const [kept, setKept] = useState<ReadonlyMap<string, EscalationView>>(new Map());
+  const keep = useCallback(
+    (view: EscalationView) =>
+      setKept((held) =>
+        held.get(view.id) === view ? held : new Map(held).set(view.id, view),
+      ),
+    [],
+  );
+
+  const listed = new Set(detail.escalations.map((item) => item.id));
+  const shown = [
+    ...detail.escalations.map((item) => kept.get(item.id) ?? item),
+    ...[...kept.values()].filter((item) => !listed.has(item.id)),
+  ];
+
+  // While only the Director is looking at a wait, the owner still keeps Cancel: it comes from
+  // `wait_actions`, drawn by TicketWait under the Director card.
+  const ownerHasItem = shown.some(
+    (item) => item.stage === 'owner' && item.settled === undefined,
+  );
+
+  const covered = new Set(shown.map((item) => item.id));
+  const legacy = detail.interactions.filter((item) => !covered.has(item.id));
+  const answer = useAnswerInteraction(ticketId);
   const sendingId = answer.isPending ? answer.variables.interactionId : null;
   const clearDraft = useClearAnswerDraft();
   const refused = answer.isError ? answer.error : null;
@@ -110,7 +147,11 @@ export function AnswerPanel(props: {
 
   return (
     <div className="grid gap-3">
-      {props.interactions.map((interaction) => (
+      {shown.map((view) => (
+        <EscalationCard key={view.id} view={view} showTicket={false} onKeep={keep} />
+      ))}
+      {!ownerHasItem && legacy.length === 0 ? <TicketWait detail={detail} /> : null}
+      {legacy.map((interaction) => (
         <QuestionCard
           key={interaction.id}
           interaction={interaction}

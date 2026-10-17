@@ -9,82 +9,33 @@
  *   is neither: it parks its harness until the reset and the ticket waits (tick/quota, d-0097).
  *   Every ticket change goes
  *   through `transition()`; nothing here writes a status directly, and a run that is no
- *   longer the ticket's current run (a late settle) changes nothing.
+ *   longer the ticket's current run (a late settle) changes nothing. A pause and a park each
+ *   leave one escalation behind (a typed question, a failure, or a setup when a login or a tool
+ *   approval is what a retry cannot fix), so the owner always has something to act on
+ *   (tick/outcome-escalate).
  *
  * Exports: applyOutcome().
  * Depends on: @forge/core (isRunActive, TERMINAL_STATUSES), domain/failure-policy,
- *   tick/quota, tick/ticket-moves, tick/wakes. Writes inside the caller's transaction.
+ *   tick/outcome-escalate, tick/quota, tick/ticket-moves, tick/wakes. Writes inside the caller's transaction.
  */
 
-import { InteractionKind, TERMINAL_STATUSES, isRunActive } from '@forge/core';
+import { TERMINAL_STATUSES, isRunActive } from '@forge/core';
 import type { ErrorFamily, Run, RunResult, StorageTx, Ticket } from '@forge/core';
 import { decideFailure } from '#/domain/failure-policy.js';
-import { iso } from '#/shared/time.js';
+import { ensureQuestion, parkRun, setupCauseOfRun } from '#/tick/outcome-escalate.js';
 import { parkHarnessForQuota, requestQuotaWake } from '#/tick/quota.js';
-import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
-import { moveTicketTx, parkPlan } from '#/tick/ticket-moves.js';
+import { moveTicketTx } from '#/tick/ticket-moves.js';
 import { requestWakeTx } from '#/tick/wakes.js';
 import type { EngineCtx, Pump } from '#/types/engine-state.types.js';
-
-async function parkIn(
-  ctx: EngineCtx,
-  tx: StorageTx,
-  ticket: Ticket,
-  reason: string,
-): Promise<void> {
-  const moved = await moveTicketTx(tx, ticket.id, ctx.nowIso, (t) => parkPlan(t, reason));
-  if (moved.ok) {
-    ctx.report.parked.push({ ticketId: ticket.id, reason });
-  } else {
-    ctx.deps.log?.('error', `could not park ${ticket.id}`, { reason: moved.reason });
-  }
-}
-
-/** Creates the interaction a pause points at when the Worker side did not write it. */
-async function ensureInteraction(
-  ctx: EngineCtx,
-  tx: StorageTx,
-  run: Run,
-  id: string,
-  pump?: Pump,
-): Promise<void> {
-  // The Worker's ask_director tool may have written the row already; either way the card's
-  // history records that a question opened, once per pause.
-  let row = await tx.interactions.get(id);
-  if (!row) {
-    const ask = pump?.asks.get(id);
-    const kind = InteractionKind.safeParse(ask?.kind);
-    row = {
-      id,
-      ticket_id: run.ticket_id,
-      run_id: run.id,
-      kind: kind.success ? kind.data : 'question',
-      payload: {
-        prompt: ask?.prompt ?? '(the Worker paused without a recorded question)',
-      },
-      status: 'pending',
-      asked_at: ctx.nowIso,
-      timeout_at: iso(ctx.now + ctx.config.forge.engine.interaction_timeout_ms),
-    };
-
-    await tx.interactions.insert(row);
-  }
-
-  const ticket = await tx.tickets.get(run.ticket_id as Ticket['id']);
-  await logCardEvent(tx, ticket?.card_id, {
-    kind: 'interaction_opened',
-    at: ctx.nowIso,
-    actor: ENGINE_ACTOR,
-    payload: { ticket_id: run.ticket_id, interaction_id: id, interaction_kind: row.kind },
-  });
-}
+import type { SettleOptions } from '#/types/tick.types.js';
 
 /**
  * Applies the ticket effect of `run` ending with `result` (family already resolved); inside
- * `tx`. `retryReason` names the retry wake when the cause is not the family itself (an
- * interrupted run that could not be resumed wakes with `resume_failed`); `parkReason` is
- * what a parking failure tells the owner when the family's generic text would hide the cause
- * (a harness build that changed under the approvals).
+ * `tx`. `opts.retryReason` names the retry wake when the cause is not the family itself (an
+ * interrupted run that could not be resumed wakes with `resume_failed`); `opts.parkReason` is
+ * what a parking failure tells the owner when the family's generic text would hide the cause,
+ * and `opts.parkBuild` marks it as a harness build that changed under the approvals (a setup
+ * for the owner, not a failure).
  */
 export async function applyOutcome(
   ctx: EngineCtx,
@@ -93,8 +44,7 @@ export async function applyOutcome(
   result: RunResult,
   family: ErrorFamily | undefined,
   pump?: Pump,
-  retryReason?: string,
-  parkReason?: string,
+  opts: Pick<SettleOptions, 'retryReason' | 'parkReason' | 'parkBuild'> = {},
 ): Promise<void> {
   const ticket = await tx.tickets.get(run.ticket_id as Ticket['id']);
   if (!ticket || TERMINAL_STATUSES.includes(ticket.status) || pump?.cancelled) {
@@ -123,7 +73,7 @@ export async function applyOutcome(
   }
 
   if (result.status === 'paused' && result.interactionId) {
-    await ensureInteraction(ctx, tx, run, result.interactionId, pump);
+    await ensureQuestion(ctx, tx, run, result.interactionId, pump);
     const m = await moveTicketTx(tx, ticket.id, ctx.nowIso, () => ({
       events: [{ type: 'asked' }],
     }));
@@ -154,7 +104,15 @@ export async function applyOutcome(
   });
 
   if (decision.action === 'park') {
-    return parkIn(ctx, tx, ticket, parkReason ?? decision.reason);
+    return parkRun(
+      ctx,
+      tx,
+      ticket,
+      run,
+      opts.parkReason ?? decision.reason,
+      family,
+      await setupCauseOfRun(ctx, tx, run, family, opts.parkBuild),
+    );
   }
 
   const wake = await requestWakeTx(
@@ -163,7 +121,7 @@ export async function applyOutcome(
     {
       ticketId: ticket.id,
       kind: 'retry',
-      reason: retryReason ?? decision.family,
+      reason: opts.retryReason ?? decision.family,
       key: run.id,
       notBefore: decision.notBefore,
     },
@@ -172,11 +130,14 @@ export async function applyOutcome(
 
   if (wake.capped) {
     const cap = ctx.config.forge.engine.rewake_cap;
-    await parkIn(
+    await parkRun(
       ctx,
       tx,
       ticket,
+      run,
       `re-wake cap (${cap.max} per hour) reached after ${decision.family}; needs a human`,
+      family,
+      null,
     );
   }
 }

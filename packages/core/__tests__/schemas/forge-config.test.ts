@@ -48,6 +48,8 @@ describe('default .forge/config/forge.yaml', () => {
       write_plan: 'opus',
       approve_plan: 'opus',
       custom_step: 'sonnet',
+      ticket_answer: 'sonnet',
+      ticket_recover: 'opus',
     });
 
     expect(models.worker).toEqual({

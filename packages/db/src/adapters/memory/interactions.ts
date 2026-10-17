@@ -4,7 +4,8 @@
  * Why: both are decided by a race on a single row, and the engine's tests must see the same
  *   winner SQLite gives. An interaction is resolved by compare-and-swap (`answer` and
  *   `expire` only from `pending`, `expire` only once due), so a human and a timeout cannot
- *   both win; an intake event is deduped on (source, dedupe_key) and a redelivery gets the
+ *   both win, and `escalate` (the Director's hand-over to the owner) applies only to a pending,
+ *   not-yet-escalated row; an intake event is deduped on (source, dedupe_key) and a redelivery gets the
  *   first stored copy, with its id and the ticket it already became, back
  *   (director-core.md §3, §7, §8).
  *
@@ -91,6 +92,29 @@ export function memoryInteractions(state: MemoryState): InteractionRepository {
       state.interactions.set(id, { ...current, status: 'timed_out' });
 
       return true;
+    },
+    async escalate(id, patch, at) {
+      const current = state.interactions.get(id);
+      if (current?.status !== 'pending' || current.escalated_at !== undefined) {
+        return false;
+      }
+
+      state.interactions.set(
+        id,
+        Interaction.parse({
+          ...current,
+          payload: normaliseJson(patch.payload),
+          escalated_at: patch.escalated_at ?? at,
+        }),
+      );
+
+      return true;
+    },
+    async listPendingByCard(cardId) {
+      return [...state.interactions.values()]
+        .filter((i) => i.status === 'pending' && i.card_id === cardId)
+        .sort(byAsked)
+        .map((i) => structuredClone(i));
     },
   };
 }

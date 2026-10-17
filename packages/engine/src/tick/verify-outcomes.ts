@@ -7,22 +7,24 @@
  *   refused a push, a gate could not run) is not the Worker's fault: transient families
  *   wait and retry under the same backoff and hourly re-wake cap as run failures, and the
  *   ones a retry cannot fix (auth, a merge conflict, a denied action) go straight to a
- *   human with the reason. That park is not a gate finding, so it is a `parked` event from
+ *   human with the reason, each park leaving a failure escalation (the Director looks first).
+ *   That park is not a gate finding, so it is a `parked` event from
  *   Verifying: it neither spends a rework nor, on release, restarts the Worker; the human's
  *   release returns the ticket to Verifying to publish, gate and merge again.
  *
  * Exports: recordVerified(), reworkOrPark(), parkVerifying(), handleVerifyFailure().
- * Depends on: @forge/core (MAX_AUTO_REWORKS), domain/{failure-policy,gate-rows,results},
- *   steps/run-step, tick/ticket-moves, tick/wakes.
+ * Depends on: @forge/core (MAX_AUTO_REWORKS, classifyPark), domain/{failure-policy,gate-rows,results},
+ *   steps/run-step, tick/escalation-raise, tick/ticket-moves, tick/wakes.
  */
 
-import { MAX_AUTO_REWORKS } from '@forge/core';
-import type { GateVerdict } from '@forge/core';
+import { MAX_AUTO_REWORKS, classifyPark } from '@forge/core';
+import type { GateVerdict, StorageTx, Ticket } from '@forge/core';
 import { decideFailure } from '#/domain/failure-policy.js';
 import { describeFailures } from '#/domain/gate-rows.js';
 import { familyOf } from '#/domain/results.js';
 import { hold } from '#/steps/run-step.js';
-import { moveTicket, moveTicketTx } from '#/tick/ticket-moves.js';
+import { attemptsOf, raiseEscalation, stageFor } from '#/tick/escalation-raise.js';
+import { moveTicketTx } from '#/tick/ticket-moves.js';
 import { requestWakeTx } from '#/tick/wakes.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type {
@@ -49,6 +51,33 @@ export function recordVerified(
   });
 }
 
+/** Raises the failure escalation of a parked ticket: its cause read off the reason, the Director looking first. */
+async function raiseFailure(
+  ctx: EngineCtx,
+  tx: StorageTx,
+  ticket: Ticket,
+  reason: string,
+  family?: VerifiedTicket['errorFamily'],
+): Promise<void> {
+  await raiseEscalation(
+    tx,
+    ctx.deps,
+    ctx.nowIso,
+    ticket,
+    {
+      kind: 'failure',
+      cause:
+        classifyPark({ status: 'waiting_human', blocked_reason: reason })?.cause ??
+        'not_retried',
+      summary: reason,
+      attempts: await attemptsOf(tx, ticket.id),
+      ...(family ? { error_family: family } : {}),
+      lane: ticket.lane,
+    },
+    await stageFor(ctx, tx, ticket, false),
+  );
+}
+
 /** Parks a Verifying ticket in WaitingHuman with `reason`; its rework count is untouched and a release returns it to Verifying. */
 export async function parkVerifying(
   ctx: EngineCtx,
@@ -57,14 +86,22 @@ export async function parkVerifying(
   rows: GateRows = [],
   errorFamily?: VerifiedTicket['errorFamily'],
 ): Promise<void> {
-  const moved = await moveTicket(ctx.deps.storage, t.ticket.id, ctx.nowIso, (cur) => {
-    if (cur.status !== 'verifying') {
-      return null;
+  const moved = await ctx.deps.storage.transaction(async (tx) => {
+    const parked = await moveTicketTx(tx, t.ticket.id, ctx.nowIso, (cur) => {
+      if (cur.status !== 'verifying') {
+        return null;
+      }
+
+      // Not a gate finding: `parked` leaves rework_count alone and remembers Verifying, so
+      // a release resumes publish, gates and merge on this run instead of dispatching a Worker.
+      return { events: [{ type: 'parked', reason }] };
+    });
+
+    if (parked.ok) {
+      await raiseFailure(ctx, tx, parked.ticket, reason, errorFamily);
     }
 
-    // Not a gate finding: `parked` leaves rework_count alone and remembers Verifying, so
-    // a release resumes publish, gates and merge on this run instead of dispatching a Worker.
-    return { events: [{ type: 'parked', reason }] };
+    return parked;
   });
 
   if (!moved.ok) {
@@ -130,11 +167,17 @@ export async function reworkOrPark(
   }
 
   const reason = `gate ${names} failed after ${MAX_AUTO_REWORKS} automatic reworks; needs you. ${findings}`;
-  await moveTicket(deps.storage, t.ticket.id, ctx.nowIso, (cur) =>
-    cur.status === 'waiting_human'
-      ? { events: [], fields: { blocked_reason: reason } }
-      : null,
-  );
+  await deps.storage.transaction(async (tx) => {
+    const parked = await moveTicketTx(tx, t.ticket.id, ctx.nowIso, (cur) =>
+      cur.status === 'waiting_human'
+        ? { events: [], fields: { blocked_reason: reason } }
+        : null,
+    );
+
+    if (parked.ok) {
+      await raiseFailure(ctx, tx, parked.ticket, reason);
+    }
+  });
 
   ctx.report.parked.push({ ticketId: t.ticket.id, reason });
   recordVerified(ctx, t, 'parked', rows, { detail: reason });

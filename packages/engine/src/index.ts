@@ -25,6 +25,7 @@ export { requestWake } from '#/tick/wakes.js';
 export type * from '#/types/card-create.types.js';
 export type * from '#/types/card-planning.types.js';
 export type * from '#/types/engine.types.js';
+export type * from '#/types/escalation.types.js';
 export type * from '#/types/failure-policy.types.js';
 export type * from '#/types/invariants.types.js';
 export type * from '#/types/lane-rules.types.js';

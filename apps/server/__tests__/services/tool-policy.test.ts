@@ -71,6 +71,15 @@ beforeEach(() => {
   version = '2.1.299';
 });
 
+describe('toolCatalogued', () => {
+  it('is true for a tool the healthy catalogue lists and false for an unknown one', async () => {
+    const p = policy();
+
+    expect(await p.toolCatalogued('read')).toBe(true);
+    expect(await p.toolCatalogued('no_such_tool')).toBe(false);
+  });
+});
+
 describe('native schema approvals', () => {
   it('admits read once its schema is approved for the installed build', async () => {
     await rowFor('read', 'approved');

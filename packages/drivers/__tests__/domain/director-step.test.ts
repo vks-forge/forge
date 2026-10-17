@@ -57,6 +57,18 @@ describe('buildStepPrompt', () => {
     ['write_plan', ['goal', 'tickets', 'input.playbook']],
     ['approve_plan', ['decision', 'ask_owner', 'input.playbook']],
     ['custom_step', ['summary', 'notes', 'input.playbook']],
+    [
+      'ticket_answer',
+      [
+        'decision',
+        'confidence',
+        'grounds',
+        'read_requests',
+        'escalate',
+        'input.playbook',
+      ],
+    ],
+    ['ticket_recover', ['decision', 'diagnosis', 'note', 'confidence', 'input.playbook']],
   ] as ReadonlyArray<readonly [StepName, string[]]>)(
     'the %s prompt names its answer keys and the engine playbook',
     (name, keys) => {

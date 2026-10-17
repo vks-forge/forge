@@ -33,6 +33,8 @@ export const ModelMatrix = z.object({
     write_plan: Model,
     approve_plan: Model,
     custom_step: Model,
+    ticket_answer: Model,
+    ticket_recover: Model,
   }),
   worker: z.object({ express: Model, standard: Model, full: Model }),
 });

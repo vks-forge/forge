@@ -93,6 +93,10 @@ const DEFAULTS: Record<StepName, Scripted> = {
   },
   approve_plan: { decision: 'approve', questions: [] },
   custom_step: { summary: 'Done.', notes: [] },
+  // Unscripted escalation steps hand the question or the failure to the owner, so a scenario that
+  // does not care about the Director's first look still ends with the owner holding the wait.
+  ticket_answer: { decision: 'escalate', confidence: 0.1, grounds: [] },
+  ticket_recover: { decision: 'escalate', diagnosis: 'Needs a person.', confidence: 0.1 },
 };
 
 /** Marks a scripted answer as a failure rather than a value. */

@@ -22,6 +22,8 @@ import {
   CustomStepOutput,
   EnhanceOutput,
   GrillTurnOutput,
+  TicketAnswerOutput,
+  TicketRecoverOutput,
   VerifyOutput,
   WritePlanOutput,
 } from '#/schemas/director-steps.js';
@@ -140,5 +142,143 @@ describe('JSON Schema', () => {
     ['custom_step', CustomStepOutput],
   ])('%s output can be sent to the harness as a JSON Schema', (_n, schema) => {
     expect(() => z.toJSONSchema(schema, { target: 'draft-7' })).not.toThrow();
+  });
+});
+
+describe('ticket_answer output', () => {
+  const answer = {
+    decision: 'answer',
+    answer: 'Use SQLite, as d-0012 decided.',
+    confidence: 0.9,
+    grounds: [{ kind: 'decision', ref: 'd-0012' }],
+  };
+
+  it('accepts an answer with grounds and an escalation with options', () => {
+    expect(TicketAnswerOutput.safeParse(answer).success).toBe(true);
+    expect(
+      TicketAnswerOutput.safeParse({
+        decision: 'escalate',
+        confidence: 0.4,
+        grounds: [],
+        escalate_reason: 'low_confidence',
+        suggested_answer: 'SQLite',
+        options: [
+          { id: 'a', label: 'SQLite', recommended: true },
+          { id: 'b', label: 'Postgres', recommended: false },
+        ],
+      }).success,
+    ).toBe(true);
+  });
+
+  it('refuses an answer decision with no answer text', () => {
+    const { answer: _a, ...noText } = answer;
+    void _a;
+
+    expect(TicketAnswerOutput.safeParse(noText).success).toBe(false);
+  });
+
+  it('refuses confidence outside 0 to 1, unknown ground kinds and unknown reasons', () => {
+    expect(TicketAnswerOutput.safeParse({ ...answer, confidence: 1.2 }).success).toBe(
+      false,
+    );
+
+    expect(
+      TicketAnswerOutput.safeParse({ ...answer, grounds: [{ kind: 'vibes', ref: 'x' }] })
+        .success,
+    ).toBe(false);
+
+    expect(
+      TicketAnswerOutput.safeParse({
+        ...answer,
+        decision: 'escalate',
+        escalate_reason: 'meh',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('allows 2 to 4 options with at most one recommended, and no others', () => {
+    const opt = (i: number, recommended = false) => ({
+      id: `o${i}`,
+      label: `Option ${i}`,
+      recommended,
+    });
+
+    const base = { decision: 'escalate', confidence: 0.1, grounds: [] };
+
+    expect(TicketAnswerOutput.safeParse({ ...base, options: [opt(1)] }).success).toBe(
+      false,
+    );
+
+    expect(
+      TicketAnswerOutput.safeParse({ ...base, options: [opt(1, true), opt(2, true)] })
+        .success,
+    ).toBe(false);
+
+    expect(
+      TicketAnswerOutput.safeParse({
+        ...base,
+        options: [1, 2, 3, 4, 5].map((i) => opt(i)),
+      }).success,
+    ).toBe(false);
+  });
+
+  it('can carry read requests, which the engine answers before the decision counts', () => {
+    expect(
+      TicketAnswerOutput.safeParse({
+        decision: 'escalate',
+        confidence: 0,
+        grounds: [],
+        read_requests: [{ op: 'read', path: 'docs/plan.md' }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it('converts to JSON Schema for the harness', () => {
+    expect(() => z.toJSONSchema(TicketAnswerOutput)).not.toThrow();
+    expect(() => z.toJSONSchema(TicketRecoverOutput)).not.toThrow();
+  });
+});
+
+describe('ticket_recover output', () => {
+  it('accepts retry with a note and escalate with a diagnosis', () => {
+    expect(
+      TicketRecoverOutput.safeParse({
+        decision: 'retry',
+        note: 'Run the migration first.',
+        diagnosis: 'The test database was missing.',
+        confidence: 0.7,
+      }).success,
+    ).toBe(true);
+
+    expect(
+      TicketRecoverOutput.safeParse({
+        decision: 'escalate',
+        diagnosis: 'The ticket needs a product decision.',
+        confidence: 0.9,
+      }).success,
+    ).toBe(true);
+  });
+
+  it('needs a diagnosis, keeps the note within 1000 characters and the decision within two values', () => {
+    expect(
+      TicketRecoverOutput.safeParse({ decision: 'retry', confidence: 0.5 }).success,
+    ).toBe(false);
+
+    expect(
+      TicketRecoverOutput.safeParse({
+        decision: 'retry',
+        diagnosis: 'd',
+        confidence: 0.5,
+        note: 'x'.repeat(1001),
+      }).success,
+    ).toBe(false);
+
+    expect(
+      TicketRecoverOutput.safeParse({
+        decision: 'cancel',
+        diagnosis: 'd',
+        confidence: 0.5,
+      }).success,
+    ).toBe(false);
   });
 });

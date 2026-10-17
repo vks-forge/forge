@@ -55,8 +55,8 @@ describe('board columns', () => {
     expect(BOARD_COLUMNS.filter((c) => c.tone === 'attn')).toHaveLength(1);
   });
 
-  it('groups blocked with cancelled and inbox with planned', () => {
-    expect(columnOf('blocked')).toBe(columnOf('cancelled'));
+  it('keeps a stopped ticket with what waits on the user, and inbox with planned', () => {
+    expect(columnOf('blocked')).toBe('needs_you');
     expect(columnOf('inbox')).toBe(columnOf('planned'));
     expect(columnOf('in_progress')).toBe('active');
   });
@@ -80,8 +80,8 @@ describe('groupByColumn and filterTickets', () => {
     const groups = groupByColumn(tickets);
 
     expect(Object.keys(groups)).toHaveLength(BOARD_COLUMNS.length);
-    expect(groups.needs_you.map((t) => t.id)).toEqual(['A-1']);
-    expect(groups.closed.map((t) => t.id)).toEqual(['A-4']);
+    expect(groups.needs_you.map((t) => t.id)).toEqual(['A-1', 'A-4']);
+    expect(groups.closed).toEqual([]);
     expect(Object.values(groups).flat()).toHaveLength(tickets.length);
   });
 

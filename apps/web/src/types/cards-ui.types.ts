@@ -53,6 +53,13 @@ export type ChatBlock =
       readonly autoApprove: boolean;
     }
   | {
+      /** A ticket that waits on the owner; drawn from the live escalation, not this payload. */
+      readonly kind: 'escalation';
+      readonly interactionId: string;
+      readonly ticketId: string;
+      readonly title: string;
+    }
+  | {
       readonly kind: 'step';
       readonly label: string;
       readonly summary: string;

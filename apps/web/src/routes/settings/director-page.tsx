@@ -104,6 +104,18 @@ export function DirectorPage() {
               />
             </SettingsSection>
             <SettingsSection
+              id="escalation"
+              title="When a ticket waits"
+              description="What the Director does with a Worker’s question or a stopped ticket before it asks you. Tier C tickets, tools and logins always come to you."
+            >
+              <ConfigFields
+                fields={DIRECTOR_FIELDS.escalation}
+                config={config}
+                errors={draft.errors}
+                onChange={set}
+              />
+            </SettingsSection>
+            <SettingsSection
               id="timeouts"
               title="Step timeouts"
               description="How long each step may run before Forge gives up on it and retries or asks you."

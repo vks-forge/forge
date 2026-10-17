@@ -11,12 +11,21 @@
  *   it into approving (d-0141 item 6). Plan tickets are validated as a graph here so a plan
  *   with a loop never reaches storage.
  *
+ *   The two escalation steps follow the same rule. `ticket_answer` is the Director's first look
+ *   at a Worker's question: it may answer alone only with cited grounds and a confidence the
+ *   engine compares with the owner's threshold, and otherwise hands the owner a suggestion and
+ *   options. `ticket_recover` looks at a failed ticket and either allows one more try with a
+ *   note or hands over a diagnosis. Neither can approve a tool or a login: those never reach
+ *   the Director.
+ *
  * Exports: MAX_READ_REQUESTS, ReadRequest, ReadRequests, CardSurveyOutput, VerifyOutput,
- *   GrillTurnOutput, EnhanceOutput, WritePlanOutput, ApprovePlanOutput, CustomStepOutput.
- * Depends on: schemas/grill, schemas/ids, schemas/plan, zod. No IO.
+ *   GrillTurnOutput, EnhanceOutput, WritePlanOutput, ApprovePlanOutput, CustomStepOutput,
+ *   ANSWER_GROUND_KINDS, ESCALATE_REASONS, TicketAnswerOutput, TicketRecoverOutput.
+ * Depends on: schemas/escalation, schemas/grill, schemas/ids, schemas/plan, zod. No IO.
  */
 
 import { z } from 'zod';
+import { EscalationOption, MAX_OPTIONS } from '#/schemas/escalation.js';
 import { GrillQuestionDraft, SurveyFindings, VerifyFindings } from '#/schemas/grill.js';
 import { CardId } from '#/schemas/ids.js';
 import { PlanTickets } from '#/schemas/plan.js';
@@ -127,3 +136,57 @@ export const CustomStepOutput = z.object({
   step_decisions: StepDecisions,
 });
 export type CustomStepOutput = z.infer<typeof CustomStepOutput>;
+
+/** What a `ticket_answer` ground points at; the engine requires at least one ground to auto-answer. */
+export const ANSWER_GROUND_KINDS = ['plan', 'decision', 'memory', 'code'] as const;
+
+/** Why the Director hands a question to the owner. */
+export const ESCALATE_REASONS = [
+  'low_confidence',
+  'out_of_plan',
+  'owner_preference',
+  'conflict',
+  'tier_c',
+] as const;
+
+/**
+ * `ticket_answer`: tool-less (reads go through the engine like the planning steps). `answer`
+ * means "I can settle this myself" and must carry the text; `escalate` hands the question to the
+ * owner, optionally with a suggested answer and 2 to 4 options (at most one recommended). A
+ * model that wants a read first sets `read_requests` and any decision: the engine runs the reads
+ * and calls again.
+ */
+export const TicketAnswerOutput = z
+  .object({
+    read_requests: ReadRequests.optional(),
+    decision: z.enum(['answer', 'escalate']),
+    answer: z.string().trim().min(1).optional(),
+    confidence: z.number().min(0).max(1),
+    grounds: z.array(
+      z.object({ kind: z.enum(ANSWER_GROUND_KINDS), ref: z.string().min(1) }),
+    ),
+    suggested_answer: z.string().trim().min(1).optional(),
+    options: z
+      .array(EscalationOption)
+      .min(2)
+      .max(MAX_OPTIONS)
+      .refine((o) => o.filter((x) => x.recommended).length <= 1, {
+        message: 'at most one option may be recommended',
+      })
+      .optional(),
+    escalate_reason: z.enum(ESCALATE_REASONS).optional(),
+  })
+  .refine((o) => o.decision !== 'answer' || o.answer !== undefined, {
+    message: 'decision answer needs the answer text',
+    path: ['answer'],
+  });
+export type TicketAnswerOutput = z.infer<typeof TicketAnswerOutput>;
+
+/** `ticket_recover`: one more try with a note that stays inside the ticket's acceptance, or a diagnosis for the owner. */
+export const TicketRecoverOutput = z.object({
+  decision: z.enum(['retry', 'escalate']),
+  note: z.string().trim().min(1).max(1000).optional(),
+  diagnosis: z.string().trim().min(1),
+  confidence: z.number().min(0).max(1),
+});
+export type TicketRecoverOutput = z.infer<typeof TicketRecoverOutput>;

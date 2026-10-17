@@ -63,6 +63,12 @@ export function createToolPolicy(deps: ToolPolicyDeps): ToolPolicy {
       return catalogue.hash;
     },
 
+    async toolCatalogued(tool) {
+      const { catalogue } = await effective();
+
+      return catalogue.status === 'verified' && catalogue.tools.has(tool);
+    },
+
     admitContext: async (run) => {
       const eff = await effective();
       const view = run.project ? await deps.config.project(run.project) : null;

@@ -17,6 +17,8 @@ export const KIND_LABEL: Readonly<Record<InteractionKind, string>> = {
   plan_confirm: 'Plan to confirm',
   permission: 'Permission request',
   blocked: 'Worker is stuck',
+  failure: 'Ticket stopped',
+  setup: 'Setup needed',
 };
 
 const FALLBACK = 'The Worker is waiting for your answer.';

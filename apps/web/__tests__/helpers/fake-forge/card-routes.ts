@@ -80,6 +80,9 @@ export function cardRoutes(options: { empty: boolean }): Routes {
   return {
     'GET /card-types': () => json({ types: CARD_TYPES }),
 
+    // No ticket of a sample card waits on the owner; tests that need one bring their own world.
+    'GET /cards/:id/escalations': () => json({ items: [] }),
+
     'POST /projects/:slug/cards': ({ params, body }) => {
       const slug = params['slug']!;
       const input = body as {

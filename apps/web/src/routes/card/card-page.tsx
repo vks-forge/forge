@@ -5,7 +5,8 @@
  *   user steers intent (the Worker thread on a ticket is where they watch the doing). It loads
  *   the card (refreshing on a slow poll and on focus), shows the header, a pinned Needs you banner
  *   when the Director raised one (with every action it listed wired), an amber banner when
- *   ticket questions wait on the user (each links to its ticket), and the body: the chat with a
+ *   ticket questions wait on the user (each links to its ticket), a pinned banner when tickets
+ *   wait on the owner as escalations (it counts them and brings the first one into view), and the body: the chat with a
  *   Plan / Tickets / Details side panel (tabs below 768 px). The tab lives in the URL
  *   (`?tab=`), so a link opens the right view and Back works. Loading,
  *   not-found, error (with retry) and offline-with-old-data are each handled in words; an id
@@ -23,6 +24,7 @@ import { Link, useParams, useSearchParams } from 'react-router';
 import { ApiError } from '#/api/api-error.js';
 import { describeError } from '#/api/describe-error.js';
 import { useCardDetail, useCardEvents, usePatchCard } from '#/api/use-card.js';
+import { useCardEscalations } from '#/api/use-escalations.js';
 import { usePlan } from '#/api/use-plan.js';
 import { useCardTypes } from '#/api/use-card-board.js';
 import { StatePanel } from '#/components/status/state-panel.js';
@@ -33,10 +35,12 @@ import { CardBody } from '#/routes/card/card-body.js';
 import { CardHeader } from '#/routes/card/card-header.js';
 import { CARD_TABS } from '#/routes/card/card-tabs.js';
 import { CloseDialog } from '#/routes/card/close-dialog.js';
+import { EscalationBanner } from '#/routes/card/escalation-banner.js';
 import { NeedsYouBanner } from '#/routes/card/needs-you-banner.js';
 import { PlanDialogs } from '#/routes/card/plan/plan-dialogs.js';
 import { usePlanDecisions } from '#/routes/card/plan/use-plan-decisions.js';
 import { useBannerActions } from '#/routes/card/use-banner-actions.js';
+import { useEscalationFocus } from '#/routes/card/use-escalation-focus.js';
 import { useNotify } from '#/state/notify/notify-context.js';
 import { useMediaQuery } from '#/state/use-media-query.js';
 import { useOnline } from '#/state/use-online.js';
@@ -68,6 +72,12 @@ export function CardPage() {
   const raised = activeNeedsYou(history.data?.events ?? []);
   const needs =
     card && card.needs_you && card.closed_reason === undefined ? raised : null;
+
+  const escalations = useCardEscalations(id);
+  const showEscalation = useEscalationFocus({ tab, wide, goTab });
+  const handed = (escalations.data?.items ?? []).filter(
+    (item) => item.stage === 'owner' && item.settled === undefined,
+  );
 
   const banner = useBannerActions({
     cardId: id,
@@ -118,7 +128,11 @@ export function CardPage() {
     return null;
   }
 
-  const waiting = card.pending_interactions.filter((i) => i.status === 'pending');
+  // An escalation draws as its own card; only questions it does not cover keep the old notice.
+  const covered = new Set((escalations.data?.items ?? []).map((item) => item.id));
+  const waiting = card.pending_interactions.filter(
+    (i) => i.status === 'pending' && !covered.has(i.id),
+  );
 
   return (
     <section className="grid gap-6">
@@ -157,6 +171,15 @@ export function CardPage() {
           busy={banner.busy}
           error={banner.error}
           onAction={banner.run}
+        />
+      ) : null}
+
+      {handed.length > 0 && card.closed_reason === undefined ? (
+        <EscalationBanner
+          slug={slug}
+          count={handed.length}
+          ticketIds={[...new Set(handed.map((item) => item.ticket_id))]}
+          onShowFirst={() => showEscalation(handed[0]?.id ?? '')}
         />
       ) : null}
 

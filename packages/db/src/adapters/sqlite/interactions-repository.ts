@@ -10,7 +10,9 @@
  *   overwriting the winner. Without it a parked ticket is invisible and the "every open
  *   ticket has a reason to wait" invariant cannot be enforced. Payload and answer are
  *   free-form JSON, so rows are re-parsed with the core `Interaction` schema on read
- *   (director-core.md §3, §8).
+ *   (director-core.md §3, §8). `escalate` is the same kind of swap for the Director's first look:
+ *   it hands a pending question to the owner (sets `escalated_at`) only while it is still
+ *   pending and not yet handed over, so it can never overwrite an answer.
  *
  * Exports: createInteractionRepository().
  * Depends on: @forge/core, shared/db-errors, shared/json, shared/patches, types/storage-driver.types.
@@ -27,6 +29,7 @@ const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
   ticket_id: { column: 'ticket_id' },
   run_id: { column: 'run_id', clearable: true },
   card_id: { column: 'card_id', clearable: true },
+  escalated_at: { column: 'escalated_at', clearable: true },
   kind: { column: 'kind' },
   payload: { column: 'payload_json', encode: toJson },
   status: { column: 'status' },
@@ -78,8 +81,8 @@ export function createInteractionRepository(driver: SqlDriver): InteractionRepos
       const i = Interaction.parse(interaction);
       driver.run(
         `INSERT INTO interactions (id, ticket_id, run_id, card_id, kind, payload_json, status,
-           asked_at, answered_at, timeout_at, answer_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           asked_at, answered_at, timeout_at, answer_json, escalated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           i.id,
           i.ticket_id,
@@ -92,6 +95,7 @@ export function createInteractionRepository(driver: SqlDriver): InteractionRepos
           i.answered_at ?? null,
           i.timeout_at,
           i.answer === undefined ? null : toJson(i.answer),
+          i.escalated_at ?? null,
         ],
       );
     },
@@ -130,6 +134,26 @@ export function createInteractionRepository(driver: SqlDriver): InteractionRepos
       );
 
       return res.changes === 1;
+    },
+
+    async escalate(id, patch, at) {
+      const res = driver.run(
+        `UPDATE interactions SET payload_json = ?, escalated_at = ?
+         WHERE id = ? AND status = 'pending' AND escalated_at IS NULL`,
+        [toJson(patch.payload), patch.escalated_at ?? at, id],
+      );
+
+      return res.changes === 1;
+    },
+
+    async listPendingByCard(cardId) {
+      return driver
+        .all(
+          `SELECT * FROM interactions WHERE card_id = ? AND status = 'pending'
+           ORDER BY asked_at, rowid`,
+          [cardId],
+        )
+        .map(toInteraction);
     },
   };
 }

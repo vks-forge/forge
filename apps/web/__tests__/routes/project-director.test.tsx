@@ -100,7 +100,7 @@ describe('project Director override', () => {
     ).step_timeouts_ms;
 
     expect(timeouts['verify']).toBe(90_000);
-    expect(Object.keys(timeouts)).toHaveLength(11);
+    expect(Object.keys(timeouts)).toHaveLength(13);
   });
 
   it('Reset to company drops every override, and saving removes the key', async () => {

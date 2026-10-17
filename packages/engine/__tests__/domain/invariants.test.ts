@@ -8,7 +8,9 @@
  *   for the control room instead of being auto-repaired.
  *
  * Pins: in_progress needs an active run, a pending interaction or a pending wake;
- *   waiting_human needs a pending interaction or a blocked_reason; other statuses are exempt.
+ *   waiting_human and blocked need a pending interaction (an escalation the owner can act on) or
+ *   a pending wake (an answer on its way); a reason text alone no longer explains a wait, because
+ *   the owner cannot act on text; other statuses are exempt.
  * Depends on: src/domain/invariants, @forge/core (Ticket), vitest.
  */
 
@@ -96,17 +98,56 @@ describe('findViolations', () => {
     ).toHaveLength(1);
   });
 
-  it('flags waiting_human with neither an interaction nor a blocked_reason', () => {
+  it('flags waiting_human with no interaction and no wake, even with a blocked_reason', () => {
     const bare = ticket('FG-2', { status: 'waiting_human' });
     expect(findViolations({ ...base, tickets: [bare] })[0]).toMatchObject({
       rule: 'waiting_human_without_reason',
     });
 
     const parked = ticket('FG-3', { status: 'waiting_human', blocked_reason: 'auth' });
-    expect(findViolations({ ...base, tickets: [parked] })).toEqual([]);
+    expect(findViolations({ ...base, tickets: [parked] })[0]).toMatchObject({
+      ticketId: 'FG-3',
+      rule: 'waiting_human_without_reason',
+    });
   });
 
-  it('accepts a ticket parked by the engine (reason, no interaction) as visibly blocked', () => {
+  it('flags a blocked ticket with no interaction, and accepts one with an interaction or a wake', () => {
+    const blocked = ticket('FG-5', { status: 'blocked', blocked_reason: 'timed out' });
+
+    expect(findViolations({ ...base, tickets: [blocked] })[0]).toMatchObject({
+      rule: 'blocked_without_reason',
+    });
+
+    expect(
+      findViolations({
+        ...base,
+        tickets: [blocked],
+        pendingInteractionTickets: new Set(['FG-5']),
+      }),
+    ).toEqual([]);
+
+    expect(
+      findViolations({ ...base, tickets: [blocked], wakeTickets: new Set(['FG-5']) }),
+    ).toEqual([]);
+  });
+
+  it('accepts a waiting ticket with a pending interaction or a pending wake', () => {
+    const waiting = ticket('FG-6', { status: 'waiting_human' });
+
+    expect(
+      findViolations({
+        ...base,
+        tickets: [waiting],
+        pendingInteractionTickets: new Set(['FG-6']),
+      }),
+    ).toEqual([]);
+
+    expect(
+      findViolations({ ...base, tickets: [waiting], wakeTickets: new Set(['FG-6']) }),
+    ).toEqual([]);
+  });
+
+  it('flags a ticket parked by the engine with a reason but no interaction', () => {
     const t = transition(ticket('FG-4', { status: 'planned' }), {
       type: 'parked',
       reason: 'lane not enabled in M0',
@@ -119,13 +160,16 @@ describe('findViolations', () => {
     }
 
     expect(t.value.status).toBe('waiting_human');
-    expect(findViolations({ ...base, tickets: [t.value] })).toEqual([]);
+    expect(findViolations({ ...base, tickets: [t.value] })[0]).toMatchObject({
+      ticketId: 'FG-4',
+      rule: 'waiting_human_without_reason',
+    });
   });
 
   it('exempts statuses that are not assigned work', () => {
-    const others = (
-      ['inbox', 'planned', 'blocked', 'verifying', 'review', 'done'] as const
-    ).map((status, i) => ticket(`FG-${i + 10}`, { status }));
+    const others = (['inbox', 'planned', 'verifying', 'review', 'done'] as const).map(
+      (status, i) => ticket(`FG-${i + 10}`, { status }),
+    );
 
     expect(findViolations({ ...base, tickets: others })).toEqual([]);
   });

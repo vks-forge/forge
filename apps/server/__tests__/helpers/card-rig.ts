@@ -96,6 +96,8 @@ export const question = (ticketId: string): Interaction => ({
   payload: { prompt: 'which?' },
   status: 'pending',
   asked_at: at(2),
+  // Already with the owner: the Director's first look is over.
+  escalated_at: at(2),
   timeout_at: '2099-01-01T00:00:00.000Z',
 });
 

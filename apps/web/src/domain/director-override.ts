@@ -110,6 +110,20 @@ export function directorIssues(
     out.push('Read caps must be whole numbers of 1 or more.');
   }
 
+  if (
+    value.escalation &&
+    !(
+      seen.escalation.answer_confidence >= 0 &&
+      seen.escalation.answer_confidence <= 1 &&
+      Number.isInteger(seen.escalation.max_director_retries) &&
+      seen.escalation.max_director_retries >= 0
+    )
+  ) {
+    out.push(
+      'Answer confidence must be between 0 and 1, and retries a whole number of 0 or more.',
+    );
+  }
+
   if (value.step_timeouts_ms && !Object.values(seen.step_timeouts_ms).every(whole)) {
     out.push('Every step timeout must be a whole number of 1 or more.');
   }

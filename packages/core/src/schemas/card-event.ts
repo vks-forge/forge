@@ -21,8 +21,14 @@
  *   each grill question and answer, the end of the grill, the plan being ready, approved or
  *   sent back with changes, and `needs_you` with the actions the owner may take.
  *
+ *   Escalations add three entries (S4a): `escalation` when a ticket's wait reaches the owner,
+ *   `escalation_settled` when it ends and who ended it (the owner, the Director's first look, or
+ *   an automatic resume), and `replan_requested` when the owner sends the card back to the
+ *   Director from a stuck ticket. The chat renders the live escalation, not the event payload, so
+ *   it shows the settled state wherever the answer was given.
+ *
  * Exports: CARD_EVENT_KINDS, CardEventKind, NEEDS_YOU_ACTIONS, NewCardEvent, CardEvent.
- * Depends on: schemas/card, schemas/card-chat, schemas/grill, schemas/ids, schemas/ticket, zod. No IO.
+ * Depends on: schemas/card, schemas/card-chat, schemas/escalation, schemas/grill, schemas/ids, schemas/ticket, zod. No IO.
  */
 
 import { z } from 'zod';
@@ -34,6 +40,11 @@ import {
   GrillDoneReason,
   GrillQuestion,
 } from '#/schemas/grill.js';
+import {
+  EscalationAction,
+  EscalationActor,
+  EscalationKind,
+} from '#/schemas/escalation.js';
 import { CardId, TicketId } from '#/schemas/ids.js';
 import { TicketStatus } from '#/schemas/ticket.js';
 
@@ -59,6 +70,9 @@ export const CARD_EVENT_KINDS = [
   'plan_approved',
   'plan_changes_requested',
   'needs_you',
+  'escalation',
+  'escalation_settled',
+  'replan_requested',
 ] as const;
 export const CardEventKind = z.enum(CARD_EVENT_KINDS);
 export type CardEventKind = z.infer<typeof CardEventKind>;
@@ -169,6 +183,8 @@ export const NewCardEvent = z.discriminatedUnion('kind', [
       version: z.number().int().positive(),
       by: z.enum(['director', 'owner']),
       ticket_ids: z.array(TicketId),
+      /** The plan key of each ticket, parallel to `ticket_ids`; absent on events written before re-planning. */
+      plan_keys: z.array(z.string().min(1)).optional(),
     }),
   ),
   event(
@@ -176,6 +192,33 @@ export const NewCardEvent = z.discriminatedUnion('kind', [
     z.object({ version: z.number().int().positive(), comment: z.string().min(1) }),
   ),
   event('needs_you', NeedsYouPayload),
+  event(
+    'escalation',
+    z.object({
+      interaction_id: z.string().min(1),
+      ticket_id: TicketId,
+      escalation_kind: EscalationKind,
+      title: z.string().min(1),
+    }),
+  ),
+  event(
+    'escalation_settled',
+    z.object({
+      interaction_id: z.string().min(1),
+      ticket_id: TicketId,
+      action: EscalationAction,
+      by: EscalationActor,
+      note: z.string().optional(),
+    }),
+  ),
+  event(
+    'replan_requested',
+    z.object({
+      ticket_id: TicketId.optional(),
+      comment: z.string().min(1),
+      by: z.literal('owner'),
+    }),
+  ),
 ]);
 export type NewCardEvent = z.infer<typeof NewCardEvent>;
 

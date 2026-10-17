@@ -118,6 +118,8 @@ export function ticketRoutes(options: { empty: boolean }): Routes {
           (i) => i.status === 'pending' && !answered.has(i.id),
         ),
         wait_reason: item.waitReason,
+        escalations: [],
+        wait_actions: [],
       });
     },
 

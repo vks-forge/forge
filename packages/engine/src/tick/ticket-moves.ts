@@ -10,10 +10,13 @@
  *   `parked` event, never a direct status write. A status change is also written to the
  *   ticket's card history in the same transaction, so the Card page's timeline follows the
  *   one door rather than a second hook, and the card's own phase follows its tickets through
- *   `syncCardWithTickets` (the card starts and completes with its work).
+ *   `syncCardWithTickets` (the card starts and completes with its work). A ticket that stops
+ *   waiting on a person also closes any wait still pending, so no interaction outlives the
+ *   state it described.
  *
  * Exports: moveTicketTx(), moveTicket(), parkPlan().
- * Depends on: @forge/core (transition, toTicketPatch), tick/card-log, tick/card-phase, types/tick. No IO of its own.
+ * Depends on: @forge/core (transition, toTicketPatch), tick/card-log, tick/card-phase, tick/escalation-settle,
+ *   types/tick. No IO of its own.
  */
 
 import { toTicketPatch, transition } from '@forge/core';
@@ -26,7 +29,11 @@ import type {
 } from '@forge/core';
 import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
 import { syncCardWithTickets } from '#/tick/card-phase.js';
+import { cancelLeftovers } from '#/tick/escalation-settle.js';
 import type { EventSpec, MoveResult, TicketPlan } from '#/types/tick.types.js';
+
+/** Statuses where a ticket waits on a person, and so on an interaction. */
+const WAITING: readonly Ticket['status'][] = ['waiting_human', 'blocked'];
 
 /** Applies `plan(ticket)` inside an open transaction; `null` from the planner means "nothing to do". */
 export async function moveTicketTx(
@@ -80,6 +87,12 @@ export async function moveTicketTx(
     });
 
     await syncCardWithTickets(tx, current.card_id, nowIso);
+
+    // A ticket that stops waiting by any door (cancelled, released) must not leave its wait
+    // pending: the owner would be asked about something that no longer exists.
+    if (WAITING.includes(current.status) && !WAITING.includes(next.status)) {
+      await cancelLeftovers(tx, nowIso, current.id, `the ticket moved to ${next.status}`);
+    }
   }
 
   return { ok: true, ticket: { ...next, status_version: current.status_version + 1 } };

@@ -70,7 +70,22 @@ tabs **Plan** (the fixed plan sections, dependency graph, version picker with
 diff, Approve plan / Request changes / light ticket edits), **Tickets** (a
 timeline) and **Details**; below 768 px the panel becomes tabs Chat / Plan /
 Tickets / Details. Ticket detail (status, live Worker thread with direct steer,
-gates, PR and merge links) is its own page. The project sidebar gains **Issues** (open GitHub issues with verdict,
+gates, PR and merge links) is its own page.
+
+Waiting tickets (S4a, d-0135 / d-0141): a ticket that cannot go on waits on the owner as
+one **escalation**, drawn by one card in three places, so acting in one settles the
+others. In the card chat it is a block (settled once settled: "Answered by you / by the
+Director · 2 min ago"), a second banner counts the owner's waiting tickets and
+"Show the first" focuses its card; on the Ticket page it sits above the thread; in the
+Inbox the row's **Respond** opens it in a drawer. Kinds: **question** (the Director's
+note, Use suggested, up to four options with Recommended, free text, Cancel), **failure**
+(summary, diagnosis, attempts folded; held lane: Run as Express / Re-plan / Cancel; capped,
+refused, out of turns or timed out: Retry with an optional note / Re-plan / Cancel;
+Re-plan asks for a comment and says what happens to the tickets, Cancel asks and lists
+dependents with Cancel all) and **setup** (Fix in settings link, I fixed it check again,
+"resumes by itself"). While the Director is still looking the page says so and offers
+nothing. A ticket in review, sign-off or a scheduler hold shows Send back for rework /
+Cancel or an "it starts by itself" line. The project sidebar gains **Issues** (open GitHub issues with verdict,
 confidence, size, risk and the analysis report; Approve → card, Re-analyse,
 Skip) and later **PRs**. Project nav: Home, Board, Issues, (PRs), Chat, Runs,
 Memory, Project settings.

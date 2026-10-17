@@ -4,17 +4,24 @@
  * Why: the Board and the Ticket page show what the server says about work in flight, so a
  *   server and UI that disagree must fail at the boundary with a named field, not as a blank
  *   card. `TicketDetail` mirrors apps/server `routes/tickets.ts` (one ticket with its runs,
- *   gate results, pending questions and the scheduler's reason for waiting) and is built from
+ *   gate results, pending questions and escalations and the scheduler's reason for waiting) and is built from
  *   core's own row schemas, so a column added there reaches the UI with no edit here. The
  *   list page is core's `TicketListPage` itself. `IngestReply` mirrors the engine's
  *   `IngestResult` returned by `POST /intake`; `AnswerReply` is the body of
  *   `POST /interactions/:id/answer`.
  *
  * Exports: TicketDetail, IngestReply, AnswerReply, SteerReply (schemas and inferred types).
- * Depends on: @forge/core (Ticket, Run, GateResult, Interaction), zod.
+ * Depends on: @forge/core (Ticket, Run, GateResult, Interaction, EscalationView), zod.
  */
 
-import { GateResult, Interaction, Run, Ticket } from '@forge/core';
+import {
+  EscalationAction,
+  EscalationView,
+  GateResult,
+  Interaction,
+  Run,
+  Ticket,
+} from '@forge/core';
 import { z } from 'zod';
 
 export const TicketDetail = z.object({
@@ -25,6 +32,10 @@ export const TicketDetail = z.object({
   interactions: z.array(Interaction),
   /** Why a ticket that has not started is held back; null when nothing holds it. */
   wait_reason: z.string().nullable(),
+  /** Every pending escalation of the ticket, any stage; empty from a server that predates them. */
+  escalations: z.array(EscalationView).default([]),
+  /** What the owner can do about a wait that has no question (review, sign-off, scheduler waits). */
+  wait_actions: z.array(EscalationAction).default([]),
 });
 export type TicketDetail = z.infer<typeof TicketDetail>;
 

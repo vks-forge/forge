@@ -128,6 +128,8 @@ export interface SettleOptions {
   readonly retryReason?: string;
   /** The reason the ticket parks with, when the failure parks it, instead of the family's generic one. */
   readonly parkReason?: string;
+  /** The harness build that changed under the approvals: the park is a setup for the owner (review the build), not a failure. */
+  readonly parkBuild?: { readonly installed: string | null };
 }
 
 /** What differs between one run's start request and another's; the rest comes from the settings. */

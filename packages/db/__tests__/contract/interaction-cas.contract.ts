@@ -8,16 +8,23 @@
  * the UI. `expire` also refuses to fire before the deadline, so a clock slip cannot kill
  * a question early (director-core.md §8).
  *
+ * The same race exists between the Director's first look and the owner: `escalate` moves an
+ * interaction from the Director's stage to the owner's (sets `escalated_at`) only while it is
+ * pending and not yet escalated, so a late escalation cannot overwrite an answer, a second
+ * escalation cannot move the date, and the card page can list what is open for its tickets.
+ *
  * Exports: describeInteractionCasContract().
  * Depends on: vitest, helpers/fixtures. IO only through the adapter under test.
  */
 
 import { describe, expect, it } from 'vitest';
-import type { StorageAdapter } from '@forge/core';
+import type { CardId, StorageAdapter } from '@forge/core';
 import { makeInteraction } from '#tests/helpers/fixtures.js';
 
 const ANSWERED = '2026-10-13T03:00:00.000Z';
 const DUE = '2026-10-14T00:00:00.000Z';
+const C1 = 'SF-C1' as CardId;
+const C2 = 'SF-C2' as CardId;
 
 /** Registers the cases; `getDb` returns the adapter the surrounding suite created for this test. */
 export function describeInteractionCasContract(getDb: () => StorageAdapter): void {
@@ -137,6 +144,108 @@ export function describeInteractionCasContract(getDb: () => StorageAdapter): voi
       const list = await tx((t) => t.interactions.listByTicket('SF-1'));
       expect(list.map((i) => i.id)).toEqual(['i1', 'i3', 'i2']);
       expect(await tx((t) => t.interactions.listByTicket('SF-9'))).toEqual([]);
+    });
+  });
+
+  describe('interaction escalate (compare-and-swap)', () => {
+    const ESCALATED = '2026-10-13T01:00:00.000Z';
+    const payload = {
+      kind: 'question',
+      text: 'Which database?',
+      source: 'ask_director',
+      options: [],
+    };
+
+    it('moves a pending interaction to the owner stage once, replacing the payload', async () => {
+      await tx((t) => t.interactions.insert(makeInteraction('i1')));
+      const won = await tx((t) =>
+        t.interactions.escalate('i1', { payload, escalated_at: ESCALATED }, ESCALATED),
+      );
+
+      expect(won).toBe(true);
+      expect(await tx((t) => t.interactions.get('i1'))).toMatchObject({
+        status: 'pending',
+        escalated_at: ESCALATED,
+        payload,
+      });
+    });
+
+    it('loses when it was already escalated, answered, timed out or is unknown', async () => {
+      await tx(async (t) => {
+        await t.interactions.insert(makeInteraction('e1', { escalated_at: ESCALATED }));
+        await t.interactions.insert(makeInteraction('a1'));
+        await t.interactions.answer('a1', 'x', ESCALATED);
+        await t.interactions.insert(makeInteraction('t1', { status: 'timed_out' }));
+      });
+
+      const results = await tx(async (t) => [
+        await t.interactions.escalate('e1', { payload, escalated_at: DUE }, DUE),
+        await t.interactions.escalate('a1', { payload, escalated_at: DUE }, DUE),
+        await t.interactions.escalate('t1', { payload, escalated_at: DUE }, DUE),
+        await t.interactions.escalate('nope', { payload, escalated_at: DUE }, DUE),
+      ]);
+
+      expect(results).toEqual([false, false, false, false]);
+      expect((await tx((t) => t.interactions.get('e1')))?.escalated_at).toBe(ESCALATED);
+      expect((await tx((t) => t.interactions.get('a1')))?.payload).toEqual({
+        prompt: 'which db?',
+      });
+    });
+
+    it('an answer racing an escalation has exactly one winner and an answer is never overwritten', async () => {
+      await tx((t) => t.interactions.insert(makeInteraction('i1')));
+      const [a, e] = await Promise.all([
+        getDb().transaction((t) => t.interactions.answer('i1', 'a', DUE)),
+        getDb().transaction((t) =>
+          t.interactions.escalate('i1', { payload, escalated_at: DUE }, DUE),
+        ),
+      ]);
+
+      const row = await tx((t) => t.interactions.get('i1'));
+      if (a) {
+        expect(row?.status).toBe('answered');
+        expect(e).toBe(false);
+      } else {
+        // Escalating first leaves the row pending: the answer then wins on the next call.
+        expect(e).toBe(true);
+        expect(row?.status).toBe('pending');
+      }
+    });
+
+    it('an answered interaction still reads back its escalated_at', async () => {
+      await tx((t) => t.interactions.insert(makeInteraction('i1')));
+      await tx((t) =>
+        t.interactions.escalate('i1', { payload, escalated_at: ESCALATED }, ESCALATED),
+      );
+
+      await tx((t) => t.interactions.answer('i1', 'x', DUE));
+      expect(await tx((t) => t.interactions.get('i1'))).toMatchObject({
+        status: 'answered',
+        escalated_at: ESCALATED,
+      });
+    });
+  });
+
+  describe('interactions listPendingByCard', () => {
+    it('returns only the pending interactions of that card, in asked order', async () => {
+      await tx(async (t) => {
+        await t.interactions.insert(
+          makeInteraction('i2', { card_id: C1, asked_at: '2026-10-13T02:00:00.000Z' }),
+        );
+
+        await t.interactions.insert(makeInteraction('i1', { card_id: C1 }));
+        await t.interactions.insert(
+          makeInteraction('i3', { card_id: C1, status: 'cancelled' }),
+        );
+
+        await t.interactions.insert(makeInteraction('i4', { card_id: C2 }));
+        await t.interactions.insert(makeInteraction('i5'));
+      });
+
+      const rows = await tx((t) => t.interactions.listPendingByCard('SF-C1'));
+
+      expect(rows.map((i) => i.id)).toEqual(['i1', 'i2']);
+      expect(await tx((t) => t.interactions.listPendingByCard('SF-C9'))).toEqual([]);
     });
   });
 }

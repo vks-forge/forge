@@ -34,6 +34,7 @@ import type {
 } from '@forge/core';
 import type { ReceiptLog } from '@forge/tools';
 import type { PlanningDoors } from '#/types/card-planning.types.js';
+import type { EscalationDoors } from '#/types/escalation.types.js';
 import type {
   CreateCardInput,
   CreateCardResult,
@@ -94,6 +95,11 @@ export interface EngineDeps {
   readonly mcpIdentity?: string;
   /** Called (never re-entrantly, coalesced) when something wants an immediate tick; the app schedules `engine.tick()`. */
   readonly onTickRequested?: () => void;
+  /**
+   * Whether the tool catalogue lists a tool (and is healthy); a setup escalation for an unknown or
+   * quarantined tool resumes once it does. Absent means not known to be fixed.
+   */
+  readonly toolCatalogued?: (tool: string) => Promise<boolean>;
   /** Tells live views which queries went stale when engine memory (not a stored row) changed; absent in tests that watch nothing. */
   readonly projectEvents?: ProjectEventSink;
   readonly log?: Logger;
@@ -137,7 +143,10 @@ export interface SettledRun {
 /** A broken engine invariant (director-core.md §3); surfaced, never silently retried. */
 export interface Violation {
   readonly ticketId: string;
-  readonly rule: 'in_progress_without_reason_to_wait' | 'waiting_human_without_reason';
+  readonly rule:
+    | 'in_progress_without_reason_to_wait'
+    | 'waiting_human_without_reason'
+    | 'blocked_without_reason';
   readonly message: string;
 }
 
@@ -177,7 +186,7 @@ export interface TickReport {
 }
 
 /** The Director engine: one writer, driven by the app's clock. */
-export interface Engine extends PlanningDoors {
+export interface Engine extends PlanningDoors, EscalationDoors {
   /** Reconcile, refresh, dispatch. Single-flight: a call during a tick returns the running tick's report. */
   tick(): Promise<TickReport>;
   /** Asks for an immediate tick through `deps.onTickRequested`; calls coalesce. */

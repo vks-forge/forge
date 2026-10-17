@@ -18,7 +18,7 @@
 
 import { admitDirectorRead } from '@forge/tools';
 import type { ReadRequest } from '@forge/core';
-import type { PlanCtx, ReadBudget, ReadResult } from '#/types/card-planning.types.js';
+import type { ReadBudget, ReadCtx, ReadResult } from '#/types/card-planning.types.js';
 
 /** A step may ask for reads this many times; the call after the last round must answer. */
 export const MAX_READ_ROUNDS = 2;
@@ -34,7 +34,7 @@ const refuse = (request: ReadRequest, error: string): ReadResult => ({
 });
 
 async function readOne(
-  pc: PlanCtx,
+  pc: ReadCtx,
   root: string,
   request: ReadRequest,
   budget: ReadBudget,
@@ -83,7 +83,7 @@ async function readOne(
 
 /** Runs the requests in order; each one is judged by `admit()` first and a failure becomes a result, not a throw. */
 export async function runReads(
-  pc: PlanCtx,
+  pc: ReadCtx,
   requests: readonly ReadRequest[],
   budget: ReadBudget,
 ): Promise<ReadResult[]> {

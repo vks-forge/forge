@@ -91,6 +91,8 @@ export interface EngineState {
   readonly regates: Map<string, number>;
   replies: QueuedReply[];
   readonly chat: CardChatState;
+  /** Interactions the Director's first look is working on now; keeps one tick from looking twice at the same row. */
+  readonly escalating: Set<string>;
 }
 
 /** What every phase receives. */

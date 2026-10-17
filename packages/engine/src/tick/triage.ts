@@ -6,7 +6,8 @@
  *   user's hint have the last word over the model. The result names the real title, type,
  *   lane and tier, and the ticket becomes `planned`. M0 only runs Express: a ticket that
  *   needs a heavier lane parks in WaitingHuman with a plain reason instead of silently
- *   running with too little process (d-0059, brief E1). A rejected triage leaves the
+ *   running with too little process (d-0059, brief E1), and the park is a lane-hold
+ *   escalation so the owner has a way forward. A rejected triage leaves the
  *   ticket in the inbox and is not retried until its hold passes.
  *
  * Exports: triageInbox().
@@ -20,7 +21,8 @@ import { decideLane } from '#/domain/lane-rules.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { hold, isHeld, rejectStep, runStep } from '#/steps/run-step.js';
 import { isUnservable, projectSettings } from '#/tick/tick-config.js';
-import { moveTicket } from '#/tick/ticket-moves.js';
+import { raiseEscalation } from '#/tick/escalation-raise.js';
+import { moveTicketTx } from '#/tick/ticket-moves.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { TicketPlan } from '#/types/tick.types.js';
 
@@ -112,9 +114,31 @@ async function triageOne(ctx: EngineCtx, ticket: Ticket): Promise<void> {
     },
   };
 
-  const moved = await moveTicket(deps.storage, ticket.id, ctx.nowIso, (t) =>
-    t.status === 'inbox' ? plan : null,
-  );
+  const moved = await deps.storage.transaction(async (tx) => {
+    const made = await moveTicketTx(tx, ticket.id, ctx.nowIso, (t) =>
+      t.status === 'inbox' ? plan : null,
+    );
+
+    // A held lane is the owner's choice (run as Express, re-plan, cancel), never the Director's.
+    if (made.ok && parked) {
+      await raiseEscalation(
+        tx,
+        deps,
+        ctx.nowIso,
+        made.ticket,
+        {
+          kind: 'failure',
+          cause: 'lane_hold',
+          summary: reason,
+          attempts: [],
+          lane: decision.lane,
+        },
+        'owner',
+      );
+    }
+
+    return made;
+  });
 
   if (!moved.ok) {
     deps.log?.('warn', 'triage could not be applied', { reason: moved.reason });

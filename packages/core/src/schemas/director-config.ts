@@ -9,10 +9,13 @@
  *   settings (defaults are built in, overrides stored), so every Director step can record
  *   the settings version it ran under. The safety rules are not in this section: the
  *   approval floor, the Tier C human, the tool-less approval step and the single doors are
- *   code, shown greyed in the UI, and no value here can switch them off.
+ *   code, shown greyed in the UI, and no value here can switch them off. The `escalation`
+ *   dials say how far the Director goes alone when a ticket waits (looks first, how sure it must
+ *   be to answer a Worker itself, how often it retries a failure before asking); Tier C
+ *   tickets, tools and logins are never the Director's to settle whatever they say.
  *
  * Exports: PlaybookId, DirectorPlaybook, ApprovalMode, DirectorGrillLimits, DirectorReadCaps,
- *   DirectorConfig.
+ *   DirectorEscalation, DirectorConfig.
  * Depends on: schemas/director-flow, schemas/steps, zod. No IO.
  */
 
@@ -50,6 +53,19 @@ export const DirectorReadCaps = z.object({
 });
 export type DirectorReadCaps = z.infer<typeof DirectorReadCaps>;
 
+/**
+ * How a waiting ticket is handled before the owner sees it: with `director_first` false every
+ * escalation goes straight to the owner; `answer_confidence` is the confidence at which the
+ * Director may answer a Worker's question alone (with cited grounds, never on Tier C);
+ * `max_director_retries` is how many times it may retry one ticket's failure cause itself.
+ */
+export const DirectorEscalation = z.object({
+  director_first: z.boolean(),
+  answer_confidence: z.number().min(0).max(1),
+  max_director_retries: z.number().int().nonnegative(),
+});
+export type DirectorEscalation = z.infer<typeof DirectorEscalation>;
+
 /** The whole section; a flow step may only name a playbook that exists. */
 export const DirectorConfig = z
   .object({
@@ -62,6 +78,7 @@ export const DirectorConfig = z
     budget_warning_usd: z.number().positive(),
     read_caps: DirectorReadCaps,
     step_timeouts_ms: z.record(StepName, PosInt),
+    escalation: DirectorEscalation,
   })
   .superRefine((d, ctx) => {
     for (const step of d.flow) {

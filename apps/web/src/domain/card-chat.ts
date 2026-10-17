@@ -11,12 +11,14 @@
  *
  * Exports: transcriptOf(), lineOf(), awaitingReply().
  * Depends on: schemas/cards (type), domain/board-columns (STATE_LABEL), domain/card-event-lines,
+ *   domain/card-escalation-lines,
  *   domain/director-flow, types/cards-ui.types.
  */
 
 import type { CardTypeName } from '@forge/core';
 import { TicketStatus } from '@forge/core';
 import { STATE_LABEL } from '#/domain/board-columns.js';
+import { escalationLineOf, raisedIds } from '#/domain/card-escalation-lines.js';
 import { flowLineOf } from '#/domain/card-event-lines.js';
 import { grillOf } from '#/domain/director-flow.js';
 import type { CardHistoryEvent } from '#/schemas/cards.js';
@@ -70,6 +72,7 @@ export function lineOf(
   event: CardHistoryEvent,
   typeLabel: (name: CardTypeName) => string = (name) => name,
   flow: FlowLineContext = NO_FLOW,
+  raised: ReadonlySet<string> = new Set(),
 ): ChatLine {
   const { payload } = event;
   const base = {
@@ -148,6 +151,7 @@ export function lineOf(
       // say what we can, never crash.
       return (
         flowLineOf(event, flow) ??
+        escalationLineOf(event, raised) ??
         note(str(payload['text']) ?? `Event: ${humanKind(event.kind)}`, ticketId)
       );
   }
@@ -167,11 +171,20 @@ export function transcriptOf(
   canAnswer = true,
 ): readonly ChatLine[] {
   const flow: FlowLineContext = { grill: grillOf(events), canAnswer };
+  const raised = raisedIds(events);
 
   return [
     ...events
       .filter((event) => !NOT_IN_TRANSCRIPT.has(event.kind))
-      .map((event) => lineOf(event, typeLabel, flow)),
+      // A settle whose block is already in the chat would only repeat it.
+      .filter(
+        (event) =>
+          !(
+            event.kind === 'escalation_settled' &&
+            escalationLineOf(event, raised) === undefined
+          ),
+      )
+      .map((event) => lineOf(event, typeLabel, flow, raised)),
     ...unsent.map((message): ChatLine => ({
       key: `u${message.id}`,
       at: message.at,

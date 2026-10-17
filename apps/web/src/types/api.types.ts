@@ -22,6 +22,7 @@ import type { OnboardingApi } from '#/types/onboarding.types.js';
 import type { ProjectSettingsApi } from '#/types/project-settings.types.js';
 import type { AnswerReply, IngestReply, TicketDetail } from '#/schemas/tickets.js';
 import type { CardsApi } from '#/types/cards-api.types.js';
+import type { EscalationsApi } from '#/types/escalations-api.types.js';
 import type {
   CostApi,
   InboxApi,
@@ -110,6 +111,7 @@ export interface ResourceApis {
   readonly runs: RunsApi;
   readonly onboarding: OnboardingApi;
   readonly cards: CardsApi;
+  readonly escalations: EscalationsApi;
 }
 
 export type ResourceName = keyof ResourceApis;

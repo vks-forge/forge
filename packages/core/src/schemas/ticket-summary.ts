@@ -22,9 +22,10 @@ import { Lane, Tier, TicketStatus, TicketType } from '#/schemas/ticket.js';
 export const TICKET_LIST_DEFAULT_LIMIT = 100;
 export const TICKET_LIST_MAX_LIMIT = 500;
 
-/** Statuses where the ticket waits on a person (a question, a review, a tier-C sign-off). */
+/** Statuses where the ticket waits on a person (a question, a question that timed out, a review, a tier-C sign-off). */
 export const NEEDS_YOU_STATUSES: readonly TicketStatus[] = [
   'waiting_human',
+  'blocked',
   'review',
   'needs_signoff',
 ];

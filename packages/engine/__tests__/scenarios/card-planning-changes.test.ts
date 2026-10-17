@@ -200,17 +200,36 @@ describe('held tickets', () => {
     expect(second).toMatchObject({ status: 'waiting_human', lane: 'standard' });
     expect(second?.blocked_reason).toMatch(/^pipeline_pending/);
 
-    const ask = (await eventsOf(rig, id, 'needs_you')).find((e) => e.payload.ticket_id);
-    expect(ask?.payload).toMatchObject({
-      actions: ['run_as_express'],
-      ticket_id: second?.id,
+    // The hold is an owner-stage lane-hold escalation, not a card-level needs_you note.
+    const held = await rig.storage.transaction((tx) =>
+      tx.interactions.listByTicket(second?.id ?? ''),
+    );
+
+    expect(held).toHaveLength(1);
+    expect(held[0]).toMatchObject({
+      kind: 'failure',
+      status: 'pending',
+      payload: { kind: 'failure', cause: 'lane_hold', lane: 'standard' },
     });
+
+    expect(held[0]?.escalated_at).toBeDefined();
+    const opened = await eventsOf(rig, id, 'escalation');
+    expect(opened.map((e) => e.payload.ticket_id)).toEqual([second?.id]);
 
     const out = await rig.engine.runAsExpress(second?.id ?? '', 'vikash');
     expect(out.status).toBe('released');
     expect(await rig.ticket(second?.id ?? '')).toMatchObject({
       status: 'planned',
       lane: 'express',
+    });
+
+    const settled = await rig.storage.transaction((tx) =>
+      tx.interactions.get(held[0]?.id ?? ''),
+    );
+
+    expect(settled).toMatchObject({
+      status: 'answered',
+      answer: { action: 'run_as_express', by: 'owner' },
     });
 
     expect((await rig.engine.runAsExpress(first?.id ?? '', 'vikash')).status).toBe(

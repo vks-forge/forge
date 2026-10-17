@@ -45,6 +45,8 @@ export interface ToolPolicy {
   /** SHA-256 of the effective catalogue (stored on every run row); throws when it does not load. */
   readonly catalogueHash: () => Promise<string>;
   readonly admitContext: (run: Run) => Promise<AdmitContext>;
+  /** Whether a healthy catalogue lists `tool`; a setup escalation for an unknown or quarantined tool resumes once it does. */
+  readonly toolCatalogued: (tool: string) => Promise<boolean>;
 }
 
 /** What the tool policy reads: the catalogue, the approvals of the installed build, project grants. */
