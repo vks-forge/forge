@@ -80,6 +80,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0165 — Reviewer blocking findings send the ticket back for rework (gate-failure path, cap then owner), not a merge hold (amends d-0071)
 - d-0166 — Remove the unused GET /projects/:slug/stats route
 - d-0167 — Test agent has no dollar cap (60 s timeout stays); panel states the test question in one line
+- d-0161 — Workers can run in a sandbox with the full codebase as worktree; Windows/macOS/Linux hosts; provider adapter interface for any third-party server (design x-0015, plan docs/briefs/worker-sandbox-plan.md)
 - d-0159 — `/` = cross-project Overview dashboard (KPIs, charts by day/week/month, projects table, cost); amends d-0104; brief docs/briefs/forge-overview-dashboard.md
 - d-0122 — Web UI state in zustand + persist (localStorage), UI prefs/drafts only; server data stays in TanStack Query; never tokens/secrets
 - d-0123 — Web uses the real server API only: mock adapter/fixtures/switches removed; missing backends built with their screen; tests stub fetch in __tests__ only
@@ -195,6 +196,8 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - x-0012 — Director project context + live code graph (index of cards/tickets/runs/memory + incrementally updated code graph, read via tools) — to grill
 - x-0013 — Memory in the database with exact + relevance search (FTS first), tools instead of loading all files; reopens part of r-0001; needs research
 - x-0014 — Bind the browser session to the port with a per-session secret held outside cookies (W7b review finding 1); pending
+- x-0015 — `SandboxProvider` port (declared capabilities, gitModes host-paths / mount+commondir / bundle, in-box relay over exec stdio, proxy credentials, G1 in box, backend ladder srt → docker → ssh → E2B/Vercel/Cloudflare); pending, 7 open P0 questions
 
 ## Outcomes
 - Older outcome pointers (2026-10-12 – 2026-10-16 overnight): `outcomes/ARCHIVE.md`
+- 2026-10-16 — Worker sandbox research: cloudroom-core teardown, local + remote sandbox surveys, Forge seams map; d-0161, x-0015, plan docs/briefs/worker-sandbox-plan.md: `outcomes/2026-10/2026-10-16-sandbox-research.md`

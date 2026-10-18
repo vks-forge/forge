@@ -108,14 +108,15 @@ realignment (d-0117, d-0005).
 
 ## Roadmap
 
-| Step | What                                                                | Plan                        |
-| ---- | ------------------------------------------------------------------- | --------------------------- |
-| Done | Realign the existing code (batches B0–B14)                          | `docs/design/build-plan.md` |
-| Now  | Worker isolation: separate low-privilege account for Workers/checks | d-0117                      |
-| P2   | Onboarding: GitHub manifest flow, language detection, Director chat | change map W4, W5, W9       |
-| P3   | Control room UI: every setting and flow on screen                   | change map W12, W14, W15    |
-| P4   | First release on Windows as `vks-forge`                             | change map W16, W17, W20    |
-| P5   | GitHub Issues intake, agents and pipelines engine, macOS/Linux, exe | change map W13, W19         |
+| Step  | What                                                                                            | Plan                                                 |
+| ----- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Done  | Realign the existing code (batches B0–B14)                                                      | `docs/design/build-plan.md`                          |
+| Now   | Worker isolation: separate low-privilege account for Workers/checks                             | d-0117                                               |
+| P2    | Onboarding: GitHub manifest flow, language detection, Director chat                             | change map W4, W5, W9                                |
+| P3    | Control room UI: every setting and flow on screen                                               | change map W12, W14, W15                             |
+| P4    | First release on Windows as `vks-forge`                                                         | change map W16, W17, W20                             |
+| P5    | GitHub Issues intake, agents and pipelines engine, macOS/Linux, exe                             | change map W13, W19                                  |
+| Later | Worker sandboxes: cross-OS, pluggable providers, full worktree inside (proposed, not scheduled) | d-0161, x-0015, `docs/briefs/worker-sandbox-plan.md` |
 
 ## Progress log
 
@@ -134,6 +135,7 @@ Newest first. One line per milestone.
 - 2026-10-17: Card-first flow S4a (ticket escalations): a stuck ticket goes to the Director first (it answers Worker questions from the plan, decisions, memory and code when confident and not Tier C, and retries once on failure), then comes back as a typed escalation (question with suggested answer, failure with Retry / Re-plan / Cancel, setup with Fix in settings and auto-resume once fixed) shown the same in card chat, ticket page and Inbox, settled live everywhere; lane holds offer Run as Express / Re-plan, timed-out questions and review waits get actions, and a test fails if any waiting state has none.
 - 2026-10-17: Overview dashboard at `/` (d-0162): spend, tickets, runs and waiting-on-you across all projects by day, week or month (7d to all time), stacked spend and run-outcome charts, spend donuts by project, harness and lane, a projects table with sparklines, needs-attention items and cost coverage; the last-project redirect is gone.
 - 2026-10-17: Card-first flow S2 (Director planning): a planned card runs an ordered, snapshot flow of Director steps (survey with engine-side reads through `admit()`, grill one question at a time, verify, enhance, versioned plan with diff, approval behind a deterministic floor or by the owner), each step recorded with its config version; approval files ordered tickets with dependencies and held non-Express tickets offer Run as Express. HTTP routes for answers, shortcuts, approve, request changes, ticket edits and start planning; Forge settings → Director and a per-project override edit the flow, six playbooks and limits.
+- 2026-10-16: Worker sandbox research (cloudroom-core teardown, local and remote sandbox surveys): requirement recorded (d-0161), design proposed (x-0015), phased plan `docs/briefs/worker-sandbox-plan.md`; not scheduled.
 - 2026-10-16: Card-first flow S3 (card page and board): chat-first card page with grill questions as option buttons, a pinned Needs-you banner whose every action is wired, and a Plan tab (fixed sections, version diff, approve with ticket order, request changes, light ticket edits); board cards show phase line, priority, progress and Blocked by / Blocks chips with dependency-chain highlight and gliding column moves (reduced-motion aware). Server side of planning lands with S2.
 - 2026-10-16: Card-first flow S1 (foundation): cards are created through a New card form (title, description, type, priority, dependencies, links) with no ticket and a durable Director reply; a card carries a stored phase, dependencies (cycle-checked) and priority; the Board and Card page update live over a per-project event stream; chat intake no longer files tickets except the PR fast path.
 - 2026-10-16: Shared Picker replaces native selects; board columns fit the screen with a collapsible Closed strip.
