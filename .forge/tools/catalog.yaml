@@ -203,3 +203,33 @@ entries:
         enforced: server
     denies_native:
       - claude-code:WebFetch
+  - id: mcp__forge__memory_search
+    kind: factory-capability
+    version: "1"
+    risk: read
+    exposure: direct
+    schema_hash: sha256:395fd52a049244e5a1b30925f2dbc35e7f500c5697cc29fb5bf3661e7976760c
+    support:
+      "*":
+        mechanism: mcp
+        enforced: server
+  - id: mcp__forge__memory_get
+    kind: factory-capability
+    version: "1"
+    risk: read
+    exposure: direct
+    schema_hash: sha256:321f209aa8bd618ef529ff3c2c0f1303467f758a09f5ecfd6955951f9b81d237
+    support:
+      "*":
+        mechanism: mcp
+        enforced: server
+  - id: mcp__forge__memory_related
+    kind: factory-capability
+    version: "1"
+    risk: read
+    exposure: direct
+    schema_hash: sha256:5f6008dd8dbcca2bb6f8bd6cb2bbfb5a67ed503f344d2e203c9079a08381a3b5
+    support:
+      "*":
+        mechanism: mcp
+        enforced: server

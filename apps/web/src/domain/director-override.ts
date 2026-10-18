@@ -132,6 +132,31 @@ export function directorIssues(
     }
   }
 
+  if (value.memory) {
+    const m = seen.memory;
+    const within = (n: number, lo: number, hi: number): boolean =>
+      Number.isInteger(n) && n >= lo && n <= hi;
+
+    if (!(
+      within(m.rewrite_timeout_ms, 1000, 60_000) &&
+      within(m.top_k, 1, 15) &&
+      within(m.pinned_max, 0, 25) &&
+      within(m.rejected_max, 5, 50)
+    )) {
+      out.push(
+        'Memory needs a rewrite timeout of 1 to 60 seconds, 1 to 15 relevant decisions, 0 to 25 pinned and 5 to 50 rejected approaches, all whole numbers.',
+      );
+    }
+
+    if (!(
+      Number.isFinite(m.rewrite_budget_usd) &&
+      m.rewrite_budget_usd >= 0 &&
+      m.rewrite_budget_usd <= 2
+    )) {
+      out.push('The rewrite budget must be between 0 and 2 USD.');
+    }
+  }
+
   if (
     value.escalation &&
     !(

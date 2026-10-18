@@ -17,7 +17,7 @@ Left sidebar (always visible)
 │       ├─ Chat ........ talk to the Director → becomes tickets
 │       ├─ Board ....... kanban by ticket state
 │       ├─ Ticket ...... live thread, gate strip, diff, runs, lane history
-│       ├─ Memory ...... decisions / rejected / proposals (approve)
+│       ├─ Memory ...... search, decisions / rejected / proposals (approve), record page
 │       └─ Settings .... overrides, checks by role, repo & branch, memory mirror
 ├─ Runs ............ every Worker across projects: working / waiting / done
 ├─ Cost ............ spend per run → ticket → project, budgets
@@ -258,6 +258,31 @@ Amended by S6-B (research and budget):
 - **Ticket and Runs**: review findings list the pages a reviewer cited as links; the Runs tab
   ("Pages this run read", loaded when opened) and the run drawer ("Sources this run read") list
   the pages a Worker fetched.
+- **Memory** (S7-B, `/p/:slug/memory`): a search box above the tabs (`/` focuses it, Esc clears, Enter
+  searches at once, otherwise after 250 ms, from 2 characters). While a query is active the tabs give way
+  to ranked results: id, kind and status chips, the statement, the matched words highlighted (drawn as text,
+  never HTML), tags and, for an older decision that matched, the newer decision that replaced it with a
+  link to the old one. Chips for kind, status and tag and an **Include superseded** switch narrow it; the
+  query and chips live in the address (`?q=&kind=&status=&tag=&superseded=1`). States: loading, "No
+  matches for ..." with Clear filters, error with Try again, offline, and a project still on files ("Search
+  is not available yet", the list is narrowed by the words instead). A banner states where the memory is
+  stored: nothing when no old repository existed, "Migrating..." with Check again, one quiet line with the
+  backup path and Copy path when verified, a list of unreadable files with **Retry import** when some could
+  not be read, the reason and Retry when it failed. **Export markdown** sits in the header.
+- **Memory record** (S7-B, `/p/:slug/memory/:id`, replaces the drawer; `?record=` redirects here): id, kind,
+  status and pin, the statement, whose word it is in one sentence ("Your decision", "Director's inference,
+  approved by you on ..."), Approve and Reject for a pending proposal with "May conflict with" above them,
+  the note on a record imported with defaults, facts (author, origin, source, dates, confidence, summary,
+  aliases, tags), the notes as plain text, **Related** (up to five, a reason chip each, "Nothing related
+  yet"), **Links** (replaces, replaced by, amends, reopens, cites, card, ticket), **History** (each state
+  move with who, when and why, and the search-aid versions) and a footnote that records are never edited
+  or deleted: to change one, supersede it. No edit, delete or revert control exists; the only text box is
+  the rejection reason. A project still on files says links, history and related are not available yet and
+  disables Export with the reason.
+- **Director settings** (S7-B): Forge settings, Director has a model row "Memory search words" and a
+  **Memory retrieval** section (rewrite on or off, rewrite timeout and budget, relevant decisions, pinned
+  decisions, rejected approaches listed) with the note that rejected approaches are always all listed; a
+  project can override it ("Director memory retrieval").
 
 ## Prototype build order
 

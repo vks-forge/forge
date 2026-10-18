@@ -10,14 +10,15 @@
  *   no chat.
  *
  * Exports: loadChatContext(), cardSpend(), HISTORY_LIMIT.
- * Depends on: @forge/core (card schemas, allowedChatActions), types/card-chat, types/engine.
+ * Depends on: tick/memory-context, @forge/core (card schemas, allowedChatActions), types/card-chat, types/engine.
  *   Reads storage and project memory.
  */
 
 import { allowedChatActions } from '@forge/core';
 import type { CardEvent, CardId, StorageTx, Ticket } from '@forge/core';
+import { buildMemoryContext } from '#/tick/memory-context.js';
 import type { ChatContext } from '#/types/card-chat.types.js';
-import type { EngineDeps } from '#/types/engine.types.js';
+import type { EngineCtx } from '#/types/engine-state.types.js';
 
 /** History entries the Director sees, newest last. */
 export const HISTORY_LIMIT = 30;
@@ -76,9 +77,10 @@ export async function cardSpend(
  * the card names a type or project that does not exist (the step must not guess).
  */
 export async function loadChatContext(
-  deps: EngineDeps,
+  ctx: EngineCtx,
   cardId: CardId,
 ): Promise<ChatContext | null> {
+  const { deps } = ctx;
   const loaded = await deps.storage.transaction(async (tx) => {
     const card = await tx.cards.get(cardId);
     if (!card || card.closed_reason !== undefined) {
@@ -134,7 +136,15 @@ export async function loadChatContext(
   }
 
   const { card, type, project, tickets } = loaded;
-  const memory = await deps.memory.slice(project.slug);
+  const memory = await buildMemoryContext(ctx, project.slug, {
+    question: [
+      card.title,
+      card.summary,
+      ...loaded.history.slice(-3).map((e) => eventText(e)),
+    ].join('\n'),
+    rewrite: true,
+    cardId: card.id,
+  });
 
   return {
     card,

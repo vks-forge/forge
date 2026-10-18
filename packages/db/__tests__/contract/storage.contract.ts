@@ -46,6 +46,7 @@ import { describeCardFlowContract } from './card-flow.contract.js';
 import { describeCardPlanningContract } from './card-planning.contract.js';
 import { describeCardPhaseContract } from './card-phase.contract.js';
 import { describeInboxStatesContract } from './inbox-states.contract.js';
+import { describeMemoryContract } from './memory.contract.js';
 import { describeTransactionsContract } from './transactions.contract.js';
 import { describeInteractionCasContract } from './interaction-cas.contract.js';
 import { describeIntakeEventsContract } from './intake-events.contract.js';
@@ -90,6 +91,7 @@ export function describeStorageContract(
     describeStageArtifactsContract(() => db);
     describePipelineProposalsContract(() => db);
     describeResearchStorageContract(() => db);
+    describeMemoryContract(() => db);
     describeHarnessesContract(() => db);
     describeHarnessStateContract(() => db);
     describeConnectionsContract(() => db);

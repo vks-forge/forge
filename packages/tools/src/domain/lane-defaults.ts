@@ -42,6 +42,13 @@ const CORE_TOOLS = [
 const EXPRESS_TOOLS = [...READ_TOOLS, ...CORE_TOOLS, 'edit', 'write', 'shell'];
 const WEB_TOOLS = ['mcp__forge__web_search', 'mcp__forge__web_fetch'];
 
+/** Read-only project memory for Workers (d-0168); Express keeps the pasted block instead, so it is not here. */
+const MEMORY_TOOLS = [
+  'mcp__forge__memory_search',
+  'mcp__forge__memory_get',
+  'mcp__forge__memory_related',
+];
+
 const INSTALL = [
   'pnpm add*',
   'pnpm install*',
@@ -102,6 +109,10 @@ export function laneRulesFor(lane: Lane, shell?: ShellAllowInput): CallRule[] {
       rules.push(rule('web_fetch', 'https://docs.*', 'allow'));
     }
 
+    for (const t of MEMORY_TOOLS) {
+      rules.push(rule(t.split('__')[2] as string, '*', 'allow'));
+    }
+
     rules.push(rule('db_query_readonly', '*', 'allow'));
     // Capability gate already requires an explicit project grant for these.
     rules.push(rule('project_mcp', '*', 'allow'));
@@ -121,7 +132,7 @@ export function laneRulesFor(lane: Lane, shell?: ShellAllowInput): CallRule[] {
   return rules;
 }
 
-const base = { deny: ['mcp__forge__memory_search'] } as const;
+const base = { deny: [] } as const;
 
 export const LANE_DEFAULTS: Readonly<Record<Lane, LaneDefaults>> = {
   express: {
@@ -133,14 +144,14 @@ export const LANE_DEFAULTS: Readonly<Record<Lane, LaneDefaults>> = {
   },
   standard: {
     ...base,
-    allow: [...EXPRESS_TOOLS, ...WEB_TOOLS],
+    allow: [...EXPRESS_TOOLS, ...WEB_TOOLS, ...MEMORY_TOOLS],
     projectGated: ['mcp__forge__db_query_readonly'],
     projectMcps: true,
     rules: laneRulesFor('standard'),
   },
   full: {
     ...base,
-    allow: [...EXPRESS_TOOLS, ...WEB_TOOLS],
+    allow: [...EXPRESS_TOOLS, ...WEB_TOOLS, ...MEMORY_TOOLS],
     projectGated: ['mcp__forge__db_query_readonly'],
     projectMcps: true,
     rules: laneRulesFor('full'),

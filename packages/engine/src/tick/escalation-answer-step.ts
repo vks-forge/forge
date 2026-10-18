@@ -13,7 +13,7 @@
  *   on the card's budget as a warning, never a block (d-0143).
  *
  * Exports: lookAtQuestion().
- * Depends on: @forge/core (step schemas, escalation types), domain/escalation-decision, steps/run-step,
+ * Depends on: tick/memory-context (the memory shown to the Director), @forge/core (step schemas, escalation types), domain/escalation-decision, steps/run-step,
  *   tick/card-budget, tick/escalation-raise, tick/interactions, tick/plan-keys, tick/planning-input,
  *   tick/planning-reads, tick/planning-state, tick/tick-config. Reads and writes storage.
  */
@@ -29,6 +29,7 @@ import type {
 } from '@forge/core';
 import { canAutoAnswer, touchesTierC } from '#/domain/escalation-decision.js';
 import { rejectStep, runStep } from '#/steps/run-step.js';
+import { buildMemoryContext, questionOf } from '#/tick/memory-context.js';
 import { addDirectorSpend } from '#/tick/card-budget.js';
 import { handToOwner } from '#/tick/escalation-raise.js';
 import { answerQuestionTx } from '#/tick/interactions.js';
@@ -111,7 +112,11 @@ export async function lookAtQuestion(
     tierCGlobs,
   );
 
-  const memory = await ctx.deps.memory.slice(slug);
+  const memory = await buildMemoryContext(ctx, slug, {
+    question: questionOf(ticket.title, ticket.body),
+    rewrite: false,
+  });
+
   const playbook = director.playbooks['answer-worker'];
 
   const base = {
@@ -142,6 +147,7 @@ export async function lookAtQuestion(
     project_rules: {
       decisions: memory.decisions,
       rejected: memory.rejected,
+      ...(memory.note === undefined ? {} : { note: memory.note }),
       repo_rules: await readRepoRules(ctx, root),
     },
     escalation: {

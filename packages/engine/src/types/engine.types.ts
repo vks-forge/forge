@@ -24,6 +24,7 @@ import type {
   ErrorFamily,
   IntakeEvent,
   ProjectEventSink,
+  MemoryIndex,
   MemorySource,
   ProjectConfigView,
   ResearchProvider,
@@ -68,6 +69,11 @@ export interface EngineDeps {
   readonly drivers: DriverRegistry;
   readonly llm: DirectorLLM;
   readonly memory: MemorySource;
+  /**
+   * Relevance search over project memory (d-0168). Absent (tests, a project still read from its old repository):
+   * the Director pastes the whole `memory` slice as before.
+   */
+  readonly memoryIndex?: MemoryIndex;
   /** Read-only view of a project's git-tracked files at HEAD, for the planning steps' reads (d-0131). */
   readonly repoReader: RepoReader;
   readonly receipts: ReceiptLog;

@@ -20,9 +20,13 @@ export function defineTool<S extends z.ZodRawShape>(def: {
   description: string;
   risk: ToolRisk;
   inputSchema: S;
+  /** Refuse unknown argument keys instead of ignoring them (tools whose arguments must not carry scope). */
+  strict?: boolean;
   handler: (ctx: ToolContext, args: z.output<z.ZodObject<S>>) => Promise<string>;
 }): ForgeToolSpec {
-  const schema = z.object(def.inputSchema);
+  const schema = def.strict
+    ? z.object(def.inputSchema).strict()
+    : z.object(def.inputSchema);
 
   return {
     name: def.name,

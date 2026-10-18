@@ -45,6 +45,8 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
       // The Director's check of finished work against its plan is judging, like a recovery.
       ticket_check: 'opus',
       pick_substitute: 'sonnet',
+      // Turning a question into key words is a tiny structured turn (d-0168).
+      memory_rewrite: 'haiku',
     },
     worker: { express: 'sonnet', standard: 'sonnet', full: 'sonnet' },
   },

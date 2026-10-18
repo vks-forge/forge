@@ -9,7 +9,7 @@
  *   Records stay open (`looseObject`) so a hand-added field such as `amends` survives a
  *   rewrite instead of being dropped.
  *
- * Exports: MEMORY_ID_PATTERN, MemoryKind, MemoryStatus, MemoryAuthor, MemoryOrigin,
+ * Exports: MEMORY_ID_PATTERN, MemoryInputLinks, MemoryKind, MemoryStatus, MemoryAuthor, MemoryOrigin,
  *   MemorySourceRef, MemoryRecord, MemoryRecordWithBody, MemoryListEntry, ProposalInput,
  *   DecisionInput (each schema and type).
  * Depends on: zod. No IO.
@@ -85,11 +85,33 @@ export const MemoryListEntry = z.object({
   status: MemoryRecord.shape.status,
   statement: MemoryRecord.shape.statement,
   tags: MemoryRecord.shape.tags,
+  /** Set by the database source; the file source leaves both out. */
+  pinned: z.boolean().optional(),
+  imported: z.boolean().optional(),
 });
 
 export type MemoryListEntry = z.infer<typeof MemoryListEntry>;
 
 const statement = z.string().trim().min(1, 'statement must not be empty');
+
+const RecordId = z.string().regex(MEMORY_ID_PATTERN, 'id must look like d-0001');
+
+/** Search aids a writer may set: a one-line gist and up to eight alternative names (never provenance). */
+const aids = {
+  gist: z.string().trim().min(1).max(160).optional(),
+  aliases: z.array(z.string().trim().min(1).max(40)).max(8).optional(),
+};
+
+/** Typed links a new record may carry: other records it amends, reopens or cites, and a card or ticket. */
+export const MemoryInputLinks = z.object({
+  amends: z.array(RecordId).max(10).optional(),
+  reopens: z.array(RecordId).max(10).optional(),
+  cites: z.array(RecordId).max(10).optional(),
+  card: z.string().min(1).max(120).optional(),
+  ticket: z.string().min(1).max(120).optional(),
+});
+
+export type MemoryInputLinks = z.infer<typeof MemoryInputLinks>;
 
 /** What the Director may propose; capped confidence keeps inferences visibly uncertain (CLAUDE.md). */
 export const ProposalInput = z.object({
@@ -99,6 +121,8 @@ export const ProposalInput = z.object({
   tags: z.array(z.string()).optional(),
   confidence: z.number().min(0).max(0.8).optional(),
   body: z.string().optional(),
+  ...aids,
+  links: MemoryInputLinks.optional(),
 });
 
 export type ProposalInput = z.infer<typeof ProposalInput>;
@@ -111,6 +135,8 @@ export const DecisionInput = z.object({
   tags: z.array(z.string()).optional(),
   pinned: z.boolean().optional(),
   body: z.string().optional(),
+  ...aids,
+  links: MemoryInputLinks.optional(),
 });
 
 export type DecisionInput = z.infer<typeof DecisionInput>;

@@ -17,7 +17,7 @@
  *   with Approve and Request changes available, never at a dead end (d-0135).
  *
  * Exports: writePlanStep(), approveStep().
- * Depends on: @forge/core (plan schemas and rules), tick/planning-input, tick/planning-floor, tick/planning-pipelines,
+ * Depends on: tick/planning-rejected (the rejected approaches a plan repeats), @forge/core (plan schemas and rules), tick/planning-input, tick/planning-floor, tick/planning-pipelines,
  *   tick/planning-state, tick/planning-step-io, tick/planning-steps, tick/plan-to-tickets,
  *   tick/card-phase, types/card-planning. Writes storage.
  */
@@ -35,6 +35,7 @@ import { approvePlanTx } from '#/tick/plan-to-tickets.js';
 import { buildApprovalInput, buildStepInput } from '#/tick/planning-input.js';
 import { computeFloor, factsOf } from '#/tick/planning-floor.js';
 import { pipelinesInput, vetPipelineOps } from '#/tick/planning-pipelines.js';
+import { planRejectedHits } from '#/tick/planning-rejected.js';
 import {
   askOwner,
   enterVerifying,
@@ -100,7 +101,10 @@ async function composePlan(
       files_read: grill.files_read.map((f) => f.path),
       overlaps: verify?.overlaps ?? [],
       matching_decisions: verify?.matching_decisions ?? [],
-      rejected_hits: verify?.rejected_hits ?? [],
+      rejected_hits: mergeUnique(
+        verify?.rejected_hits ?? [],
+        await planRejectedHits(pc, body),
+      ),
       risks: mergeUnique(
         mergeUnique(verify?.risks ?? [], grill.survey?.risks ?? []),
         mergeUnique(body.risks, vetted.notes),

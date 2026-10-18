@@ -26,12 +26,16 @@ Status: proposed, 2026-10-12
 >   OS boundary (d-0117).
 > - **This repository** (software-factory) keeps its own `.forge/memory/` as
 >   the dev team's memory, governed by `CLAUDE.md`. That folder is not the
->   product's mechanism and the product never reads it.
-> - **Pending proposal x-0013** would move records into the database with
->   search (exact lookup plus full-text relevance) and keep markdown as an
->   export; it is not approved, and the git-repo layout below is what is built.
-> - **Not built yet:** the janitor, `playbook/`, the SQLite/FTS index, the
->   pre-compaction flush, and the onboarding-chat seeding (d-0095). Treat §7
+>   product's store; the product never reads it, but the CLI indexes it with the product's search.
+> - **Superseded by S7 (x-0013, d-0168): memory lives in the database.** Records, tags, links, history and the versions of
+>   their search aids are tables (migration 0029); the full-text index (FTS5, porter) is the only retrieval structure, no
+>   vectors. "Markdown is the source of truth" no longer holds for a product project: the database is, behind one write door
+>   (`createSqlProjectMemory`) and triggers that make records append-only. Markdown remains as an export
+>   (`POST /projects/:slug/memory/export`, under `<dataHome>/exports/`). Each project's old repository is imported once, proved
+>   against the database and **deleted** after a verified backup; a project that fails its proof stays on its repository. See
+>   `packages/memory/README.md` and `docs/briefs/s7-memory-db.md`. This repository's own `.forge/memory/` stays markdown in git
+>   and gets a local index and `forge memory search | get | related` that share the product's search code.
+> - **Not built yet:** the janitor, `playbook/`, vectors, the pre-compaction flush, and the onboarding-chat seeding (d-0095). Treat §7
 >   onwards as design.
 >
 > Package notes: `packages/memory/README.md`.
@@ -98,6 +102,11 @@ Why this and not a framework:
    enforce. Memory only informs.
 
 ## 4. Storage layout
+
+> **S7 amendment (d-0168).** The layout below describes the files an earlier release kept and what an export writes. A product
+> project's records are rows in the database (`memory_records`, `memory_tags`, `memory_links`, `memory_events`,
+> `memory_aid_versions`, `memory_fts`, `memory_access_log`, `memory_imports`); the folder tree is produced by the export and read by
+> the importer, and `<dataHome>/memory/<slug>/` exists only for a project not yet imported.
 
 One private git repository per project, in the Forge data home, outside every
 product repo (d-0086):
@@ -254,6 +263,15 @@ Secrets: the outcome hook runs a secret scanner over `failure_cause` and
 `files_touched` before writing. Transcripts are never ingested into memory.
 
 ## 8. Read paths
+
+> **S7 amendment (d-0168).** Nothing below is pasted whole any more. The Director builds each prompt from the index: pinned decisions
+> (up to 12) plus the 8 most relevant to the question (a cheap model call may first turn a card's question into key words and
+> synonyms, for planning and card chat only; other steps use the ticket's own words), **every** active rejected approach (up to 25,
+> newest first, ranked past that) and a note saying how many active decisions were left out. Workers read through three read-only
+> tools (`memory_search`, `memory_get`, `memory_related`) whose scope the server builds from the agent's slice; they see only
+> active decisions and rejected approaches. A search for a replaced decision returns its active successor. Every search, get and
+> related call is logged (20,000 rows and 90 days per project) so misses can be measured; vectors come only if that log shows
+> lexical misses (r-0001's own trigger).
 
 ### Director intake (every Epic)
 

@@ -204,8 +204,9 @@ describe('list and call agree', () => {
     expect(ids('express')).not.toContain('mcp__forge__web_search');
     expect(ids('standard')).toContain('mcp__forge__web_search');
     expect(ids('full')).toContain('shell');
+    expect(ids('express')).not.toContain('mcp__forge__memory_search');
+    expect(ids('standard')).toContain('mcp__forge__memory_search');
     for (const lane of ['express', 'standard', 'full'] as const) {
-      expect(ids(lane)).not.toContain('mcp__forge__memory_search');
       expect(ids(lane)).not.toContain('mcp__github__create_issue');
     }
   });

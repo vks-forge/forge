@@ -21,6 +21,9 @@ const FORGE_TOOLS = [
   'docs_lookup',
   'finish',
   'get_ticket',
+  'memory_get',
+  'memory_related',
+  'memory_search',
   'report_blocked',
   'submit_review',
   'web_fetch',
@@ -34,7 +37,7 @@ describe('built-in catalogue', () => {
     expect(state.status).toBe('verified');
   });
 
-  it('lists the nine forge tools and the native tools', () => {
+  it('lists the twelve forge tools and the native tools', () => {
     if (state.status !== 'verified') {
       throw new Error('not verified');
     }
@@ -86,5 +89,8 @@ describe('built-in catalogue', () => {
     expect(state.tools.get('mcp__forge__web_search')?.risk).toBe('network');
     expect(state.tools.get('mcp__forge__finish')?.risk).toBe('write-cwd');
     expect(state.tools.get('mcp__forge__docs_lookup')?.risk).toBe('read');
+    for (const t of ['memory_search', 'memory_get', 'memory_related']) {
+      expect(state.tools.get(`mcp__forge__${t}`)?.risk).toBe('read');
+    }
   });
 });

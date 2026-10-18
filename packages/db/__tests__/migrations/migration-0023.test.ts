@@ -80,7 +80,7 @@ describe('0023 escalations', () => {
 
   it('stamps existing questions as already with the owner', () => {
     const driver = oldDatabase();
-    expect(runMigrations(driver)).toEqual([23, 24, 25, 26, 27, 28]);
+    expect(runMigrations(driver)).toEqual([23, 24, 25, 26, 27, 28, 29]);
 
     const rows = driver.all<{ id: string; escalated_at: string | null }>(
       'SELECT id, escalated_at FROM interactions ORDER BY id',

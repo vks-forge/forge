@@ -24,7 +24,7 @@ async function setup() {
 }
 
 describe('tool list', () => {
-  it('serves exactly the nine Forge tools', async () => {
+  it('serves exactly the twelve Forge tools', async () => {
     const { client } = await setup();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
@@ -33,6 +33,9 @@ describe('tool list', () => {
       'docs_lookup',
       'finish',
       'get_ticket',
+      'memory_get',
+      'memory_related',
+      'memory_search',
       'report_blocked',
       'submit_review',
       'web_fetch',

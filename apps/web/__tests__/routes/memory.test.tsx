@@ -1,7 +1,8 @@
 /**
- * Pins: the memory screen: four tabs with counts, text and tag filters, superseded decisions
- * marked and linked, the detail drawer and its chain, approve and reject behind a confirm,
- * optimistic moves that roll back on failure, and a long list that is windowed.
+ * Pins: the memory list: four tabs with counts, tag filter, superseded decisions marked, each row
+ * a link to its record page (and the old `?record=` link redirecting there), approve and reject
+ * behind a confirm, optimistic moves that roll back on failure, and a long list that is
+ * windowed. Search is pinned in memory-search.test.tsx, the record page in memory-record.test.tsx.
  *
  * Why: the owner decides what binds the Director from this screen. A rejected approach under
  * Decisions, an answer that appears saved when it was not, or a 130-row list that freezes
@@ -48,34 +49,26 @@ describe('memory', () => {
 
     await user.click(screen.getByRole('tab', { name: /Decisions/ }));
     const row = screen
-      .getByRole('button', { name: /Open d-0003/ })
+      .getByRole('link', { name: /Open d-0003/ })
       .closest('li') as HTMLElement;
 
     expect(within(row).getByText('Superseded')).toBeInTheDocument();
 
     await user.click(screen.getByRole('checkbox', { name: 'Hide superseded' }));
-    expect(screen.queryByRole('button', { name: /Open d-0003/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Open d-0003/ })).not.toBeInTheDocument();
   });
 
-  it('filters by text and by tag and says how many are shown', async () => {
+  it('filters by tag and says how many are shown', async () => {
     const user = userEvent.setup();
     renderScreens(PATH);
     await ready();
 
-    await user.type(
-      screen.getByRole('searchbox', { name: 'Search memory' }),
-      'migrations',
-    );
-
-    expect(screen.getByText('1 of 3 shown')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
     await user.click(screen.getByRole('button', { name: 'tests' }));
     expect(screen.getByText('1 of 3 shown')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Open x-0001/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Open x-0001/ })).toBeInTheDocument();
 
-    await user.type(screen.getByRole('searchbox', { name: 'Search memory' }), 'zzz');
-    expect(screen.getByText('Nothing matches')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(screen.getByText('3 records')).toBeInTheDocument();
   });
 
   it('approving asks first, then moves the proposal to Decisions with its id kept', async () => {
@@ -92,9 +85,9 @@ describe('memory', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Approve proposal' }));
 
     expect(await screen.findByText(/x-0001 approved/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Open x-0001/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Open x-0001/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: /Decisions/ }));
-    expect(screen.getByRole('button', { name: /Open x-0001/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Open x-0001/ })).toBeInTheDocument();
   });
 
   it('rejecting needs a reason before the button works', async () => {
@@ -143,26 +136,34 @@ describe('memory', () => {
 
     const alert = await screen.findByText(/Not saved, the list was put back/);
     expect(alert).toHaveTextContent('x-0003 is not a pending proposal');
-    expect(screen.getByRole('button', { name: /Open x-0003/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Open x-0003/ })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /Proposals/ })).toHaveTextContent('3');
   });
 
-  it('opens a record in a drawer, links the supersede chain and follows it', async () => {
+  it('opens a record on its own page, and an old ?record= link goes there too', async () => {
     const user = userEvent.setup();
-    const { router } = renderScreens(PATH);
+    const { router, unmount } = renderScreens(PATH);
     await ready();
 
     await user.click(screen.getByRole('tab', { name: /Decisions/ }));
-    await user.click(screen.getByRole('button', { name: /Open d-0003/ }));
-    const drawer = await screen.findByRole('dialog');
-    const link = await within(drawer).findByRole('button', { name: /Replaced by/ });
-    expect(link).toHaveTextContent('d-0006');
-    expect(router.state.location.search).toBe('?record=d-0003');
+    await user.click(screen.getByRole('link', { name: /Open d-0003/ }));
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/p/sample-service/memory/d-0003'),
+    );
 
-    await user.click(link);
-    await waitFor(() => expect(router.state.location.search).toBe('?record=d-0006'));
-    const next = await screen.findByRole('button', { name: /Replaces/ });
-    expect(next).toHaveTextContent('d-0003');
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /Run the full test suite/ }),
+    ).toBeInTheDocument();
+
+    unmount();
+    const legacy = renderScreens(`${PATH}?record=d-0006`);
+    await waitFor(() =>
+      expect(legacy.router.state.location.pathname).toBe(
+        '/p/sample-service/memory/d-0006',
+      ),
+    );
+
+    expect(legacy.router.state.location.search).toBe('');
   });
 
   it('windows a long list so only a few rows are in the page', async () => {

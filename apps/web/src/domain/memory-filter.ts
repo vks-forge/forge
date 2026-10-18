@@ -8,7 +8,7 @@
  *   Decisions at once (the id is kept, as the real writer does) so the click feels instant.
  *   These are pure so the optimistic move and its rollback are testable without a screen.
  *
- * Exports: TAB_OF_KIND, tabOf(), filterEntries(), countByTab(), tagsOf(), applyAnswer(),
+ * Exports: TAB_OF_KIND, tabOf(), filterEntries(), countByTab(), tagsOf(), tagsInUse(), applyAnswer(),
  *   DEFAULT_FILTER.
  * Depends on: @forge/core (types), types/memory.types. No IO.
  */
@@ -93,6 +93,21 @@ export function tagsOf(entries: readonly MemoryListEntry[], tab: MemoryTab): str
 
   return [...uses.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([tag]) => tag);
+}
+
+/** Every tag in use across all tabs, most used first: the tag chips of a search. */
+export function tagsInUse(entries: readonly MemoryListEntry[]): string[] {
+  const uses = new Map<string, number>();
+  for (const entry of entries) {
+    for (const tag of entry.tags) {
+      uses.set(tag, (uses.get(tag) ?? 0) + 1);
+    }
+  }
+
+  return [...uses.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 24)
     .map(([tag]) => tag);
 }
 

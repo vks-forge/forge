@@ -3,7 +3,7 @@
  *
  * Why: engine and server tests run on this backend, so deleting a project must clear the
  *   same rows the SQLite purge clears (tickets, relations, intake, wakes, runs and their
- *   events, inbox, tokens, gates and interactions, cards, their history, relations, queued replies, planning state and plan versions, inbox marks, pipeline snapshots, stage rows and artifacts, fetched research sources and card evidence),
+ *   events, inbox, tokens, gates and interactions, cards, their history, relations, queued replies, planning state and plan versions, inbox marks, pipeline snapshots, stage rows and artifacts, fetched research sources, card evidence and project memory),
  *   or a test that re-adds a deleted project would pass here and fail in production. Tool
  *   receipts live in the receipt log, not in this state, so they are outside this purge.
  *
@@ -28,6 +28,19 @@ export function purgeProjectState(state: MemoryState, slug: string): boolean {
   const cardIds = new Set(
     [...state.cards.values()].filter((c) => c.project === slug).map((c) => c.id),
   );
+
+  for (const k of [...state.memoryRows.keys()]) {
+    if ((JSON.parse(k) as [string, string])[0] === slug) {
+      state.memoryRows.delete(k);
+      state.memoryTags.delete(k);
+    }
+  }
+
+  state.memoryLinks = state.memoryLinks.filter((l) => l.project !== slug);
+  state.memoryEvents = state.memoryEvents.filter((e) => e.project !== slug);
+  state.memoryVersions = state.memoryVersions.filter((v) => v.project !== slug);
+  state.memoryAccess = state.memoryAccess.filter((a) => a.project !== slug);
+  state.memoryImports.delete(slug);
 
   state.evidence = state.evidence.filter((e) => !cardIds.has(e.card_id));
   state.researchSources = state.researchSources.filter((s) => s.project !== slug);

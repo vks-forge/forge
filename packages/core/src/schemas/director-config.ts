@@ -17,7 +17,7 @@
  *   a value, and a project's override may only lower the company's.
  *   `pipelines` says whether the Director may adjust a ticket's own pipeline copy and when it proposes a change to a project's list.
  *
- * Exports: PlaybookId, DirectorPlaybook, ApprovalMode, DirectorGrillLimits, DirectorReadCaps, DirectorResearchCaps,
+ * Exports: PlaybookId, DirectorPlaybook, ApprovalMode, DirectorGrillLimits, DirectorReadCaps, DirectorResearchCaps, DirectorMemorySettings,
  *   DirectorEscalation, DirectorSignOff, DirectorPipelines, DirectorConfig.
  * Depends on: schemas/director-flow, schemas/steps, zod. No IO.
  */
@@ -106,6 +106,22 @@ export const DirectorResearchCaps = z.object({
 });
 export type DirectorResearchCaps = z.infer<typeof DirectorResearchCaps>;
 
+/**
+ * How the Director reads project memory (d-0168): `rewrite` lets one cheap model call turn a free-text
+ * question into key words and synonyms (card planning and card chat only), bounded by its own timeout and
+ * budget and falling back to plain keywords; `top_k` relevant and up to `pinned_max` pinned decisions go into
+ * a prompt; every rejected approach is always listed, up to `rejected_max`, and the rest are ranked.
+ */
+export const DirectorMemorySettings = z.object({
+  rewrite: z.boolean(),
+  rewrite_timeout_ms: z.number().int().min(1000).max(60_000),
+  rewrite_budget_usd: z.number().min(0).max(2),
+  top_k: z.number().int().min(1).max(15),
+  pinned_max: z.number().int().min(0).max(25),
+  rejected_max: z.number().int().min(5).max(50),
+});
+export type DirectorMemorySettings = z.infer<typeof DirectorMemorySettings>;
+
 /** The whole section; a flow step may only name a playbook that exists. */
 export const DirectorConfig = z
   .object({
@@ -118,6 +134,7 @@ export const DirectorConfig = z
     budget_warning_usd: z.number().positive(),
     read_caps: DirectorReadCaps,
     research: DirectorResearchCaps,
+    memory: DirectorMemorySettings,
     step_timeouts_ms: z.record(StepName, PosInt),
     escalation: DirectorEscalation,
     sign_off: DirectorSignOff,

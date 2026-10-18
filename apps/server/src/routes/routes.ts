@@ -25,6 +25,7 @@ import { githubConnectionRoutes } from '#/routes/github-connections.js';
 import { hookRoute } from '#/routes/hook.js';
 import { intakeRoute } from '#/routes/intake.js';
 import { memoryRoutes } from '#/routes/memory.js';
+import { memorySearchRoutes } from '#/routes/memory-search.js';
 import { pipelineRoutes } from '#/routes/pipelines.js';
 import { projectAgentRoutes } from '#/routes/project-agents.js';
 import { pipelineProposalRoutes } from '#/routes/pipeline-proposals.js';
@@ -78,6 +79,8 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ...projectsRoutes(deps),
     ...projectDeleteRoutes(deps),
     ...systemRoutes(deps),
+    // The fixed words (search, import, export, access-log) must come before the `:id` of a record.
+    ...memorySearchRoutes(deps),
     ...memoryRoutes(deps),
     ...githubConnectionRoutes(deps),
     ...projectStatsRoutes(deps),

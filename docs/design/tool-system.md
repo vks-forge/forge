@@ -65,7 +65,7 @@ tool, the catalogue says whether the tool exists for this run at all.
 |---|---|---|---|
 | **harness-native** | read, edit, write, grep, glob, shell | the harness | PreToolUse / PostToolUse hook (Claude), app-server events (Codex), plugin (OpenCode), extension `tool_call` (Pi), ACP permission stream |
 | **factory-core** (MCP) | `get_ticket`, `list_comments`, `add_comment`, `ask_director`, `report_blocked`, `finish` | Factory MCP server, per-run token | server-side |
-| **factory-capability** (MCP) | `web_search` (SearXNG, pluggable backends), `web_fetch` (allow-listed, proxied, SSRF-guarded), `docs_lookup`, `code_graph` (graft), `memory_search` (Director only), `db_query_readonly` | Factory MCP server, each tool individually grantable | server-side |
+| **factory-capability** (MCP) | `web_search` (SearXNG, pluggable backends), `web_fetch` (allow-listed, proxied, SSRF-guarded), `docs_lookup`, `code_graph` (graft), `memory_search`, `memory_get`, `memory_related` (Workers: read-only, active decisions and rejected approaches of the agent's slice, scope forced by the server; the Director reads through the same index), `db_query_readonly` | Factory MCP server, each tool individually grantable | server-side |
 | **project** (MCP) | servers added as catalogue entries (database, versioned) | proxied through the factory MCP mux | server-side |
 | **gate-only** | test runner, lint, typecheck, mutation, SAST | dispatcher, outside the Worker | `gate_results` |
 
@@ -399,13 +399,19 @@ tool_effects     decision_id, state (not_started|read_completed|failed_no_effect
 | db_query_readonly | deny | per project grant | per project grant |
 | project MCPs | deny | per project grant | per project grant |
 | ask_director / report_blocked / finish | allow | allow | allow |
-| memory_search | deny (Director only) | deny | deny |
+| memory_search, memory_get, memory_related | deny | allow | allow |
 | harness-native network | deny | deny | deny |
 | unattended mode | `deny` | Needs-you, 4 h | Needs-you, 4 h |
 | guardian reviewer | off | on for ask-class calls | on for all exec/network |
 
-Director's fixed grant: `memory_search`, `code_graph`, `web_search`,
+Director's fixed grant: the memory index, `code_graph`, `web_search`,
 `docs_lookup`, read-only repo access. Never `shell` on the product repo.
+
+The three memory tools (`memory_search`, `memory_get`, `memory_related`) are read-only, take no project, status or scope input (the
+server builds the scope from the run's agent: its tag slice and whether it sees rejected approaches, d-0078), see only active
+decisions and rejected approaches (never proposals, outcomes or superseded records, not even by id), carry author and origin on every
+record, cap their answers (2,500 / 4,000 / 1,200 characters) and log every call. Express Workers get none of them: their request
+stays byte-identical and they keep the pasted block (d-0168).
 
 ## 13. Who may change grants
 

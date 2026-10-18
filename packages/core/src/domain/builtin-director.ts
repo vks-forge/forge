@@ -48,6 +48,7 @@ export const DIRECTOR_STEP_TIMEOUTS_MS: DirectorConfig['step_timeouts_ms'] = {
   draft_agent: 120_000,
   ticket_check: 300_000,
   pick_substitute: 120_000,
+  memory_rewrite: 30_000,
 };
 
 export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {
@@ -146,6 +147,14 @@ export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {
     max_bytes: 600_000,
     max_runs_per_card: 4,
     grill_detours: true,
+  },
+  memory: {
+    rewrite: true,
+    rewrite_timeout_ms: 15_000,
+    rewrite_budget_usd: 0.25,
+    top_k: 8,
+    pinned_max: 12,
+    rejected_max: 25,
   },
   step_timeouts_ms: DIRECTOR_STEP_TIMEOUTS_MS,
   escalation: { director_first: true, answer_confidence: 0.8, max_director_retries: 1 },

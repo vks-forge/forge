@@ -1,5 +1,5 @@
 /**
- * Input shapes for the nine Forge tools.
+ * Input shapes for the twelve Forge tools.
  *
  * Why: these shapes are both the validation the server applies and the JSON schema the
  *   harness sees; the catalogue pins a hash of that schema, so a change here is a
@@ -8,11 +8,18 @@
  *
  * Exports: TicketIdField, GetTicketInput, AddCommentInput, AskDirectorInput,
  *   ReportBlockedInput, FinishInput, SubmitReviewInput, WebSearchInput, DocsLookupInput, WebFetchInput,
- *   MAX_SEARCH_RESULTS.
+ *   MemorySearchInput, MemoryGetInput, MemoryRelatedInput, MAX_SEARCH_RESULTS.
  * Depends on: @forge/core (Claim, Finding, TICKET_ID_PATTERN), zod. No IO.
  */
 
-import { Claim, Finding, TICKET_ID_PATTERN } from '@forge/core';
+import {
+  Claim,
+  Finding,
+  MemoryGetToolInput,
+  MemoryRelatedToolInput,
+  MemorySearchToolInput,
+  TICKET_ID_PATTERN,
+} from '@forge/core';
 import { z } from 'zod';
 
 export const MAX_SEARCH_RESULTS = 10;
@@ -59,3 +66,8 @@ export const DocsLookupInput = {
 export const WebFetchInput = {
   url: z.url({ protocol: /^https?$/ }).max(2_048),
 };
+
+/** The three memory tools reuse core's strict inputs field for field, so the Worker and the server agree on the shape. */
+export const MemorySearchInput = MemorySearchToolInput.shape;
+export const MemoryGetInput = MemoryGetToolInput.shape;
+export const MemoryRelatedInput = MemoryRelatedToolInput.shape;

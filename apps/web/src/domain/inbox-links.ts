@@ -59,7 +59,7 @@ export function inboxLink(
 
   if (item.kind === 'memory_proposal' && source) {
     return {
-      to: `${projectPath(slug, 'memory')}?record=${encodeURIComponent(source)}`,
+      to: projectPath(slug, `memory/${encodeURIComponent(source)}`),
       label: 'Open in Memory',
     };
   }

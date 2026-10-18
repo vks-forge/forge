@@ -17,6 +17,7 @@
     "@forge/core": "workspace:*",
     "@forge/db": "workspace:*",
     "@forge/mcp": "workspace:*",
+    "@forge/memory": "workspace:*",
     "@forge/research": "workspace:*",
     "zod": "4.6.7"
   },

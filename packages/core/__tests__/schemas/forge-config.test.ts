@@ -59,6 +59,7 @@ describe('default .forge/config/forge.yaml', () => {
       draft_agent: 'sonnet',
       ticket_check: 'opus',
       pick_substitute: 'sonnet',
+      memory_rewrite: 'haiku',
     });
 
     expect(models.worker).toEqual({

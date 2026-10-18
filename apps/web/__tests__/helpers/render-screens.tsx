@@ -1,5 +1,5 @@
 /**
- * `renderScreens()`: mounts the memory and project-settings screens over the stubbed server
+ * `renderScreens()`: mounts the memory, memory-record and project-settings screens over the stubbed server
  * and hands back the API, so a test can change the "server" behind the screen's back.
  *
  * Why: the hard cases on these screens are about the server moving while the user is looking:
@@ -20,6 +20,7 @@ import type { RenderResult } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { AppProviders } from '#/components/app-providers.js';
 import { MemoryPage } from '#/routes/memory/memory-page.js';
+import { RecordPage } from '#/routes/memory/record-page.js';
 import { ProjectSettingsPage } from '#/routes/project-settings/project-settings-page.js';
 import { projectSettingsRoutes } from '#/routes/project-settings/project-settings-routes.js';
 import type { ForgeApi } from '#/types/api.types.js';
@@ -44,6 +45,7 @@ export function renderScreens(
   const router = createMemoryRouter(
     [
       { path: '/p/:slug/memory', element: <MemoryPage /> },
+      { path: '/p/:slug/memory/:id', element: <RecordPage /> },
       {
         path: '/p/:slug/settings',
         element: <ProjectSettingsPage />,

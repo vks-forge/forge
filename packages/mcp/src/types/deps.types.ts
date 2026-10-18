@@ -7,13 +7,21 @@
  *   `ResearchProvider`) is a named port here, so the auth check and the web tools can be tested with
  *   stubs. The domain never builds a real network provider: `apps/mcp` supplies one from the owner's
  *   settings, and a web tool whose provider is missing refuses to run instead of silently using the
- *   ambient network (d-0144: one port, one door).
+ *   ambient network (d-0144: one port, one door). Memory works the same way: the tools get a `MemoryIndex`
+ *   and a function that returns the run's project and scope, built by `apps/mcp` from the run, its ticket and
+ *   its agent, so a tool can never name a project or widen a scope (d-0168).
  *
- * Exports: WorkerResearchLimits, ForgeMcpDeps, ToolContext.
+ * Exports: WorkerResearchLimits, WorkerMemoryScope, ForgeMcpDeps, ToolContext.
  * Depends on: @forge/core (types only). No IO.
  */
 
-import type { ResearchProvider, Run, StorageAdapter } from '@forge/core';
+import type {
+  MemoryIndex,
+  MemoryScope,
+  ResearchProvider,
+  Run,
+  StorageAdapter,
+} from '@forge/core';
 
 /** What narrows a Worker's fetches; the network floor itself lives in the provider. */
 export interface WorkerResearchLimits {
@@ -25,6 +33,13 @@ export interface WorkerResearchLimits {
   readonly timeoutMs?: number;
 }
 
+/** Where a run's memory reads happen: its project, the scope its agent allows and its ticket. Built by the server, never by a tool. */
+export interface WorkerMemoryScope {
+  readonly project: string;
+  readonly scope: MemoryScope;
+  readonly ticket_id: string;
+}
+
 export interface ForgeMcpDeps {
   storage: StorageAdapter;
   runId: string;
@@ -33,6 +48,10 @@ export interface ForgeMcpDeps {
   /** The one door to the web; absent means `web_search` and `web_fetch` refuse. */
   research?: ResearchProvider;
   researchLimits?: WorkerResearchLimits;
+  /** Project memory for the three memory tools; absent means they answer `invalid_input`. */
+  memory?: MemoryIndex;
+  /** The run's project, memory scope and ticket (run, ticket, project, agent slice); null when any is unknown. */
+  memoryScope?: (runId: string) => Promise<WorkerMemoryScope | null>;
   /** Absolute directories `docs_lookup` may read markdown from. */
   docsDirs?: readonly string[];
   docsMaxBytes?: number;

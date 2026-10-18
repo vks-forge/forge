@@ -88,6 +88,13 @@ const ROWS: readonly DirectorRow[] = [
       `${d.research.max_rounds} rounds, ${d.research.max_searches} searches, ${d.research.max_fetches} pages, ${d.research.max_runs_per_card} runs per card${d.research.grill_detours ? '' : ', none during the grill'}`,
   },
   {
+    key: 'memory',
+    label: 'Director memory retrieval',
+    hint: 'How many decisions the Director reads from this project’s memory and whether it rewrites a question first. Rejected approaches are always all listed.',
+    words: (d) =>
+      `${d.memory.rewrite ? 'Rewrites questions' : 'Keywords only'}, ${d.memory.pinned_max} pinned and ${d.memory.top_k} relevant decisions, up to ${d.memory.rejected_max} rejected approaches`,
+  },
+  {
     key: 'escalation',
     label: 'Director on waiting tickets',
     hint: 'Whether the Director looks first, how sure it must be to answer a Worker, and how often it retries.',

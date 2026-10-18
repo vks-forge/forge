@@ -19,7 +19,9 @@ working preferences. Everything about *this project* lives here.
 entries are the working summary of every record (x-0013). Open a full record
 in `decisions/` or `rejected/` when the task touches its area, before relying
 on its details, and before proposing or changing anything it covers (grep the
-folder by tag or keyword). Treat active decisions as authoritative
+folder by tag or keyword, or use `node apps/cli/dist/main.js memory search
+"<key words>"`, `memory get <id>` and `memory related <id>`; search with 2-4 key
+terms, not a sentence). Treat active decisions as authoritative
 constraints. Never propose anything listed in `rejected/` without naming the
 record and saying why it should be reopened.
 

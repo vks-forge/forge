@@ -22,6 +22,7 @@ import { CostPage } from '#/routes/cost/cost-page.js';
 import { HomePage } from '#/routes/home/home-page.js';
 import { InboxPage } from '#/routes/inbox/inbox-page.js';
 import { MemoryPage } from '#/routes/memory/memory-page.js';
+import { RecordPage } from '#/routes/memory/record-page.js';
 import { NotFound } from '#/routes/not-found.js';
 import { PlaceholderPage } from '#/routes/placeholder-page.js';
 import { ProjectSettingsPage } from '#/routes/project-settings/project-settings-page.js';
@@ -59,6 +60,7 @@ export const appRoutes: RouteObject[] = [
         children: [
           { path: 'tickets/:id/:tab?', element: <TicketPage /> },
           { path: 'cards/:id/:tab?', element: <CardPage /> },
+          { path: 'memory/:id', element: <RecordPage /> },
           ...PROJECT_NAV.map((entry) =>
             entry.segment === ''
               ? { index: true, element: <HomePage /> }

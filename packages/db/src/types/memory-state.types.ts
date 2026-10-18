@@ -31,6 +31,12 @@ import type {
   ResearchSource,
   HarnessVersion,
   Interaction,
+  MemoryAccessLogRow,
+  MemoryAidVersion,
+  MemoryEvent,
+  MemoryImportRecord,
+  MemoryLinkRow,
+  MemoryRow,
   Project,
   Run,
   RunEvent,
@@ -116,4 +122,19 @@ export interface MemoryState {
   evidence: Evidence[];
   /** Last evidence id handed out. */
   evidenceSeq: number;
+  /** Memory records keyed by JSON of `[project, id]`. */
+  memoryRows: Map<string, MemoryRow>;
+  /** Sorted tags per memory record, same key. */
+  memoryTags: Map<string, string[]>;
+  memoryLinks: (MemoryLinkRow & { project: string })[];
+  /** Memory history in seq order. */
+  memoryEvents: (MemoryEvent & { project: string })[];
+  /** Last memory event seq handed out. */
+  memoryEventSeq: number;
+  memoryVersions: (MemoryAidVersion & { project: string; id: string })[];
+  memoryAccess: (MemoryAccessLogRow & { project: string })[];
+  /** Last access log seq handed out. */
+  memoryAccessSeq: number;
+  /** Import attempts per project, in attempt order. */
+  memoryImports: Map<string, MemoryImportRecord[]>;
 }

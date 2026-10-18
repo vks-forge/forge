@@ -16,6 +16,7 @@ import {
   countByTab,
   DEFAULT_FILTER,
   filterEntries,
+  tagsInUse,
   tagsOf,
 } from '#/domain/memory-filter.js';
 
@@ -95,6 +96,19 @@ describe('counts, tags and optimistic answers', () => {
     });
 
     expect(tagsOf(ENTRIES, 'decisions')).toEqual(['tests', 'tooling']);
+  });
+
+  it('offers every tag in use across tabs for a search, most used first and capped', () => {
+    const many = Array.from({ length: 30 }, (_, i) =>
+      entry({ id: `d-${i}`, tags: [`t${String(i).padStart(2, '0')}`] }),
+    );
+
+    expect(tagsInUse(ENTRIES)).toEqual(expect.arrayContaining(['tests', 'tooling']));
+    expect(tagsInUse(many)).toHaveLength(24);
+    expect(tagsInUse([entry({ tags: ['b'] }), entry({ tags: ['a', 'b'] })])).toEqual([
+      'b',
+      'a',
+    ]);
   });
 
   it('approve makes a proposal an active decision, reject a rejected record, ids kept', () => {

@@ -12,10 +12,10 @@
  *
  * Exports: none (executable).
  * Depends on: node:fs/promises, node:path, @forge/secrets, services/data-home,
- *   services/node-daemon-ports, services/run-cli.
+ *   services/node-daemon-ports, services/run-cli, services/memory-index-open (loaded only by `forge memory`).
  */
 
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createDpapiSecretStore } from '@forge/secrets';
 import { loadDataHome } from '#/services/data-home.js';
@@ -33,4 +33,13 @@ process.exitCode = await runCli(process.argv.slice(2), {
   stdout,
   stderr,
   daemon: createNodeDaemonPorts({ stdout, stderr }),
+  memory: {
+    cwd: process.cwd(),
+    env: process.env,
+    isDir: async (path) =>
+      (await stat(path).catch(() => undefined))?.isDirectory() === true,
+    // The index loads the database package; only a memory command pays for it.
+    openIndex: async (dir) =>
+      (await import('#/services/memory-index-open.js')).openLocalMemoryIndex(dir),
+  },
 });

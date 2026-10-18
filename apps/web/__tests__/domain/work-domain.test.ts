@@ -100,7 +100,7 @@ describe('inbox links', () => {
     expect(
       inboxLink('p', inboxItem({ id: 'memory_proposal:x-0003', kind: 'memory_proposal' }))
         .to,
-    ).toBe('/p/p/memory?record=x-0003');
+    ).toBe('/p/p/memory/x-0003');
 
     expect(
       inboxLink(

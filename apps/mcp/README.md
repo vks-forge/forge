@@ -18,6 +18,7 @@ does not match the run.
 - `src/services/start.ts`: `parseEnv()`, `depsFromEnv()` (async: opens the database through `services/open-database.ts`, which returns the storage and a settings reader on one connection, and builds the research provider from the run's settings; the run-token hash is read by `@forge/mcp` through that storage), `start()` (serve, or print to stderr and exit 1 on any startup failure).
 - `src/services/research-settings.ts`: `resolveResearch()` finds the run's project (run, else its ticket), reads the effective settings, applies the project's narrowing (`effectiveResearch` from core) and builds the `ResearchProvider` with `@forge/research`. Research off or settings that do not load give the Worker no web tools; the server still starts.
 - Bin: `forge-mcp` -> `dist/main.js`.
+- `src/services/memory-scope.ts`: `memoryScopeResolver()` builds a run's memory scope from its own rows and the saved settings (run, ticket, project, agent): the agent's tags and whether it sees rejected approaches (`workerScope`), the whole project with rejected approaches for a run that records no agent, the narrowest scope for an agent the settings no longer list, and null (so the tools answer `not_found`) for a run, ticket or project that cannot be found. `depsFromEnv()` hands `@forge/mcp` the SQL memory index and this resolver; a tool input can never build or widen a scope.
 
 ## Why this approach
 

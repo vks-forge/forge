@@ -25,6 +25,8 @@ models:
     draft_agent: sonnet
     ticket_check: opus
     pick_substitute: sonnet
+    # Turns a question into key words and synonyms for the memory search (d-0168): a tiny structured turn.
+    memory_rewrite: haiku
   # Workers: sonnet in every lane until changed in Settings.
   worker:
     express: sonnet

@@ -81,6 +81,8 @@ export const ENTRIES: Record<string, unknown>[] = [
   forge('web_fetch', { risk: 'network', taints: true, exposure: 'deferred' }),
   forge('db_query_readonly', { risk: 'read' }),
   forge('memory_search'),
+  forge('memory_get'),
+  forge('memory_related'),
   forge('tool_search', { reaches_tools: ['mcp__forge__*', 'read'] }),
   entry('mcp__github__create_issue', { kind: 'project', risk: 'network' }),
 ];

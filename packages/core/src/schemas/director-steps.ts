@@ -21,7 +21,7 @@
  * Exports: MAX_READ_REQUESTS, ReadRequest, ReadRequests, CardSurveyOutput, VerifyOutput,
  *   GrillTurnOutput, EnhanceOutput, WritePlanOutput, ApprovePlanOutput, CustomStepOutput,
  *   ANSWER_GROUND_KINDS, ESCALATE_REASONS, TicketAnswerOutput, TicketRecoverOutput, PickSubstituteOutput,
- *   DraftAgentOutput.
+ *   DraftAgentOutput, MemoryRewriteInput, MemoryRewriteOutput.
  * Depends on: schemas/agent, schemas/escalation, schemas/grill, schemas/ids, schemas/plan, schemas/research, zod. No IO.
  */
 
@@ -241,3 +241,25 @@ export const DraftAgentOutput = z.object({
   questions: z.array(z.string()).max(3),
 });
 export type DraftAgentOutput = z.infer<typeof DraftAgentOutput>;
+
+/**
+ * `memory_rewrite`: tool-less and tiny. The question is data; `known_tags` is the project's own tag
+ * vocabulary so the model can pick from words that exist. The answer is key words and synonyms for the
+ * memory search, never a decision; the engine drops any tag that is not in `known_tags`.
+ */
+export const MemoryRewriteInput = z.object({
+  question: z.string().max(1000),
+  known_tags: z
+    .array(z.object({ tag: z.string().max(40), count: z.number().int() }))
+    .max(40),
+});
+export type MemoryRewriteInput = z.infer<typeof MemoryRewriteInput>;
+
+const Keyword = z.string().trim().min(1).max(40);
+
+export const MemoryRewriteOutput = z.object({
+  terms: z.array(Keyword).min(1).max(4),
+  synonyms: z.array(Keyword).max(8),
+  tags: z.array(Keyword).max(4),
+});
+export type MemoryRewriteOutput = z.infer<typeof MemoryRewriteOutput>;

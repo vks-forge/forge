@@ -17,6 +17,7 @@ import type {
   ConfigSource,
   DriverRegistry,
   IntakeEvent,
+  MemoryIndex,
   StorageAdapter,
   Ticket,
 } from '@forge/core';
@@ -123,6 +124,8 @@ export interface RigOptions {
   storage?: StorageAdapter;
   /** Give the engine a fake research provider (default: none, so research is off). */
   research?: boolean;
+  /** Give the engine a memory index (default: none, so the Director pastes the whole slice). */
+  memoryIndex?: MemoryIndex;
 }
 
 export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
@@ -206,6 +209,7 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
     onTickRequested: () => void tickRequests.count++,
     log,
     ...(research ? { research } : {}),
+    ...(opts.memoryIndex ? { memoryIndex: opts.memoryIndex } : {}),
   };
 
   const engine = createEngine(deps);

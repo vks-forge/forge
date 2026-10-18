@@ -12,12 +12,13 @@
  *   floor result, so text from the repository or the chat cannot talk it into approving.
  *
  * Exports: REPO_RULE_FILES, readRepoRules(), buildStepInput(), buildApprovalInput().
- * Depends on: @forge/core (grill and plan types), tick/plan-keys, tick/planning-state, types/card-planning.
+ * Depends on: tick/memory-context (the memory shown to the Director), @forge/core (grill and plan types), tick/plan-keys, tick/planning-state, types/card-planning.
  *   Reads the memory and repo ports and the card's tickets.
  */
 
 import type { FloorResult, GrillState, PlanVersion } from '@forge/core';
 import type { FlowStep } from '@forge/core';
+import { buildMemoryContext } from '#/tick/memory-context.js';
 import { ticketPlanKeys } from '#/tick/plan-keys.js';
 import { evidenceInput, loadEvidenceViews } from '#/tick/research-store.js';
 import type { PlanCtx } from '#/types/card-planning.types.js';
@@ -104,7 +105,12 @@ export async function buildStepInput(
   previousPlan: PlanVersion | null,
   extra: Record<string, unknown> = {},
 ): Promise<Record<string, unknown>> {
-  const memory = await pc.ctx.deps.memory.slice(pc.project.slug);
+  const memory = await buildMemoryContext(pc.ctx, pc.project.slug, {
+    question: [pc.card.title, pc.card.summary, grill.current?.text ?? ''].join('\n'),
+    rewrite: true,
+    cardId: pc.card.id,
+  });
+
   const existing = await existingTickets(pc);
   const evidence = await pc.ctx.deps.storage.transaction((tx) =>
     loadEvidenceViews(tx, pc.card.id),
@@ -117,6 +123,7 @@ export async function buildStepInput(
     project_rules: {
       decisions: memory.decisions,
       rejected: memory.rejected,
+      ...(memory.note === undefined ? {} : { note: memory.note }),
       repo_rules: await readRepoRules(pc.ctx, pc.root),
     },
     card: cardInput(pc),

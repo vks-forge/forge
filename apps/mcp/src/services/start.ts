@@ -4,18 +4,21 @@
  * Why: if the token does not match the run, or the environment is incomplete, the
  *   process must die loudly before it serves a single tool, so the driver sees a failed
  *   MCP server instead of a Worker quietly talking to the wrong run. This is the one
- *   place that reads environment variables and opens the database (code.md rule 1).
+ *   place that reads environment variables and opens the database (code.md rule 1). It also gives the memory tools
+ *   their index and the scope builder, so a Worker reads project memory read-only and only inside its agent's slice.
  *
  * Exports: parseEnv(), depsFromEnv(), start().
- * Depends on: @forge/core, @forge/mcp, node:path, schemas/env, services/open-database, services/research-settings,
+ * Depends on: @forge/core, @forge/mcp, @forge/memory, node:path, schemas/env, services/memory-scope, services/open-database, services/research-settings,
  *   types/start.types. IO: opens SQLite (existing, never migrated), stdio via StartIo.
  */
 
 import { delimiter } from 'node:path';
 import { InvalidInputError } from '@forge/core';
 import { createForgeMcpServer } from '@forge/mcp';
+import { createSqlMemoryIndex } from '@forge/memory';
 import type { ForgeMcpDeps } from '@forge/mcp';
 import { ForgeEnv } from '#/schemas/env.js';
+import { memoryScopeResolver } from '#/services/memory-scope.js';
 import { openExistingDatabase } from '#/services/open-database.js';
 import { resolveResearch } from '#/services/research-settings.js';
 import type { Env, StartIo } from '#/types/start.types.js';
@@ -55,6 +58,9 @@ export async function depsFromEnv(env: Env): Promise<ForgeMcpDeps> {
       fetchAllowHosts: list(e.FORGE_FETCH_ALLOW_HOSTS, ','),
     })),
     docsDirs: list(e.FORGE_DOCS_DIRS, delimiter),
+    // Project memory is read through the index; the scope comes from the run's agent, never from a tool input.
+    memory: createSqlMemoryIndex({ storage, now: () => new Date() }),
+    memoryScope: memoryScopeResolver(storage, config),
   };
 }
 

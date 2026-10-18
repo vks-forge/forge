@@ -65,6 +65,7 @@ const ANSWERS: Record<StepName, unknown> = {
   ticket_recover: { decision: 'escalate', diagnosis: 'Needs a person.', confidence: 0.1 },
   // Unscripted, the Director pauses on a missing substitute, so the owner holds the wait (never a silent swap).
   pick_substitute: { decision: 'pause', reason: 'No good fit; the owner decides.' },
+  memory_rewrite: { terms: ['memory'], synonyms: [], tags: [] },
   ticket_check: {
     verdict: 'pass',
     summary: 'The change meets the plan.',

@@ -84,6 +84,7 @@ describe('NewRequestPayload / STEP_NAMES', () => {
       'draft_agent',
       'ticket_check',
       'pick_substitute',
+      'memory_rewrite',
     ]);
   });
 });

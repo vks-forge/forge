@@ -19,7 +19,7 @@
  *   an ended run is never reopened.
  *
  * Exports: startRun().
- * Depends on: @forge/core (branchName, DispatchPromptOutput, IMPLEMENTER_ID), steps/run-step,
+ * Depends on: tick/memory-context (the memory shown to the Director), @forge/core (branchName, DispatchPromptOutput, IMPLEMENTER_ID), steps/run-step,
  *   domain/worker-contract, tick/{agent-prompt,project-runtime,dispatch-park,dispatch-check,dispatch-stage,
  *   launch-run,stage-records,ticket-moves,wake-delta}, shared/trace.
  */
@@ -33,6 +33,7 @@ import {
 import type { Ticket, Worktree, WorkerDriver } from '@forge/core';
 import { renderWorkerContract, workerContract } from '#/domain/worker-contract.js';
 import { hold, rejectStep, runStep } from '#/steps/run-step.js';
+import { buildMemoryContext, questionOf } from '#/tick/memory-context.js';
 import { workerPrompt } from '#/tick/agent-prompt.js';
 import { startChecks } from '#/tick/dispatch-check.js';
 import { chooseWriter } from '#/tick/dispatch-stage.js';
@@ -141,7 +142,12 @@ async function tryStart(
     throw e;
   }
 
-  const slice = await deps.memory.slice(project.slug, agent.definition.memory);
+  const slice = await buildMemoryContext(ctx, project.slug, {
+    question: questionOf(ticket.title, ticket.body),
+    rewrite: false,
+    filter: agent.definition.memory,
+  });
+
   const contract = workerContract({
     rework: c.kind === 'retry' && c.wake?.kind === 'continuation',
     checks: runtime.config.checks,

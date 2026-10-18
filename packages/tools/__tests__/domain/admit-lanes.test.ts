@@ -40,6 +40,7 @@ describe('Express defaults (unattended: ask becomes deny)', () => {
     [call('mcp__forge__web_fetch', { url: 'https://docs.x.com' }), 'deny', 'not_granted'],
     [call('mcp__forge__db_query_readonly', {}), 'deny', 'not_granted'],
     [call('mcp__forge__memory_search', {}), 'deny', 'not_granted'],
+    [call('mcp__forge__memory_get', {}), 'deny', 'not_granted'],
     [call('mcp__github__create_issue', {}), 'deny', 'not_granted'],
   ])('%j -> %s %s', (c, decision, reason) => {
     expect(verdict(admit(ctx, c))).toEqual([decision, reason]);

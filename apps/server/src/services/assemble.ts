@@ -4,12 +4,10 @@
  * Why: this is the composition root (code.md rule 1). It is the only place that opens the
  *   database (and runs its migrations, which the server owns), builds the hook ingress and
  *   starts a socket. It holds no logic of its own: it picks adapters from config, hands them
- *   to the engine and the routes, and returns a small handle. Projects are not built here:
- *   the project registry serves every registered project (each with its own clone,
- *   worktrees, git host and gates) and the projects API adds more while the server runs.
- *   The Worker driver and the Director's model arrive as ports, so production passes the
- *   Claude adapters and the end-to-end test passes fakes through the same assembly, the same
- *   hook route, the same receipts and the same G1 gate. It also wires what lets runs survive a
+ *   to the engine and the routes, and returns a small handle. Projects are not built here: the project registry serves
+ *   every registered project (each with its own clone, worktrees, git host and gates) and the projects API adds more
+ *   while the server runs. The Worker driver and the Director's model arrive as ports, so production passes the Claude
+ *   adapters and the end-to-end test passes fakes through the same assembly, hook route, receipts and G1 gate. It also wires what lets runs survive a
  *   restart (d-0092): shutdown interrupts live runs instead of cancelling them, the first tick
  *   resumes them, and run secrets live in the SecretStore until the run is over and are swept
  *   at start and after every tick (d-0100). Planning reads the code via a git repo reader
@@ -118,12 +116,14 @@ export async function assembleServer(
 
     await projects.load();
 
-    const parts = await composeProjectMemory(
-      layout.data.memoryDir,
+    const parts = await composeProjectMemory({
+      storage,
+      dataHome: layout.data,
       now,
       log,
-      projects.slugs(),
-    );
+      slugs: projects.slugs(),
+      catalogue,
+    });
 
     const { driver, llm, drivers } = await composeWorker(
       ports,
@@ -169,7 +169,7 @@ export async function assembleServer(
       storage,
       drivers,
       llm,
-      memory: parts.source,
+      ...parts.forEngine,
       repoReader: createGitRepoReader(),
       receipts,
       reports: createFileReportStore(layout.data.home),
@@ -214,7 +214,7 @@ export async function assembleServer(
         compat,
         research,
         projects,
-        memory: parts.memory,
+        ...parts.forRoutes,
         triggers,
         hooks,
         secrets,

@@ -11,7 +11,7 @@
  *   ticket in the inbox and is not retried until its hold passes.
  *
  * Exports: triageInbox().
- * Depends on: @forge/core (preCheckLane, TriageOutput), domain/lane-rules, steps/run-step,
+ * Depends on: tick/memory-context (the memory shown to the Director), @forge/core (preCheckLane, TriageOutput), domain/lane-rules, steps/run-step,
  *   tick/ticket-moves.
  */
 
@@ -21,6 +21,7 @@ import { decideLane } from '#/domain/lane-rules.js';
 import { isLive } from '#/domain/live-lanes.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { hold, isHeld, rejectStep, runStep } from '#/steps/run-step.js';
+import { buildMemoryContext, questionOf } from '#/tick/memory-context.js';
 import { isUnservable, projectSettings } from '#/tick/tick-config.js';
 import { raiseEscalation } from '#/tick/escalation-raise.js';
 import { moveTicketTx } from '#/tick/ticket-moves.js';
@@ -51,7 +52,11 @@ async function triageOne(ctx: EngineCtx, ticket: Ticket): Promise<void> {
   }
 
   const meta = await requestMeta(ctx, ticket);
-  const slice = await deps.memory.slice(project.slug);
+  const slice = await buildMemoryContext(ctx, project.slug, {
+    question: questionOf(ticket.title, ticket.body),
+    rewrite: false,
+  });
+
   // Tier C paths are policy: they come from the settings snapshot, so an edit applies at once.
   const globs = projectSettings(ctx.config, project.slug).tier_c_globs;
   const early = preCheckLane({

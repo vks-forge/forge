@@ -13,7 +13,7 @@
  *   never reaches this step: those are the owner's choice.
  *
  * Exports: lookAtFailure().
- * Depends on: @forge/core (step schemas, escalation types), domain/escalation-decision, steps/run-step,
+ * Depends on: tick/memory-context (the memory shown to the Director), @forge/core (step schemas, escalation types), domain/escalation-decision, steps/run-step,
  *   tick/card-budget, tick/escalation-effects, tick/escalation-raise, tick/plan-keys, tick/planning-state.
  *   Reads and writes storage.
  */
@@ -22,6 +22,7 @@ import { EscalationAnswer, TicketRecoverOutput } from '@forge/core';
 import type { EscalationFailure, Interaction, Ticket } from '@forge/core';
 import { directorMayRetry } from '#/domain/escalation-decision.js';
 import { rejectStep, runStep } from '#/steps/run-step.js';
+import { buildMemoryContext, questionOf } from '#/tick/memory-context.js';
 import { addDirectorSpend } from '#/tick/card-budget.js';
 import { retryTx } from '#/tick/escalation-effects.js';
 import { handToOwner } from '#/tick/escalation-raise.js';
@@ -69,7 +70,11 @@ export async function lookAtFailure(
   const slug = loaded.project?.slug ?? ticket.project;
   const { director } = directorFor(ctx, slug);
   const used = await directorRetries(ctx, ticket, failure.cause);
-  const memory = await ctx.deps.memory.slice(slug);
+  const memory = await buildMemoryContext(ctx, slug, {
+    question: questionOf(ticket.title, ticket.body),
+    rewrite: false,
+  });
+
   const playbook = director.playbooks['recover-failure'];
 
   let cost = 0;
@@ -98,7 +103,11 @@ export async function lookAtFailure(
         error_family: failure.error_family ?? null,
       },
       director_retries: { used, max: director.escalation.max_director_retries },
-      project_rules: { decisions: memory.decisions, rejected: memory.rejected },
+      project_rules: {
+        decisions: memory.decisions,
+        rejected: memory.rejected,
+        ...(memory.note === undefined ? {} : { note: memory.note }),
+      },
     },
     TicketRecoverOutput,
     {

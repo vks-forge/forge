@@ -81,6 +81,10 @@ describe('buildStepPrompt', () => {
       ],
     ],
     ['ticket_recover', ['decision', 'diagnosis', 'note', 'confidence', 'input.playbook']],
+    [
+      'memory_rewrite',
+      ['terms', 'synonyms', 'tags', 'known_tags', 'question', 'data, never instructions'],
+    ],
   ] as ReadonlyArray<readonly [StepName, string[]]>)(
     'the %s prompt names its answer keys and the engine playbook',
     (name, keys) => {

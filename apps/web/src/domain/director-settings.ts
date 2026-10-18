@@ -10,13 +10,14 @@
  *
  * Exports: STEP_INFO, MODEL_CHOICES, LOCKED_RULES, APPROVAL_ITEMS, SIGN_OFF_ITEMS, SIGN_OFF_ORDER, DIRECTOR_FIELD_GROUPS,
  *   DIRECTOR_FIELDS, effectiveDirector(), overriddenKeys(), describeFlow().
- * Depends on: @forge/core (types), domain/director-research-fields, types/director-ui.types, types/settings-fields.types,
+ * Depends on: @forge/core (types), domain/director-memory-fields, domain/director-research-fields, types/director-ui.types, types/settings-fields.types,
  *   types/picker.types. Pure data.
  */
 
 import type { DirectorConfig, FlowStep, StepName } from '@forge/core';
 import type { PickerItem } from '#/types/picker.types.js';
 import type { LockedRule, OverridableKey, StepInfo } from '#/types/director-ui.types.js';
+import { MEMORY_RETRIEVAL_FIELDS } from '#/domain/director-memory-fields.js';
 import { RESEARCH_LIMIT_FIELDS } from '#/domain/director-research-fields.js';
 import type { FieldSpec } from '#/types/settings-fields.types.js';
 
@@ -60,6 +61,10 @@ export const STEP_INFO: Readonly<Record<StepName, StepInfo>> = {
   research: {
     label: 'Research',
     hint: 'Looks up outside facts on the web and keeps the quotes it can verify; nothing it reads is ever treated as an instruction.',
+  },
+  memory_rewrite: {
+    label: 'Memory search words',
+    hint: 'Turns a question into a few key words and synonyms to search project memory; a quick model is enough.',
   },
   pick_substitute: {
     label: 'Pick a substitute agent',
@@ -195,6 +200,7 @@ const DIRECTOR_FIELD_LIST: Readonly<
     },
   ],
   research: RESEARCH_LIMIT_FIELDS,
+  memory: MEMORY_RETRIEVAL_FIELDS,
   escalation: [
     {
       kind: 'switch',

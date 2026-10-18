@@ -1,5 +1,5 @@
 /**
- * Project memory API: list records, read one, approve or reject a proposal.
+ * Project memory API: list records, read one, approve or reject a proposal (search, history and admin are in memory-search).
  *
  * Why: the Director infers things about a project (a stack pick, a lesson) and may only
  *   propose them; a proposal becomes a constraint on later planning only when the owner
@@ -70,7 +70,11 @@ export function memoryRoutes(deps: RouteDeps): Route[] {
       path: '/projects/:slug/memory/:id',
       async handle(ctx) {
         const { slug, id } = await target(ctx);
-        const record = await deps.memory.reader.get(slug, id);
+        // The record view carries provenance, links and import notes; without an index (route tests) the plain record is read.
+        const record = deps.memoryIndex
+          ? (await deps.memoryIndex.get(slug, [id], { actor: 'web' })).records[0]
+          : await deps.memory.reader.get(slug, id);
+
         if (!record) {
           throw new HttpError(404, 'memory_record_not_found', `no memory record ${id}`);
         }

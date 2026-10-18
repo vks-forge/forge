@@ -31,6 +31,7 @@ import { createGithubConnectionRepository } from '#/adapters/sqlite/github-conne
 import { createInboxStateRepository } from '#/adapters/sqlite/inbox-states-repository.js';
 import { createIntakeEventRepository } from '#/adapters/sqlite/intake-events-repository.js';
 import { createInteractionRepository } from '#/adapters/sqlite/interactions-repository.js';
+import { createMemoryRepository } from '#/adapters/sqlite/memory-repository.js';
 import { runImmediate } from '#/adapters/sqlite/immediate-tx.js';
 import {
   createHarnessToolSchemaRepository,
@@ -103,6 +104,7 @@ export function createStorageOnDriver(
     findingMarks: createFindingMarkRepository(driver),
     researchSources: createResearchSourceRepository(driver),
     evidence: createEvidenceRepository(driver),
+    memory: createMemoryRepository(driver),
   };
 
   return {

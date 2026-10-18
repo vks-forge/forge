@@ -1,7 +1,7 @@
 /**
  * SQLite purge of everything a project owns, in foreign-key-safe order.
  *
- * Why: deleting a project must leave no ticket, run, receipt, card, plan version or pipeline stage behind, or re-adding
+ * Why: deleting a project must leave no ticket, run, receipt, card, plan version, pipeline stage or memory record behind, or re-adding
  *   the same folder and slug would show another project's old history under it. Most tables
  *   point at a project only through a ticket or a run, so the rows are found by walking
  *   project -> tickets -> runs -> per-run records and removed leaf-first. The settings
@@ -61,6 +61,23 @@ export function purgeProject(driver: SqlDriver, slug: string): boolean {
   // Sources and evidence point at cards and tickets, so they go before either.
   del(`DELETE FROM card_evidence WHERE card_id IN (${CARDS})`);
   del('DELETE FROM research_sources WHERE project = ?');
+
+  // Memory: the delete triggers allow this only while the guard row exists, and the guard goes before commit.
+  del('INSERT INTO memory_purge_guard (project) VALUES (?)');
+  del('DELETE FROM memory_fts WHERE project = ?');
+  for (const table of [
+    'memory_links',
+    'memory_tags',
+    'memory_aid_versions',
+    'memory_events',
+    'memory_access_log',
+    'memory_imports',
+    'memory_records',
+  ]) {
+    del(`DELETE FROM ${table} WHERE project = ?`);
+  }
+
+  driver.run('DELETE FROM memory_purge_guard');
 
   del('DELETE FROM intake_events WHERE project = ?');
   del(`DELETE FROM runs WHERE project = ? OR ticket_id IN (${TICKETS})`);

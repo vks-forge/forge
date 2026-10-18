@@ -47,6 +47,14 @@ function cliRig(store: SecretStore) {
     stdout: (t) => out.push(t),
     stderr: (t) => err.push(t),
     daemon: createFakeWorld().ports,
+    memory: {
+      cwd: '/',
+      env: {},
+      isDir: async () => false,
+      openIndex: async () => {
+        throw new Error('this test never opens a memory index');
+      },
+    },
   };
 
   return { deps, out, err };

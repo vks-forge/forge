@@ -29,6 +29,7 @@ import {
 import { CompanyScreen } from '#/components/settings/company-screen.js';
 import { ConfigFields } from '#/components/settings/config-fields.js';
 import { SettingsSection } from '#/components/settings/settings-page.js';
+import { MEMORY_REJECTED_NOTE } from '#/domain/director-memory-fields.js';
 import { DIRECTOR_FIELDS } from '#/domain/director-settings.js';
 
 export function DirectorPage() {
@@ -118,6 +119,21 @@ export function DirectorPage() {
             >
               <ConfigFields
                 fields={DIRECTOR_FIELDS.research}
+                config={config}
+                errors={draft.errors}
+                onChange={set}
+              />
+            </SettingsSection>
+            <SettingsSection
+              id="memory"
+              title="Memory retrieval"
+              description="How the Director reads this project's memory when it plans: how many decisions it pastes, and whether a quick model call first turns the question into search words."
+            >
+              <p className="mb-4 max-w-prose text-sm text-muted">
+                {MEMORY_REJECTED_NOTE}
+              </p>
+              <ConfigFields
+                fields={DIRECTOR_FIELDS.memory}
                 config={config}
                 errors={draft.errors}
                 onChange={set}

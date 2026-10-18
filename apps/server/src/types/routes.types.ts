@@ -14,6 +14,7 @@
 import type {
   ConfigSource,
   DataHomeLayout,
+  MemoryIndex,
   ProjectMemory,
   SecretStore,
   StorageAdapter,
@@ -26,6 +27,7 @@ import type { AgentPorts } from '#/types/agent-store.types.js';
 import type { SessionStore, SseTicketIssuer, TokenProver } from '#/types/auth.types.js';
 import type { FolderPicker, FolderRevealer } from '#/types/folder-picker.types.js';
 import type { HarnessCompat } from '#/types/harness-compat.types.js';
+import type { MemoryAdmin } from '#/types/memory-admin.types.js';
 import type { ProjectEvents } from '#/types/project-events.types.js';
 import type { ProjectRegistry } from '#/types/project-registry.types.js';
 import type { ResearchRoutePort } from '#/types/research.types.js';
@@ -49,6 +51,10 @@ export interface RouteDeps {
   readonly projects: ProjectRegistry;
   /** Each project's memory repository: the memory API reads it and applies approvals and rejections. */
   readonly memory: ProjectMemory;
+  /** Search, records with provenance, related records and history for the memory API; absent (route tests) those answer 503 `not_available`. */
+  readonly memoryIndex?: MemoryIndex | undefined;
+  /** Import status and retry, markdown export and the access log; absent (route tests) those answer 503 `not_available`. */
+  readonly memoryAdmin?: MemoryAdmin | undefined;
   /** The ticket sources `POST /intake` accepts events from. */
   readonly triggers: TriggerRegistry;
   readonly hooks: HookHandler;

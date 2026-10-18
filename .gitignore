@@ -4,6 +4,7 @@
 # legacy local runtime data and live-probe artefacts (the data home is outside the repo since B1)
 .forge/data/
 .forge/memory/*/.index/
+.forge/memory/.index/
 
 # legacy worktrees from before they moved to the data home (d-0098)
 .worktrees/

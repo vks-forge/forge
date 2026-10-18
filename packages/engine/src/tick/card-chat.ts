@@ -76,7 +76,7 @@ async function answerCard(
   cardId: CardId,
   rows: readonly number[],
 ): Promise<void> {
-  const view = await loadChatContext(ctx.deps, cardId);
+  const view = await loadChatContext(ctx, cardId);
   if (!view) {
     return;
   }

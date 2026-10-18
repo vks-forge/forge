@@ -1,19 +1,18 @@
 /**
- * MemoryToolbar: search, tag filter and (on Decisions) hide-superseded.
+ * MemoryToolbar: tag filter, hide-superseded and the shown-count for the tab list.
  *
- * Why: a project that has run for months has hundreds of records. The owner narrows by
- *   words they remember (searches id, statement and tags) or by a tag the Director used, both
- *   visible as chips so nothing has to be recalled or typed exactly. Active filters are shown
- *   and cleared in one click, and the result count is announced politely so a screen-reader
- *   user hears that typing changed the list. `/` jumps to the search box, the usual shortcut.
+ * Why: a project that has run for months has hundreds of records. Besides searching (the box
+ *   above the tabs), the owner narrows a tab by a tag the Director used, shown as chips so
+ *   nothing has to be recalled or typed exactly. Active filters are shown and cleared in one
+ *   click, and the result count is announced politely so a screen-reader user hears that a
+ *   change moved the list. When the project's memory is still in files (search unavailable) the
+ *   search words narrow this list too, and "Clear filters" clears them with the rest.
  *
  * Exports: MemoryToolbar.
- * Depends on: react, lucide-react, components/ui/{button,field}, types/memory.types.
+ * Depends on: lucide-react, types/memory.types.
  */
 
-import { Search, X } from 'lucide-react';
-import { useEffect, useRef } from 'react';
-import { INPUT_CLASS } from '#/components/ui/field.js';
+import { X } from 'lucide-react';
 import type { MemoryFilter } from '#/types/memory.types.js';
 
 export function MemoryToolbar(props: {
@@ -24,23 +23,7 @@ export function MemoryToolbar(props: {
   onChange: (next: MemoryFilter) => void;
 }) {
   const { filter } = props;
-  const search = useRef<HTMLInputElement>(null);
   const narrowed = filter.text !== '' || filter.tags.length > 0 || filter.activeOnly;
-
-  useEffect(() => {
-    const focus = (event: KeyboardEvent): void => {
-      const target = event.target as HTMLElement;
-      const typing = /^(input|textarea|select)$/i.test(target.tagName);
-      if (event.key === '/' && !typing && !target.isContentEditable) {
-        event.preventDefault();
-        search.current?.focus();
-      }
-    };
-
-    window.addEventListener('keydown', focus);
-
-    return () => window.removeEventListener('keydown', focus);
-  }, []);
 
   const toggleTag = (tag: string): void =>
     props.onChange({
@@ -52,22 +35,6 @@ export function MemoryToolbar(props: {
 
   return (
     <div className="grid gap-3">
-      <div className="relative">
-        <Search
-          aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint"
-        />
-        <input
-          ref={search}
-          type="search"
-          aria-label="Search memory"
-          placeholder="Search by words, id or tag (press /)"
-          value={filter.text}
-          onChange={(event) => props.onChange({ ...filter, text: event.target.value })}
-          className={`${INPUT_CLASS} pl-9`}
-        />
-      </div>
-
       {props.tags.length > 0 || filter.tab === 'decisions' ? (
         <div
           className="flex flex-wrap items-center gap-2"

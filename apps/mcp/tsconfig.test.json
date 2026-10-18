@@ -12,6 +12,7 @@
     { "path": "../../packages/core" },
     { "path": "../../packages/db" },
     { "path": "../../packages/mcp" },
+    { "path": "../../packages/memory" },
     { "path": "../../packages/research" }
   ]
 }

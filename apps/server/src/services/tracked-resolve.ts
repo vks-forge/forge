@@ -6,7 +6,7 @@
  *   turns the touches into the web client's query keys per project slug, so the reads see the rows and a rolled
  *   back transaction announces nothing. The keys follow the web client's: `["cards", slug]`, `["card", id]`,
  *   `["tickets", slug]`, `["inbox", slug]`, `["ticket", id]`, `["ticket-pipeline", id]`, `["card-evidence", id]`,
- *   `["run-sources", runId]`.
+ *   `["run-sources", runId]`, `["memory", slug]`.
  *
  * Exports: resolve().
  * Depends on: @forge/core (QueryKey, StorageTx), types/tracked-storage. IO: extra reads inside the caller's
@@ -67,6 +67,14 @@ export async function resolve(
       case 'inbox':
         await add(t.project, ['inbox', await slugOf(t.project)]);
         break;
+      case 'memory': {
+        // Memory is keyed by the slug itself, so there is no project id to resolve.
+        const bucket = out.get(t.slug) ?? new Map<string, QueryKey>();
+        bucket.set(JSON.stringify(['memory', t.slug]), ['memory', t.slug]);
+        out.set(t.slug, bucket);
+        break;
+      }
+
       case 'card_evidence': {
         const owner = await tx.cards.get(t.id as never);
         if (owner) {

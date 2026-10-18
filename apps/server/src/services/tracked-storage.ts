@@ -20,7 +20,8 @@
  *   `["pipelines", "project", slug]` and `["project-settings", slug]` (an accepted one changed the lane).
  *   Research: new evidence or a Director source announces `["card-evidence", id]` and `["card", id]`; a Worker's page
  *   read announces `["run-sources", runId]`; a `budget_warning` event and a change of a card's cap also announce
- *   `["inbox", slug]`.
+ *   `["inbox", slug]`. A write to a project's memory (a record, a move, a search aid or an import attempt) announces
+ *   `["memory", slug]`.
  *
  * Exports: trackProjectWrites().
  * Depends on: @forge/core (storage ports), services/tracked-resolve, services/tracked-watch, types/project-events,
@@ -148,6 +149,15 @@ function track(tx: StorageTx, touches: Touch[]): StorageTx {
     }),
     stageArtifacts: watch(tx.stageArtifacts, touches, {
       add: (a) => ({ kind: 'pipeline', id: (a[0] as { ticket_id: string }).ticket_id }),
+    }),
+    memory: watch(tx.memory, touches, {
+      insertRecord: (a) => ({
+        kind: 'memory',
+        slug: (a[0] as { project: string }).project,
+      }),
+      transition: (a) => ({ kind: 'memory', slug: String(a[0]) }),
+      setAids: (a) => ({ kind: 'memory', slug: String(a[0]) }),
+      saveImport: (a) => ({ kind: 'memory', slug: String(a[0]) }),
     }),
     inboxStates: watch(tx.inboxStates, touches, {
       upsert: (a) => ({ kind: 'inbox', project: (a[0] as { project: string }).project }),

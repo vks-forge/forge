@@ -31,7 +31,9 @@ export type Touch =
   /** A card's budget warning was written or its cap changed: its project's Inbox is stale. */
   | { readonly kind: 'card_inbox'; readonly id: string }
   /** A proposal decided by its id; its project is read from the row before the commit, and the lane's own settings may have changed too. */
-  | { readonly kind: 'proposal_decided'; readonly id: number };
+  | { readonly kind: 'proposal_decided'; readonly id: number }
+  /** A write to a project's memory (a record, a move, a search aid, an import attempt): its slug; the memory screen is stale. */
+  | { readonly kind: 'memory'; readonly slug: string };
 
 /** Turns the arguments of a successful write into what it touched. */
 export type Recorder = (args: readonly unknown[]) => Touch | readonly Touch[];

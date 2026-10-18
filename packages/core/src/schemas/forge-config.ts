@@ -42,6 +42,7 @@ export const ModelMatrix = z.object({
     draft_agent: Model,
     ticket_check: Model,
     pick_substitute: Model,
+    memory_rewrite: Model,
   }),
   worker: z.object({ express: Model, standard: Model, full: Model }),
 });

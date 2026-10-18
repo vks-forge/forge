@@ -36,8 +36,8 @@ describe('lane ceilings (tool-system.md section 12)', () => {
     ['full', 'mcp__forge__web_search', true],
     ['standard', 'mcp__forge__db_query_readonly', false],
     ['standard', 'mcp__github__create_issue', false],
-    ['full', 'mcp__forge__memory_search', false],
-    ['standard', 'mcp__forge__memory_search', false],
+    ['full', 'mcp__forge__memory_search', true],
+    ['standard', 'mcp__forge__memory_search', true],
     ['express', 'mcp__forge__memory_search', false],
     ['standard', 'unknown_tool_x', false],
   ] as const)('%s lane / %s granted=%s', (lane, id, expected) => {
