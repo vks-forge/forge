@@ -9,11 +9,13 @@
  *   they parse a body and call a method here. The safety rules (`pipelineProblems`,
  *   `routingProblems`) run BEFORE anything is appended and answer 400 with every problem, so a
  *   pipeline that skips G1 or lets an agent check its own work can never be stored, whoever
- *   sends it. The engine runs the same rules again when a ticket takes its snapshot.
+ *   sends it, and a critic on the Worker's own model family is a problem once two families are
+ *   connected (services/model-families). The engine runs the same rules again when a ticket takes
+ *   its snapshot.
  *
  * Exports: createPipelineStore().
  * Depends on: @forge/core (pipeline rules, doc helpers, effectivePipelines), @forge/engine (LIVE_LANES),
- *   services/agent-state, services/http/http-errors, types/pipeline-store. IO: through the
+ *   services/{agent-state,model-families}, services/http/http-errors, types/pipeline-store. IO: through the
  *   ConfigSource port.
  */
 
@@ -40,6 +42,7 @@ import type {
 import { LIVE_LANES } from '@forge/engine';
 import { createAgentState } from '#/services/agent-state.js';
 import { HttpError } from '#/services/http/http-errors.js';
+import { connectedFamilies } from '#/services/model-families.js';
 import type { AgentDeps, ScopeState } from '#/types/agent-store.types.js';
 import type {
   CompanyPipelinesReply,
@@ -112,8 +115,17 @@ export function createPipelineStore(deps: AgentDeps): PipelineStore {
   const asCompany = (doc: ScopeState['doc']): CompanyOverride => doc as CompanyOverride;
   const asProject = (doc: ScopeState['doc']): ProjectOverride => doc as ProjectOverride;
 
-  function judge(at: ScopeState, lane: Lane, def: PipelineDefinition): void {
-    const problems = pipelineProblems(def, { roster: at.views, lane });
+  async function judge(
+    at: ScopeState,
+    lane: Lane,
+    def: PipelineDefinition,
+  ): Promise<void> {
+    const problems = pipelineProblems(def, {
+      roster: at.views,
+      lane,
+      families_available: await connectedFamilies(deps),
+    });
+
     if (problems.length > 0) {
       refuse('pipeline_invalid', problems);
     }
@@ -128,7 +140,7 @@ export function createPipelineStore(deps: AgentDeps): PipelineStore {
       const lane = laneOf(rawLane);
       const at = await state.read(COMPANY);
       state.assertFresh(at, body);
-      judge(at, lane, body.pipeline);
+      await judge(at, lane, body.pipeline);
       const doc = setCompanyLane(asCompany(at.doc), lane, body.pipeline);
 
       return companyReply(await state.commit(at, doc, body));
@@ -159,7 +171,7 @@ export function createPipelineStore(deps: AgentDeps): PipelineStore {
       const lane = laneOf(rawLane);
       const at = await state.read({ scope: 'project', slug });
       state.assertFresh(at, body);
-      judge(at, lane, body.pipeline);
+      await judge(at, lane, body.pipeline);
       const doc = setProjectLane(
         asProject(at.doc),
         lane,
@@ -212,7 +224,11 @@ export function createPipelineStore(deps: AgentDeps): PipelineStore {
       ];
 
       return {
-        problems: pipelineProblems(body.pipeline, { roster: at.views, lane: body.lane }),
+        problems: pipelineProblems(body.pipeline, {
+          roster: at.views,
+          lane: body.lane,
+          families_available: await connectedFamilies(deps),
+        }),
         warnings: view.warnings,
       };
     },

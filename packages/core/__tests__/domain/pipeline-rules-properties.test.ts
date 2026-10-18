@@ -28,7 +28,7 @@ const roster = effectiveAgents({ ...BUILTIN_AGENTS }, undefined, () => ({
   reasons: [],
 }));
 
-const ctx = { roster, lane: 'standard' as const };
+const ctx = { roster, lane: 'standard' as const, families_available: ['claude'] };
 
 const impl: Stage = {
   id: 'implementer',
@@ -63,6 +63,14 @@ const script: Stage = {
 };
 
 const human: Stage = { id: 'human', kind: 'human', label: 'You', prompt: 'Look.' };
+const dcheck: Stage = { id: 'check-plan', kind: 'director_check', label: 'Check' };
+const signOff: Stage = {
+  id: 'sign-off',
+  kind: 'sign_off',
+  label: 'Sign off',
+  signer: 'director_or_owner',
+  prompt: 'Sign.',
+};
 
 /** A valid skeleton to start from: the shipped lanes, optionally with a script gate or a critic added. */
 const skeleton = fc
@@ -85,7 +93,18 @@ const skeleton = fc
     return stages;
   });
 
-const palette: Stage[] = [impl, tests, g1, reviewer, critic, script, human, merge];
+const palette: Stage[] = [
+  impl,
+  tests,
+  g1,
+  reviewer,
+  critic,
+  script,
+  human,
+  dcheck,
+  signOff,
+  merge,
+];
 
 /** One random mutation of a list: swap two stages, drop one, duplicate one, insert from the palette, or point a rework edge somewhere. */
 const mutate = (stages: Stage[], pick: number, i: number, j: number): Stage[] => {
@@ -143,6 +162,25 @@ const agentOfStage = (s: Stage): string | undefined =>
   s.kind === 'agent' ? s.agent : undefined;
 
 const writerAgents = new Set(['implementer', 'test-writer']);
+
+describe('the shipped lanes', () => {
+  it('are all valid, Full included, with one family or two', () => {
+    for (const lane of ['express', 'standard', 'full'] as const) {
+      for (const families_available of [['claude'], ['claude', 'openai']]) {
+        // Two families: the critic still runs on Claude with the Worker, so only that case differs.
+        const problems = pipelineProblems(BUILTIN_PIPELINES[lane], {
+          roster,
+          lane,
+          families_available,
+        });
+
+        expect(problems.map((p) => p.code)).toEqual(
+          lane === 'full' && families_available.length > 1 ? ['critic_same_family'] : [],
+        );
+      }
+    }
+  });
+});
 
 describe('properties over random stage lists', () => {
   it('a list that validates keeps every invariant', () => {
@@ -205,12 +243,29 @@ describe('properties over random stage lists', () => {
           }
         });
 
-        // one human stage, after every check
-        const humanAt = stages.findIndex((s) => s.kind === 'human');
-        if (humanAt >= 0) {
-          expect(stages.filter((s) => s.kind === 'human')).toHaveLength(1);
-          expect(kinds.slice(humanAt + 1).filter((k) => k === 'check')).toEqual([]);
-          expect(g1s[0]).toBeLessThan(humanAt);
+        // one human or sign-off stage, after every check and the Director check
+        const signAt = stages.findIndex(
+          (s) => s.kind === 'human' || s.kind === 'sign_off',
+        );
+
+        if (signAt >= 0) {
+          expect(
+            stages.filter((s) => s.kind === 'human' || s.kind === 'sign_off'),
+          ).toHaveLength(1);
+
+          expect(kinds.slice(signAt + 1).filter((k) => k === 'check')).toEqual([]);
+          expect(kinds.slice(signAt + 1)).not.toContain('director_check');
+          expect(g1s[0]).toBeLessThan(signAt);
+        }
+
+        // the Director check comes once, after G1 and after every other check
+        const dAt = stages.findIndex((s) => s.kind === 'director_check');
+        if (dAt >= 0) {
+          expect(stages.filter((s) => s.kind === 'director_check')).toHaveLength(1);
+          expect(g1s[0]).toBeLessThan(dAt);
+          expect(kinds.slice(dAt + 1)).not.toContain('check');
+          expect(stages.slice(dAt + 1).some((s) => s.kind === 'script_gate')).toBe(false);
+          expect(stages.slice(dAt + 1).some((s) => s.kind === 'group')).toBe(false);
         }
       }),
       { numRuns: 400 },

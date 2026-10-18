@@ -1,28 +1,34 @@
 /**
  * StageDetails: the settings of one stage, shaped by what kind of stage it is.
  *
- * Why: a stage is one of five things and each has different knobs: an agent (which one, and for
- *   a test writer whether the new tests must fail first), a script gate (its command), a group
- *   (two to four checks that run together), the owner's own sign-off (what to ask them), and
+ * Why: a stage is one of several things and each has different knobs: an agent (which one, and
+ *   for a test writer whether the new tests must fail first), a script gate (its command), a group
+ *   (two to four checks, or writers, that run together), the Director check (what a blocking
+ *   finding does), the sign-off (who signs and what to ask) or the older human sign-off, and
  *   merge or G1, which have nothing to set. Putting the knobs that fit and no others keeps the
  *   panel short, and a check stage always shows what happens to blocking findings (d-0165), so
  *   that choice is never hidden. A name, shown on the strip and in problems, is editable on
  *   every stage that can be edited.
  *
  * Exports: StageDetails, AgentStageFields.
- * Depends on: react, components/pipelines/{agent-picker,check-policy,group-members,script-fields},
+ * Depends on: react, components/pipelines/{agent-picker,check-policy,finish-stage-fields,group-members,script-fields},
  *   components/settings/form-field, components/ui/field, domain/pipeline-edit, @forge/core (types).
  */
 
 import { isCheckRole } from '@forge/core';
 import type { AgentStage, AgentView, PipelineDefinition, Stage } from '@forge/core';
+import {
+  DirectorCheckFields,
+  PromptField,
+  SignOffFields,
+} from '#/components/pipelines/finish-stage-fields.js';
 import { useLaneId } from '#/components/pipelines/lane-ids.js';
 import { AgentPicker } from '#/components/pipelines/agent-picker.js';
 import { CheckPolicy } from '#/components/pipelines/check-policy.js';
 import { GroupMembers } from '#/components/pipelines/group-members.js';
 import { ScriptFields } from '#/components/pipelines/script-fields.js';
 import { TextInput } from '#/components/settings/form-field.js';
-import { Field, INPUT_CLASS, Switch } from '#/components/ui/field.js';
+import { Field, Switch } from '#/components/ui/field.js';
 import { roleOf, takenIds } from '#/domain/pipeline-edit.js';
 import { writersAbove } from '#/domain/pipeline-policy.js';
 import type { WriterOption } from '#/types/pipeline-ui.types.js';
@@ -59,7 +65,7 @@ export function AgentStageFields(props: {
           }}
         />
       </Field>
-      {role === 'tester' ? (
+      {role === 'tester' && (!props.inGroup || stage.proof === 'red') ? (
         <div className="flex items-start gap-3">
           <Switch
             checked={stage.proof === 'red'}
@@ -164,21 +170,19 @@ export function StageDetails(props: {
       ) : null}
 
       {stage.kind === 'human' ? (
-        <Field
-          id={`${prefix}prompt-${stage.id}`}
-          label="What to ask you"
-          hint="Shown with the review: the ticket waits here until you approve or send it back."
-        >
-          <textarea
-            id={`${prefix}prompt-${stage.id}`}
-            aria-describedby={`${prefix}prompt-${stage.id}-hint`}
-            value={stage.prompt}
-            maxLength={500}
-            rows={3}
-            onChange={(event) => props.onChange({ ...stage, prompt: event.target.value })}
-            className={INPUT_CLASS}
-          />
-        </Field>
+        <PromptField
+          stageId={stage.id}
+          value={stage.prompt}
+          onChange={(prompt) => props.onChange({ ...stage, prompt })}
+        />
+      ) : null}
+
+      {stage.kind === 'director_check' ? (
+        <DirectorCheckFields stage={stage} onChange={props.onChange} />
+      ) : null}
+
+      {stage.kind === 'sign_off' ? (
+        <SignOffFields stage={stage} onChange={props.onChange} />
       ) : null}
     </div>
   );

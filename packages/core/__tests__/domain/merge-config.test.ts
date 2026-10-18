@@ -20,7 +20,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { BUILTIN_CONFIG, BUILTIN_FORGE_CONFIG } from '#/domain/builtin-config.js';
-import { mergeCompany, mergeConfig } from '#/domain/merge-config.js';
+import { mergeCompany, mergeConfig, signOffAboveCeiling } from '#/domain/merge-config.js';
 import { EffectiveConfig } from '#/schemas/config-override.js';
 import { ForgeConfig } from '#/schemas/forge-config.js';
 import { InvalidInputError } from '#/shared/errors.js';
@@ -204,6 +204,51 @@ describe('mergeConfig properties', () => {
           expect(error).toBeInstanceOf(InvalidInputError);
         }
       }),
+    );
+  });
+});
+
+describe('the Director sign-off ceiling', () => {
+  const company = (max_tier: 'none' | 'A' | 'B') => ({
+    director: { sign_off: { max_tier } },
+  });
+
+  const project = (max_tier: string) =>
+    ({ director: { sign_off: { max_tier } } }) as never;
+
+  it('defaults to B', () => {
+    expect(BUILTIN_FORGE_CONFIG.director.sign_off).toEqual({ max_tier: 'B' });
+  });
+
+  it('lets a project equal or lower the company ceiling and refuses a higher one', () => {
+    const forge = mergeCompany(BUILTIN_FORGE_CONFIG, company('A'));
+    const dir = (tier: string) => (project(tier) as { director: unknown }).director;
+
+    expect(signOffAboveCeiling(forge, dir('A'))).toBeUndefined();
+    expect(signOffAboveCeiling(forge, dir('none'))).toBeUndefined();
+    expect(signOffAboveCeiling(forge, dir('B'))).toMatch(/only lower/);
+    expect(signOffAboveCeiling(forge, undefined)).toBeUndefined();
+  });
+
+  it('holds a stored project value above the company value to the company value when merged', () => {
+    const effective = mergeConfig(BUILTIN_CONFIG, company('A'), project('B'));
+
+    expect(effective.forge.director.sign_off.max_tier).toBe('A');
+    expect(
+      mergeConfig(BUILTIN_CONFIG, company('B'), project('none')).forge.director.sign_off
+        .max_tier,
+    ).toBe('none');
+  });
+
+  it('refuses tier C as a value in either layer', () => {
+    expect(() =>
+      mergeCompany(BUILTIN_FORGE_CONFIG, {
+        director: { sign_off: { max_tier: 'C' } },
+      } as never),
+    ).toThrow(InvalidInputError);
+
+    expect(() => mergeConfig(BUILTIN_CONFIG, {}, project('C'))).toThrow(
+      InvalidInputError,
     );
   });
 });

@@ -348,3 +348,121 @@ LF line endings (keep CRLF where an existing file uses it). READMEs current. PRO
 6. **Writer group rework.** Default: every member re-runs. Later: only members whose scope covers the finding's files.
 7. **Critic family.** Default: a warning while one family is connected; `critic_same_family` refuses once two are.
 8. **Approval mode "always ask".** Default: it does not force owner sign-off; `sign_off.max_tier` controls that.
+
+
+## S5c-A contract (as built)
+
+Everything in "Contract (shared, binding)" holds unless listed under **Deviations**. Error envelope as S5a/S5b:
+`{ error: { code, message, issues?, ...details } }`. The act routes keep their S4a code `invalid_body` for a bad body
+(the brief's `invalid_request` applies to the settings routes). Writes are authored `owner`.
+
+### Shared shapes (core `@forge/core`; mirror in the web)
+
+- `schemas/pipeline.ts`: `DirectorCheckStage` (`{ id, kind:'director_check', label, on_blocking?, blocking? }`, default policy
+  **hold**, no `rework_to`), `SignOffStage` (`{ id, kind:'sign_off', label, signer:'director_or_owner'|'owner', prompt }`),
+  `Stage` gains both. `GroupStage.members` is now max 4 (it was 8; the rule `group_size` still says 2 to 4). Problem codes
+  added: `group_mixed`, `writer_scope_overlap`, `writer_group_proof`, `director_check_position`, `director_check_duplicate`,
+  `sign_off_position`, `critic_same_family`. A mixed group (writer plus check) reports `group_mixed` on the group and still
+  `group_writer` on the writer member. A group is a **writer group** when every member is an agent stage whose agent has
+  role writer or tester; it needs 2 to 4 distinct agents, no `proof`, and write scopes that cannot meet (`scopesOverlap()`,
+  conservative; `**` and the same agent twice overlap). `PipelineRuleContext.families_available: string[]` is required.
+  `critic_same_family` is a **problem** only when `families_available` holds two or more families; with one family it stays
+  the `PipelineView.warnings` text (`SAME_FAMILY_WARNING`, now also for any reviewer whose id or name contains `critic`, or
+  whose origin is `duplicate:critic` / `template:*critic*`).
+- Built-in Full: `test-writer(red) -> implementer -> g1 -> review-group [review: reviewer, critique: critic (on_blocking hold)]
+  -> check-plan (director_check) -> sign-off (sign_off, director_or_owner) -> merge`. Saved lists with a `human` stage are
+  unchanged and valid. Routed (rule) checks are inserted before the first of `director_check`, `sign_off`, `human`, `merge`.
+- `schemas/stage-run.ts`: `STAGE_RUN_KINDS = agent | script_gate | human | director`. `StageOutcome` adds `check`
+  (`TicketCheckOutput`), `unplanned` (<=200), `signed_by` (`director|owner`), `sign_reason`, `override`
+  (`{by:'owner', action:'merge_anyway'|'continue', comment, at}`), `same_family: true`, and `attempts` (the Director
+  check's failed tries, for the retry bound). `Finding` moved to `schemas/finding.ts` (still exported from `@forge/core`).
+- `StageView` (`TicketPipelineView.stages[]`, members too): `kind` adds `director_check` and `sign_off`; new keys
+  `findings?` (the current round's findings of that row, **capped at 20**, with `file`, `line`, `evidence`; `counts` still
+  counts all), `warnings: string[]` (always present; holds the same-family text on a critic that ran on the Worker's
+  family), `signed_by?`, `override?`, `scope?` (a **writer-group member's** write scope, absent elsewhere), `check?` (the
+  Director check's `TicketCheckOutput`: acceptance verdicts, findings, confidence), `unplanned?` (files outside the plan),
+  and `summary` for a sign-off is the signing reason. `MAX_VIEW_FINDINGS = 20`.
+- `schemas/ticket-check.ts` (new file): `TicketCheckOutput` as in the contract (a `pass` that lists a `met:'no'` or a
+  critical or high finding is refused as invalid output), `AcceptanceCheck`, `MAX_ACCEPTANCE_CHECKS`.
+- `schemas/escalation.ts`: `EscalationKind` adds `decision` and `sign_off`; `DECISION_CAUSES = findings_hold | scope_drift`;
+  `EscalationDecision { kind:'decision', cause, summary, stage_id, stage_label, findings (<=20, the blocking ones),
+  unplanned? (<=50), rework:{count,cap} }`; `SIGN_OFF_CAUSES = tier_b | tier_c | owner_stage | director_declined`;
+  `EscalationSignOff { kind:'sign_off', cause, tier, summary, director_note?, checks:{passed, counts:Record<Severity,int>,
+  overrides} }`; `ESCALATION_ACTIONS` adds `merge_anyway` and `continue`; `EscalationActBody` adds
+  `{action:'merge_anyway', comment}` and `{action:'continue', comment}` (comment trimmed, **at least 5 characters**);
+  `rework{comment}`, `approve`, `sign_off{signer?}` and `cancel{cascade?}` are valid on the new items. `EscalationAnswer`
+  carries `comment`. The card event `escalation_settled` payload gains optional `comment`. `InteractionKind` adds
+  `decision` and `sign_off`; `interactions.kind` has no CHECK, so no table changed.
+- Action tables (`escalation-actions.ts`): `DECISION_ACTIONS.findings_hold = [merge_anyway, rework, replan, cancel]`,
+  `.scope_drift = [continue, replan, cancel]`; `SIGN_OFF_ACTIONS(tier)`: C `[sign_off, rework, cancel]`, A/B `[approve,
+  rework, cancel]`; `replan` is dropped for a ticket with no card (as for every kind). `ticketWaitActions` for `review` /
+  `needs_signoff` returns the pending sign-off item's actions when there is one.
+- `schemas/director-config.ts`: `DirectorConfig.sign_off = { max_tier: 'none'|'A'|'B' }` (default `B`; `C` is not a value).
+  `STEP_NAMES` adds `ticket_check`; `ModelMatrix.director.ticket_check` (`opus`, also in `.forge/config/forge.yaml`);
+  `step_timeouts_ms.ticket_check = 300000`; playbook `check-against-plan` (v1) in `director.playbooks`. A project override
+  may only lower `sign_off.max_tier` (see PUT below); the merged effective value is held to the company's.
+
+### Routes (all as the contract table unless noted)
+
+| Route | Behaviour as built |
+|---|---|
+| `POST /interactions/:id/act` | body union as above; 200 `{ escalation: EscalationView }` (the item after the action: `status`, `settled`, `actions`). 400 `invalid_body` (+`issues`) for a short or blank `comment`. 404 `interaction_not_found`. 409 `not_pending` (+`settled`), `action_not_offered` (also for `merge_anyway` / `continue` / `approve` / `sign_off` from any author other than the owner, and for an action the item's payload does not offer), `stale`, `head_moved`, `merge_refused` (+`detail`), `ticket_has_dependents` (+`dependents`). |
+| `POST /tickets/:id/act` | unchanged shape; `approve`, `sign_off`, `rework` and `cancel` now **settle the pending sign-off item** in the same step, so both doors agree. After an item is settled a second act on the same item through `/interactions/:id/act` is 409 `not_pending`; a second act through the ticket door on a ticket that is already done is 409 `action_not_offered`. |
+| `GET /cards/:id/escalations` | `{ items }` includes `decision` and `sign_off` items (pending first). |
+| `GET /projects/:slug/inbox` | a ticket in `review` / `needs_signoff` is listed **once**, through its sign-off item (`question:<interaction id>` with `escalation` = the view); a plain `ticket_review` / `ticket_signoff` row appears only when no sign-off item is pending. A held ticket is listed through its decision. |
+| `GET /tickets/:id` | `escalations` includes the item; `wait_actions` come from the pending sign-off item (finished work) or from the pending owner items (held). |
+| `GET /tickets/:id/pipeline` | `TicketPipelineView` as above (new kinds and keys). |
+| `GET /settings/pipelines`, project variant | Full `live: true`; the shipped Full list is the new one. |
+| `PUT /settings/pipelines/:lane`, project variant, `POST /settings/pipelines/validate` | the new problem codes in `error.problems` / `problems`; `critic_same_family` is a 400 / a problem when two model families are connected (families come from the drivers' declared models) and a warning otherwise. |
+| `PUT /settings/company`, `PUT /settings/projects/:slug` | `doc.director.sign_off.max_tier` is `none|A|B`; `C` -> 400 `invalid_request`; a project value above the company's -> 400 `invalid_request` with the reason. |
+
+### Query keys and live updates
+
+`tracked-storage.ts` announces `['ticket-pipeline', ticketId]` **and** `['ticket', ticketId]` (project slug stream) after a
+commit that wrote a pipeline snapshot (`insert`, `replace`, `appendRouted`), a stage row (`start`, `finish`) or a stage
+artifact (`add`). A finished row is resolved to its ticket by id before the commit. Escalation writes announce `['card', id]`,
+`['inbox', slug]`, `['ticket', id]` as before. The strip should refetch on `['ticket-pipeline', id]`. Acting mutations should
+also invalidate `['ticket-pipeline', id]` (the web's side).
+
+### Behaviour the web should word
+
+- **Rows and statuses.** The Director check is a row with kind `director`: `running` while the step runs; `passed`
+  (with `check`, `unplanned`); `waiting` when it holds the ticket for the owner (blocking findings, or scope drift);
+  `skipped` for a ticket with no plan ("no plan to check against"); `error` between retries. A held row the owner overruled
+  reads `passed` with `override`. The sign-off stage is a `director` row `passed` with `signed_by:'director'` and the reason in
+  `summary`, or a `human` row `waiting` while the owner signs (then `passed` with `signed_by:'owner'`). Merge still reads
+  passed only when the ticket is done.
+- **Findings route.** A reviewer's blocking findings send work back twice (`rework`), then **hold**: the ticket is
+  `waiting_human` with `parked_from: verifying`, one `decision` item `findings_hold`. The critic and the Director check hold
+  at once. A failed G1 or script gate never holds: it reworks, then the `rework_cap` failure (Retry / Re-plan / Cancel). A
+  script gate set to hold parks as a plain failure. `rework` from a hold sends the ticket back without spending a rework; the
+  comment and the held findings reach the Worker.
+- **Scope drift.** `out_of_plan` with unplanned files raises `decision/scope_drift` with `unplanned`; `continue` (reason
+  required) proceeds on the record, `replan` sends the card back to grilling, `cancel`.
+- **Who signs.** The Director signs tier A and B only when the sign-off stage is `director_or_owner`, the tier of the real diff
+  is within `director.sign_off.max_tier`, every check passed outright, the Director check passed with every criterion
+  confirmed and no owner override stands. Otherwise one `sign_off` item (cause `director_declined`, `director_note` says why;
+  `tier_c` for tier C; `owner_stage` for a plain human stage; `tier_b` for Express/Standard tier B) waits for the owner. Tier B
+  signed by the Director ends `done` with the card note "Signed off by the Director (tier B): ...".
+- **Parallel writers.** Writer-group members appear as `members` of a group chip (`scope` on each). With the default
+  per-project limit of 1 they run one after another; reviewer and critic too.
+- **Errors.** A Director check that errors is retried by its error family and then parks the ticket with a failure item
+  (Retry runs the check again); it never passes and the Director never signs over it.
+
+### Deviations from the brief
+
+1. **Act routes keep `400 invalid_body`** (S4a's code, pinned by existing tests), not `invalid_request`; the settings routes use `invalid_request`.
+2. **`review-rework.test.ts`:** beyond the third step the brief names, the "hold at once" case now asserts a `decision` item instead of a `failure` one: the contract raises `findings_hold` for every hold, so the old assertion could not stay. Reworks 1 and 2 are byte-identical; the golden fixture, `express-parity`, `standard-pipeline` and `pipeline-stages` tests are untouched.
+3. **Script gates:** `on_blocking:'hold'` on a script gate keeps S5b's behaviour (park with a plain failure, Retry runs it again) instead of becoming a decision, because a gate never offers Merge anyway (`blockingRoute` has no `hold` for a gate).
+4. **`TicketCheckOutput` and `Finding` live in their own files** (`schemas/ticket-check.ts`, `schemas/finding.ts`), not in `director-steps.ts` / `stage-run.ts`: `stage-run` needs the first and the first needs `Finding`, which would be an import cycle. Both are exported from `@forge/core`.
+5. **`raiseDecisionTx` / `raiseSignOffTx` live in `tick/escalation-finished.ts`** (and the sign-off facts in `tick/sign-off-raise.ts`), not `escalation-raise.ts`: the raise has to park through `parkVerifyingTx`, which imports `escalation-raise`. `overrideTx` is in `tick/escalation-override.ts`; `reworkTx` stays in `escalation-effects.ts` and also covers a held ticket.
+6. **Extra optional fields:** `StageOutcome.attempts` (retry bound of the Director check) and `StageView.check` / `StageView.unplanned` (the web's checklist needs them on the strip).
+7. **An `unclear` criterion** keeps the Director from signing (the check still passes; it is a medium finding), in line with "fail closed"; the brief only says "passed with no override".
+8. **Director-signed tier A** leaves no card note (the sign-off row says who signed); only tier B writes the note, as the brief says.
+9. **`unplannedFiles`** returns `[]` when the plan entry lists no files (no claim about scope); a deleted file that matches the plan is not unplanned.
+10. **Wake encoding:** the member of a group rides in the wake key (`...:stage#member:cycle:runs` for stage wakes, `...~member` for rework wakes); a retry after a crash reads the member from the crashed run's stage row. No wake-table change.
+11. **`families_available` is `[]` for a started ticket's snapshot check** (the critic-family rule is a save-time rule: a ticket never parks because a second harness was connected later). The pipeline save door and `validate` pass the real set.
+12. **Sign-off ceiling:** a project override above the company's is refused at `PUT` (400); when a later company change makes an already stored project value too high, the merged value is clamped to the company's instead of making the project unservable.
+13. **Existing tests adapted** because Full is live: the eight scenario files that held a Full ticket now stub `LIVE_LANES` (`vi.mock('#/domain/live-lanes.js')`) to still exercise the hold path kept for a lane without a runner; `lane-hold-release.test.ts` now expects a Full hold to be released; `pipeline-groups-routing.test.ts` expects the reviewer and critic one tick apart; the core cursor fixture `full` is the older human-stage list and `fullLane` is the shipped one.
+14. **Tracked storage** announces `['ticket-pipeline', id]` and `['ticket', id]` for a stage write; a late blocking result of a check on a held ticket is recorded `waiting` (covered by the owner's decision) rather than `failed`.
+15. **Notes:** `escalation-director.ts` skips the new kinds only by their owner-stage start (they are raised with `escalated_at` set) plus an explicit owner-only guard in `lookAt`; the Director-check job is in memory (`EngineState.checkJobs`) and counted by `gateJobsInFlight()`.

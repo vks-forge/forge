@@ -211,6 +211,8 @@ export const NewCardEvent = z.discriminatedUnion('kind', [
       action: EscalationAction,
       by: EscalationActor,
       note: z.string().optional(),
+      /** The owner's written reason for an override (merge anyway, continue, send back). */
+      comment: z.string().optional(),
     }),
   ),
   event(

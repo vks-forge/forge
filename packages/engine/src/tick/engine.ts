@@ -176,6 +176,7 @@ export function createEngine(deps: EngineDeps): Engine {
     baseShas: new Map(),
     gateJobs: new Map(),
     stageJobs: new Map(),
+    checkJobs: new Map(),
     diffRouted: new Set(),
     regates: new Map(),
     replies: [],
@@ -244,9 +245,11 @@ export function createEngine(deps: EngineDeps): Engine {
     liveRunIds: () => [...state.pumps.keys()],
     unservableProjects: () => new Map(state.unservable),
     gateJobsInFlight: () =>
-      [...state.gateJobs.values(), ...state.stageJobs.values()].filter(
-        (j) => j.outcome === undefined,
-      ).length,
+      [
+        ...state.gateJobs.values(),
+        ...state.stageJobs.values(),
+        ...state.checkJobs.values(),
+      ].filter((j) => j.outcome === undefined).length,
   };
 
   return engine;

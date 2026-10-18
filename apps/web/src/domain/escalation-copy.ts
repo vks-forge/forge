@@ -11,6 +11,7 @@
  *
  * Exports: ACTION_LABEL, FAILURE_TITLE, escalationTitle(), settledWords(), settledLine(), replanConsequence(),
  *   describeEscalationError(), dependentsOf().
+ *   (Words for the decision and sign-off bodies live in domain/finished-work-copy.)
  * Depends on: api/api-error, api/describe-error, domain/relative-time, schemas/escalation.
  */
 
@@ -21,6 +22,7 @@ import type {
   EscalationAction,
   EscalationView,
   FailureCause,
+  SignOffCause,
 } from '#/schemas/escalation.js';
 
 export const ACTION_LABEL: Readonly<Record<EscalationAction, string>> = {
@@ -33,6 +35,8 @@ export const ACTION_LABEL: Readonly<Record<EscalationAction, string>> = {
   recheck: 'I fixed it, check again',
   approve: 'Approve and merge',
   sign_off: 'Sign off and merge',
+  merge_anyway: 'Merge anyway',
+  continue: 'Continue',
   // Settled by the engine when a held lane goes live; shown in history, never as a button.
   pipeline_ready: 'Lane went live',
 };
@@ -56,6 +60,13 @@ export const FAILURE_TITLE: Readonly<Record<FailureCause, (lane?: string) => str
   question_timeout: () => 'Stopped: a question went unanswered',
 };
 
+const SIGN_OFF_TITLE: Readonly<Record<SignOffCause, string>> = {
+  tier_b: 'Ready for your sign-off',
+  tier_c: 'Needs your sign-off: it touches protected files',
+  owner_stage: 'Ready for your sign-off',
+  director_declined: 'The Director did not sign this off: it is yours',
+};
+
 /** The one-line title of an escalation, in plain words. */
 export function escalationTitle(view: Pick<EscalationView, 'payload'>): string {
   const { payload } = view;
@@ -68,6 +79,16 @@ export function escalationTitle(view: Pick<EscalationView, 'payload'>): string {
 
   if (payload.kind === 'failure') {
     return FAILURE_TITLE[payload.cause](payload.lane);
+  }
+
+  if (payload.kind === 'decision') {
+    return payload.cause === 'findings_hold'
+      ? `Held: ${payload.stage_label} found problems that need your decision`
+      : 'Held: the work went beyond its plan';
+  }
+
+  if (payload.kind === 'sign_off') {
+    return SIGN_OFF_TITLE[payload.cause];
   }
 
   const { cause } = payload;
@@ -93,6 +114,8 @@ const SETTLED_VERB: Readonly<Record<string, string>> = {
   recheck: 'Checked and resumed',
   approve: 'Approved and merged',
   sign_off: 'Signed off and merged',
+  merge_anyway: 'Merged anyway',
+  continue: 'Continued as is',
 };
 
 /** "Answered by you": what was done and by whom, without a time. */

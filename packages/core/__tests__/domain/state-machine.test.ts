@@ -212,6 +212,60 @@ describe('tier C signer', () => {
   );
 });
 
+describe('the Director never signs tier C', () => {
+  it.each(['director', ' Director ', 'DIRECTOR'])(
+    'refuses done from needs_signoff when the signer is the reserved id %j',
+    (signer) => {
+      const sign = makeTicket({ status: 'needs_signoff', tier_actual: 'C' });
+      const r = transition(sign, { type: 'done', at: T1, signer });
+
+      expect(r.ok).toBe(false);
+      expect(r.ok ? '' : r.error.kind).toBe('precondition');
+    },
+  );
+
+  it('still lets a named person sign tier C, and lets the Director finish tier B in review', () => {
+    const sign = makeTicket({ status: 'needs_signoff', tier_actual: 'C' });
+    const review = makeTicket({ status: 'review', tier_actual: 'B' });
+
+    expect(transition(sign, { type: 'done', at: T1, signer: 'vikash' }).ok).toBe(true);
+    expect(transition(review, { type: 'done', at: T1, signer: 'director' }).ok).toBe(
+      true,
+    );
+  });
+});
+
+describe('rework from a held ticket', () => {
+  it('lets the owner send a ticket held from verifying back to in progress, without a rework bump', () => {
+    const held = makeTicket({
+      status: 'waiting_human',
+      parked_from: 'verifying',
+      blocked_reason: 'findings_hold: x',
+      rework_count: 2,
+    });
+
+    const r = transition(held, { type: 'rework', at: T1 });
+
+    expect(r.ok).toBe(true);
+    expect(r.ok ? r.value : null).toMatchObject({
+      status: 'in_progress',
+      rework_count: 2,
+      parked_from: undefined,
+      blocked_reason: undefined,
+    });
+  });
+
+  it.each([
+    ['waiting_human parked from nowhere', { status: 'waiting_human' as const }],
+    ['in_progress', { status: 'in_progress' as const }],
+    ['verifying', { status: 'verifying' as const }],
+  ])('refuses rework from %s', (_name, patch) => {
+    const r = transition(makeTicket(patch), { type: 'rework', at: T1 });
+
+    expect(r.ok).toBe(false);
+  });
+});
+
 describe('rework cap', () => {
   it('allows two automatic reworks then hands to a human', () => {
     let t = makeTicket({ status: 'verifying' });

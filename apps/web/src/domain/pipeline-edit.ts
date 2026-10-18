@@ -1,7 +1,7 @@
 /**
  * Pipeline edit rules: what each control of the pipeline editor may do to a stage list.
  *
- * Why: the owner reshapes a lane with plain buttons (add, move, remove, change the agent), and a
+ * Why: the owner reshapes a lane with plain buttons (add, move, remove, change the agent; adding lives in domain/pipeline-add), and a
  *   list that quietly lost its merge stage or its independent G1 gate would break the rules that
  *   keep unreviewed work from merging. The rules are pure functions over the list so every
  *   control, the add menu and the tests agree: merge is locked last and G1 is pinned (they show a
@@ -10,21 +10,25 @@
  *   differs from the defaults (see pipeline-policy). Whether a list may be saved is decided by
  *   core's `pipelineProblems`, never here.
  *
- * Exports: addStage(), addAction(), moveStage(), moveAction(), removeStage(), removeAction(),
- *   replaceStage(), newMember(), takenIds(), roleOf(), usableAgents(), uniqueId(), LOCK_REASONS,
- *   MAX_MEMBERS, MIN_MEMBERS, MAX_STAGES, HUMAN_PROMPT.
+ * Exports: moveStage(), moveAction(), removeStage(), removeAction(), replaceStage(), takenIds(),
+ *   roleOf(), isWriterGroup(), usableAgents(), uniqueId(), LOCK_REASONS,
+ *   MAX_MEMBERS, MIN_MEMBERS, MAX_STAGES.
  * Depends on: @forge/core, types/pipeline-ui.types. No IO.
  */
 
-import { isCheckRole, isWriterRole } from '@forge/core';
-import type { AgentRole, AgentView, PipelineDefinition, Stage } from '@forge/core';
-import type { AddKind, Member, StageGate, StageMove } from '#/types/pipeline-ui.types.js';
+import { isWriterRole } from '@forge/core';
+import type {
+  AgentRole,
+  AgentView,
+  GroupStage,
+  PipelineDefinition,
+  Stage,
+} from '@forge/core';
+import type { StageGate, StageMove } from '#/types/pipeline-ui.types.js';
 
 export const MIN_MEMBERS = 2;
 export const MAX_MEMBERS = 4;
 export const MAX_STAGES = 12;
-export const HUMAN_PROMPT =
-  'Look at the finished change and approve it, or send it back with a comment.';
 
 export const LOCK_REASONS = {
   merge: 'Merge is always the last stage and cannot be removed.',
@@ -41,6 +45,11 @@ export function roleOf(
   return stage.kind === 'agent'
     ? roster.find((a) => a.id === stage.agent)?.definition.role
     : undefined;
+}
+
+/** A group whose members are all agents with a writing role: its members work side by side. */
+export function isWriterGroup(group: GroupStage, roster: readonly AgentView[]): boolean {
+  return group.members.every((m) => isWriterRole(roleOf(m, roster)));
 }
 
 /** Agents a stage may name: not switched off and not archived. */
@@ -66,117 +75,6 @@ export function takenIds(def: PipelineDefinition): Set<string> {
       s.kind === 'group' ? [s.id, ...s.members.map((m) => m.id)] : [s.id],
     ),
   );
-}
-
-/** Where a new stage goes so that it can be valid: writers before G1, the rest after it. */
-function insertAt(def: PipelineDefinition, kind: AddKind, writer: boolean): number {
-  const { stages } = def;
-  const merge = stages.findIndex((s) => s.kind === 'merge');
-  const end = merge === -1 ? stages.length : merge;
-  const g1 = stages.findIndex(isG1);
-
-  if (kind === 'human') {
-    return end;
-  }
-
-  if (kind === 'agent' && writer) {
-    return g1 === -1 ? end : g1;
-  }
-
-  const human = stages.findIndex((s) => s.kind === 'human');
-
-  return human === -1 ? end : human;
-}
-
-function pick(
-  roster: readonly AgentView[],
-  want: (role: AgentRole) => boolean,
-  skip = 0,
-): AgentView | undefined {
-  return usableAgents(roster).filter((a) => want(a.definition.role))[skip];
-}
-
-const SCRIPT_RUN = { command: '', timeout_ms: 120_000, guard_paths: [] as string[] };
-
-function checkMember(
-  id: string,
-  agent: AgentView | undefined,
-): Extract<Member, { kind: 'agent' }> {
-  return {
-    id,
-    kind: 'agent',
-    label: agent?.definition.name ?? 'Check',
-    agent: agent?.id ?? '',
-  };
-}
-
-/** `def` with a new stage of `kind` and a default agent from `roster`. */
-export function addStage(
-  def: PipelineDefinition,
-  kind: AddKind,
-  roster: readonly AgentView[],
-): PipelineDefinition {
-  const taken = takenIds(def);
-  const checker = pick(roster, isCheckRole) ?? usableAgents(roster)[0];
-  let stage: Stage;
-  let writer = false;
-
-  if (kind === 'agent') {
-    stage = {
-      id: uniqueId(checker?.id ?? 'agent', taken),
-      kind: 'agent',
-      label: checker?.definition.name ?? 'New agent stage',
-      agent: checker?.id ?? '',
-    };
-
-    writer = isWriterRole(checker?.definition.role);
-  } else if (kind === 'script_gate') {
-    stage = {
-      id: uniqueId('script', taken),
-      kind: 'script_gate',
-      label: 'Script check',
-      run: { ...SCRIPT_RUN },
-    };
-  } else if (kind === 'group') {
-    const groupId = uniqueId('group', taken);
-    const second = pick(roster, isCheckRole, 1) ?? checker;
-
-    stage = {
-      id: groupId,
-      kind: 'group',
-      label: 'Run together',
-      join: 'all',
-      members: [
-        checkMember(uniqueId(`${groupId}-1`, taken), checker),
-        checkMember(
-          uniqueId(`${groupId}-2`, new Set([...taken, `${groupId}-1`])),
-          second,
-        ),
-      ],
-    };
-  } else {
-    stage = {
-      id: uniqueId('human', taken),
-      kind: 'human',
-      label: 'Your sign-off',
-      prompt: HUMAN_PROMPT,
-    };
-  }
-
-  const at = insertAt(def, kind, writer);
-
-  return { ...def, stages: [...def.stages.slice(0, at), stage, ...def.stages.slice(at)] };
-}
-
-/** Whether the add menu may offer `kind` now. */
-export function addAction(def: PipelineDefinition, kind: AddKind): StageGate {
-  if (kind === 'human' && def.stages.some((s) => s.kind === 'human')) {
-    return { ok: false, reason: 'A pipeline has at most one human sign-off.' };
-  }
-
-  return def.stages.length >= MAX_STAGES
-    ? { ok: false, reason: `A pipeline holds at most ${MAX_STAGES} stages.` }
-    : { ok: true };
 }
 
 /** Whether stage `id` may move one place in `direction`. */
@@ -250,15 +148,4 @@ export function removeStage(def: PipelineDefinition, id: string): PipelineDefini
 /** `def` with the stage that has `next.id` replaced. */
 export function replaceStage(def: PipelineDefinition, next: Stage): PipelineDefinition {
   return { ...def, stages: def.stages.map((s) => (s.id === next.id ? next : s)) };
-}
-
-/** A new check for a group: an agent (the first usable reviewer) or an empty script. */
-export function newMember(
-  kind: 'agent' | 'script_gate',
-  id: string,
-  roster: readonly AgentView[],
-): Member {
-  return kind === 'agent'
-    ? checkMember(id, pick(roster, isCheckRole) ?? usableAgents(roster)[0])
-    : { id, kind: 'script_gate', label: 'Script check', run: { ...SCRIPT_RUN } };
 }

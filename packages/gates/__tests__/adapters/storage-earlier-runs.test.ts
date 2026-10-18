@@ -5,7 +5,8 @@
  * G1 must look at the ticket's earlier runs, and only at those, or an unrelated ticket's
  * receipts (or a later run's) could vouch for a claim.
  *
- * Pins: createStorageEarlierRuns() returns same-ticket runs that started before, oldest first.
+ * Pins: createStorageEarlierRuns() returns other same-ticket runs that started at or before, oldest first;
+ * parallel runs with the same start time see each other.
  * Depends on: adapters/storage-earlier-runs, vitest. No IO.
  */
 
@@ -44,5 +45,22 @@ describe('createStorageEarlierRuns', () => {
     );
 
     expect(await earlier(current)).toEqual(['r1', 'r2']);
+  });
+
+  it('lets two parallel runs started in the same millisecond each see the other', async () => {
+    const stamp = '2026-01-01T00:05:00.000Z';
+    const a = run('w-a', stamp);
+    const b = run('w-b', stamp);
+    const earlier = createStorageEarlierRuns(
+      storageWith([
+        b,
+        a,
+        run('r0', '2026-01-01T00:01:00.000Z'),
+        run('late', '2026-01-01T00:09:00.000Z'),
+      ]),
+    );
+
+    expect(await earlier(a)).toEqual(['r0', 'w-b']);
+    expect(await earlier(b)).toEqual(['r0', 'w-a']);
   });
 });

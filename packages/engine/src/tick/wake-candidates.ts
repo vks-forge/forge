@@ -14,12 +14,19 @@
  *   verifying); until then it waits, never dropped, because the red proof of a test-writer runs
  *   between the writer and the next stage and the wake is what keeps the ticket explained.
  *
+ *   The members of a parallel group each have their own wake (the member is in the wake key), so
+ *   the scheduler places them one at a time. A member's wake is a candidate while that member has
+ *   no row to start from (none, or an errored one), even while a sibling's run is live; once the
+ *   member has started, a leftover wake for it is stale and is dropped. The member of a retry after
+ *   a crash is read from the stage row of the run that crashed.
+ *
  * Exports: classifyWake(), wakeIsDue().
- * Depends on: @forge/core (TERMINAL_STATUSES), tick/stage-state, types/engine-state, types/tick. IO only through the open transaction.
+ * Depends on: @forge/core (TERMINAL_STATUSES), tick/{stage-records,stage-state}, types/engine-state, types/tick. IO only through the open transaction.
  */
 
 import { TERMINAL_STATUSES } from '@forge/core';
 import type { StorageTx, Ticket, TicketId, WakeRequest } from '@forge/core';
+import { wakeMember } from '#/tick/stage-records.js';
 import { readStageState } from '#/tick/stage-state.js';
 import type { Candidate, WakeView } from '#/types/tick.types.js';
 
@@ -38,6 +45,21 @@ async function stageCandidate(
     return drop(`stage wake does not apply to a ${ticket.status} ticket`);
   }
 
+  const state = await readStageState(tx, ticket.id);
+  const cursor = state?.cursor;
+  const member = wakeMember(w);
+  const members =
+    cursor?.kind === 'run_writers' || cursor?.kind === 'run_checks'
+      ? cursor.members
+      : null;
+
+  // A group member's wake: startable while that member has nothing to start from, stale after.
+  if (member !== undefined) {
+    return members?.some((m) => m.id === member)
+      ? { ticket, kind: 'stage', wake: w, member }
+      : drop(`${member} of the stage already started or the stage moved on`);
+  }
+
   if (
     ticket.status === 'in_progress' &&
     ticket.assignee_run_id &&
@@ -46,10 +68,16 @@ async function stageCandidate(
     return null;
   }
 
-  const state = await readStageState(tx, ticket.id);
   const ready = ticket.status === 'in_progress' ? 'run_writer' : 'run_checks';
 
-  return state?.cursor.kind === ready ? { ticket, kind: 'stage', wake: w } : null;
+  return cursor?.kind === ready ? { ticket, kind: 'stage', wake: w } : null;
+}
+
+/** The writer-group member whose crashed run a retry wake is for, from the stage row of that run; undefined for a lone stage. */
+async function memberOfRun(tx: StorageTx, runId: string): Promise<string | undefined> {
+  const row = await tx.stageRuns.getByRun(runId);
+
+  return row && row.kind === 'agent' && row.member_id !== '' ? row.member_id : undefined;
 }
 
 /**
@@ -84,14 +112,29 @@ export async function classifyWake(
     ? await tx.runs.get(ticket.assignee_run_id)
     : null;
 
-  // A continuation wake is the rework request after a failed gate, and a stage wake the start
-  // of the next stage: the run each follows did report done, which is exactly why they exist.
-  if (assigned?.status === 'success' && w.kind !== 'continuation' && w.kind !== 'stage') {
-    return drop('its run already reported done');
-  }
-
   if (w.kind === 'stage') {
     return stageCandidate(view, tx, ticket, w, drop);
+  }
+
+  // A retry or rework of one member of a writer group is placed on its own, beside the live runs of its siblings.
+  const member =
+    w.kind === 'retry' || w.kind === 'continuation'
+      ? (wakeMember(w) ?? (await memberOfRun(tx, w.idempotency_key.split('~')[0] ?? '')))
+      : undefined;
+
+  if (member !== undefined && ticket.status === 'in_progress') {
+    const state = await readStageState(tx, ticket.id);
+
+    return state?.cursor.kind === 'run_writers' &&
+      state.cursor.members.some((m) => m.id === member)
+      ? { ticket, kind: 'retry', wake: w, member }
+      : drop(`${member} of the writer group already started or the stage moved on`);
+  }
+
+  // A continuation wake is the rework request after a failed gate, and a stage wake the start
+  // of the next stage: the run each follows did report done, which is exactly why they exist.
+  if (assigned?.status === 'success' && w.kind !== 'continuation') {
+    return drop('its run already reported done');
   }
 
   if (ticket.assignee_run_id && view.state.pumps.has(ticket.assignee_run_id)) {

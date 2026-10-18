@@ -15,7 +15,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { classifyPark, setupCauseFor } from '#/domain/escalation-classify.js';
+import {
+  classifyPark,
+  failureCauseOf,
+  setupCauseFor,
+} from '#/domain/escalation-classify.js';
 
 const park = (status: 'waiting_human' | 'blocked' | 'planned', reason?: string) => ({
   status,
@@ -145,5 +149,36 @@ describe('setupCauseFor', () => {
         ctx,
       ),
     ).toBeNull();
+  });
+});
+
+describe('classifyPark for held tickets', () => {
+  it.each([
+    [
+      'findings_hold: Review found blocking findings and holds the merge for you.',
+      'findings_hold',
+    ],
+    [
+      'scope_drift: the change is bigger than planned (2 files outside the plan).',
+      'scope_drift',
+    ],
+  ] as const)('reads "%s" as a %s decision', (reason, cause) => {
+    expect(classifyPark(park('waiting_human', reason))).toMatchObject({
+      kind: 'decision',
+      cause,
+    });
+  });
+
+  it('never calls an old failure reason a decision, and failureCauseOf reads a decision as not retried', () => {
+    const old = classifyPark(
+      park('waiting_human', 'automatic rework cap (2) reached; needs you'),
+    );
+
+    const held = classifyPark(park('waiting_human', 'findings_hold: x'));
+
+    expect(old?.kind).toBe('failure');
+    expect(failureCauseOf(old)).toBe('rework_cap');
+    expect(failureCauseOf(held)).toBe('not_retried');
+    expect(failureCauseOf(null)).toBe('not_retried');
   });
 });

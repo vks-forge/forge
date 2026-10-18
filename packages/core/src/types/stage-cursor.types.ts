@@ -13,8 +13,11 @@
 import type { AgentId, AgentRole } from '#/schemas/agent.js';
 import type {
   AgentStage,
+  DirectorCheckStage,
+  GroupStage,
   PipelineDefinition,
   ScriptGateStage,
+  SignOffStage,
   Severity,
   Stage,
 } from '#/schemas/pipeline.js';
@@ -39,11 +42,19 @@ export interface CheckMember {
 }
 
 /**
- * What a ticket's pipeline asks for next. `run_writer` and `run_proof` happen while the ticket
- * is in progress; `start_gates`, `run_checks`, `await` and `merge` while it is verifying.
+ * What a ticket's pipeline asks for next. `run_writer`, `run_writers` (the members of a writer
+ * group that have not started) and `run_proof` happen while the ticket is in progress;
+ * `start_gates`, `run_checks`, `director_check`, `sign_off`, `await` and `merge` while it is
+ * verifying.
  */
 export type Cursor =
   | { readonly kind: 'run_writer'; readonly stage: AgentStage; readonly cycle: number }
+  | {
+      readonly kind: 'run_writers';
+      readonly stage: GroupStage;
+      readonly members: readonly CheckMember[];
+      readonly cycle: number;
+    }
   | { readonly kind: 'run_proof'; readonly stage: AgentStage; readonly cycle: number }
   | {
       readonly kind: 'start_gates';
@@ -56,13 +67,29 @@ export type Cursor =
       readonly members: readonly CheckMember[];
       readonly cycle: number;
     }
+  | {
+      readonly kind: 'director_check';
+      readonly stage: DirectorCheckStage;
+      readonly cycle: number;
+    }
+  | { readonly kind: 'sign_off'; readonly stage: SignOffStage; readonly cycle: number }
   | { readonly kind: 'await'; readonly stage: Stage; readonly cycle: number }
   | { readonly kind: 'merge'; readonly hold: boolean; readonly cycle: number }
   | { readonly kind: 'done' };
 
 /** What a stage is, by its kind and, for an agent, its role. */
 export type StageClass =
-  'writer' | 'check_agent' | 'g1' | 'script' | 'group' | 'human' | 'merge' | 'unknown';
+  | 'writer'
+  | 'writer_group'
+  | 'check_agent'
+  | 'g1'
+  | 'script'
+  | 'group'
+  | 'human'
+  | 'director_check'
+  | 'sign_off'
+  | 'merge'
+  | 'unknown';
 
 /** A stage row to insert for a ticket that was already past some stages when pipelines went live. */
 export interface StageSeed {

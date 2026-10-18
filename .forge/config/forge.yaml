@@ -22,6 +22,7 @@ models:
     ticket_answer: sonnet
     ticket_recover: opus
     draft_agent: sonnet
+    ticket_check: opus
   # Workers: sonnet in every lane until changed in Settings.
   worker:
     express: sonnet

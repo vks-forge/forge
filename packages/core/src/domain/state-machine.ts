@@ -7,11 +7,11 @@
  *   Verifying, reach Done without the sign-off its tier requires, or loop through
  *   automatic rework forever. `transition()` is the one pure function that holds those
  *   rules (legal moves, the two-rework cap that hands a failing ticket to a human, the
- *   named signer for tier C) and returns the next row with `status_version` bumped, so
+ *   named signer for tier C, which is never the Director) and returns the next row with `status_version` bumped, so
  *   storage can compare-and-swap and a stale writer loses instead of double-dispatching
  *   the ticket (director-core.md §3-§4, v1-scope-review.md §4.9).
  *
- * Exports: transition(), MAX_AUTO_REWORKS.
+ * Exports: transition(), MAX_AUTO_REWORKS, DIRECTOR_SIGNER.
  * Depends on: domain/lane-triage, schemas/ticket, shared/result, types/result, types/ticket-events.
  *   No IO.
  */
@@ -25,6 +25,9 @@ import type {
   TicketEvent,
   TransitionError,
 } from '#/types/ticket-events.types.js';
+
+/** The signer id of the Director's own sign-off; no person may use it and tier C never accepts it. */
+export const DIRECTOR_SIGNER = 'director';
 
 /** Cap on automatic Verifying -> InProgress loops (v1-scope-review.md §4.9); beyond it the ticket goes to a human. */
 export const MAX_AUTO_REWORKS = 2;
@@ -165,13 +168,27 @@ function decide(t: Ticket, e: TicketEvent): Result<TicketDelta, TransitionError>
         return err(precondition(e, 'tier C needs a named signer'));
       }
 
+      // `director` is the Director's reserved signer id: it may finish tier A and B work, never
+      // tier C. Enforced here, the one door, so no caller can sign tier C as the Director.
+      if (
+        from === 'needs_signoff' &&
+        e.signer?.trim().toLowerCase() === DIRECTOR_SIGNER
+      ) {
+        return err(precondition(e, 'tier C needs a named person, not the Director'));
+      }
+
       return ok({ status: 'done' });
-    case 'rework':
-      if (from !== 'review' && from !== 'needs_signoff') {
+    case 'rework': {
+      // Finished work in review is sent back by its owner; so is work held from verifying
+      // (a reviewer's findings the owner chose to fix). Neither spends an automatic rework.
+      const held = from === 'waiting_human' && t.parked_from === 'verifying';
+      if (from !== 'review' && from !== 'needs_signoff' && !held) {
         return err(illegal(t, e));
       }
 
       return ok({ status: 'in_progress', tier_actual: undefined });
+    }
+
     case 'regate':
       // The PR head moved after the gates passed: the pass judged a commit that is gone, so the
       // work is judged again. Like a fresh verify cycle it drops the old tier.

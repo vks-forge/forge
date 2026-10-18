@@ -17,7 +17,7 @@
  *   steps/run-step, tick/escalation-raise, tick/ticket-moves, tick/wakes.
  */
 
-import { classifyPark } from '@forge/core';
+import { classifyPark, failureCauseOf } from '@forge/core';
 import type { StorageTx, Ticket } from '@forge/core';
 import { decideFailure } from '#/domain/failure-policy.js';
 import { familyOf } from '#/domain/results.js';
@@ -65,9 +65,9 @@ export async function raiseFailure(
     ticket,
     {
       kind: 'failure',
-      cause:
-        classifyPark({ status: 'waiting_human', blocked_reason: reason })?.cause ??
-        'not_retried',
+      cause: failureCauseOf(
+        classifyPark({ status: 'waiting_human', blocked_reason: reason }),
+      ),
       summary: reason,
       attempts: await attemptsOf(tx, ticket.id),
       ...(family ? { error_family: family } : {}),
@@ -79,8 +79,9 @@ export async function raiseFailure(
 
 /**
  * Parks a Verifying ticket in WaitingHuman with `reason` inside `tx`; its rework count is untouched and a
- * release returns it to Verifying. `also` writes more rows in the same transaction. False when the ticket
- * was not verifying (nothing is written).
+ * release returns it to Verifying. `also` writes more rows in the same transaction. `raise` replaces the
+ * failure escalation (a held ticket raises a decision instead). False when the ticket was not verifying
+ * (nothing is written).
  */
 export async function parkVerifyingTx(
   ctx: EngineCtx,
@@ -90,6 +91,7 @@ export async function parkVerifyingTx(
   rows: GateRows = [],
   errorFamily?: VerifiedTicket['errorFamily'],
   also?: (tx: StorageTx) => Promise<void>,
+  raise?: (tx: StorageTx, ticket: Ticket) => Promise<void>,
 ): Promise<boolean> {
   const parked = await moveTicketTx(tx, t.ticket.id, ctx.nowIso, (cur) => {
     if (cur.status !== 'verifying') {
@@ -107,7 +109,10 @@ export async function parkVerifyingTx(
     return false;
   }
 
-  await raiseFailure(ctx, tx, parked.ticket, reason, errorFamily);
+  await (raise
+    ? raise(tx, parked.ticket)
+    : raiseFailure(ctx, tx, parked.ticket, reason, errorFamily));
+
   await also?.(tx);
   ctx.report.parked.push({ ticketId: t.ticket.id, reason });
   recordVerified(ctx, t, 'parked', rows, {

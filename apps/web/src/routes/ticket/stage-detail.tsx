@@ -3,18 +3,19 @@
  *
  * Why: the strip says a stage failed or waits; the owner needs to know why before deciding what
  *   to do. This panel answers: which agent ran (with a link to that run's thread), when, in
- *   which round, the reviewer's summary and its findings counted by severity, and the artifacts
- *   the stage was shown or produced (the diff, the plan, the gate report, earlier findings).
- *   An artifact loads only when opened, since a diff can be large, and is shown in a fixed-width
- *   block so a diff reads as one. The Worker's own account is labelled as such and the panel says
- *   a reviewer never saw it, because the owner is the only reader allowed both stories. A group
- *   shows each member as its own block. Individual findings (file, line, evidence) are not in the
- *   stage view the server sends, so what is shown is the reviewer's own summary, the counts, and
- *   the "Earlier findings" artifact when one exists.
+ *   which round, the check's summary and each of its findings (severity, `file:line`, evidence),
+ *   the Director check's acceptance answers and the files outside the plan, who signed a
+ *   sign-off and why, an owner overrule with the reason given, any warning on the stage (a critic
+ *   on the Worker's own model family), the folders a writer-group member may write, and the
+ *   artifacts the stage was shown or produced (the diff, the plan, the gate report, earlier
+ *   findings). An artifact loads only when opened, since a diff can be large, and is shown in a
+ *   fixed-width block so a diff reads as one. The Worker's own account is labelled as such and
+ *   the panel says a reviewer never saw it, because the owner is the only reader allowed both
+ *   stories.
  *
  * Exports: StageDetail.
- * Depends on: react, react-router, lucide-react, api/use-ticket-pipeline, components/ui/*,
- *   domain/{format-time,stage-view-copy,ticket-paths}, schemas/pipelines.
+ * Depends on: react, react-router, api/use-ticket-pipeline, components/ticket/findings-list,
+ *   routes/ticket/stage-check, domain/{format-time,stage-view-copy,ticket-paths}, schemas/pipelines.
  */
 
 import { Link } from 'react-router';
@@ -22,14 +23,17 @@ import { useState } from 'react';
 import { describeError } from '#/api/describe-error.js';
 import { useStageArtifact } from '#/api/use-ticket-pipeline.js';
 import { StatePanel } from '#/components/status/state-panel.js';
+import { FindingsList } from '#/components/ticket/findings-list.js';
 import { formatWhen } from '#/domain/format-time.js';
 import {
   NARRATIVE_NOTE,
   STATUS_VIEW,
   artifactLabel,
   countsLine,
+  overrideLine,
 } from '#/domain/stage-view-copy.js';
 import { ticketPath } from '#/domain/ticket-paths.js';
+import { StageCheck } from '#/routes/ticket/stage-check.js';
 import type { StageView } from '#/schemas/pipelines.js';
 
 function ArtifactBody(props: {
@@ -106,6 +110,18 @@ function Block(props: {
       <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_minmax(0,1fr)]">
         <dt className="text-muted">Status</dt>
         <dd>{status.label}</dd>
+        {view.kind === 'sign_off' && view.signed_by !== undefined ? (
+          <>
+            <dt className="text-muted">Signed by</dt>
+            <dd>{view.signed_by === 'director' ? 'The Director' : 'You'}</dd>
+          </>
+        ) : null}
+        {view.scope === undefined || view.scope.length === 0 ? null : (
+          <>
+            <dt className="text-muted">May write</dt>
+            <dd className="break-all font-data text-xs">{view.scope.join(', ')}</dd>
+          </>
+        )}
         {view.agent ? (
           <>
             <dt className="text-muted">Agent</dt>
@@ -158,7 +174,28 @@ function Block(props: {
           </>
         ) : null}
       </dl>
-      {view.summary ? <p className="max-w-prose text-sm">{view.summary}</p> : null}
+      {view.summary && view.check === undefined ? (
+        <p className="max-w-prose text-sm">{view.summary}</p>
+      ) : null}
+      {view.warnings.map((warning) => (
+        <p
+          key={warning}
+          role="note"
+          className="max-w-prose rounded-lg bg-attn-soft p-2 text-sm"
+        >
+          {warning}
+        </p>
+      ))}
+      {view.override === undefined ? null : (
+        <p className="max-w-prose rounded-lg border border-attn bg-attn-soft p-2 text-sm">
+          {overrideLine(view.override)}
+        </p>
+      )}
+      {view.findings === undefined || view.check !== undefined ? null : (
+        <FindingsList findings={view.findings} label={`Findings from ${view.label}`} />
+      )}
+      {/* A Director check lists its findings inside the checklist, so they are not drawn twice. */}
+      <StageCheck view={view} />
       {view.artifacts.length > 0 ? (
         <ul aria-label={`What ${view.label} saw and made`} className="grid gap-2">
           {view.artifacts.map((artifact) => (
@@ -196,20 +233,9 @@ export function StageDetail(props: {
       <Block
         slug={props.slug}
         ticketId={props.ticketId}
-        // A group's artifact list is its members' together; they are shown under each member.
-        view={view.members ? { ...view, artifacts: [] } : view}
+        view={view}
         heading={view.label}
       />
-      {view.members?.map((member) => (
-        <div key={member.id} className="grid gap-2 border-t border-line pt-3">
-          <Block
-            slug={props.slug}
-            ticketId={props.ticketId}
-            view={member}
-            heading={member.label}
-          />
-        </div>
-      ))}
     </section>
   );
 }

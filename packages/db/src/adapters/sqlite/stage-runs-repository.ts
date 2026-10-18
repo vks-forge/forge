@@ -5,7 +5,7 @@
  *   pipeline stands. A row is one stage attempt, unique per (ticket, stage, group member, rework
  *   cycle): `start` reports `'exists'` instead of inserting a second one, which is what makes a
  *   double tick or a restart start nothing twice. An attempt is looked up by the run that carries
- *   it (a settled check run finds its stage this way) or listed per ticket for the cursor. The
+ *   it (a settled check run finds its stage this way) read by id, or listed per ticket for the cursor. The
  *   outcome is parsed with the core schema both ways, so an attempt this version cannot read
  *   fails closed. `finish` changes only the keys it is given.
  *
@@ -75,6 +75,12 @@ export function createStageRunRepository(driver: SqlDriver): StageRunRepository 
           WHERE ticket_id = ? AND stage_id = ? AND member_id = ? AND cycle = ?`,
         [ticketId, stageId, memberId, cycle],
       );
+
+      return row ? toRun(row) : null;
+    },
+
+    async get(id) {
+      const row = driver.get('SELECT * FROM stage_runs WHERE id = ?', [id]);
 
       return row ? toRun(row) : null;
     },

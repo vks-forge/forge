@@ -22,6 +22,11 @@ export type RosterEntry = Pick<AgentView, 'id' | 'tags' | 'definition'>;
 export interface PipelineRuleContext {
   readonly roster: readonly RosterEntry[];
   readonly lane: Lane;
+  /**
+   * The model families the connected harnesses offer (`claude`, `openai`, ...). With two or more,
+   * a critic on the Worker's family is refused (d-0073); with one it is only a warning.
+   */
+  readonly families_available: readonly string[];
 }
 
 /** An agent stage, top level or a group member. */

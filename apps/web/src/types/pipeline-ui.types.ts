@@ -6,7 +6,7 @@
  *   these small shapes instead of loose objects, so a control, its tooltip reason and its test
  *   all read the same fields.
  *
- * Exports: AddKind, StageMove, StageGate, CheckStage, Member, ProblemIndex, WriterOption,
+ * Exports: StageTone, AddKind, StageMove, StageGate, CheckStage, Member, ProblemIndex, WriterOption,
  *   CheckPolicyView, ProblemCode, StageStatus, CustomScript.
  * Depends on: @forge/core (types only).
  */
@@ -25,11 +25,24 @@ export type ProblemCode = PipelineProblem['code'];
 /** A stage's status as the strip shows it: a recorded status or not yet started. */
 export type StageStatus = StageView['status'];
 
+/** The tone of a status chip on the ticket strip. */
+export type StageTone = 'good' | 'danger' | 'attn' | 'signal' | 'quiet';
+
 /** The run of a script gate the owner wrote (the other kind is the built-in G1). */
 export type CustomScript = Extract<ScriptGateStage['run'], { command: string }>;
 
-/** The four kinds the Add stage menu offers; merge is always there and cannot be added. */
-export type AddKind = 'agent' | 'script_gate' | 'group' | 'human';
+/**
+ * What the Add stage menu offers; merge is always there and cannot be added. `writer` is only an
+ * insertion zone (an agent stage whose agent writes), never a menu entry.
+ */
+export type AddKind =
+  | 'agent'
+  | 'script_gate'
+  | 'group'
+  | 'writer_group'
+  | 'director_check'
+  | 'sign_off'
+  | 'writer';
 
 /** Whether a stage may move or go, and if not, why in words. */
 export type StageGate =

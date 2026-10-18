@@ -24,6 +24,7 @@ import { latestPerGate, summarizeGates } from '#/domain/gate-rows.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { isHeld } from '#/steps/run-step.js';
 import { jobKey, pruneGateJobs, startGateJob } from '#/tick/gate-jobs.js';
+import { pruneCheckJobs } from '#/tick/stage-director-check.js';
 import { pruneStageJobs } from '#/tick/stage-script-jobs.js';
 import { baseRefFor, runtimeFor } from '#/tick/project-runtime.js';
 import { driveStages } from '#/tick/stage-runner.js';
@@ -35,7 +36,7 @@ import { handleVerifyFailure, parkVerifying } from '#/tick/verify-outcomes.js';
 import { publishBranch } from '#/tick/verify-publish.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { G1Result } from '#/types/stage-runner.types.js';
-import type { GateRows, GateRun, VerifyTarget } from '#/types/verify.types.js';
+import type { GateRows, GateRun, MergeOpts, VerifyTarget } from '#/types/verify.types.js';
 
 /** A branch that keeps moving under the gates is not going to settle by itself. */
 const MAX_REGATES = 3;
@@ -181,9 +182,9 @@ async function mergeStep(
   ctx: EngineCtx,
   t: VerifyTarget,
   rows: GateRows,
-  hold: boolean,
+  opts: MergeOpts,
 ): Promise<void> {
-  if ((await passAndMerge(ctx, t, rows, hold)) === 'regate') {
+  if ((await passAndMerge(ctx, t, rows, opts)) === 'regate') {
     return regate(ctx, t, jobKey(t.ticket.id, t.run.id));
   }
 }
@@ -223,6 +224,7 @@ export async function verifyReady(ctx: EngineCtx): Promise<void> {
 
   pruneGateJobs(ctx, new Set(tickets.map((x) => x.id)));
   pruneStageJobs(ctx, new Set(tickets.map((x) => x.id)));
+  pruneCheckJobs(ctx, new Set(tickets.map((x) => x.id)));
 
   let worked = 0;
   for (const ticket of tickets) {

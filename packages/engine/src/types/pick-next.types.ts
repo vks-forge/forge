@@ -15,6 +15,11 @@
 export interface PickCandidate {
   /** Ticket id, e.g. `PAY-12`. */
   readonly id: string;
+  /**
+   * The group member this candidate starts (a writer or check of a parallel group), absent for a
+   * lone stage. A ticket can have several candidates, one per member, each placed on its own.
+   */
+  readonly member?: string;
   readonly project: string;
   /** The harness the run would use, after any quota fallback. */
   readonly harness: string;

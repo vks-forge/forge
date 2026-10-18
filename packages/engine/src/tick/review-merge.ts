@@ -16,10 +16,11 @@
  */
 
 import { ForgeError } from '@forge/core';
-import type { Ticket } from '@forge/core';
+import type { Interaction, StorageTx, Ticket } from '@forge/core';
 import { latestPerGate, summarizeGates } from '#/domain/gate-rows.js';
 import { iso } from '#/shared/time.js';
 import { notifyCard } from '#/tick/card-notify.js';
+import { settleEscalation } from '#/tick/escalation-settle.js';
 import { approveHuman } from '#/tick/stage-records.js';
 import { loadTickConfig } from '#/tick/tick-config.js';
 import { emptyReport } from '#/tick/tick-report.js';
@@ -30,12 +31,17 @@ import type { EngineCtx, EngineState } from '#/types/engine-state.types.js';
 import type { ActOutcome } from '#/types/escalation.types.js';
 import type { EngineDeps } from '#/types/engine.types.js';
 
-/** Merges the ticket's PR for the owner; `signer` names who signs off tier C work. */
+/**
+ * Merges the ticket's PR for the owner; `signer` names who signs off tier C work. With the pending
+ * sign-off `item`, that item is settled by the same approval, so the ticket door and the item door agree.
+ */
 export async function approveAndMerge(
   deps: EngineDeps,
   state: EngineState,
   ticket: Ticket,
   signer: string | undefined,
+  item?: Interaction,
+  author = 'owner',
 ): Promise<ActOutcome> {
   const now = deps.clock.now();
   const ctx: EngineCtx = {
@@ -69,7 +75,27 @@ export async function approveAndMerge(
       };
     }
 
-    const end = await mergeReviewed(ctx, target, rows, signer);
+    // The sign-off item is settled in the transaction that moves the ticket to done, so both doors agree.
+    const end = await mergeReviewed(ctx, target, rows, signer, {
+      ...(item === undefined
+        ? {}
+        : {
+            beforeMove: async (tx: StorageTx) => {
+              await settleEscalation(
+                tx,
+                ctx.nowIso,
+                item.card_id === undefined ? { ...item, card_id: ticket.card_id } : item,
+                {
+                  action: signer === undefined ? 'approve' : 'sign_off',
+                  by: 'owner',
+                  ...(signer === undefined ? {} : { text: signer }),
+                },
+                author,
+              );
+            },
+          }),
+    });
+
     if (end === 'done') {
       // The owner's approval passes the pipeline's human stage.
       await deps.storage.transaction((tx) => approveHuman(tx, ctx.nowIso, ticket.id));

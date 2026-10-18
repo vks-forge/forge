@@ -109,6 +109,8 @@ export const EscalationSettledEvent = z.object({
   action: z.string(),
   by: z.enum(['owner', 'director', 'auto']).catch('owner'),
   note: z.string().optional(),
+  /** The owner's reason for Merge anyway or Continue. */
+  comment: z.string().optional(),
 });
 export type EscalationSettledEvent = z.infer<typeof EscalationSettledEvent>;
 

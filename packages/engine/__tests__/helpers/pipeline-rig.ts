@@ -73,9 +73,14 @@ export interface PipelineRig extends VerifyRig {
 
 /** A verify rig whose triage chooses `lane` (Standard by default) at `tier`, with a script runner on the runtime. */
 export async function makePipelineRig(
-  opts: { lane?: 'express' | 'standard' | 'full'; tier?: 'A' | 'B' | 'C' } = {},
+  opts: {
+    lane?: 'express' | 'standard' | 'full';
+    tier?: 'A' | 'B' | 'C';
+    /** Company engine settings for the rig, e.g. `{ max_concurrent_per_project: 2 }`. */
+    engine?: Record<string, unknown>;
+  } = {},
 ): Promise<PipelineRig> {
-  const v = await makeVerifyRig();
+  const v = await makeVerifyRig(opts.engine ? { engine: opts.engine } : {});
   const scripts = createFakeScriptRunner();
   v.rig.runtime.current = {
     ...v.rig.runtime.current!,

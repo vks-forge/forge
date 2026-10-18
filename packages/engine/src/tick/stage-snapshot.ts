@@ -48,7 +48,9 @@ async function build(
     lane
   ].definition;
 
-  const problems = pipelineProblems(base, { roster, lane });
+  // The one-family rule for a critic is a save-time rule: a ticket never parks because a second
+  // harness was connected after its pipeline was saved.
+  const problems = pipelineProblems(base, { roster, lane, families_available: [] });
   if (problems.length > 0) {
     throw new InvalidInputError(
       `the ${lane} pipeline of project ${slug} cannot run: ${problems.map((p) => p.message).join('; ')}. Fix it in Pipelines settings, then retry.`,
@@ -91,28 +93,34 @@ async function adoptWriters(
     ...rows.map((r) => stages.findIndex((s) => s.id === r.stage_id)),
   );
 
-  const earlier = stages.flatMap((s, i) =>
-    i < reached && s.kind === 'agent' && snapshot.roles[s.agent] !== undefined
-      ? [{ stage: s, writer: classifyStage(s, snapshot.roles) === 'writer' }]
-      : [],
-  );
+  const adopt = (stage: string, member: string, agent: string) => ({
+    stage_id: stage,
+    member_id: member,
+    cycle: 0,
+    kind: 'agent' as const,
+    agent_id: agent,
+    status: 'adopted' as const,
+  });
 
   const seeds = [
     ...adoptLegacy(ticket, snapshot),
-    ...earlier.flatMap(({ stage, writer }) =>
-      writer && stage.kind === 'agent'
-        ? [
-            {
-              stage_id: stage.id,
-              member_id: '',
-              cycle: 0,
-              kind: 'agent' as const,
-              agent_id: stage.agent,
-              status: 'adopted' as const,
-            },
-          ]
-        : [],
-    ),
+    ...stages.flatMap((s, i) => {
+      if (i >= reached) {
+        return [];
+      }
+
+      const klass = classifyStage(s, snapshot.roles);
+      if (s.kind === 'agent' && klass === 'writer') {
+        return [adopt(s.id, '', s.agent)];
+      }
+
+      // Every member of an earlier group of writers is past too.
+      return s.kind === 'group' && klass === 'writer_group'
+        ? s.members.flatMap((m) =>
+            m.kind === 'agent' ? [adopt(s.id, m.id, m.agent)] : [],
+          )
+        : [];
+    }),
   ];
 
   for (const seed of seeds) {

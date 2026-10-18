@@ -19,6 +19,8 @@ export const KIND_LABEL: Readonly<Record<InteractionKind, string>> = {
   blocked: 'Worker is stuck',
   failure: 'Ticket stopped',
   setup: 'Setup needed',
+  decision: 'Held for your decision',
+  sign_off: 'Ready for your sign-off',
 };
 
 const FALLBACK = 'The Worker is waiting for your answer.';

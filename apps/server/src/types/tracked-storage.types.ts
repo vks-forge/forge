@@ -17,7 +17,11 @@ export type Touch =
   | { readonly kind: 'card'; readonly id: string }
   | { readonly kind: 'ticket'; readonly id: string }
   | { readonly kind: 'interaction'; readonly id: string; readonly cardId?: string }
-  | { readonly kind: 'inbox'; readonly project: string };
+  | { readonly kind: 'inbox'; readonly project: string }
+  /** A write to a ticket's pipeline snapshot, a stage row or an artifact: the ticket page's strip is stale. */
+  | { readonly kind: 'pipeline'; readonly id: string }
+  /** A stage row changed by its id; the ticket is resolved from the row before the commit. */
+  | { readonly kind: 'stage_run'; readonly id: number };
 
 /** Turns the arguments of a successful write into what it touched. */
 export type Recorder = (args: readonly unknown[]) => Touch | readonly Touch[];

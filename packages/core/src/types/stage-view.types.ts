@@ -11,13 +11,21 @@
  */
 
 import type { ArtifactKind } from '#/schemas/agent.js';
+import type { Finding } from '#/schemas/finding.js';
 import type { Severity } from '#/schemas/pipeline.js';
-import type { StageArtifact, StageRun, StageRunStatus } from '#/schemas/stage-run.js';
+import type {
+  StageArtifact,
+  StageOutcome,
+  StageRun,
+  StageRunStatus,
+} from '#/schemas/stage-run.js';
+import type { TicketCheckOutput } from '#/schemas/ticket-check.js';
 
 /** One stage as the strip draws it, rolled up from its attempts at the current cycle. */
 export interface StageView {
   id: string;
-  kind: 'agent' | 'script_gate' | 'group' | 'human' | 'merge';
+  kind:
+    'agent' | 'script_gate' | 'group' | 'human' | 'director_check' | 'sign_off' | 'merge';
   label: string;
   agent?: { id: string; name: string } | undefined;
   members?: StageView[] | undefined;
@@ -28,6 +36,16 @@ export interface StageView {
   ended_at?: string | undefined;
   summary?: string | undefined;
   counts?: Record<Severity, number> | undefined;
+  /** The current round's findings, capped, with file, line and evidence. */
+  findings?: Finding[] | undefined;
+  /** Soft notes on this stage: the critic runs on the Worker's model family. */
+  warnings: string[];
+  signed_by?: 'director' | 'owner' | undefined;
+  override?: NonNullable<StageOutcome['override']> | undefined;
+  /** A writer-group member: the write scope it is held to. */
+  scope?: string[] | undefined;
+  check?: TicketCheckOutput | undefined;
+  unplanned?: string[] | undefined;
   artifacts: { id: number; kind: ArtifactKind }[];
 }
 

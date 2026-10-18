@@ -5,22 +5,25 @@
  *   editing the database (d-0135). Every waiting state has a row here: a question can be answered
  *   or its ticket cancelled; a lane hold can be run as Express, re-planned or cancelled; a capped
  *   or refused failure can be retried, re-planned or cancelled; a setup problem is fixed outside
- *   and re-checked; finished work can be approved and merged (tier B), signed off (tier C), or sent back for rework. The same tables serve the engine
+ *   and re-checked; finished work can be approved and merged (tier B), signed off (tier C), or sent back for rework;
+ *   a held ticket can be merged anyway (findings the owner overrules, never a failed gate), sent back,
+ *   re-planned or cancelled, and work that outgrew its plan can be continued, re-planned or cancelled. The same tables serve the engine
  *   (it refuses an action that was not offered), the server (it returns the list in each view) and
  *   the tests (a rule test fails when a status, cause or setup type has no row). Order is button
  *   order. "Fix in settings" is a link in the setup payload, not an action.
  *
- * Exports: QUESTION_ACTIONS, FAILURE_ACTIONS, SETUP_ACTIONS, REVIEW_ACTIONS, SIGNOFF_ACTIONS, SCHEDULER_WAIT_KINDS,
- *   STATUS_WAIT_CLASS, escalationActions(), ticketWaitActions().
+ * Exports: QUESTION_ACTIONS, FAILURE_ACTIONS, SETUP_ACTIONS, REVIEW_ACTIONS, SIGNOFF_ACTIONS, DECISION_ACTIONS,
+ *   SIGN_OFF_ACTIONS(), SCHEDULER_WAIT_KINDS, STATUS_WAIT_CLASS, escalationActions(), ticketWaitActions().
  * Depends on: schemas/escalation, schemas/ticket, types/escalation. No IO.
  */
 
 import type {
+  DecisionCause,
   EscalationAction,
   EscalationPayload,
   FailureCause,
 } from '#/schemas/escalation.js';
-import type { TicketStatus } from '#/schemas/ticket.js';
+import type { Tier, TicketStatus } from '#/schemas/ticket.js';
 import type {
   ActionContext,
   EscalationBase,
@@ -41,6 +44,18 @@ export const SIGNOFF_ACTIONS: readonly EscalationAction[] = [
   'rework',
   'cancel',
 ];
+
+/** The actions of each decision cause: a hold offers Merge anyway, scope drift offers Continue; both can re-plan or cancel. */
+export const DECISION_ACTIONS: Readonly<
+  Record<DecisionCause, readonly EscalationAction[]>
+> = {
+  findings_hold: ['merge_anyway', 'rework', 'replan', 'cancel'],
+  scope_drift: ['continue', 'replan', 'cancel'],
+};
+
+/** Finished work waiting for a name: tier C needs a named sign-off, the rest an approval; both can be sent back or cancelled. */
+export const SIGN_OFF_ACTIONS = (tier: Tier): readonly EscalationAction[] =>
+  tier === 'C' ? SIGNOFF_ACTIONS : REVIEW_ACTIONS;
 
 const RETRYABLE: readonly EscalationAction[] = ['retry', 'replan', 'cancel'];
 
@@ -79,17 +94,27 @@ export const STATUS_WAIT_CLASS: Readonly<Record<TicketStatus, WaitClass>> = {
 const withoutReplan = (actions: readonly EscalationAction[]): EscalationAction[] =>
   actions.filter((a) => a !== 'replan');
 
+function tableFor(payload: EscalationPayload): readonly EscalationAction[] {
+  switch (payload.kind) {
+    case 'question':
+      return QUESTION_ACTIONS;
+    case 'failure':
+      return FAILURE_ACTIONS[payload.cause];
+    case 'setup':
+      return SETUP_ACTIONS;
+    case 'decision':
+      return DECISION_ACTIONS[payload.cause];
+    case 'sign_off':
+      return SIGN_OFF_ACTIONS(payload.tier);
+  }
+}
+
 /** The actions offered for one escalation payload, in button order. */
 export function escalationActions(
   payload: EscalationPayload,
   context: ActionContext,
 ): EscalationAction[] {
-  const table =
-    payload.kind === 'question'
-      ? QUESTION_ACTIONS
-      : payload.kind === 'failure'
-        ? FAILURE_ACTIONS[payload.cause]
-        : SETUP_ACTIONS;
+  const table = tableFor(payload);
 
   return context.replannable ? [...table] : withoutReplan(table);
 }
@@ -101,7 +126,8 @@ const unique = (actions: readonly EscalationAction[]): EscalationAction[] => [
 /**
  * What a ticket page offers for the ticket's own wait: the pending owner escalations' actions for
  * a waiting ticket (cancel alone while the Director is still looking, or when no escalation
- * exists yet), Approve (tier B) or Sign off (tier C) with Rework and Cancel for finished work, Cancel for a ticket the scheduler holds back,
+ * exists yet), for finished work the pending `sign_off` item's actions when there is one, else
+ * Approve (tier B) or Sign off (tier C) with Rework and Cancel, Cancel for a ticket the scheduler holds back,
  * nothing for one that is running or finished. `schedulerWait` is the ticket page's wait line.
  */
 export function ticketWaitActions(
@@ -119,8 +145,18 @@ export function ticketWaitActions(
       return unique(owned.flatMap((p) => escalationActions(p.payload, ticket)));
     }
 
-    case 'review':
+    case 'review': {
+      const item = pending.find(
+        (p) => p.kind === 'sign_off' && p.stage === 'owner' && p.status === 'pending',
+      );
+
+      if (item) {
+        return escalationActions(item.payload, ticket);
+      }
+
       return [...(ticket.status === 'needs_signoff' ? SIGNOFF_ACTIONS : REVIEW_ACTIONS)];
+    }
+
     case 'scheduler':
       return schedulerWait === null ? [] : ['cancel'];
     case 'none':

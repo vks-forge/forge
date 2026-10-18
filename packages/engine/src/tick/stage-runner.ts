@@ -2,20 +2,24 @@
  * Stage runner (verifying side): performs what the ticket's pipeline asks for next.
  *
  * Why: once the last writer is done the ticket waits in Verifying while the rest of its pipeline
- *   runs: the gates, the checks, the owner's review, then the merge. Which of those comes next
- *   is not stored; it is the cursor over the stage rows. Each tick this takes the ticket's
- *   snapshot (checking it again if the ticket never had one), lets routing rules add checks on
- *   the real diff, applies script gates that finished, reads the cursor and does exactly one
- *   kind of thing: run the gates (the existing G1 job, unchanged), start the checks (a `stage`
- *   wake for agents, a background job for scripts), wait, or call the merge door with `hold`
- *   when a human stage is still open. When a step completes it asks the cursor again in the same
- *   tick, so an Express ticket goes from gates to merge exactly as it did before pipelines.
- *   A state the cursor should not produce for a verifying ticket (a writer is due) is not
- *   guessed at: the ticket is parked with the reason (fail closed).
+ *   runs: the gates, the checks, the Director's check against the plan, the sign-off, then the
+ *   merge. Which of those comes next is not stored; it is the cursor over the stage rows. Each tick
+ *   this takes the ticket's snapshot (checking it again if the ticket never had one), lets routing
+ *   rules add checks on the real diff, applies script gates and Director checks that finished,
+ *   reads the cursor and does exactly one kind of thing: run the gates (the existing G1 job,
+ *   unchanged), start the checks (one `stage` wake per agent member, so the scheduler places each
+ *   against the Worker limits; a background job for scripts), start the Director check (a step, not
+ *   a Worker), decide the sign-off (the Director signs low-risk work that passed everything, else
+ *   the owner is asked), wait, or call the merge door with `hold` when the owner's stage is still
+ *   open and `directorSigned` when the Director signed. When a step completes it asks the cursor
+ *   again in the same tick, so an Express ticket goes from gates to merge exactly as it did before
+ *   pipelines. A state the cursor should not produce for a verifying ticket (a writer is due) is
+ *   not guessed at: the ticket is parked with the reason (fail closed).
  *
  * Exports: driveStages().
- * Depends on: @forge/core (routeStages, classifyStage, pipelineHash), tick/{stage-artifacts,stage-gates,
- *   stage-records,stage-snapshot,stage-state,verify-outcomes,tick-config}, types/stage-runner. IO through the hooks and storage.
+ * Depends on: @forge/core (routeStages, classifyStage, pipelineHash), tick/{stage-artifacts,stage-director-apply,stage-director-check,
+ *   stage-gates,stage-records,stage-sign-off,stage-snapshot,stage-state,verify-outcomes,tick-config}, types/stage-runner.
+ *   IO through the hooks and storage.
  */
 
 import { InvalidInputError, classifyStage, pipelineHash, routeStages } from '@forge/core';
@@ -30,7 +34,10 @@ import {
   resumeLostGates,
   startScriptMember,
 } from '#/tick/stage-gates.js';
+import { applyFinishedChecks } from '#/tick/stage-director-apply.js';
+import { resumeDirectorCheck, startDirectorCheck } from '#/tick/stage-director-check.js';
 import { recordStage, requestStageWake } from '#/tick/stage-records.js';
+import { directorSignature, signOff } from '#/tick/stage-sign-off.js';
 import { ensureSnapshotTx } from '#/tick/stage-snapshot.js';
 import { readStageState } from '#/tick/stage-state.js';
 import { projectSettings } from '#/tick/tick-config.js';
@@ -102,7 +109,9 @@ async function prepare(ctx: EngineCtx, t: VerifyTarget): Promise<StageState | nu
   }
 
   await routeAtDiff(ctx, t, state);
-  if (await applyFinishedGates(ctx, t, state)) {
+  const gated = await applyFinishedGates(ctx, t, state);
+  const checked = await applyFinishedChecks(ctx, t, state);
+  if (gated || checked) {
     const fresh = await storage.transaction(async (tx) => ({
       ticket: await tx.tickets.get(t.ticket.id),
       state: await readStageState(tx, t.ticket.id),
@@ -170,17 +179,23 @@ async function startCheckStage(
     }
   }
 
-  if (cursor.members.some((m) => m.stage.kind === 'agent')) {
-    await ctx.deps.storage.transaction((tx) =>
-      requestStageWake(
-        ctx,
-        tx,
-        t.ticket.id,
-        cursor.stage.id,
-        cursor.cycle,
-        `stage:${cursor.stage.id}`,
-      ),
-    );
+  // One wake per agent member: each is placed by the scheduler against the Worker limits on its own.
+  const agents = cursor.members.filter((m) => m.stage.kind === 'agent');
+  if (agents.length > 0) {
+    await ctx.deps.storage.transaction(async (tx) => {
+      for (const m of agents) {
+        await requestStageWake(
+          ctx,
+          tx,
+          t.ticket.id,
+          cursor.stage.id,
+          cursor.cycle,
+          `stage:${cursor.stage.id}`,
+          undefined,
+          m.id,
+        );
+      }
+    });
   }
 }
 
@@ -213,6 +228,18 @@ export async function driveStages(
 
       case 'run_checks':
         return startCheckStage(ctx, t, state, cursor);
+      case 'director_check':
+        if ((await startDirectorCheck(ctx, t, state, cursor.stage)) === 'skipped') {
+          break;
+        }
+
+        return;
+      case 'sign_off':
+        if ((await signOff(ctx, t, state, cursor.stage, hooks)) === 'signed') {
+          break;
+        }
+
+        return;
       case 'await': {
         const roles = state.snapshot.roles;
         if (classifyStage(cursor.stage, roles) === 'unknown') {
@@ -225,11 +252,22 @@ export async function driveStages(
           return;
         }
 
+        if (cursor.stage.kind === 'director_check') {
+          return resumeDirectorCheck(ctx, t, state, cursor.stage);
+        }
+
         return resumeLostGates(ctx, t, state, cursor.stage);
       }
 
-      case 'merge':
-        return hooks.merge(ctx, t, await hooks.rows(ctx, t), cursor.hold);
+      case 'merge': {
+        const signed = directorSignature(state);
+
+        return hooks.merge(ctx, t, await hooks.rows(ctx, t), {
+          hold: cursor.hold,
+          ...(signed === null ? {} : { directorSigned: true, signReason: signed }),
+        });
+      }
+
       case 'done':
         return;
       default:

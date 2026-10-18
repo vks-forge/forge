@@ -1,23 +1,32 @@
 /**
- * AddStageMenu: the four kinds of stage an owner can add, behind one button.
+ * AddStageMenu: the kinds of stage an owner can add, behind one button.
  *
  * Why: a pipeline grows by adding an agent that does a piece of work, a script that checks it,
- *   a group of checks that run together, or the owner's own sign-off. Merge is always there and
- *   is never added. Putting the four behind one clearly named button keeps the list quiet, and an
- *   entry that cannot be added now (a second human sign-off, a thirteenth stage) stays in the
+ *   a group of checks that run together (or of writers that work side by side), the Director's
+ *   check against the plan, or the sign-off. Merge is always there and is never added. Putting
+ *   them behind one clearly named button keeps the list quiet, and an entry that cannot be added
+ *   now (a second sign-off or Director check, a thirteenth stage) stays in the
  *   menu, greyed, with its reason, instead of vanishing. Every entry is a real menu item, so the
  *   whole menu works from the keyboard.
  *
  * Exports: AddStageMenu.
- * Depends on: @radix-ui/react-dropdown-menu, lucide-react, components/ui/button, domain/pipeline-edit.
+ * Depends on: @radix-ui/react-dropdown-menu, lucide-react, components/ui/button, domain/pipeline-add.
  */
 
 import * as Menu from '@radix-ui/react-dropdown-menu';
-import { Bot, ChevronDown, Layers, Terminal, UserCheck } from 'lucide-react';
+import {
+  Bot,
+  ChevronDown,
+  ClipboardCheck,
+  Layers,
+  PenLine,
+  Stamp,
+  Terminal,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { PipelineDefinition } from '@forge/core';
 import { Button } from '#/components/ui/button.js';
-import { addAction } from '#/domain/pipeline-edit.js';
+import { addAction } from '#/domain/pipeline-add.js';
 import type { AddKind } from '#/types/pipeline-ui.types.js';
 
 const ITEM =
@@ -48,10 +57,22 @@ const ENTRIES: readonly {
     hint: 'Two to four checks at once; all must pass.',
   },
   {
-    kind: 'human',
-    icon: UserCheck,
-    title: 'Human sign-off',
-    hint: 'The ticket waits for your approval.',
+    kind: 'writer_group',
+    icon: PenLine,
+    title: 'Writers together',
+    hint: 'Two to four writers at once, each in its own folders.',
+  },
+  {
+    kind: 'director_check',
+    icon: ClipboardCheck,
+    title: 'Director check',
+    hint: 'The Director compares the work with the plan.',
+  },
+  {
+    kind: 'sign_off',
+    icon: Stamp,
+    title: 'Sign-off',
+    hint: 'The Director signs tier A and B; you sign tier C.',
   },
 ];
 

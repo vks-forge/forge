@@ -76,9 +76,11 @@ describe('blocking', () => {
     expect(isBlocking({}, policy)).toBe(false);
   });
 
-  it('gives the defaults to a stage with no policy of its own', () => {
+  it('gives the defaults to a stage with no policy of its own, and holds for the Director check', () => {
     for (const stage of BUILTIN_PIPELINES.full.stages) {
-      expect(checkPolicy(stage).on_blocking).toBe('rework');
+      expect(checkPolicy(stage).on_blocking).toBe(
+        stage.kind === 'director_check' ? 'hold' : 'rework',
+      );
     }
   });
 

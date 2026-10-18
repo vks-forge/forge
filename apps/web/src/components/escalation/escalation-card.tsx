@@ -2,11 +2,12 @@
  * EscalationCard: the one way a waiting ticket is drawn, in the card chat, on the Ticket page and
  * in the Inbox.
  *
- * Why: when a ticket cannot go on it waits on the owner as one escalation, and the owner may meet
+ * Why: when a ticket cannot go on, or finished work needs a name, it waits on the owner as one escalation, and the owner may meet
  *   it in any of three places. Drawing it three ways would mean three sets of words and three sets
  *   of bugs, and acting in one place would leave the others looking stuck. This card states what
  *   is wrong in plain words, offers exactly the actions the server listed (a question's answer
- *   form, a failure's Retry / Re-plan / Cancel, a setup's Fix in settings and check again), and
+ *   form, a failure's Retry / Re-plan / Cancel, a setup's Fix in settings and check again, a held decision's findings with Merge anyway / Send back /
+ *   Re-plan, a sign-off's tier and checks with Approve or Sign off), and
  *   once acted on collapses to one line saying who settled it and when; the act refreshes every
  *   screen that shows the item (api/use-escalations). While the Director is still looking, it
  *   says so and offers nothing, because the owner is not the one being asked yet. Amber means
@@ -14,18 +15,19 @@
  *   (and the card refreshes), never as a silent failure.
  *
  * Exports: EscalationCard, escalationDomId().
- * Depends on: lucide-react, api/use-escalations, components/escalation/*, components/ticket/ticket-link,
+ * Depends on: lucide-react, api/use-escalations, components/escalation/* (incl. decision, sign-off), components/ticket/ticket-link,
  *   domain/escalation-copy, state/use-now, schemas/escalation (type), types/escalation-ui.types.
  */
 
 import { Check, CircleAlert, Eye } from 'lucide-react';
-import { useEffect } from 'react';
 import { ApiError } from '#/api/api-error.js';
 import { useActOnEscalation } from '#/api/use-escalations.js';
 import { EscalationActions } from '#/components/escalation/escalation-actions.js';
+import { EscalationDecision } from '#/components/escalation/escalation-decision.js';
 import { EscalationFailure } from '#/components/escalation/escalation-failure.js';
 import { EscalationQuestion } from '#/components/escalation/escalation-question.js';
 import { EscalationSetup, FixLink } from '#/components/escalation/escalation-setup.js';
+import { EscalationSignOff } from '#/components/escalation/escalation-signoff.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
 import {
   dependentsOf,
@@ -72,14 +74,22 @@ export function EscalationCard(props: {
   /**
    * Called with the item once there is something the owner must still be able to read although
    * the server no longer lists it as pending: it was settled by this click, or someone settled
-   * it first. A list that drops settled items uses it to keep the card on screen.
+   * it first. A list that drops settled items uses it to keep the card on screen. It is called
+   * by the mutation itself, so it still fires if the refreshed list unmounts this card first.
    */
   onKeep?: (view: EscalationView) => void;
 }) {
   const { view, variant = 'framed', showTicket = true } = props;
   const now = useNow(60_000);
-  const mutation = useActOnEscalation(view);
+  const mutation = useActOnEscalation(view, props.onKeep);
   const settled = view.settled ?? mutation.data?.escalation.settled;
+  // An overrule is recorded with the owner's reason; the settled view does not carry it, so the
+  // card that took it says it back ("Merged anyway by you: reason") for as long as it is on screen.
+  const body = mutation.variables;
+  const overrule =
+    body !== undefined && (body.action === 'merge_anyway' || body.action === 'continue')
+      ? body.comment
+      : undefined;
 
   const controls: EscalationControls = {
     act: (body, onSuccess, onFailure) => {
@@ -97,19 +107,8 @@ export function EscalationCard(props: {
     reset: mutation.reset,
   };
 
-  const confirmed = mutation.data?.escalation;
   const alreadySettled =
     mutation.error instanceof ApiError && mutation.error.code === 'not_pending';
-
-  const { onKeep } = props;
-
-  useEffect(() => {
-    if (confirmed !== undefined) {
-      onKeep?.(confirmed);
-    } else if (alreadySettled) {
-      onKeep?.(view);
-    }
-  }, [confirmed, alreadySettled, onKeep, view]);
 
   const domId = escalationDomId(view.id);
   const frame =
@@ -129,6 +128,11 @@ export function EscalationCard(props: {
         <p className="flex items-center gap-1.5 font-medium">
           <Check aria-hidden="true" className="size-4 shrink-0 text-good" />
           {settledLine(settled, now)}
+          {overrule === undefined ? null : (
+            <span className="min-w-0 break-words font-normal text-muted">
+              {` · ${overrule}`}
+            </span>
+          )}
         </p>
       </section>
     );
@@ -183,6 +187,10 @@ export function EscalationCard(props: {
         <EscalationQuestion id={view.id} question={payload} controls={controls} />
       ) : payload.kind === 'failure' ? (
         <EscalationFailure failure={payload} />
+      ) : payload.kind === 'decision' ? (
+        <EscalationDecision decision={payload} />
+      ) : payload.kind === 'sign_off' ? (
+        <EscalationSignOff signOff={payload} />
       ) : (
         <EscalationSetup setup={payload} />
       )}

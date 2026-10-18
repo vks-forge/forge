@@ -29,7 +29,7 @@ import {
   stageJobKey,
   takeFinishedJob,
 } from '#/tick/stage-script-jobs.js';
-import { holdForOwnerTx, sendBackTx } from '#/tick/stage-send-back.js';
+import { routeBlockedTx } from '#/tick/stage-send-back.js';
 import { parkVerifying } from '#/tick/verify-outcomes.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type {
@@ -176,18 +176,16 @@ async function applyGate(
       : verdict.report;
 
   const policy = policyOf(snapshot, row);
-  const args = {
-    stage: { id: row.stage_id, member: row.member_id, kind: 'script_gate' as const },
-    label,
-    findings: `${label} failed.\n${findings}`,
-    outcome: { gate },
-    rowId: row.id,
-  };
-
   await deps.storage.transaction(async (tx) => {
-    await (policy.on_blocking === 'hold'
-      ? holdForOwnerTx(ctx, tx, t, args)
-      : sendBackTx(ctx, tx, t, args));
+    await routeBlockedTx(ctx, tx, t, {
+      stage: { id: row.stage_id, member: row.member_id, kind: 'script_gate' as const },
+      klass: 'gate',
+      policy: policy.on_blocking,
+      label,
+      findings: `${label} failed.\n${findings}`,
+      outcome: { gate },
+      rowId: row.id,
+    });
   });
 }
 

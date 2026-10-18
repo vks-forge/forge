@@ -5,7 +5,8 @@
  *   same small control surface, so each piece can be tested and drawn alone while a click in any
  *   of them goes through the one mutation that settles every screen. Types only.
  *
- * Exports: EscalationControls, QuestionPayload, FailurePayload, SetupPayload, EscalationSnapshot.
+ * Exports: EscalationControls, QuestionPayload, FailurePayload, SetupPayload,
+ *   DecisionPayload, SignOffPayload, EscalationSnapshot.
  * Depends on: schemas/escalation (types).
  */
 
@@ -32,10 +33,12 @@ export interface EscalationControls {
   readonly reset: () => void;
 }
 
-/** The three payload shapes, so each body component takes exactly its own. */
+/** The five payload shapes, so each body component takes exactly its own. */
 export type QuestionPayload = Extract<EscalationPayload, { kind: 'question' }>;
 export type FailurePayload = Extract<EscalationPayload, { kind: 'failure' }>;
 export type SetupPayload = Extract<EscalationPayload, { kind: 'setup' }>;
+export type DecisionPayload = Extract<EscalationPayload, { kind: 'decision' }>;
+export type SignOffPayload = Extract<EscalationPayload, { kind: 'sign_off' }>;
 
 /** What an optimistic settle replaced, so a refusal can put it back. */
 export interface EscalationSnapshot {

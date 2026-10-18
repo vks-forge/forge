@@ -10,7 +10,7 @@
  *   happen after the first dispatch; work from before pipelines continues on the agent its earlier
  *   run used, else the implementer.
  *
- * Exports: chooseWriter().
+ * Exports: chooseWriter(). A group of writers starts the member it is asked for.
  * Depends on: @forge/core (InvalidInputError), steps/run-step, tick/{dispatch-park,run-agent,stage-snapshot,
  *   stage-state}, types/stage-runner. IO: storage.
  */
@@ -54,10 +54,48 @@ export async function chooseWriter(
   ticket: Ticket,
   slug: string,
   previous: Run | null,
+  member?: string,
 ): Promise<WriterChoice> {
   const state = await stageStateFor(ctx, ticket);
   if (state === 'parked') {
     return { kind: 'stop' };
+  }
+
+  if (state?.cursor.kind === 'run_writers') {
+    // The members of a writer group start one at a time, each the one the scheduler placed.
+    const { stage, members } = state.cursor;
+    const pick = member === undefined ? members[0] : members.find((m) => m.id === member);
+    if (!pick || pick.stage.kind !== 'agent') {
+      ctx.deps.log?.(
+        'warn',
+        `${ticket.id}: dispatch skipped, ${member ?? 'no member'} of ${stage.id} is not due`,
+      );
+
+      hold(ctx, `dispatch:${ticket.id}`);
+
+      return { kind: 'stop' };
+    }
+
+    const agent = resolveStageAgent(ctx.config, slug, pick.stage.agent);
+    if (!agent) {
+      await parkDispatch(
+        ctx,
+        ticket,
+        new InvalidInputError(
+          `the "${pick.stage.label}" stage needs agent "${pick.stage.agent}", which is missing, disabled or archived. Restore it or change the pipeline, then retry.`,
+        ),
+      );
+
+      return { kind: 'stop' };
+    }
+
+    return {
+      kind: 'go',
+      agent,
+      stage: { id: stage.id, label: `${stage.label}: ${pick.stage.label}` },
+      memberId: pick.id,
+      state,
+    };
   }
 
   if (state?.cursor.kind === 'run_writer') {

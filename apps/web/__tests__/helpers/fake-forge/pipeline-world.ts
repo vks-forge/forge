@@ -52,6 +52,8 @@ export interface PipelineWorld {
 
 export interface WorldOptions {
   roster?: readonly AgentView[];
+  /** The model families the connected harnesses offer; two or more make a same-family critic a problem. */
+  families?: readonly string[];
   projects?: readonly string[];
   /** Routing rules a project starts with, by slug. */
   routing?: Readonly<Record<string, readonly RoutingRule[]>>;
@@ -61,6 +63,7 @@ export function createPipelineWorld(options: WorldOptions = {}) {
   const roster =
     options.roster ?? effectiveAgents(structuredClone(BUILTIN_AGENTS), undefined, READY);
 
+  const families = options.families ?? ['claude'];
   const known = new Set(options.projects ?? ['sample-service', 'sample-web']);
   const world: PipelineWorld = {
     company: { version: 3, doc: {} },
@@ -175,7 +178,11 @@ export function createPipelineWorld(options: WorldOptions = {}) {
       return def;
     }
 
-    const problems = pipelineProblems(def, { roster, lane });
+    const problems = pipelineProblems(def, {
+      roster,
+      lane,
+      families_available: families,
+    });
 
     if (problems.length > 0) {
       return invalid('pipeline_invalid', problems);
@@ -239,6 +246,7 @@ export function createPipelineWorld(options: WorldOptions = {}) {
 
   return {
     roster,
+    families,
     known,
     project,
     companyBody,

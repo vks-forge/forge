@@ -5,7 +5,11 @@
  *   behaviour exactly (one implementer, G1, merge), so turning pipelines on changes nothing for
  *   small work. Standard adds what a medium change deserves: the failing tests first, then the
  *   implementation, G1, and an independent reviewer who has not seen the Worker's own story.
- *   Full adds a critic beside the reviewer and a human look before merge (d-0137). These are
+ *   Full adds a critic beside the reviewer, the Director's check against the plan, and a sign-off
+ *   the Director gives for tier A and B work that passed everything and the owner gives for
+ *   tier C and anything in doubt (d-0137, d-0141 item 9). The critic holds the merge on a
+ *   blocking finding instead of sending work back, because its objections are arguments the owner
+ *   may overrule, and it stays optional: the owner can remove it in the editor. These are
  *   code merged at read, so a better default reaches every install that never edited a lane,
  *   and an owner's edit replaces the whole lane list. They carry no `description`, because a
  *   shipped note would survive a settings merge into an owner's replacement.
@@ -62,15 +66,23 @@ export const BUILTIN_PIPELINES: LanePipelines = {
         join: 'all',
         members: [
           { id: 'review', kind: 'agent', label: 'Review', agent: 'reviewer' },
-          { id: 'critique', kind: 'agent', label: 'Critique', agent: 'critic' },
+          {
+            id: 'critique',
+            kind: 'agent',
+            label: 'Critique',
+            agent: 'critic',
+            on_blocking: 'hold',
+          },
         ],
       },
+      { id: 'check-plan', kind: 'director_check', label: 'Check against the plan' },
       {
-        id: 'human',
-        kind: 'human',
-        label: 'Your sign-off',
+        id: 'sign-off',
+        kind: 'sign_off',
+        label: 'Sign-off',
+        signer: 'director_or_owner',
         prompt:
-          'Look at the finished change and approve it, or send it back with a comment.',
+          'The Director signs tier A and B work that passed every check; tier C and anything in doubt waits for you.',
       },
       MERGE,
     ],

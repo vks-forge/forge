@@ -174,3 +174,90 @@ describe('EscalationList and EscalationActReply', () => {
     ).toBe(false);
   });
 });
+
+describe('decision and sign-off payloads', () => {
+  const decision = {
+    kind: 'decision',
+    cause: 'findings_hold',
+    summary: 'Review found blocking findings and holds the merge for you.',
+    stage_id: 'reviewer',
+    stage_label: 'Review',
+    findings: [
+      { severity: 'high', issue: 'null case', evidence: 'a.ts:1', file: 'a.ts', line: 1 },
+    ],
+    rework: { count: 2, cap: 2 },
+  };
+
+  const signOff = {
+    kind: 'sign_off',
+    cause: 'tier_c',
+    tier: 'C',
+    summary: 'Needs a named person.',
+    checks: {
+      passed: 4,
+      counts: { critical: 0, high: 0, medium: 1, low: 2 },
+      overrides: 0,
+    },
+  };
+
+  it('parses a decision for each cause and a sign-off for each cause', () => {
+    for (const cause of ['findings_hold', 'scope_drift']) {
+      expect(EscalationPayload.safeParse({ ...decision, cause }).success).toBe(true);
+    }
+
+    for (const cause of ['tier_b', 'tier_c', 'owner_stage', 'director_declined']) {
+      expect(EscalationPayload.safeParse({ ...signOff, cause }).success).toBe(true);
+    }
+  });
+
+  it('refuses a decision with an unknown cause, a stage id that is not a slug, or more than 20 findings', () => {
+    expect(EscalationPayload.safeParse({ ...decision, cause: 'whim' }).success).toBe(
+      false,
+    );
+
+    expect(EscalationPayload.safeParse({ ...decision, stage_id: 'Bad Id' }).success).toBe(
+      false,
+    );
+
+    expect(
+      EscalationPayload.safeParse({
+        ...decision,
+        findings: Array.from({ length: 21 }, () => decision.findings[0]),
+      }).success,
+    ).toBe(false);
+  });
+
+  it('needs five characters of reason for merge anyway and continue, and none for approve and sign off', () => {
+    expect(
+      EscalationActBody.safeParse({ action: 'merge_anyway', comment: 'four' }).success,
+    ).toBe(false);
+
+    expect(
+      EscalationActBody.safeParse({ action: 'merge_anyway', comment: '  fives ' })
+        .success,
+    ).toBe(true);
+
+    expect(
+      EscalationActBody.safeParse({ action: 'continue', comment: 'ok' }).success,
+    ).toBe(false);
+
+    expect(
+      EscalationActBody.safeParse({ action: 'continue', comment: 'carry on' }).success,
+    ).toBe(true);
+
+    expect(EscalationActBody.safeParse({ action: 'approve' }).success).toBe(true);
+    expect(
+      EscalationActBody.safeParse({ action: 'sign_off', signer: 'vikash' }).success,
+    ).toBe(true);
+  });
+
+  it('stores the comment of an override in the answer', () => {
+    expect(
+      EscalationAnswer.safeParse({
+        action: 'merge_anyway',
+        by: 'owner',
+        comment: 'accepted',
+      }).success,
+    ).toBe(true);
+  });
+});

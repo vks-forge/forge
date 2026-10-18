@@ -5,7 +5,7 @@
  *   properties). They must all build stage rows and snapshots the same way, or a drift in one suite's
  *   idea of "a passed implementer row" would hide a bug in another's.
  *
- * Exports: roles, snap, standard, full, row, next, kindOf.
+ * Exports: roles, snap, standard, full, fullLane, row, next, kindOf.
  * Depends on: src/domain/{stage-cursor,builtin-pipelines}. No IO.
  */
 
@@ -27,7 +27,32 @@ export const snap = (def: PipelineDefinition): SnapshotView => ({
   roles,
 });
 export const standard = snap(BUILTIN_PIPELINES.standard);
-export const full = snap(BUILTIN_PIPELINES.full);
+
+/** The shipped Full lane: reviewer and critic, the Director's check, then a sign-off. */
+export const fullLane = snap(BUILTIN_PIPELINES.full);
+
+/**
+ * A saved owner list in the older Full shape: the group, then a `human` stage (no Director
+ * check, no sign-off). Lists like this keep working, so the cursor suites still walk one.
+ */
+export const full = snap({
+  stages: BUILTIN_PIPELINES.full.stages.flatMap((s) => {
+    if (s.kind === 'director_check') {
+      return [];
+    }
+
+    return s.kind === 'sign_off'
+      ? [
+          {
+            id: 'human',
+            kind: 'human' as const,
+            label: 'Your sign-off',
+            prompt: s.prompt,
+          },
+        ]
+      : [s];
+  }),
+});
 
 export const row = (
   stage_id: string,

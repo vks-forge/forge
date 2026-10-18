@@ -18,9 +18,15 @@
  * Depends on: helpers/rig, helpers/scripted-llm, vitest.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { makeRig } from '#tests/helpers/rig.js';
 import { fail } from '#tests/helpers/scripted-llm.js';
+
+// Every lane runs now, so a held lane has to be stubbed to exercise the hold path still kept for a lane without a runner.
+vi.mock('#/domain/live-lanes.js', () => ({
+  LIVE_LANES: ['express', 'standard'],
+  isLive: (lane: string) => lane !== 'full',
+}));
 
 const triageAnswer = (over: Record<string, unknown> = {}) => ({
   lane: 'express',

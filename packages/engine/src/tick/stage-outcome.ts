@@ -5,19 +5,22 @@
  *   passes its stage, and the cursor says what is next: another writer (a `stage` wake starts it
  *   while the ticket stays In Progress), the red proof of a test-writer, or Verifying. A check
  *   (a reviewer or researcher) never moves the ticket on its own say: it reports a typed review
- *   through `submit_review`, and only findings the stage's policy calls blocking stop the merge
- *   (send the Worker back, or hold for the owner); a run that ended without any review is an
- *   error and parks the ticket, never a pass (fail closed). A check that failed to run is retried
- *   or parked by its error family under the same bounds as any run, and an out-of-quota harness
- *   is parked until its reset. All of it is applied inside the settle transaction, through the
- *   same doors as every other ticket change.
+ *   through `submit_review`, and only findings the stage's policy calls blocking stop the merge;
+ *   a run that ended without any review is an error and parks the ticket, never a pass (fail
+ *   closed). Where blocking findings go (back for rework, or held for the owner) is
+ *   `blockingRoute`'s call: a reviewer's findings at the rework cap hold the ticket instead of
+ *   dead-ending it, and a critic set to hold holds at once. A critic that runs on the Worker's own
+ *   model family is labelled on its row (d-0073). A check that failed to run is retried or parked
+ *   by its error family under the same bounds as any run, and an out-of-quota harness is parked
+ *   until its reset. All of it is applied inside the settle transaction, through the same doors as
+ *   every other ticket change.
  *
  * Exports: afterWriterSuccessTx(), applyCheckOutcome().
- * Depends on: @forge/core (stage policy, cursor), domain/failure-policy, tick/{quota,stage-artifacts,
- *   stage-records,stage-send-back,ticket-moves,verify-outcomes}. Writes inside the caller's transaction.
+ * Depends on: @forge/core (stage policy, cursor, sameFamilyCritics), domain/failure-policy, tick/{quota,run-agent,
+ *   stage-artifacts,stage-records,stage-send-back,ticket-moves,verify-outcomes}. Writes inside the caller's transaction.
  */
 
-import { blockingCount, renderBlocking } from '@forge/core';
+import { blockingCount, renderBlocking, sameFamilyCritics } from '@forge/core';
 import type {
   ErrorFamily,
   Run,
@@ -37,7 +40,8 @@ import {
 } from '#/tick/stage-artifacts.js';
 import { finishStageRun, requestStageWake } from '#/tick/stage-records.js';
 import { labelOf, policyOf } from '#/tick/stage-labels.js';
-import { holdForOwnerTx, sendBackTx } from '#/tick/stage-send-back.js';
+import { routeBlockedTx } from '#/tick/stage-send-back.js';
+import { agentViews } from '#/tick/run-agent.js';
 import { parkVerifyingTx } from '#/tick/verify-outcomes.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { StageState } from '#/types/stage-runner.types.js';
@@ -107,6 +111,7 @@ async function checkNotCompleted(
       row.cycle,
       'stage:quota',
       until,
+      row.member_id,
     );
 
     return;
@@ -147,6 +152,23 @@ async function checkNotCompleted(
     row.cycle,
     `stage:retry:${decision.family}`,
     decision.notBefore,
+    row.member_id,
+  );
+}
+
+/** True when the check of `row` is a critic on the Worker's own model family (the strip labels it, d-0073). */
+async function isSameFamilyCritic(
+  ctx: EngineCtx,
+  tx: StorageTx,
+  ticket: Ticket,
+  snapshot: TicketPipeline,
+  row: StageRun,
+): Promise<boolean> {
+  const slug = (await tx.projects.get(ticket.project))?.slug ?? ticket.project;
+  const critics = sameFamilyCritics(snapshot.definition, agentViews(ctx.config, slug));
+
+  return critics.some(
+    (s) => s.id === (row.member_id === '' ? row.stage_id : row.member_id),
   );
 }
 
@@ -233,13 +255,23 @@ export async function applyCheckOutcome(
 
   const policy = policyOf(snapshot, row);
   const blocking = blockingCount(review, policy);
-  const outcome = { review, blocking };
+  const outcome = {
+    review,
+    blocking,
+    ...((await isSameFamilyCritic(ctx, tx, ticket, snapshot, row))
+      ? { same_family: true as const }
+      : {}),
+  };
+
   if (blocking === 0 || ticket.status !== 'verifying') {
-    // A late result for work that already went back is kept as a record, nothing more.
+    // A late result for work that already went back is kept as a record, nothing more. When the
+    // ticket is held for the owner, a blocking late result waits with the hold (so the owner's
+    // decision covers it) instead of ending the cycle behind the owner's back.
+    const held = ticket.status === 'waiting_human' && ticket.parked_from === 'verifying';
     await finishStageRun(
       tx,
       row.id,
-      blocking === 0 ? 'passed' : 'failed',
+      blocking === 0 ? 'passed' : held ? 'waiting' : 'failed',
       outcome,
       ctx.nowIso,
     );
@@ -247,19 +279,20 @@ export async function applyCheckOutcome(
     return;
   }
 
-  const args = {
-    stage: { id: row.stage_id, member: row.member_id, kind: 'agent' as const },
-    label,
-    findings: renderBlocking(label, review, policy),
-    outcome,
-    rowId: row.id,
-    agent: { id: row.agent_id ?? '', hash: row.agent_hash },
-  };
-
-  const target = { ticket, run: writer };
-  if (policy.on_blocking === 'hold') {
-    await holdForOwnerTx(ctx, tx, target, args);
-  } else {
-    await sendBackTx(ctx, tx, target, args);
-  }
+  await routeBlockedTx(
+    ctx,
+    tx,
+    { ticket, run: writer },
+    {
+      stage: { id: row.stage_id, member: row.member_id, kind: 'agent' as const },
+      klass: 'check',
+      policy: policy.on_blocking,
+      blocking: review.findings.filter((f) => policy.blocking.includes(f.severity)),
+      label,
+      findings: renderBlocking(label, review, policy),
+      outcome,
+      rowId: row.id,
+      agent: { id: row.agent_id ?? '', hash: row.agent_hash },
+    },
+  );
 }

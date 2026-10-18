@@ -7,26 +7,34 @@
  *   machine's cap of two automatic reworks, then a human); and the findings travel in the
  *   continuation wake, so the next Worker prompt carries them even if the server restarts in
  *   between. The next cycle restarts at the stage's `rework_to` (the last writer by default),
- *   so the test-writer is not run again when only the implementation is wrong. A stage set to
- *   hold instead parks the ticket from Verifying for the owner (its attempt is recorded as
- *   waiting), which neither spends a rework nor loses the finished work. Each door has a `Tx`
- *   form because a settled check run applies its verdict inside the settle transaction.
+ *   so the test-writer is not run again when only the implementation is wrong. Which road a
+ *   blocking result takes is `blockingRoute`'s call: a gate always reworks and ends at the
+ *   `rework_cap` failure (never "merge anyway"); a reviewer's or critic's findings, or the
+ *   Director check's, rework while reworks remain and then hold, and a stage set to hold holds at
+ *   once. A hold parks the ticket from Verifying (its attempt is recorded as waiting) with one
+ *   `decision` item for the owner (Merge anyway, Send back, Re-plan, Cancel), which neither spends
+ *   a rework nor loses the finished work. Each door has a `Tx` form because a settled check run
+ *   applies its verdict inside the settle transaction.
  *
- * Exports: sendBackTx(), sendBack(), holdForOwnerTx(), reworkOrPark(), clip().
- * Depends on: @forge/core (MAX_AUTO_REWORKS, currentCycle), domain/gate-rows, tick/stage-records,
- *   tick/ticket-moves, tick/verify-outcomes, tick/wakes, types/stage-runner.
+ * Exports: sendBackTx(), sendBack(), routeBlockedTx(), holdForOwnerTx(), holdGateTx(), reworkOrPark(), clip().
+ * Depends on: @forge/core (MAX_AUTO_REWORKS, blockingRoute, currentCycle), domain/gate-rows, tick/escalation-finished,
+ *   tick/stage-records, tick/ticket-moves, tick/verify-outcomes, tick/rework-wakes, types/stage-runner.
  */
 
-import { MAX_AUTO_REWORKS, currentCycle } from '@forge/core';
+import { MAX_AUTO_REWORKS, blockingRoute, currentCycle } from '@forge/core';
 import type { GateVerdict, StorageTx } from '@forge/core';
 import { describeFailures } from '#/domain/gate-rows.js';
+import { raiseDecisionTx } from '#/tick/escalation-finished.js';
 import { finishStageRun, recordStage } from '#/tick/stage-records.js';
 import { moveTicketTx } from '#/tick/ticket-moves.js';
 import { parkVerifyingTx, raiseFailure, recordVerified } from '#/tick/verify-outcomes.js';
-import { requestWakeTx } from '#/tick/wakes.js';
+import { requestReworkWakesTx } from '#/tick/rework-wakes.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { SendBackArgs, StageTarget } from '#/types/stage-runner.types.js';
 import type { GateRows } from '#/types/verify.types.js';
+
+/** A decision card carries at most this many blocking findings. */
+const MAX_DECISION_FINDINGS = 20;
 
 /** The longest findings text a wake carries. */
 const MAX_FINDINGS = 6000;
@@ -97,12 +105,14 @@ export async function sendBackTx(
   if (moved.ticket.status === 'in_progress') {
     // The findings travel in the wake's reason, which is durable: the next run's prompt
     // is built from it even if the server restarts in between.
-    await requestWakeTx(tx, deps, {
-      ticketId: t.ticket.id,
-      kind: 'continuation',
-      reason: `gate_failed: ${findings}`,
-      key: t.run.id,
-    });
+    await requestReworkWakesTx(
+      deps,
+      tx,
+      t.ticket.id,
+      a.stage.id,
+      `gate_failed: ${findings}`,
+      t.run.id,
+    );
 
     recordVerified(ctx, t, 'rework', rows, { detail: findings });
 
@@ -135,8 +145,43 @@ export async function sendBack(
   await ctx.deps.storage.transaction((tx) => sendBackTx(ctx, tx, t, a));
 }
 
-/** A stage set to hold, inside `tx`: its attempt is `waiting` and the ticket parks from Verifying for the owner. */
+/**
+ * A hold for the owner, inside `tx`: the stage's attempt is `waiting`, the ticket parks from
+ * Verifying and one `findings_hold` decision (the blocking findings, the rework count) is raised.
+ */
 export async function holdForOwnerTx(
+  ctx: EngineCtx,
+  tx: StorageTx,
+  t: StageTarget,
+  a: SendBackArgs,
+): Promise<boolean> {
+  const count =
+    (await tx.tickets.get(t.ticket.id))?.rework_count ?? t.ticket.rework_count;
+
+  return raiseDecisionTx(
+    ctx,
+    tx,
+    t,
+    {
+      kind: 'decision',
+      cause: 'findings_hold',
+      summary: `${a.label} found blocking findings and holds the merge for you. ${clip(a.findings)}`,
+      stage_id: a.stage.id,
+      stage_label: a.label,
+      findings: [...(a.blocking ?? [])].slice(0, MAX_DECISION_FINDINGS),
+      rework: { count, cap: MAX_AUTO_REWORKS },
+    },
+    a.rows ?? [],
+    (inner) => closeStage(inner, ctx, t, a, 'waiting'),
+  );
+}
+
+/**
+ * A script gate set to hold, inside `tx`: its attempt is `waiting` and the ticket parks from
+ * Verifying with a plain failure (Retry runs the gate again). A gate is deterministic, so it never
+ * offers "merge anyway": an owner who wants the work past it edits the gate in the pipeline.
+ */
+export async function holdGateTx(
   ctx: EngineCtx,
   tx: StorageTx,
   t: StageTarget,
@@ -147,6 +192,38 @@ export async function holdForOwnerTx(
   return parkVerifyingTx(ctx, tx, t, reason, a.rows ?? [], undefined, (inner) =>
     closeStage(inner, ctx, t, a, 'waiting'),
   );
+}
+
+/**
+ * Applies a blocking result by the road `blockingRoute` names: back for rework (a gate, at the cap,
+ * ends in the `rework_cap` failure), or a hold for the owner. A script gate that says hold parks
+ * as a plain failure. False when the ticket was not verifying.
+ */
+export async function routeBlockedTx(
+  ctx: EngineCtx,
+  tx: StorageTx,
+  t: StageTarget,
+  a: SendBackArgs,
+): Promise<boolean> {
+  const count =
+    (await tx.tickets.get(t.ticket.id))?.rework_count ?? t.ticket.rework_count;
+
+  const route = blockingRoute({
+    klass: a.klass,
+    policy: a.policy,
+    reworkCount: count,
+    cap: MAX_AUTO_REWORKS,
+  });
+
+  if (route === 'hold') {
+    return holdForOwnerTx(ctx, tx, t, a);
+  }
+
+  if (a.klass === 'gate' && a.policy === 'hold') {
+    return holdGateTx(ctx, tx, t, a);
+  }
+
+  return sendBackTx(ctx, tx, t, a);
 }
 
 /** A failed G1: send the Worker back with the gate findings, or park at the rework cap. */
@@ -166,6 +243,8 @@ export async function reworkOrPark(
 
   await sendBack(ctx, t, {
     stage: { id: g1StageId, member: '', kind: 'script_gate' },
+    klass: 'gate',
+    policy: 'rework',
     label: names,
     findings: describeFailures(rows, verdicts),
     outcome: {

@@ -18,7 +18,7 @@
  * Depends on: helpers/escalation-rig, helpers/planning-rig, helpers/verify-rig, vitest.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   ask,
   cardEventsOf,
@@ -33,6 +33,12 @@ import { makeRig } from '#tests/helpers/rig.js';
 import { makeResult } from '#tests/helpers/scripted-driver.js';
 import { verdict } from '#tests/helpers/fake-git-host.js';
 import { drive, makeVerifyRig, startAndFinish } from '#tests/helpers/verify-rig.js';
+
+// Every lane runs now, so a held lane has to be stubbed to exercise the hold path still kept for a lane without a runner.
+vi.mock('#/domain/live-lanes.js', () => ({
+  LIVE_LANES: ['express', 'standard'],
+  isLive: (lane: string) => lane !== 'full',
+}));
 
 const RETRY = {
   decision: 'retry',

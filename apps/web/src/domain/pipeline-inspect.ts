@@ -6,7 +6,7 @@
  *   was saved, whatever order the keys came back in. Neither changes the list, so they live apart
  *   from the edit rules.
  *
- * Exports: indexProblems(), sameDefinition().
+ * Exports: indexProblems(), stageWarnings(), listWarnings(), sameDefinition().
  * Depends on: @forge/core (types), types/pipeline-ui.types. No IO.
  */
 
@@ -50,6 +50,36 @@ export function indexProblems(
   }
 
   return { general, byStage };
+}
+
+/**
+ * The server's warnings that belong to one row: they start with the name of the stage or of one
+ * of its group members (`Critic: ...`), which is how core files a same-family critic.
+ */
+export function stageWarnings(
+  stage: PipelineDefinition['stages'][number],
+  warnings: readonly string[],
+): string[] {
+  const names = [
+    stage.label,
+    ...(stage.kind === 'group' ? stage.members.map((m) => m.label) : []),
+  ];
+
+  return warnings.flatMap((warning) => {
+    const own = names.find((name) => warning.startsWith(`${name}: `));
+
+    return own === undefined ? [] : [warning.slice(own.length + 2)];
+  });
+}
+
+/** The warnings no row claims, which stay in the list above the stages. */
+export function listWarnings(
+  def: PipelineDefinition,
+  warnings: readonly string[],
+): string[] {
+  return warnings.filter(
+    (warning) => !def.stages.some((stage) => stageWarnings(stage, [warning]).length > 0),
+  );
 }
 
 function canonical(value: unknown): string {

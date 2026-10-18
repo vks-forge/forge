@@ -26,14 +26,16 @@ import {
 import { NEEDS_YOU_ACTIONS } from '#/schemas/card-event.js';
 import { CARD_PHASES } from '#/schemas/card.js';
 import {
+  DECISION_CAUSES,
   EscalationAction,
   EscalationKind,
   FailureCause,
   SetupCause,
 } from '#/schemas/escalation.js';
 import type { EscalationPayload } from '#/schemas/escalation.js';
-import { TicketStatus } from '#/schemas/ticket.js';
+import { Tier, TicketStatus } from '#/schemas/ticket.js';
 import type { EscalationBase } from '#/types/escalation.types.js';
+import { decisionPayload, signOffPayload } from '#tests/helpers/escalation-payloads.js';
 
 const AT = '2026-10-17T00:00:00.000Z';
 
@@ -69,7 +71,7 @@ function payloadOf(kind: EscalationKind, detail?: string): EscalationPayload {
   }
 
   return {
-    kind,
+    kind: 'setup',
     cause: setupCauses[detail as keyof typeof setupCauses],
     summary: 'fix it',
     fix_href: '/settings/harnesses/claude-code',
@@ -193,10 +195,15 @@ describe('no dead ends', () => {
   const failureCauses = FailureCause.options.map((c) => payloadOf('failure', c));
   const setups = SetupCause.options.map((o) => payloadOf('setup', o.shape.type.value));
 
+  const decisions = DECISION_CAUSES.map((c) => decisionPayload(c));
+  const signOffs = Tier.options.map((t) => signOffPayload(t));
+
   const payloads: EscalationPayload[] = [
     payloadOf('question'),
     ...failureCauses,
     ...setups,
+    ...decisions,
+    ...signOffs,
   ];
 
   it('covers every escalation kind', () => {

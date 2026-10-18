@@ -96,7 +96,9 @@ export function usePipelineEditor(args: {
     dirty && DefinitionSchema.safeParse(settled).success,
   );
 
-  const local = pipelineProblems(draft, { roster, lane });
+  // The connected model families are the server's to know: this instant check passes none, and
+  // the server's own validation (critic_same_family) arrives a moment later.
+  const local = pipelineProblems(draft, { roster, lane, families_available: [] });
   const problems: PipelineProblem[] = [
     ...local,
     ...(remote.data?.problems ?? []),

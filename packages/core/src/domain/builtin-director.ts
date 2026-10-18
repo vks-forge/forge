@@ -6,8 +6,9 @@
  *   install reads the flow and playbooks at config version 0 and a later release can improve a
  *   playbook for everyone who never edited it. The default flow is survey, grill, verify,
  *   enhance (Standard and Full lanes only), then the two locked steps: write the plan and
- *   approve it (d-0146). Each step names the playbook that carries its method; the eight
- *   playbooks (six for planning, two for the escalation steps) are real, usable method text,
+ *   approve it (d-0146). Each step names the playbook that carries its method; the nine
+ *   playbooks (six for planning, two for the escalation steps, one for the check of finished work
+ *   against its plan) are real, usable method text,
  *   kept one per file under `playbooks/`. The escalation dials default to "Director first".
  *
  * Exports: BUILTIN_DIRECTOR_CONFIG, DIRECTOR_STEP_TIMEOUTS_MS.
@@ -16,6 +17,7 @@
 
 import { ANSWER_WORKER_PLAYBOOK } from '#/domain/playbooks/answer-worker.js';
 import { APPROVE_PLAN_PLAYBOOK } from '#/domain/playbooks/approve-plan.js';
+import { CHECK_AGAINST_PLAN_PLAYBOOK } from '#/domain/playbooks/check-against-plan.js';
 import { ENHANCE_DECISIONS_PLAYBOOK } from '#/domain/playbooks/enhance-decisions.js';
 import { PLAN_GRILL_PLAYBOOK } from '#/domain/playbooks/plan-grill.js';
 import { PLAN_TO_TICKETS_PLAYBOOK } from '#/domain/playbooks/plan-to-tickets.js';
@@ -40,6 +42,7 @@ export const DIRECTOR_STEP_TIMEOUTS_MS: DirectorConfig['step_timeouts_ms'] = {
   ticket_answer: 180_000,
   ticket_recover: 180_000,
   draft_agent: 120_000,
+  ticket_check: 300_000,
 };
 
 export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {
@@ -111,6 +114,7 @@ export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {
     'approve-plan': APPROVE_PLAN_PLAYBOOK,
     'answer-worker': ANSWER_WORKER_PLAYBOOK,
     'recover-failure': RECOVER_FAILURE_PLAYBOOK,
+    'check-against-plan': CHECK_AGAINST_PLAN_PLAYBOOK,
   },
   house_rules: '',
   approval_mode: 'director_or_user',
@@ -119,4 +123,5 @@ export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {
   read_caps: { max_files: 40, max_bytes: 400_000 },
   step_timeouts_ms: DIRECTOR_STEP_TIMEOUTS_MS,
   escalation: { director_first: true, answer_confidence: 0.8, max_director_retries: 1 },
+  sign_off: { max_tier: 'B' },
 };

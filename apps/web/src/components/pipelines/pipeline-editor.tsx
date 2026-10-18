@@ -19,13 +19,9 @@ import type { AgentView, PipelineDefinition, PipelineProblem } from '@forge/core
 import { AddStageMenu } from '#/components/pipelines/add-stage-menu.js';
 import { PipelineProblems } from '#/components/pipelines/pipeline-problems.js';
 import { StageRow } from '#/components/pipelines/stage-row.js';
-import {
-  addStage,
-  moveStage,
-  removeStage,
-  replaceStage,
-} from '#/domain/pipeline-edit.js';
-import { indexProblems } from '#/domain/pipeline-inspect.js';
+import { addStage } from '#/domain/pipeline-add.js';
+import { moveStage, removeStage, replaceStage } from '#/domain/pipeline-edit.js';
+import { indexProblems, listWarnings, stageWarnings } from '#/domain/pipeline-inspect.js';
 
 export function PipelineEditor(props: {
   label: string;
@@ -44,7 +40,7 @@ export function PipelineEditor(props: {
     <div className="grid gap-3">
       <PipelineProblems
         general={index.general}
-        warnings={props.warnings}
+        warnings={listWarnings(def, props.warnings)}
         checking={props.checking}
       />
 
@@ -57,6 +53,7 @@ export function PipelineEditor(props: {
             def={def}
             roster={props.roster}
             problems={index.byStage.get(stage.id) ?? []}
+            warnings={stageWarnings(stage, props.warnings)}
             onChange={(next) => props.onChange(replaceStage(def, next))}
             onMove={(direction) => props.onChange(moveStage(def, stage.id, direction))}
             onRemove={() => props.onChange(removeStage(def, stage.id))}

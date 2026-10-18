@@ -23,7 +23,7 @@ import type { PipelineDefinition, Stage } from '#/schemas/pipeline.js';
 
 const ready = () => ({ ready: true, reasons: [] });
 const roster = effectiveAgents({ ...BUILTIN_AGENTS }, undefined, ready);
-const ctx = { roster, lane: 'standard' as const };
+const ctx = { roster, lane: 'standard' as const, families_available: ['claude'] };
 
 const impl: Stage = {
   id: 'implementer',
@@ -63,7 +63,13 @@ const codes = (d: PipelineDefinition): string[] =>
 
 describe('shipped pipelines', () => {
   it.each(['express', 'standard', 'full'] as const)('the %s lane is valid', (lane) => {
-    expect(pipelineProblems(BUILTIN_PIPELINES[lane], { roster, lane })).toEqual([]);
+    expect(
+      pipelineProblems(BUILTIN_PIPELINES[lane], {
+        roster,
+        lane,
+        families_available: ['claude'],
+      }),
+    ).toEqual([]);
   });
 });
 
@@ -115,6 +121,7 @@ describe('each rule, one list that breaks it', () => {
       pipelineProblems(def(impl, g1, reviewer, merge), {
         roster: off,
         lane: 'standard',
+        families_available: ['claude'],
       }).map((p) => p.code),
     ).toContain('agent_unavailable');
   });
@@ -234,6 +241,7 @@ describe('each rule, one list that breaks it', () => {
       pipelineProblems(def(impl, g1, reviewer, merge), {
         roster: r,
         lane: 'standard',
+        families_available: ['claude'],
       }).map((p) => p.code),
     ).toContain('review_tool_missing');
   });

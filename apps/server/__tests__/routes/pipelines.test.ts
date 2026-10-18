@@ -61,7 +61,7 @@ describe('GET /settings/pipelines', () => {
       'merge',
     ]);
 
-    expect(Object.values(pipelines).map((p) => p.live)).toEqual([true, true, false]);
+    expect(Object.values(pipelines).map((p) => p.live)).toEqual([true, true, true]);
     expect(pipelines['full']?.warnings.length).toBeGreaterThan(0);
   });
 });

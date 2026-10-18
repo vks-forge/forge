@@ -166,7 +166,7 @@ describe('pipeline strip: stage detail', () => {
     expect(await screen.findByLabelText('Diff')).toHaveTextContent('second try');
   });
 
-  it('shows each member of a group as its own block', async () => {
+  it('draws a group as one frame with a chip per member, and opens the member that was chosen', async () => {
     const user = userEvent.setup();
 
     renderApp({
@@ -193,16 +193,24 @@ describe('pipeline strip: stage detail', () => {
       },
     });
 
-    await strip();
-    await user.click(chip('Review and critique', 'Running'));
+    const list = await strip();
+    const frame = within(list).getByRole('group', { name: 'Review and critique' });
 
-    const detail = await screen.findByRole('region', {
-      name: 'Details of Review and critique',
-    });
+    expect(within(frame).getByRole('button', { name: /^Review\s*Passed/ })).toBeVisible();
 
-    expect(within(detail).getByRole('heading', { name: 'Review' })).toBeVisible();
+    await user.click(within(frame).getByRole('button', { name: /^Critique\s*Running/ }));
+
+    const detail = await screen.findByRole('region', { name: 'Details of Critique' });
+
     expect(within(detail).getByRole('heading', { name: 'Critique' })).toBeVisible();
-    expect(within(detail).getByText('No findings')).toBeVisible();
+
+    await user.click(within(frame).getByRole('button', { name: /^Review\s*Passed/ }));
+
+    expect(
+      within(await screen.findByRole('region', { name: 'Details of Review' })).getByText(
+        'No findings',
+      ),
+    ).toBeVisible();
   });
 
   it('opens and closes the detail from the keyboard', async () => {

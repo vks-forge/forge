@@ -23,6 +23,7 @@ export function stageView(
     label: over.label ?? id,
     status: 'pending',
     cycle: 0,
+    warnings: [],
     artifacts: [],
     ...over,
   };

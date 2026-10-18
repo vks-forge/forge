@@ -9,7 +9,7 @@
  *   the same model family as the Worker approves its work too easily, which is allowed while
  *   only one family is connected, but the owner should be told.
  *
- * Exports: effectivePipelines(), modelFamilyOf(), LANES.
+ * Exports: effectivePipelines(), modelFamilyOf(), isCritic(), sameFamilyCritics(), LANES.
  * Depends on: domain/builtin-pipelines, domain/builtin-agent-texts/critic, domain/stage-kinds,
  *   schemas/pipeline, schemas/ticket, types/pipeline-rules. No IO.
  */
@@ -19,6 +19,7 @@ import { BUILTIN_PIPELINES } from '#/domain/builtin-pipelines.js';
 import { classifyStage, flattenStages, pipelineHash } from '#/domain/stage-kinds.js';
 import type { ModelChoice } from '#/schemas/agent.js';
 import type {
+  AgentStage,
   LanePipelines,
   PipelineDefinition,
   PipelineTag,
@@ -49,38 +50,55 @@ export function modelFamilyOf(choice: ModelChoice): string {
   return /^gemini/.test(id) ? 'google' : id;
 }
 
-/** True for the shipped critic and copies of it: the agents d-0073 asks to run on another family. */
-const isCritic = (e: RosterEntry): boolean =>
-  e.id === 'critic' || e.definition.origin === 'duplicate:critic';
+/**
+ * True for a critic: a reviewer-role agent whose id or name says critic, or one made from the
+ * critic (a duplicate or a template of it). These are the agents d-0073 asks to run on another family.
+ */
+export const isCritic = (e: RosterEntry): boolean =>
+  e.definition.role === 'reviewer' &&
+  (/critic/i.test(e.id) ||
+    /critic/i.test(e.definition.name) ||
+    e.definition.origin === 'duplicate:critic' ||
+    /^template:.*critic/.test(e.definition.origin));
 
-function warningsFor(def: PipelineDefinition, roster: readonly RosterEntry[]): string[] {
+/** The critic agent stages of `def` (members of groups included) whose model family is also a writer's. */
+export function sameFamilyCritics(
+  def: PipelineDefinition,
+  roster: readonly RosterEntry[],
+): AgentStage[] {
   const byId = new Map(roster.map((e) => [e.id, e]));
   const roles = Object.fromEntries(roster.map((e) => [e.id, e.definition.role]));
-  const writers = def.stages.flatMap((s) =>
-    s.kind === 'agent' && classifyStage(s, roles) === 'writer' ? [s.agent] : [],
-  );
+  const writerAgents = def.stages.flatMap((s) => {
+    const klass = classifyStage(s, roles);
+    if (klass === 'writer' && s.kind === 'agent') {
+      return [s.agent];
+    }
+
+    return klass === 'writer_group' && s.kind === 'group'
+      ? s.members.flatMap((m) => (m.kind === 'agent' ? [m.agent] : []))
+      : [];
+  });
 
   const families = new Set(
-    writers.map((w) =>
+    writerAgents.map((w) =>
       modelFamilyOf(byId.get(w)?.definition.runs_on.model ?? { kind: 'forge_default' }),
     ),
   );
 
-  const out: string[] = [];
-  for (const s of flattenStages(def)) {
+  return flattenStages(def).flatMap((s) => {
     const entry = s.kind === 'agent' ? byId.get(s.agent) : undefined;
-    if (
-      s.kind === 'agent' &&
+
+    return s.kind === 'agent' &&
       entry &&
       isCritic(entry) &&
       families.has(modelFamilyOf(entry.definition.runs_on.model))
-    ) {
-      out.push(`${s.label}: ${SAME_FAMILY_WARNING}`);
-    }
-  }
-
-  return out;
+      ? [s]
+      : [];
+  });
 }
+
+const warningsFor = (def: PipelineDefinition, roster: readonly RosterEntry[]): string[] =>
+  sameFamilyCritics(def, roster).map((s) => `${s.label}: ${SAME_FAMILY_WARNING}`);
 
 /**
  * The view of every lane. `company` is the merged company pipelines (shipped lists with the

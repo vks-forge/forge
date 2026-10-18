@@ -8,7 +8,7 @@
  *   supplies a `ProjectRuntime` per project and the engine stays free of IO. The records
  *   below carry one ticket through those steps and report what happened to it.
  *
- * Exports: ProjectRuntime, ReadyRuntime, VerifyTarget, GateRun, GateRows, GateSummary, GateJob, GateJobOutcome, MergeOutcome, VerifyOutcome, VerifiedTicket.
+ * Exports: ProjectRuntime, MergeOpts, ReviewedExtras, ReadyRuntime, VerifyTarget, GateRun, GateRows, GateSummary, GateJob, GateJobOutcome, MergeOutcome, VerifyOutcome, VerifiedTicket.
  * Depends on: @forge/core (ports, schemas). Types only.
  */
 
@@ -22,6 +22,7 @@ import type {
   Project,
   ProjectConfig,
   Run,
+  StorageTx,
   Ticket,
   ScriptGateRunner,
   WorktreeManager,
@@ -92,6 +93,25 @@ export type GateSummary =
   | { readonly kind: 'pass' }
   | { readonly kind: 'fail'; readonly gates: readonly string[] }
   | { readonly kind: 'error'; readonly gates: readonly string[] };
+
+/**
+ * How the merge door is asked to treat a ticket whose stages all passed: `hold` waits for the owner
+ * even at tier A (a human or sign-off stage is open); `directorSigned` means the sign-off stage's
+ * Director signed (tier A and B only, never C); `declined` carries why the Director did not sign.
+ */
+export interface MergeOpts {
+  readonly hold: boolean;
+  readonly directorSigned?: boolean;
+  readonly declined?: string;
+  /** The Director's reasons, written on the card note when it signs tier B. */
+  readonly signReason?: string;
+}
+
+/** What a caller adds to an approval: a card note in place of the default, and writes that join the move to done. */
+export interface ReviewedExtras {
+  readonly note?: string;
+  readonly beforeMove?: (tx: StorageTx) => Promise<void>;
+}
 
 /** `done`: the cycle ended (merged, or handed to a human). `regate`: the PR head moved and the gates must judge it again. */
 export type MergeOutcome = 'done' | 'regate';

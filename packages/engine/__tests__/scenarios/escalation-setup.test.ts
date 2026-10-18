@@ -15,11 +15,17 @@
  */
 
 import { HarnessChangedError } from '@forge/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { cardEventsOf, pendingOf } from '#tests/helpers/escalation-rig.js';
 import { makeRig } from '#tests/helpers/rig.js';
 import type { Rig } from '#tests/helpers/rig.js';
 import { makeResult } from '#tests/helpers/scripted-driver.js';
+
+// Every lane runs now, so a held lane has to be stubbed to exercise the hold path still kept for a lane without a runner.
+vi.mock('#/domain/live-lanes.js', () => ({
+  LIVE_LANES: ['express', 'standard'],
+  isLive: (lane: string) => lane !== 'full',
+}));
 
 const iso = (ms: number): string => new Date(ms).toISOString();
 

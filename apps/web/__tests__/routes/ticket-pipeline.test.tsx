@@ -9,14 +9,9 @@
  * Depends on: routes/ticket/pipeline-strip, the stubbed Forge server.
  */
 
-import { QueryClient } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
-import { AppProviders } from '#/components/app-providers.js';
-import { PipelineStrip } from '#/routes/ticket/pipeline-strip.js';
-import { installFakeForge } from '#tests/helpers/fake-forge/fake-forge.js';
 import { json, refusal, sequence } from '#tests/helpers/fetch-stub.js';
 import {
   STANDARD_STAGES,
@@ -212,35 +207,6 @@ describe('pipeline strip: rework, held and routed stages', () => {
     await user.click(chip('Network review', 'Not yet'));
 
     expect(await screen.findByText('Added by the routing rule “tf-net”.')).toBeVisible();
-  });
-});
-
-describe('pipeline strip: follows the ticket', () => {
-  it('refetches at once when the ticket changes, without waiting for the poll', async () => {
-    const forge = installFakeForge({
-      routes: { [PIPELINE]: json({ pipeline: ticketPipeline(STANDARD_STAGES) }) },
-    });
-
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const tree = (stamp: string) => (
-      <AppProviders api={forge.api} queryClient={client}>
-        <MemoryRouter>
-          <PipelineStrip slug="sample-service" ticketId="SVC-1" stamp={stamp} />
-        </MemoryRouter>
-      </AppProviders>
-    );
-
-    const view = render(tree('queued|1|0|0'));
-
-    await strip();
-    expect(forge.stub.callsTo(PIPELINE)).toHaveLength(1);
-
-    view.rerender(tree('queued|1|0|0'));
-    expect(forge.stub.callsTo(PIPELINE)).toHaveLength(1);
-
-    view.rerender(tree('verifying|2|0|1'));
-
-    await waitFor(() => expect(forge.stub.callsTo(PIPELINE)).toHaveLength(2));
   });
 });
 

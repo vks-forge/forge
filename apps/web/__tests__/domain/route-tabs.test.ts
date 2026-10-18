@@ -1,6 +1,6 @@
 /**
  * Pins: a URL's tab segment resolves to a known tab or to the page's default, the old `?tab=`
- * value maps to its new tab, the Review tab exists only for review and sign-off, and the tab
+ * value maps to its new tab, the Review tab exists only for review, sign-off and a held decision, and the tab
  * paths of cards and tickets are path segments (with `?run=` on a ticket).
  *
  * Why: the tab is the last segment of the Card and Ticket URLs. A mistyped or stale tab must
@@ -13,6 +13,7 @@ import { cardPath } from '#/domain/card-paths.js';
 import {
   CARD_TAB_IDS,
   TICKET_TAB_IDS,
+  isReviewItem,
   legacyCardTab,
   resolveTab,
   ticketHasReview,
@@ -48,12 +49,49 @@ describe('legacyCardTab', () => {
   });
 });
 
+const item = (kind: 'decision' | 'sign_off' | 'failure', over: object = {}) =>
+  ({ id: 'q-1', stage: 'owner', payload: { kind }, ...over }) as never;
+
+const detailOf = (status: string, escalations: object[] = []) =>
+  ({ ticket: { status }, escalations }) as never;
+
 describe('ticketHasReview', () => {
-  it('is true only while the ticket waits on review or sign-off', () => {
-    expect(ticketHasReview('review')).toBe(true);
-    expect(ticketHasReview('needs_signoff')).toBe(true);
-    expect(ticketHasReview('in_progress')).toBe(false);
-    expect(ticketHasReview('done')).toBe(false);
+  it('is true while the ticket waits on review or sign-off', () => {
+    expect(ticketHasReview(detailOf('review'))).toBe(true);
+    expect(ticketHasReview(detailOf('needs_signoff'))).toBe(true);
+    expect(ticketHasReview(detailOf('in_progress'))).toBe(false);
+    expect(ticketHasReview(detailOf('done'))).toBe(false);
+  });
+
+  it('is also true for a ticket held for a decision, which the owner must settle on that tab', () => {
+    expect(ticketHasReview(detailOf('waiting_human', [item('decision')]))).toBe(true);
+    expect(ticketHasReview(detailOf('waiting_human', [item('sign_off')]))).toBe(true);
+  });
+
+  it('ignores a failure, a settled decision and one the Director still looks at', () => {
+    expect(ticketHasReview(detailOf('waiting_human', [item('failure')]))).toBe(false);
+
+    expect(
+      ticketHasReview(
+        detailOf('waiting_human', [
+          item('decision', { settled: { action: 'continue' } }),
+        ]),
+      ),
+    ).toBe(false);
+
+    expect(
+      ticketHasReview(
+        detailOf('waiting_human', [item('decision', { stage: 'director' })]),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('isReviewItem', () => {
+  it('names the two kinds the Review tab draws', () => {
+    expect(isReviewItem(item('decision'))).toBe(true);
+    expect(isReviewItem(item('sign_off'))).toBe(true);
+    expect(isReviewItem(item('failure'))).toBe(false);
   });
 });
 

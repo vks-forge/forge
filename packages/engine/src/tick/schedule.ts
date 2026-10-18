@@ -19,7 +19,7 @@
 import { PLANNING_PHASES } from '@forge/core';
 import type { CardId, StorageTx, Ticket, TicketId } from '@forge/core';
 import { chooseHarness } from '#/domain/harness-choice.js';
-import { pickNext } from '#/domain/pick-next.js';
+import { candidateKey, pickNext } from '#/domain/pick-next.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { FAR_FUTURE } from '#/shared/time.js';
 import { peekAgent } from '#/tick/stage-agent.js';
@@ -84,6 +84,22 @@ export async function planDispatch(
     }
   }
 
+  // Two wakes for the same start (a rework wake and a stage wake of one member) are one candidate;
+  // the rework wake wins because it carries the findings.
+  const one = new Map<string, Candidate>();
+  for (const c of found.splice(0)) {
+    const key = candidateKey(c.ticket.id, c.member);
+    const prior = one.get(key);
+    if (
+      !prior ||
+      (prior.wake?.kind !== 'continuation' && c.wake?.kind === 'continuation')
+    ) {
+      one.set(key, c);
+    }
+  }
+
+  found.push(...one.values());
+
   const blockers = new Map<string, string[]>();
   for (const t of await tx.tickets.listByStatus('planned')) {
     if (!waking.has(t.id)) {
@@ -118,15 +134,16 @@ export async function planDispatch(
     const slug = slugOf.get(c.ticket.project) ?? c.ticket.project;
     const settings = projectSettings(view.config, slug);
     // The ticket's agent names its own harness; its fallback list, when it has one, replaces the company's (quota and harness-down only).
-    const agent = await peekAgent(view, tx, c.ticket, slug);
+    const agent = await peekAgent(view, tx, c.ticket, slug, c.member);
     const fallbacks =
       agent.fallbackHarnesses.length > 0
         ? agent.fallbackHarnesses
         : (settings.harness_fallbacks ?? engine.harness_fallbacks);
 
-    byId.set(c.ticket.id, c);
+    byId.set(candidateKey(c.ticket.id, c.member), c);
     pickable.push({
       id: c.ticket.id,
+      ...(c.member === undefined ? {} : { member: c.member }),
       project: c.ticket.project,
       harness: chooseHarness(agent.harnessId, fallbacks, paused, installed, view.now),
       priority: c.ticket.priority,

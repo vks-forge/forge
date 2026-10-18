@@ -76,7 +76,9 @@ async function tryStart(
   const { deps } = ctx;
   const { ticket } = c;
   const { project, previous, answered } = await deps.storage.transaction(async (tx) => {
-    const prevId = c.kind === 'retry' ? c.wake?.idempotency_key : undefined;
+    // A rework wake of one writer-group member carries `~member` after the run id it follows.
+    const prevId = c.kind === 'retry' ? c.wake?.idempotency_key.split('~')[0] : undefined;
+
     const interaction =
       c.kind === 'resume' && c.wake
         ? await tx.interactions.get(c.wake.idempotency_key)
@@ -108,7 +110,7 @@ async function tryStart(
     throw new Error(`project ${project.slug} has no runtime on this server`);
   }
 
-  const choice = await chooseWriter(ctx, ticket, project.slug, previous);
+  const choice = await chooseWriter(ctx, ticket, project.slug, previous, c.member);
   if (choice.kind === 'stop') {
     return false;
   }
@@ -211,7 +213,7 @@ async function tryStart(
             await beginStageRun(tx, ctx.nowIso, {
               ticket_id: ticket.id,
               stage_id: stage.id,
-              member_id: '',
+              member_id: choice.memberId ?? '',
               cycle: state.cycle,
               kind: 'agent',
               agent_id: agent.id,

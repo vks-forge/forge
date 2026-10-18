@@ -12,10 +12,12 @@
  *   code, shown greyed in the UI, and no value here can switch them off. The `escalation`
  *   dials say how far the Director goes alone when a ticket waits (looks first, how sure it must
  *   be to answer a Worker itself, how often it retries a failure before asking); Tier C
- *   tickets, tools and logins are never the Director's to settle whatever they say.
+ *   tickets, tools and logins are never the Director's to settle whatever they say. `sign_off`
+ *   says up to which tier the Director may sign finished work itself (default B); tier C is not
+ *   a value, and a project's override may only lower the company's.
  *
  * Exports: PlaybookId, DirectorPlaybook, ApprovalMode, DirectorGrillLimits, DirectorReadCaps,
- *   DirectorEscalation, DirectorConfig.
+ *   DirectorEscalation, DirectorSignOff, DirectorConfig.
  * Depends on: schemas/director-flow, schemas/steps, zod. No IO.
  */
 
@@ -66,6 +68,13 @@ export const DirectorEscalation = z.object({
 });
 export type DirectorEscalation = z.infer<typeof DirectorEscalation>;
 
+/**
+ * How far the Director's own sign-off goes: the highest tier it may sign (`none` never signs).
+ * Tier C is not a value because it always needs a named person; a project may only lower it.
+ */
+export const DirectorSignOff = z.object({ max_tier: z.enum(['none', 'A', 'B']) });
+export type DirectorSignOff = z.infer<typeof DirectorSignOff>;
+
 /** The whole section; a flow step may only name a playbook that exists. */
 export const DirectorConfig = z
   .object({
@@ -79,6 +88,7 @@ export const DirectorConfig = z
     read_caps: DirectorReadCaps,
     step_timeouts_ms: z.record(StepName, PosInt),
     escalation: DirectorEscalation,
+    sign_off: DirectorSignOff,
   })
   .superRefine((d, ctx) => {
     for (const step of d.flow) {

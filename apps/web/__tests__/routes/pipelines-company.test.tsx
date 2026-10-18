@@ -56,12 +56,13 @@ describe('company pipelines: the lanes', () => {
       'Implement',
       'Gate G1',
       'Review and critique',
-      'Your sign-off',
+      'Check against the plan',
+      'Sign-off',
       'Merge',
     ]);
   });
 
-  it('says Full cannot run yet and Express and Standard say nothing of the kind', async () => {
+  it('says nothing of a lane that cannot run: all three lanes are live', async () => {
     const user = userEvent.setup();
 
     renderApp({ path: PIPELINE_PATH });
@@ -69,18 +70,14 @@ describe('company pipelines: the lanes', () => {
 
     const panel = (): HTMLElement => screen.getByRole('tabpanel');
 
-    expect(within(panel()).queryByText(/Runs from the next update/)).toBeNull();
+    for (const name of ['Express', 'Standard', 'Full']) {
+      await openLane(user, name);
 
-    await openLane(user, 'Standard');
-
-    expect(within(panel()).queryByText(/Runs from the next update/)).toBeNull();
-
-    await openLane(user, 'Full');
+      expect(within(panel()).queryByText(/next update/)).toBeNull();
+    }
 
     expect(
-      within(panel()).getByText(
-        'Runs from the next update; Full tickets wait until then. You can edit it now.',
-      ),
+      within(panel()).getByText(/the Director’s check against the plan, then sign-off/),
     ).toBeVisible();
   });
 

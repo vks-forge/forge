@@ -29,6 +29,7 @@ type Body = Record<string, unknown> | undefined;
 export function pipelineRoutes(options: WorldOptions = {}): Routes {
   const {
     roster,
+    families,
     known,
     project,
     companyBody,
@@ -69,7 +70,10 @@ export function pipelineRoutes(options: WorldOptions = {}): Routes {
         LIVE,
       )[lane].warnings;
 
-      return json({ problems: pipelineProblems(def, { roster, lane }), warnings });
+      return json({
+        problems: pipelineProblems(def, { roster, lane, families_available: families }),
+        warnings,
+      });
     },
 
     'GET /settings/projects/:slug/pipelines': ({ params }) =>

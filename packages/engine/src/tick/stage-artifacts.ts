@@ -135,6 +135,7 @@ async function textOf(
 
     case 'test_report':
     case 'gate_report':
+    case 'check_report':
       return storedText(tx, ticket.id, kind);
   }
 }

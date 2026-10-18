@@ -30,12 +30,16 @@ export const DEFAULT_BLOCKING: readonly Severity[] = ['critical', 'high'];
 
 /** The policy of `stage` with the defaults filled in; a stage without a policy gets the defaults. */
 export function checkPolicy(stage: Stage): ResolvedPolicy {
-  if (stage.kind === 'human' || stage.kind === 'merge') {
+  if (stage.kind === 'human' || stage.kind === 'merge' || stage.kind === 'sign_off') {
     return { on_blocking: 'rework', blocking: DEFAULT_BLOCKING };
   }
 
+  // The Director's check holds for the owner unless told otherwise: it judges the plan, and the
+  // owner may overrule a plan the work honestly outgrew.
+  const fallback = stage.kind === 'director_check' ? 'hold' : 'rework';
+
   return {
-    on_blocking: stage.on_blocking ?? 'rework',
+    on_blocking: stage.on_blocking ?? fallback,
     blocking: stage.blocking ?? DEFAULT_BLOCKING,
   };
 }
@@ -102,18 +106,26 @@ export function adoptLegacy(
     return [];
   }
 
-  return snapshot.definition.stages.flatMap((s) =>
-    s.kind === 'agent' && classifyStage(s, snapshot.roles) === 'writer'
-      ? [
-          {
-            stage_id: s.id,
-            member_id: '',
-            cycle: 0,
-            kind: 'agent' as const,
-            agent_id: s.agent,
-            status: 'adopted' as const,
-          },
-        ]
-      : [],
-  );
+  const adopted = (stage: string, member: string, agent: string): StageSeed => ({
+    stage_id: stage,
+    member_id: member,
+    cycle: 0,
+    kind: 'agent' as const,
+    agent_id: agent,
+    status: 'adopted' as const,
+  });
+
+  return snapshot.definition.stages.flatMap((s) => {
+    const klass = classifyStage(s, snapshot.roles);
+    if (s.kind === 'agent' && klass === 'writer') {
+      return [adopted(s.id, '', s.agent)];
+    }
+
+    // Every member of a group of writers is past too.
+    return s.kind === 'group' && klass === 'writer_group'
+      ? s.members.flatMap((m) =>
+          m.kind === 'agent' ? [adopted(s.id, m.id, m.agent)] : [],
+        )
+      : [];
+  });
 }

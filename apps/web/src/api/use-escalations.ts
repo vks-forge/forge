@@ -14,17 +14,19 @@
  *
  * Exports: cardEscalationsKey(), useCardEscalations(), useActOnEscalation(),
  *   useActOnTicketWait().
- * Depends on: @tanstack/react-query, api/api-provider, api/poll-interval, api/use-card-board,
- *   api/use-card (CARD_POLL_MS), api/use-tickets, schemas/escalation, schemas/tickets,
+ * Depends on: @tanstack/react-query, api/api-error, api/api-provider, api/poll-interval, api/use-card-board,
+ *   api/use-card (CARD_POLL_MS), api/use-ticket-pipeline, api/use-tickets, schemas/escalation, schemas/tickets,
  *   types/escalation-ui.types (types).
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
+import { ApiError } from '#/api/api-error.js';
 import { useForgeApi } from '#/api/api-provider.js';
 import { useRefetchMs } from '#/api/poll-interval.js';
 import { CARD_POLL_MS } from '#/api/use-card.js';
 import { CARDS_KEY, cardKey } from '#/api/use-card-board.js';
+import { ticketPipelineKey } from '#/api/use-ticket-pipeline.js';
 import { TICKETS_KEY, ticketKey } from '#/api/use-tickets.js';
 import type {
   EscalationAction,
@@ -67,6 +69,7 @@ function refresh(
 ): Promise<unknown> {
   return Promise.all([
     client.invalidateQueries({ queryKey: ticketKey(target.ticketId) }),
+    client.invalidateQueries({ queryKey: ticketPipelineKey(target.ticketId) }),
     client.invalidateQueries({ queryKey: TICKETS_KEY }),
     client.invalidateQueries({ queryKey: CARDS_KEY }),
     client.invalidateQueries({ queryKey: INBOX_KEY }),
@@ -127,7 +130,10 @@ function restore(
 }
 
 /** Acts on one escalation; the refusal is the raw server error. */
-export function useActOnEscalation(view: EscalationView) {
+export function useActOnEscalation(
+  view: EscalationView,
+  onKeep?: (view: EscalationView) => void,
+) {
   const api = useForgeApi();
   const client = useQueryClient();
 
@@ -145,12 +151,24 @@ export function useActOnEscalation(view: EscalationView) {
 
       return { snapshot: settleInCache(client, view, body.action) };
     },
-    onError: (_error, _body, context) => {
+    // The mutation, not the card, hands a settled item back: the refreshed lists no longer hold it
+    // and may unmount the card before the card sees the success.
+    onSuccess: (reply) => onKeep?.(reply.escalation),
+    onError: (error, _body, context) => {
       if (context?.snapshot !== undefined) {
         restore(client, view, context.snapshot);
       }
+
+      if (error instanceof ApiError && error.code === 'not_pending') {
+        onKeep?.(view);
+      }
     },
-    onSettled: () => refresh(client, { ticketId: view.ticket_id, cardId: view.card_id }),
+    // Not awaited: TanStack holds a mutation in "pending" until its `onSettled` promise settles, and
+    // the refreshed lists no longer hold a settled item, so awaiting would unmount the card before it
+    // could say "Merged anyway by you" (the card hands the settled item back through `onKeep`).
+    onSettled: () => {
+      void refresh(client, { ticketId: view.ticket_id, cardId: view.card_id });
+    },
   });
 }
 

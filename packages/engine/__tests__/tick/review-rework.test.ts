@@ -4,17 +4,19 @@
  * Why: a reviewer that cannot stop a bad change is decoration, and one that can loop forever is a
  *   cost leak. Blocking findings (critical or high, with evidence) take the same bounded road as a
  *   failed gate (d-0152): the work goes back to the implementer with the findings in its wake, at
- *   most twice, then the owner decides. The test-writer is not run again, because only the
+ *   most twice, then the ticket is held for the owner, who may merge anyway, send it back, re-plan
+ *   or cancel (a reviewer's judgement can be overruled; a failed gate cannot, see the G1 test). The test-writer is not run again, because only the
  *   implementation was wrong. A stage set to hold parks the ticket for the owner at once without
  *   spending a rework. Findings that are not blocking (medium, low) never stop the merge.
  *
  * Pins: Done-when 4 (a high finding: `gate_failed`, rework count 1, the implementer runs again with
  *   the findings in its prompt and the test-writer does not; the same at 2; the third time
- *   `waiting_human` with a `rework_cap` escalation; `on_blocking: 'hold'` parks from verifying at
- *   once), medium findings pass, a reviewer who submits nothing parks the ticket.
+ *   `waiting_human` with a `findings_hold` decision offering merge anyway, rework, replan, cancel;
+ *   `on_blocking: 'hold'` parks from verifying at once with the same decision), medium findings pass, a reviewer who submits nothing parks the ticket.
  * Depends on: helpers/pipeline-rig, helpers/escalation-rig, vitest.
  */
 
+import { escalationActions, toEscalation } from '@forge/core';
 import { describe, expect, it } from 'vitest';
 import { pendingOf } from '#tests/helpers/escalation-rig.js';
 import {
@@ -103,7 +105,7 @@ describe('review rework', () => {
     );
   });
 
-  it('allows two automatic reworks and then hands the ticket to the owner with a rework_cap escalation', async () => {
+  it("at the cap a reviewer's findings hold for the owner", async () => {
     const v = await makePipelineRig();
     const { rig } = v;
     const { id, reviewerRun } = await toReviewer(v);
@@ -124,11 +126,25 @@ describe('review rework', () => {
     await rig.tick();
 
     const t = await rig.ticket(id);
-    expect(t.status).toBe('waiting_human');
-    expect(t.blocked_reason).toMatch(/failed after 2 automatic reworks/);
-    const [row] = await pendingOf(rig, id, 'failure');
+    expect(t).toMatchObject({
+      status: 'waiting_human',
+      rework_count: 2,
+      parked_from: 'verifying',
+    });
 
-    expect(row?.payload).toMatchObject({ kind: 'failure', cause: 'rework_cap' });
+    expect(t.blocked_reason).toMatch(/^findings_hold: /);
+    const [row] = await pendingOf(rig, id, 'decision');
+
+    expect(row?.payload).toMatchObject({
+      kind: 'decision',
+      cause: 'findings_hold',
+      stage_id: 'reviewer',
+      rework: { count: 2, cap: 2 },
+    });
+
+    expect(
+      row && escalationActions(toEscalation(row).payload, { replannable: true }),
+    ).toEqual(['merge_anyway', 'rework', 'replan', 'cancel']);
   });
 
   it('holds the ticket for the owner at once when the stage says hold, without spending a rework', async () => {
@@ -184,7 +200,7 @@ describe('review rework', () => {
       (await stageRows(rig, id)).find((r) => r.stage_id === 'reviewer')?.status,
     ).toBe('waiting');
 
-    expect(await pendingOf(rig, id, 'failure')).toHaveLength(1);
+    expect(await pendingOf(rig, id, 'decision')).toHaveLength(1);
   });
 
   it('lets medium and low findings through: they never stop the merge', async () => {

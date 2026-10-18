@@ -4,19 +4,19 @@
  * Why: a reviewer's review reaches the engine only as a typed event, so a finding with no
  *   evidence must never be stored (it could send work back on an unsupported claim), and the last
  *   call must be the one that stands. A reviewer must also not be able to read the ticket's runs,
- *   which would lead it to the writer's own account of the work; a writer and a run with no stage
- *   row keep them.
+ *   which would lead it to the writer's own account of the work; a writer-group member sees only
+ *   its own run, not its siblings'; a plain writer and a run with no stage row keep them all.
  *
  * Pins: the review run event, refusal of a finding without evidence, last call wins, `runs`
  *   omitted for reviewer/researcher stage runs and for a run whose role is unknown, kept for a
- *   writer stage run and a run with no stage row.
+ *   writer stage run and a run with no stage row; a group member sees only its own run.
  * Depends on: helpers/harness, helpers/auto-close, @forge/core, @forge/db.
  */
 
 import type { StorageAdapter } from '@forge/core';
 import { describe, expect, it } from 'vitest';
 import { useAutoClose } from '#tests/helpers/auto-close.js';
-import { RUN_ID, T0, TICKET_ID, connect, textOf } from '#tests/helpers/harness.js';
+import { RUN_ID, T0, TICKET_ID, connect, run, textOf } from '#tests/helpers/harness.js';
 
 const closer = useAutoClose();
 
@@ -39,6 +39,7 @@ async function seedStage(
   storage: StorageAdapter,
   agent: string,
   roles: Record<string, 'writer' | 'reviewer' | 'researcher' | 'tester'>,
+  memberId = '',
 ): Promise<void> {
   await storage.transaction(async (tx) => {
     await tx.ticketPipelines.insert({
@@ -61,7 +62,7 @@ async function seedStage(
     await tx.stageRuns.start({
       ticket_id: TICKET_ID,
       stage_id: 'reviewer',
-      member_id: '',
+      member_id: memberId,
       cycle: 0,
       kind: 'agent',
       agent_id: agent,
@@ -167,5 +168,32 @@ describe('get_ticket for check runs', () => {
     expect((await runsOf(client)).runs).toEqual([
       expect.objectContaining({ id: RUN_ID }),
     ]);
+  });
+
+  it('shows a writer-group member only its own run, not its siblings', async () => {
+    const { client, storage } = await setup();
+    await seedStage(storage, 'impl', { impl: 'writer' }, 'm1');
+    await storage.transaction((tx) => tx.runs.insert(run({ id: 'run-sibling' })));
+
+    expect((await runsOf(client)).runs).toEqual([
+      expect.objectContaining({ id: RUN_ID }),
+    ]);
+  });
+
+  it('shows a plain writer (no member id) every run of the ticket', async () => {
+    const { client, storage } = await setup();
+    await seedStage(storage, 'impl', { impl: 'writer' });
+    await storage.transaction((tx) => tx.runs.insert(run({ id: 'run-sibling' })));
+
+    const ids = ((await runsOf(client)).runs as { id: string }[]).map((r) => r.id);
+
+    expect(ids.sort()).toEqual(['run-1', 'run-sibling']);
+  });
+
+  it('still shows a check run no runs even when it carries a member id', async () => {
+    const { client, storage } = await setup();
+    await seedStage(storage, 'rev', { rev: 'reviewer' }, 'm1');
+
+    expect('runs' in (await runsOf(client))).toBe(false);
   });
 });

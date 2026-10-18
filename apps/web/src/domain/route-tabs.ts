@@ -4,14 +4,16 @@
  * Why: the tab is the last path segment of the Card and Ticket pages. A link may carry a tab
  *   this page does not know (a typo, an old bookmark, `/review` on a ticket that no longer
  *   waits on review), and the page must land on its default tab instead of an empty panel.
- *   The Review tab exists only while the ticket waits on the owner's review or sign-off, so
- *   that rule lives here, once, for the tab strip and the redirect to agree.
+ *   The Review tab exists only while the ticket waits on the owner's review or sign-off or is held
+ *   for their decision, so that rule lives here, once, for the tab strip and the redirect to agree.
  *
- * Exports: CARD_TAB_IDS, TICKET_TAB_IDS, resolveTab(), legacyCardTab(), ticketHasReview().
- * Depends on: @forge/core (type), types/cards-ui.types, types/route-tabs.types. No IO.
+ * Exports: CARD_TAB_IDS, TICKET_TAB_IDS, resolveTab(), legacyCardTab(), ticketHasReview(),
+ *   isReviewItem().
+ * Depends on: schemas/escalation, schemas/tickets (types), types/cards-ui.types, types/route-tabs.types. No IO.
  */
 
-import type { TicketStatus } from '@forge/core';
+import type { EscalationView } from '#/schemas/escalation.js';
+import type { TicketDetail } from '#/schemas/tickets.js';
 import type { CardTab } from '#/types/cards-ui.types.js';
 import type { TicketTab } from '#/types/route-tabs.types.js';
 
@@ -52,6 +54,26 @@ export function legacyCardTab(value: string | null): CardTab | null {
 }
 
 /** True while the ticket waits on the owner's review or sign-off. */
-export function ticketHasReview(status: TicketStatus): boolean {
-  return status === 'review' || status === 'needs_signoff';
+/** A held decision or a sign-off: the escalations the Review tab draws. */
+export function isReviewItem(item: Pick<EscalationView, 'payload'>): boolean {
+  return item.payload.kind === 'decision' || item.payload.kind === 'sign_off';
+}
+
+/**
+ * Whether the Review tab exists: the ticket waits on review or sign-off, or is held for the
+ * owner's decision (merge anyway, send back, continue).
+ */
+export function ticketHasReview(
+  detail: Pick<TicketDetail, 'ticket' | 'escalations'>,
+): boolean {
+  const { status } = detail.ticket;
+
+  return (
+    status === 'review' ||
+    status === 'needs_signoff' ||
+    detail.escalations.some(
+      (item) =>
+        isReviewItem(item) && item.stage === 'owner' && item.settled === undefined,
+    )
+  );
 }

@@ -11,11 +11,8 @@
  *   transaction (tick/escalation-effects), so the card history and the ticket cannot disagree.
  *
  * Exports: actOnEscalation(), actOnTicket().
- *   Approve and Sign off (finished work) have no interaction: they come in through the ticket door and
- *   merge through tick/review-merge.
- * Depends on: @forge/core (escalation rules and schemas), tick/escalation-effects, tick/escalation-facts,
- *   tick/escalation-settle, tick/interactions, tick/plan-to-tickets, tick/ticket-cancel,
- *   tick/card-notify, tick/tick-requests, types/escalation. Writes storage.
+ * Depends on: @forge/core (escalation rules and schemas), tick/escalation-{act-finished,effects,facts},
+ *   tick/{interactions,ticket-cancel,card-notify,tick-requests}, types/escalation. Writes storage.
  */
 
 import {
@@ -36,6 +33,12 @@ import { iso } from '#/shared/time.js';
 import { notifyCard } from '#/tick/card-notify.js';
 import { cancelFlow } from '#/tick/escalation-cancel.js';
 import { replanTx, retryTx, reworkTx } from '#/tick/escalation-effects.js';
+import {
+  actOnFinished,
+  ended,
+  refusesAuthor,
+  sendBackItem,
+} from '#/tick/escalation-act-finished.js';
 import { setupFactsFor } from '#/tick/escalation-facts.js';
 import { answerQuestionTx } from '#/tick/interactions.js';
 import { approveAndMerge } from '#/tick/review-merge.js';
@@ -43,7 +46,7 @@ import { runAsExpress } from '#/tick/run-as-express.js';
 import { requestTick } from '#/tick/tick-requests.js';
 import type { EngineState } from '#/types/engine-state.types.js';
 import type { EngineDeps } from '#/types/engine.types.js';
-import type { ActOutcome, EffectEnd } from '#/types/escalation.types.js';
+import type { ActOutcome } from '#/types/escalation.types.js';
 
 /** A card the Director can re-plan through: the ticket has one, and it is not a Discussion. */
 async function replannable(tx: StorageTx, ticket: Ticket): Promise<boolean> {
@@ -53,15 +56,6 @@ async function replannable(tx: StorageTx, ticket: Ticket): Promise<boolean> {
 }
 
 const NOT_FOUND: ActOutcome = { status: 'not_found' };
-
-/** Maps how an effect ended onto the outcome the routes know. */
-function ended(end: EffectEnd, interaction: Interaction | null): ActOutcome {
-  return end === 'done'
-    ? { status: 'done', interaction }
-    : end === 'stale'
-      ? { status: 'stale' }
-      : { status: 'not_pending' };
-}
 
 /** Settles `row` (still pending) with the owner's `body`; the action was already checked against what is offered. */
 async function apply(
@@ -156,10 +150,12 @@ async function apply(
       return ended(end, await reload());
     }
 
+    case 'merge_anyway':
+    case 'continue':
     case 'rework':
     case 'approve':
     case 'sign_off':
-      return { status: 'action_not_offered' };
+      return actOnFinished(deps, state, row, ticket, body, author);
   }
 }
 
@@ -188,12 +184,11 @@ export async function actOnEscalation(
     return { status: 'not_pending', ...(view.settled ? { settled: view.settled } : {}) };
   }
 
-  const offered =
-    view.stage === 'owner'
-      ? escalationActions(view.payload, { replannable: replan })
-      : [];
+  const asked = { replannable: replan };
+  const offered = view.stage === 'owner' ? escalationActions(view.payload, asked) : [];
 
-  if (!offered.includes(body.action)) {
+  // Overruling a hold and signing finished work are the owner's alone.
+  if (refusesAuthor(body.action, author) || !offered.includes(body.action)) {
     return { status: 'action_not_offered' };
   }
 
@@ -219,7 +214,16 @@ export async function actOnTicket(
   const found = await deps.storage.transaction(async (tx) => {
     const ticket = await tx.tickets.get(ticketId as TicketId);
 
-    return ticket ? { ticket, replan: await replannable(tx, ticket) } : null;
+    return ticket
+      ? {
+          ticket,
+          replan: await replannable(tx, ticket),
+          // Finished work's sign-off item: acting on the ticket settles it, so both doors agree.
+          item: (await tx.interactions.listByTicket(ticketId)).find(
+            (i) => i.status === 'pending' && i.kind === 'sign_off',
+          ),
+        }
+      : null;
   });
 
   if (!found) {
@@ -250,6 +254,8 @@ export async function actOnTicket(
       state,
       ticket,
       body.action === 'sign_off' ? (body.signer ?? author) : undefined,
+      found.item,
+      author,
     );
   }
 
@@ -262,12 +268,27 @@ export async function actOnTicket(
   }
 
   const nowIso = iso(deps.clock.now());
-  const reworked = await deps.storage.transaction((tx) =>
-    reworkTx(deps, tx, nowIso, ticketId, body.comment),
-  );
+  if (found.item) {
+    const end = await sendBackItem(
+      deps,
+      nowIso,
+      found.item,
+      ticket,
+      body.comment,
+      author,
+    );
 
-  if (!reworked) {
-    return { status: 'stale' };
+    if (end !== 'done') {
+      return end === 'stale' ? { status: 'stale' } : { status: 'not_pending' };
+    }
+  } else {
+    const reworked = await deps.storage.transaction((tx) =>
+      reworkTx(deps, tx, nowIso, ticketId, body.comment),
+    );
+
+    if (!reworked) {
+      return { status: 'stale' };
+    }
   }
 
   requestTick(deps, state);

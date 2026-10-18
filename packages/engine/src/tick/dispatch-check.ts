@@ -5,11 +5,12 @@
  *   three ways this file keeps: it never becomes the ticket's assignee (the run the gates and
  *   the merge judge stays the last writer's), its prompt is rendered from typed artifacts with
  *   the Worker's own account stripped (tick/stage-prompt), and it never resumes a writer's
- *   session (it starts fresh). A group starts all its agent members together; the group passes
- *   when every member has reported. The attempt row and the artifacts the agent was shown are
- *   written in the same transaction as the run row, so what the owner reads on the ticket page
- *   is exactly what the reviewer got. Limits and quota pauses apply as for any run: the scheduler
- *   picked this ticket for its first agent, and each further member is placed the same way.
+ *   session (it starts fresh). A group's agent members are started one wake at a time, each placed
+ *   by the scheduler against the Worker limits (a reviewer and a critic are two Workers, so under a
+ *   per-project limit of one they run one after the other), and the group passes when every member
+ *   has reported. The attempt row and the artifacts the agent was shown are written in the same
+ *   transaction as the run row, so what the owner reads on the ticket page is exactly what the
+ *   reviewer got.
  *
  * Exports: startChecks().
  * Depends on: @forge/core (ArtifactKind, stageInputs), domain/harness-choice, tick/{launch-run,project-runtime,
@@ -95,7 +96,13 @@ export async function startChecks(
   let started = false;
   let wake = c.wake;
 
-  for (const m of cursor.members) {
+  // Only the member the scheduler placed starts (a lone check has one member); each further member
+  // of a group has a wake of its own and is placed against the Worker limits like any other run.
+  const due = cursor.members.filter((m) => m.stage.kind === 'agent');
+  const placed =
+    c.member === undefined ? due.slice(0, 1) : due.filter((m) => m.id === c.member);
+
+  for (const m of placed) {
     if (m.stage.kind !== 'agent') {
       continue;
     }

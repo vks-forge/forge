@@ -1,20 +1,19 @@
 /**
  * Pins that a ticket held for a lane that has since gone live is released by the engine itself.
  *
- * Why: before Standard had a pipeline, every non-Express ticket was parked with a lane-hold
+ * Why: before a lane had a pipeline runner, every ticket of it was parked with a lane-hold
  *   escalation and waited for the owner to run it as Express. Tickets already parked that way
  *   must not stay stuck once the lane is live: the owner would otherwise have to find and click
  *   each one, and a person-only way out of a state the system can leave on its own is a dead end
- *   (d-0135). A lane that is still not live (Full) must keep its hold and its actions, or a Full
- *   ticket would run with a pipeline the engine cannot yet execute.
+ *   (d-0135). Standard went live first, and Full now runs too (its Director check and sign-off),
+ *   so a Full ticket held by an earlier build resumes by itself.
  *
- * Pins: a Standard hold is settled `pipeline_ready` by `auto` and the ticket is released through
- *   `transition()` and dispatched to the test-writer; a Full hold stays pending with its actions;
+ * Pins: a Standard hold and a Full hold are each settled `pipeline_ready` by `auto`, the ticket is
+ *   released through `transition()` and dispatched to the test-writer; releasing is once only;
  *   a hold on a ticket that is not waiting is left alone.
  * Depends on: helpers/rig, @forge/core, vitest.
  */
 
-import { escalationActions, toEscalation } from '@forge/core';
 import type { Interaction, Ticket } from '@forge/core';
 import { describe, expect, it } from 'vitest';
 import { makeRig } from '#tests/helpers/rig.js';
@@ -84,20 +83,18 @@ describe('lane holds lift when the lane goes live', () => {
     expect(run?.agent_id).toBe('test-writer');
   });
 
-  it('leaves a Full hold pending with its actions and starts nothing', async () => {
+  it('settles a Full hold as pipeline_ready too: Full runs now, and its first stage starts', async () => {
     const rig = await makeRig();
     const id = await held(rig, 2, 'full');
 
     await rig.tick();
 
     const row = await interaction(rig, 'int-hold-2');
-    expect(row?.status).toBe('pending');
-    expect(
-      row && escalationActions(toEscalation(row).payload, { replannable: true }),
-    ).toEqual(['run_as_express', 'replan', 'cancel']);
-
-    expect((await rig.ticket(id)).status).toBe('waiting_human');
-    expect(rig.driver.starts).toEqual([]);
+    expect(row?.status).toBe('answered');
+    expect(row?.answer).toMatchObject({ action: 'pipeline_ready', by: 'auto' });
+    expect((await rig.ticket(id)).status).toBe('in_progress');
+    const run = await rig.storage.transaction((tx) => tx.runs.get('run-1'));
+    expect(run?.agent_id).toBe('test-writer');
   });
 
   it('releases each hold once: a second tick changes nothing more', async () => {

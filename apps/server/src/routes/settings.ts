@@ -7,14 +7,20 @@
  *   409 and nothing is overwritten. A document the engine could not run on is refused here
  *   with the offending keys listed, so the owner learns when saving, not when a tick fails.
  *   Scope and project come from the path, so a body cannot aim a save somewhere else.
+ *   The Director's own sign-off ceiling is the one setting a project may only lower: a project
+ *   value above the company's is a 400, as is `C` (tier C always needs a person).
  *   The engine reads the new version on its next tick; nothing needs a restart.
  *
  * Exports: settingsRoutes().
- * Depends on: @forge/core (ConfigAppend, ConfigVersionConflictError), schemas/api,
+ * Depends on: @forge/core (ConfigAppend, ConfigVersionConflictError, signOffAboveCeiling), schemas/api,
  *   services/http/{body,http-errors,respond}, types/routes. IO: config source and storage reads.
  */
 
-import { ConfigAppend, ConfigVersionConflictError } from '@forge/core';
+import {
+  ConfigAppend,
+  ConfigVersionConflictError,
+  signOffAboveCeiling,
+} from '@forge/core';
 import { CatalogueDoc } from '@forge/tools';
 import { CataloguePutBody, SettingsPutBody } from '#/schemas/api.js';
 import { readJson } from '#/services/http/body.js';
@@ -47,6 +53,18 @@ async function save(
   const request = ConfigAppend.safeParse({ ...scope, ...body });
   if (!request.success) {
     throw HttpError.fromZod(request.error);
+  }
+
+  // A project may only lower the Director's sign-off ceiling, never raise the company's.
+  if (request.data.scope === 'project') {
+    const reason = signOffAboveCeiling(
+      (await deps.config.company()).config,
+      (request.data.doc as { director?: unknown }).director,
+    );
+
+    if (reason !== undefined) {
+      throw new HttpError(400, 'invalid_request', reason);
+    }
   }
 
   try {

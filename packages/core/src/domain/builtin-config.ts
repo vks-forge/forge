@@ -40,6 +40,8 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
       ticket_recover: 'opus',
       // Drafting an agent from a description is one quick structured answer.
       draft_agent: 'sonnet',
+      // The Director's check of finished work against its plan is judging, like a recovery.
+      ticket_check: 'opus',
     },
     worker: { express: 'sonnet', standard: 'sonnet', full: 'sonnet' },
   },

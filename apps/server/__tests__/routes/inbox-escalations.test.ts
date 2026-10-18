@@ -7,7 +7,9 @@
  *   looking at, or call that ticket "waiting on you" before the owner has anything to do.
  *
  * Pins: `question:<id>` items for all three kinds with the `escalation` view and its actions, the
- *   item dated by when it reached the owner, and a Director-stage wait staying out of every view.
+ *   item dated by when it reached the owner, and a Director-stage wait staying out of every view;
+ *   finished work (review, needs sign-off) listed once through its sign-off item and as a plain
+ *   review row only when it has none; a held ticket listed through its decision.
  * Depends on: helpers/read-rig. IO: a loopback socket.
  */
 
@@ -132,5 +134,93 @@ describe('escalations in the Inbox', () => {
 
     expect(all).not.toContain('question:int-d');
     expect(all).not.toContain('ticket_waiting:FX-6');
+  });
+});
+
+describe('finished work in the Inbox', () => {
+  const signOff = (id: string, ticketId: string, tier: 'B' | 'C') => ({
+    id,
+    ticket_id: ticketId,
+    kind: 'sign_off' as const,
+    payload: {
+      kind: 'sign_off',
+      cause: tier === 'C' ? 'tier_c' : 'tier_b',
+      tier,
+      summary: 'The checks passed.',
+      checks: {
+        passed: 3,
+        counts: { critical: 0, high: 0, medium: 0, low: 0 },
+        overrides: 0,
+      },
+    },
+    status: 'pending' as const,
+    asked_at: '2026-10-16T07:00:00.000Z',
+    escalated_at: '2026-10-16T07:00:30.000Z',
+    timeout_at: '9999-12-31T23:59:59.999Z',
+  });
+
+  it('lists a ticket waiting for a name once, through its sign-off item, and not as a review row too', async () => {
+    await t.storage.transaction(async (tx) => {
+      await tx.tickets.insert(makeTicket('FX', 7, { status: 'review' }));
+      await tx.tickets.insert(makeTicket('FX', 8, { status: 'needs_signoff' }));
+      await tx.interactions.insert(signOff('int-so7', 'FX-7', 'B'));
+      await tx.interactions.insert(signOff('int-so8', 'FX-8', 'C'));
+    });
+
+    const items = ((await get('/projects/fixture/inbox')).body as Page).items;
+    const all = items.map((i) => i.id);
+
+    expect(all).toContain('question:int-so7');
+    expect(all).toContain('question:int-so8');
+    expect(all).not.toContain('ticket_review:FX-7');
+    expect(all).not.toContain('ticket_signoff:FX-8');
+    expect(items.find((i) => i.id === 'question:int-so8')?.escalation).toMatchObject({
+      kind: 'sign_off',
+      actions: ['sign_off', 'rework', 'cancel'],
+    });
+
+    expect(all.filter((id) => id.endsWith('FX-7') || id.endsWith('so7'))).toHaveLength(1);
+  });
+
+  it('still lists a ticket in review with no sign-off item as a plain review row', async () => {
+    await t.storage.transaction((tx) =>
+      tx.tickets.insert(makeTicket('FX', 9, { status: 'review' })),
+    );
+
+    expect(await ids('all')).toContain('ticket_review:FX-9');
+  });
+
+  it('lists a held ticket through its decision, with the findings on the view', async () => {
+    await t.storage.transaction(async (tx) => {
+      await tx.tickets.insert(makeTicket('FX', 10, { status: 'waiting_human' }));
+      await tx.interactions.insert({
+        id: 'int-dec',
+        ticket_id: 'FX-10',
+        kind: 'decision',
+        payload: {
+          kind: 'decision',
+          cause: 'findings_hold',
+          summary: 'Review found blocking findings and holds the merge for you.',
+          stage_id: 'reviewer',
+          stage_label: 'Review',
+          findings: [],
+          rework: { count: 2, cap: 2 },
+        },
+        status: 'pending',
+        asked_at: '2026-10-16T08:00:00.000Z',
+        escalated_at: '2026-10-16T08:00:30.000Z',
+        timeout_at: '9999-12-31T23:59:59.999Z',
+      });
+    });
+
+    const items = ((await get('/projects/fixture/inbox')).body as Page).items;
+
+    expect(items.find((i) => i.id === 'question:int-dec')).toMatchObject({
+      title: expect.stringContaining('holds the merge for you'),
+      // The ticket has no card here, so there is nothing to re-plan through.
+      escalation: { kind: 'decision', actions: ['merge_anyway', 'rework', 'cancel'] },
+    });
+
+    expect(items.map((i) => i.id)).not.toContain('ticket_waiting:FX-10');
   });
 });

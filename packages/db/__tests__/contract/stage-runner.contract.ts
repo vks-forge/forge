@@ -101,6 +101,22 @@ export function describeStageRunnerContract(getDb: () => StorageAdapter): void {
       expect(await tx((t) => t.stageRuns.getByRun('run-4'))).toMatchObject({ id });
     });
 
+    it('reads an attempt by id, null for an unknown id, and sees a later finish', async () => {
+      await seedTicket();
+      const id = (await tx((t) =>
+        t.stageRuns.start(attempt(TID, 'reviewer', { run_id: 'run-8' })),
+      )) as number;
+
+      const started = await tx((t) => t.stageRuns.get(id));
+
+      await tx((t) => t.stageRuns.finish(id, { status: 'passed', ended_at: T1 }));
+      const finished = await tx((t) => t.stageRuns.get(id));
+
+      expect(started).toMatchObject({ id, stage_id: 'reviewer', status: 'running' });
+      expect(await tx((t) => t.stageRuns.get(id + 1000))).toBeNull();
+      expect(finished).toMatchObject({ id, status: 'passed', ended_at: T1 });
+    });
+
     it('finishes an attempt with status, outcome and end time, changing only what it is given', async () => {
       await seedTicket();
       const id = (await tx((t) =>

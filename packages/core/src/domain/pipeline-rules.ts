@@ -9,10 +9,13 @@
  *   earlier writer, which is also what rules out loops. Each problem names the stage it
  *   concerns so a screen can show it beside the row. The same function runs when a pipeline
  *   is saved and again when a ticket takes its snapshot, so a roster that changed in between
- *   (an agent archived) can never start a ticket on a list that no longer holds.
+ *   (an agent archived) can never start a ticket on a list that no longer holds. The Full lane adds
+ *   three more floors: the Director's check comes once, after G1 and every check; one sign-off (or
+ *   human) stage closes the list before merge; and once two model families are connected a critic
+ *   on the Worker's own family is refused (d-0073), not just warned about.
  *
  * Exports: pipelineProblems(), routingProblems(), REVIEW_TOOL.
- * Depends on: domain/{pipeline-stage-rules,stage-kinds}, schemas/agent, schemas/pipeline, types/pipeline-rules. No IO.
+ * Depends on: domain/{effective-pipelines,pipeline-stage-rules,stage-kinds}, schemas/agent, schemas/pipeline, types/pipeline-rules. No IO.
  */
 
 import {
@@ -25,6 +28,7 @@ import {
   rolesOf,
   scriptProblems,
 } from '#/domain/pipeline-stage-rules.js';
+import { familyProblems, orderProblems } from '#/domain/pipeline-order-rules.js';
 import { classifyStage, flattenStages } from '#/domain/stage-kinds.js';
 import type { AgentRole } from '#/schemas/agent.js';
 import { MAX_STAGES } from '#/schemas/pipeline.js';
@@ -53,7 +57,10 @@ function frameProblems(
   }
 
   const classes = stages.map((s) => classifyStage(s, roles));
-  const writers = classes.flatMap((c, i) => (c === 'writer' ? [i] : []));
+  const writers = classes.flatMap((c, i) =>
+    c === 'writer' || c === 'writer_group' ? [i] : [],
+  );
+
   const lastWriter = writers.length === 0 ? -1 : (writers[writers.length - 1] as number);
   if (writers.length === 0) {
     out.push(problem('no_writer', 'The pipeline needs at least one writer'));
@@ -85,79 +92,6 @@ function frameProblems(
   return out;
 }
 
-/**
- * Who comes where: a writer needs to come before every gate and check, an agent never checks
- * what it wrote, a reviewer needs a writer before it, one human stage after the checks.
- */
-function orderProblems(
-  def: PipelineDefinition,
-  roles: Record<string, AgentRole>,
-): PipelineProblem[] {
-  const out: PipelineProblem[] = [];
-  const classes = def.stages.map((s) => classifyStage(s, roles));
-  const humans = classes.filter((c) => c === 'human').length;
-  const writerAgents = new Set<string>();
-  let g1Seen = false;
-  let checkSeen = false;
-  def.stages.forEach((s, i) => {
-    const c = classes[i];
-    if (c === 'writer' && s.kind === 'agent') {
-      if (g1Seen || checkSeen) {
-        // The same agent now sits where checks sit: it would be approving its own work.
-        if (writerAgents.has(s.agent)) {
-          out.push(
-            problem(
-              'self_review',
-              `${s.label}: an agent cannot check its own work`,
-              s.id,
-            ),
-          );
-        } else if (checkSeen) {
-          out.push(
-            problem(
-              'writer_after_check',
-              `${s.label}: a writer cannot come after a check`,
-              s.id,
-            ),
-          );
-        }
-      }
-
-      writerAgents.add(s.agent);
-    } else if (c === 'g1') {
-      g1Seen = true;
-    } else if (c === 'check_agent' || c === 'script' || c === 'group') {
-      checkSeen = true;
-      if (c === 'check_agent' && writerAgents.size === 0) {
-        out.push(
-          problem(
-            'reviewer_first',
-            `${s.label}: a reviewer needs a writer before it`,
-            s.id,
-          ),
-        );
-      }
-    } else if (c === 'human') {
-      const checksAfter = classes.some(
-        (k, j) =>
-          j > i && (k === 'check_agent' || k === 'script' || k === 'group' || k === 'g1'),
-      );
-
-      if (humans > 1 || checksAfter) {
-        out.push(
-          problem(
-            'human_position',
-            `${s.label}: one human stage, after every check`,
-            s.id,
-          ),
-        );
-      }
-    }
-  });
-
-  return out;
-}
-
 /** A check's `rework_to` must name a writer stage that comes before it: the only back edge. */
 function reworkProblems(
   def: PipelineDefinition,
@@ -165,7 +99,13 @@ function reworkProblems(
 ): PipelineProblem[] {
   const out: PipelineProblem[] = [];
   def.stages.forEach((s, i) => {
-    if (s.kind === 'human' || s.kind === 'merge' || s.rework_to === undefined) {
+    if (
+      s.kind === 'human' ||
+      s.kind === 'merge' ||
+      s.kind === 'sign_off' ||
+      s.kind === 'director_check' ||
+      s.rework_to === undefined
+    ) {
       return;
     }
 
@@ -227,6 +167,7 @@ export function pipelineProblems(
     ...orderProblems(def, roles),
     ...reworkProblems(def, roles),
     ...duplicateIdProblems(def),
+    ...familyProblems(def, ctx),
   );
 
   return out;

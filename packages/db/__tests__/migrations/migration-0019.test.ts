@@ -43,7 +43,7 @@ describe('0019 cards', () => {
     driver.run(ticket('SF-13'));
     driver.run(ticket('SF-14', { body: '' }));
 
-    expect(runMigrations(driver)).toEqual([19, 20, 21, 22, 23, 24, 25]);
+    expect(runMigrations(driver)).toEqual([19, 20, 21, 22, 23, 24, 25, 26]);
 
     const cards = driver.all<Record<string, unknown>>('SELECT * FROM cards ORDER BY id');
     const links = driver.all<{ id: string; card_id: string }>(

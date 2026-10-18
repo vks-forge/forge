@@ -12,7 +12,7 @@
  *   `pipelineProblems` on save and again when a ticket takes its snapshot.
  *
  * Exports: StageId, Severity, CheckPolicy, AgentStage, ScriptGateStage, GroupStage, HumanStage,
- *   MergeStage, Stage, PipelineDefinition, LanePipelines, RoutingRule, ProjectPipelines,
+ *   DirectorCheckStage, SignOffStage, MergeStage, Stage, PipelineDefinition, LanePipelines, RoutingRule, ProjectPipelines,
  *   PIPELINE_PROBLEM_CODES, PipelineProblem, PipelineTag, PipelineView (and their types),
  *   MAX_STAGES, MAX_ROUTING_RULES.
  * Depends on: schemas/agent, schemas/ticket, zod. No IO.
@@ -87,13 +87,17 @@ export const ScriptGateStage = z.strictObject({
 });
 export type ScriptGateStage = z.infer<typeof ScriptGateStage>;
 
-/** Two to four checks that run together; the group passes when every member passes. */
+/**
+ * Two to four members that run together; the group passes when every member passes. Members are
+ * all checks, or all writers (a writer group runs them side by side in one worktree, each held to
+ * its own write scope); `pipelineProblems` refuses a mix.
+ */
 export const GroupStage = z.strictObject({
   id: StageId,
   kind: z.literal('group'),
   label: Label,
   join: z.literal('all'),
-  members: z.array(z.discriminatedUnion('kind', [AgentStage, ScriptGateStage])).max(8),
+  members: z.array(z.discriminatedUnion('kind', [AgentStage, ScriptGateStage])).max(4),
   ...policyShape,
 });
 export type GroupStage = z.infer<typeof GroupStage>;
@@ -106,6 +110,32 @@ export const HumanStage = z.strictObject({
   prompt: z.string().trim().min(1).max(500),
 });
 export type HumanStage = z.infer<typeof HumanStage>;
+
+/**
+ * The Director checks the finished work against the plan (acceptance criteria, planned files)
+ * from typed artifacts only. Blocking findings hold the ticket for the owner by default.
+ */
+export const DirectorCheckStage = z.strictObject({
+  id: StageId,
+  kind: z.literal('director_check'),
+  label: Label,
+  on_blocking: z.enum(['rework', 'hold']).optional(),
+  blocking: z.array(Severity).max(4).optional(),
+});
+export type DirectorCheckStage = z.infer<typeof DirectorCheckStage>;
+
+/**
+ * The sign-off of finished work: the Director signs tier A and B when everything passed
+ * (`director_or_owner`), tier C and anything in doubt always wait for the owner.
+ */
+export const SignOffStage = z.strictObject({
+  id: StageId,
+  kind: z.literal('sign_off'),
+  label: Label,
+  signer: z.enum(['director_or_owner', 'owner']),
+  prompt: z.string().trim().min(1).max(500),
+});
+export type SignOffStage = z.infer<typeof SignOffStage>;
 
 /** The merge door; always last and never removable. */
 export const MergeStage = z.strictObject({
@@ -121,6 +151,8 @@ export const Stage = z.discriminatedUnion('kind', [
   ScriptGateStage,
   GroupStage,
   HumanStage,
+  DirectorCheckStage,
+  SignOffStage,
   MergeStage,
 ]);
 export type Stage = z.infer<typeof Stage>;
@@ -184,6 +216,13 @@ export const PIPELINE_PROBLEM_CODES = [
   'review_tool_missing',
   'routing_writer',
   'duplicate_rule_id',
+  'group_mixed',
+  'writer_scope_overlap',
+  'writer_group_proof',
+  'director_check_position',
+  'director_check_duplicate',
+  'sign_off_position',
+  'critic_same_family',
 ] as const;
 
 /** A reason a pipeline or routing list cannot be saved; `stage_id` names the stage (or rule) it concerns. */
@@ -208,7 +247,7 @@ export const PipelineView = z.object({
   /** SHA-256 of the definition; a ticket records the hash it started with. */
   hash: z.string().regex(/^[0-9a-f]{64}$/),
   tags: z.array(PipelineTag),
-  /** False while the lane has no runner (Full until the next update): tickets of the lane wait. */
+  /** False while the lane has no runner: tickets of the lane wait. All three lanes run today. */
   live: z.boolean(),
   warnings: z.array(z.string()),
 });

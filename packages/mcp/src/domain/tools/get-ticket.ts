@@ -14,7 +14,7 @@
 
 import { PolicyDeniedError, UnknownForgeError } from '@forge/core';
 import type { Ticket } from '@forge/core';
-import { isCheckRun } from '#/domain/check-run.js';
+import { isCheckRun, isWriterGroupMember } from '#/domain/check-run.js';
 import { GetTicketInput } from '#/schemas/tool-inputs.js';
 import { defineTool } from '#/shared/define-tool.js';
 
@@ -58,7 +58,12 @@ export const getTicketTool = defineTool({
 
       // A check agent never sees the ticket's runs: they lead to the writer's own account.
       const showRuns = isOwn && !(await isCheckRun(tx, ctx.run));
-      const runs = showRuns ? await tx.runs.listByTicket(own.id) : [];
+      const listed = showRuns ? await tx.runs.listByTicket(own.id) : [];
+
+      // A writer-group member sees only its own run: siblings' runs lead to their accounts.
+      const runs = (await isWriterGroupMember(tx, ctx.run))
+        ? listed.filter((r) => r.id === ctx.run.id)
+        : listed;
 
       return JSON.stringify({
         ticket: {

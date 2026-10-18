@@ -7,66 +7,34 @@
  *   which stages passed, which one runs now, which failed or waits, whether work went back for
  *   rework ("Rework 1 of 2", so the cap of two is never a surprise) and which checks a routing
  *   rule added. Status is a word and an icon, never colour alone. A chip opens the stage's detail
- *   in place. The strip follows the ticket: it refetches whenever the ticket changes and polls
- *   at the ticket's pace. Before the first dispatch there is no pipeline to show, and the strip
+ *   in place. The strip follows the ticket: the server announces every stage write on the project
+ *   stream and the strip refetches at once (api/use-ticket-pipeline), with a slow poll behind it.
+ *   The Director check and the sign-off are stages of their own, and the members of a group sit
+ *   side by side inside a dashed frame so "run together" is visible. Before the first dispatch there is no pipeline to show, and the strip
  *   says when it will start; it never shows an empty frame.
  *
  * Exports: PipelineStrip.
- * Depends on: react, lucide-react, api/use-ticket-pipeline, routes/ticket/stage-detail,
+ * Depends on: react, api/use-ticket-pipeline, routes/ticket/{stage-chip,stage-detail},
  *   components/status/state-panel, domain/stage-view-copy, schemas/pipelines.
  */
 
-import {
-  Check,
-  CheckCheck,
-  Circle,
-  CircleAlert,
-  CircleX,
-  LoaderCircle,
-  Minus,
-  UserRound,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { describeError } from '#/api/describe-error.js';
 import { useTicketPipeline } from '#/api/use-ticket-pipeline.js';
 import { Button } from '#/components/ui/button.js';
 import {
   NOT_STARTED,
-  STATUS_VIEW,
+  findStage,
   reworkBadge,
   ruleFor,
 } from '#/domain/stage-view-copy.js';
+import { StageChip } from '#/routes/ticket/stage-chip.js';
 import { StageDetail } from '#/routes/ticket/stage-detail.js';
 import type { StageView } from '#/schemas/pipelines.js';
 
-const ICON: Readonly<Record<StageView['status'], LucideIcon>> = {
-  pending: Circle,
-  running: LoaderCircle,
-  passed: Check,
-  failed: CircleX,
-  error: CircleAlert,
-  waiting: UserRound,
-  skipped: Minus,
-  adopted: CheckCheck,
-};
-
-const TONE = {
-  good: 'border-good text-good',
-  danger: 'border-danger bg-danger-soft text-fg',
-  attn: 'border-attn bg-attn-soft text-fg',
-  signal: 'border-signal text-fg',
-  quiet: 'border-line text-muted',
-} as const;
-
-export function PipelineStrip(props: {
-  slug: string;
-  ticketId: string;
-  /** Changes whenever the ticket does, so the strip refetches at once. */
-  stamp: string;
-}) {
+export function PipelineStrip(props: { slug: string; ticketId: string }) {
   const { ticketId } = props;
-  const query = useTicketPipeline(ticketId, props.stamp);
+  const query = useTicketPipeline(ticketId);
   const [openId, setOpenId] = useState<string | null>(null);
 
   if (query.isPending) {
@@ -103,7 +71,7 @@ export function PipelineStrip(props: {
   }
 
   const badge = reworkBadge(pipeline.rework);
-  const open = pipeline.stages.find((s) => s.id === openId);
+  const open = openId === null ? undefined : findStage(pipeline.stages, openId);
   const panelId = 'pipeline-stage-detail';
 
   return (
@@ -118,41 +86,36 @@ export function PipelineStrip(props: {
         ) : null}
       </div>
 
-      <ol aria-label="Pipeline stages" className="flex flex-wrap gap-2">
+      <ol aria-label="Pipeline stages" className="flex flex-wrap items-start gap-2">
         {pipeline.stages.map((stage) => {
-          const status = STATUS_VIEW[stage.status];
-          const Icon = ICON[stage.status];
-          const rule = ruleFor(pipeline.routed, stage.id);
-          const selected = stage.id === openId;
+          const chip = (member: StageView) => (
+            <StageChip
+              stage={member}
+              selected={member.id === openId}
+              panelId={panelId}
+              addedByRule={ruleFor(pipeline.routed, member.id) !== undefined}
+              onToggle={() => setOpenId(member.id === openId ? null : member.id)}
+            />
+          );
 
           return (
             <li key={stage.id}>
-              <button
-                type="button"
-                aria-expanded={selected}
-                aria-controls={selected ? panelId : undefined}
-                onClick={() => setOpenId(selected ? null : stage.id)}
-                className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 py-1 text-left text-sm transition-colors hover:bg-hover ${TONE[status.tone]} ${
-                  selected ? 'ring-2 ring-signal' : ''
-                }`}
-              >
-                <Icon
-                  aria-hidden="true"
-                  className={`size-4 shrink-0 ${
-                    stage.status === 'running' ? 'motion-safe:animate-spin' : ''
-                  }`}
-                />
-                <span className="grid">
-                  <span className="font-medium">{stage.label}</span>
-                  <span className="text-xs">
-                    {status.label}
-                    {stage.cycle > 0 && stage.status !== 'pending'
-                      ? `, round ${stage.cycle + 1}`
-                      : ''}
-                    {rule ? ', added by rule' : ''}
-                  </span>
-                </span>
-              </button>
+              {stage.members === undefined ? (
+                chip(stage)
+              ) : (
+                <div
+                  role="group"
+                  aria-label={stage.label}
+                  className="grid gap-1 rounded-xl border border-dashed border-line p-1.5"
+                >
+                  <p className="px-1 text-xs text-muted">{`${stage.label} · together`}</p>
+                  <ul className="flex flex-wrap gap-2">
+                    {stage.members.map((member) => (
+                      <li key={member.id}>{chip(member)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </li>
           );
         })}

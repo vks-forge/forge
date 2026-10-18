@@ -8,25 +8,27 @@
  *   truth, the job map only says a command is running now, so a restart finds a `running` row
  *   with no job and runs the command again.
  *
- * Exports: WriterChoice, CustomScriptRun, StageTarget, SendBackArgs, AttemptKey, StageState, StageJob, StageJobOutcome, ArtifactDraft, CollectInput, G1Result, VerifyHooks, StageTicket.
+ * Exports: CheckJob, WriterChoice, CustomScriptRun, StageTarget, SendBackArgs, AttemptKey, StageState, StageJob, StageJobOutcome, ArtifactDraft, CollectInput, G1Result, VerifyHooks, StageTicket.
  * Depends on: @forge/core (stage types, gate types), types/engine-state, types/verify. Types only.
  */
 
 import type {
-  AgentStage,
   ArtifactKind,
+  Finding,
   ScriptGateStage,
   StageOutcome,
   Cursor,
   GateVerdict,
   Run,
   StageRun,
+  StepError,
   Ticket,
+  TicketCheckOutput,
   TicketPipeline,
 } from '@forge/core';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { ResolvedAgent } from '#/types/run-agent.types.js';
-import type { GateRows, VerifyTarget } from '#/types/verify.types.js';
+import type { GateRows, MergeOpts, VerifyTarget } from '#/types/verify.types.js';
 
 /** What identifies a stage attempt, and who runs it. */
 export interface AttemptKey {
@@ -64,17 +66,23 @@ export interface StageJob {
   done: Promise<void>;
 }
 
+/** The Director check running beside the tick: its answer (or why it gave none) and what it cost. */
+export interface CheckJob {
+  readonly ticketId: string;
+  readonly stageRunId: number;
+  /** Changed files the plan did not name, computed from the diff when the job started. */
+  readonly unplanned: string[];
+  cost: number;
+  outcome?:
+    | { readonly ok: true; readonly value: TicketCheckOutput }
+    | { readonly ok: false; readonly error: StepError };
+  /** Settles when the step is done and the outcome is set (tests and shutdown await it). */
+  done: Promise<void>;
+}
+
 /** An artifact ready to store: capped, hashed. */
 export interface ArtifactDraft {
-  readonly kind:
-    | 'plan'
-    | 'ticket'
-    | 'diff'
-    | 'finish_claims'
-    | 'narrative'
-    | 'test_report'
-    | 'findings'
-    | 'gate_report';
+  readonly kind: ArtifactKind;
   readonly content: string;
   readonly truncated: boolean;
   readonly sha256: string;
@@ -95,8 +103,14 @@ export interface SendBackArgs {
   readonly stage: {
     readonly id: string;
     readonly member: string;
-    readonly kind: 'agent' | 'script_gate';
+    readonly kind: 'agent' | 'script_gate' | 'director';
   };
+  /** What stopped the merge: a deterministic gate, a check agent or the Director check; `blockingRoute` decides the road from it. */
+  readonly klass: 'gate' | 'check' | 'director_check';
+  /** The stage's own policy for blocking findings. */
+  readonly policy: 'rework' | 'hold';
+  /** The blocking findings, for the decision card a hold raises (capped there). */
+  readonly blocking?: readonly Finding[];
   /** What the owner reads for the stage ("Review", "Gate G1"). */
   readonly label: string;
   /** The findings as text; they travel in the continuation wake, so the next Worker prompt carries them. */
@@ -119,12 +133,12 @@ export interface VerifyHooks {
   readonly g1: (ctx: EngineCtx, t: VerifyTarget) => Promise<G1Result>;
   /** The latest gate rows of the target's run. */
   readonly rows: (ctx: EngineCtx, t: VerifyTarget) => Promise<GateRows>;
-  /** The merge door: merges tier A, holds B/C or a human stage; handles a moved head. */
+  /** The merge door: merges tier A, holds B/C or a human stage, lets a Director-signed ticket through; handles a moved head. */
   readonly merge: (
     ctx: EngineCtx,
     t: VerifyTarget,
     rows: GateRows,
-    hold: boolean,
+    opts: MergeOpts,
   ) => Promise<void>;
 }
 
@@ -140,12 +154,16 @@ export type CustomScriptRun = Extract<ScriptGateStage['run'], { command: string 
 /** What a stage result concerns: the ticket and the writer run the gates and the merge judge. */
 export type StageTarget = Pick<VerifyTarget, 'ticket' | 'run'>;
 
-/** The writer a dispatch starts: the agent, its stage and the pipeline state (null for work from before pipelines), or nothing. */
+/**
+ * The writer a dispatch starts: the agent, its stage (the group's, for a member of a writer group,
+ * with `memberId`) and the pipeline state (null for work from before pipelines), or nothing.
+ */
 export type WriterChoice =
   | { readonly kind: 'stop' }
   | {
       readonly kind: 'go';
       readonly agent: ResolvedAgent;
-      readonly stage?: AgentStage;
+      readonly stage?: { readonly id: string; readonly label: string };
+      readonly memberId?: string;
       readonly state: StageState | null;
     };

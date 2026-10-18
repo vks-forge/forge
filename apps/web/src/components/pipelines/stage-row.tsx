@@ -7,7 +7,9 @@
  *   doing nothing. Merge and G1 show a lock and the reason, and offer no buttons: merge ends
  *   every pipeline and G1 is the independent gate nobody may skip (d-0006). Each row says in one
  *   line what the stage is (the agent and its role, the command, the people it asks) and shows
- *   the problems core found for it, in words, right under it where the owner is looking.
+ *   the problems core found for it, in words, right under it where the owner is looking, and the
+ *   server's notes (a critic on the Worker's own model family) as a labelled line. The Director
+ *   check and the sign-off say what they do and, for the sign-off, who signs.
  *
  * Exports: StageRow.
  * Depends on: react, lucide-react, components/pipelines/stage-details, components/ui/*,
@@ -18,10 +20,12 @@ import {
   Bot,
   ChevronDown,
   ChevronUp,
+  ClipboardCheck,
   GitMerge,
   Layers,
   Lock,
   ShieldCheck,
+  Stamp,
   Terminal,
   Trash2,
   UserCheck,
@@ -57,6 +61,10 @@ function StageIcon(props: { stage: Stage }) {
       return <Layers aria-hidden="true" className={ICON} />;
     case 'human':
       return <UserCheck aria-hidden="true" className={ICON} />;
+    case 'director_check':
+      return <ClipboardCheck aria-hidden="true" className={ICON} />;
+    case 'sign_off':
+      return <Stamp aria-hidden="true" className={ICON} />;
     case 'merge':
       return <GitMerge aria-hidden="true" className={ICON} />;
   }
@@ -86,6 +94,14 @@ function summary(stage: Stage, roster: readonly AgentView[]): string {
         .join(', ')}`;
     case 'human':
       return 'Waits for your approval';
+    case 'director_check':
+      return stage.on_blocking === 'rework'
+        ? 'Compares the work with the plan; findings send it back'
+        : 'Compares the work with the plan; findings hold it for you';
+    case 'sign_off':
+      return stage.signer === 'owner'
+        ? 'Always you'
+        : 'Director signs tier A and B, you sign tier C';
     case 'merge':
       return 'Always last';
   }
@@ -97,6 +113,8 @@ export function StageRow(props: {
   def: PipelineDefinition;
   roster: readonly AgentView[];
   problems: readonly PipelineProblem[];
+  /** The server's notes for this row, such as a critic on the Worker's own model family. */
+  warnings: readonly string[];
   onChange: (next: Stage) => void;
   onMove: (direction: StageMove) => void;
   onRemove: () => void;
@@ -199,6 +217,19 @@ export function StageRow(props: {
             onChange={props.onChange}
           />
         </div>
+      ) : null}
+
+      {props.warnings.length > 0 ? (
+        <ul className="grid gap-1 border-t border-line px-3 py-2">
+          {props.warnings.map((warning) => (
+            <li key={warning} role="note" className="text-xs">
+              <span className="mr-1.5 rounded-md border border-attn bg-attn-soft px-1.5 py-0.5 font-medium">
+                Note
+              </span>
+              {warning}
+            </li>
+          ))}
+        </ul>
       ) : null}
 
       {props.problems.length > 0 ? (

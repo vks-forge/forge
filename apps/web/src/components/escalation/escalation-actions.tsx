@@ -5,11 +5,12 @@
  *   (d-0135), and the same set of buttons must read the same in the card chat, on the Ticket
  *   page and in the Inbox. The server decides which actions apply (`view.actions`); this draws
  *   them in the owner's words and wires each to its call: Retry takes an optional note for the
- *   Worker, Re-plan and Send back for rework open a dialog that asks for a comment (and Re-plan
- *   says what happens to the tickets), Approve and merge / Sign off and merge ask before they merge
+ *   Worker, Re-plan, Send back for rework, Merge anyway and Continue open a dialog that asks for a comment (and Re-plan
+ *   says what happens to the tickets; Merge anyway says it merges despite held findings and cannot
+ *   be undone), Approve and merge / Sign off and merge ask before they merge
  *   (a merge cannot be undone), Cancel asks before it acts, Run as Express and "I fixed
- *   it, check again" act at once. The first action is the primary one; Cancel is the only
- *   danger-styled button. `answer` has its own form and is skipped here. An action this UI has no
+ *   it, check again" act at once. The first action is the primary one (never Merge anyway, which
+ *   overrules a hold); Cancel is the only danger-styled button. `answer` has its own form and is skipped here. An action this UI has no
  *   button for never reaches this component (the schema drops it).
  *
  * Exports: EscalationActions.
@@ -42,7 +43,14 @@ export function EscalationActions(props: {
 }) {
   const { controls } = props;
   const [dialog, setDialog] = useState<
-    'replan' | 'rework' | 'cancel' | 'approve' | 'sign_off' | null
+    | 'replan'
+    | 'rework'
+    | 'merge_anyway'
+    | 'continue'
+    | 'cancel'
+    | 'approve'
+    | 'sign_off'
+    | null
   >(null);
 
   const [noting, setNoting] = useState(false);
@@ -54,7 +62,7 @@ export function EscalationActions(props: {
   );
 
   const busy = controls.pending !== null;
-  const open = (which: 'replan' | 'rework' | 'cancel' | 'approve' | 'sign_off'): void => {
+  const open = (which: NonNullable<typeof dialog>): void => {
     controls.reset();
     setDialog(which);
   };
@@ -64,6 +72,9 @@ export function EscalationActions(props: {
     setDialog(null);
   };
 
+  // An accepted comment closes its dialog but keeps the answer the card is about to show.
+  const done = (): void => setDialog(null);
+
   const style = (
     action: EscalationAction,
     index: number,
@@ -72,7 +83,10 @@ export function EscalationActions(props: {
       return 'danger';
     }
 
-    return index === 0 && props.lead === undefined ? 'primary' : 'quiet';
+    // Merge anyway overrules a hold, so it is never the highlighted choice.
+    const first = actions[0] === 'merge_anyway' ? 1 : 0;
+
+    return index === first && props.lead === undefined ? 'primary' : 'quiet';
   };
 
   const button = (action: (typeof actions)[number], index: number): ReactNode => {
@@ -99,6 +113,8 @@ export function EscalationActions(props: {
         );
       case 'replan':
       case 'rework':
+      case 'merge_anyway':
+      case 'continue':
         return (
           <Button {...common} onClick={() => open(action)}>
             {ACTION_LABEL[action]}
@@ -165,6 +181,7 @@ export function EscalationActions(props: {
         <CommentDialog
           open={dialog === 'replan'}
           onClose={close}
+          onDone={done}
           controls={controls}
           action="replan"
           title="Re-plan this card?"
@@ -177,12 +194,41 @@ export function EscalationActions(props: {
         <CommentDialog
           open={dialog === 'rework'}
           onClose={close}
+          onDone={done}
           controls={controls}
           action="rework"
           title="Send back for rework"
           description="A Worker starts again on this ticket with your comment."
           label="What needs to change?"
           sendLabel="Send back"
+        />
+      ) : null}
+      {actions.includes('merge_anyway') ? (
+        <CommentDialog
+          open={dialog === 'merge_anyway'}
+          onClose={close}
+          onDone={done}
+          controls={controls}
+          action="merge_anyway"
+          title="Merge anyway?"
+          description="This merges the change although a check found blocking problems. The merge cannot be undone from Forge."
+          label="Why is it fine to merge?"
+          sendLabel="Merge anyway"
+          footnote="Recorded on the card. Only you can do this. The gates still passed."
+        />
+      ) : null}
+      {actions.includes('continue') ? (
+        <CommentDialog
+          open={dialog === 'continue'}
+          onClose={close}
+          onDone={done}
+          controls={controls}
+          action="continue"
+          title="Continue as is?"
+          description="The work touched files the plan did not name. It carries on to its checks and sign-off as it is."
+          label="Why is it fine to go on?"
+          sendLabel="Continue"
+          footnote="Recorded on the card. Only you can do this."
         />
       ) : null}
       {actions.includes('approve') || actions.includes('sign_off') ? (

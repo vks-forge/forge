@@ -25,6 +25,7 @@ const TITLES: Record<ArtifactDraft['kind'], string> = {
   test_report: 'The test report',
   findings: 'Findings from earlier rounds',
   gate_report: 'The gate report',
+  check_report: "The Director's check of the work against the plan",
 };
 
 /** A fence longer than any backtick run inside `text`, so the data cannot close it early. */

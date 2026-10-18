@@ -32,8 +32,13 @@ import { syncCardWithTickets } from '#/tick/card-phase.js';
 import { cancelLeftovers } from '#/tick/escalation-settle.js';
 import type { EventSpec, MoveResult, TicketPlan } from '#/types/tick.types.js';
 
-/** Statuses where a ticket waits on a person, and so on an interaction. */
-const WAITING: readonly Ticket['status'][] = ['waiting_human', 'blocked'];
+/** Statuses where a ticket waits on a person, and so on an interaction (finished work waiting for a name included). */
+const WAITING: readonly Ticket['status'][] = [
+  'waiting_human',
+  'blocked',
+  'review',
+  'needs_signoff',
+];
 
 /** Applies `plan(ticket)` inside an open transaction; `null` from the planner means "nothing to do". */
 export async function moveTicketTx(

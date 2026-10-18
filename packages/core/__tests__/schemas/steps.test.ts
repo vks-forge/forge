@@ -81,6 +81,7 @@ describe('NewRequestPayload / STEP_NAMES', () => {
       'ticket_answer',
       'ticket_recover',
       'draft_agent',
+      'ticket_check',
     ]);
   });
 });

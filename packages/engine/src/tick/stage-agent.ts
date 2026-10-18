@@ -9,13 +9,13 @@
  *   rows. When the stage's agent cannot run, the implementer stands in for the scheduling
  *   decision only; the dispatch itself refuses the run (fail closed) and parks the ticket.
  *
- * Exports: peekAgent(), firstCheckAgent().
+ * Exports: peekAgent(), firstCheckAgent(), memberAgent().
  * Depends on: @forge/core (effectivePipelines, classifyStage), tick/run-agent, tick/stage-state,
  *   tick/tick-config. Reads storage.
  */
 
 import { classifyStage, effectivePipelines } from '@forge/core';
-import type { CheckMember, StorageTx, Ticket } from '@forge/core';
+import type { AgentRole, CheckMember, Stage, StorageTx, Ticket } from '@forge/core';
 import { agentViews, resolveAgent, resolveStageAgent } from '#/tick/run-agent.js';
 import { readStageState } from '#/tick/stage-state.js';
 import { projectSettings } from '#/tick/tick-config.js';
@@ -26,12 +26,44 @@ import type { TickConfig } from '#/types/tick.types.js';
 export const firstCheckAgent = (members: readonly CheckMember[]): string | undefined =>
   members.flatMap((m) => (m.stage.kind === 'agent' ? [m.stage.agent] : []))[0];
 
-/** The agent the ticket's next run uses; the implementer stands in when the stage's agent cannot run. */
+/** The agent of `member` among the members to start; the first agent member when none is named. */
+export const memberAgent = (
+  members: readonly CheckMember[],
+  member?: string,
+): string | undefined =>
+  member === undefined
+    ? firstCheckAgent(members)
+    : firstCheckAgent(members.filter((m) => m.id === member));
+
+/** The first agent a pipeline's writers name: a lone writer stage's, or the first member of a writer group. */
+function firstWriterAgent(
+  stages: readonly Stage[],
+  roles: Readonly<Record<string, AgentRole>>,
+): string | undefined {
+  for (const s of stages) {
+    const klass = classifyStage(s, roles);
+    if (klass === 'writer' && s.kind === 'agent') {
+      return s.agent;
+    }
+
+    if (klass === 'writer_group' && s.kind === 'group') {
+      return firstCheckAgent(s.members.map((m) => ({ id: m.id, stage: m })));
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * The agent the ticket's next run uses; the implementer stands in when the stage's agent cannot
+ * run. For one member of a parallel group, `member` picks that member's agent.
+ */
 export async function peekAgent(
   view: { readonly config: TickConfig },
   tx: StorageTx,
   ticket: Ticket,
   slug: string,
+  member?: string,
 ): Promise<ResolvedAgent> {
   const { config } = view;
   const state = await readStageState(tx, ticket.id);
@@ -41,8 +73,8 @@ export async function peekAgent(
     agentId =
       cur.kind === 'run_writer'
         ? cur.stage.agent
-        : cur.kind === 'run_checks'
-          ? firstCheckAgent(cur.members)
+        : cur.kind === 'run_checks' || cur.kind === 'run_writers'
+          ? memberAgent(cur.members, member)
           : undefined;
   } else {
     const roster = agentViews(config, slug);
@@ -53,11 +85,7 @@ export async function peekAgent(
       roster,
     )[ticket.lane].definition;
 
-    const first = def.stages.find(
-      (s) => s.kind === 'agent' && classifyStage(s, roles) === 'writer',
-    );
-
-    agentId = first?.kind === 'agent' ? first.agent : undefined;
+    agentId = firstWriterAgent(def.stages, roles);
   }
 
   return (

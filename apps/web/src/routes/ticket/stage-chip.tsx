@@ -1,0 +1,95 @@
+/**
+ * StageChip: one stage of the ticket's pipeline as a button with its status in words.
+ *
+ * Why: the owner reads the strip to learn where a ticket is and why it waits. Every chip says its
+ *   status as a word and an icon (never colour alone); the sign-off chip says who signed ("Signed
+ *   by the Director", "Waiting for you"); a Director check that had no plan says so; a stage the
+ *   owner overruled carries an "Overruled by you" badge so a merge-anyway is never invisible; a
+ *   routing rule's stage and a stage with a warning (a critic on the Worker's own model family)
+ *   say so too. A writer-group member also shows the folders it may write, so side-by-side
+ *   writers are told apart by what they own. The chip is the control that opens the detail.
+ *
+ * Exports: StageChip.
+ * Depends on: lucide-react, domain/stage-view-copy, schemas/pipelines (type).
+ */
+
+import {
+  Check,
+  CheckCheck,
+  Circle,
+  CircleAlert,
+  CircleX,
+  LoaderCircle,
+  Minus,
+  UserRound,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { stageWords } from '#/domain/stage-view-copy.js';
+import type { StageView } from '#/schemas/pipelines.js';
+
+const ICON: Readonly<Record<StageView['status'], LucideIcon>> = {
+  pending: Circle,
+  running: LoaderCircle,
+  passed: Check,
+  failed: CircleX,
+  error: CircleAlert,
+  waiting: UserRound,
+  skipped: Minus,
+  adopted: CheckCheck,
+};
+
+const TONE = {
+  good: 'border-good text-good',
+  danger: 'border-danger bg-danger-soft text-fg',
+  attn: 'border-attn bg-attn-soft text-fg',
+  signal: 'border-signal text-fg',
+  quiet: 'border-line text-muted',
+} as const;
+
+export function StageChip(props: {
+  stage: StageView;
+  selected: boolean;
+  panelId: string;
+  addedByRule: boolean;
+  onToggle: () => void;
+}) {
+  const { stage } = props;
+  const words = stageWords(stage);
+  const Icon = ICON[stage.status];
+
+  return (
+    <button
+      type="button"
+      aria-expanded={props.selected}
+      aria-controls={props.selected ? props.panelId : undefined}
+      onClick={props.onToggle}
+      className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 py-1 text-left text-sm transition-colors hover:bg-hover ${TONE[words.tone]} ${
+        props.selected ? 'ring-2 ring-signal' : ''
+      }`}
+    >
+      <Icon
+        aria-hidden="true"
+        className={`size-4 shrink-0 ${
+          stage.status === 'running' ? 'motion-safe:animate-spin' : ''
+        }`}
+      />
+      <span className="grid min-w-0">
+        <span className="font-medium">{stage.label}</span>
+        <span className="text-xs">
+          {words.label}
+          {stage.cycle > 0 && stage.status !== 'pending'
+            ? `, round ${stage.cycle + 1}`
+            : ''}
+          {props.addedByRule ? ', added by rule' : ''}
+          {stage.override === undefined ? '' : ', overruled by you'}
+          {stage.warnings.length > 0 ? ', has a note' : ''}
+        </span>
+        {stage.scope === undefined || stage.scope.length === 0 ? null : (
+          <span className="break-all font-data text-xs text-muted">
+            {stage.scope.join(', ')}
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}

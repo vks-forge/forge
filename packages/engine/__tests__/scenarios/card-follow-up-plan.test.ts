@@ -13,7 +13,7 @@
  */
 
 import type { Ticket } from '@forge/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { syncCardWithTickets } from '#/tick/card-phase.js';
 import { pendingOf } from '#tests/helpers/escalation-rig.js';
 import {
@@ -25,6 +25,12 @@ import {
   tickets,
   todoPlan,
 } from '#tests/helpers/planning-rig.js';
+
+// Every lane runs now, so a held lane has to be stubbed to exercise the hold path still kept for a lane without a runner.
+vi.mock('#/domain/live-lanes.js', () => ({
+  LIVE_LANES: ['express', 'standard'],
+  isLive: (lane: string) => lane !== 'full',
+}));
 
 const NOW = '2026-10-16T00:00:00.000Z';
 

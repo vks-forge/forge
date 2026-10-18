@@ -3,10 +3,11 @@
  *
  * Why: this is where a person follows and unblocks a single piece of work. The page is a frame
  *   that fills the screen: a compact header (state, lane, cost, title), whatever waits on the
- *   owner (a question or failure to answer, a ready-for-review notice linking to the Review
- *   tab, which the Review tab itself replaces), a tab strip and one panel. The tab is a path segment (`/tickets/FX-4/runs`):
+ *   owner (a question or failure to answer, a ready-for-review or held-for-decision notice linking to
+ *   the Review tab, which the Review tab itself replaces), a tab strip and one panel. The tab is a path segment (`/tickets/FX-4/runs`):
  *   Conversation (the Worker thread and steer box) is the default and an unknown tab replaces
- *   itself with it; Review exists only while the ticket waits on review or sign-off, so
+ *   itself with it; Review exists only while the ticket waits on review or sign-off or is held for
+ *   the owner's decision, so
  *   `/review` on any other ticket redirects too; Runs lists the attempts and Details the
  *   metadata and cost. `?run=` picks which run's thread the Conversation shows. The thread and
  *   its stream live above the tabs (keyed by run, so one run's lines never leak into another's),
@@ -18,7 +19,7 @@
  * Exports: TicketPage.
  * Depends on: react, react-router, api/use-tickets, api/describe-error, components/thread/*,
  *   components/status/state-panel, components/ui/*, domain/route-tabs, domain/thread,
- *   domain/ticket-paths, routes/ticket/*, state/use-online, state/use-scroll-memory.
+ *   domain/ticket-paths, routes/ticket/*, state/use-kept-escalations, state/use-online, state/use-scroll-memory.
  */
 
 import { CircleAlert, SearchX } from 'lucide-react';
@@ -32,11 +33,11 @@ import { useRunThread } from '#/components/thread/use-run-thread.js';
 import { RouteTabs } from '#/components/ui/route-tabs.js';
 import { ScrollArea } from '#/components/ui/scroll-area.js';
 import { TabPanel } from '#/components/ui/tab-panel.js';
+import { reviewHeadline } from '#/domain/finished-work-copy.js';
 import { projectPath } from '#/domain/nav-entries.js';
 import { TICKET_TAB_IDS, resolveTab, ticketHasReview } from '#/domain/route-tabs.js';
 import { pendingAsk } from '#/domain/thread.js';
 import { ticketPath } from '#/domain/ticket-paths.js';
-import { ticketStamp } from '#/domain/ticket-stamp.js';
 import { AnswerPanel } from '#/routes/ticket/answer-panel.js';
 import { PipelineStrip } from '#/routes/ticket/pipeline-strip.js';
 import { ConversationTab } from '#/routes/ticket/tabs/conversation-tab.js';
@@ -44,7 +45,9 @@ import { DetailsTab } from '#/routes/ticket/tabs/details-tab.js';
 import { ReviewTab } from '#/routes/ticket/tabs/review-tab.js';
 import { RunsTab } from '#/routes/ticket/tabs/runs-tab.js';
 import { TicketHeader } from '#/routes/ticket/ticket-header.js';
+import type { EscalationView } from '#/schemas/escalation.js';
 import type { TicketDetail } from '#/schemas/tickets.js';
+import { useKeptEscalations } from '#/state/use-kept-escalations.js';
 import { useOnline } from '#/state/use-online.js';
 import { useScrollMemory } from '#/state/use-scroll-memory.js';
 import type { RouteTab, ScrollMemory, TicketTab } from '#/types/route-tabs.types.js';
@@ -69,6 +72,8 @@ function TicketBody(props: {
   tab: TicketTab;
   hasReview: boolean;
   memory: ScrollMemory;
+  escalations: readonly EscalationView[];
+  onKeep: (view: EscalationView) => void;
 }) {
   const { slug, detail, runId, tab, hasReview } = props;
   const thread = useRunThread(runId);
@@ -98,7 +103,9 @@ function TicketBody(props: {
       <ScrollArea className="grid max-h-[40dvh] shrink-0 gap-2 has-[>div:empty]:hidden">
         <AnswerPanel
           detail={detail}
-          showWait={!hasReview}
+          escalations={props.escalations}
+          onKeep={props.onKeep}
+          reviewTab={hasReview}
           streamedPrompt={(interactionId) => pendingAsk(thread.items, interactionId)}
         />
         {hasReview && tab !== 'review' ? (
@@ -108,9 +115,7 @@ function TicketBody(props: {
           >
             <p className="flex items-center gap-2 text-sm font-semibold">
               <CircleAlert aria-hidden="true" className="size-5 shrink-0 text-attn" />
-              {detail.ticket.status === 'needs_signoff'
-                ? 'This ticket needs your sign-off.'
-                : 'This ticket is ready for your review.'}
+              {reviewHeadline(detail)}
             </p>
             <Link
               to={ticketPath(slug, id, 'review')}
@@ -122,7 +127,7 @@ function TicketBody(props: {
         ) : null}
       </ScrollArea>
 
-      <PipelineStrip slug={slug} ticketId={id} stamp={ticketStamp(detail)} />
+      <PipelineStrip slug={slug} ticketId={id} />
       <RouteTabs label="Ticket" idPrefix="ticket" tabs={tabs} active={tab} />
       <TabPanel
         idPrefix="ticket"
@@ -138,7 +143,13 @@ function TicketBody(props: {
             memory={props.memory}
           />
         ) : null}
-        {tab === 'review' ? <ReviewTab detail={detail} /> : null}
+        {tab === 'review' ? (
+          <ReviewTab
+            detail={detail}
+            escalations={props.escalations}
+            onKeep={props.onKeep}
+          />
+        ) : null}
         {tab === 'runs' ? (
           <RunsTab slug={slug} detail={detail} selectedId={runId} />
         ) : null}
@@ -156,6 +167,9 @@ export function TicketPage() {
   const memory = useScrollMemory();
   const detail = query.data;
   const resolved = resolveTab<TicketTab>(segment, TICKET_TAB_IDS, 'conversation');
+  // Above the early returns and the tab redirect: an item settled on the Review tab must still be
+  // drawn (as its one-line settled card) once the ticket no longer has that tab.
+  const { shown, keep } = useKeptEscalations(detail?.escalations ?? []);
   const runParam = params.get('run') ?? undefined;
 
   useEffect(() => {
@@ -208,7 +222,7 @@ export function TicketPage() {
     return null;
   }
 
-  const hasReview = ticketHasReview(detail.ticket.status);
+  const hasReview = ticketHasReview(detail);
   // The Review tab is only there while the ticket waits on it: its URL falls back, not 404s.
   if (resolved.tab === 'review' && !hasReview) {
     return <Navigate to={ticketPath(slug, id, 'conversation', runParam)} replace />;
@@ -242,6 +256,8 @@ export function TicketPage() {
         tab={resolved.tab}
         hasReview={hasReview}
         memory={memory}
+        escalations={shown}
+        onKeep={keep}
       />
     </section>
   );

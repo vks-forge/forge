@@ -38,6 +38,7 @@ export const ArtifactKind = z.enum([
   'test_report',
   'findings',
   'gate_report',
+  'check_report',
 ]);
 export type ArtifactKind = z.infer<typeof ArtifactKind>;
 

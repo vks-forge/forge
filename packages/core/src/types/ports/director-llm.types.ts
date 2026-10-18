@@ -10,11 +10,12 @@
  *   family so retry and park decisions read the family, not message text
  *   (director-core.md §5, d-0032, d-0003).
  *
- * Exports: StepErrorKind, StepError, StepOptions, DirectorLLMCapabilities, DirectorLLM.
+ * Exports: StepErrorKind, StepError, StepOptions, DirectorLLMCapabilities, TicketCheckInput, DirectorLLM.
  * Depends on: schemas/errors, schemas/steps, types/result. Types only.
  */
 
 import type { ZodType } from 'zod';
+import type { ArtifactKind } from '#/schemas/agent.js';
 import type { ErrorFamily } from '#/schemas/errors.js';
 import type { StepName } from '#/schemas/steps.js';
 import type { Result } from '#/types/result.types.js';
@@ -43,6 +44,26 @@ export interface StepOptions {
 export interface DirectorLLMCapabilities {
   readonly structuredOutput: boolean;
   readonly reportsCost: boolean;
+}
+
+/**
+ * The input of the `ticket_check` step: typed artifacts only (never the Worker's narrative or
+ * claims), the files the plan did not name, and the method text. A driver renders it; nothing
+ * outside this shape reaches the model.
+ */
+export interface TicketCheckInput {
+  readonly artifacts: readonly {
+    readonly kind: ArtifactKind;
+    readonly content: string;
+    readonly truncated: boolean;
+  }[];
+  readonly unplanned: readonly string[];
+  readonly playbook: {
+    readonly id: string;
+    readonly title: string;
+    readonly body: string;
+  } | null;
+  readonly house_rules: string;
 }
 
 /** One finite LLM call: input in, schema-validated output or a typed {@link StepError} out. Never throws for a model failure. */

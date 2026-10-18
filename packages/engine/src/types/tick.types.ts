@@ -85,6 +85,8 @@ export interface Candidate {
   readonly ticket: Ticket;
   readonly kind: DispatchKind;
   readonly wake?: WakeRequest;
+  /** The member of a writer or check group this start is for; absent for a lone stage. */
+  readonly member?: string;
 }
 
 /** What a wake check needs from the tick; a read-only caller builds one without a report. */

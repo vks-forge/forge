@@ -7,7 +7,7 @@
  *   in step.
  *
  * Exports: FlowIssue, StepAction, WhenKind, LockedRule, StepInfo, DirectorKey,
- *   DirectorOverrideValue, DirectorRow, OverridableKey.
+ *   DirectorOverrideValue, DirectorRow, OverridableKey, SignOffTier.
  * Depends on: @forge/core (types). Types only.
  */
 
@@ -53,6 +53,9 @@ export interface DirectorRow {
   /** The company value in words. */
   readonly words: (d: DirectorConfig) => string;
 }
+
+/** How far the Director may sign finished work: `none`, tier A or tier B (tier C is always the owner's). */
+export type SignOffTier = DirectorConfig['sign_off']['max_tier'];
 
 /** The sections a project may override on its own (playbooks stay company-wide). */
 export type OverridableKey = Exclude<DirectorKey, 'playbooks'>;

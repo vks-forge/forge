@@ -67,6 +67,8 @@ export interface StageRunRepository {
   ): Promise<StageRun | null>;
   /** Every attempt of the ticket, oldest first. */
   listByTicket(ticketId: string): Promise<StageRun[]>;
+  /** One attempt by its row id, or null (the live strip resolves a finished row's ticket through this). */
+  get(id: number): Promise<StageRun | null>;
   /** The attempt a run belongs to, or null (a writer run of a ticket with no pipeline, a legacy run). */
   getByRun(runId: string): Promise<StageRun | null>;
   /** Applies `patch` to the attempt; a missing id throws. */

@@ -71,8 +71,11 @@ async function lookAt(ctx: EngineCtx, row: Interaction): Promise<void> {
 
   const view = toEscalation(row);
   const firstLook = directorFor(ctx, loaded.slug).director.escalation.director_first;
+  // A decision on a hold and a sign-off are the owner's alone: the Director never settles them.
   const ownerOnly =
     view.payload.kind === 'setup' ||
+    view.payload.kind === 'decision' ||
+    view.payload.kind === 'sign_off' ||
     (view.payload.kind === 'failure' &&
       (view.payload.cause === 'lane_hold' || view.payload.cause === 'question_timeout'));
 

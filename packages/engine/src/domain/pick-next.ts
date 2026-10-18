@@ -15,7 +15,7 @@
  *   the ticket page's "why is this waiting?", so the explanation can never disagree with
  *   what dispatch does.
  *
- * Exports: pickNext(), orderCandidates().
+ * Exports: pickNext(), orderCandidates(), candidateKey().
  * Depends on: types/pick-next. No IO.
  */
 
@@ -27,6 +27,14 @@ import type {
   WaitReason,
 } from '#/types/pick-next.types.js';
 
+/**
+ * The unique key of a candidate: the ticket id, plus the group member when the start is one
+ * member of a parallel group (a ticket then has one candidate per member, each placed on its own).
+ */
+export const candidateKey = (id: string, member?: string): string =>
+  member === undefined || member === '' ? id : `${id}#${member}`;
+
+// Members of one ticket tie here and keep their given order (the pipeline's), the sort being stable.
 const compare = (a: PickCandidate, b: PickCandidate): number =>
   b.priority - a.priority ||
   a.number - b.number ||

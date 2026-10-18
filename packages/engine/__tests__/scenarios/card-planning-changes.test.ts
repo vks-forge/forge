@@ -14,7 +14,7 @@
  * Depends on: helpers/planning-rig, vitest.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   cardOf,
   eventsOf,
@@ -27,6 +27,12 @@ import {
   tickets,
   todoPlan,
 } from '#tests/helpers/planning-rig.js';
+
+// Every lane runs now, so a held lane has to be stubbed to exercise the hold path still kept for a lane without a runner.
+vi.mock('#/domain/live-lanes.js', () => ({
+  LIVE_LANES: ['express', 'standard'],
+  isLive: (lane: string) => lane !== 'full',
+}));
 
 describe('request changes and ticket edits', () => {
   it('re-grills on the comment and writes version 2 with a diff', async () => {

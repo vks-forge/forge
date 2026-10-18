@@ -82,8 +82,9 @@ conversation, Back and Forward step through views, each tab keeps its scroll. Th
 pane: bubbles are narrow (70% / 36rem) and quiet, author and time show once per group with day
 separators, the list scrolls above a composer docked at the bottom. The **Ticket page**
 (`/p/:slug/tickets/:id/<tab>`) is the same frame: **Conversation** (the live Worker thread with
-the steer box docked below), **Review** (only while the ticket waits on review or sign-off:
-what will be merged, Approve and merge / Sign off and merge, rework, cancel), **Runs** (status,
+the steer box docked below), **Review** (only while the ticket waits on review or sign-off, or
+is held for your decision: the pending decision or sign-off card, what will be merged, each check's findings with
+`file:line`, rework, cancel), **Runs** (status,
 duration, cost per run; a run opens in Conversation via `?run=`) and **Details** (metadata,
 gates, cost by run). A question that waits on you and a ready-for-review notice stay above the
 tabs. Cost also shows small on Board tiles.
@@ -98,8 +99,12 @@ note, Use suggested, up to four options with Recommended, free text, Cancel), **
 (summary, diagnosis, attempts folded; held lane: Run as Express / Re-plan / Cancel; capped,
 refused, out of turns or timed out: Retry with an optional note / Re-plan / Cancel;
 Re-plan asks for a comment and says what happens to the tickets, Cancel asks and lists
-dependents with Cancel all) and **setup** (Fix in settings link, I fixed it check again,
-"resumes by itself"). While the Director is still looking the page says so and offers
+dependents with Cancel all), **setup** (Fix in settings link, I fixed it check again,
+"resumes by itself"), **decision** (S5c, a held ticket: blocking findings worst first with
+`file:line`, how often it was sent back, the files outside the plan; Merge anyway or Continue need
+a reason and say they overrule a hold, then Send back / Re-plan / Cancel) and **sign-off** (the
+tier in words, what the checks said, why the Director did not sign; Approve and merge, or Sign
+off and merge asking who signs for tier C). While the Director is still looking the page says so and offers
 nothing. A ticket in review, sign-off or a scheduler hold shows Send back for rework /
 Cancel or an "it starts by itself" line. The project sidebar gains **Issues** (open GitHub issues with verdict,
 confidence, size, risk and the analysis report; Approve → card, Re-analyse,
@@ -143,7 +148,10 @@ Amended by the UI pass U1 (shared surfaces, d-0164):
   a reason (held, with its reason, while the lane is already the default) and the **list
   editor**: ordered rows (kind icon, name, agent and role, move up and down, remove, Details),
   merge locked last and G1 pinned with a lock and the reason, and **Add stage** (Agent, Script
-  gate, Run-together group of 2 to 4 checks, Human sign-off, at most one). Details by kind: an
+  gate, Run-together group of 2 to 4 checks, Writers together of 2 to 4 writers with their
+  folders shown and overlapping folders refused, Director check, Sign-off (the Director signs
+  tier A and B, or always you; tier C is always you); one sign-off or older Human sign-off and
+  one Director check at most). Details by kind: an
   agent Picker over the effective roster (switched-off and archived agents shown greyed with the
   reason), the red-proof switch for a tester, for a check the d-0165 policy (send back up to 2
   times or hold for me; blocking severities; send back to a writer above), for a script gate its
@@ -152,7 +160,7 @@ Amended by the UI pass U1 (shared surfaces, d-0164):
   server's verdict from a debounced validate call joins them, warnings (a critic on the writer's
   model family) show as a notice, and **Save stays held** while a problem stands. The save bar
   has the reason (3 to 500 characters), the version being saved over, a 409 conflict banner (keep
-  mine or reload) and the leave guard. Full says it runs from the next update. A project also has
+  mine or reload) and the leave guard. All three lanes are live. A project also has
   **Routing rules**: glob chips and an agent Picker that offers reviewers and researchers only,
   reorder, remove, its own save bar. States: loading, error with retry, no agents (links to
   Agents), no routing rules, saved ("Saved as version N").
@@ -161,9 +169,16 @@ Amended by the UI pass U1 (shared surfaces, d-0164):
   lane, "Rework 1 of 2" and "added by rule" for a routed check. A chip opens the stage's detail
   in place: agent, round, times, a link to its run, finding counts by severity, the reviewer's
   summary and the artifacts (loaded when opened; the Worker's own account is labelled and the
-  panel says a reviewer never saw it); a group shows each member. Before the first dispatch it
-  says "Starts when the ticket is dispatched." The Review tab lists each check that reported,
-  with counts and words, and the rework it took.
+  panel says a reviewer never saw it). A group is a dashed frame with a chip per member (a
+  writer-group member also shows the folders it may write). The sign-off chip reads "Signed by
+  the Director", "Signed by you" or "Waiting for you"; a Director check with no plan reads "No
+  plan to check against" and otherwise opens as an acceptance checklist (Met, Not met, Unclear
+  with evidence) and the files outside the plan; an owner overrule shows "overruled by you" on
+  the chip and its reason in the detail; a stage with a warning (a critic on the Worker's model
+  family) says "has a note". Findings list each with severity, `file:line` and evidence. The strip
+  refetches when the project stream names its ticket (every stage write), with a slow poll behind
+  it. Before the first dispatch it says "Starts when the ticket is dispatched." The Review tab
+  lists each check that reported, with counts, words and every finding, and the rework it took.
 - **Unsaved dot**: a project-settings tab whose fields differ from the saved version shows a
   small amber dot (spoken as "unsaved changes"; "(unsaved)" in the phone picker).
 - **Empty states** are one component (centred, quiet icon, title, one help line, actions;

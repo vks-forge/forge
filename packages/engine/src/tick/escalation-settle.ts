@@ -50,6 +50,7 @@ export async function settleEscalation(
       action: answer.action,
       by: answer.by,
       ...(answer.note === undefined ? {} : { note: answer.note }),
+      ...(answer.comment === undefined ? {} : { comment: answer.comment }),
     },
   });
 

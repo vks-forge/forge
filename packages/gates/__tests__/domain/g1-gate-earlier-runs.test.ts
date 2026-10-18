@@ -8,7 +8,7 @@
  *   counts earlier runs of the ticket, but only if their receipt chains verify under their
  *   own secrets, so a forged or unverifiable earlier chain buys the Worker nothing.
  *
- * Pins: files edited by an earlier run are covered without a claim; a read claim is backed by
+ * Pins: files edited by two earlier runs (parallel writers) are covered by the third; files edited by an earlier run are covered without a claim; a read claim is backed by
  *   an earlier run's read receipt; a forged earlier chain and an earlier run whose secret is
  *   gone give no cover and the report says why; a file nobody's receipts cover still fails; a
  *   file this run edited itself still needs its own edited claim; the report names the run
@@ -86,6 +86,24 @@ describe('G1 with earlier runs of the ticket', () => {
     expect(verdict.status).toBe('passed');
     expect(verdict.report).toContain('run-0');
     expect(verdict.report).toContain('README.md');
+  });
+
+  it("covers files two other runs' receipts edited when the assignee claims only its own", async () => {
+    const own = chain([edit('o1', 'src/todos.js')]);
+
+    const verdict = await createG1Gate(
+      deps({
+        own,
+        earlier: {
+          'run-a': chain([edit('a1', 'README.md')]),
+          'run-b': chain([edit('b1', 'src/app.js')]),
+        },
+      }),
+    ).run(ctx(claimed('src/todos.js')));
+
+    expect(verdict.status).toBe('passed');
+    expect(verdict.report).toContain('run-a');
+    expect(verdict.report).toContain('run-b');
   });
 
   it('backs a read claim with an earlier run read receipt', async () => {

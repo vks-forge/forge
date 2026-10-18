@@ -59,8 +59,31 @@ describe('routeStages', () => {
     ]);
   });
 
-  it('places it before the human stage when the pipeline has one', () => {
+  it('places it before the Director check and the sign-off when the pipeline has them', () => {
     const out = routeStages(BUILTIN_PIPELINES.full, [rule()], ['a.tf'], roles);
+
+    expect(ids(out.definition.stages).slice(-4)).toEqual([
+      'route-net',
+      'check-plan',
+      'sign-off',
+      'merge',
+    ]);
+  });
+
+  it('places it before a human stage of an older saved list', () => {
+    const human = {
+      stages: BUILTIN_PIPELINES.full.stages.flatMap((s) => {
+        if (s.kind === 'director_check') {
+          return [];
+        }
+
+        return s.kind === 'sign_off'
+          ? [{ id: 'human', kind: 'human' as const, label: 'You', prompt: s.prompt }]
+          : [s];
+      }),
+    };
+
+    const out = routeStages(human, [rule()], ['a.tf'], roles);
 
     expect(ids(out.definition.stages).slice(-3)).toEqual(['route-net', 'human', 'merge']);
   });

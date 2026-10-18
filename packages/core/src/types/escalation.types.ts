@@ -12,8 +12,11 @@
  * Depends on: schemas/escalation, schemas/harness, schemas/harness-compat, schemas/ticket. Types only.
  */
 
-import type { EscalationView } from '#/schemas/escalation.js';
-import type { FailureCause } from '#/schemas/escalation.js';
+import type {
+  DecisionCause,
+  EscalationView,
+  FailureCause,
+} from '#/schemas/escalation.js';
 import type { HarnessKind, HarnessStatus } from '#/schemas/harness.js';
 import type { CompatStatus, ToolSchemaStatus } from '#/schemas/harness-compat.js';
 import type { TicketStatus } from '#/schemas/ticket.js';
@@ -64,9 +67,11 @@ export interface SetupFacts {
   readonly build?: { readonly compat: CompatStatus } | null;
 }
 
-/** What a parked ticket's reason text means. */
-export interface ParkClass {
-  readonly kind: 'failure';
-  readonly cause: FailureCause;
-  readonly summary: string;
-}
+/** What a parked ticket's reason text means: a failure, or a held ticket waiting for a decision. */
+export type ParkClass =
+  | { readonly kind: 'failure'; readonly cause: FailureCause; readonly summary: string }
+  | {
+      readonly kind: 'decision';
+      readonly cause: DecisionCause;
+      readonly summary: string;
+    };

@@ -5,17 +5,18 @@
  *   on a login or a denied tool must not look like any other failure. A retry fixes neither: it
  *   fails the same way and burns a run. Two pure rules read what the engine already writes. The
  *   first gives a parked ticket its failure cause (so the start-up sweep can offer "Run as
- *   Express" for a lane hold and "Retry" for a retry cap); the second names the setup the owner
+ *   Express" for a lane hold and "Retry" for a retry cap, and the Merge anyway card for a ticket held
+ *   with a `findings_hold:` or `scope_drift:` reason); the second names the setup the owner
  *   must fix (sign in, approve a tool, grant a tool) from the error family and the denials in the
  *   run's receipts. An unknown reason still gets a cause, so no parked ticket is left without a
  *   way forward.
  *
- * Exports: SETUP_DENIAL_REASONS, classifyPark(), setupCauseFor().
+ * Exports: SETUP_DENIAL_REASONS, classifyPark(), failureCauseOf(), setupCauseFor().
  * Depends on: schemas/errors, schemas/escalation, schemas/ticket, types/escalation. No IO.
  */
 
 import type { ErrorFamily } from '#/schemas/errors.js';
-import type { FailureCause, SetupCause } from '#/schemas/escalation.js';
+import type { DecisionCause, FailureCause, SetupCause } from '#/schemas/escalation.js';
 import type { Ticket } from '#/schemas/ticket.js';
 import type { DenyDecision, ParkClass, SetupContext } from '#/types/escalation.types.js';
 
@@ -30,6 +31,14 @@ export const SETUP_DENIAL_REASONS: readonly string[] = [
   'schema_denied',
   'not_granted',
   'unattended',
+];
+
+const DECISION_PREFIXES: readonly {
+  readonly prefix: string;
+  readonly cause: DecisionCause;
+}[] = [
+  { prefix: 'findings_hold:', cause: 'findings_hold' },
+  { prefix: 'scope_drift:', cause: 'scope_drift' },
 ];
 
 const clip = (text: string): string =>
@@ -77,10 +86,20 @@ export function classifyPark(
     return { kind: 'failure', cause: 'question_timeout', summary };
   }
 
+  // A held ticket (a stage's findings, work outside its plan) is a decision, not a failure.
+  const held = DECISION_PREFIXES.find((d) => reason.startsWith(d.prefix));
+  if (held) {
+    return { kind: 'decision', cause: held.cause, summary };
+  }
+
   const rule = RULES.find((r) => r.test(reason));
 
   return { kind: 'failure', cause: rule?.cause ?? 'not_retried', summary };
 }
+
+/** The failure cause of a classified park; a held ticket (a decision) or an unparked one has none, so it reads as "not retried". */
+export const failureCauseOf = (park: ParkClass | null): FailureCause =>
+  park?.kind === 'failure' ? park.cause : 'not_retried';
 
 /**
  * The setup an ended run needs, or null when it is an ordinary failure. `auth` is the harness's

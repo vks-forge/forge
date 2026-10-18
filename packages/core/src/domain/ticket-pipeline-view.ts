@@ -10,13 +10,16 @@
  *   fetched one by one by id so the strip stays small.
  *
  * Exports: ticketPipelineView().
- * Depends on: domain/stage-cursor, schemas/pipeline, schemas/stage-run, schemas/ticket,
+ * Depends on: domain/stage-cursor, domain/builtin-agent-texts/critic, schemas/pipeline, schemas/stage-run, schemas/ticket,
  *   types/pipeline-rules, types/stage-view. No IO.
  */
 
+import { SAME_FAMILY_WARNING } from '#/domain/builtin-agent-texts/critic.js';
 import { MAX_AUTO_REWORKS } from '#/domain/state-machine.js';
 import { currentCycle, cycleStart } from '#/domain/stage-cursor.js';
+import { isWriterRole } from '#/domain/stage-kinds.js';
 import type { Severity, Stage } from '#/schemas/pipeline.js';
+import { MAX_VIEW_FINDINGS } from '#/schemas/stage-run.js';
 import type {
   StageArtifact,
   StageRun,
@@ -66,6 +69,7 @@ function leaf(
   parent: string,
   ctx: ViewContext,
   agentOf: (stage: Stage) => StageView['agent'],
+  scope?: string[],
 ): StageView {
   const id = parent === '' ? stage.id : parent;
   const row = latest(ctx.records, id, member);
@@ -87,7 +91,13 @@ function leaf(
       ) as Record<Severity, number>)
     : undefined;
 
-  const summary = shown?.outcome.review?.summary ?? shown?.outcome.note;
+  const summary =
+    shown?.outcome.sign_reason ??
+    shown?.outcome.review?.summary ??
+    shown?.outcome.check?.summary ??
+    shown?.outcome.note;
+
+  const out = shown?.outcome;
   const agent = agentOf(stage);
   const rows = ctx.records.filter(
     (r) =>
@@ -106,6 +116,13 @@ function leaf(
     ...(shown?.ended_at ? { ended_at: shown.ended_at } : {}),
     ...(summary ? { summary } : {}),
     ...(counts ? { counts } : {}),
+    ...(out?.review ? { findings: out.review.findings.slice(0, MAX_VIEW_FINDINGS) } : {}),
+    warnings: out?.same_family ? [SAME_FAMILY_WARNING] : [],
+    ...(out?.signed_by ? { signed_by: out.signed_by } : {}),
+    ...(out?.override ? { override: out.override } : {}),
+    ...(scope && scope.length > 0 ? { scope } : {}),
+    ...(out?.check ? { check: out.check } : {}),
+    ...(out?.unplanned ? { unplanned: out.unplanned } : {}),
     artifacts: ctx.artifacts
       .filter((a) => rows.some((r) => r.id === a.stage_run_id))
       .map((a) => ({ id: a.id, kind: a.kind })),
@@ -132,6 +149,12 @@ export function ticketPipelineView(
   const agentOf = (s: Stage): StageView['agent'] =>
     s.kind === 'agent' ? { id: s.agent, name: names.get(s.agent) ?? s.agent } : undefined;
 
+  const scopes = new Map(roster.map((e) => [e.id, e.definition.write_scope]));
+  const scopeOf = (s: Stage): string[] | undefined =>
+    s.kind === 'agent' && isWriterRole(snapshot.roles[s.agent])
+      ? scopes.get(s.agent)
+      : undefined;
+
   const views = stages.map((stage): StageView => {
     if (stage.kind === 'merge') {
       // Merge leaves no row of its own: it has passed exactly when the ticket is done.
@@ -145,12 +168,22 @@ export function ticketPipelineView(
       return leaf(stage, '', '', ctx, agentOf);
     }
 
-    const members = stage.members.map((m) => leaf(m, m.id, stage.id, ctx, agentOf));
+    const members = stage.members.map((m) =>
+      leaf(
+        m,
+        m.id,
+        stage.id,
+        ctx,
+        agentOf,
+        stage.members.length > 1 ? scopeOf(m) : undefined,
+      ),
+    );
 
     return {
       id: stage.id,
       kind: 'group',
       label: stage.label,
+      warnings: members.flatMap((m) => m.warnings),
       members,
       status: rollUp(members),
       cycle: Math.max(cycle, ...members.map((m) => m.cycle)),

@@ -1,14 +1,14 @@
 /**
  * What the Director page says: step names, model choices, locked rules and number fields.
  *
- * Why: the Director page edits thirteen per-step models, a handful of limits and a flow, and
+ * Why: the Director page edits fifteen per-step models, a handful of limits and a flow, and
  *   shows the rules no setting can switch off. Each needs words an owner understands (what the
  *   step is for, what a limit does when it is reached, why a rule is locked), kept as data so
  *   a new Director step is a line here and the screens stay thin. The locked list is the set
  *   of d-0150; each reason says what would go wrong if the rule could be edited. The budget
  *   field says outright that it only warns, because the owner would otherwise assume a cap.
  *
- * Exports: STEP_INFO, MODEL_CHOICES, LOCKED_RULES, APPROVAL_ITEMS, DIRECTOR_FIELD_GROUPS,
+ * Exports: STEP_INFO, MODEL_CHOICES, LOCKED_RULES, APPROVAL_ITEMS, SIGN_OFF_ITEMS, SIGN_OFF_ORDER, DIRECTOR_FIELD_GROUPS,
  *   DIRECTOR_FIELDS, effectiveDirector(), overriddenKeys(), describeFlow().
  * Depends on: @forge/core (types), types/director-ui.types, types/settings-fields.types,
  *   types/picker.types. Pure data.
@@ -52,7 +52,33 @@ export const STEP_INFO: Readonly<Record<StepName, StepInfo>> = {
     label: 'Draft an agent',
     hint: 'Proposes an agent definition from your description; nothing is saved from it.',
   },
+  ticket_check: {
+    label: 'Check against the plan',
+    hint: 'Compares finished work with the plan before sign-off; it never sees the Worker’s own account.',
+  },
 };
+
+/** The sign-off ceilings, lowest to highest; tier C is not among them because it is always yours. */
+export const SIGN_OFF_ITEMS: readonly PickerItem[] = [
+  {
+    value: 'B',
+    label: 'Up to tier B',
+    description:
+      'The Director signs low and moderate risk changes when every check passed.',
+  },
+  {
+    value: 'A',
+    label: 'Tier A only',
+    description: 'The Director signs only the lowest-risk changes; tier B comes to you.',
+  },
+  {
+    value: 'none',
+    label: 'Never',
+    description: 'Every change waits for your signature.',
+  },
+];
+
+export const SIGN_OFF_ORDER = ['none', 'A', 'B'] as const;
 
 /** Common models offered first; anything else is typed in. */
 export const MODEL_CHOICES: readonly PickerItem[] = [
@@ -116,7 +142,7 @@ export const APPROVAL_ITEMS: readonly PickerItem[] = [
 
 const DIRECTOR_FIELD_LIST: Readonly<
   Record<
-    Exclude<OverridableKey, 'flow' | 'house_rules' | 'approval_mode'>,
+    Exclude<OverridableKey, 'flow' | 'house_rules' | 'approval_mode' | 'sign_off'>,
     readonly FieldSpec[]
   >
 > = {

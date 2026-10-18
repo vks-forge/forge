@@ -18,6 +18,7 @@ import type {
   EscalationQuestion,
   FailureCause,
   SetupCause,
+  SignOffCause,
 } from '@forge/core';
 
 const TITLE_MAX = 120;
@@ -31,6 +32,13 @@ const FAILURE_TITLES: Readonly<Record<FailureCause, string>> = {
   max_turns: 'Stopped: the Worker ran out of turns',
   refused: 'Stopped: the model declined the task',
   question_timeout: 'Stopped: a question went unanswered',
+};
+
+const SIGN_OFF_TITLES: Readonly<Record<SignOffCause, string>> = {
+  tier_c: 'Needs your sign-off: a tier C change',
+  tier_b: 'Ready for your approval',
+  owner_stage: 'Ready for your review',
+  director_declined: 'Ready for your sign-off: the Director did not sign',
 };
 
 const oneLine = (text: string, max: number): string => {
@@ -59,6 +67,12 @@ export function titleOf(payload: EscalationPayload): string {
       return FAILURE_TITLES[payload.cause];
     case 'setup':
       return setupTitle(payload.cause);
+    case 'decision':
+      return payload.cause === 'scope_drift'
+        ? 'Held: the change is bigger than planned'
+        : oneLine(`Held: ${payload.stage_label} found blocking findings`, TITLE_MAX);
+    case 'sign_off':
+      return SIGN_OFF_TITLES[payload.cause];
   }
 }
 

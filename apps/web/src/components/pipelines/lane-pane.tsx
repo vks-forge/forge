@@ -27,12 +27,7 @@ import { Button } from '#/components/ui/button.js';
 import { ConfirmDialog } from '#/components/ui/confirm-dialog.js';
 import { INPUT_CLASS } from '#/components/ui/field.js';
 import { Tooltip } from '#/components/ui/tooltip.js';
-import {
-  FULL_NOT_LIVE,
-  LANE_BLURB,
-  LANE_LABEL,
-  tagWords,
-} from '#/domain/pipeline-copy.js';
+import { LANE_BLURB, LANE_LABEL, tagWords } from '#/domain/pipeline-copy.js';
 import { REASON_MIN, usePipelineEditor } from '#/state/use-pipeline-editor.js';
 import type { PipelineList, PipelineScope } from '#/types/pipeline-api.types.js';
 
@@ -93,11 +88,6 @@ export function LanePane(props: {
             </div>
           </div>
           <p className="max-w-prose text-sm text-muted">{LANE_BLURB[lane]}</p>
-          {editor.view.live ? null : (
-            <Notice tone="info" title={FULL_NOT_LIVE}>
-              A held Full ticket offers Run as Express in your inbox.
-            </Notice>
-          )}
         </header>
 
         {editor.resetError ? (

@@ -60,7 +60,7 @@ export function wakeDelta(
 
     return {
       kind: 'rework',
-      previous_run: c.wake.idempotency_key,
+      previous_run: c.wake.idempotency_key.split('~')[0] ?? c.wake.idempotency_key,
       ...(owner
         ? { owner_comment: c.wake.reason.replace(/^owner_rework: /, '') }
         : { gate_findings: c.wake.reason.replace(/^gate_failed: /, '') }),

@@ -9,12 +9,12 @@
  *   which is decided by the role the snapshot recorded for the agent, and an agent the snapshot
  *   does not know counts as a check, so the narrower rules apply (fail closed).
  *
- * Exports: readStageState(), isCheckRow().
+ * Exports: readStageState(), isCheckRow(), holdsRun().
  * Depends on: @forge/core (stageCursor, currentCycle), types/stage-runner. Reads storage.
  */
 
 import { currentCycle, stageCursor } from '@forge/core';
-import type { StageRun, StorageTx, TicketPipeline } from '@forge/core';
+import type { StageRun, StorageTx, Ticket, TicketPipeline } from '@forge/core';
 import type { StageState } from '#/types/stage-runner.types.js';
 
 /** The ticket's snapshot, rows, cycle and next step; null when it has no pipeline snapshot yet. */
@@ -31,6 +31,24 @@ export async function readStageState(
   const cycle = currentCycle(records);
 
   return { snapshot, records, cycle, cursor: stageCursor(snapshot, records, cycle) };
+}
+
+/**
+ * True when `runId` is the ticket's current run, or carries a member of a group of writers (a stage
+ * row of an agent with a member id): the members run beside each other, so only the newest is current.
+ */
+export async function holdsRun(
+  tx: StorageTx,
+  ticket: Pick<Ticket, 'assignee_run_id'>,
+  runId: string,
+): Promise<boolean> {
+  if (ticket.assignee_run_id === runId) {
+    return true;
+  }
+
+  const row = await tx.stageRuns.getByRun(runId);
+
+  return row !== null && row.kind === 'agent' && row.member_id !== '';
 }
 
 /** True when `row` is an attempt of a read-only agent (or of one the snapshot cannot place). */

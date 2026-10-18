@@ -10,14 +10,14 @@
  *   upgrade must leave existing tickets and wakes readable, and the new `stage` wake kind must be
  *   storable without rebuilding the wake table.
  *
- * Pins: the three tables and their columns, the unique key and both indexes, the CHECK lists equal
- *   to core's (lanes, stage statuses, stage kinds, artifact kinds), a duplicate attempt refused,
+ * Pins: the three tables and their columns, the unique key and both indexes, the CHECK lists at version 25
+ *   (lanes and statuses equal core's, kinds the literal 0025 sets; later migrations widen them), a duplicate attempt refused,
  *   existing tickets and wakes untouched, a `stage` wake accepted and read back, and that
  *   storage reads an upgraded database.
  * Depends on: src/index, @forge/core, vitest. IO: in-memory SQLite.
  */
 
-import { ArtifactKind, Lane, STAGE_RUN_KINDS, STAGE_RUN_STATUSES } from '@forge/core';
+import { Lane, STAGE_RUN_STATUSES } from '@forge/core';
 import { describe, expect, it } from 'vitest';
 import {
   MIGRATIONS,
@@ -107,15 +107,30 @@ describe('0025 stage runner', () => {
     );
   });
 
-  it("copies core's kind lists into its CHECKs at this version", () => {
+  it('writes its own CHECK lists as literals at this version', () => {
     const driver = openSqliteDriver(':memory:');
-    runMigrations(driver);
+    runMigrations(
+      driver,
+      MIGRATIONS.filter((m) => m.id <= 25),
+    );
 
     expect(checkList(driver, 'ticket_pipelines', 'lane')).toEqual([...Lane.options]);
     expect(checkList(driver, 'stage_runs', 'status')).toEqual([...STAGE_RUN_STATUSES]);
-    expect(checkList(driver, 'stage_runs', 'kind')).toEqual([...STAGE_RUN_KINDS]);
+    expect(checkList(driver, 'stage_runs', 'kind')).toEqual([
+      'agent',
+      'script_gate',
+      'human',
+    ]);
+
     expect(checkList(driver, 'stage_artifacts', 'kind')).toEqual([
-      ...ArtifactKind.options,
+      'plan',
+      'ticket',
+      'diff',
+      'finish_claims',
+      'narrative',
+      'test_report',
+      'findings',
+      'gate_report',
     ]);
   });
 

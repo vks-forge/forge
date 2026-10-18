@@ -4,7 +4,7 @@
  * Why: some changes deserve a second pair of eyes whatever the lane: a Terraform file wants a
  *   network reviewer, a migration a database one (d-0069). A rule says "when these paths are
  *   touched, add this agent". Rules only ever make a pipeline stricter: a matching rule appends
- *   one check right before the human or merge stage, and nothing is ever removed or reordered.
+ *   one check right before the Director check, the sign-off or human stage, or merge, and nothing is ever removed or reordered.
  *   They are evaluated twice, on the plan's files when the ticket takes its snapshot and again
  *   on the real diff when verifying starts, so a change that grew into a sensitive path is
  *   caught. A rule that names a writer, or an agent the ticket does not know as a check, is
@@ -70,8 +70,10 @@ export function routeStages(
     return { definition: def, fired };
   }
 
-  // Before the human stage when there is one, else before merge: the last two kinds close the list.
-  const at = def.stages.findIndex((s) => s.kind === 'human' || s.kind === 'merge');
+  // Before the Director check, the sign-off or human stage when there is one, else before merge:
+  // those kinds close the list, and the Director check judges after every other check.
+  const closing = ['human', 'sign_off', 'director_check', 'merge'];
+  const at = def.stages.findIndex((s) => closing.includes(s.kind));
   const stages = [...def.stages];
   stages.splice(at < 0 ? stages.length : at, 0, ...added);
 

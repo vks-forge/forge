@@ -3,28 +3,26 @@
  *
  * Why: when a writer's stage passes, the ticket either has another writer to run (a `stage` wake
  *   starts it while the ticket stays In Progress), a red proof to run first, or is done writing
- *   and moves to Verifying. The red proof is the check that a test-writer's new tests really
- *   fail before the implementation exists (d-0015); it runs the project's test command on the
- *   worktree through the script runner, beside the tick, and is advisory: tests that already
- *   pass are reported to the next reviewer and noted on the card, never a block. A project with
- *   no test command, or a server with no runner, skips the proof with a note. Every tick this
- *   phase finds in-progress tickets with a proof due or finished, so a restart resumes it.
+ *   and moves to Verifying. A group of writers is several Workers at once: each member that has not
+ *   started gets a wake of its own, every tick, even while a sibling's run is live, so the
+ *   scheduler starts them as the Worker limits allow and a restart loses none. The red proof is the
+ *   check that a test-writer's new tests really fail before the implementation exists (d-0015); it
+ *   runs the project's test command on the worktree through the script runner, beside the tick, and
+ *   is advisory: tests that already pass are reported to the next reviewer and noted on the card,
+ *   never a block. A project with no test command, or a server with no runner, skips the proof
+ *   with a note. Every tick this phase finds in-progress tickets with a proof due or finished, so a
+ *   restart resumes it.
  *
  * Exports: advanceStagesTx(), advanceStages().
- * Depends on: @forge/core (stageCursor, currentCycle), tick/{card-log,project-runtime,stage-artifacts,stage-records,
- *   stage-script-jobs,stage-state,ticket-moves,tick-config}, types/stage-runner. IO: git worktree, the script runner.
+ * Depends on: @forge/core (stageCursor, currentCycle), tick/{project-runtime,stage-proof,stage-records,
+ *   stage-script-jobs,stage-state,ticket-moves}, types/stage-runner. IO: git worktree, the script runner.
  */
 
 import { currentCycle, stageCursor } from '@forge/core';
 import type { AgentStage, StorageTx, Ticket, TicketPipeline } from '@forge/core';
 import { FAR_FUTURE } from '#/shared/time.js';
-import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
 import { baseRefFor, runtimeFor } from '#/tick/project-runtime.js';
-import {
-  makeDraft,
-  persistArtifacts,
-  pipelineHasChecks,
-} from '#/tick/stage-artifacts.js';
+import { finishProof, testCheck } from '#/tick/stage-proof.js';
 import { beginStageRun, finishStageRun, requestStageWake } from '#/tick/stage-records.js';
 import {
   hasJob,
@@ -34,9 +32,7 @@ import {
 } from '#/tick/stage-script-jobs.js';
 import { readStageState } from '#/tick/stage-state.js';
 import { moveTicketTx } from '#/tick/ticket-moves.js';
-import { projectSettings } from '#/tick/tick-config.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
-import type { StageJobOutcome } from '#/types/stage-runner.types.js';
 
 /** A red proof gets as long as a normal project test run. */
 const PROOF_TIMEOUT_MS = 10 * 60 * 1000;
@@ -68,6 +64,25 @@ export async function advanceStagesTx(
     return 'waiting';
   }
 
+  if (cursor.kind === 'run_writers') {
+    // Each member that has not started has a wake of its own, so the scheduler places it against
+    // the Worker limits: both start at once when there is room, one after the other when not.
+    for (const m of cursor.members) {
+      await requestStageWake(
+        ctx,
+        tx,
+        ticket.id,
+        cursor.stage.id,
+        cycle,
+        `stage:${cursor.stage.id}`,
+        undefined,
+        m.id,
+      );
+    }
+
+    return 'waiting';
+  }
+
   if (cursor.kind === 'await') {
     return 'waiting';
   }
@@ -92,66 +107,8 @@ export async function advanceStagesTx(
   return 'verifying';
 }
 
-/** The project's test check, the command the red proof runs. */
-function testCheck(ctx: EngineCtx, slug: string) {
-  return projectSettings(ctx.config, slug).checks.find((c) => c.role === 'test');
-}
-
-/** Writes the proof's result on its row and, for a pipeline with checks, as the test report. */
-async function finishProof(
-  ctx: EngineCtx,
-  tx: StorageTx,
-  ticket: Ticket,
-  snapshot: TicketPipeline,
-  rowId: number,
-  outcome: StageJobOutcome,
-): Promise<void> {
-  const ran =
-    outcome.ok &&
-    outcome.verdict.status !== 'error' &&
-    outcome.verdict.status !== 'skipped';
-
-  const red = outcome.ok && outcome.verdict.status === 'passed';
-  const report = outcome.ok
-    ? outcome.verdict.report
-    : `The red proof could not run: ${outcome.error instanceof Error ? outcome.error.message : String(outcome.error)}`;
-
-  const note = red
-    ? 'the new tests fail before the implementation, as they should'
-    : ran
-      ? 'the new tests already pass before the implementation, so they may not test the change'
-      : 'the red proof could not run; it is advisory, so work goes on';
-
-  await finishStageRun(
-    tx,
-    rowId,
-    ran ? 'passed' : 'skipped',
-    { red, note, ...(outcome.ok ? { gate: { status: outcome.verdict.status } } : {}) },
-    ctx.nowIso,
-  );
-
-  if (pipelineHasChecks(snapshot)) {
-    await persistArtifacts(
-      tx,
-      ticket.id,
-      rowId,
-      [makeDraft('test_report', `${note}\n\n${report}`)],
-      ctx.nowIso,
-    );
-  }
-
-  if (ran && !red) {
-    await logCardEvent(tx, ticket.card_id, {
-      kind: 'note',
-      at: ctx.nowIso,
-      actor: ENGINE_ACTOR,
-      payload: { text: `${ticket.id}: ${note}.` },
-    });
-  }
-}
-
 /** One in-progress ticket whose pipeline asks for a red proof: apply a finished one, skip or start one. */
-async function advanceOne(ctx: EngineCtx, ticket: Ticket): Promise<void> {
+async function advanceOne(ctx: EngineCtx, ticket: Ticket, live: boolean): Promise<void> {
   const { deps } = ctx;
   const state = await deps.storage.transaction((tx) => readStageState(tx, ticket.id));
   if (!state) {
@@ -159,6 +116,11 @@ async function advanceOne(ctx: EngineCtx, ticket: Ticket): Promise<void> {
   }
 
   const { cursor } = state;
+  // A run is live: only a writer group still has something to do (its other members start beside it).
+  if (live && cursor.kind !== 'run_writers') {
+    return;
+  }
+
   // A proof is due (`run_proof`) or running (`await` on a tester stage that asks for one).
   const proving =
     cursor.kind === 'run_proof' ||
@@ -281,12 +243,12 @@ export async function advanceStages(ctx: EngineCtx): Promise<void> {
   );
 
   for (const ticket of tickets) {
-    if (ticket.assignee_run_id && ctx.state.pumps.has(ticket.assignee_run_id)) {
-      continue;
-    }
+    const live = Boolean(
+      ticket.assignee_run_id && ctx.state.pumps.has(ticket.assignee_run_id),
+    );
 
     try {
-      await advanceOne(ctx, ticket);
+      await advanceOne(ctx, ticket, live);
     } catch (e) {
       ctx.report.errors.push({
         where: `advance ${ticket.id}`,

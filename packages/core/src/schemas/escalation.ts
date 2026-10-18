@@ -9,23 +9,36 @@
  *   enum says what the owner can do about it, and one view is what every screen reads, so the
  *   Director's first attempt (a suggested answer, a diagnosis, the attempts so far) and the
  *   owner's choice share a shape. Escalations reuse the `interactions` row (d-0141 item 8): the
- *   payload rides in `payload_json` and the answer in `answer_json`.
+ *   payload rides in `payload_json` and the answer in `answer_json`. Two kinds cover finished
+ *   work: a `decision` is a held ticket (a stage's findings, or work that outgrew its plan) and a
+ *   `sign_off` is finished work waiting for the owner's name; both start at the owner (the
+ *   Director's first look has nothing to add) and their overriding options need a written reason.
  *
  * Exports: EscalationKind, FAILURE_CAUSES, FailureCause, SetupCause, EscalationOption,
- *   EscalationQuestion, EscalationFailure, EscalationSetup, EscalationPayload, ESCALATION_ACTIONS,
+ *   EscalationQuestion, EscalationFailure, EscalationSetup, DECISION_CAUSES, DecisionCause,
+ *   EscalationDecision, SIGN_OFF_CAUSES, SignOffCause, EscalationSignOff, EscalationPayload, ESCALATION_ACTIONS,
  *   EscalationAction, EscalationActor, EscalationAnswer, EscalationStage, EscalationSettled,
  *   EscalationView, EscalationList, EscalationActReply, TicketActReply, EscalationActBody, MAX_OPTIONS.
- * Depends on: schemas/errors, schemas/harness, schemas/ids, schemas/interaction, schemas/ticket, zod. No IO.
+ * Depends on: schemas/errors, schemas/finding, schemas/harness, schemas/ids, schemas/interaction,
+ *   schemas/pipeline, schemas/ticket, zod. No IO.
  */
 
 import { z } from 'zod';
 import { ErrorFamily } from '#/schemas/errors.js';
 import { HarnessId, HarnessKind } from '#/schemas/harness.js';
+import { Finding } from '#/schemas/finding.js';
 import { CardId, TicketId } from '#/schemas/ids.js';
 import { InteractionStatus } from '#/schemas/interaction.js';
-import { Lane } from '#/schemas/ticket.js';
+import { Severity, StageId } from '#/schemas/pipeline.js';
+import { Lane, Tier } from '#/schemas/ticket.js';
 
-export const EscalationKind = z.enum(['question', 'failure', 'setup']);
+export const EscalationKind = z.enum([
+  'question',
+  'failure',
+  'setup',
+  'decision',
+  'sign_off',
+]);
 export type EscalationKind = z.infer<typeof EscalationKind>;
 
 /** Why a ticket failed and waits; the order is the order the contract lists them. */
@@ -111,11 +124,61 @@ export const EscalationSetup = z.object({
 });
 export type EscalationSetup = z.infer<typeof EscalationSetup>;
 
+/** Why a held ticket waits for a decision: a stage's findings it will not send back again, or work that outgrew its plan. */
+export const DECISION_CAUSES = ['findings_hold', 'scope_drift'] as const;
+export const DecisionCause = z.enum(DECISION_CAUSES);
+export type DecisionCause = z.infer<typeof DecisionCause>;
+
+/** A held ticket's choice (d-0135): merge anyway, send back or re-plan for findings; continue or re-plan for scope drift. */
+export const EscalationDecision = z.object({
+  kind: z.literal('decision'),
+  cause: DecisionCause,
+  summary: z.string().min(1),
+  stage_id: StageId,
+  stage_label: z.string().min(1),
+  /** The blocking findings, capped. */
+  findings: z.array(Finding).max(20),
+  /** Scope drift: changed files the plan did not name. */
+  unplanned: z.array(z.string()).max(50).optional(),
+  rework: z.object({
+    count: z.number().int().nonnegative(),
+    cap: z.number().int().positive(),
+  }),
+});
+export type EscalationDecision = z.infer<typeof EscalationDecision>;
+
+export const SIGN_OFF_CAUSES = [
+  'tier_b',
+  'tier_c',
+  'owner_stage',
+  'director_declined',
+] as const;
+export const SignOffCause = z.enum(SIGN_OFF_CAUSES);
+export type SignOffCause = z.infer<typeof SignOffCause>;
+
+/** Finished work waiting for the owner's name: why it did not go through the Director, and what passed. */
+export const EscalationSignOff = z.object({
+  kind: z.literal('sign_off'),
+  cause: SignOffCause,
+  tier: Tier,
+  summary: z.string().min(1),
+  /** Why the Director did not sign, when it looked first. */
+  director_note: z.string().min(1).optional(),
+  checks: z.object({
+    passed: z.number().int().nonnegative(),
+    counts: z.record(Severity, z.number().int().nonnegative()),
+    overrides: z.number().int().nonnegative(),
+  }),
+});
+export type EscalationSignOff = z.infer<typeof EscalationSignOff>;
+
 /** The payload of a new escalation row, told apart by `kind` (which mirrors the row kind). */
 export const EscalationPayload = z.discriminatedUnion('kind', [
   EscalationQuestion,
   EscalationFailure,
   EscalationSetup,
+  EscalationDecision,
+  EscalationSignOff,
 ]);
 export type EscalationPayload = z.infer<typeof EscalationPayload>;
 
@@ -130,6 +193,10 @@ export const ESCALATION_ACTIONS = [
   'recheck',
   'approve',
   'sign_off',
+  /** Owner only: merge held work although a check found blocking findings (comment recorded). */
+  'merge_anyway',
+  /** Owner only: carry on although the work outgrew its plan (comment recorded). */
+  'continue',
   /** Engine only: a held ticket's lane went live and the hold lifted by itself; never offered as a button. */
   'pipeline_ready',
 ] as const;
@@ -211,6 +278,8 @@ export const EscalationActBody = z.discriminatedUnion('action', [
   z.object({ action: z.literal('run_as_express') }),
   z.object({ action: z.literal('rework'), comment }),
   z.object({ action: z.literal('recheck') }),
+  z.object({ action: z.literal('merge_anyway'), comment }),
+  z.object({ action: z.literal('continue'), comment }),
   z.object({ action: z.literal('approve') }),
   z.object({
     action: z.literal('sign_off'),

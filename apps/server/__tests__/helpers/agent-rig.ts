@@ -67,7 +67,12 @@ export function agentBody(over: Record<string, unknown> = {}): Record<string, un
 }
 
 export async function startAgentRig(
-  opts: { ports?: boolean; draft?: unknown } = {},
+  opts: {
+    ports?: boolean;
+    draft?: unknown;
+    /** Connects a second harness whose models are another vendor's family (OpenAI), so a critic can be refused. */
+    second?: boolean;
+  } = {},
 ): Promise<AgentRig> {
   const storage = createMemoryStorage();
   const config = createMemoryConfigSource();
@@ -110,6 +115,24 @@ export async function startAgentRig(
     },
   } as unknown as WorkerDriver;
 
+  const other = {
+    id: 'codex',
+    models: async () => [
+      {
+        id: 'gpt-5',
+        label: 'GPT-5',
+        speed: 'balanced',
+        cost: 'medium',
+        recommended_for: ['writer'],
+      },
+    ],
+    probe: (req: AgentProbeRequest) => {
+      probes.push(req);
+
+      return probe(req);
+    },
+  } as unknown as WorkerDriver;
+
   const director = createScriptedDirector(
     opts.draft === undefined ? {} : { draft_agent: opts.draft },
   );
@@ -123,7 +146,12 @@ export async function startAgentRig(
       ...inertRouteExtras(),
       ...(opts.ports === false
         ? {}
-        : { agentPorts: { drivers: createDriverRegistry([driver]), llm: director.llm } }),
+        : {
+            agentPorts: {
+              drivers: createDriverRegistry(opts.second ? [driver, other] : [driver]),
+              llm: director.llm,
+            },
+          }),
       hooks: { handle: vi.fn() },
       owner: 'srv-test',
       startedAt: 0,

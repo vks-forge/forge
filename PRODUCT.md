@@ -96,8 +96,8 @@ Director flow and playbooks); a cross-project Overview at `/`. UI
 preferences persist across reloads.
 
 **Not yet:** GitHub Issues intake and the Issues page (P5); the card Director
-cannot yet pause or restart tickets; Express and Standard lanes run Workers
-through their pipelines, Full is editable but held until S5c; not packaged or published.
+cannot yet pause or restart tickets; the Director does not yet adjust a ticket's
+pipeline or keep agent scorecards (S5d); not packaged or published.
 
 **Known limits:** Workers and project checks run as the user's own Windows
 account, so code a Worker writes (a test, a script) can read Forge's data
@@ -121,6 +121,7 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-18: Full lane live (S5c): Full tickets run test-writer, implementer, G1, reviewer and critic, the Director's check of the work against the plan and acceptance criteria (typed results only, no Worker narrative), then a sign-off the Director gives for tier A and B up to a ceiling set in Director settings while tier C always comes to you; held findings and scope drift ask you with Merge anyway, Continue, Send back or Re-plan (a reason is recorded), Standard at the rework cap now holds with Merge anyway; every wait on finished work is one item in card chat, the Ticket page and the Inbox; writer groups run in parallel in one worktree with disjoint folders; the stage strip updates live and the Review tab lists each finding with file and line.
 - 2026-10-18: Pipeline editor (S5b-B): Forge settings and project settings get a Pipelines area with one list editor per lane (Express, Standard, Full) that keeps merge and G1 locked, adds agent, script-gate, run-together and human stages, sets each check to send back or hold, checks the list live with the server and explains every problem in words; projects can change a lane from the company default with Reset and add routing rules (paths add a reviewer or researcher); the ticket page shows a stage strip (status, rework round, added-by-rule) with stage details, and the Review tab lists what the checks found.
 - 2026-10-18: Agents screens and stage runner (S5a-B, S5b-A): Forge and project settings get an Agents area (roster with tags, one editor for every agent with Runs on, tools by role, write scope, budget, Test agent, template gallery and Describe it to the Director); tickets now run through snapshot lane pipelines, Standard is live (test-writer with red proof, implementer, G1, an independent read-only reviewer whose blocking findings send work back for rework up to the cap, d-0165), held tickets of live lanes resume by themselves, Full stays held; the unused project stats route is removed (d-0166).
 - 2026-10-17: Agents backend S5a-A: agents are config rows (four built-ins: implementer, test-writer, reviewer, critic; six templates) with company and per-project scopes (override, disable, own agents), role bounds that keep reviewers read-only, a per-agent tool grant that can only narrow what a run may do, "Runs on" harness and model per agent with readiness, Test agent (one capped call) and Describe it to the Director drafting; runs record the agent id and hash, and Express dispatch is pinned byte-for-byte to today's request. The web Agents screens land with S5a-B.

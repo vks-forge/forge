@@ -117,6 +117,12 @@ export function memoryStageRuns(state: MemoryState): StageRunRepository {
       return found ? structuredClone(found) : null;
     },
 
+    async get(id) {
+      const found = state.stageRuns.find((r) => r.id === id);
+
+      return found ? structuredClone(found) : null;
+    },
+
     async listByTicket(ticketId) {
       return structuredClone(state.stageRuns.filter((r) => r.ticket_id === ticketId));
     },

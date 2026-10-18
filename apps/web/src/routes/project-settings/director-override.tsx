@@ -17,7 +17,11 @@
 import type { DirectorConfig } from '@forge/core';
 import { Link } from 'react-router';
 import { FlowEditor } from '#/components/director/flow-editor.js';
-import { ApprovalField, HouseRulesField } from '#/components/director/rules-fields.js';
+import {
+  ApprovalField,
+  HouseRulesField,
+  SignOffField,
+} from '#/components/director/rules-fields.js';
 import { ConfigFields } from '#/components/settings/config-fields.js';
 import { Button } from '#/components/ui/button.js';
 import {
@@ -28,6 +32,7 @@ import {
 import {
   APPROVAL_ITEMS,
   DIRECTOR_FIELDS,
+  SIGN_OFF_ITEMS,
   describeFlow,
   effectiveDirector,
   overriddenKeys,
@@ -48,6 +53,13 @@ const ROWS: readonly DirectorRow[] = [
     label: 'Director plan approval',
     hint: 'Whether the Director may approve a plan that passes the fixed checks.',
     words: (d) => APPROVAL_ITEMS.find((i) => i.value === d.approval_mode)?.label ?? '',
+  },
+  {
+    key: 'sign_off',
+    label: 'Director sign-off',
+    hint: 'How far the Director may sign finished work here. A project can only lower the company setting; tier C always needs you.',
+    words: (d) =>
+      SIGN_OFF_ITEMS.find((i) => i.value === d.sign_off.max_tier)?.label ?? '',
   },
   {
     key: 'grill',
@@ -120,6 +132,14 @@ export function DirectorOverride(props: {
           <ApprovalField
             value={seen.approval_mode}
             onChange={(v) => write({ ...value, approval_mode: v })}
+          />
+        );
+      case 'sign_off':
+        return (
+          <SignOffField
+            value={seen.sign_off.max_tier}
+            ceiling={company.sign_off.max_tier}
+            onChange={(max_tier) => write({ ...value, sign_off: { max_tier } })}
           />
         );
       case 'flow':

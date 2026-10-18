@@ -10,7 +10,7 @@
  *   server's own problems are read from the refusal so the same sentences appear. Pure.
  *
  * Exports: PROBLEM_WORDS, problemWords(), problemsOf(), pipelineErrorText(), KIND_LABEL,
- *   LANE_LABEL, LANE_BLURB, LANE_ORDER, tagWords(), SEVERITY_LABEL, SEVERITIES, FULL_NOT_LIVE.
+ *   LANE_LABEL, LANE_BLURB, LANE_ORDER, tagWords(), SEVERITY_LABEL, SEVERITIES.
  * Depends on: api/api-error, api/describe-error, schemas/pipelines, zod.
  */
 
@@ -41,10 +41,22 @@ export const PROBLEM_WORDS: Readonly<Record<ProblemCode, string>> = {
   reviewer_first: 'A reviewer needs something to review. Put a writer above it.',
   self_review:
     'This agent also writes in this pipeline, so it would approve its own work. Pick a different agent.',
-  group_writer: 'A group can hold checks only, not writers.',
-  group_size: 'A group holds 2 to 4 checks.',
+  group_writer: 'A group of checks cannot hold a writer.',
+  group_size: 'A group holds 2 to 4 members.',
+  group_mixed: 'A group holds checks only or writers only, never both.',
+  writer_scope_overlap:
+    'Two writers in this group could change the same files. Give each writer its own folders under Agents.',
+  writer_group_proof:
+    'A writer inside a group cannot need red proof. Move that test writer out of the group.',
   human_position:
     'The human sign-off has to come after every check, and there can be only one.',
+  director_check_position:
+    'The Director check goes after G1 and after every other check.',
+  director_check_duplicate: 'The Director check can appear only once.',
+  sign_off_position:
+    'The sign-off has to come after every check and the Director check, and there can be only one.',
+  critic_same_family:
+    'The critic runs on the same model family as the Worker. A second family is connected, so pick a critic that runs on another one.',
   rework_target: '“Send back to” has to be a writer above this stage.',
   script_invalid:
     'The command or folder is not allowed. Write a one-line command and a folder inside the repository.',
@@ -118,6 +130,8 @@ export const KIND_LABEL = {
   script_gate: 'Script gate',
   group: 'Run-together group',
   human: 'Human sign-off',
+  director_check: 'Director check',
+  sign_off: 'Sign-off',
   merge: 'Merge',
 } as const;
 
@@ -132,11 +146,8 @@ export const LANE_LABEL = {
 export const LANE_BLURB = {
   express: 'Small, low-risk changes: one Worker, then the gate.',
   standard: 'Everyday changes: tests first, the implementation, the gate, then a review.',
-  full: 'Large or risky changes: tests, the gate, a review and critique, then your sign-off.',
+  full: 'Large or risky changes: tests, the gate, a review and critique, the Director’s check against the plan, then sign-off.',
 } as const;
-
-export const FULL_NOT_LIVE =
-  'Runs from the next update; Full tickets wait until then. You can edit it now.';
 
 export const SEVERITIES = ['critical', 'high', 'medium', 'low'] as const;
 

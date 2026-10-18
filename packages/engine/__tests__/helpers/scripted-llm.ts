@@ -97,6 +97,14 @@ const DEFAULTS: Record<StepName, Scripted> = {
   // does not care about the Director's first look still ends with the owner holding the wait.
   ticket_answer: { decision: 'escalate', confidence: 0.1, grounds: [] },
   ticket_recover: { decision: 'escalate', diagnosis: 'Needs a person.', confidence: 0.1 },
+  // The Director's check of finished work against its plan: a clean pass unless a scenario scripts otherwise.
+  ticket_check: {
+    verdict: 'pass',
+    summary: 'The change meets the plan.',
+    acceptance: [{ criterion: 'it works', met: 'yes', evidence: 'src/a.ts:1' }],
+    findings: [],
+    confidence: 0.9,
+  },
   // Drafting an agent is a button the owner presses; scenarios that do not press it never read this.
   draft_agent: {
     definition: {

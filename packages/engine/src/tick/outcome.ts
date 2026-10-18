@@ -64,15 +64,24 @@ export async function applyOutcome(
     ? await tx.runs.get(ticket.assignee_run_id)
     : null;
 
-  if (current && current.id !== run.id && isRunActive(current)) {
-    return;
-  }
-
-  const { log } = ctx.deps;
   // A run that carries a pipeline stage: a check applies its verdict, a writer passes its stage
   // and the cursor says what is next. A run with no stage row (from before pipelines) is the old path.
   const row = await tx.stageRuns.getByRun(run.id);
   const staged = row ? await readStageState(tx, ticket.id) : null;
+  // A member of a writer group runs beside its siblings: only the newest is the assignee, and the
+  // settle of the others must not be taken for a late result of a run that was replaced.
+  const parallel =
+    row !== null &&
+    staged !== null &&
+    row.kind === 'agent' &&
+    row.member_id !== '' &&
+    !isCheckRow(staged.snapshot, row);
+
+  if (current && current.id !== run.id && isRunActive(current) && !parallel) {
+    return;
+  }
+
+  const { log } = ctx.deps;
   if (row && staged) {
     if (isCheckRow(staged.snapshot, row)) {
       return applyCheckOutcome(ctx, tx, ticket, run, result, family, row, staged);

@@ -9,14 +9,24 @@
  *   count as satisfied by their earlier passed records, so the test-writer is not re-run when
  *   the implementer is sent back. Anything the cursor cannot make sense of (an agent nobody
  *   knows, a failed row in the cycle it is asked about) answers `await`, never merge, so a
- *   corrupt row can stall a ticket visibly but can never let one through.
+ *   corrupt row can stall a ticket visibly but can never let one through. A row the owner
+ *   overruled (`outcome.override`) counts as passed, so a held check the owner chose to merge
+ *   anyway does not start the stage again. A group of writers starts the members that have no
+ *   row yet, each on its own, and waits for the rest.
  *
- * Exports: currentCycle(), cycleStart(), reworkTarget(), stageCursor(), isCloser(), PROOF_MEMBER.
+ * Exports: currentCycle(), cycleStart(), reworkTarget(), stageCursor(), isCloser(), isDone(), PROOF_MEMBER.
  * Depends on: domain/stage-kinds, schemas/pipeline, types/stage-cursor. No IO.
  */
 
 import { classifyStage, lastWriterIndex } from '#/domain/stage-kinds.js';
-import type { AgentStage, ScriptGateStage, Stage } from '#/schemas/pipeline.js';
+import type {
+  AgentStage,
+  DirectorCheckStage,
+  GroupStage,
+  ScriptGateStage,
+  SignOffStage,
+  Stage,
+} from '#/schemas/pipeline.js';
 import type { StageRunStatus } from '#/schemas/stage-run.js';
 import type {
   CheckMember,
@@ -27,8 +37,10 @@ import type {
 } from '#/types/stage-cursor.types.js';
 
 const DONE: readonly StageRunStatus[] = ['passed', 'adopted', 'skipped'];
-const isDone = (r: StageRecord | undefined): boolean =>
-  r !== undefined && DONE.includes(r.status);
+
+/** A row that satisfies its stage: passed, adopted or skipped, or overruled by the owner. */
+export const isDone = (r: StageRecord | undefined): boolean =>
+  r !== undefined && (DONE.includes(r.status) || r.outcome.override !== undefined);
 
 /** The member id of the red-proof attempt that follows a tester's run. */
 export const PROOF_MEMBER = 'proof';
@@ -38,7 +50,8 @@ export const PROOF_MEMBER = 'proof';
  * the owner (it is run again). A human stage waiting for the owner does not end anything.
  */
 export const isCloser = (r: StageRecord): boolean =>
-  r.status === 'failed' || (r.status === 'waiting' && r.kind !== 'human');
+  r.outcome.override === undefined &&
+  (r.status === 'failed' || (r.status === 'waiting' && r.kind !== 'human'));
 
 /** The cycle the ticket is in: the highest recorded, or the next one when that cycle ended. */
 export function currentCycle(records: readonly StageRecord[]): number {
@@ -59,9 +72,13 @@ export function reworkTarget(snapshot: SnapshotView, stageId: string): string {
   const { stages } = snapshot.definition;
   const at = stages.findIndex((s) => s.id === stageId);
   const stage = stages[at];
-  const writer = (i: number): boolean =>
-    stages[i] !== undefined &&
-    classifyStage(stages[i] as Stage, snapshot.roles) === 'writer';
+  const writer = (i: number): boolean => {
+    const klass = stages[i]
+      ? classifyStage(stages[i] as Stage, snapshot.roles)
+      : undefined;
+
+    return klass === 'writer' || klass === 'writer_group';
+  };
 
   if (stage && writer(at)) {
     return stage.id;
@@ -69,13 +86,19 @@ export function reworkTarget(snapshot: SnapshotView, stageId: string): string {
 
   const last = lastWriterIndex(snapshot.definition, snapshot.roles);
   const fallback = (stages[last] ?? stages[0])?.id ?? stageId;
-  if (!stage || stage.kind === 'human' || stage.kind === 'merge') {
+  if (
+    !stage ||
+    stage.kind === 'human' ||
+    stage.kind === 'merge' ||
+    stage.kind === 'sign_off'
+  ) {
     return fallback;
   }
 
-  const named = stages.findIndex((s) => s.id === stage.rework_to);
-  if (stage.rework_to !== undefined && named >= 0 && named < at && writer(named)) {
-    return stage.rework_to;
+  const wanted = 'rework_to' in stage ? stage.rework_to : undefined;
+  const named = stages.findIndex((s) => s.id === wanted);
+  if (wanted !== undefined && named >= 0 && named < at && writer(named)) {
+    return wanted;
   }
 
   for (let i = at - 1; i >= 0; i--) {
@@ -151,7 +174,9 @@ export function stageCursor(
         r.stage_id === stageId && r.member_id === member && r.cycle <= cycle && isDone(r),
     );
 
-  const hasOpenHuman = stages.some((s) => s.kind === 'human' && !isDone(row(s.id, '')));
+  const hasOpenHuman = stages.some(
+    (s) => (s.kind === 'human' || s.kind === 'sign_off') && !isDone(row(s.id, '')),
+  );
 
   for (const [i, stage] of stages.entries()) {
     const above = i < start;
@@ -192,6 +217,26 @@ export function stageCursor(
       return { kind: 'merge', hold: true, cycle };
     }
 
+    if (klass === 'director_check' || klass === 'sign_off') {
+      const mine = row(stage.id, '');
+      if (isDone(mine)) {
+        continue;
+      }
+
+      // A sign-off row that is waiting is the owner's signature: the work is parked in review.
+      if (klass === 'sign_off' && mine?.status === 'waiting') {
+        return { kind: 'merge', hold: true, cycle };
+      }
+
+      if (mine === undefined || mine.status === 'error') {
+        return klass === 'director_check'
+          ? { kind: 'director_check', stage: stage as DirectorCheckStage, cycle }
+          : { kind: 'sign_off', stage: stage as SignOffStage, cycle };
+      }
+
+      return { kind: 'await', stage, cycle };
+    }
+
     if (klass === 'merge') {
       return isDone(row(stage.id, ''))
         ? { kind: 'done' }
@@ -202,6 +247,8 @@ export function stageCursor(
       stage.kind === 'group'
         ? stage.members.map((m) => ({ id: m.id, stage: m }))
         : [{ id: '', stage: stage as AgentStage | ScriptGateStage }];
+
+    const writers = klass === 'writer_group';
 
     const slots: CheckSlot[] = members.map((m) => ({
       member: m,
@@ -223,6 +270,15 @@ export function stageCursor(
 
     if (state.kind === 'wait') {
       return { kind: 'await', stage, cycle };
+    }
+
+    if (writers) {
+      return {
+        kind: 'run_writers',
+        stage: stage as GroupStage,
+        members: state.members,
+        cycle,
+      };
     }
 
     if (klass === 'g1') {

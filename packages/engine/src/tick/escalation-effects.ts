@@ -26,7 +26,9 @@ import { settleEscalation } from '#/tick/escalation-settle.js';
 import { grillIndex } from '#/tick/plan-actions.js';
 import { setNeedsYou } from '#/tick/planning-state.js';
 import { moveTicketTx } from '#/tick/ticket-moves.js';
-import { sendBackFromHuman } from '#/tick/stage-records.js';
+import { heldFindingsText, heldRows } from '#/tick/escalation-override.js';
+import { requestReworkWakesTx } from '#/tick/rework-wakes.js';
+import { finishStageRun, humanStageId, sendBackFromHuman } from '#/tick/stage-records.js';
 import { requestWakeTx } from '#/tick/wakes.js';
 import type { EngineDeps } from '#/types/engine.types.js';
 import type { EffectEnd } from '#/types/escalation.types.js';
@@ -179,9 +181,12 @@ export async function replanTx(
 }
 
 /**
- * Sends finished work back to its Worker: the `rework` event moves a ticket in review or
- * waiting for sign-off to In Progress, and a continuation wake carries the owner's comment to the
- * next run's prompt. False when the ticket is not in a state that can be reworked.
+ * Sends finished work back to its Worker: the `rework` event moves a ticket in review, waiting for
+ * sign-off, or held from verifying to In Progress, and a continuation wake carries the owner's
+ * comment (and, for a hold, the held findings) to the next run's prompt, one wake per member when
+ * the work goes back to a writer group. A hold sends back without spending an automatic rework: the
+ * held stage rows fail, which ends the cycle so the next one restarts at the writer. False when the
+ * ticket is not in a state that can be reworked.
  */
 export async function reworkTx(
   deps: EngineDeps,
@@ -190,8 +195,11 @@ export async function reworkTx(
   ticketId: string,
   comment: string,
 ): Promise<boolean> {
+  const held = await heldRows(tx, ticketId);
   const moved = await moveTicketTx(tx, ticketId, nowIso, (t) =>
-    t.status === 'review' || t.status === 'needs_signoff'
+    t.status === 'review' ||
+    t.status === 'needs_signoff' ||
+    (t.status === 'waiting_human' && t.parked_from === 'verifying')
       ? { events: [{ type: 'rework' }] }
       : null,
   );
@@ -201,13 +209,28 @@ export async function reworkTx(
   }
 
   // The owner's send-back ends the pipeline's cycle: the next one restarts at the writer.
-  await sendBackFromHuman(tx, nowIso, ticketId);
-  await requestWakeTx(tx, deps, {
+  let from = 'merge';
+  if (held.length > 0) {
+    for (const h of held) {
+      await finishStageRun(tx, h.id, 'failed', h.outcome, nowIso);
+    }
+
+    from = held[0]?.stage_id ?? from;
+  } else {
+    const snapshot = await tx.ticketPipelines.get(ticketId);
+    from = snapshot ? humanStageId(snapshot) : from;
+    await sendBackFromHuman(tx, nowIso, ticketId);
+  }
+
+  const findings = heldFindingsText(held);
+  await requestReworkWakesTx(
+    deps,
+    tx,
     ticketId,
-    kind: 'continuation',
-    reason: `owner_rework: ${comment}`,
-    key: `rework-${moved.ticket.status_version}`,
-  });
+    from,
+    `owner_rework: ${comment}${findings === '' ? '' : `\n\nFindings that held the merge:\n${findings}`}`,
+    `rework-${moved.ticket.status_version}`,
+  );
 
   return true;
 }

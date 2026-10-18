@@ -11,34 +11,25 @@
  *   owner can see exactly what a reviewer read. The ticket's own copy of its pipeline
  *   (`TicketPipeline`) is what makes a later settings edit unable to change a started ticket.
  *
- * Exports: Finding, ReviewSubmission, StageRunStatus, StageOutcome, StageRun, StageArtifact,
+ * Exports: ReviewSubmission, StageRunStatus, StageOutcome, MAX_VIEW_FINDINGS, StageRun, StageArtifact,
  *   RoutedStage, TicketPipeline, StageViewSchema, TicketPipelineView, STAGE_RUN_STATUSES,
  *   STAGE_RUN_KINDS (and their types).
- * Depends on: schemas/agent, schemas/config-override, schemas/gate-result, schemas/ids,
- *   schemas/pipeline, schemas/ticket, types/stage-view, zod. No IO.
+ * Depends on: schemas/agent, schemas/config-override, schemas/finding, schemas/gate-result, schemas/ids,
+ *   schemas/pipeline, schemas/ticket, schemas/ticket-check, types/stage-view, zod. No IO.
  */
 
 import { z } from 'zod';
 import { AgentId, AgentRole, ArtifactKind } from '#/schemas/agent.js';
 import { ConfigVersionRef } from '#/schemas/config-override.js';
+import { Finding } from '#/schemas/finding.js';
 import { GateStatus } from '#/schemas/gate-result.js';
 import { TicketId } from '#/schemas/ids.js';
 import { PipelineDefinition, Severity, StageId } from '#/schemas/pipeline.js';
+import { TicketCheckOutput } from '#/schemas/ticket-check.js';
 import { Lane } from '#/schemas/ticket.js';
 import type { StageView } from '#/types/stage-view.types.js';
 
 const Timestamp = z.iso.datetime();
-const RelPath = z.string().min(1).max(500);
-
-/** One thing a reviewer found; evidence is required, a finding without it is refused. */
-export const Finding = z.object({
-  severity: Severity,
-  file: RelPath.optional(),
-  line: z.number().int().positive().optional(),
-  issue: z.string().min(1).max(1000),
-  evidence: z.string().min(1).max(2000),
-});
-export type Finding = z.infer<typeof Finding>;
 
 /** What `submit_review` carries: a verdict, a short summary and up to 100 findings. */
 export const ReviewSubmission = z.object({
@@ -47,6 +38,9 @@ export const ReviewSubmission = z.object({
   findings: z.array(Finding).max(100),
 });
 export type ReviewSubmission = z.infer<typeof ReviewSubmission>;
+
+/** The most findings one stage view carries; the full list stays in the stored outcome. */
+export const MAX_VIEW_FINDINGS = 20;
 
 export const STAGE_RUN_STATUSES = [
   'running',
@@ -60,7 +54,7 @@ export const STAGE_RUN_STATUSES = [
 export const StageRunStatus = z.enum(STAGE_RUN_STATUSES);
 export type StageRunStatus = z.infer<typeof StageRunStatus>;
 
-export const STAGE_RUN_KINDS = ['agent', 'script_gate', 'human'] as const;
+export const STAGE_RUN_KINDS = ['agent', 'script_gate', 'human', 'director'] as const;
 
 /** The result of a stage attempt; every key is optional and set only by the stage kind that produces it. */
 export const StageOutcome = z.object({
@@ -73,6 +67,27 @@ export const StageOutcome = z.object({
   /** Red proof: true when the new tests failed before the implementation. */
   red: z.boolean().optional(),
   note: z.string().max(1000).optional(),
+  /** Director check: what the step answered (acceptance verdicts, findings, confidence). */
+  check: TicketCheckOutput.optional(),
+  /** Director check: changed files the plan's `files` did not cover (computed by the engine, never by the model). */
+  unplanned: z.array(z.string().max(500)).max(200).optional(),
+  /** Sign-off: who signed the finished work. */
+  signed_by: z.enum(['director', 'owner']).optional(),
+  /** Sign-off: why the Director signed, or why it declined and left the signature to the owner. */
+  sign_reason: z.string().max(500).optional(),
+  /** The owner overruled a held stage (`merge_anyway` on findings, `continue` on scope drift); the row then reads passed. */
+  override: z
+    .object({
+      by: z.literal('owner'),
+      action: z.enum(['merge_anyway', 'continue']),
+      comment: z.string().min(1).max(2000),
+      at: Timestamp,
+    })
+    .optional(),
+  /** The critic ran on the same model family as the Worker (d-0073): the strip labels it. */
+  same_family: z.literal(true).optional(),
+  /** Director check: how many times the step failed to answer in this cycle, for the retry bound. */
+  attempts: z.number().int().positive().max(20).optional(),
 });
 export type StageOutcome = z.infer<typeof StageOutcome>;
 
@@ -137,7 +152,15 @@ export type TicketPipeline = z.infer<typeof TicketPipeline>;
 export const StageViewSchema: z.ZodType<StageView> = z.lazy(() =>
   z.object({
     id: z.string(),
-    kind: z.enum(['agent', 'script_gate', 'group', 'human', 'merge']),
+    kind: z.enum([
+      'agent',
+      'script_gate',
+      'group',
+      'human',
+      'director_check',
+      'sign_off',
+      'merge',
+    ]),
     label: z.string(),
     agent: z.object({ id: z.string(), name: z.string() }).optional(),
     members: z.array(StageViewSchema).optional(),
@@ -148,6 +171,23 @@ export const StageViewSchema: z.ZodType<StageView> = z.lazy(() =>
     ended_at: z.string().optional(),
     summary: z.string().optional(),
     counts: z.record(Severity, z.number().int().nonnegative()).optional(),
+    /** The current round's findings (capped at 20), so the strip can show file:line and evidence. */
+    findings: z.array(Finding).max(MAX_VIEW_FINDINGS).optional(),
+    warnings: z.array(z.string()),
+    signed_by: z.enum(['director', 'owner']).optional(),
+    override: z
+      .object({
+        by: z.literal('owner'),
+        action: z.enum(['merge_anyway', 'continue']),
+        comment: z.string(),
+        at: z.string(),
+      })
+      .optional(),
+    /** A writer-group member: the write scope it is held to. */
+    scope: z.array(z.string()).optional(),
+    /** Director check: the acceptance verdicts and the files the plan did not cover. */
+    check: TicketCheckOutput.optional(),
+    unplanned: z.array(z.string()).optional(),
     artifacts: z.array(z.object({ id: z.number().int().positive(), kind: ArtifactKind })),
   }),
 );

@@ -193,6 +193,14 @@ export function escalationWorld(
         return refusal(409, 'action_not_offered', `${action} is not offered`);
       }
 
+      // The server's own rule for an overrule: a reason of at least five characters (S5c-A).
+      if (
+        (action === 'merge_anyway' || action === 'continue') &&
+        String(input['comment'] ?? '').trim().length < 5
+      ) {
+        return refusal(400, 'invalid_body', 'comment must be at least 5 characters');
+      }
+
       if (
         action === 'cancel' &&
         input['cascade'] !== true &&

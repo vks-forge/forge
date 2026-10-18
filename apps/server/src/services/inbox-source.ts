@@ -6,7 +6,8 @@
  *   ticket waiting for review or sign-off, a failed gate, an interrupted run, a harness out of
  *   quota, a harness build or tool awaiting a decision and a memory proposal each become one
  *   item whose `updated_at` is the source's own change time, which is what lets a mark expire
- *   when the source moves (d-0116). Items that wait on a decision are `needs_action`; the
+ *   when the source moves (d-0116). Finished work waiting for a name is listed once, through its
+ *   sign-off item, and falls back to a plain review item only when it has none. Items that wait on a decision are `needs_action`; the
  *   rest inform. Harness-level items (compat, tool approvals) block every project, so they
  *   show in each, but only for the current build of each harness (the installed one, else the
  *   newest checked): an older build can no longer be acted on and would nag forever. A tool
@@ -50,10 +51,16 @@ function titleOf(view: EscalationView): string {
 const ticketItems = (
   tickets: readonly Ticket[],
   pending: ReadonlySet<string>,
+  signOffs: ReadonlySet<string>,
   project: string,
 ) =>
   tickets.flatMap((t): InboxCandidate[] => {
     const base = { project, ticket_id: t.id, updated_at: t.updated_at };
+    // Finished work waiting for a name is already listed through its sign-off item: one item, not two.
+    if ((t.status === 'review' || t.status === 'needs_signoff') && signOffs.has(t.id)) {
+      return [];
+    }
+
     if (t.status === 'review') {
       return [
         {
@@ -156,7 +163,13 @@ export async function gatherInboxCandidates(
     });
   }
 
-  items.push(...ticketItems(tickets, pending, slug));
+  const signOffs = new Set(
+    mine
+      .filter((i) => i.kind === 'sign_off' && i.escalated_at !== undefined)
+      .map((i) => i.ticket_id),
+  );
+
+  items.push(...ticketItems(tickets, pending, signOffs, slug));
 
   const open = tickets.filter((t) => !TERMINAL_STATUSES.includes(t.status));
   for (const t of open) {

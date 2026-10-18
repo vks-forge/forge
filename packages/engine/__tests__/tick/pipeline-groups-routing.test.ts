@@ -53,12 +53,12 @@ describe('run-together group', () => {
     return { ...v, id };
   }
 
-  it('starts every member together and merges only after both reported', async () => {
+  it('places each member on its own, so a one-Worker project runs them in turn, and merges only after both reported', async () => {
     const { rig, host, id } = await toGroup();
 
-    expect(runIds(rig)).toEqual(['run-1', 'run-2', 'run-3']);
+    // The scheduler placed only the reviewer: the per-project limit of one Worker is still honoured.
+    expect(runIds(rig)).toEqual(['run-1', 'run-2']);
     expect(await agentOf(rig, 'run-2')).toBe('reviewer');
-    expect(await agentOf(rig, 'run-3')).toBe('critic');
     expect(await rig.ticket(id)).toMatchObject({
       status: 'verifying',
       assignee_run_id: 'run-1',
@@ -67,6 +67,8 @@ describe('run-together group', () => {
     await reviewDone(rig, 'run-2', review('pass'));
     await rig.tick();
 
+    expect(runIds(rig)).toEqual(['run-1', 'run-2', 'run-3']);
+    expect(await agentOf(rig, 'run-3')).toBe('critic');
     expect(host.count('merge')).toBe(0);
     expect(await rig.ticket(id)).toMatchObject({ status: 'verifying' });
 

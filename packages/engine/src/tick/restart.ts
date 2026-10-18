@@ -13,18 +13,17 @@
  *   the app writes the `resumed` link into the receipt chain when it prepares the run. A run
  *   that cannot be resumed (no session, a harness that cannot resume, the worktree gone, a
  *   start that fails) is never lost: it is settled as a crash and the ticket is retried as a
- *   new run in the same worktree, so the Worker continues from the existing changes. A lost
- *   run with no session at all is crash-settled exactly as before. Resumes are due work like any
- *   other wake: they wait for the scheduler's global, per-project and per-harness limits, at
- *   the priority of their ticket and on the same rotation cursor as new starts. A start that
- *   fails before the chain's `resumed` link was written gives the generation back, so the
- *   chain stays 1, 2, 3 without a gap. Each run is resumed on its own: a project whose runtime
- *   cannot be built (or a store error) is reported as a tick error against that run, which stays
- *   interrupted for the next tick, while every other run still resumes. A resume keeps its run's agent.
+ *   new run in the same worktree (a lost run with no session is crash-settled the same way).
+ *   Resumes are due work like any other wake: they wait for the scheduler's limits, at the
+ *   priority of their ticket and on the same rotation cursor as new starts. A start that fails
+ *   before the chain's `resumed` link was written gives the generation back, so the chain stays
+ *   1, 2, 3 without a gap. Each run is resumed on its own: a project whose runtime cannot be
+ *   built (or a store error) is a tick error against that run, which stays interrupted for the
+ *   next tick. A resume keeps its run's agent; a writer-group member resumes by its stage row.
  *
  * Exports: reconcileRestart(), resumeInterrupted().
  * Depends on: @forge/core (TERMINAL_STATUSES, branchName), @forge/tools (sha256Hex), domain/results,
- *   tick/{project-runtime,pump,resume-prompt,run-agent,run-request,settle}, shared/time. IO only through the engine ports.
+ *   tick/{project-runtime,pump,resume-prompt,run-agent,run-request,settle,stage-state}, shared/time. IO only through the engine ports.
  */
 
 import { TERMINAL_STATUSES, branchName } from '@forge/core';
@@ -42,6 +41,7 @@ import { buildRunRequest } from '#/tick/run-request.js';
 import { planDispatch } from '#/tick/schedule.js';
 import { settleRun } from '#/tick/settle.js';
 import { settleGuarded } from '#/tick/settle-guard.js';
+import { holdsRun } from '#/tick/stage-state.js';
 import { isUnservable } from '#/tick/tick-config.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 
@@ -84,7 +84,7 @@ async function tryResume(
     return 'its ticket has ended';
   }
 
-  if (ticket.assignee_run_id !== run.id) {
+  if (!(await deps.storage.transaction((tx) => holdsRun(tx, ticket, run.id)))) {
     return `its ticket is assigned to ${ticket.assignee_run_id ?? 'no run'}`;
   }
 

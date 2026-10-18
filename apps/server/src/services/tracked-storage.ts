@@ -12,6 +12,9 @@
  *   nothing. Keys follow the web client's: `["cards", slug]`, `["card", id]`,
  *   `["tickets", slug]`, `["inbox", slug]`. The ticket page's `["ticket", id]` is touched
  *   by every ticket and interaction write, and `["card", id]` covers the card's events and escalations by prefix.
+ *   A write to a ticket's pipeline snapshot, a stage row (started or finished) or a stage artifact
+ *   announces `["ticket-pipeline", id]` and `["ticket", id]`, so the strip on the ticket page moves
+ *   as the stages do; a finished row is resolved to its ticket by id before the commit.
  *
  * Exports: trackProjectWrites().
  * Depends on: @forge/core (storage ports), types/project-events, types/tracked-storage. IO: extra
@@ -111,6 +114,24 @@ function track(tx: StorageTx, touches: Touch[]): StorageTx {
       expire: interaction,
       escalate: interaction,
     }),
+    ticketPipelines: watch(tx.ticketPipelines, touches, {
+      insert: (a) => ({
+        kind: 'pipeline',
+        id: (a[0] as { ticket_id: string }).ticket_id,
+      }),
+      replace: (a) => ({
+        kind: 'pipeline',
+        id: (a[0] as { ticket_id: string }).ticket_id,
+      }),
+      appendRouted: (a) => ({ kind: 'pipeline', id: first(a) }),
+    }),
+    stageRuns: watch(tx.stageRuns, touches, {
+      start: (a) => ({ kind: 'pipeline', id: (a[0] as { ticket_id: string }).ticket_id }),
+      finish: (a) => ({ kind: 'stage_run', id: Number(a[0]) }),
+    }),
+    stageArtifacts: watch(tx.stageArtifacts, touches, {
+      add: (a) => ({ kind: 'pipeline', id: (a[0] as { ticket_id: string }).ticket_id }),
+    }),
     inboxStates: watch(tx.inboxStates, touches, {
       upsert: (a) => ({ kind: 'inbox', project: (a[0] as { project: string }).project }),
     }),
@@ -165,6 +186,23 @@ async function resolve(tx: StorageTx, touches: readonly Touch[]): Promise<Resolv
       case 'inbox':
         await add(t.project, ['inbox', await slugOf(t.project)]);
         break;
+      case 'pipeline':
+      case 'stage_run': {
+        const ticketId =
+          t.kind === 'pipeline' ? t.id : (await tx.stageRuns.get(t.id))?.ticket_id;
+
+        const ticket = ticketId ? await tx.tickets.get(ticketId as never) : null;
+        if (ticket) {
+          await add(
+            ticket.project,
+            ['ticket-pipeline', ticket.id],
+            ['ticket', ticket.id],
+          );
+        }
+
+        break;
+      }
+
       case 'ticket':
       case 'interaction': {
         const ticket =

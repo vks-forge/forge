@@ -10,26 +10,41 @@
  *   the head moved, nothing merges and the caller gates the new head. The tier comes from
  *   the real diff against the project's tier-C globs, not from the triage guess, and must
  *   still match what `gate_passed` recorded. Tier B and C stop in Review / NeedsSignoff for
- *   a human, and so does tier A when the pipeline has a human stage (`hold`). The merge is resumable: if the server died after the host merged but before the
- *   ticket moved, the PR already reads as merged and only the ticket event is missing.
- *   Cleanup after Done is best effort and never undoes the merge. The owner's approval of tier B
- *   (or sign-off of tier C) comes through `mergeReviewed()`, the same door with the same checks.
+ *   a person, and so does tier A when the pipeline has a human or sign-off stage (`hold`); each
+ *   such stop leaves one sign-off item for the owner. A Director-signed sign-off lets tier A through
+ *   as always and tier B through the owner's door below with the signer `director` (same checks);
+ *   tier C is refused here, in the state machine and in the sign-off decision. The merge is
+ *   resumable: if the server died after the host merged but before the ticket moved, only the ticket
+ *   event is missing. Cleanup after Done never undoes the merge. The owner's approval of tier B (or
+ *   sign-off of tier C) comes through `mergeReviewed()`, the same door with the same checks.
  *
  * Exports: passAndMerge(), mergeReviewed(), MergeOutcome.
- * Depends on: @forge/core (errors), domain/gate-rows, tick/{stage-records,ticket-moves,verify-merge-steps,
- *   verify-outcomes}. IO only through GitHost and worktree ports.
+ * Depends on: @forge/core (errors, DIRECTOR_SIGNER), domain/gate-rows, tick/{sign-off-raise,stage-records,ticket-moves,
+ *   verify-merge-steps,verify-outcomes}. IO only through GitHost and worktree ports.
  */
 
-import { HeadMovedError, PolicyDeniedError, RateLimitError } from '@forge/core';
+import {
+  DIRECTOR_SIGNER,
+  HeadMovedError,
+  PolicyDeniedError,
+  RateLimitError,
+} from '@forge/core';
 import type { PrStatus } from '@forge/core';
 import { gatedHeadOf } from '#/domain/gate-rows.js';
-import { logCardEvent } from '#/tick/card-log.js';
+import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
+import { raiseOwnerSignOff } from '#/tick/sign-off-raise.js';
 import { holdForHuman } from '#/tick/stage-records.js';
 import { moveTicket, moveTicketTx } from '#/tick/ticket-moves.js';
 import { cleanup, recordPass, tierOfDiff } from '#/tick/verify-merge-steps.js';
 import { recordVerified } from '#/tick/verify-outcomes.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
-import type { GateRows, MergeOutcome, VerifyTarget } from '#/types/verify.types.js';
+import type {
+  GateRows,
+  MergeOpts,
+  MergeOutcome,
+  ReviewedExtras,
+  VerifyTarget,
+} from '#/types/verify.types.js';
 
 async function mergeTierA(
   ctx: EngineCtx,
@@ -93,20 +108,27 @@ async function mergeTierA(
 
 /**
  * The owner's approval of tier B work (or sign-off of tier C): merges exactly the sha the gates
- * judged, then moves the ticket to done through `transition()` (`done`, with the signer for C).
- * `head_moved` when the PR head is not that sha: nothing merged, and the ticket goes back to
- * verifying (`regate`) so the new head is gated again. Same checks as the automatic merge: the
- * tier must still match the diff, the PR must be open and mergeable. Resumable like it: a PR
- * the host already merged only needs the ticket event.
+ * judged, then moves the ticket to done through `transition()`. `head_moved` when the PR head is
+ * not that sha: nothing merged, and the ticket goes back to verifying (`regate`). Same checks as
+ * the automatic merge (tier still matches the diff, PR open and mergeable); resumable like it.
  */
 export async function mergeReviewed(
   ctx: EngineCtx,
   t: VerifyTarget,
   rows: GateRows,
   signer?: string,
+  also: ReviewedExtras = {},
 ): Promise<'done' | 'head_moved'> {
   const { ticket } = t;
   const prNumber = ticket.pr_number;
+  const byDirector = signer?.trim().toLowerCase() === DIRECTOR_SIGNER;
+  // Fail closed: the Director signs tier A and B only; the state machine refuses tier C as well.
+  if (byDirector && ticket.tier_actual === 'C') {
+    throw new PolicyDeniedError(
+      `${ticket.id} is tier C; only a named person signs it off`,
+    );
+  }
+
   // Fail closed: only finished work in review (B, or A held by a human stage) or sign-off (C), with a PR, merges here.
   const tierOk =
     ticket.status === 'review'
@@ -173,6 +195,8 @@ export async function mergeReviewed(
 
   const who = signer?.trim() ? signer.trim() : undefined;
   const done = await ctx.deps.storage.transaction(async (tx) => {
+    // The caller's own writes (settling the sign-off item) join the transaction that moves the ticket.
+    await also.beforeMove?.(tx);
     const end = await moveTicketTx(tx, ticket.id, ctx.nowIso, (cur) =>
       cur.status === ticket.status
         ? { events: [{ type: 'done', ...(who === undefined ? {} : { signer: who }) }] }
@@ -183,12 +207,13 @@ export async function mergeReviewed(
       await logCardEvent(tx, ticket.card_id, {
         kind: 'note',
         at: ctx.nowIso,
-        actor: { type: 'user', id: who ?? 'owner' },
+        actor: byDirector ? ENGINE_ACTOR : { type: 'user', id: who ?? 'owner' },
         payload: {
           text:
-            who === undefined
+            also.note ??
+            (who === undefined
               ? `${ticket.id} was approved and merged.`
-              : `${ticket.id} was signed off by ${who} and merged.`,
+              : `${ticket.id} was signed off by ${who} and merged.`),
         },
       });
     }
@@ -211,8 +236,9 @@ export async function passAndMerge(
   ctx: EngineCtx,
   t: VerifyTarget,
   rows: GateRows,
-  hold = false,
+  mode: boolean | MergeOpts = false,
 ): Promise<MergeOutcome> {
+  const opts: MergeOpts = typeof mode === 'boolean' ? { hold: mode } : mode;
   const gatedSha = gatedHeadOf(rows);
   const prNumber = t.ticket.pr_number;
   if (prNumber === undefined) {
@@ -230,7 +256,9 @@ export async function passAndMerge(
 
   const tier = await tierOfDiff(ctx, t);
   const ticket =
-    t.ticket.tier_actual === undefined ? await recordPass(ctx, t, tier, hold) : t.ticket;
+    t.ticket.tier_actual === undefined
+      ? await recordPass(ctx, t, tier, opts.hold)
+      : t.ticket;
 
   // A re-gated head may touch other files than the ones `gate_passed` was recorded for.
   if (ticket.tier_actual !== tier) {
@@ -239,11 +267,28 @@ export async function passAndMerge(
     );
   }
 
-  if (tier === 'B' || tier === 'C' || hold) {
-    // The pipeline's human stage begins: the owner's review is a row, so the ticket page shows it.
-    if (hold) {
-      await ctx.deps.storage.transaction((tx) => holdForHuman(tx, ctx.nowIso, ticket.id));
-    }
+  // Fail closed: a Director signature never carries tier C, whatever the stage rows say.
+  if (opts.directorSigned === true && tier === 'C') {
+    throw new PolicyDeniedError(`${ticket.id} is tier C; only a person signs it`);
+  }
+
+  if (opts.directorSigned === true && tier === 'B') {
+    const end = await mergeReviewed(ctx, { ...t, ticket }, rows, DIRECTOR_SIGNER, {
+      note: `Signed off by the Director (tier B): ${opts.signReason ?? 'every check passed'}`,
+    });
+
+    return end === 'done' ? 'done' : 'regate';
+  }
+
+  if (tier === 'B' || tier === 'C' || opts.hold) {
+    // The owner's stage begins: their review is a row and a sign-off item, so every screen shows it.
+    await ctx.deps.storage.transaction(async (tx) => {
+      if (opts.hold) {
+        await holdForHuman(tx, ctx.nowIso, ticket.id);
+      }
+
+      await raiseOwnerSignOff(ctx, tx, ticket, tier, opts.declined, t.run.id);
+    });
 
     recordVerified(ctx, t, tier === 'C' ? 'needs_signoff' : 'review', rows);
 

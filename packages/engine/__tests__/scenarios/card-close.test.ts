@@ -15,7 +15,7 @@
  */
 
 import type { CardId } from '@forge/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { moveCardTx } from '#/tick/card-phase.js';
 import { cardEventsOf, pendingOf } from '#tests/helpers/escalation-rig.js';
 import {
@@ -28,6 +28,12 @@ import {
 } from '#tests/helpers/planning-rig.js';
 import type { Rig } from '#tests/helpers/rig.js';
 import { makeRig } from '#tests/helpers/rig.js';
+
+// Every lane runs now, so a held lane has to be stubbed to exercise the hold path still kept for a lane without a runner.
+vi.mock('#/domain/live-lanes.js', () => ({
+  LIVE_LANES: ['express', 'standard'],
+  isLive: (lane: string) => lane !== 'full',
+}));
 
 const at = (rig: Rig): string => new Date(rig.clock.now()).toISOString();
 

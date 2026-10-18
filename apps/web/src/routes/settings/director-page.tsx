@@ -21,7 +21,11 @@ import { DirectorStatus } from '#/components/director/director-status.js';
 import { FlowEditor } from '#/components/director/flow-editor.js';
 import { LockedRules, PlaybooksView } from '#/components/director/locked-rules.js';
 import { ModelFields } from '#/components/director/model-fields.js';
-import { ApprovalField, HouseRulesField } from '#/components/director/rules-fields.js';
+import {
+  ApprovalField,
+  HouseRulesField,
+  SignOffField,
+} from '#/components/director/rules-fields.js';
 import { CompanyScreen } from '#/components/settings/company-screen.js';
 import { ConfigFields } from '#/components/settings/config-fields.js';
 import { SettingsSection } from '#/components/settings/settings-page.js';
@@ -76,7 +80,7 @@ export function DirectorPage() {
             <SettingsSection
               id="rules"
               title="House rules and approval"
-              description="Standing instructions for every step, and who approves a finished plan."
+              description="Standing instructions for every step, who approves a finished plan, and how far the Director may sign finished work."
             >
               <HouseRulesField
                 value={director.house_rules}
@@ -85,6 +89,10 @@ export function DirectorPage() {
               <ApprovalField
                 value={director.approval_mode}
                 onChange={(v) => set('director.approval_mode', v)}
+              />
+              <SignOffField
+                value={director.sign_off.max_tier}
+                onChange={(v) => set('director.sign_off.max_tier', v)}
               />
             </SettingsSection>
             <SettingsSection

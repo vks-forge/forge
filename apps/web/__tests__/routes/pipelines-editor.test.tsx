@@ -167,43 +167,6 @@ describe('script gate, group and human sign-off', () => {
       screen.getAllByRole('button', { name: /^Remove .* from the group$/ })[0],
     ).toBeEnabled();
   });
-
-  it('offers one human sign-off, and says so when it is already there', async () => {
-    const user = userEvent.setup();
-
-    renderApp({ path: `${PIPELINE_PATH}?lane=full` });
-    await ready();
-    await user.click(await screen.findByRole('button', { name: 'Add stage' }));
-
-    const item = await screen.findByRole('menuitem', { name: /Human sign-off/ });
-
-    expect(item).toHaveAttribute('aria-disabled', 'true');
-    expect(item).toHaveTextContent('A pipeline has at most one human sign-off.');
-  });
-
-  it('adds the human sign-off last before merge and lets the owner word the question', async () => {
-    const user = userEvent.setup();
-    const { forge } = renderApp({ path: PIPELINE_PATH });
-
-    await ready();
-    await addStageOf(user, /Human sign-off/);
-
-    expect((await stageNames('Express')).slice(-2)).toEqual(['Your sign-off', 'Merge']);
-
-    await openDetails(user, 'Your sign-off');
-
-    const prompt = screen.getByLabelText('What to ask you');
-
-    await user.clear(prompt);
-    await user.type(prompt, 'Check the migration by eye');
-    await saveLane(user, 'Express');
-    await screen.findByText(/Saved as version/);
-
-    expect(lastPut(forge, 'express').pipeline.stages.at(-2)).toMatchObject({
-      kind: 'human',
-      prompt: 'Check the migration by eye',
-    });
-  });
 });
 
 describe('keyboard', () => {

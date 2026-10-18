@@ -90,7 +90,7 @@ export async function logOpened(
 }
 
 /**
- * Opens a failure or setup escalation for `ticket` and returns its id (null for a ticket of a closed card: none is raised). A ticket that already
+ * Opens a failure, setup, decision or sign-off escalation for `ticket` and returns its id (null for a ticket of a closed card: none is raised). A ticket that already
  * has one pending keeps it (a second park of the same wait must not raise a second row). A row
  * that starts with the owner is stamped and announced on the card at once; failures and setups
  * never time out.
@@ -111,7 +111,12 @@ export async function raiseEscalation(
   }
 
   const open = (await tx.interactions.listByTicket(ticket.id)).find(
-    (i) => i.status === 'pending' && (i.kind === 'failure' || i.kind === 'setup'),
+    (i) =>
+      i.status === 'pending' &&
+      (i.kind === 'failure' ||
+        i.kind === 'setup' ||
+        i.kind === 'decision' ||
+        i.kind === 'sign_off'),
   );
 
   if (open) {

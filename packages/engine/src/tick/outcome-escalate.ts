@@ -21,6 +21,7 @@ import {
   EscalationPayload,
   InteractionKind,
   classifyPark,
+  failureCauseOf,
   setupCauseFor,
   toEscalation,
 } from '@forge/core';
@@ -184,9 +185,9 @@ export async function parkRun(
     setup === null
       ? {
           kind: 'failure',
-          cause:
-            classifyPark({ status: 'waiting_human', blocked_reason: reason })?.cause ??
-            'not_retried',
+          cause: failureCauseOf(
+            classifyPark({ status: 'waiting_human', blocked_reason: reason }),
+          ),
           summary: reason,
           attempts: await attemptsOf(tx, ticket.id),
           ...(family === undefined ? {} : { error_family: family }),

@@ -19,7 +19,7 @@
 import type { RunHandle, RunResult, WorkerDriver } from '@forge/core';
 import type { EngineDeps, TickReport } from '#/types/engine.types.js';
 import type { TickConfig } from '#/types/tick.types.js';
-import type { StageJob } from '#/types/stage-runner.types.js';
+import type { CheckJob, StageJob } from '#/types/stage-runner.types.js';
 import type { GateJob } from '#/types/verify.types.js';
 
 /** One live run: its handle and, once the stream and result are in, the outcome. */
@@ -90,6 +90,8 @@ export interface EngineState {
   readonly gateJobs: Map<string, GateJob>;
   /** Script gates and red proofs in flight or finished-but-unapplied, by `ticket:run:stage:member`; lost on restart, so the command simply runs again. */
   readonly stageJobs: Map<string, StageJob>;
+  /** Director checks in flight or finished-but-unapplied, by `ticket:run:stage:cycle`; lost on restart, so the step simply runs again. */
+  readonly checkJobs: Map<string, CheckJob>;
   /** Tickets (`ticket:run`) whose routing rules were already evaluated on the real diff this process; the evaluation is idempotent, this only saves the git call. */
   readonly diffRouted: Set<string>;
   /** Re-gates after the PR head moved, per `ticket:run`, to stop a branch that never settles. */

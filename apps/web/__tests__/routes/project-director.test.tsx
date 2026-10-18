@@ -79,6 +79,25 @@ describe('project Director override', () => {
     expect(snapshot.config.forge.director.house_rules).toBe('');
   });
 
+  it('inherits the sign-off ceiling, and overriding it lowers it for this project only', async () => {
+    const user = userEvent.setup();
+    const { api } = renderScreens(PATH);
+    await ready();
+
+    expect(screen.getByText('Up to tier B')).toBeVisible();
+
+    await user.click(screen.getByRole('switch', { name: 'Override Director sign-off' }));
+    await choose(user, 'Director sign-off', 'Never');
+    expect(screen.getByText('Tier C always needs you.')).toBeVisible();
+
+    await saveWith(user, 'every change is mine here', 'Save as v4');
+    expect(await screen.findByText(/Saved as version 4/)).toBeInTheDocument();
+
+    const snapshot = await api.projectSettings.get('sample-service');
+
+    expect(snapshot.override['director']).toEqual({ sign_off: { max_tier: 'none' } });
+  });
+
   it('writes the whole timeout group when one timeout is changed', async () => {
     const user = userEvent.setup();
     const { api } = renderScreens(PATH);

@@ -77,7 +77,15 @@ export function escalationLineOf(
       return { ...base, tone: 'note', text: 'A waiting ticket was settled' };
     }
 
-    const { interaction_id: id, ticket_id: ticketId, action, by, note } = parsed.data;
+    const {
+      interaction_id: id,
+      ticket_id: ticketId,
+      action,
+      by,
+      note,
+      comment,
+    } = parsed.data;
+
     if (raised.has(id)) {
       return undefined;
     }
@@ -85,7 +93,7 @@ export function escalationLineOf(
     return {
       ...base,
       tone: 'note',
-      text: `${settledWords(action, by)}${note ? `: ${note}` : ''}`,
+      text: `${settledWords(action, by)}${note || comment ? `: ${note || comment}` : ''}`,
       ticketId,
     };
   }

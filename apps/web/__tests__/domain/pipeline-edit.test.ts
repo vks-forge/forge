@@ -11,12 +11,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { addAction, addStage, newMember } from '#/domain/pipeline-add.js';
 import {
-  addAction,
-  addStage,
+  isWriterGroup,
   moveAction,
   moveStage,
-  newMember,
   removeAction,
   removeStage,
 } from '#/domain/pipeline-edit.js';
@@ -42,10 +41,10 @@ describe('adding stages', () => {
     ]);
   });
 
-  it('adds a script gate with an empty command, a group of two checks and the human stage last', () => {
+  it('adds a script gate with an empty command, a group of two checks and the sign-off last', () => {
     const script = addStage(lane('express'), 'script_gate', ROSTER);
     const group = addStage(lane('express'), 'group', ROSTER);
-    const human = addStage(group, 'human', ROSTER);
+    const human = addStage(group, 'sign_off', ROSTER);
 
     expect(script.stages[2]).toMatchObject({
       kind: 'script_gate',
@@ -54,7 +53,7 @@ describe('adding stages', () => {
 
     expect(group.stages[2]).toMatchObject({ kind: 'group' });
     expect((group.stages[2] as { members: unknown[] }).members).toHaveLength(2);
-    expect(stageIds(human).slice(-2)).toEqual(['human', 'merge']);
+    expect(stageIds(human).slice(-2)).toEqual(['sign-off', 'merge']);
   });
 
   it('keeps every id unique across the whole list, group members included', () => {
@@ -66,7 +65,7 @@ describe('adding stages', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('refuses a second human sign-off and a thirteenth stage, each with its reason', () => {
+  it('refuses a second sign-off and a thirteenth stage, each with its reason', () => {
     const full = lane('full');
     let many = lane('express');
 
@@ -74,9 +73,9 @@ describe('adding stages', () => {
       many = addStage(many, 'agent', ROSTER);
     }
 
-    expect(addAction(full, 'human')).toEqual({
+    expect(addAction(full, 'sign_off')).toEqual({
       ok: false,
-      reason: 'A pipeline has at most one human sign-off.',
+      reason: 'A pipeline has at most one sign-off.',
     });
 
     expect(addAction(many, 'agent')).toMatchObject({ ok: false });
@@ -132,5 +131,77 @@ describe('moving and removing', () => {
       'g1',
       'merge',
     ]);
+  });
+});
+
+describe('adding the Director check, the sign-off and a writer group', () => {
+  it('puts the Director check after every check and before the sign-off', () => {
+    const standard = addStage(lane('standard'), 'director_check', ROSTER);
+    const withSignOff = addStage(standard, 'sign_off', ROSTER);
+
+    expect(stageIds(standard)).toEqual([
+      'test-writer',
+      'implementer',
+      'g1',
+      'reviewer',
+      'check-plan',
+      'merge',
+    ]);
+
+    expect(stageIds(addStage(withSignOff, 'agent', ROSTER)).slice(-4)).toEqual([
+      'reviewer-2',
+      'check-plan',
+      'sign-off',
+      'merge',
+    ]);
+  });
+
+  it('starts a sign-off the Director may sign, asking the owner for tier C', () => {
+    const next = addStage(lane('express'), 'sign_off', ROSTER);
+
+    expect(next.stages.at(-2)).toMatchObject({
+      kind: 'sign_off',
+      signer: 'director_or_owner',
+    });
+  });
+
+  it('refuses a second Director check, and a sign-off beside the older human stage', () => {
+    expect(addAction(lane('full'), 'director_check')).toEqual({
+      ok: false,
+      reason: 'A pipeline has at most one Director check.',
+    });
+
+    const human = {
+      ...lane('express'),
+      stages: [
+        ...lane('express').stages.slice(0, 2),
+        { id: 'human', kind: 'human' as const, label: 'You', prompt: 'Look.' },
+        ...lane('express').stages.slice(2),
+      ],
+    };
+
+    expect(addAction(human, 'sign_off')).toMatchObject({ ok: false });
+  });
+
+  it('adds a group of two writers before G1, which reads as a writer group', () => {
+    const next = addStage(lane('standard'), 'writer_group', ROSTER);
+    const group = next.stages.find((s) => s.kind === 'group');
+
+    expect(stageIds(next).indexOf('writers')).toBeLessThan(stageIds(next).indexOf('g1'));
+    expect(group?.kind === 'group' && group.members).toHaveLength(2);
+    expect(group?.kind === 'group' && isWriterGroup(group, ROSTER)).toBe(true);
+  });
+
+  it('does not take a group of reviewers for a writer group', () => {
+    const next = addStage(lane('standard'), 'group', ROSTER);
+    const group = next.stages.find((s) => s.kind === 'group');
+
+    expect(group?.kind === 'group' && isWriterGroup(group, ROSTER)).toBe(false);
+  });
+
+  it('builds a writer group member from a writer, not a reviewer', () => {
+    expect(newMember('agent', 'w-3', ROSTER, true)).not.toMatchObject({
+      agent: 'reviewer',
+    });
   });
 });

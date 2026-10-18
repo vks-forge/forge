@@ -6,13 +6,15 @@
  *   starting a stage twice. An attempt is unique per (ticket, stage, member, cycle): starting one
  *   that already exists is a no-op unless it is the same attempt coming back (a running one after
  *   a restart, one that ended in an error), in which case it is linked to the new run instead of
- *   duplicated. The human stage's rows live here too: it waits while the owner reviews, passes
- *   when they approve and fails when they send the work back, and a send-back on a pipeline with
- *   no human stage is recorded against the merge stage so the next cycle still restarts at the
- *   writer. Everything runs inside the caller's transaction.
+ *   duplicated. The owner's stage rows live here too (a `human` stage or a `sign_off` stage whose
+ *   signature the Director did not give): it waits while the owner reviews, passes when they
+ *   approve and fails when they send the work back, and a send-back on a pipeline with neither is
+ *   recorded against the merge stage so the next cycle still restarts at the writer. A wake can
+ *   name one member of a group (`#member` in its key), so the members of a parallel group are
+ *   placed by the scheduler one at a time. Everything runs inside the caller's transaction.
  *
  * Exports: beginStageRun(), finishStageRun(), recordStage(), humanStageId(), holdForHuman(),
- *   approveHuman(), sendBackFromHuman(), requestStageWake().
+ *   approveHuman(), sendBackFromHuman(), requestStageWake(), wakeMember().
  * Depends on: @forge/core (currentCycle, stage types), tick/wakes, types/stage-runner. Writes inside the caller's transaction.
  */
 
@@ -108,9 +110,12 @@ export async function recordStage(
   return id;
 }
 
-/** The id of the pipeline's human stage; a pipeline with none answers `merge`, which then stands in for it. */
+/** The id of the pipeline's human or sign-off stage; a pipeline with none answers `merge`, which then stands in for it. */
 export function humanStageId(snapshot: Pick<TicketPipeline, 'definition'>): string {
-  return snapshot.definition.stages.find((s) => s.kind === 'human')?.id ?? 'merge';
+  return (
+    snapshot.definition.stages.find((s) => s.kind === 'human' || s.kind === 'sign_off')
+      ?.id ?? 'merge'
+  );
 }
 
 async function humanRow(
@@ -138,11 +143,12 @@ async function humanRow(
   };
 }
 
-/** The pipeline has a human stage and the work reached it: the owner's review begins (a `waiting` row). */
+/** The pipeline has a human or sign-off stage and the work reached it: the owner's review begins (a `waiting` row). */
 export async function holdForHuman(
   tx: StorageTx,
   nowIso: string,
   ticketId: string,
+  note = 'waiting for your review',
 ): Promise<void> {
   const h = await humanRow(tx, ticketId);
   if (!h || h.stageId === 'merge') {
@@ -160,11 +166,11 @@ export async function holdForHuman(
       kind: 'human',
     },
     'waiting',
-    { note: 'waiting for your review' },
+    { note },
   );
 }
 
-/** The owner approved: the human stage passes. */
+/** The owner approved: the human or sign-off stage passes (a sign-off stage records who signed). */
 export async function approveHuman(
   tx: StorageTx,
   nowIso: string,
@@ -175,8 +181,16 @@ export async function approveHuman(
     return;
   }
 
+  const signed = h.snapshot.definition.stages.some(
+    (s) => s.id === h.stageId && s.kind === 'sign_off',
+  );
+
+  const outcome = signed
+    ? { note: 'approved', signed_by: 'owner' as const }
+    : { note: 'approved' };
+
   if (h.row?.status === 'waiting') {
-    await finishStageRun(tx, h.row.id, 'passed', { note: 'approved' }, nowIso);
+    await finishStageRun(tx, h.row.id, 'passed', outcome, nowIso);
 
     return;
   }
@@ -192,7 +206,7 @@ export async function approveHuman(
       kind: 'human',
     },
     'passed',
-    { note: 'approved' },
+    outcome,
   );
 }
 
@@ -234,6 +248,8 @@ export async function sendBackFromHuman(
  * verifying ticket). The key carries the number of runs the ticket has had, so the wake that
  * asked for a start already consumed can never swallow the one a retry asks for, while a repeated
  * request in the same tick coalesces. `notBefore` (epoch ms) delays it (a backoff, a quota reset).
+ * `memberId` names one member of a group: it rides in the key as `stage#member`, so each member of
+ * a parallel group has its own wake and is placed by the scheduler on its own.
  */
 export async function requestStageWake(
   ctx: EngineCtx,
@@ -243,13 +259,25 @@ export async function requestStageWake(
   cycle: number,
   reason: string,
   notBefore?: number,
+  memberId?: string,
 ): Promise<void> {
   const runs = (await tx.runs.listByTicket(ticketId)).length;
+  const at =
+    memberId === undefined || memberId === '' ? stageId : `${stageId}#${memberId}`;
+
   await requestWakeTx(tx, ctx.deps, {
     ticketId,
     kind: 'stage',
     reason,
-    key: `${ticketId}:${stageId}:${cycle}:${runs}`,
+    key: `${ticketId}:${at}:${cycle}:${runs}`,
     ...(notBefore === undefined ? {} : { notBefore }),
   });
+}
+
+/** The group member a wake is for: `#member` in a stage wake's key, `~member` in a rework wake's; undefined for a lone stage. */
+export function wakeMember(w: { readonly idempotency_key: string }): string | undefined {
+  return (
+    /#([a-z0-9_-]+):/i.exec(w.idempotency_key)?.[1] ??
+    /~([a-z0-9_-]+)$/i.exec(w.idempotency_key)?.[1]
+  );
 }

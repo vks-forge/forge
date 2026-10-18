@@ -1,12 +1,13 @@
 /**
- * Escalation dialogs: "Re-plan" and "Send back for rework" ask for words, "Cancel ticket" asks
- * before it throws work away.
+ * Escalation dialogs: "Re-plan", "Send back for rework", "Merge anyway" and "Continue" ask for
+ * words, "Cancel ticket" asks before it throws work away.
  *
  * Why: re-planning sends the whole card back to the Director and rework sends one ticket back to
  *   a Worker; both are useless without a reason, so each takes a comment of at least five
  *   characters and keeps Send off until there is one, and Re-plan says what happens to the
- *   card's tickets before the owner commits. Cancelling cannot be undone, so it asks; when other
- *   tickets depend on this one the server refuses a plain cancel, and the dialog then lists them
+ *   card's tickets before the owner commits. Merge anyway and Continue overrule a hold, so they
+ *   need the owner's reason too (it is recorded on the card), and Merge anyway says it cannot be
+ *   undone. Cancelling cannot be undone, so it asks; when other tickets depend on this one the server refuses a plain cancel, and the dialog then lists them
  *   and offers "Cancel all" instead of leaving the owner with a bare error. A refusal is shown
  *   inside the dialog so it never closes on a failure.
  *
@@ -26,16 +27,24 @@ import type { EscalationControls } from '#/types/escalation-ui.types.js';
 
 const MIN_COMMENT = 5;
 
-/** A dialog that takes a comment (re-plan, rework) and sends it. */
+/** A dialog that takes a comment (re-plan, rework, merge anyway, continue) and sends it. */
 export function CommentDialog(props: {
   open: boolean;
   onClose: () => void;
+  /**
+   * Called instead of `onClose` once the server accepted the comment. Closing a dismissed dialog
+   * clears the shown refusal; closing an accepted one must not, or it would also clear the answer
+   * the card is about to show ("Merged anyway by you").
+   */
+  onDone?: () => void;
   controls: EscalationControls;
-  action: 'replan' | 'rework';
+  action: 'replan' | 'rework' | 'merge_anyway' | 'continue';
   title: string;
   description: string;
   label: string;
   sendLabel: string;
+  /** One more line under the field, such as "Recorded on the card. Only you can do this." */
+  footnote?: string;
 }) {
   const { controls } = props;
   const [comment, setComment] = useState('');
@@ -44,6 +53,11 @@ export function CommentDialog(props: {
   const close = (): void => {
     setComment('');
     props.onClose();
+  };
+
+  const done = (): void => {
+    setComment('');
+    (props.onDone ?? props.onClose)();
   };
 
   return (
@@ -60,14 +74,18 @@ export function CommentDialog(props: {
           disabled={comment.trim().length < MIN_COMMENT}
           status={busy ? 'loading' : 'idle'}
           onClick={() =>
-            controls.act({ action: props.action, comment: comment.trim() }, close)
+            controls.act({ action: props.action, comment: comment.trim() }, done)
           }
         >
           {props.sendLabel}
         </Button>
       }
     >
-      <Field id={id} label={props.label} hint={`At least ${MIN_COMMENT} characters.`}>
+      <Field
+        id={id}
+        label={props.label}
+        hint={`At least ${MIN_COMMENT} characters.${props.footnote === undefined ? '' : ` ${props.footnote}`}`}
+      >
         <textarea
           id={id}
           rows={4}

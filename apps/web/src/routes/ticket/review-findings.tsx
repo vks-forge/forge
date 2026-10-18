@@ -6,25 +6,33 @@
  *   many findings and how serious, and their own summary. A ticket that went back for rework
  *   shows why. Making the owner open a chip on the strip to learn that hides the one thing that
  *   decides whether to approve, so the Review tab lists each check that reported, with its
- *   counts by severity and its words. Nothing is shown for a ticket whose pipeline has no
+ *   counts by severity, its words and each finding itself (severity, `file:line`, what is wrong and the
+ *   evidence), so the owner can open the file instead of trusting a count. The Director's check
+ *   against the plan reports the same way. Nothing is shown for a ticket whose pipeline has no
  *   reporting check (Express), and the full detail of any stage stays one click away on the strip.
  *
  * Exports: ReviewFindings.
- * Depends on: api/use-ticket-pipeline, domain/stage-view-copy, schemas/pipelines.
+ * Depends on: api/use-ticket-pipeline, components/ticket/findings-list, domain/stage-view-copy,
+ *   schemas/pipelines.
  */
 
 import { useTicketPipeline } from '#/api/use-ticket-pipeline.js';
+import { FindingsList } from '#/components/ticket/findings-list.js';
 import { STATUS_VIEW, countsLine, reworkBadge } from '#/domain/stage-view-copy.js';
 import type { StageView } from '#/schemas/pipelines.js';
 
 function reporters(stages: readonly StageView[]): StageView[] {
   return stages.flatMap((s) =>
-    s.members ? reporters(s.members) : s.counts !== undefined ? [s] : [],
+    s.members
+      ? reporters(s.members)
+      : s.counts !== undefined || s.check !== undefined
+        ? [s]
+        : [],
   );
 }
 
-export function ReviewFindings(props: { ticketId: string; stamp: string }) {
-  const query = useTicketPipeline(props.ticketId, props.stamp);
+export function ReviewFindings(props: { ticketId: string }) {
+  const query = useTicketPipeline(props.ticketId);
   const pipeline = query.data;
 
   if (!pipeline) {
@@ -67,10 +75,16 @@ export function ReviewFindings(props: { ticketId: string; stamp: string }) {
                 ) : null}
                 <span className="font-normal text-muted">{` · ${STATUS_VIEW[row.status].label}`}</span>
               </p>
-              <p className={serious ? 'font-medium text-danger' : 'text-muted'}>
-                {countsLine(row.counts)}
-              </p>
+              {row.counts === undefined ? null : (
+                <p className={serious ? 'font-medium text-danger' : 'text-muted'}>
+                  {countsLine(row.counts)}
+                </p>
+              )}
               {row.summary ? <p className="max-w-prose">{row.summary}</p> : null}
+              <FindingsList
+                findings={row.findings ?? row.check?.findings ?? []}
+                label={`Findings from ${row.label}`}
+              />
             </li>
           );
         })}
