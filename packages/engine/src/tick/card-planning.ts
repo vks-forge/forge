@@ -13,9 +13,12 @@
  *   An owner's chat message during planning answers the open question rather than starting a
  *   second conversation. A step that fails is retried after its queued turn goes stale, except
  *   a step over its budget, which asks the owner to raise the cap or retry (never a silent loop).
+ *   A turn that took an owner message always leaves a Director event after it: when nothing
+ *   else answered, a plain reply says the message was kept and nothing ran (d-0135).
  *
  * Exports: planningHandles(), runPlanningTurn().
- * Depends on: @forge/core (flow cursor, queue items), tick/planning-*, tick/plan-to-tickets,
+ * Depends on: @forge/core (flow cursor, queue items), tick/planning-* (planning-reply-guard for the
+ *   no-silent-reply rule), tick/plan-to-tickets,
  *   tick/card-log, tick/card-phase, types/card-planning. Reads and writes storage.
  */
 
@@ -25,6 +28,7 @@ import { iso } from '#/shared/time.js';
 import { logCardEvent } from '#/tick/card-log.js';
 import { askQueued, grillStep, recordAnswerTx } from '#/tick/planning-grill.js';
 import { approveStep, writePlanStep } from '#/tick/planning-plan.js';
+import { answerIfSilent } from '#/tick/planning-reply-guard.js';
 import {
   isPlannedType,
   isPlanningPhase,
@@ -247,11 +251,15 @@ export async function runPlanningTurn(
   }
 
   await ensureFlow(pc);
-  for (const item of items.filter((i) => i.reason === 'user_message')) {
+  const messages = items.filter((i) => i.reason === 'user_message');
+  for (const item of messages) {
     await absorbMessage(pc, item);
   }
 
   const end = await runFlow(ctx, cardId);
+  if (messages.length > 0) {
+    await answerIfSilent(pc, Math.max(...messages.map((m) => m.event_id)));
+  }
 
   // A blocked step is not retried by itself: the same cap would fail the same way.
   return end === 'failed' ? 'retry' : 'done';

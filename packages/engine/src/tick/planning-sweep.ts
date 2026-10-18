@@ -10,7 +10,9 @@
  *   after a day of silence the Director writes a plain note that it is still waiting (d-0112's
  *   idle-card nudge applied to an open question). It never answers for the owner and never closes
  *   the card (d-0141 item 3). Writing the note moves the card's last activity forward, which is
- *   what spaces the next nudge a day later, so no extra state is needed.
+ *   what spaces the next nudge a day later, so no extra state is needed. A card holding queued
+ *   owner questions (from the enhance pass) with none open and no turn owed would also sit
+ *   unseen: the sweep queues a turn for it, and the flow asks the next question.
  *
  * Exports: NUDGE_AFTER_MS, sweepPlanning().
  * Depends on: @forge/core, tick/card-notify, tick/planning-state. Reads and writes storage.
@@ -26,7 +28,7 @@ export const NUDGE_AFTER_MS = 24 * 60 * 60 * 1000;
 
 const PAGE = 200;
 
-/** Queues the first planning turn of planned-type cards that have no flow, and nudges quiet open questions. */
+/** Queues the first planning turn of planned-type cards that have no flow or a stranded queued question, and nudges quiet open questions. */
 export async function sweepPlanning(ctx: EngineCtx): Promise<void> {
   const touched = await ctx.deps.storage.transaction(async (tx) => {
     const out: CardId[] = [];
@@ -57,6 +59,22 @@ export async function sweepPlanning(ctx: EngineCtx): Promise<void> {
 
             out.push(card.id);
           }
+
+          continue;
+        }
+
+        const { grill } = planning;
+        const stranded = grill.current === null && grill.queued.length > 0;
+        if (stranded && (await tx.cardReplyQueue.listOpen(card.id)).length === 0) {
+          // A queued question with none open and no turn owed would wait forever: run the flow, which asks it.
+          await tx.cardReplyQueue.enqueue({
+            card_id: card.id,
+            event_id: 0,
+            reason: 'start_planning',
+            enqueued_at: ctx.nowIso,
+          });
+
+          out.push(card.id);
 
           continue;
         }

@@ -43,6 +43,7 @@ import {
   latestPlanOf,
   logPlanEvent,
   mergeUnique,
+  stamp,
 } from '#/tick/planning-state.js';
 import { callStep, finishStep, startStep } from '#/tick/planning-step-io.js';
 import type {
@@ -242,8 +243,10 @@ export async function enhanceStep(
       assumptions: mergeUnique(g.assumptions, out.assumptions),
       queued: [...g.queued, ...out.owner_questions.slice(0, max)],
     }),
+    // The clock now, not the tick's start: the model call took minutes, and an older stamp
+    // would sort the message before the step it reports and move the card's activity back.
     after: (tx) =>
-      logPlanEvent(tx, pc.card.id as CardId, pc.ctx.nowIso, {
+      logPlanEvent(tx, pc.card.id as CardId, stamp(pc), {
         kind: 'director_message',
         payload: { text: `Enhance pass: ${out.summary}` },
       }),

@@ -60,6 +60,7 @@ function toQuestion(draft: GrillQuestionDraft, n: number, open: number): GrillQu
  * Stores `draft` as the open question, logs it and raises the card to Needs you (true), or drops it (false). The state is
  * read again inside the transaction: if the owner ended the grill or answered while the model
  * was thinking, the question is dropped (its cost is still counted) rather than asked after "enough".
+ * A question taken from the queue is asked even though the grill step is done (see below).
  */
 async function openQuestionTx(
   tx: StorageTx,
@@ -72,7 +73,10 @@ async function openQuestionTx(
   const at = stamp(pc);
   const fresh = (await tx.cardPlanning.get(pc.card.id)).grill;
   const spent = fresh.director_spend_usd + cost;
-  if (fresh.done || fresh.current !== null) {
+  // A queued question comes from the enhance pass, which runs after the grill step has finished
+  // (`done`), so `done` cannot veto it. The owner's shortcuts empty the queue instead.
+  const ended = fresh.done && !extras.fromQueue;
+  if (ended || fresh.current !== null) {
     await tx.cardPlanning.update(pc.card.id, {
       grill: { ...fresh, director_spend_usd: spent },
     });
