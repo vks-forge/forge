@@ -1,13 +1,17 @@
 ---
 id: x-0013
-kind: proposal
+kind: decision
 statement: Move memory (decisions, rejected, proposals, outcomes) from markdown files into the Forge database with retrieval - exact lookup (id, tag, status, scope) and relevance search (full-text first, e.g. SQLite FTS5 with ranking; semantic/embedding search only if research shows FTS is not enough) - so an agent loads a small relevant slice per task instead of every file each session. Records keep the same schema, provenance and append-only rules (never edit statement/source, supersede instead); export to markdown stays possible for review and the repo mirror (d-0086). Agents read memory through tools (search, get, related) rather than having it pasted in. Applies to project memory in the product and, as a dev-tooling step, to this repo's own `.forge/memory` session loading.
 source: { type: chat, ref: "2026-10-14: user \"also add in propsal for moving moemory to database with proper functionlity to find relative or exact memories etc(need research), i need this beacuse loading all memory file per session is conting me too much content.\"" }
 author: director
 origin: user-requested
-status: pending
+status: active
 confidence: 0.7
 valid_from: 2026-10-14
+approved_at: 2026-10-18
+approved_source: { type: chat, ref: "2026-10-18: user \"approved\" after the x-0013 summary" }
+amends: [d-0007, d-0086]
+reopens: [r-0001]
 tags: [memory, database, search, retrieval, cost, research]
 ---
 
