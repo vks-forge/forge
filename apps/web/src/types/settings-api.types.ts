@@ -19,6 +19,8 @@ import type {
   HarnessKind,
   HarnessSecretKind,
   HarnessToolSchema,
+  ResearchTestBody,
+  ResearchTestReply,
 } from '@forge/core';
 import type {
   CompanyView,
@@ -94,6 +96,8 @@ export interface SettingsApi {
   saveCompany(body: SettingsSaveBody): Promise<ConfigVersion>;
   /** Every saved version, oldest first. */
   companyHistory(options?: RequestOptions): Promise<readonly ConfigVersion[]>;
+  /** Tries the search provider (with the given unsaved settings, or the saved ones); nothing is saved. */
+  testResearch(body: ResearchTestBody): Promise<ResearchTestReply>;
 }
 
 /** An edit in progress: the settings being changed, as they were when loaded, and the version they came from. */

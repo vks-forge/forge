@@ -8,16 +8,19 @@
  *   in the held-decision card, the Review tab and a stage's detail, so a finding reads the same
  *   wherever the owner meets it. Where the list comes from a stored review row (`marking`), each
  *   finding also carries the owner's "Real" / "False alarm" toggle; the toggle is keyed by the
- *   finding's position in the check's own list, not its place in the sorted display.
+ *   finding's position in the check's own list, not its place in the sorted display. A reviewer
+ *   that leaned on a web page lists it under the finding as a link out (only for a real http or
+ *   https address, opened without an opener handle or referrer), so the claim can be checked.
  *
  * Exports: FindingsList.
- * Depends on: components/ticket/finding-mark, domain/finding-marks, domain/finished-work-copy,
+ * Depends on: components/ticket/finding-mark, domain/finding-marks, domain/research-evidence, domain/finished-work-copy,
  *   domain/pipeline-copy, types/finding-marks.types, @forge/core (type).
  */
 
 import type { Finding } from '@forge/core';
 import { FindingMarkToggle } from '#/components/ticket/finding-mark.js';
 import { verdictAt } from '#/domain/finding-marks.js';
+import { domainOf, OPEN_LINK_REL, safeHref } from '#/domain/research-evidence.js';
 import { indexedBySeverity, whereOf } from '#/domain/finished-work-copy.js';
 import { SEVERITY_LABEL } from '#/domain/pipeline-copy.js';
 import type { FindingMarking } from '#/types/finding-marks.types.js';
@@ -58,6 +61,30 @@ export function FindingsList(props: {
             <p className="min-w-0 whitespace-pre-wrap break-words text-xs text-muted">
               {finding.evidence}
             </p>
+            {finding.sources !== undefined && finding.sources.length > 0 ? (
+              <ul aria-label="Sources cited" className="grid min-w-0 gap-0.5 text-xs">
+                {finding.sources.map((source) => {
+                  const href = safeHref(source);
+
+                  return (
+                    <li key={source} className="min-w-0 break-all">
+                      {href === null ? (
+                        <span className="font-data">{source}</span>
+                      ) : (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel={OPEN_LINK_REL}
+                          className="font-data text-signal underline-offset-2 hover:underline"
+                        >
+                          {`${domainOf(href)} · ${href}`}
+                        </a>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
             {props.marking === undefined ? null : (
               <FindingMarkToggle
                 ticketId={props.marking.ticketId}

@@ -27,6 +27,7 @@ Left sidebar (always visible)
     ├─ GitHub .......... connections, installations, rotate key
     ├─ Models & budgets
     ├─ Limits & queue .. global / per-project / per-harness
+    ├─ Research ........ search provider, host lists, test provider (S6-B)
     ├─ Agents .......... roster, editor, templates, Director drafts (S5a)
     ├─ Pipelines ....... per-lane stage lists (Express / Standard / Full), reset to built-in (S5b)
     ├─ Skills           (editor, after x-0011)
@@ -116,9 +117,9 @@ Amended by the UI pass U1 (shared surfaces, d-0164):
   ticket (id, title, card, lane, state chip, cost, updated) with state and lane filters,
   debounced search, sort and server-side pages (10/25/50), all in the URL; a row opens
   `/p/:slug/tickets/:id`.
-- **Settings use left tabs**: Forge settings (General, Director, Agents, Pipelines, Limits, Harnesses,
+- **Settings use left tabs**: Forge settings (General, Director, Agents, Pipelines, Limits, Research, Harnesses,
   GitHub) and project settings (`/p/:slug/settings/<section>`: project, workers, checks, repository,
-  director, agents, pipelines, history, danger) are a sticky vertical tab list beside the section; below 768 px
+  director, research, agents, pipelines, history, danger) are a sticky vertical tab list beside the section; below 768 px
   the tabs become a picker. One draft and one save bar span the project tabs; switching tabs
   keeps edits, leaving settings still asks.
 - **Agents** (S5a-B): Forge settings → Agents (`/settings/agents`) and a project's Agents tab
@@ -229,6 +230,34 @@ Amended by the UI pass U1 (shared surfaces, d-0164):
 Visual direction: A "Instrument" (Instrument Sans + IBM Plex Mono, graphite
 with one cobalt signal, amber only for what needs the user, critically damped
 springs). Prototype: https://claude.ai/artifact/1bdAeov3SxXfQYydSrgWrP
+
+Amended by S6-B (research and budget):
+- **Card, Evidence tab** (`/p/:slug/cards/:id/evidence`; shown once the card has evidence or a
+  finished research run, with a count badge): "Research used 2 of 4 runs", claims grouped under
+  their question, each with a Verified or Unverified chip ("No quote matched the page"), its
+  sources as domain, title and time, an expandable quote and **Open source**, which opens a side
+  drawer with the stored page as plain text (never HTML), the quote marked, where the page came
+  from and one external link (http or https only, `noopener noreferrer nofollow`). A list of
+  every page read, and the notes research left when it could not run with a link to Research
+  settings. States: loading, error with Try again, empty.
+- **Card, Conversation**: a `research` event is one line, "Researched: 3 searches, 5 pages, 7
+  facts (2 unverified)" with See the evidence, or "Research could not run" with the reason and
+  Open Research settings.
+- **Card, Plan, Verification**: "Outside facts the plan rests on" with each claim's status, `E`
+  links to the Evidence tab and "Needs your approval: rests on 1 unverified outside fact" when
+  one is unverified. **Details** edits the card's budget cap (set, change, clear) and says it
+  only warns.
+- **Forge settings, Research** (`/settings/research`): provider (SearXNG or Off), address, extra
+  allowed hosts, fetch allow and deny host lists, page timeout and **Test provider**, which tries
+  the settings on screen without saving and says the latency, or the cause and the fix.
+  **Director** gains Research limits (rounds, searches, pages, KB, runs per card, an optional
+  per-call budget, Research during the grill) and **Add Research step** (once). Project
+  settings gain a **Research** tab that can only narrow the company's setting.
+- **Inbox**: a `budget_warning` row (kind Budget) opens the card's Details and offers
+  **Acknowledge** (archive) and **Change cap** (a drawer with the cap box).
+- **Ticket and Runs**: review findings list the pages a reviewer cited as links; the Runs tab
+  ("Pages this run read", loaded when opened) and the run drawer ("Sources this run read") list
+  the pages a Worker fetched.
 
 ## Prototype build order
 

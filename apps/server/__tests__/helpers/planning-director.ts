@@ -67,6 +67,7 @@ const answers = (calls: Map<StepName, number>): Partial<Record<StepName, unknown
     assumptions: [],
     owner_questions: [],
   },
+  research: { findings: { summary: 'Nothing to look up.', claims: [], unanswered: [] } },
   write_plan: plan,
   approve_plan: { decision: 'approve', questions: [] },
   dispatch_prompt: {

@@ -23,5 +23,7 @@ export const Finding = z.object({
   line: z.number().int().positive().optional(),
   issue: z.string().min(1).max(1000),
   evidence: z.string().min(1).max(2000),
+  /** URLs the finding rests on; a reviewer may cite only pages its own run fetched (checked by submit_review). */
+  sources: z.array(z.url()).max(10).optional(),
 });
 export type Finding = z.infer<typeof Finding>;

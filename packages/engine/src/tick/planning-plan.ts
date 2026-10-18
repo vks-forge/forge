@@ -5,7 +5,8 @@
  *   the survey and the verify findings into one versioned, fixed-structure plan (d-0132); the
  *   engine, not the model, fills the decisions (from the stored answers) and the verification
  *   block (from the verify findings and the files it recorded reading), so the plan cannot drift
- *   from what was asked and found, and the approval floor reads facts the model cannot edit. The planner may also
+ *   from what was asked and found, and the approval floor reads facts the model cannot edit. The same goes for the
+ *   evidence the plan rests on: the engine attaches the card's checked research and marks each outside claim. The planner may also
  *   tailor a ticket's pipeline; each op is checked against the lane here and only the ops that hold are kept, the
  *   others named under the risks. A
  *   revision after Request changes carries a computed diff from the version before.
@@ -21,7 +22,13 @@
  *   tick/card-phase, types/card-planning. Writes storage.
  */
 
-import { ApprovePlanOutput, PlanVersion, WritePlanOutput, diffPlans } from '@forge/core';
+import {
+  ApprovePlanOutput,
+  PlanVersion,
+  WritePlanOutput,
+  diffPlans,
+  markOutsideClaims,
+} from '@forge/core';
 import type { CardPlanningState, FlowStep, GrillState } from '@forge/core';
 import { moveCardTx } from '#/tick/card-phase.js';
 import { approvePlanTx } from '#/tick/plan-to-tickets.js';
@@ -38,6 +45,7 @@ import {
   stamp,
 } from '#/tick/planning-state.js';
 import { callStep, finishStep, startStep } from '#/tick/planning-step-io.js';
+import { loadEvidenceViews } from '#/tick/research-store.js';
 import type { PlanCtx, StepOutcome } from '#/types/card-planning.types.js';
 
 /** Whether the owner alone approves this card's plan: "always ask", or a card type that never lets the Director approve. */
@@ -69,6 +77,12 @@ async function composePlan(
   // The planner's pipeline ops are untrusted: only those that hold on their lane stay, the rest are named under the risks.
   const vetted = vetPipelineOps(pc, body.tickets, stamp(pc));
 
+  // The evidence is the engine's: every checked claim of the card with its sources, and each outside claim the plan
+  // names is marked supported or unverified here, never by the model that wrote the plan (d-0144).
+  const evidence = await pc.ctx.deps.storage.transaction((tx) =>
+    loadEvidenceViews(tx, pc.card.id),
+  );
+
   const plan = PlanVersion.parse({
     card_id: pc.card.id,
     version: (previous?.version ?? 0) + 1,
@@ -91,6 +105,8 @@ async function composePlan(
         mergeUnique(verify?.risks ?? [], grill.survey?.risks ?? []),
         mergeUnique(body.risks, vetted.notes),
       ),
+      evidence,
+      outside_claims: markOutsideClaims(body.outside_claims, evidence),
     },
     tickets: vetted.tickets,
     card_links: links,

@@ -34,7 +34,11 @@ import {
   StepName,
 } from '@forge/core';
 import { z } from 'zod';
-import { FALLBACK_DIRECTOR, FALLBACK_STEP_MODELS } from '#/domain/director-defaults.js';
+import {
+  FALLBACK_DIRECTOR,
+  FALLBACK_RESEARCH,
+  FALLBACK_STEP_MODELS,
+} from '#/domain/director-defaults.js';
 
 export {
   ApprovalMode,
@@ -65,6 +69,7 @@ const LenientForgeConfig = z.looseObject({
       draft_agent: true,
       ticket_check: true,
       pick_substitute: true,
+      research: true,
     }),
     worker: ModelMatrix.shape.worker,
   }),
@@ -106,9 +111,11 @@ export function withDirectorDefaults(raw: LenientForgeConfig): ForgeConfig {
         draft_agent: d.draft_agent ?? fallback.draft_agent,
         ticket_check: d.ticket_check ?? fallback.ticket_check,
         pick_substitute: d.pick_substitute ?? fallback.pick_substitute,
+        research: d.research ?? fallback.research,
       },
       worker: models.worker,
     },
+    research: newer.research ?? FALLBACK_RESEARCH,
     engine,
     director: director ?? FALLBACK_DIRECTOR,
     agents: agents ?? {},

@@ -217,4 +217,23 @@ describe('checkFloor: lighter pipelines (d-0141 item 6)', () => {
 
     expect(checkFloor({ plan: plan(), ...clean })).toEqual({ pass: true, reasons: [] });
   });
+
+  it('adds one reason per unverified outside claim and none when there are none', () => {
+    const r = checkFloor({
+      plan: plan(),
+      ...clean,
+      unverified: ['The API limit is 100 per minute', 'It supports OAuth'],
+    });
+
+    expect(r.pass).toBe(false);
+    expect(r.reasons).toEqual([
+      'Plan rests on an unverified outside claim: The API limit is 100 per minute',
+      'Plan rests on an unverified outside claim: It supports OAuth',
+    ]);
+
+    expect(checkFloor({ plan: plan(), ...clean, unverified: [] })).toEqual({
+      pass: true,
+      reasons: [],
+    });
+  });
 });

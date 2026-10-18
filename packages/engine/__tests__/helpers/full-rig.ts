@@ -61,6 +61,8 @@ export async function seedPlan(
         matching_decisions: [],
         rejected_hits: [],
         risks: [],
+        evidence: [],
+        outside_claims: [],
       },
       tickets: [
         {

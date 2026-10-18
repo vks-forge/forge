@@ -13,7 +13,7 @@
  */
 
 import { Check, CircleAlert, Info, TriangleAlert } from 'lucide-react';
-import type { InputHTMLAttributes, ReactNode } from 'react';
+import type { InputHTMLAttributes, ReactNode, Ref } from 'react';
 
 export const INPUT_CLASS =
   'min-h-10 w-full min-w-0 rounded-lg border border-line bg-surface px-3 text-sm text-fg transition-colors duration-150 placeholder:text-faint hover:border-faint disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-danger';
@@ -56,6 +56,8 @@ export function TextInput(
     id: string;
     hasHint?: boolean;
     error?: string | undefined;
+    /** For a form that moves focus to its first box when it opens. */
+    ref?: Ref<HTMLInputElement>;
   },
 ) {
   const { hasHint, error, className = '', ...rest } = props;

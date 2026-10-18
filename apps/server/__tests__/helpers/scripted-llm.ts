@@ -46,6 +46,7 @@ const ANSWERS: Record<StepName, unknown> = {
   },
   verify: { findings: { summary: 'n/a', blast_radius: 'n/a' } },
   enhance: { summary: 'n/a', report: 'n/a', assumptions: [], owner_questions: [] },
+  research: { findings: { summary: 'n/a', claims: [], unanswered: [] } },
   write_plan: {
     summary: 'n/a',
     goal: 'n/a',

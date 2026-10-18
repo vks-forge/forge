@@ -3,7 +3,7 @@
  *
  * Why: layering and import discipline only hold if the build fails when they break. Core
  *   imports no sibling package, `tools` (the pure policy ring) imports core only, adapter
- *   packages (db, drivers, git, hooks, mcp, gates, memory, secrets, triggers) import core and tools but never each
+ *   packages (db, drivers, git, hooks, mcp, gates, memory, research, secrets, triggers) import core and tools but never each
  *   other, and only `apps/*` compose freely (d-0052). `../` imports are banned. Static
  *   and dynamic imports are both checked, so `import('@forge/x')` or `require` cannot
  *   smuggle in a forbidden edge. The same config rejects a file with no header comment,
@@ -48,6 +48,7 @@ const LAYER_ALLOWED = {
   hooks: CORE_AND_TOOLS,
   mcp: CORE_AND_TOOLS,
   memory: CORE_AND_TOOLS,
+  research: CORE_AND_TOOLS,
   secrets: CORE_AND_TOOLS,
   triggers: CORE_AND_TOOLS,
 };
@@ -459,6 +460,7 @@ export default tseslint.config(
       'hooks',
       'mcp',
       'memory',
+      'research',
       'secrets',
       'triggers',
     ].map((p) => `packages/${p}/src/**/*.${EXT}`),

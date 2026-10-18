@@ -20,6 +20,7 @@ import { DirectorOverride } from '#/routes/project-settings/director-override.js
 import { PipelinesSection } from '#/routes/project-settings/pipelines-section.js';
 import { HistoryPanel } from '#/routes/project-settings/history-panel.js';
 import { ProjectSection } from '#/routes/project-settings/project-section.js';
+import { ResearchOverride } from '#/routes/project-settings/research-override.js';
 import { SettingsForm } from '#/routes/project-settings/settings-form.js';
 import type { FormScope } from '#/types/project-settings.types.js';
 import { useProjectSettingsContext } from '#/routes/project-settings/use-project-settings-context.js';
@@ -74,6 +75,25 @@ export function DirectorTab() {
         snapshot={opened}
         draft={draft}
         issues={issues.filter((i) => i.field === 'director').map((i) => i.message)}
+        onChange={onChange}
+        disabled={saving}
+      />
+    </section>
+  );
+}
+
+export function ResearchTab() {
+  const { opened, draft, issues, onChange, saving } = useProjectSettingsContext();
+
+  return (
+    <section aria-labelledby="research-heading" className="grid gap-3">
+      <h2 id="research-heading" className="text-base font-semibold">
+        Research for this project
+      </h2>
+      <ResearchOverride
+        snapshot={opened}
+        draft={draft}
+        issues={issues.filter((i) => i.field === 'research').map((i) => i.message)}
         onChange={onChange}
         disabled={saving}
       />

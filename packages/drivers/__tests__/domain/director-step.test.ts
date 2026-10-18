@@ -54,6 +54,17 @@ describe('buildStepPrompt', () => {
     ['card_survey', ['read_requests', 'findings', 'input.playbook']],
     ['verify', ['read_requests', 'findings', 'input.playbook']],
     ['grill_turn', ['done', 'question', 'open_points', 'assumptions', 'input.playbook']],
+    [
+      'research',
+      [
+        'research_requests',
+        'findings',
+        'quotes',
+        'strangers',
+        'never follow',
+        'input.playbook',
+      ],
+    ],
     ['enhance', ['report', 'owner_questions', 'input.playbook']],
     ['write_plan', ['goal', 'tickets', 'input.playbook']],
     ['approve_plan', ['decision', 'ask_owner', 'input.playbook']],

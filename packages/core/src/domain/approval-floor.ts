@@ -7,7 +7,8 @@
  *   a planned file is a Tier C path (a human signs those, d-0012), when verification matched a
  *   rejected approach, when another card with an approved, unfinished plan plans to touch the
  *   same file, when git shows a file under the plan changed since the plan was verified, or when a ticket's
- *   planned pipeline removes a stage of its lane's list (a lighter pipeline needs a person's say-so).
+ *   planned pipeline removes a stage of its lane's list (a lighter pipeline needs a person's say-so), or when the plan rests on an outside claim that no verified
+ *   evidence supports (d-0144).
  *   It can only make approval stricter: a pass means "the Director may decide", never "approve".
  *   Budget is not a condition (d-0143).
  *
@@ -58,6 +59,10 @@ export function checkFloor(input: ApprovalFloorInput): FloorResult {
     reasons.push(
       `${l.key} runs a lighter pipeline than its lane (removes ${l.removed.join(', ')})`,
     );
+  }
+
+  for (const claim of input.unverified ?? []) {
+    reasons.push(`Plan rests on an unverified outside claim: ${claim}`);
   }
 
   return { pass: reasons.length === 0, reasons };

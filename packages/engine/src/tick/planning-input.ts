@@ -19,6 +19,7 @@
 import type { FloorResult, GrillState, PlanVersion } from '@forge/core';
 import type { FlowStep } from '@forge/core';
 import { ticketPlanKeys } from '#/tick/plan-keys.js';
+import { evidenceInput, loadEvidenceViews } from '#/tick/research-store.js';
 import type { PlanCtx } from '#/types/card-planning.types.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 
@@ -65,7 +66,8 @@ async function existingTickets(pc: PlanCtx): Promise<Record<string, unknown>[]> 
   });
 }
 
-function playbookOf(pc: PlanCtx, step: FlowStep): Record<string, unknown> | null {
+/** The playbook of `step` as the step input carries it, or null when it names none that exists. */
+export function playbookOf(pc: PlanCtx, step: FlowStep): Record<string, unknown> | null {
   const id = step.playbook_id;
   const body = id === undefined ? undefined : pc.director.playbooks[id];
 
@@ -74,12 +76,24 @@ function playbookOf(pc: PlanCtx, step: FlowStep): Record<string, unknown> | null
     : { id, title: body.title, body: body.body };
 }
 
-const stepOf = (step: FlowStep): Record<string, unknown> => ({
+/** The step as its input names it. */
+export const stepOf = (step: FlowStep): Record<string, unknown> => ({
   id: step.id,
   kind: step.kind,
   label: step.label,
   depth: step.depth ?? 'normal',
   instructions: step.instructions ?? '',
+});
+
+/** The card block of a step input. */
+export const cardInput = (pc: PlanCtx): Record<string, unknown> => ({
+  id: pc.card.id,
+  title: pc.card.title,
+  summary: pc.card.summary,
+  type: pc.card.type,
+  priority: pc.card.priority,
+  links: pc.card.links,
+  phase: pc.card.phase,
 });
 
 /** The input of a planning step; `extra` adds the step-specific fields (read results, the previous plan). */
@@ -91,8 +105,10 @@ export async function buildStepInput(
   extra: Record<string, unknown> = {},
 ): Promise<Record<string, unknown>> {
   const memory = await pc.ctx.deps.memory.slice(pc.project.slug);
-  const { card } = pc;
   const existing = await existingTickets(pc);
+  const evidence = await pc.ctx.deps.storage.transaction((tx) =>
+    loadEvidenceViews(tx, pc.card.id),
+  );
 
   return {
     step: stepOf(step),
@@ -103,15 +119,7 @@ export async function buildStepInput(
       rejected: memory.rejected,
       repo_rules: await readRepoRules(pc.ctx, pc.root),
     },
-    card: {
-      id: card.id,
-      title: card.title,
-      summary: card.summary,
-      type: card.type,
-      priority: card.priority,
-      links: card.links,
-      phase: card.phase,
-    },
+    card: cardInput(pc),
     grill: {
       answers: grill.answers.map((a) => ({
         question: a.question,
@@ -127,6 +135,8 @@ export async function buildStepInput(
     },
     survey: grill.survey,
     verify: grill.verify,
+    // What research found, as the engine checked it: claims, verified quotes, refs, statuses and where they came from (d-0144).
+    evidence: evidenceInput(evidence),
     enhance_report: grill.enhance_report,
     previous_steps: grill.step_summaries,
     lane_hint: grill.predicted_lane,
@@ -137,6 +147,24 @@ export async function buildStepInput(
     // After a re-plan the card already has tickets: done and running ones stay and must not be planned twice.
     ...(existing.length === 0 ? {} : { existing_tickets: existing }),
     ...extra,
+  };
+}
+
+/**
+ * The plan as the approval step sees it: the evidence is cut down to claim, ref and status, so no quote and
+ * no page text can reach the one step that decides (d-0141 item 6, d-0144).
+ */
+function withoutQuotes(plan: PlanVersion): Record<string, unknown> {
+  return {
+    ...plan,
+    verification: {
+      ...plan.verification,
+      evidence: plan.verification.evidence.map((e) => ({
+        ref: e.ref,
+        claim: e.claim,
+        status: e.status,
+      })),
+    },
   };
 }
 
@@ -152,7 +180,7 @@ export function buildApprovalInput(
     step: stepOf(step),
     playbook: playbookOf(pc, step),
     house_rules: pc.director.house_rules,
-    plan,
+    plan: withoutQuotes(plan),
     findings: grill.verify,
     floor,
   };

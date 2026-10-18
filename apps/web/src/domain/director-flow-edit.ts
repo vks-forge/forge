@@ -10,7 +10,7 @@
  *   refinements (the server stays the authority and re-checks).
  *
  * Exports: LOCKED_REASON, MAX_LABEL, whenKind(), stepAction(), moveStep(), patchStep(),
- *   removeStep(), addCustomStep(), flowIssues(), customStepId().
+ *   removeStep(), addCustomStep(), addResearchStep(), hasResearchStep(), RESEARCH_PRESENT_REASON, flowIssues(), customStepId().
  * Depends on: @forge/core (types), types/director-ui.types. No IO.
  */
 
@@ -155,6 +155,38 @@ export function addCustomStep(
   return next;
 }
 
+export const RESEARCH_PRESENT_REASON =
+  'The flow already has a Research step. A flow may have only one.';
+
+/** True when the flow already holds its one Research step (core allows at most one). */
+export function hasResearchStep(flow: readonly FlowStep[]): boolean {
+  return flow.some((s) => s.kind === 'research');
+}
+
+/**
+ * The Research step as Forge ships it, inserted just before the locked tail; the list is
+ * returned unchanged when it already has one.
+ */
+export function addResearchStep(flow: readonly FlowStep[]): FlowStep[] {
+  if (hasResearchStep(flow)) {
+    return [...flow];
+  }
+
+  const taken = new Set(flow.map((s) => s.id));
+  const next = [...flow];
+  next.splice(tailStart(flow), 0, {
+    id: taken.has('research') ? customStepId(flow, 'research step') : 'research',
+    kind: 'research',
+    label: 'Research outside facts',
+    enabled: true,
+    when: 'director_decides',
+    depth: 'normal',
+    locked: false,
+  });
+
+  return next;
+}
+
 const LANES: readonly Lane[] = ['express', 'standard', 'full'];
 
 /** Everything wrong with the list, one message each; `stepId` is set when one step is at fault. */
@@ -184,6 +216,10 @@ export function flowIssues(
         });
       }
     }
+  }
+
+  if (flow.filter((s) => s.kind === 'research').length > 1) {
+    issues.push({ message: 'The flow may have only one Research step.' });
   }
 
   if (flow.at(-1)?.kind !== 'approve') {

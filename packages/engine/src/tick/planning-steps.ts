@@ -242,6 +242,7 @@ export async function enhanceStep(
       enhance_report: out.report,
       assumptions: mergeUnique(g.assumptions, out.assumptions),
       queued: [...g.queued, ...out.owner_questions.slice(0, max)],
+      step_decisions: { ...g.step_decisions, ...(out.step_decisions ?? {}) },
     }),
     // The clock now, not the tick's start: the model call took minutes, and an older stamp
     // would sort the message before the step it reports and move the card's activity back.

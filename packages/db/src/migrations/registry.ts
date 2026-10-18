@@ -43,6 +43,7 @@ import { MIGRATION_0024 } from '#/migrations/0024-run-agent.js';
 import { MIGRATION_0025 } from '#/migrations/0025-stage-runner.js';
 import { MIGRATION_0026 } from '#/migrations/0026-full-lane.js';
 import { MIGRATION_0027 } from '#/migrations/0027-director-pipelines.js';
+import { MIGRATION_0028 } from '#/migrations/0028-research.js';
 import type { Migration } from '#/types/migrations.types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -71,4 +72,5 @@ export const MIGRATIONS: readonly Migration[] = [
   MIGRATION_0025,
   MIGRATION_0026,
   MIGRATION_0027,
+  MIGRATION_0028,
 ];

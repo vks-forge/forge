@@ -133,6 +133,91 @@ describe('submit_review', () => {
     expect(reviews).toHaveLength(2);
     expect(reviews.at(-1)).toMatchObject({ review: { summary: 'second' } });
   });
+
+  describe('cited sources', () => {
+    const recordPage = (storage: StorageAdapter, url: string, finalUrl = url) =>
+      storage.transaction((tx) =>
+        tx.researchSources.insert({
+          project: 'SF',
+          ticket_id: TICKET_ID,
+          run_id: RUN_ID,
+          origin: 'worker',
+          url,
+          final_url: finalUrl,
+          title: 't',
+          retrieved_at: T0,
+          sha256: 'a'.repeat(64),
+          bytes: 1,
+          truncated: false,
+          text: 'x',
+        }),
+      );
+
+    const review = (sources: string[]) => ({
+      verdict: 'changes',
+      summary: 's',
+      findings: [{ ...finding, sources }],
+    });
+
+    it('refuses a finding that cites a page this run never fetched, naming the URL', async () => {
+      const { client, storage } = await setup();
+
+      const res = await client.callTool({
+        name: 'submit_review',
+        arguments: review(['https://invented.example.com/doc']),
+      });
+
+      expect(res.isError).toBe(true);
+      expect(textOf(res)).toContain('https://invented.example.com/doc');
+      expect(
+        (await storage.transaction((tx) => tx.runEvents.listByRun(RUN_ID))).filter(
+          (e) => e.type === 'review',
+        ),
+      ).toEqual([]);
+    });
+
+    it('accepts a page this run fetched, by its URL or its final URL, ignoring fragments', async () => {
+      const { client, storage } = await setup();
+      await recordPage(storage, 'https://example.com/a', 'https://example.com/b');
+
+      for (const url of ['https://example.com/a', 'https://example.com/b#part']) {
+        const res = await client.callTool({
+          name: 'submit_review',
+          arguments: review([url]),
+        });
+
+        expect(res.isError).toBeFalsy();
+      }
+    });
+
+    it('does not accept a page another run fetched', async () => {
+      const { client, storage } = await setup();
+      await storage.transaction(async (tx) => {
+        await tx.runs.insert(run({ id: 'run-other' }));
+        await tx.researchSources.insert({
+          project: 'SF',
+          ticket_id: TICKET_ID,
+          run_id: 'run-other',
+          origin: 'worker',
+          url: 'https://example.com/a',
+          final_url: 'https://example.com/a',
+          title: 't',
+          retrieved_at: T0,
+          sha256: 'a'.repeat(64),
+          bytes: 1,
+          truncated: false,
+          text: 'x',
+        });
+      });
+
+      const res = await client.callTool({
+        name: 'submit_review',
+        arguments: review(['https://example.com/a']),
+      });
+
+      expect(res.isError).toBe(true);
+    });
+  });
 });
 
 describe('get_ticket for check runs', () => {

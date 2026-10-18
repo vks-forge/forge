@@ -10,6 +10,7 @@
   "references": [
     { "path": "../../packages/core" },
     { "path": "../../packages/db" },
-    { "path": "../../packages/mcp" }
+    { "path": "../../packages/mcp" },
+    { "path": "../../packages/research" }
   ]
 }

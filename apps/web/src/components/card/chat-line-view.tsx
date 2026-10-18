@@ -11,7 +11,7 @@
  *   safe markdown subset (never HTML, links only http/https) because they are untrusted model
  *   output; the owner's own words stay plain text. An unsent line says so and is dimmed. The planning flow's
  *   lines are blocks: a grill question with its answer buttons, a finished Director step that
- *   expands to the files it read, and a ready plan with its Review button; an answer given by
+ *   expands to the files it read, a finished research run, and a ready plan with its Review button; an answer given by
  *   the Director's recommendation says so, so the owner can tell whose choice it was. A ticket
  *   that waits on the owner is the live escalation card, so acting on it here settles the Ticket
  *   page and the Inbox too.
@@ -19,7 +19,7 @@
  * Exports: ChatLineView.
  * Depends on: react, react-router, lucide-react, components/chat/*, components/thread/markdown-text,
  *   components/ticket/ticket-link,
- *   components/card/question-block, step-line, plan-ready-card, components/escalation/escalation-line,
+ *   components/card/question-block, step-line, research-line, plan-ready-card, components/escalation/escalation-line,
  *   domain/relative-time, schemas/escalation (type), types/cards-ui.types.
  */
 
@@ -30,6 +30,7 @@ import { ChatRow } from '#/components/chat/chat-row.js';
 import { MarkdownText } from '#/components/thread/markdown-text.js';
 import { EscalationLine } from '#/components/escalation/escalation-line.js';
 import { QuestionBlock } from '#/components/card/question-block.js';
+import { ResearchLine } from '#/components/card/research-line.js';
 import { StepLine } from '#/components/card/step-line.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
 import { clockTime } from '#/domain/relative-time.js';
@@ -89,6 +90,14 @@ export function ChatLineView(props: {
           view={props.escalations?.find((item) => item.id === interactionId)}
           loading={props.escalations === undefined}
         />
+      </ChatRow>
+    );
+  }
+
+  if (line.block?.kind === 'research') {
+    return (
+      <ChatRow {...row}>
+        <ResearchLine research={line.block.research} slug={props.slug} at={line.at} />
       </ChatRow>
     );
   }

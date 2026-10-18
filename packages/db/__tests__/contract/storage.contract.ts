@@ -57,6 +57,7 @@ import { describeHarnessStateContract } from './harness-state.contract.js';
 import { describeHarnessesContract } from './harnesses.contract.js';
 import { describePipelineProposalsContract } from './pipeline-proposals.contract.js';
 import { describeProjectPurgeContract } from './project-purge.contract.js';
+import { describeResearchStorageContract } from './research-storage.contract.js';
 import { describeStageArtifactsContract } from './stage-artifacts.contract.js';
 import { describeStageRunnerContract } from './stage-runner.contract.js';
 import { describeTicketPipelinesContract } from './ticket-pipelines.contract.js';
@@ -88,6 +89,7 @@ export function describeStorageContract(
     describeStageRunnerContract(() => db);
     describeStageArtifactsContract(() => db);
     describePipelineProposalsContract(() => db);
+    describeResearchStorageContract(() => db);
     describeHarnessesContract(() => db);
     describeHarnessStateContract(() => db);
     describeConnectionsContract(() => db);

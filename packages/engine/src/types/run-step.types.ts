@@ -13,6 +13,8 @@
 export interface StepExtras {
   /** How long this call may run before it is stopped; the adapter's default when absent. */
   readonly timeoutMs?: number;
+  /** Budget of this call in dollars; the engine's `step_budget_usd` when absent (a research call has its own cap). */
+  readonly budgetUsd?: number;
   /** Called with the dollars the call cost when the model reports it. */
   readonly onCost?: (usd: number) => void;
 }

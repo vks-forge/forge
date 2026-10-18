@@ -49,6 +49,7 @@ describe('AppShell navigation', () => {
       'Agents',
       'Pipelines',
       'Limits',
+      'Research',
       'Harnesses',
       'GitHub',
     ]);

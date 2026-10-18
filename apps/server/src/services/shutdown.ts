@@ -20,7 +20,7 @@
  *   HTTP port, the harness resources and the database close. Every step is best effort and
  *   logged: one failing cancel must not keep the port open.
  *
- * Exports: shutdownServer().
+ * Exports: shutdownServer(), stopOnce().
  * Depends on: @forge/core (WorkerDriver, StorageAdapter, BUILTIN_FORGE_CONFIG), @forge/engine (Engine, Logger),
  *   types/server. IO: stops processes, closes the socket and the database.
  */
@@ -149,4 +149,14 @@ export async function shutdownServer(parts: ShutdownParts): Promise<void> {
   await step('close http', () => parts.closeHttp());
   await step('dispose ports', () => parts.disposePorts?.());
   await step('close database', () => parts.storage.close());
+}
+
+/** A stop function that runs the shutdown once, however often it is called, then `after`; later calls get the same promise. */
+export function stopOnce(
+  parts: ShutdownParts,
+  after: () => Promise<void>,
+): () => Promise<void> {
+  let stopping: Promise<void> | null = null;
+
+  return () => (stopping ??= shutdownServer(parts).finally(after));
 }

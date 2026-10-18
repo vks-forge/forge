@@ -83,7 +83,11 @@ function Field(props: {
           onChange={(e) =>
             props.onChange(
               spec.path,
-              e.target.value === '' ? Number.NaN : tidy(Number(e.target.value) * scale),
+              e.target.value === ''
+                ? spec.optional
+                  ? undefined
+                  : Number.NaN
+                : tidy(Number(e.target.value) * scale),
             )
           }
         />

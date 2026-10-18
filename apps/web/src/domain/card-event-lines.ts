@@ -5,13 +5,14 @@
  *   each reads differently in the chat: a question is a block with answer buttons until it is
  *   answered and then collapses to the words that were chosen; an answer is the owner's own
  *   bubble (labelled when the Director's recommendation was used on their behalf); a finished
- *   step is one quiet line that can expand to the files it read; a ready plan is a card with a
+ *   step is one quiet line that can expand to the files it read; a finished research run is one
+ *   line saying what it looked up (or why it could not) with a way to the evidence; a ready plan is a card with a
  *   Review button; approvals, change requests, budget warnings and the end of the grill are
  *   plain system lines. A payload that does not parse falls back to a neutral line built from
  *   what can be read, never a crash and never a blank.
  *
  * Exports: flowLineOf(), FLOW_KINDS, answerWords().
- * Depends on: schemas/card-events, schemas/cards (type), types/cards-ui.types. No IO.
+ * Depends on: schemas/card-events, schemas/cards (type), domain/research-copy, types/cards-ui.types. No IO.
  */
 
 import {
@@ -23,6 +24,7 @@ import {
   PlanReady,
   StepFinished,
 } from '#/schemas/card-events.js';
+import { researchLineOf } from '#/domain/research-copy.js';
 import type { CardHistoryEvent } from '#/schemas/cards.js';
 import type { ChatLine, FlowLineContext } from '#/types/cards-ui.types.js';
 
@@ -36,6 +38,7 @@ export const FLOW_KINDS: ReadonlySet<string> = new Set([
   'plan_approved',
   'plan_changes_requested',
   'budget_warning',
+  'research',
 ]);
 
 const DONE_WORDS: Readonly<Record<string, string>> = {
@@ -186,6 +189,17 @@ export function flowLineOf(
             }`
           : 'Changes were requested on the plan.',
       );
+    }
+
+    case 'research': {
+      const research = researchLineOf(payload);
+
+      return {
+        ...base,
+        tone: 'note',
+        text: research.text,
+        block: { kind: 'research', research },
+      };
     }
 
     case 'budget_warning': {

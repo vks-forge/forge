@@ -13,7 +13,7 @@
  *   restart (d-0092): shutdown interrupts live runs instead of cancelling them, the first tick
  *   resumes them, and run secrets live in the SecretStore until the run is over and are swept
  *   at start and after every tick (d-0100). Planning reads the code via a git repo reader
- *   (d-0131). Agent routes get the drivers and the Director model. A failed assembly closes the DB.
+ *   (d-0131) and the web through one research provider that follows the saved settings (d-0144). Agent routes get the drivers and the Director model. A failed assembly closes the DB.
  *
  * Exports: assembleServer().
  * Depends on: @forge/db, @forge/drivers (systemClock), @forge/engine, @forge/git, @forge/hooks, @forge/tools,
@@ -40,9 +40,10 @@ import { createHarnessSource } from '#/services/harness-source.js';
 import { createApiServer } from '#/services/http/create-api-server.js';
 import { assertLoopbackBind, closeServer, listen } from '#/services/http/listen.js';
 import { composeProjectMemory } from '#/services/project-memory.js';
+import { createResearchWiring } from '#/services/research-wiring.js';
 import { createProjectRegistry } from '#/services/project-registry.js';
 import { createRunWiring } from '#/services/run-wiring.js';
-import { shutdownServer } from '#/services/shutdown.js';
+import { stopOnce } from '#/services/shutdown.js';
 import { composeWorker } from '#/services/worker-wiring.js';
 import { createTicker } from '#/services/ticker.js';
 import { composeTriggers } from '#/services/triggers.js';
@@ -163,6 +164,7 @@ export async function assembleServer(
       log,
     });
 
+    const research = await createResearchWiring(config, ports.researchNet);
     const engine = createEngine({
       storage,
       drivers,
@@ -180,6 +182,7 @@ export async function assembleServer(
       toolCatalogued: (tool) => policy.toolCatalogued(tool),
       onTickRequested: ticker.requestTick,
       projectEvents,
+      research: research.provider,
       trace: trace.sink,
       log,
     });
@@ -209,6 +212,7 @@ export async function assembleServer(
         config,
         catalogue,
         compat,
+        research,
         projects,
         memory: parts.memory,
         triggers,
@@ -241,7 +245,23 @@ export async function assembleServer(
       },
     );
 
-    let stopping: Promise<void> | null = null;
+    const stopServer = stopOnce(
+      {
+        ticker,
+        stopPolling: () => poller.stop(),
+        engine,
+        interruptRun: (runId) => engine.interruptRun(runId),
+        storage,
+        endStreams: () => streams.abort(),
+        closeHttp: () => closeServer(http),
+        disposePorts: ports.dispose,
+        drain,
+        drainMs: async () => (await config.company()).config.engine.shutdown_drain_ms,
+        graceMs: settings.shutdownGraceMs,
+        log,
+      },
+      () => trace.close(),
+    );
 
     const handle: ForgeServer = {
       owner,
@@ -270,26 +290,6 @@ export async function assembleServer(
       },
       stop: () => stopServer(),
     };
-
-    function stopServer(): Promise<void> {
-      stopping ??= shutdownServer({
-        ticker,
-        stopPolling: () => poller.stop(),
-        engine,
-        // The engine marks the run interrupted and stops it on the driver that started it.
-        interruptRun: (runId) => engine.interruptRun(runId),
-        storage,
-        endStreams: () => streams.abort(),
-        closeHttp: () => closeServer(http),
-        disposePorts: ports.dispose,
-        drain,
-        drainMs: async () => (await config.company()).config.engine.shutdown_drain_ms,
-        graceMs: settings.shutdownGraceMs,
-        log,
-      }).finally(() => trace.close());
-
-      return stopping;
-    }
 
     return handle;
   } catch (error) {

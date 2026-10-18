@@ -7,7 +7,7 @@
  *   The Review tab exists only while the ticket waits on the owner's review or sign-off or is held
  *   for their decision, so that rule lives here, once, for the tab strip and the redirect to agree.
  *
- * Exports: CARD_TAB_IDS, TICKET_TAB_IDS, resolveTab(), legacyCardTab(), ticketHasReview(),
+ * Exports: CARD_TAB_IDS, TICKET_TAB_IDS, shownCardTabs(), resolveTab(), legacyCardTab(), ticketHasReview(),
  *   isReviewItem().
  * Depends on: schemas/escalation, schemas/tickets (types), types/cards-ui.types, types/route-tabs.types. No IO.
  */
@@ -20,6 +20,7 @@ import type { TicketTab } from '#/types/route-tabs.types.js';
 export const CARD_TAB_IDS: readonly CardTab[] = [
   'conversation',
   'plan',
+  'evidence',
   'tickets',
   'details',
 ];
@@ -30,6 +31,21 @@ export const TICKET_TAB_IDS: readonly TicketTab[] = [
   'runs',
   'details',
 ];
+
+/**
+ * The card tabs to show: Evidence appears once research has left something to read (a
+ * fact or a finished run, even one that kept nothing), or while it is the open tab, so a
+ * link to it never lands on a missing tab.
+ */
+export function shownCardTabs(
+  research: { evidence: readonly unknown[]; runs_used: number } | undefined,
+  active: CardTab,
+): readonly CardTab[] {
+  const researched =
+    research !== undefined && (research.evidence.length > 0 || research.runs_used > 0);
+
+  return CARD_TAB_IDS.filter((id) => id !== 'evidence' || researched || active === id);
+}
 
 /** The tab a URL segment names: `known` when it is one of `allowed`, else the default. */
 export function resolveTab<T extends string>(

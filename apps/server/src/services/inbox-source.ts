@@ -15,10 +15,11 @@
  *   is affected. Memory proposals carry no timestamp, so they use the epoch and sort last
  *   (the web shows no date for an epoch item). A pending proposal of the Director to change a lane is one item
  *   (`pipeline_proposal:<id>`, needs action, dated by when it was made); accepted, rejected and stale ones drop out. Tickets of a closed card never show: their work was
- *   cancelled with the card.
+ *   cancelled with the card. A card's budget warning is one item per threshold (`budget_warning:<card>:<threshold>`,
+ *   needs action, dated by the warning) while the card is open and the cap is the one it was written for.
  *
  * Exports: gatherInboxCandidates().
- * Depends on: @forge/core (inbox rules, StorageTx, memory entries), services/collect-pages,
+ * Depends on: @forge/core (inbox rules, StorageTx, memory entries), services/collect-pages, services/inbox-budget,
  *   services/current-harness-build, services/escalation-view.
  *   IO: reads storage.
  */
@@ -36,6 +37,7 @@ import type {
 import { collectRuns, collectTickets } from '#/services/collect-pages.js';
 import { currentHarnessBuilds } from '#/services/current-harness-build.js';
 import { escalationViews } from '#/services/escalation-view.js';
+import { budgetWarningItems } from '#/services/inbox-budget.js';
 import { pipelineProposalItems } from '#/services/inbox-proposals.js';
 
 const EPOCH = '1970-01-01T00:00:00.000Z';
@@ -275,6 +277,7 @@ export async function gatherInboxCandidates(
   }
 
   items.push(...(await pipelineProposalItems(tx, slug)));
+  items.push(...(await budgetWarningItems(tx, project.id, slug)));
 
   return items;
 }

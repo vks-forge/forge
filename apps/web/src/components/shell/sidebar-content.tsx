@@ -28,6 +28,7 @@ import {
   Plug,
   Settings,
   SquareKanban,
+  Telescope,
   type LucideIcon,
 } from 'lucide-react';
 import { Link } from 'react-router';
@@ -59,6 +60,7 @@ const ICONS: Readonly<Record<string, LucideIcon>> = {
   harnesses: Cpu,
   github: Plug,
   limits: Gauge,
+  research: Telescope,
   agents: Bot,
   general: Folder,
 };

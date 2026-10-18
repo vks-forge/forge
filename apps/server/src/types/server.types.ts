@@ -35,6 +35,7 @@ import type {
 } from '@forge/drivers';
 import type { Engine, IdSource, Logger } from '@forge/engine';
 import type { RunSecretRegistry } from '@forge/hooks';
+import type { NetworkPorts } from '@forge/research';
 import type { AdmitContext, CatalogueStore, ReceiptLog } from '@forge/tools';
 import type { RestrictFile } from '#/types/auth.types.js';
 import type { Drain } from '#/types/drain.types.js';
@@ -116,6 +117,8 @@ export interface ExternalPorts {
    * (`apps/web/dist/web`); `null` means serve no UI (tests).
    */
   readonly webRoot?: string | null;
+  /** The network the research provider uses (DNS, pinned sockets, fetch); absent means the production network (tests pass a fake). */
+  readonly researchNet?: NetworkPorts;
   /** Releases what these ports hold; called once at the end of shutdown. */
   readonly dispose?: () => Promise<void> | void;
 }

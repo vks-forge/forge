@@ -12,7 +12,7 @@
  *   types/api.types, types/settings-api.types.
  */
 
-import { ConfigVersion, HarnessToolSchema } from '@forge/core';
+import { ConfigVersion, HarnessToolSchema, ResearchTestReply } from '@forge/core';
 import { requestJson } from '#/api/http/request-json.js';
 import {
   CompanyView,
@@ -93,6 +93,11 @@ export function createSettingsHttp(
         requestJson(client, '/settings/company', CompanyView, options),
       saveCompany: (body) =>
         requestJson(client, '/settings/company', ConfigVersion, { method: 'PUT', body }),
+      testResearch: (body) =>
+        requestJson(client, '/settings/research/test', ResearchTestReply, {
+          method: 'POST',
+          body,
+        }),
       async companyHistory(options) {
         const body = await requestJson(
           client,

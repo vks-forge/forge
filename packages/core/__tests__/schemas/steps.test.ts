@@ -75,6 +75,7 @@ describe('NewRequestPayload / STEP_NAMES', () => {
       'grill_turn',
       'verify',
       'enhance',
+      'research',
       'write_plan',
       'approve_plan',
       'custom_step',

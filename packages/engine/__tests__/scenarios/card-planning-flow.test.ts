@@ -97,6 +97,9 @@ describe('planning a card', () => {
       'step_finished:verify',
       'step_started:enhance',
       'step_finished:enhance',
+      // Research has no provider in this rig: it finishes at once with a note (d-0144).
+      'step_started:research',
+      'step_finished:research',
       'step_started:write_plan',
       'step_finished:write_plan',
       'step_started:approve',

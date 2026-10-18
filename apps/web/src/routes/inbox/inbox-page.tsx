@@ -11,7 +11,8 @@
  *   windowed. A ticket waiting on the owner has a "Respond" button that opens its escalation card
  *   in a drawer (rows are fixed-height for the windowed list, so the card does not grow the row);
  *   acting settles the card, the chat and the Ticket page. A Director pipeline suggestion has "Review", which
- *   opens the change and its evidence in a drawer to accept or reject. Loading, empty, error and offline each
+ *   opens the change and its evidence in a drawer to accept or reject. A budget warning has
+ *   "Acknowledge" (archive) and "Change cap" (a drawer with the card's cap box). Loading, empty, error and offline each
  *   have their own state.
  *
  * Exports: InboxPage.
@@ -31,6 +32,8 @@ import { Button } from '#/components/ui/button.js';
 import { SideDrawer } from '#/components/ui/side-drawer.js';
 import { WindowedList } from '#/components/ui/windowed-list.js';
 import { undoOf } from '#/domain/inbox-marks.js';
+import { budgetCardId } from '#/domain/inbox-links.js';
+import { InboxBudget } from '#/routes/inbox/inbox-budget.js';
 import { InboxProposal } from '#/routes/inbox/inbox-proposal.js';
 import { InboxRow, INBOX_ROW_HEIGHT } from '#/routes/inbox/inbox-row.js';
 import { INBOX_VIEW_LABEL, InboxTabs } from '#/routes/inbox/inbox-tabs.js';
@@ -70,6 +73,8 @@ export function InboxPage() {
   const [responding, setResponding] = useState<InboxItem | null>(null);
   // The Director's pipeline suggestion being decided, in its own drawer.
   const [reviewing, setReviewing] = useState<InboxItem | null>(null);
+  // The budget warning whose cap is being changed, in its own drawer.
+  const [capping, setCapping] = useState<InboxItem | null>(null);
 
   useEffect(() => {
     document.title = 'Inbox · Forge';
@@ -163,6 +168,7 @@ export function InboxPage() {
                 onMark={(target, name) => void mark(target, name)}
                 onRespond={setResponding}
                 onReview={setReviewing}
+                onChangeCap={setCapping}
                 marksDisabled={!online}
               />
             )}
@@ -222,6 +228,25 @@ export function InboxPage() {
       >
         {reviewing ? (
           <InboxProposal key={reviewing.id} slug={slug} itemId={reviewing.id} />
+        ) : null}
+      </SideDrawer>
+
+      <SideDrawer
+        open={capping !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCapping(null);
+          }
+        }}
+        title="Change the budget cap"
+        {...(capping ? { eyebrow: capping.title } : {})}
+      >
+        {capping && budgetCardId(capping) ? (
+          <InboxBudget
+            key={capping.id}
+            cardId={budgetCardId(capping) ?? ''}
+            onDone={() => setCapping(null)}
+          />
         ) : null}
       </SideDrawer>
     </section>

@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@types/node": "26.6.5",
-    "@forge/db": "workspace:*"
+    "@forge/db": "workspace:*",
+    "@forge/research": "workspace:*"
   }
 }

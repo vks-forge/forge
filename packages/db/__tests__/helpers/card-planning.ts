@@ -57,6 +57,8 @@ export const plan = (
     matching_decisions: [],
     rejected_hits: [],
     risks: [],
+    evidence: [],
+    outside_claims: [],
   },
   tickets: [
     {

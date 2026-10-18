@@ -24,6 +24,7 @@ import { StatePanel } from '#/components/status/state-panel.js';
 import { Button } from '#/components/ui/button.js';
 import { Picker } from '#/components/ui/picker.js';
 import { diffPlans, diffRowsOf } from '#/domain/plan-diff.js';
+import { outsideFactsBanner } from '#/domain/research-copy.js';
 import { PlanDiffView } from '#/routes/card/plan/plan-diff-view.js';
 import { PlanBody, PlanLinks } from '#/routes/card/plan/plan-sections.js';
 import { PlanTickets } from '#/routes/card/plan/plan-tickets.js';
@@ -32,8 +33,9 @@ import type { FloorResult, PlanVersion } from '#/schemas/plan.js';
 import type { PlanDecisions } from '#/types/plan.types.js';
 import { EmptyState } from '#/components/ui/empty-state.js';
 
-function Floor(props: { floor: FloorResult }) {
+function Floor(props: { floor: FloorResult; unverified: number }) {
   const { floor } = props;
+  const banner = outsideFactsBanner(props.unverified);
   const Icon = floor.pass ? CircleCheck : CircleAlert;
 
   return (
@@ -45,6 +47,9 @@ function Floor(props: { floor: FloorResult }) {
         />
         {floor.pass ? 'Floor check passed' : 'Floor check did not pass'}
       </p>
+      {banner !== null && !floor.pass ? (
+        <p className="pl-6 text-xs font-medium">{banner}</p>
+      ) : null}
       {floor.reasons.length > 0 ? (
         <ul
           aria-label="Floor reasons"
@@ -174,7 +179,15 @@ export function PlanTab(props: { card: CardDetailReply; decisions: PlanDecisions
         </p>
       ) : null}
 
-      {viewing === null && plan.data?.floor ? <Floor floor={plan.data.floor} /> : null}
+      {viewing === null && plan.data?.floor ? (
+        <Floor
+          floor={plan.data.floor}
+          unverified={
+            current.verification.outside_claims.filter((c) => c.status === 'unverified')
+              .length
+          }
+        />
+      ) : null}
 
       {showDiff && shown && shown.version > 1 ? (
         rows === null ? (
@@ -196,7 +209,7 @@ export function PlanTab(props: { card: CardDetailReply; decisions: PlanDecisions
         )
       ) : (
         <>
-          <PlanBody plan={shown} />
+          <PlanBody plan={shown} slug={card.project} />
           <PlanTickets cardId={card.id} plan={shown} editable={canDecide} />
           <PlanLinks slug={card.project} links={shown.card_links} />
         </>

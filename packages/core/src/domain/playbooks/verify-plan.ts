@@ -41,6 +41,10 @@ export const VERIFY_PLAN_PLAYBOOK: DirectorPlaybook = {
     '4. **Rejected approaches.** Compare the grill answers and the likely design with every record in `project_rules.rejected`. List the id of EVERY rejected record the plan would repeat or revive. The approval floor reads this list: a miss is the worst error here, a false hit only sends the plan to the owner.',
     '5. **Risks.** Security, data loss, migrations, public API change, tier C paths, flaky tests, missing tests, reliance on something you could not read.',
     '',
+    '## Outside claims',
+    '',
+    'If the plan or the grill answers rest on a fact from outside the repository (a library, an API, a standard) that no `evidence` in the input verifies, note it under `risks` as "OUTSIDE CLAIM: ..." and, in `step_decisions`, set `research` to `true` so the research step runs. If nothing rests on outside facts, set `research` to `false`.',
+    '',
     '## Evidence',
     '',
     'Cite the file (and symbol) behind every claim. Mark what you could not confirm "UNVERIFIED:". Never state what a file contains unless it is in `read_results`. A finding without evidence is a risk, not a fact.',
@@ -61,5 +65,6 @@ export const VERIFY_PLAN_PLAYBOOK: DirectorPlaybook = {
     '- `summary`, `relevant_files`, `existing_code` (what already does part of the job, with the path), `conventions` (naming, layering, test style found in the repo rules and code), `risks`.',
     '- `predicted_lane`: `express` for a small contained change, `standard` for a normal feature, `full` for anything touching tier C paths, migrations, security or many modules. When unsure choose the stricter lane.',
     '- `predicted_files`: your best list of paths. Keep it short and honest.',
+    '- `step_decisions`: `{ "research": false }` when nothing the card needs lies outside the repository; leave `research` out (or `true`) when a library, service or standard has to be looked up.',
   ].join('\n'),
 };

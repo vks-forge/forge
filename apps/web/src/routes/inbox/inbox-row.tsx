@@ -8,7 +8,9 @@
  *   on a phone. They are held while offline, because a mark that cannot be saved would only
  *   bounce back. An item that carries an escalation (a ticket waiting on the owner) gets a primary
  *   "Respond" button that opens the escalation card, so the owner can act without leaving the list; a Director
- *   pipeline suggestion gets "Review", which opens it for Accept or Reject the same way.
+ *   pipeline suggestion gets "Review", which opens it for Accept or Reject the same way. A budget
+ *   warning gets "Acknowledge" (it archives the item, and comes back only if a new warning is written)
+ *   and "Change cap", which opens the card's cap box.
  *
  * Exports: InboxRow, INBOX_ROW_HEIGHT.
  * Depends on: react-router, lucide-react, @forge/core (type), components/inbox/kind-chip, components/ui/button, components/ui/tooltip,
@@ -60,6 +62,8 @@ export function InboxRow(props: {
   onRespond: (item: InboxItem) => void;
   /** Opens a Director pipeline suggestion, to accept or reject it. */
   onReview: (item: InboxItem) => void;
+  /** Opens the cap box for a budget warning. */
+  onChangeCap: (item: InboxItem) => void;
   marksDisabled: boolean;
 }) {
   const { item } = props;
@@ -105,6 +109,24 @@ export function InboxRow(props: {
         >
           Review
         </Button>
+      ) : null}
+      {item.kind === 'budget_warning' && !item.archived ? (
+        <>
+          <Button
+            aria-label={`Change cap: ${item.title}`}
+            onClick={() => props.onChangeCap(item)}
+          >
+            Change cap
+          </Button>
+          <Button
+            variant="primary"
+            aria-label={`Acknowledge: ${item.title}`}
+            disabled={props.marksDisabled}
+            onClick={() => props.onMark(item, 'archive')}
+          >
+            Acknowledge
+          </Button>
+        </>
       ) : null}
       {item.read ? (
         <IconButton

@@ -39,6 +39,8 @@ export function useProjectEvents(slug: string | null): void {
         for (const queryKey of [
           ['cards', slug],
           ['card'],
+          ['card-evidence'],
+          ['run-sources'],
           ['ticket-pipeline'],
           ['tickets', slug],
           ['inbox', slug],

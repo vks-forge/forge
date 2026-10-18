@@ -108,6 +108,12 @@ export const SETTINGS_NAV: readonly NavEntry[] = [
     blurb: 'Global, per-project and per-harness limits.',
   },
   {
+    segment: 'research',
+    label: 'Research',
+    batch: 'W2',
+    blurb: 'The search provider and which pages the Director and Workers may read.',
+  },
+  {
     segment: 'harnesses',
     label: 'Harnesses',
     batch: 'W2',

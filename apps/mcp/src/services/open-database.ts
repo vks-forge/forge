@@ -8,18 +8,24 @@
  *   the registry, and never runs a migration. The caller gets a storage adapter only for
  *   a database the server has already brought to the current schema.
  *
- * Exports: openExistingStorage().
- * Depends on: node:fs, @forge/core, @forge/db (openSqliteDriver, createStorageOnDriver, MIGRATIONS).
+ * Exports: openExistingDatabase().
+ * Depends on: node:fs, @forge/core, @forge/db (openSqliteDriver, createStorageOnDriver, createSqliteConfigSource, createMutex, MIGRATIONS).
  *   IO: stats and opens one SQLite file.
  */
 
 import { statSync } from 'node:fs';
 import { InvalidInputError } from '@forge/core';
-import type { StorageAdapter } from '@forge/core';
-import { MIGRATIONS, createStorageOnDriver, openSqliteDriver } from '@forge/db';
+import {
+  MIGRATIONS,
+  createMutex,
+  createSqliteConfigSource,
+  createStorageOnDriver,
+  openSqliteDriver,
+} from '@forge/db';
+import type { ExistingDatabase } from '#/types/start.types.js';
 
-/** Opens `path` as storage; throws InvalidInputError if it is missing or not at the current schema. */
-export function openExistingStorage(path: string): StorageAdapter {
+/** Opens `path`; throws InvalidInputError if it is missing or not at the current schema. */
+export function openExistingDatabase(path: string): ExistingDatabase {
   let isFile = false;
   try {
     isFile = statSync(path).isFile();
@@ -52,7 +58,12 @@ export function openExistingStorage(path: string): StorageAdapter {
       );
     }
 
-    return createStorageOnDriver(driver);
+    const mutex = createMutex();
+
+    return {
+      storage: createStorageOnDriver(driver, mutex),
+      config: createSqliteConfigSource(driver, mutex),
+    };
   } catch (error) {
     driver.close();
     throw error;

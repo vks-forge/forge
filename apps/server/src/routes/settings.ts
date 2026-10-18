@@ -68,7 +68,13 @@ async function save(
   }
 
   try {
-    sendJson(ctx.res, 200, await deps.config.append(request.data));
+    const saved = await deps.config.append(request.data);
+    // The Director's research provider follows the company's research settings without a restart.
+    if (request.data.scope === 'company') {
+      await deps.research?.refresh();
+    }
+
+    sendJson(ctx.res, 200, saved);
   } catch (error) {
     if (error instanceof ConfigVersionConflictError) {
       throw new HttpError(409, 'version_conflict', error.message);

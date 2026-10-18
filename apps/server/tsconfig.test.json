@@ -15,6 +15,7 @@
     { "path": "../../packages/gates" },
     { "path": "../../packages/git" },
     { "path": "../../packages/mcp" },
+    { "path": "../../packages/research" },
     { "path": "../../packages/tools" },
     { "path": "../../packages/triggers" }
   ]

@@ -5,9 +5,9 @@
  *   overrides stored in the database layer over them (d-0085, d-0090, d-0150), so a fresh
  *   install reads the flow and playbooks at config version 0 and a later release can improve a
  *   playbook for everyone who never edited it. The default flow is survey, grill, verify,
- *   enhance (Standard and Full lanes only), then the two locked steps: write the plan and
- *   approve it (d-0146). Each step names the playbook that carries its method; the eleven
- *   playbooks (six for planning, two for the escalation steps, one for the check of finished work
+ *   enhance (Standard and Full lanes only), research (when the Director decides, d-0144), then the two locked steps: write the plan and
+ *   approve it (d-0146). Each step names the playbook that carries its method; the twelve
+ *   playbooks (seven for planning, two for the escalation steps, one for the check of finished work
  *   against its plan, one for tailoring a ticket's pipeline and one for picking a substitute agent) are real, usable method text,
  *   kept one per file under `playbooks/`. The escalation dials default to "Director first".
  *
@@ -24,6 +24,7 @@ import { PICK_SUBSTITUTE_PLAYBOOK } from '#/domain/playbooks/pick-substitute.js'
 import { PLAN_GRILL_PLAYBOOK } from '#/domain/playbooks/plan-grill.js';
 import { PLAN_TO_TICKETS_PLAYBOOK } from '#/domain/playbooks/plan-to-tickets.js';
 import { RECOVER_FAILURE_PLAYBOOK } from '#/domain/playbooks/recover-failure.js';
+import { RESEARCH_PLAYBOOK } from '#/domain/playbooks/research.js';
 import { VERIFY_PLAN_PLAYBOOK } from '#/domain/playbooks/verify-plan.js';
 import { WRITE_PLAN_PLAYBOOK } from '#/domain/playbooks/write-plan.js';
 import type { DirectorConfig } from '#/schemas/director-config.js';
@@ -38,6 +39,7 @@ export const DIRECTOR_STEP_TIMEOUTS_MS: DirectorConfig['step_timeouts_ms'] = {
   grill_turn: 120_000,
   verify: 300_000,
   enhance: 300_000,
+  research: 180_000,
   write_plan: 420_000,
   approve_plan: 120_000,
   custom_step: 180_000,
@@ -90,6 +92,16 @@ export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {
       locked: false,
     },
     {
+      id: 'research',
+      kind: 'research',
+      label: 'Research outside facts',
+      enabled: true,
+      when: 'director_decides',
+      depth: 'normal',
+      playbook_id: 'research',
+      locked: false,
+    },
+    {
       id: 'write_plan',
       kind: 'write_plan',
       label: 'Write the plan',
@@ -112,6 +124,7 @@ export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {
     'plan-grill': PLAN_GRILL_PLAYBOOK,
     'verify-plan': VERIFY_PLAN_PLAYBOOK,
     'enhance-decisions': ENHANCE_DECISIONS_PLAYBOOK,
+    research: RESEARCH_PLAYBOOK,
     'write-plan': WRITE_PLAN_PLAYBOOK,
     'plan-to-tickets': PLAN_TO_TICKETS_PLAYBOOK,
     'approve-plan': APPROVE_PLAN_PLAYBOOK,
@@ -126,6 +139,14 @@ export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {
   grill: { max_questions_per_round: 8, max_rounds: 3 },
   budget_warning_usd: 5,
   read_caps: { max_files: 40, max_bytes: 400_000 },
+  research: {
+    max_rounds: 2,
+    max_searches: 6,
+    max_fetches: 8,
+    max_bytes: 600_000,
+    max_runs_per_card: 4,
+    grill_detours: true,
+  },
   step_timeouts_ms: DIRECTOR_STEP_TIMEOUTS_MS,
   escalation: { director_first: true, answer_confidence: 0.8, max_director_retries: 1 },
   sign_off: { max_tier: 'B' },

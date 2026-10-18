@@ -21,7 +21,6 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CardTypeName } from '@forge/core';
 import type { NewCardInput } from '#/schemas/new-card.js';
 import { useForgeApi } from '#/api/api-provider.js';
 import { useRefetchMs } from '#/api/poll-interval.js';
@@ -29,7 +28,7 @@ import { CARDS_KEY, cardEventsKey, cardKey } from '#/api/use-card-board.js';
 import { TICKETS_KEY } from '#/api/use-tickets.js';
 import { awaitingReply } from '#/domain/card-chat.js';
 import type { CardDetailReply, CardHistoryEvent } from '#/schemas/cards.js';
-import type { CardHistory } from '#/types/cards-api.types.js';
+import type { CardHistory, CardPatchInput } from '#/types/cards-api.types.js';
 
 export const CARD_POLL_MS = 5000;
 export const REPLY_POLL_MS = 3000;
@@ -171,14 +170,15 @@ export function usePatchCard(cardId: string) {
   const client = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: { type?: CardTypeName; closed_reason?: string }) =>
-      api.cards.patch(cardId, body),
+    mutationFn: (body: CardPatchInput) => api.cards.patch(cardId, body),
     onSuccess: async (card: CardDetailReply) => {
       client.setQueryData(cardKey(cardId), card);
       await Promise.all([
         client.invalidateQueries({ queryKey: cardEventsKey(cardId) }),
         client.invalidateQueries({ queryKey: CARDS_KEY }),
         client.invalidateQueries({ queryKey: TICKETS_KEY }),
+        // A cap change can raise or clear a budget warning, which lives in the Inbox.
+        client.invalidateQueries({ queryKey: ['inbox'] }),
       ]);
     },
   });

@@ -7,7 +7,8 @@
  *   ran on a fallback or as a substitute (who wrote the code), and its cost: the
  *   recorded dollars, or "not recorded" when the harness reported none, never `$0.00`. Picking a
  *   run opens it in the Conversation tab (`?run=`), so the thread of that attempt is one click
- *   away and the link can be shared.
+ *   away and the link can be shared. Under each run, "Pages this run read" lists the web pages its
+ *   Worker fetched (loaded when opened).
  *
  * Exports: RunsTab.
  * Depends on: react, react-router, lucide-react, components/cost/cost-chip, components/ticket/*,
@@ -15,9 +16,11 @@
  *   domain/ticket-paths, state/use-now, schemas/tickets (type).
  */
 
-import { Activity } from 'lucide-react';
+import { Activity, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { CostChip } from '#/components/cost/cost-chip.js';
+import { RunSources } from '#/components/research/run-sources.js';
 import { RunChip } from '#/components/ticket/status-chips.js';
 import { EmptyState } from '#/components/ui/empty-state.js';
 import { slotWords } from '#/domain/director-change-copy.js';
@@ -27,6 +30,35 @@ import { formatDuration } from '#/domain/stats-format.js';
 import { ticketPath } from '#/domain/ticket-paths.js';
 import type { TicketDetail } from '#/schemas/tickets.js';
 import { useNow } from '#/state/use-now.js';
+
+/** "Pages read" under a run: loads the run's sources only when opened, since most runs read none. */
+function RunSourcesToggle(props: { runId: string }) {
+  const [open, setOpen] = useState(false);
+  const panel = `run-sources-${props.runId}`;
+
+  return (
+    <div className="grid gap-1 px-1">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panel}
+        onClick={() => setOpen((value) => !value)}
+        className="inline-flex min-h-9 w-fit items-center gap-0.5 rounded-md px-1 text-xs font-medium text-signal hover:bg-hover"
+      >
+        <ChevronRight
+          aria-hidden="true"
+          className={`size-3.5 transition-transform duration-150 motion-reduce:transition-none ${open ? 'rotate-90' : ''}`}
+        />
+        Pages this run read
+      </button>
+      {open ? (
+        <div id={panel} className="rounded-lg border border-line bg-surface px-3 py-1">
+          <RunSources runId={props.runId} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function RunsTab(props: {
   slug: string;
@@ -99,6 +131,7 @@ export function RunsTab(props: {
                   />
                 </span>
               </Link>
+              <RunSourcesToggle runId={run.id} />
             </li>
           );
         })}

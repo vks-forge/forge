@@ -16,7 +16,12 @@
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createSqliteStorage, openSqliteDriver } from '@forge/db';
+import {
+  createMutex,
+  createSqliteConfigSource,
+  createSqliteStorage,
+  openSqliteDriver,
+} from '@forge/db';
 import type { StorageAdapter } from '@forge/core';
 import { hashToken } from '@forge/mcp';
 import type { ForgeMcpDeps } from '@forge/mcp';
@@ -31,8 +36,8 @@ let dbPath: string;
 let seed: StorageAdapter;
 /** Databases `start()` opened; closed after each test so the temp directory can go. */
 const opened: StorageAdapter[] = [];
-const track = (e: Record<string, string | undefined>): ForgeMcpDeps => {
-  const deps = depsFromEnv(e);
+const track = async (e: Record<string, string | undefined>): Promise<ForgeMcpDeps> => {
+  const deps = await depsFromEnv(e);
   opened.push(deps.storage);
 
   return deps;
@@ -173,29 +178,119 @@ describe('start', () => {
 });
 
 describe('env parsing', () => {
-  it('splits host lists and sets searxng only when given', () => {
+  it('reads the run, token and database from the environment', () => {
     expect(parseEnv(env()).FORGE_RUN_ID).toBe(RUN_ID);
-    const d = track(
+    expect(() => parseEnv({})).toThrow(/FORGE_RUN_ID/);
+  });
+});
+
+/** Saves a company or project settings version through a second connection, as the server does. */
+async function saveSettings(
+  scope: 'company' | 'project',
+  doc: Record<string, unknown>,
+  project = 'sf',
+): Promise<void> {
+  const driver = openSqliteDriver(dbPath);
+  const config = createSqliteConfigSource(driver, createMutex());
+  await (scope === 'company'
+    ? config.append({ scope, doc, author: 'test', reason: 'test', expectedVersion: 0 })
+    : config.append({
+        scope,
+        project,
+        doc,
+        author: 'test',
+        reason: 'test',
+        expectedVersion: 0,
+      }));
+
+  driver.close();
+}
+
+describe('research from settings (d-0144, code.md rule 9)', () => {
+  it('builds the provider from the stored settings with no environment variable', async () => {
+    const d = await track(env());
+
+    expect(d.research?.capabilities().provider).toBe('searxng');
+    expect(d.researchLimits).toEqual({
+      allowHosts: [],
+      denyHosts: [],
+      timeoutMs: 10_000,
+    });
+  });
+
+  it('applies the company host lists and timeout', async () => {
+    await saveSettings('company', {
+      research: {
+        fetch: { allow_hosts: ['docs.a.com'], deny_hosts: ['bad.com'], timeout_ms: 5000 },
+      },
+    });
+
+    const d = await track(env());
+
+    expect(d.researchLimits).toEqual({
+      allowHosts: ['docs.a.com'],
+      denyHosts: ['bad.com'],
+      timeoutMs: 5000,
+    });
+  });
+
+  it('gives a Worker no web tools when the company sets provider none', async () => {
+    await saveSettings('company', { research: { provider: 'none' } });
+
+    expect((await track(env())).research).toBeUndefined();
+  });
+
+  it('lets the run project narrow the company settings', async () => {
+    await seed.transaction((tx) => tx.runs.update(RUN_ID, { project: 'sf' }));
+    await saveSettings('project', { research: { deny_hosts: ['p.com'] } });
+
+    const d = await track(env());
+
+    expect(d.researchLimits?.denyHosts).toEqual(['p.com']);
+  });
+
+  it('lets the run project switch research off', async () => {
+    await seed.transaction((tx) => tx.runs.update(RUN_ID, { project: 'sf' }));
+    await saveSettings('project', { research: { enabled: false } });
+
+    expect((await track(env())).research).toBeUndefined();
+  });
+
+  it('lets the old environment variables override the stored settings in development', async () => {
+    await saveSettings('company', { research: { provider: 'none' } });
+
+    const d = await track(
       env({
-        FORGE_SEARXNG_URL: 'http://localhost:8888',
+        FORGE_SEARXNG_URL: 'http://localhost:9999',
         FORGE_SEARXNG_ALLOW_HOSTS: 'a.lan, b.lan',
         FORGE_FETCH_ALLOW_HOSTS: 'docs.example.org',
       }),
     );
 
-    expect(d.searxng).toEqual({
-      baseUrl: 'http://localhost:8888',
-      allowHosts: ['a.lan', 'b.lan'],
-    });
-
-    expect(d.fetchAllowHosts).toEqual(['docs.example.org']);
-    expect(track(env()).searxng).toBeUndefined();
+    expect(d.research?.capabilities().provider).toBe('searxng');
+    expect(d.researchLimits?.allowHosts).toEqual(['docs.example.org']);
   });
 
-  it('wires the production network ports here, not in the library domain', () => {
-    const d = track(env());
-    expect(typeof d.resolve).toBe('function');
-    expect(typeof d.transport).toBe('function');
-    expect(typeof d.searchFetch).toBe('function');
+  it('still serves the tools it can when the stored settings do not load', async () => {
+    const driver = openSqliteDriver(dbPath);
+    driver.run('DROP TRIGGER IF EXISTS config_versions_no_update');
+    driver.run(
+      `INSERT INTO config_versions (scope, project, version, doc_json, author, reason, created_at)
+       VALUES ('company', NULL, 1, '{"research":{"provider":"carrier-pigeon"}}', 'x', 'x', 1)`,
+    );
+
+    driver.close();
+
+    const d = await track(env());
+
+    expect(d.research).toBeUndefined();
+    expect(d.storage).toBeDefined();
+  });
+
+  it('wires no network port into the MCP server dependencies themselves', async () => {
+    const d = await track(env());
+
+    expect(Object.keys(d)).not.toContain('resolve');
+    expect(Object.keys(d)).not.toContain('transport');
   });
 });

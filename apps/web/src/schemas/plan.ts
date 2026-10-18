@@ -11,10 +11,10 @@
  * Exports: PlanPriority, PlanLane, PlanTicket, PlanVerification, PlanOverlap, PlanChange,
  *   PlanVersion, PlanVersionRef, FloorResult, PlanReply, PlanVersionReply, PlanApproveReply
  *   (schemas and inferred types).
- * Depends on: @forge/core, zod.
+ * Depends on: @forge/core (PlanPipeline, EvidenceView, EvidenceRef), zod.
  */
 
-import { PlanPipeline } from '@forge/core';
+import { EvidenceRef, EvidenceView, PlanPipeline } from '@forge/core';
 import { z } from 'zod';
 
 export const PlanPriority = z.enum(['low', 'normal', 'high', 'urgent']);
@@ -52,6 +52,18 @@ export const PlanVerification = z.object({
   matching_decisions: z.array(z.string()).default([]),
   rejected_hits: z.array(z.string()).default([]),
   risks: z.array(z.string()).default([]),
+  /** The card's checked research evidence; a plan stored before research existed has none. */
+  evidence: z.array(EvidenceView).default([]),
+  /** The outside facts the plan rests on, each marked supported or unverified by the engine. */
+  outside_claims: z
+    .array(
+      z.object({
+        claim: z.string(),
+        evidence: z.array(EvidenceRef).default([]),
+        status: z.enum(['supported', 'unverified']).catch('unverified'),
+      }),
+    )
+    .default([]),
 });
 export type PlanVerification = z.infer<typeof PlanVerification>;
 

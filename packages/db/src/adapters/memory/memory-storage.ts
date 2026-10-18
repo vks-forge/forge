@@ -14,7 +14,7 @@
  *   backend.
  *
  * Cards, their history, relations, the reply queue, planning state with plan versions and the card type registry (seeded with the built-in types) live here too,
- * as do ticket pipeline snapshots, stage attempts, stage artifacts, pipeline proposals and finding marks.
+ * as do ticket pipeline snapshots, stage attempts, stage artifacts, pipeline proposals, finding marks, fetched research sources and card evidence.
  *
  * Exports: createMemoryStorage().
  * Depends on: adapters/memory/*, shared/db-errors, shared/mutex, types/memory-state. No IO.
@@ -48,6 +48,7 @@ import {
   memoryFindingMarks,
   memoryPipelineProposals,
 } from '#/adapters/memory/proposals.js';
+import { memoryEvidence, memoryResearchSources } from '#/adapters/memory/research.js';
 import { memoryRunTokens } from '#/adapters/memory/run-tokens.js';
 import {
   memoryStageArtifacts,
@@ -100,6 +101,10 @@ const emptyState = (): MemoryState => ({
   pipelineProposals: [],
   proposalSeq: 0,
   findingMarks: [],
+  researchSources: [],
+  researchSourceSeq: 0,
+  evidence: [],
+  evidenceSeq: 0,
   // Same rows migration 0019 seeds, so a fresh memory store routes intake like a fresh database.
   cardTypes: new Map(BUILTIN_CARD_TYPES.map((t) => [t.name, structuredClone(t)])),
 });
@@ -134,6 +139,8 @@ function buildTx(state: MemoryState): StorageTx {
     stageArtifacts: memoryStageArtifacts(state),
     pipelineProposals: memoryPipelineProposals(state),
     findingMarks: memoryFindingMarks(state),
+    researchSources: memoryResearchSources(state),
+    evidence: memoryEvidence(state),
   };
 }
 

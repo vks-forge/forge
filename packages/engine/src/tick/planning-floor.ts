@@ -116,5 +116,9 @@ export async function computeFloor(
     changedSinceBase: await movedSinceBase(facts, plan),
     // A ticket whose pipeline loses a stage of its lane's list is for the owner to approve (d-0141 item 6).
     lighter: removalsOf(plan.tickets),
+    // A plan resting on an outside claim no verified evidence supports is for the owner to approve (d-0144).
+    unverified: plan.verification.outside_claims
+      .filter((c) => c.status === 'unverified')
+      .map((c) => c.claim),
   });
 }

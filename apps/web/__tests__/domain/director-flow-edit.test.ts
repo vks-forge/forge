@@ -14,8 +14,10 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_FLOW } from '#/domain/director-defaults.js';
 import {
   addCustomStep,
+  addResearchStep,
   customStepId,
   flowIssues,
+  hasResearchStep,
   LOCKED_REASON,
   moveStep,
   patchStep,
@@ -123,6 +125,44 @@ describe('adding a custom step', () => {
   it('makes an id that starts with a letter from any name', () => {
     expect(customStepId(flow(), '2nd pass!')).toBe('custom-2nd-pass');
     expect(customStepId(flow(), '!!!')).toBe('custom-step');
+  });
+});
+
+describe('adding the Research step', () => {
+  const withoutResearch = (): FlowStep[] => flow();
+  const withResearch = (): FlowStep[] => addResearchStep(flow());
+
+  it('inserts the shipped Research step before the locked tail, once', () => {
+    const next = addResearchStep(withoutResearch());
+
+    expect(ids(next).slice(-3)).toEqual(['research', 'write_plan', 'approve']);
+    expect(next.find((s) => s.kind === 'research')).toEqual({
+      id: 'research',
+      kind: 'research',
+      label: 'Research outside facts',
+      enabled: true,
+      when: 'director_decides',
+      depth: 'normal',
+      locked: false,
+    });
+
+    expect(flowIssues(next)).toEqual([]);
+  });
+
+  it('says whether the flow has one and refuses a second', () => {
+    expect(hasResearchStep(withoutResearch())).toBe(false);
+    expect(hasResearchStep(withResearch())).toBe(true);
+    expect(ids(addResearchStep(withResearch()))).toEqual(ids(withResearch()));
+
+    const twin: FlowStep[] = [
+      ...withResearch().slice(0, 5),
+      { ...withResearch()[4]!, id: 'research-2' },
+      ...withResearch().slice(5),
+    ];
+
+    expect(flowIssues(twin).map((i) => i.message)).toContain(
+      'The flow may have only one Research step.',
+    );
   });
 });
 

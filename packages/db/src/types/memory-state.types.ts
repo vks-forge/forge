@@ -23,10 +23,12 @@ import type {
   HarnessState,
   GithubConnection,
   HarnessToolSchema,
+  Evidence,
   FindingMark,
   InboxStateRow,
   PipelineProposal,
   PlanVersion,
+  ResearchSource,
   HarnessVersion,
   Interaction,
   Project,
@@ -106,4 +108,12 @@ export interface MemoryState {
   proposalSeq: number;
   /** The owner's marks on findings, one per (stage run, finding index). */
   findingMarks: (FindingMark & { ticket_id: string })[];
+  /** Fetched pages with their capped text, in insertion order. */
+  researchSources: (ResearchSource & { text: string })[];
+  /** Last research source id handed out. */
+  researchSourceSeq: number;
+  /** Checked card evidence, in insertion order. */
+  evidence: Evidence[];
+  /** Last evidence id handed out. */
+  evidenceSeq: number;
 }

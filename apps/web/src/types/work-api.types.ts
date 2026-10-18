@@ -20,6 +20,7 @@ import type {
   OverviewStats,
   RunDetail,
   RunListPage,
+  RunSourcesReply,
   RunStatus,
   StatsRange,
 } from '@forge/core';
@@ -74,6 +75,8 @@ export interface InboxApi {
 export interface RunsApi {
   list(slug: string, args: RunListArgs, options?: RequestOptions): Promise<RunListPage>;
   get(id: string, options?: RequestOptions): Promise<RunDetail>;
+  /** The pages this run's Worker read (no text), oldest first. */
+  sources(id: string, options?: RequestOptions): Promise<RunSourcesReply>;
   /** Messages a running Worker; refused with 409 when the run is over or cannot take it. */
   steer(id: string, message: string, author: string): Promise<SteerReply>;
 }

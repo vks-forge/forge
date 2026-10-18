@@ -6,7 +6,7 @@
  *   unguessable and be safe to put in a URL path or header. Run, wake and interaction ids
  *   are random too, so two server instances sharing a database can never collide.
  *
- * Exports: createIdSource(), createOwnerId().
+ * Exports: createIdSource(), createOwnerId(), nonce().
  * Depends on: node:crypto, types/engine (IdSource). IO: reads the OS random source.
  */
 
@@ -23,6 +23,11 @@ export function createIdSource(): IdSource {
     interactionId: () => `int-${short()}`,
     token: () => randomBytes(32).toString('base64url'),
   };
+}
+
+/** An unguessable id for one untrusted-content envelope: a fetched page cannot know it, so it cannot close the envelope early. */
+export function nonce(): string {
+  return randomUUID().replaceAll('-', '');
 }
 
 /** A fresh owner id for one server start (d-0054: a new start owns no earlier run). */

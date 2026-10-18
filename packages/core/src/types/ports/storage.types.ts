@@ -13,11 +13,10 @@
  *   transaction. Behind a port, the backend (SQLite WAL by default) can change without
  *   touching the engine (director-core.md §2-§3, §7-§8, d-0023).
  *
- * Cards, their history and the type registry (ports/card.types), card planning state and
- * plan versions (ports/card-planning.types), the harness registries
- * (ports/harness-registry.types) and the ticket pipeline snapshots, stage rows and artifacts
- * (ports/stage-storage.types), the pipeline proposals and the owner's finding marks
- * (ports/proposal-storage.types) join the same transaction.
+ * Cards and their type registry (ports/card.types), planning state and plan versions (ports/card-planning.types),
+ * the harness registries (ports/harness-registry.types), ticket pipeline snapshots, stage rows and artifacts
+ * (ports/stage-storage.types), pipeline proposals and finding marks (ports/proposal-storage.types) and
+ * research sources and evidence (ports/research-storage.types) join the same transaction.
  *
  * Exports: TicketPatch, TicketRepository, TicketRelationRepository, RunRepository,
  *   RunEventRepository, RunInboxRepository, RunTokenRepository, IntakeEventRepository,
@@ -54,6 +53,8 @@ import type {
   PipelineProposalRepository,
 } from '#/types/ports/proposal-storage.types.js';
 import type { InboxStateRepository } from '#/types/ports/inbox-state.types.js';
+import type { EvidenceRepository } from '#/types/ports/research-storage.types.js';
+import type { ResearchSourceRepository } from '#/types/ports/research-storage.types.js';
 import type {
   GithubConnectionRepository,
   ProjectRepository,
@@ -288,6 +289,8 @@ export interface StorageTx {
   readonly stageArtifacts: StageArtifactRepository;
   readonly pipelineProposals: PipelineProposalRepository;
   readonly findingMarks: FindingMarkRepository;
+  readonly researchSources: ResearchSourceRepository;
+  readonly evidence: EvidenceRepository;
 }
 
 /** Single-writer storage backend; every mutation happens inside `transaction`. */

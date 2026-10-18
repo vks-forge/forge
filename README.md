@@ -232,6 +232,7 @@ flowchart TB
 | `packages/git`      | Worktree manager and `GitHost` adapters (local bare repo, GitHub App)                                             |
 | `packages/memory`   | Project memory in a private git repo per project, with a Director-only writer                                     |
 | `packages/secrets`  | `SecretStore` adapters: Windows DPAPI and in-memory                                                               |
+| `packages/research` | `ResearchProvider` adapters (SearXNG, none) and the SSRF-guarded fetcher: the one door to the web                 |
 | `packages/triggers` | Ticket sources that feed the Director (chat today)                                                                |
 | `packages/mcp`      | The `forge` MCP server, the only Forge tools a Worker gets                                                        |
 | `apps/server`       | The server process: HTTP and SSE API on `127.0.0.1`, engine tick, hook ingress, serves the web UI                 |

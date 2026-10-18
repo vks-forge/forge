@@ -26,6 +26,7 @@ import type {
   ProjectEventSink,
   MemorySource,
   ProjectConfigView,
+  ResearchProvider,
   RepoReader,
   ReportStore,
   RunStatus,
@@ -35,7 +36,7 @@ import type {
   TraceSink,
 } from '@forge/core';
 import type { ReceiptLog } from '@forge/tools';
-import type { PlanningDoors } from '#/types/card-planning.types.js';
+import type { PlanningDoors } from '#/types/planning-doors.types.js';
 import type { EscalationDoors } from '#/types/escalation.types.js';
 import type {
   CreateCardInput,
@@ -104,6 +105,11 @@ export interface EngineDeps {
   readonly toolCatalogued?: (tool: string) => Promise<boolean>;
   /** Tells live views which queries went stale when engine memory (not a stored row) changed; absent in tests that watch nothing. */
   readonly projectEvents?: ProjectEventSink;
+  /**
+   * The one door to the web for the Director's research step (d-0144); absent means provider `none`: the
+   * research step finishes with a note and the plan's outside claims stay unverified.
+   */
+  readonly research?: ResearchProvider;
   /** Debug trace sink (d-0163): run events, run start and end, dispatch picks, rejected steps. Absent means nothing is traced. */
   readonly trace?: TraceSink;
   readonly log?: Logger;

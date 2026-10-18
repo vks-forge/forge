@@ -35,6 +35,7 @@ import { statsOverviewRoutes } from '#/routes/stats-overview.js';
 import { projectInspectRoutes } from '#/routes/project-inspect.js';
 import { projectDeleteRoutes } from '#/routes/project-delete.js';
 import { projectsRoutes } from '#/routes/projects.js';
+import { researchRoutes } from '#/routes/research.js';
 import { runEventsRoute } from '#/routes/run-events.js';
 import { scorecardRoutes } from '#/routes/scorecards.js';
 import { runSteerRoute } from '#/routes/run-steer.js';
@@ -84,5 +85,6 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ...statsOverviewRoutes(deps),
     ...inboxRoutes(deps),
     ...runsRoutes(deps),
+    ...researchRoutes(deps),
   ];
 }

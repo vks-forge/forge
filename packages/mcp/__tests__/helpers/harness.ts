@@ -7,14 +7,15 @@
  *   error mapping are exercised exactly as a harness would see them. The run's token is
  *   registered through the same `runTokens` repository production uses (hash only).
  *
- * Exports: RUN_ID, TOKEN, TICKET_ID, T0, seedStorage(), connect(), textOf().
- * Depends on: @forge/core, @forge/db, @modelcontextprotocol/sdk, domain/run-tokens, domain/server.
+ * Exports: RUN_ID, TOKEN, TICKET_ID, T0, SETTINGS, seedStorage(), connect(), textOf().
+ * Depends on: @forge/core, @forge/db, @forge/research (a fake-network provider), @modelcontextprotocol/sdk, domain/run-tokens, domain/server.
  */
 
 import type { ForgeMcpDeps } from '#/types/deps.types.js';
 import { makeTicketId } from '@forge/core';
-import type { Run, StorageAdapter, Ticket } from '@forge/core';
+import type { ResearchSettings, Run, StorageAdapter, Ticket } from '@forge/core';
 import { createMemoryStorage } from '@forge/db';
+import { createResearchProvider } from '@forge/research';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { hashToken } from '#/domain/run-tokens.js';
@@ -24,6 +25,12 @@ export const RUN_ID = 'run-1';
 export const TOKEN = 'tok-correct-horse';
 export const TICKET_ID = makeTicketId('SF', 1);
 export const T0 = '2026-10-13T00:00:00.000Z';
+
+export const SETTINGS: ResearchSettings = {
+  provider: 'searxng',
+  searxng: { base_url: 'http://localhost:8888', allow_hosts: [] },
+  fetch: { allow_hosts: [], deny_hosts: [], timeout_ms: 10_000 },
+};
 
 export function ticket(n: number, over: Partial<Ticket> = {}): Ticket {
   return {
@@ -78,8 +85,11 @@ export async function seedStorage(): Promise<StorageAdapter> {
   return storage;
 }
 
+/** Dependency overrides; a key set to `undefined` removes the default (a run with no research provider). */
+export type DepsOverride = { [K in keyof ForgeMcpDeps]?: ForgeMcpDeps[K] | undefined };
+
 export async function connect(
-  over: Partial<ForgeMcpDeps> = {},
+  over: DepsOverride = {},
   storage?: StorageAdapter,
 ): Promise<{ client: Client; storage: StorageAdapter; close(): Promise<void> }> {
   const store = storage ?? (await seedStorage());
@@ -88,13 +98,21 @@ export async function connect(
     runId: RUN_ID,
     runToken: TOKEN,
     now: () => new Date(T0),
-    // No real network in tests: a public-looking answer and a transport that must not be reached.
-    resolve: async () => ['93.184.216.34'],
-    transport: async () => {
-      throw new Error('unexpected network access in test');
-    },
-    searchFetch: fetch,
-    ...over,
+    // No real network in tests: the provider's ports answer public-looking addresses and refuse real I/O.
+    research: createResearchProvider(
+      SETTINGS,
+      {
+        resolve: async () => ['93.184.216.34'],
+        transport: async () => {
+          throw new Error('unexpected network access in test');
+        },
+        fetch: async () => {
+          throw new Error('unexpected fetch in test');
+        },
+      },
+      () => new Date(T0),
+    ),
+    ...(over as Partial<ForgeMcpDeps>),
   });
 
   const [a, b] = InMemoryTransport.createLinkedPair();

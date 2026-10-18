@@ -11,12 +11,15 @@
  * Depends on: helpers/card-rig, vitest. IO: a loopback socket.
  */
 
+import { GrillState } from '@forge/core';
 import type { CardId } from '@forge/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { at, card, startCardRig, ticket } from '#tests/helpers/card-rig.js';
 import type { CardRig } from '#tests/helpers/card-rig.js';
 
 let ctx: CardRig;
+
+const emptyGrill = () => GrillState.parse({});
 
 const seed: CardRig['seed'] = (cards, tickets) => ctx.seed(cards, tickets);
 const patch = (path: string, body: unknown) => ctx.rig.json('PATCH', path, body);
@@ -117,5 +120,60 @@ describe('PATCH /cards/:id', () => {
     expect((await patch('/cards/FX-C1', {})).status).toBe(400);
     expect((await patch('/cards/FX-C1', { closed_reason: ' ' })).status).toBe(400);
     expect((await patch('/cards/nonsense', { type: 'plan' })).status).toBe(400);
+  });
+
+  describe('budget cap (d-0143)', () => {
+    const capOf = async () =>
+      (await ctx.storage.transaction((tx) => tx.cards.get('FX-C1' as CardId)))
+        ?.budget_cap_usd;
+
+    it('sets, changes and clears the cap, alone or with another field, and never blocks the card', async () => {
+      await seed([card(1, { type: 'discussion' })]);
+
+      const set = await patch('/cards/FX-C1', { budget_cap_usd: 5 });
+      expect(set.status).toBe(200);
+      expect(await capOf()).toBe(5);
+      expect(set.body).toMatchObject({ budget_cap_usd: 5 });
+
+      expect((await patch('/cards/FX-C1', { budget_cap_usd: 0 })).status).toBe(200);
+      expect(await capOf()).toBe(0);
+
+      const both = await patch('/cards/FX-C1', { type: 'issue', budget_cap_usd: 8.5 });
+      expect(both.status).toBe(200);
+      expect(await capOf()).toBe(8.5);
+      expect((await events()).map((e) => e.kind)).toEqual(['type_changed']);
+
+      expect((await patch('/cards/FX-C1', { budget_cap_usd: null })).status).toBe(200);
+      expect(await capOf()).toBeUndefined();
+    });
+
+    it('warns at once when the new cap is already reached by the spend, once per cap', async () => {
+      await seed([card(1)]);
+      await ctx.storage.transaction((tx) =>
+        tx.cardPlanning.update('FX-C1' as CardId, {
+          grill: { ...emptyGrill(), director_spend_usd: 0.9 },
+        }),
+      );
+
+      await patch('/cards/FX-C1', { budget_cap_usd: 1 });
+      await patch('/cards/FX-C1', { budget_cap_usd: 1 });
+
+      const warned = (await events()).filter((e) => e.kind === 'budget_warning');
+      expect(warned.map((e) => e.payload)).toEqual([
+        { threshold: 0.8, spent_usd: 0.9, cap_usd: 1 },
+      ]);
+
+      await patch('/cards/FX-C1', { budget_cap_usd: 1.1 });
+      expect((await events()).filter((e) => e.kind === 'budget_warning')).toHaveLength(2);
+    });
+
+    it('refuses a negative or non-number cap (400) and a closed card (409)', async () => {
+      await seed([card(1), card(2, { closed_reason: 'dup' })]);
+
+      expect((await patch('/cards/FX-C1', { budget_cap_usd: -1 })).status).toBe(400);
+      expect((await patch('/cards/FX-C1', { budget_cap_usd: 'lots' })).status).toBe(400);
+      expect((await patch('/cards/FX-C2', { budget_cap_usd: 5 })).status).toBe(409);
+      expect(await capOf()).toBeUndefined();
+    });
   });
 });

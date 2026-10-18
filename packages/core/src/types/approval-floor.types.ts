@@ -34,4 +34,6 @@ export interface ApprovalFloorInput {
   readonly changedSinceBase: readonly string[];
   /** Tickets whose planned pipeline removes a stage of the lane's list: a person approves those (d-0141 item 6). */
   readonly lighter?: readonly LighterEntry[];
+  /** Outside claims of the plan that no verified evidence supports: the owner approves those (d-0144). */
+  readonly unverified?: readonly string[];
 }

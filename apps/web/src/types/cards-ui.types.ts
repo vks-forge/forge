@@ -7,12 +7,13 @@
  *
  * Exports: CardColumnDef, CardFilter, ChatAction, ChatBlock, ChatLine, CardTab, DependencyChip,
  *   GrillView, FlowHandlers, CardPriorityMark.
- * Depends on: schemas/cards (types), schemas/card-events (types), types/board.types. Types only.
+ * Depends on: schemas/cards (types), schemas/card-events (types), types/board.types, types/research-ui.types. Types only.
  */
 
 import type { GrillAnswer, GrillQuestion } from '#/schemas/card-events.js';
 import type { CardColumn } from '#/schemas/cards.js';
 import type { ColumnTone } from '#/types/board.types.js';
+import type { ResearchLineView } from '#/types/research-ui.types.js';
 
 export interface CardColumnDef {
   readonly id: CardColumn;
@@ -60,6 +61,11 @@ export type ChatBlock =
       readonly title: string;
     }
   | {
+      /** A research run that ended: what it looked up, or why it could not. */
+      readonly kind: 'research';
+      readonly research: ResearchLineView;
+    }
+  | {
       readonly kind: 'step';
       readonly label: string;
       readonly summary: string;
@@ -89,7 +95,7 @@ export interface ChatLine {
   readonly byRecommendation?: boolean;
 }
 
-export type CardTab = 'conversation' | 'plan' | 'tickets' | 'details';
+export type CardTab = 'conversation' | 'plan' | 'evidence' | 'tickets' | 'details';
 
 /** The grill as the history tells it (domain/director-flow). */
 export interface GrillView {

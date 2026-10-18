@@ -10,11 +10,11 @@
  *   labels, limits and timeouts as core's built-ins) but carry no
  *   playbooks, because playbook text is the server's to ship.
  *
- * Exports: FALLBACK_STEP_MODELS, DEFAULT_FLOW, FALLBACK_DIRECTOR.
+ * Exports: FALLBACK_STEP_MODELS, DEFAULT_FLOW, FALLBACK_RESEARCH, FALLBACK_DIRECTOR.
  * Depends on: schemas/director-config (types). No IO.
  */
 
-import type { DirectorConfig, FlowStep } from '@forge/core';
+import type { DirectorConfig, FlowStep, ResearchSettings } from '@forge/core';
 
 /** Models for the planning steps an older server does not list. */
 export const FALLBACK_STEP_MODELS = {
@@ -30,6 +30,7 @@ export const FALLBACK_STEP_MODELS = {
   draft_agent: 'sonnet',
   ticket_check: 'opus',
   pick_substitute: 'sonnet',
+  research: 'sonnet',
 } as const;
 
 export const DEFAULT_FLOW: readonly FlowStep[] = [
@@ -87,6 +88,13 @@ export const DEFAULT_FLOW: readonly FlowStep[] = [
   },
 ];
 
+/** The company research settings an older server does not send: the built-in defaults (SearXNG on this machine). */
+export const FALLBACK_RESEARCH: ResearchSettings = {
+  provider: 'searxng',
+  searxng: { base_url: 'http://localhost:8888', allow_hosts: [] },
+  fetch: { allow_hosts: [], deny_hosts: [], timeout_ms: 10_000 },
+};
+
 export const FALLBACK_DIRECTOR: DirectorConfig = {
   flow: [...DEFAULT_FLOW],
   playbooks: {},
@@ -95,6 +103,14 @@ export const FALLBACK_DIRECTOR: DirectorConfig = {
   grill: { max_questions_per_round: 8, max_rounds: 3 },
   budget_warning_usd: 5,
   read_caps: { max_files: 40, max_bytes: 400_000 },
+  research: {
+    max_rounds: 2,
+    max_searches: 6,
+    max_fetches: 8,
+    max_bytes: 600_000,
+    max_runs_per_card: 4,
+    grill_detours: true,
+  },
   step_timeouts_ms: {
     triage: 120_000,
     dispatch_prompt: 120_000,
@@ -104,6 +120,7 @@ export const FALLBACK_DIRECTOR: DirectorConfig = {
     grill_turn: 120_000,
     verify: 300_000,
     enhance: 300_000,
+    research: 180_000,
     write_plan: 420_000,
     approve_plan: 120_000,
     custom_step: 180_000,

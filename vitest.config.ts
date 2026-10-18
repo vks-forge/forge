@@ -5,7 +5,7 @@
  *   same resolution as the build, so a green run means the whole workspace is green. It
  *   also enforces per-package line-coverage floors (70% for core and db, the state
  *   machine and storage the Director's correctness rests on; 80% for tools, mcp, hooks,
- *   drivers, engine, git, memory, secrets, triggers and apps/mcp, apps/cli and apps/server, the policy and adapter code) so they cannot quietly lose test
+ *   drivers, engine, git, memory, research, secrets, triggers and apps/mcp, apps/cli and apps/server, the policy and adapter code) so they cannot quietly lose test
  *   coverage. Live probes (any `__tests__/probes` folder: harness, GitHub App) skip themselves
  *   unless FORGE_PROBES=1, so they never count toward or against these floors. The web app
  *   (apps/web, React components and hooks, 70%) runs in its own `web` project under jsdom,
@@ -119,6 +119,7 @@ export default defineConfig({
         'packages/gates/src/**/*.ts',
         'packages/git/src/**/*.ts',
         'packages/memory/src/**/*.ts',
+        'packages/research/src/**/*.ts',
         'packages/secrets/src/**/*.ts',
         'packages/triggers/src/**/*.ts',
         'apps/mcp/src/**/*.ts',
@@ -148,6 +149,7 @@ export default defineConfig({
         'packages/gates/src/**': { lines: 80 },
         'packages/git/src/**': { lines: 80 },
         'packages/memory/src/**': { lines: 80 },
+        'packages/research/src/**': { lines: 80 },
         'packages/secrets/src/**': { lines: 80 },
         'packages/triggers/src/**': { lines: 80 },
         'apps/mcp/src/**': { lines: 80 },

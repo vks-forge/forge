@@ -5,6 +5,9 @@
  *   one schema makes the launch contract explicit and means an incomplete environment
  *   stops the process before it serves anything, instead of failing mid-run.
  *
+ * `FORGE_SEARXNG_URL`, `FORGE_SEARXNG_ALLOW_HOSTS` and `FORGE_FETCH_ALLOW_HOSTS` are a dev override of the
+ *   research settings stored in the database (code.md rule 9); a normal run sets none of them.
+ *
  * Exports: ForgeEnv.
  * Depends on: zod. No IO.
  */

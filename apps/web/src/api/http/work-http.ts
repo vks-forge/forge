@@ -20,6 +20,7 @@ import {
   OverviewStats,
   RunDetail,
   RunListPage,
+  RunSourcesReply,
 } from '@forge/core';
 import { requestJson } from '#/api/http/request-json.js';
 import { SteerReply } from '#/schemas/tickets.js';
@@ -116,6 +117,8 @@ export function createWorkHttp(
           options,
         ),
       get: (id, options) => requestJson(client, `/runs/${enc(id)}`, RunDetail, options),
+      sources: (id, options) =>
+        requestJson(client, `/runs/${enc(id)}/sources`, RunSourcesReply, options),
       steer: (id, message, author) =>
         requestJson(client, `/runs/${enc(id)}/steer`, SteerReply, {
           method: 'POST',

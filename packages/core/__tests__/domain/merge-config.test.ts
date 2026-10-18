@@ -46,18 +46,23 @@ describe('built-in defaults', () => {
       director: _director,
       agents: _agents,
       pipelines: _pipelines,
+      research: _research,
       ...builtin
     } = BUILTIN_FORGE_CONFIG;
 
     void _director;
     void _agents;
     void _pipelines;
+    void _research;
 
     // `director` (d-0150), `agents` and `pipelines` are built in only; the yaml carries models and engine.
     expect(builtin).toEqual(
-      ForgeConfig.omit({ director: true, agents: true, pipelines: true }).parse(
-        yamlConfig(),
-      ),
+      ForgeConfig.omit({
+        director: true,
+        agents: true,
+        pipelines: true,
+        research: true,
+      }).parse(yamlConfig()),
     );
   });
 

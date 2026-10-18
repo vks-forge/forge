@@ -10,7 +10,7 @@
  *
  * Exports: GrillOption, GrillQuestion, GrillAnswer, GrillDone, PlanReady, PlanApproved,
  *   PlanChangesRequested, NeedsYou, StepStarted, StepFinished, NEEDS_YOU_ACTIONS,
- *   NeedsYouAction, EscalationRaised, EscalationSettledEvent, ReplanRequested (schemas and
+ *   NeedsYouAction, ResearchRan, EscalationRaised, EscalationSettledEvent, ReplanRequested (schemas and
  *   inferred types).
  * Depends on: zod.
  */
@@ -135,3 +135,14 @@ export const StepFinished = StepStarted.extend({
   summary: z.string().default(''),
 });
 export type StepFinished = z.infer<typeof StepFinished>;
+
+/** A research run ended (a flow step or a detour in the grill); `note` says why nothing was looked up. */
+export const ResearchRan = z.object({
+  origin: z.string().default('research_step'),
+  searches: z.array(z.string()).default([]),
+  fetched: z.array(z.object({ ref: z.string(), url: z.string() })).default([]),
+  claims: z.array(z.object({ ref: z.string(), status: z.string() })).default([]),
+  unanswered: z.array(z.string()).default([]),
+  note: z.string().optional(),
+});
+export type ResearchRan = z.infer<typeof ResearchRan>;

@@ -48,6 +48,7 @@ const HAS_DEPTH: ReadonlySet<FlowStep['kind']> = new Set([
   'grill',
   'verify',
   'enhance',
+  'research',
   'custom',
 ]);
 

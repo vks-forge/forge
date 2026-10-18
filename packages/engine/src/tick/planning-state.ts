@@ -15,7 +15,7 @@
  *   types/card-planning. Reads and writes inside the caller's transaction where it takes one.
  */
 
-import { BUILTIN_DIRECTOR_CONFIG, PLANNING_PHASES } from '@forge/core';
+import { BUILTIN_DIRECTOR_CONFIG, PLANNING_PHASES, effectiveResearch } from '@forge/core';
 import type {
   Card,
   CardId,
@@ -92,6 +92,11 @@ export async function loadPlanCtx(
     ctx,
     ...loaded,
     director,
+    research: effectiveResearch(
+      ctx.config.projects.get(loaded.project.slug)?.config.forge.research ??
+        ctx.config.forge.research,
+      projectSettings(ctx.config, loaded.project.slug).research,
+    ),
     configVersion,
     root: loaded.project.local_path ?? null,
     tierCGlobs: projectSettings(ctx.config, loaded.project.slug).tier_c_globs,

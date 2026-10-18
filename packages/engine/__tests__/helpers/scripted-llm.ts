@@ -63,6 +63,8 @@ const DEFAULTS: Record<StepName, Scripted> = {
       predicted_files: [],
     },
   },
+  // Unscripted, research looks up nothing and reports so: the engine, not the model, decides what counts as evidence.
+  research: { findings: { summary: 'Nothing to look up.', claims: [], unanswered: [] } },
   enhance: {
     summary: 'Nothing to add.',
     report: '# Enhance\n\nKeep.',

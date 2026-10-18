@@ -3,33 +3,39 @@
  *
  * Why: the conversation is about what to do; this tab answers "where did this come from, who
  *   made it, what may it cost and what has it cost" without making anyone dig through history.
- *   Source, creator, times and the budget cap (only when one is set; an absent cap is "No cap",
- *   never 0) are plain labelled facts. The Director's summary is shown when it has written one,
+ *   Source, creator, times and the budget cap (an absent cap is "No cap", never 0, and the
+ *   cap can be set, changed or cleared here: it only warns) are plain labelled facts. The Director's summary is shown when it has written one,
  *   as text. The cost breakdown lists the Director, each ticket and the total, with "not
  *   recorded" kept honest (components/cost/cost-breakdown).
  *
  * Exports: DetailsTab.
- * Depends on: react, components/cost/cost-breakdown, domain/card-source, domain/format-time,
+ * Depends on: react, components/card/budget-cap-field, components/cost/cost-breakdown, domain/card-source, domain/format-time,
  *   domain/stats-format, schemas/cards (type).
  */
 
+import type { ReactNode } from 'react';
+import { BudgetCapField } from '#/components/card/budget-cap-field.js';
 import { CardCostBreakdown } from '#/components/cost/cost-breakdown.js';
 import { ACTOR_LABEL, SOURCE_LABEL } from '#/domain/card-source.js';
 import { formatWhen } from '#/domain/format-time.js';
-import { formatUsd } from '#/domain/stats-format.js';
 import type { CardDetailReply } from '#/schemas/cards.js';
 
 export function DetailsTab(props: { card: CardDetailReply }) {
   const { card } = props;
   const creator = ACTOR_LABEL[card.created_by.type] ?? card.created_by.type;
-  const rows: readonly [string, string][] = [
+  const rows: readonly [string, ReactNode][] = [
     ['Source', `${SOURCE_LABEL[card.source.kind]} · ${card.source.ref}`],
     ['Created by', `${creator} (${card.created_by.id})`],
     ['Created', formatWhen(card.created_at)],
     ['Last change', formatWhen(card.updated_at)],
     [
       'Budget cap',
-      card.budget_cap_usd === undefined ? 'No cap' : formatUsd(card.budget_cap_usd),
+      <BudgetCapField
+        key="cap"
+        cardId={card.id}
+        cap={card.budget_cap_usd}
+        closed={card.closed_reason !== undefined}
+      />,
     ],
   ];
 

@@ -79,4 +79,51 @@ describe('DirectorFlow', () => {
 
     expect(DirectorFlow.safeParse(flow).success).toBe(false);
   });
+
+  describe('research step (d-0146)', () => {
+    const research = (over: Partial<FlowStep> = {}): FlowStep => ({
+      id: 'research',
+      kind: 'research',
+      label: 'Research outside facts',
+      enabled: true,
+      when: 'director_decides',
+      depth: 'normal',
+      playbook_id: 'research',
+      locked: false,
+      ...over,
+    });
+
+    const noResearch = (): FlowStep[] => builtin().filter((s) => s.kind !== 'research');
+
+    it('ships once in the built-in flow, right after enhance', () => {
+      const ids = builtin().map((s) => s.id);
+
+      expect(ids.filter((id) => id === 'research')).toHaveLength(1);
+      expect(ids.indexOf('research')).toBe(ids.indexOf('enhance') + 1);
+    });
+
+    it('can be added, moved and disabled', () => {
+      const flow = noResearch();
+      flow.splice(2, 0, research());
+      expect(DirectorFlow.safeParse(flow).success).toBe(true);
+
+      const moved = noResearch();
+      moved.splice(0, 0, research({ enabled: false }));
+      expect(DirectorFlow.safeParse(moved).success).toBe(true);
+    });
+
+    it('is never locked, at most once, and never after write_plan', () => {
+      const locked = noResearch();
+      locked.splice(2, 0, research({ locked: true }));
+      expect(DirectorFlow.safeParse(locked).success).toBe(false);
+
+      const twice = builtin();
+      twice.splice(2, 0, research({ id: 'research2' }));
+      expect(DirectorFlow.safeParse(twice).success).toBe(false);
+
+      const late = noResearch();
+      late.splice(late.length - 1, 0, research());
+      expect(DirectorFlow.safeParse(late).success).toBe(false);
+    });
+  });
 });

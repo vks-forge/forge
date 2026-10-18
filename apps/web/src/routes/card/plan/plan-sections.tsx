@@ -11,11 +11,12 @@
  *   edited. All text is rendered as text; it comes from a model.
  *
  * Exports: PlanSections, PlanSection.
- * Depends on: react, react-router, domain/card-paths, schemas/plan (type).
+ * Depends on: react, react-router, components/research/outside-facts, domain/card-paths, schemas/plan (type).
  */
 
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { OutsideFacts } from '#/components/research/outside-facts.js';
 import { cardPath } from '#/domain/card-paths.js';
 import type { PlanVersion } from '#/schemas/plan.js';
 
@@ -58,7 +59,7 @@ function Sub(props: { title: string; children: ReactNode }) {
 }
 
 /** Goal, scope, decisions, assumptions and verification (everything above the tickets). */
-export function PlanBody(props: { plan: PlanVersion }) {
+export function PlanBody(props: { plan: PlanVersion; slug: string }) {
   const { plan } = props;
   const v = plan.verification;
 
@@ -125,6 +126,13 @@ export function PlanBody(props: { plan: PlanVersion }) {
           </Sub>
           <Sub title="Risks">
             <Bullets items={v.risks} label="Risks" />
+          </Sub>
+          <Sub title="Outside facts the plan rests on">
+            <OutsideFacts
+              slug={props.slug}
+              cardId={plan.card_id}
+              claims={v.outside_claims}
+            />
           </Sub>
         </div>
       </PlanSection>

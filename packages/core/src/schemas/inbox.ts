@@ -31,6 +31,7 @@ export const INBOX_KINDS = [
   'tool_approval',
   'memory_proposal',
   'pipeline_proposal',
+  'budget_warning',
 ] as const;
 export const InboxKind = z.enum(INBOX_KINDS);
 export type InboxKind = z.infer<typeof InboxKind>;

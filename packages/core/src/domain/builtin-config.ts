@@ -32,6 +32,8 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
       grill_turn: 'sonnet',
       verify: 'opus',
       enhance: 'opus',
+      // Research reads pages and reports quoted claims: a quick structured turn.
+      research: 'sonnet',
       write_plan: 'opus',
       approve_plan: 'opus',
       custom_step: 'sonnet',
@@ -73,6 +75,12 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
     shutdown_drain_ms: 10_000,
   },
   director: BUILTIN_DIRECTOR_CONFIG,
+  // Keyless self-hosted SearXNG on this machine (d-0144); the owner changes it in Settings, Research.
+  research: {
+    provider: 'searxng',
+    searxng: { base_url: 'http://localhost:8888', allow_hosts: [] },
+    fetch: { allow_hosts: [], deny_hosts: [], timeout_ms: 10_000 },
+  },
   agents: { ...BUILTIN_AGENTS },
   pipelines: BUILTIN_PIPELINES,
 };

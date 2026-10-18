@@ -10,6 +10,7 @@
  * Depends on: api/http/request-json, schemas/cards, schemas/plan, types/api.types, types/cards-api.types, zod.
  */
 
+import { CardEvidenceReply, SourceTextReply } from '@forge/core';
 import { z } from 'zod';
 import { requestJson } from '#/api/http/request-json.js';
 import {
@@ -73,6 +74,15 @@ export function createCardsHttp(client: HttpClientOptions): CardsApi {
       ),
     types: async (options) =>
       (await requestJson(client, '/card-types', CardTypesReply, options)).types,
+    evidence: (id, options) =>
+      requestJson(client, `/cards/${enc(id)}/evidence`, CardEvidenceReply, options),
+    sourceText: (id, ref, options) =>
+      requestJson(
+        client,
+        `/cards/${enc(id)}/sources/${enc(ref)}`,
+        SourceTextReply,
+        options,
+      ),
     patch: (id, body) =>
       requestJson(client, `/cards/${enc(id)}`, CardDetailReply, {
         method: 'PATCH',

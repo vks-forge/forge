@@ -1,5 +1,5 @@
 /**
- * `PATCH /cards/:id`: change a card's type, or close it with a reason.
+ * `PATCH /cards/:id`: change a card's type, close it with a reason, or set its budget cap.
  *
  * Why: the owner can re-file a card under another type (a Discussion that became real work)
  *   and can drop one that is a duplicate or not actionable. Both are deliberate acts, so each
@@ -14,12 +14,13 @@
  *   card must not leave work running or waiting).
  *
  * Exports: cardPatchRoute().
- * Depends on: @forge/core (CardId, CardPatchBody, checkTypeChange), services/card-phase, services/card-view,
+ * Depends on: @forge/core (CardId, CardPatchBody, checkTypeChange), @forge/engine (warnOnBudget), services/card-phase, services/card-view,
  *   services/http/*, types/routes. IO: reads and writes storage.
  */
 
 import { CardId, CardPatchBody, checkTypeChange } from '@forge/core';
 import type { CardActor, NewCardEvent } from '@forge/core';
+import { warnOnBudget } from '@forge/engine';
 import { moveCardPhase } from '#/services/card-phase.js';
 import { cardDetail, viewCard } from '#/services/card-view.js';
 import { readJson } from '#/services/http/body.js';
@@ -29,6 +30,15 @@ import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
 
 const OWNER: CardActor = { type: 'user', id: 'owner' };
+
+/** The Director's warning level, which a card without its own cap uses; undefined when the settings cannot be read. */
+async function companyWarningLevel(deps: RouteDeps): Promise<number | undefined> {
+  try {
+    return (await deps.config.company()).config.director.budget_warning_usd;
+  } catch {
+    return undefined;
+  }
+}
 
 export function cardPatchRoute(deps: RouteDeps): Route {
   return {
@@ -42,6 +52,9 @@ export function cardPatchRoute(deps: RouteDeps): Route {
 
       const body = await readJson(req, CardPatchBody);
       const at = new Date(deps.now()).toISOString();
+      // Read before the transaction: settings and storage share one writer queue.
+      const warningLevel =
+        body.budget_cap_usd === undefined ? undefined : await companyWarningLevel(deps);
 
       const detail = await deps.storage.transaction(async (tx) => {
         const card = await tx.cards.get(id.data);
@@ -54,7 +67,12 @@ export function cardPatchRoute(deps: RouteDeps): Route {
         }
 
         const events: NewCardEvent[] = [];
-        const patch: { type?: string; closed_reason?: string } = {};
+        const patch: {
+          type?: string;
+          closed_reason?: string;
+          budget_cap_usd?: number | undefined;
+        } = {};
+
         if (body.type !== undefined && body.type !== card.type) {
           const next = await tx.cardTypes.get(body.type);
           const check = checkTypeChange(card, next, body.type);
@@ -85,7 +103,13 @@ export function cardPatchRoute(deps: RouteDeps): Route {
           });
         }
 
-        if (events.length > 0) {
+        // The owner's budget cap only warns, never blocks (d-0143); null clears it. Warnings are measured
+        // against the cap in force, so a changed cap warns afresh once spend has reached a threshold of it.
+        if (body.budget_cap_usd !== undefined) {
+          patch.budget_cap_usd = body.budget_cap_usd ?? undefined;
+        }
+
+        if (events.length > 0 || body.budget_cap_usd !== undefined) {
           await tx.cards.update(card.id, { ...patch, updated_at: at });
           for (const event of events) {
             await tx.cardEvents.append(card.id, event);
@@ -95,6 +119,8 @@ export function cardPatchRoute(deps: RouteDeps): Route {
         if (body.closed_reason !== undefined) {
           // The phase follows the reason through the one door, so Board and phase agree.
           await moveCardPhase(tx, card.id, { type: 'close' }, at);
+        } else if (body.budget_cap_usd !== undefined) {
+          await warnOnBudget(tx, card.id, at, warningLevel);
         }
 
         const slug = (await tx.projects.get(card.project))?.slug ?? card.project;

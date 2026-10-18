@@ -110,6 +110,28 @@ export function directorIssues(
     out.push('Read caps must be whole numbers of 1 or more.');
   }
 
+  if (value.research) {
+    const r = seen.research;
+    const within = (n: number, lo: number, hi: number): boolean =>
+      Number.isInteger(n) && n >= lo && n <= hi;
+
+    if (!(
+      within(r.max_rounds, 1, 3) &&
+      within(r.max_searches, 0, 20) &&
+      within(r.max_fetches, 0, 20) &&
+      within(r.max_bytes, 50_000, 2_000_000) &&
+      within(r.max_runs_per_card, 1, 10)
+    )) {
+      out.push(
+        'Research needs 1 to 3 rounds, 0 to 20 searches and pages, 50 to 2000 KB and 1 to 10 runs per card, all whole numbers.',
+      );
+    }
+
+    if (r.step_budget_usd !== undefined && !positive(r.step_budget_usd)) {
+      out.push('The research call budget must be more than 0, or left empty.');
+    }
+  }
+
   if (
     value.escalation &&
     !(

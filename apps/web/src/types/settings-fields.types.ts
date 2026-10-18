@@ -23,6 +23,8 @@ export interface NumberFieldSpec extends BaseSpec {
   /** Stored value divided by this is what the user types (1000 shows milliseconds as seconds). */
   readonly scale?: number;
   readonly step?: number;
+  /** An empty box means "not set" (the key is left out) instead of "enter a number". */
+  readonly optional?: boolean;
 }
 
 export interface TextFieldSpec extends BaseSpec {

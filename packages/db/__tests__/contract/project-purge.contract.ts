@@ -7,7 +7,7 @@
  *   neighbour's history. Both backends are held to the same walk: tickets and what hangs
  *   off them, runs and their records, cards with their history, relations, queued replies,
  *   plan versions and card questions, inbox marks, pipeline snapshots with their stage rows and
- *   artifacts, the project row.
+ *   artifacts, fetched research sources and card evidence, the project row.
  *
  * Exports: describeProjectPurgeContract().
  * Depends on: vitest, @forge/core, helpers/fixtures. IO only through the adapter under test.
@@ -28,6 +28,7 @@ import {
   makeTicket,
   makeWake,
 } from '#tests/helpers/fixtures.js';
+import { seedResearch } from '#tests/helpers/research-seed.js';
 
 const HASH = 'a'.repeat(64);
 const cardIdOf = (slug: string): CardId => `${slug.toUpperCase()}-C1` as CardId;
@@ -111,6 +112,8 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
           matching_decisions: [],
           rejected_hits: [],
           risks: [],
+          evidence: [],
+          outside_claims: [],
         },
         tickets: [],
         card_links: [],
@@ -172,6 +175,8 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
         sha256: HASH,
         created_at: T0,
       });
+
+      await seedResearch(t, slug, cardId, ticket.id, runId);
     });
   }
 
@@ -204,6 +209,9 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
       pipeline: await t.ticketPipelines.get(ticketId),
       stageRuns: await t.stageRuns.listByTicket(ticketId),
       artifacts: await t.stageArtifacts.listByTicket(ticketId),
+      cardSources: await t.researchSources.listByCard(cardIdOf(slug)),
+      runSources: await t.researchSources.listByRun(runId),
+      evidence: await t.evidence.listByCard(cardIdOf(slug)),
     }));
   }
 
@@ -236,6 +244,9 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
         pipeline: null,
         stageRuns: [],
         artifacts: [],
+        cardSources: [],
+        runSources: [],
+        evidence: [],
       });
     });
 
@@ -253,6 +264,9 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
       expect(before.cardReplies).toHaveLength(1);
       expect(before.cardPlans).toHaveLength(1);
       expect(before.cardInteraction).not.toBeNull();
+      expect(before.cardSources).toHaveLength(1);
+      expect(before.runSources).toHaveLength(1);
+      expect(before.evidence).toHaveLength(1);
     });
 
     it('returns false for an unknown slug and changes nothing', async () => {

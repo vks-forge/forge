@@ -23,6 +23,7 @@ export const FLOW_STEP_KINDS = [
   'grill',
   'verify',
   'enhance',
+  'research',
   'write_plan',
   'approve',
   'custom',
@@ -94,6 +95,10 @@ function flowProblems(flow: readonly FlowStep[]): string[] {
 
   if (beforeLast?.kind !== 'write_plan') {
     problems.push('the write_plan step must come right before approve');
+  }
+
+  if (flow.filter((s) => s.kind === 'research').length > 1) {
+    problems.push('the flow may have at most one research step');
   }
 
   for (const s of flow) {

@@ -224,6 +224,9 @@ importers:
       '@forge/mcp':
         specifier: workspace:*
         version: link:../../packages/mcp
+      '@forge/research':
+        specifier: workspace:*
+        version: link:../../packages/research
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -264,6 +267,9 @@ importers:
       '@forge/memory':
         specifier: workspace:*
         version: link:../../packages/memory
+      '@forge/research':
+        specifier: workspace:*
+        version: link:../../packages/research
       '@forge/secrets':
         specifier: workspace:*
         version: link:../../packages/secrets
@@ -514,6 +520,9 @@ importers:
       '@forge/db':
         specifier: workspace:*
         version: link:../db
+      '@forge/research':
+        specifier: workspace:*
+        version: link:../research
       '@types/node':
         specifier: 26.6.5
         version: 26.6.5
@@ -526,6 +535,19 @@ importers:
       yaml:
         specifier: 2.9.1
         version: 2.9.1
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@types/node':
+        specifier: 26.6.5
+        version: 26.6.5
+
+  packages/research:
+    dependencies:
+      '@forge/core':
+        specifier: workspace:*
+        version: link:../core
       zod:
         specifier: 4.6.7
         version: 4.6.7

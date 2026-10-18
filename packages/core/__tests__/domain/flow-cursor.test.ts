@@ -29,7 +29,11 @@ describe('resolveFlowStep', () => {
   it('skips the enhance step for an Express card and runs it for Standard', () => {
     const enhance = flow.findIndex((s) => s.id === 'enhance');
 
-    expect(ids(enhance, { lane: 'express', decisions: {} })).toBe('write_plan');
+    expect(ids(enhance, { lane: 'express', decisions: {} })).toBe('research');
+    expect(ids(enhance, { lane: 'express', decisions: { research: false } })).toBe(
+      'write_plan',
+    );
+
     expect(ids(enhance, { lane: 'standard', decisions: {} })).toBe('enhance');
   });
 

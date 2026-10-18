@@ -17,7 +17,7 @@
  *   else answered, a plain reply says the message was kept and nothing ran (d-0135).
  *
  * Exports: planningHandles(), runPlanningTurn().
- * Depends on: @forge/core (flow cursor, queue items), tick/planning-* (planning-reply-guard for the
+ * Depends on: @forge/core (flow cursor, queue items), tick/planning-* (planning-research for the research step, planning-reply-guard for the
  *   no-silent-reply rule), tick/plan-to-tickets,
  *   tick/card-log, tick/card-phase, types/card-planning. Reads and writes storage.
  */
@@ -29,6 +29,7 @@ import { logCardEvent } from '#/tick/card-log.js';
 import { askQueued, grillStep, recordAnswerTx } from '#/tick/planning-grill.js';
 import { approveStep, writePlanStep } from '#/tick/planning-plan.js';
 import { answerIfSilent } from '#/tick/planning-reply-guard.js';
+import { researchStep } from '#/tick/planning-research.js';
 import {
   isPlannedType,
   isPlanningPhase,
@@ -159,6 +160,8 @@ async function runKind(
       return verifyStep(pc, planning, index, step);
     case 'enhance':
       return enhanceStep(pc, planning, index, step);
+    case 'research':
+      return researchStep(pc, planning, index, step);
     case 'custom':
       return customStep(pc, planning, index, step);
     case 'write_plan':

@@ -1,76 +1,20 @@
 /**
- * Tool `web_search` — search the web through the operator's own SearXNG.
+ * Tool `web_search` — search the web through the research provider.
  *
- * Why: Workers need current docs and error explanations, but the harness's built-in web
- *   tools are denied so every egress goes through Forge. SearXNG is self-hosted and
- *   keyless; the tool refuses any base URL that is not loopback or explicitly
- *   allow-listed, so a mis-set `FORGE_SEARXNG_URL` cannot leak queries to a third party.
- *   Results are cut to title, url and a short snippet, non-http links are dropped, and
- *   the answer is wrapped in the untrusted-content envelope like `web_fetch` output:
- *   titles and snippets are written by strangers and the Worker must read them as data.
- *   The body is read through a byte-capped stream so a rogue endpoint cannot exhaust
- *   memory (tool-system.md §9).
+ * Why: Workers need current docs and error explanations, but the harness's built-in web tools are
+ *   denied so every egress goes through Forge. The search itself (SearXNG on the owner's machine, its
+ *   host check, the byte cap) lives behind the one `ResearchProvider` port that the Director's research
+ *   step uses too (d-0144), so there is one network floor and no second client in this package. Titles and
+ *   snippets are written by strangers, so the answer is wrapped in the untrusted-content envelope like
+ *   `web_fetch` output and the Worker must read it as data (tool-system.md §9).
  *
- * Exports: webSearchTool, validateSearxngBase().
- * Depends on: @forge/core, node:net, shared/ip-guard, shared/define-tool, shared/envelope,
- *   shared/capped-reader, schemas/tool-inputs. IO: HTTP to SearXNG via the injected `searchFetch`.
+ * Exports: webSearchTool.
+ * Depends on: @forge/core, shared/define-tool, schemas/tool-inputs. IO: the injected ResearchProvider.
  */
 
-import { InvalidInputError, PolicyDeniedError } from '@forge/core';
-import { isIP } from 'node:net';
-import { z } from 'zod';
+import { InvalidInputError, PolicyDeniedError, wrapUntrusted } from '@forge/core';
 import { WebSearchInput } from '#/schemas/tool-inputs.js';
-import { readCapped } from '#/shared/capped-reader.js';
 import { defineTool } from '#/shared/define-tool.js';
-import { wrapUntrusted } from '#/shared/envelope.js';
-import { isLoopbackAddress } from '#/shared/ip-guard.js';
-import type { SearxngConfig } from '#/types/deps.types.js';
-
-const TIMEOUT_MS = 10_000;
-const MAX_BODY_BYTES = 1_000_000;
-const SNIPPET_CHARS = 300;
-
-const SearxResponse = z.object({
-  results: z.array(
-    z.object({
-      title: z.string().default(''),
-      url: z.string(),
-      content: z.string().default(''),
-    }),
-  ),
-});
-
-/** Returns the base URL when it is loopback or allow-listed; throws PolicyDeniedError otherwise. */
-export function validateSearxngBase(cfg: SearxngConfig | undefined): URL {
-  if (!cfg?.baseUrl) {
-    throw new InvalidInputError('web_search is not configured (FORGE_SEARXNG_URL)');
-  }
-
-  let url: URL;
-  try {
-    url = new URL(cfg.baseUrl);
-  } catch {
-    throw new InvalidInputError('FORGE_SEARXNG_URL is not a valid URL');
-  }
-
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new PolicyDeniedError('SearXNG URL must be http or https');
-  }
-
-  if (url.username || url.password) {
-    throw new PolicyDeniedError('SearXNG URL must not embed credentials');
-  }
-
-  const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
-  const loopback = host === 'localhost' || (isIP(host) !== 0 && isLoopbackAddress(host));
-  if (!loopback && !(cfg.allowHosts ?? []).includes(host)) {
-    throw new PolicyDeniedError(
-      `SearXNG host ${host} is not loopback and not allow-listed`,
-    );
-  }
-
-  return url;
-}
 
 export const webSearchTool = defineTool({
   name: 'web_search',
@@ -79,61 +23,26 @@ export const webSearchTool = defineTool({
   risk: 'network',
   inputSchema: WebSearchInput,
   async handler(ctx, { query, max_results, engines }) {
-    const base = validateSearxngBase(ctx.deps.searxng);
-    const url = new URL('search', base.href.endsWith('/') ? base.href : `${base.href}/`);
-    url.searchParams.set('q', query);
-    url.searchParams.set('format', 'json');
-    if (engines && engines.length > 0) {
-      url.searchParams.set('engines', engines.join(','));
+    const provider = ctx.deps.research;
+    if (!provider) {
+      throw new InvalidInputError('web_search is not configured (no research provider)');
     }
 
-    const doFetch = ctx.deps.searchFetch;
-    if (!doFetch) {
-      throw new InvalidInputError('web_search is not configured (no fetch)');
-    }
-
-    const res = await doFetch(url, {
-      redirect: 'error',
-      signal: AbortSignal.timeout(ctx.deps.fetchTimeoutMs ?? TIMEOUT_MS),
-      headers: { accept: 'application/json' },
-    }).catch((e: unknown) => {
-      throw new InvalidInputError(
-        `SearXNG request failed: ${e instanceof Error ? e.message : 'error'}`,
-      );
+    const res = await provider.search(query, {
+      maxResults: max_results,
+      ...(engines && engines.length > 0 ? { engines } : {}),
     });
 
     if (!res.ok) {
-      throw new InvalidInputError(`SearXNG returned HTTP ${res.status}`);
+      throw res.error.kind === 'denied'
+        ? new PolicyDeniedError(res.error.message)
+        : new InvalidInputError(res.error.message);
     }
 
-    const source = res.body as
-      (AsyncIterable<Uint8Array> & { cancel(): Promise<void> }) | null;
-
-    const { bytes, truncated } = source
-      ? await readCapped(source, MAX_BODY_BYTES, () => source.cancel())
-      : { bytes: new Uint8Array(), truncated: false };
-
-    if (truncated) {
-      throw new InvalidInputError('SearXNG response too large');
-    }
-
-    const raw = new TextDecoder().decode(bytes);
-    let parsed: z.infer<typeof SearxResponse>;
-    try {
-      parsed = SearxResponse.parse(JSON.parse(raw));
-    } catch {
-      throw new InvalidInputError('SearXNG returned an unexpected response');
-    }
-
-    const results = parsed.results
-      .filter((r) => /^https?:\/\//i.test(r.url))
-      .slice(0, max_results)
-      .map((r) => ({
-        title: r.title,
-        url: r.url,
-        snippet: r.content.slice(0, SNIPPET_CHARS),
-      }));
-
-    return wrapUntrusted(JSON.stringify({ query, results }), ctx.newId(), base.href);
+    return wrapUntrusted(
+      JSON.stringify({ query, results: res.value.hits }),
+      ctx.newId(),
+      'web_search',
+    );
   },
 });

@@ -18,6 +18,7 @@ import {
   Info,
   Layers,
   ListChecks,
+  Telescope,
   Users,
   Workflow,
 } from 'lucide-react';
@@ -33,6 +34,7 @@ import {
   HistoryTab,
   PipelinesTab,
   ProjectTab,
+  ResearchTab,
   RepositoryTab,
   WorkersTab,
 } from '#/routes/project-settings/project-settings-tabs.js';
@@ -48,6 +50,7 @@ export const PROJECT_SETTINGS_SECTIONS: readonly {
   { segment: 'checks', label: 'Checks', icon: ListChecks },
   { segment: 'repository', label: 'Repository', icon: FolderGit2 },
   { segment: 'director', label: 'Director', icon: Workflow },
+  { segment: 'research', label: 'Research', icon: Telescope },
   { segment: 'agents', label: 'Agents', icon: Bot },
   { segment: 'pipelines', label: 'Pipelines', icon: Layers },
   { segment: 'history', label: 'History', icon: Clock },
@@ -61,6 +64,7 @@ export const projectSettingsRoutes: RouteObject[] = [
   { path: 'checks', element: <ChecksTab /> },
   { path: 'repository', element: <RepositoryTab /> },
   { path: 'director', element: <DirectorTab /> },
+  { path: 'research', element: <ResearchTab /> },
   { path: 'agents', element: <AgentsTab /> },
   { path: 'pipelines', element: <PipelinesTab /> },
   { path: 'history', element: <HistoryTab /> },

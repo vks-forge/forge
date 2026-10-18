@@ -24,6 +24,7 @@ import { ProjectAgents } from '#/schemas/agent.js';
 import { DirectorConfig } from '#/schemas/director-config.js';
 import { ProjectPrefix } from '#/schemas/ids.js';
 import { ProjectPipelines } from '#/schemas/pipeline.js';
+import { ProjectResearch } from '#/schemas/research-settings.js';
 import { SecretName } from '#/schemas/secret-name.js';
 import { deepPartial } from '#/shared/deep-partial.js';
 import type { DeepPartial } from '#/types/config.types.js';
@@ -195,6 +196,8 @@ export const ProjectConfigShape = z.object({
   agents: ProjectAgents.optional(),
   /** This project's own lane pipelines and routing rules; a lane it names replaces the company's whole (d-0151). */
   pipelines: ProjectPipelines.optional(),
+  /** This project's narrowing of the company's research settings: off, more denied hosts, fewer allowed hosts (d-0144). */
+  research: ProjectResearch.optional(),
 });
 
 /**

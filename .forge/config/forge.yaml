@@ -15,6 +15,7 @@ models:
     grill_turn: sonnet
     verify: opus
     enhance: opus
+    research: sonnet
     write_plan: opus
     approve_plan: opus
     custom_step: sonnet

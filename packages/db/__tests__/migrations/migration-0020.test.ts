@@ -40,7 +40,7 @@ describe('0020 project scope', () => {
     driver.run(`INSERT INTO projects (id, slug, prefix, harness_defaults_json, tier_c_globs_json)
       VALUES ('old', 'old', 'OLD', '{}', '[]')`);
 
-    expect(runMigrations(driver)).toEqual([20, 21, 22, 23, 24, 25, 26, 27]);
+    expect(runMigrations(driver)).toEqual([20, 21, 22, 23, 24, 25, 26, 27, 28]);
     const storage = createStorageOnDriver(driver);
 
     await storage.transaction((tx) =>

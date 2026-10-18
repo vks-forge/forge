@@ -48,6 +48,7 @@ describe('Forge settings tabs', () => {
       'Agents',
       'Pipelines',
       'Limits',
+      'Research',
       'Harnesses',
       'GitHub',
     ]);
@@ -92,6 +93,9 @@ describe('Forge settings tabs', () => {
     expect(tabs.getByRole('link', { name: 'General' })).toHaveAttribute('tabindex', '-1');
 
     active.focus();
+    await user.keyboard('{ArrowDown}');
+    expect(tabs.getByRole('link', { name: 'Research' })).toHaveFocus();
+
     await user.keyboard('{ArrowDown}');
     expect(tabs.getByRole('link', { name: 'Harnesses' })).toHaveFocus();
 

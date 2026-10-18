@@ -17,7 +17,7 @@
  *   a value, and a project's override may only lower the company's.
  *   `pipelines` says whether the Director may adjust a ticket's own pipeline copy and when it proposes a change to a project's list.
  *
- * Exports: PlaybookId, DirectorPlaybook, ApprovalMode, DirectorGrillLimits, DirectorReadCaps,
+ * Exports: PlaybookId, DirectorPlaybook, ApprovalMode, DirectorGrillLimits, DirectorReadCaps, DirectorResearchCaps,
  *   DirectorEscalation, DirectorSignOff, DirectorPipelines, DirectorConfig.
  * Depends on: schemas/director-flow, schemas/steps, zod. No IO.
  */
@@ -89,6 +89,23 @@ export const DirectorPipelines = z.object({
 });
 export type DirectorPipelines = z.infer<typeof DirectorPipelines>;
 
+/**
+ * How much outside research one card may do (d-0144, d-0072): per research run, rounds of requests,
+ * searches, fetches and page bytes; per card, runs. A cap stops the requests (the step sees "cap
+ * reached"), never the card. `grill_detours` lets the grill pause for outside facts before a question;
+ * `step_budget_usd` caps one research model call and defaults to the engine step budget.
+ */
+export const DirectorResearchCaps = z.object({
+  max_rounds: z.number().int().min(1).max(3),
+  max_searches: z.number().int().min(0).max(20),
+  max_fetches: z.number().int().min(0).max(20),
+  max_bytes: z.number().int().min(50_000).max(2_000_000),
+  max_runs_per_card: z.number().int().min(1).max(10),
+  grill_detours: z.boolean(),
+  step_budget_usd: z.number().positive().optional(),
+});
+export type DirectorResearchCaps = z.infer<typeof DirectorResearchCaps>;
+
 /** The whole section; a flow step may only name a playbook that exists. */
 export const DirectorConfig = z
   .object({
@@ -100,6 +117,7 @@ export const DirectorConfig = z
     /** A warning (never a block) once the card's spend, Director steps included, reaches this (d-0143). */
     budget_warning_usd: z.number().positive(),
     read_caps: DirectorReadCaps,
+    research: DirectorResearchCaps,
     step_timeouts_ms: z.record(StepName, PosInt),
     escalation: DirectorEscalation,
     sign_off: DirectorSignOff,

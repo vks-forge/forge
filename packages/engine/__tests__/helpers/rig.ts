@@ -34,6 +34,9 @@ import {
 } from '#tests/helpers/fakes.js';
 import { createFakeRepoReader } from '#tests/helpers/fake-repo-reader.js';
 import type { FakeRepoReader } from '#tests/helpers/fake-repo-reader.js';
+import { createFakeResearch } from '#tests/helpers/fake-research.js';
+import { mergeReports } from '#tests/helpers/merge-reports.js';
+import type { FakeResearch } from '#tests/helpers/fake-research.js';
 import { createScriptedDriver } from '#tests/helpers/scripted-driver.js';
 import { createScriptedLLM } from '#tests/helpers/scripted-llm.js';
 
@@ -43,6 +46,8 @@ export interface Rig {
   readonly llm: ReturnType<typeof createScriptedLLM>;
   readonly worktrees: ReturnType<typeof createFakeWorktrees>;
   readonly memory: ReturnType<typeof createFakeMemory>;
+  /** The research provider of the engine, when the rig was made with `research: true`; otherwise research is off. */
+  readonly research: FakeResearch | undefined;
   /** The project's tracked files at HEAD as the planning steps see them. */
   readonly repo: FakeRepoReader;
   readonly receipts: ReturnType<typeof createFakeReceipts>;
@@ -90,25 +95,6 @@ export function intake(over: Partial<IntakeEvent> = {}, now = Date.now()): Intak
   };
 }
 
-/** Adds the lists of `b` to those of `a`; the tick that applies a gate job reports what the one that started it could not. */
-function mergeReports(a: TickReport, b: TickReport): TickReport {
-  return {
-    ...a,
-    crashed: [...a.crashed, ...b.crashed],
-    resumed: [...a.resumed, ...b.resumed],
-    resumeFailed: [...a.resumeFailed, ...b.resumeFailed],
-    settled: [...a.settled, ...b.settled],
-    triaged: [...a.triaged, ...b.triaged],
-    dispatched: [...a.dispatched, ...b.dispatched],
-    steered: [...a.steered, ...b.steered],
-    verified: [...a.verified, ...b.verified],
-    parked: [...a.parked, ...b.parked],
-    violations: [...a.violations, ...b.violations],
-    rejectedSteps: [...a.rejectedSteps, ...b.rejectedSteps],
-    errors: [...a.errors, ...b.errors],
-  };
-}
-
 /**
  * One tick, plus the follow-up tick a finished gate job asks for. Gates run beside the tick
  * (verify-gates jobs), so a scenario that reads "tick: merged" needs both. Use `engine.tick()`
@@ -135,6 +121,8 @@ export async function tickToIdle(
 export interface RigOptions {
   engine?: Record<string, unknown>;
   storage?: StorageAdapter;
+  /** Give the engine a fake research provider (default: none, so research is off). */
+  research?: boolean;
 }
 
 export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
@@ -144,6 +132,7 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
   const worktrees = createFakeWorktrees();
   const memory = createFakeMemory();
   const repo = createFakeRepoReader();
+  const research = opts.research === true ? createFakeResearch() : undefined;
   const receipts = createFakeReceipts();
   const reports = createFakeReports();
   const runtime: { current: ProjectRuntime | null } = {
@@ -216,6 +205,7 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
     catalogueHash: async () => 'c'.repeat(64),
     onTickRequested: () => void tickRequests.count++,
     log,
+    ...(research ? { research } : {}),
   };
 
   const engine = createEngine(deps);
@@ -238,6 +228,7 @@ export async function makeRig(opts: RigOptions = {}): Promise<Rig> {
     llm,
     worktrees,
     memory,
+    research,
     repo,
     receipts,
     reports,

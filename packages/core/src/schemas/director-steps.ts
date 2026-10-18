@@ -22,7 +22,7 @@
  *   GrillTurnOutput, EnhanceOutput, WritePlanOutput, ApprovePlanOutput, CustomStepOutput,
  *   ANSWER_GROUND_KINDS, ESCALATE_REASONS, TicketAnswerOutput, TicketRecoverOutput, PickSubstituteOutput,
  *   DraftAgentOutput.
- * Depends on: schemas/agent, schemas/escalation, schemas/grill, schemas/ids, schemas/plan, zod. No IO.
+ * Depends on: schemas/agent, schemas/escalation, schemas/grill, schemas/ids, schemas/plan, schemas/research, zod. No IO.
  */
 
 import { z } from 'zod';
@@ -31,6 +31,7 @@ import { GrillQuestionDraft, SurveyFindings, VerifyFindings } from '#/schemas/gr
 import { AgentId, AgentInput } from '#/schemas/agent.js';
 import { CardId } from '#/schemas/ids.js';
 import { PlanTickets } from '#/schemas/plan.js';
+import { EvidenceRef } from '#/schemas/research.js';
 
 /** One engine-side read round carries at most this many requests. */
 export const MAX_READ_REQUESTS = 20;
@@ -88,10 +89,22 @@ export const GrillTurnOutput = z
     question: GrillQuestionDraft.optional(),
     open_points: z.number().int().nonnegative(),
     assumptions: z.array(z.string()),
+    /** Outside facts the next question depends on: the engine researches them first (d-0144); only while the grill is not done. */
+    research: z
+      .object({ questions: z.array(z.string().trim().min(5).max(300)).min(1).max(3) })
+      .optional(),
+    step_decisions: StepDecisions,
   })
-  .refine((o) => (o.done ? o.done_reason !== undefined : o.question !== undefined), {
-    message: 'a finished grill needs done_reason; an unfinished one needs a question',
-  });
+  .refine(
+    (o) =>
+      o.done
+        ? o.done_reason !== undefined && o.research === undefined
+        : o.question !== undefined || o.research !== undefined,
+    {
+      message:
+        'a finished grill needs done_reason and no research; an unfinished one needs a question or research',
+    },
+  );
 export type GrillTurnOutput = z.infer<typeof GrillTurnOutput>;
 
 /** `enhance`: the markdown report, what the Director resolved itself, and points only the owner can settle. */
@@ -100,6 +113,7 @@ export const EnhanceOutput = z.object({
   report: z.string().min(1),
   assumptions: z.array(z.string()),
   owner_questions: z.array(GrillQuestionDraft).max(4),
+  step_decisions: StepDecisions,
 });
 export type EnhanceOutput = z.infer<typeof EnhanceOutput>;
 
@@ -117,6 +131,16 @@ export const WritePlanOutput = z.object({
   risks: z.array(z.string()),
   tickets: PlanTickets.refine((t) => t.length > 0, { message: 'a plan needs a ticket' }),
   card_links: z.array(CardId),
+  /** Facts from outside the repository the plan rests on, with the evidence refs behind each; the engine marks them (d-0144). */
+  outside_claims: z
+    .array(
+      z.object({
+        claim: z.string().trim().min(10).max(500),
+        evidence: z.array(EvidenceRef).max(5),
+      }),
+    )
+    .max(20)
+    .default([]),
 });
 export type WritePlanOutput = z.infer<typeof WritePlanOutput>;
 

@@ -1,21 +1,22 @@
 /**
  * Pins web_search through the MCP protocol.
  *
- * Why: search is the Worker's route to outside knowledge and must reach only the
- *   operator's SearXNG (loopback or allow-listed). A result is untrusted text: it must
- *   be capped, stripped of non-http links and unable to close its own envelope, or a
- *   prompt-injected page steers the Worker.
+ * Why: search is the Worker's route to outside knowledge and goes through the one research provider. The
+ *   provider reaches only the owner's SearXNG (checked in the research package); this tool must wrap the
+ *   hits in the untrusted-content envelope so a prompt-injected title cannot close it, cap and shape the
+ *   answer, and turn a provider refusal or outage into a tool error the Worker can read, never a crash.
  *
  * Pins: web_search.
- * Depends on: helpers/harness, helpers/auto-close, domain/server, node:http.
+ * Depends on: helpers/harness, helpers/auto-close, @forge/research, domain/server, node:http.
  */
 
 import { once } from 'node:events';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { createResearchProvider } from '@forge/research';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { useAutoClose } from '#tests/helpers/auto-close.js';
-import { connect, textOf } from '#tests/helpers/harness.js';
+import { SETTINGS, connect, textOf } from '#tests/helpers/harness.js';
 
 const closer = useAutoClose();
 
@@ -54,9 +55,21 @@ afterAll(() => {
   fake.close();
 });
 
+const provider = (fetchImpl: typeof fetch = fetch, url = base) =>
+  createResearchProvider(
+    { ...SETTINGS, searxng: { base_url: url, allow_hosts: [] } },
+    {
+      resolve: async () => ['93.184.216.34'],
+      transport: async () => {
+        throw new Error('no fetch in this test');
+      },
+      fetch: fetchImpl,
+    },
+  );
+
 describe('web_search', () => {
   it('queries SearXNG JSON and returns {title,url,snippet}, capped', async () => {
-    const c = await connect({ searxng: { baseUrl: base } });
+    const c = await connect({ research: provider() });
     closer.set(c.close);
     const res = await c.client.callTool({
       name: 'web_search',
@@ -68,9 +81,7 @@ describe('web_search', () => {
     });
 
     expect(res.isError).toBeFalsy();
-    expect(textOf(res)).toMatch(
-      /^<untrusted-content id="[0-9a-f]+" source="http:\/\/127\.0\.0\.1/,
-    );
+    expect(textOf(res)).toMatch(/^<untrusted-content id="[0-9a-f]+" source="web_search"/);
 
     const body = unwrapJson(textOf(res));
     expect(body.results).toHaveLength(3);
@@ -87,7 +98,7 @@ describe('web_search', () => {
   });
 
   it('drops non-http result urls and caps max_results at 10', async () => {
-    const c = await connect({ searxng: { baseUrl: base } });
+    const c = await connect({ research: provider() });
     closer.set(c.close);
     const res = await c.client.callTool({
       name: 'web_search',
@@ -105,8 +116,8 @@ describe('web_search', () => {
     expect(over.isError).toBe(true);
   });
 
-  it('refuses a non-loopback base URL unless allow-listed', async () => {
-    const c = await connect({ searxng: { baseUrl: 'http://search.example.com' } });
+  it('turns a refused base URL into a tool error', async () => {
+    const c = await connect({ research: provider(fetch, 'http://search.example.com') });
     closer.set(c.close);
     const res = await c.client.callTool({
       name: 'web_search',
@@ -115,29 +126,6 @@ describe('web_search', () => {
 
     expect(res.isError).toBe(true);
     expect(textOf(res)).toMatch(/loopback|allow/i);
-  });
-
-  it('accepts an allow-listed host', async () => {
-    const stub: typeof fetch = async () =>
-      new Response(
-        JSON.stringify({ results: [{ title: 'a', url: 'https://a.io', content: 'z' }] }),
-        {
-          headers: { 'content-type': 'application/json' },
-        },
-      );
-
-    const c = await connect({
-      searxng: { baseUrl: 'http://search.lan:8888', allowHosts: ['search.lan'] },
-      searchFetch: stub,
-    });
-
-    closer.set(c.close);
-    const res = await c.client.callTool({
-      name: 'web_search',
-      arguments: { query: 'x' },
-    });
-
-    expect(res.isError).toBeFalsy();
   });
 
   it('defangs an injected closing envelope tag inside a result', async () => {
@@ -150,7 +138,7 @@ describe('web_search', () => {
         }),
       );
 
-    const c = await connect({ searxng: { baseUrl: base }, searchFetch: stub });
+    const c = await connect({ research: provider(stub) });
     closer.set(c.close);
     const res = await c.client.callTool({
       name: 'web_search',
@@ -160,32 +148,8 @@ describe('web_search', () => {
     expect(textOf(res).match(/<\/untrusted-content/g)).toHaveLength(1);
   });
 
-  it('stops reading an endless SearXNG body at the cap', async () => {
-    let pulled = 0;
-    const stub: typeof fetch = async () =>
-      new Response(
-        new ReadableStream({
-          pull(ctl) {
-            pulled += 1;
-            ctl.enqueue(new TextEncoder().encode('x'.repeat(100_000)));
-          },
-        }),
-      );
-
-    const c = await connect({ searxng: { baseUrl: base }, searchFetch: stub });
-    closer.set(c.close);
-    const res = await c.client.callTool({
-      name: 'web_search',
-      arguments: { query: 'x' },
-    });
-
-    expect(res.isError).toBe(true);
-    expect(textOf(res)).toMatch(/too large/i);
-    expect(pulled).toBeLessThan(40);
-  });
-
-  it('errors when SearXNG is not configured or fails', async () => {
-    const none = await connect();
+  it('errors when no provider is configured and when SearXNG fails', async () => {
+    const none = await connect({ research: undefined });
     closer.set(none.close);
     expect(
       (await none.client.callTool({ name: 'web_search', arguments: { query: 'x' } }))
@@ -194,8 +158,7 @@ describe('web_search', () => {
 
     await closer.run();
     const bad = await connect({
-      searxng: { baseUrl: base },
-      searchFetch: async () => new Response('boom', { status: 500 }),
+      research: provider(async () => new Response('boom', { status: 500 })),
     });
 
     closer.set(bad.close);

@@ -7,16 +7,17 @@
  *   place that reads environment variables and opens the database (code.md rule 1).
  *
  * Exports: parseEnv(), depsFromEnv(), start().
- * Depends on: @forge/core, @forge/mcp, node:path, schemas/env, services/open-database,
+ * Depends on: @forge/core, @forge/mcp, node:path, schemas/env, services/open-database, services/research-settings,
  *   types/start.types. IO: opens SQLite (existing, never migrated), stdio via StartIo.
  */
 
 import { delimiter } from 'node:path';
 import { InvalidInputError } from '@forge/core';
-import { createForgeMcpServer, withDefaultNetwork } from '@forge/mcp';
+import { createForgeMcpServer } from '@forge/mcp';
 import type { ForgeMcpDeps } from '@forge/mcp';
 import { ForgeEnv } from '#/schemas/env.js';
-import { openExistingStorage } from '#/services/open-database.js';
+import { openExistingDatabase } from '#/services/open-database.js';
+import { resolveResearch } from '#/services/research-settings.js';
 import type { Env, StartIo } from '#/types/start.types.js';
 
 const list = (s: string | undefined, sep: string): string[] =>
@@ -37,27 +38,24 @@ export function parseEnv(env: Env): ForgeEnv {
 }
 
 /**
- * Opens the existing SQLite database (never creating or migrating it), wires the real
- * network ports, and assembles the server's dependencies.
+ * Opens the existing SQLite database (never creating or migrating it), builds the research
+ * provider from the settings stored in it, and assembles the server's dependencies.
  */
-export function depsFromEnv(env: Env): ForgeMcpDeps {
+export async function depsFromEnv(env: Env): Promise<ForgeMcpDeps> {
   const e = parseEnv(env);
+  const { storage, config } = openExistingDatabase(e.FORGE_DB_PATH);
 
-  return withDefaultNetwork({
-    storage: openExistingStorage(e.FORGE_DB_PATH),
+  return {
+    storage,
     runId: e.FORGE_RUN_ID,
     runToken: e.FORGE_RUN_TOKEN,
-    ...(e.FORGE_SEARXNG_URL
-      ? {
-          searxng: {
-            baseUrl: e.FORGE_SEARXNG_URL,
-            allowHosts: list(e.FORGE_SEARXNG_ALLOW_HOSTS, ','),
-          },
-        }
-      : {}),
+    ...(await resolveResearch(storage, config, e.FORGE_RUN_ID, {
+      searxngUrl: e.FORGE_SEARXNG_URL,
+      searxngAllowHosts: list(e.FORGE_SEARXNG_ALLOW_HOSTS, ','),
+      fetchAllowHosts: list(e.FORGE_FETCH_ALLOW_HOSTS, ','),
+    })),
     docsDirs: list(e.FORGE_DOCS_DIRS, delimiter),
-    fetchAllowHosts: list(e.FORGE_FETCH_ALLOW_HOSTS, ','),
-  });
+  };
 }
 
 /**
@@ -67,10 +65,10 @@ export function depsFromEnv(env: Env): ForgeMcpDeps {
 export async function start(
   env: Env,
   io: StartIo,
-  makeDeps: (env: Env) => ForgeMcpDeps = depsFromEnv,
+  makeDeps: (env: Env) => Promise<ForgeMcpDeps> = depsFromEnv,
 ): Promise<void> {
   try {
-    await io.serve(await createForgeMcpServer(makeDeps(env)));
+    await io.serve(await createForgeMcpServer(await makeDeps(env)));
   } catch (err) {
     io.stderr(`forge-mcp: ${err instanceof Error ? err.message : 'startup failed'}\n`);
     io.exit(1);

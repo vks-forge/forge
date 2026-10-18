@@ -1,0 +1,29 @@
+{
+  "name": "@forge/research",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "imports": {
+    "#/*": {
+      "development": "./src/*",
+      "default": "./dist/*"
+    },
+    "#tests/*": "./__tests__/*"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@forge/core": "workspace:*",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5"
+  }
+}

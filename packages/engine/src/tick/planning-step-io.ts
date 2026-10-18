@@ -25,6 +25,7 @@ import { rejectStep, runStep } from '#/steps/run-step.js';
 import { warnOnBudget } from '#/tick/card-budget.js';
 import { askStepBudget, logPlanEvent, stamp } from '#/tick/planning-state.js';
 import type { ModelCall, PlanCtx, StepFinish } from '#/types/card-planning.types.js';
+import type { StepExtras } from '#/types/run-step.types.js';
 
 /** Writes `step_started` so the card shows which step the Director is on. */
 export async function startStep(pc: PlanCtx, step: FlowStep): Promise<void> {
@@ -43,10 +44,12 @@ export async function callStep<T>(
   name: StepName,
   schema: ZodType<T>,
   input: Record<string, unknown>,
+  extras: Pick<StepExtras, 'budgetUsd'> = {},
 ): Promise<ModelCall<T>> {
   let cost = 0;
   const result = await runStep(pc.ctx, name, input, schema, {
     timeoutMs: pc.director.step_timeouts_ms[name],
+    ...(extras.budgetUsd === undefined ? {} : { budgetUsd: extras.budgetUsd }),
     onCost: (usd) => {
       cost += usd;
     },
@@ -64,7 +67,7 @@ export async function callStep<T>(
         pc.card.id,
         stamp(pc),
         step.label,
-        pc.ctx.config.forge.engine.step_budget_usd,
+        extras.budgetUsd ?? pc.ctx.config.forge.engine.step_budget_usd,
       ),
     );
 

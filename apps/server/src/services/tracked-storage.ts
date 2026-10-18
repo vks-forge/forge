@@ -18,14 +18,19 @@
  *   to a ticket's copy and the owner's mark on a finding announce the same keys. A pipeline proposal announces
  *   `["pipeline-proposals", slug]` and `["inbox", slug]` when it is made, and when it is decided also
  *   `["pipelines", "project", slug]` and `["project-settings", slug]` (an accepted one changed the lane).
+ *   Research: new evidence or a Director source announces `["card-evidence", id]` and `["card", id]`; a Worker's page
+ *   read announces `["run-sources", runId]`; a `budget_warning` event and a change of a card's cap also announce
+ *   `["inbox", slug]`.
  *
  * Exports: trackProjectWrites().
- * Depends on: @forge/core (storage ports), services/tracked-watch, types/project-events, types/tracked-storage.
+ * Depends on: @forge/core (storage ports), services/tracked-resolve, services/tracked-watch, types/project-events,
+ *   types/tracked-storage.
  *   IO: extra reads inside the caller's transaction.
  */
 
-import type { QueryKey, StorageAdapter, StorageTx } from '@forge/core';
+import type { StorageAdapter, StorageTx } from '@forge/core';
 import type { ProjectEvents } from '#/types/project-events.types.js';
+import { resolve } from '#/services/tracked-resolve.js';
 import { first, watch } from '#/services/tracked-watch.js';
 import type { Recorder, Resolved, Touch } from '#/types/tracked-storage.types.js';
 
@@ -52,11 +57,37 @@ function track(tx: StorageTx, touches: Touch[]): StorageTx {
     ...tx,
     cards: watch(tx.cards, touches, {
       insert: (a) => ({ kind: 'card', id: (a[0] as { id: string }).id }),
-      update: card,
+      // A cap change moves the Inbox's budget warnings (they show only for the cap in force).
+      update: (a) =>
+        'budget_cap_usd' in (a[1] as object)
+          ? [
+              { kind: 'card', id: first(a) },
+              { kind: 'card_inbox', id: first(a) },
+            ]
+          : { kind: 'card', id: first(a) },
       updatePhase: card,
     }),
     cardEvents: watch(tx.cardEvents, touches, {
-      append: (a) => ({ kind: 'card', id: first(a) }),
+      // A budget warning is an Inbox item too.
+      append: (a) =>
+        (a[1] as { kind?: string }).kind === 'budget_warning'
+          ? [
+              { kind: 'card', id: first(a) },
+              { kind: 'card_inbox', id: first(a) },
+            ]
+          : { kind: 'card', id: first(a) },
+    }),
+    evidence: watch(tx.evidence, touches, {
+      insertMany: (a) => ({ kind: 'card_evidence', id: first(a) }),
+    }),
+    researchSources: watch(tx.researchSources, touches, {
+      insert: (a) => {
+        const s = a[0] as { card_id?: string; run_id?: string; project: string };
+
+        return s.card_id === undefined
+          ? { kind: 'run_sources', id: s.run_id ?? '', project: s.project }
+          : { kind: 'card_evidence', id: s.card_id };
+      },
     }),
     cardRelations: watch(tx.cardRelations, touches, {
       replaceFor: (a) => [
@@ -122,138 +153,6 @@ function track(tx: StorageTx, touches: Touch[]): StorageTx {
       upsert: (a) => ({ kind: 'inbox', project: (a[0] as { project: string }).project }),
     }),
   };
-}
-
-/** Turns the touches into query keys per project slug, reading inside the open transaction. */
-async function resolve(tx: StorageTx, touches: readonly Touch[]): Promise<Resolved> {
-  const out: Resolved = new Map();
-  const slugs = new Map<string, string>();
-  const slugOf = async (projectId: string): Promise<string> => {
-    const known = slugs.get(projectId);
-    if (known !== undefined) {
-      return known;
-    }
-
-    const slug = (await tx.projects.get(projectId))?.slug ?? projectId;
-    slugs.set(projectId, slug);
-
-    return slug;
-  };
-
-  const add = async (projectId: string, ...keys: QueryKey[]): Promise<void> => {
-    const slug = await slugOf(projectId);
-    const bucket = out.get(slug) ?? new Map<string, QueryKey>();
-    for (const key of keys) {
-      bucket.set(JSON.stringify(key), key);
-    }
-
-    out.set(slug, bucket);
-  };
-
-  const addCard = async (id: string, withList: boolean): Promise<void> => {
-    const card = await tx.cards.get(id as never);
-    if (!card) {
-      return;
-    }
-
-    const slug = await slugOf(card.project);
-    await add(
-      card.project,
-      ['card', id],
-      ...(withList ? [['cards', slug] as const] : []),
-    );
-  };
-
-  for (const t of touches) {
-    switch (t.kind) {
-      case 'card':
-        await addCard(t.id, true);
-        break;
-      case 'inbox':
-        await add(t.project, ['inbox', await slugOf(t.project)]);
-        break;
-      case 'pipeline':
-      case 'stage_run': {
-        const ticketId =
-          t.kind === 'pipeline' ? t.id : (await tx.stageRuns.get(t.id))?.ticket_id;
-
-        const ticket = ticketId ? await tx.tickets.get(ticketId as never) : null;
-        if (ticket) {
-          await add(
-            ticket.project,
-            ['ticket-pipeline', ticket.id],
-            ['ticket', ticket.id],
-          );
-        }
-
-        break;
-      }
-
-      case 'proposal': {
-        const slug = await slugOf(t.project);
-        await add(t.project, ['pipeline-proposals', slug], ['inbox', slug]);
-        break;
-      }
-
-      case 'proposal_decided': {
-        const proposal = await tx.pipelineProposals.get(t.id);
-        if (proposal) {
-          const slug = await slugOf(proposal.project);
-          // An accepted proposal also changed the lane's own list in the project's settings.
-          await add(
-            proposal.project,
-            ['pipeline-proposals', slug],
-            ['inbox', slug],
-            ['pipelines', 'project', slug],
-            ['project-settings', slug],
-          );
-        }
-
-        break;
-      }
-
-      case 'ticket':
-      case 'interaction': {
-        const ticket =
-          t.kind === 'ticket'
-            ? await tx.tickets.get(t.id as never)
-            : await ticketOfInteraction(tx, t.id);
-
-        if (ticket) {
-          const slug = await slugOf(ticket.project);
-          await add(
-            ticket.project,
-            ['ticket', ticket.id],
-            ['tickets', slug],
-            ['cards', slug],
-            ['inbox', slug],
-          );
-
-          if (ticket.card_id) {
-            await addCard(ticket.card_id, false);
-          }
-        }
-
-        if (t.kind === 'interaction' && t.cardId !== undefined) {
-          await addCard(t.cardId, true);
-          const card = await tx.cards.get(t.cardId as never);
-          if (card) {
-            await add(card.project, ['inbox', await slugOf(card.project)]);
-          }
-        }
-
-        break;
-      }
-    }
-  }
-
-  return out;
-}
-
-async function ticketOfInteraction(tx: StorageTx, interactionId: string) {
-  const row = await tx.interactions.get(interactionId);
-
-  return row ? tx.tickets.get(row.ticket_id as never) : null;
 }
 
 /** `storage` whose committed writes call `events.invalidate`; all other behaviour is unchanged. */

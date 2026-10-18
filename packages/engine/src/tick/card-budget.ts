@@ -5,8 +5,9 @@
  *   heading past its cap, but a warning must never stop the card or refuse a ticket, or a
  *   cost guard would become the dead end the flow is built to avoid (d-0135). When spend
  *   (the card's ticket runs and its Director steps) first reaches each threshold, one `budget_warning`
- *   event goes to the card history; the event is the record of "already told", so a later
- *   check, a restart or a second writer never repeats it.
+ *   event goes to the card history; the event is the record of "already told" for that threshold
+ *   and that cap, so a later check, a restart or a second writer never repeats it, while a cap the
+ *   owner changed (d-0143) warns afresh.
  *
  * Exports: BUDGET_THRESHOLDS, warnOnBudget(), addDirectorSpend().
  * Depends on: @forge/core (card event schemas, card planning state), tick/card-chat-context (cardSpend), tick/card-log.
@@ -22,9 +23,12 @@ export const BUDGET_THRESHOLDS: readonly number[] = [0.8, 1];
 
 const PAGE = 200;
 
-/** Thresholds a `budget_warning` already exists for. */
-async function warnedThresholds(tx: StorageTx, cardId: CardId): Promise<Set<number>> {
-  const seen = new Set<number>();
+/** `<threshold>@<cap>`: a warning belongs to the cap it was written for, so a new cap warns again. */
+const warnKey = (threshold: number, cap: number): string => `${threshold}@${cap}`;
+
+/** The (threshold, cap) pairs a `budget_warning` already exists for. */
+async function warnedThresholds(tx: StorageTx, cardId: CardId): Promise<Set<string>> {
+  const seen = new Set<string>();
   let afterSeq: number | undefined;
   for (;;) {
     const page = await tx.cardEvents.list(cardId, {
@@ -34,7 +38,7 @@ async function warnedThresholds(tx: StorageTx, cardId: CardId): Promise<Set<numb
 
     for (const e of page) {
       if (e.kind === 'budget_warning') {
-        seen.add(e.payload.threshold);
+        seen.add(warnKey(e.payload.threshold, e.payload.cap_usd));
       }
     }
 
@@ -79,7 +83,7 @@ export async function warnOnBudget(
   }
 
   const warned = await warnedThresholds(tx, card.id);
-  for (const threshold of reached.filter((t) => !warned.has(t))) {
+  for (const threshold of reached.filter((t) => !warned.has(warnKey(t, cap)))) {
     await logCardEvent(tx, card.id, {
       kind: 'budget_warning',
       at,

@@ -1,7 +1,7 @@
 /**
  * What the Director page says: step names, model choices, locked rules and number fields.
  *
- * Why: the Director page edits sixteen per-step models, a handful of limits and a flow, and
+ * Why: the Director page edits seventeen per-step models, a handful of limits and a flow, and
  *   shows the rules no setting can switch off. Each needs words an owner understands (what the
  *   step is for, what a limit does when it is reached, why a rule is locked), kept as data so
  *   a new Director step is a line here and the screens stay thin. The locked list is the set
@@ -10,13 +10,14 @@
  *
  * Exports: STEP_INFO, MODEL_CHOICES, LOCKED_RULES, APPROVAL_ITEMS, SIGN_OFF_ITEMS, SIGN_OFF_ORDER, DIRECTOR_FIELD_GROUPS,
  *   DIRECTOR_FIELDS, effectiveDirector(), overriddenKeys(), describeFlow().
- * Depends on: @forge/core (types), types/director-ui.types, types/settings-fields.types,
+ * Depends on: @forge/core (types), domain/director-research-fields, types/director-ui.types, types/settings-fields.types,
  *   types/picker.types. Pure data.
  */
 
 import type { DirectorConfig, FlowStep, StepName } from '@forge/core';
 import type { PickerItem } from '#/types/picker.types.js';
 import type { LockedRule, OverridableKey, StepInfo } from '#/types/director-ui.types.js';
+import { RESEARCH_LIMIT_FIELDS } from '#/domain/director-research-fields.js';
 import type { FieldSpec } from '#/types/settings-fields.types.js';
 
 export const STEP_INFO: Readonly<Record<StepName, StepInfo>> = {
@@ -55,6 +56,10 @@ export const STEP_INFO: Readonly<Record<StepName, StepInfo>> = {
   ticket_check: {
     label: 'Check against the plan',
     hint: 'Compares finished work with the plan before sign-off; it never sees the Worker’s own account.',
+  },
+  research: {
+    label: 'Research',
+    hint: 'Looks up outside facts on the web and keeps the quotes it can verify; nothing it reads is ever treated as an instruction.',
   },
   pick_substitute: {
     label: 'Pick a substitute agent',
@@ -189,6 +194,7 @@ const DIRECTOR_FIELD_LIST: Readonly<
       hint: 'Reads stop at this total; the step works with what it has.',
     },
   ],
+  research: RESEARCH_LIMIT_FIELDS,
   escalation: [
     {
       kind: 'switch',

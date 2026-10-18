@@ -11,7 +11,7 @@
  *
  * Exports: FIELD_KEYS, draftFromSnapshot(), inheritedOf(), docFromDraft(), isDirty(), dirtyFields(), SCOPE_FIELDS,
  *   validateDraft(), setOverridden(), parseLines(), SAFE_TIER_C.
- * Depends on: @forge/core (BUILTIN_PROJECT_SETTINGS), domain/director-override,
+ * Depends on: @forge/core (BUILTIN_PROJECT_SETTINGS), domain/director-override, domain/research-narrowing,
  *   domain/director-settings, types/project-settings.types. No IO.
  */
 
@@ -19,6 +19,7 @@ import { BUILTIN_PROJECT_SETTINGS } from '@forge/core';
 import type { ProjectCheck } from '@forge/core';
 import { directorDraftOf, directorIssues } from '#/domain/director-override.js';
 import { effectiveDirector } from '#/domain/director-settings.js';
+import * as narrowing from '#/domain/research-narrowing.js';
 import type {
   FieldKey,
   FormScope,
@@ -36,6 +37,7 @@ export const FIELD_KEYS: readonly FieldKey[] = [
   'tier_c_globs',
   'remote',
   'director',
+  'research',
 ];
 
 /** The Tier C paths Forge protects by default; a list that drops them weakens the safeguard. */
@@ -75,6 +77,8 @@ export function inheritedOf(
       return '';
     case 'director':
       return {};
+    case 'research':
+      return narrowing.NO_RESEARCH_NARROWING;
   }
 }
 
@@ -120,6 +124,7 @@ export function draftFromSnapshot(snapshot: SettingsSnapshot): SettingsDraft {
     ),
     remote: field('remote', project.remote ?? '', ''),
     director: directorDraftOf(own['director']),
+    research: narrowing.researchDraftOf(own['research']),
   };
 }
 
@@ -164,6 +169,8 @@ function valueForDoc(key: FieldKey, draft: SettingsDraft): unknown {
       return draft.remote.value.trim();
     case 'director':
       return draft.director.value;
+    case 'research':
+      return narrowing.researchDocOf(draft.research.value);
   }
 }
 
@@ -210,7 +217,8 @@ export const SCOPE_FIELDS = {
   checks: ['checks', 'ecosystems'],
   repository: ['remote', 'tier_c_globs'],
   director: ['director'],
-} as const satisfies Record<FormScope | 'director', readonly FieldKey[]>;
+  research: ['research'],
+} as const satisfies Record<FormScope | 'director' | 'research', readonly FieldKey[]>;
 
 /** The fields whose value in the draft differs from the saved one, so a tab can say "unsaved". */
 export function dirtyFields(
@@ -275,6 +283,8 @@ export function validateDraft(
       });
     }
   }
+
+  issues.push(...narrowing.researchIssues(draft.research));
 
   if (draft.director.overridden) {
     const seen = effectiveDirector(snapshot.company.director, draft.director.value);

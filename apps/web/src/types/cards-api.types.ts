@@ -10,13 +10,18 @@
  *   its two shortcuts, approving or sending back a plan, light ticket edits, and starting
  *   planning on a backfilled card. Each is the only way the UI moves the card through a phase.
  *
- * Exports: CardsApi, CardListParams, CardEventsParams, CardHistory, CardRelationsBody,
+ * Exports: CardsApi, CardPatchInput, CardListParams, CardEventsParams, CardHistory, CardRelationsBody,
  *   GrillAnswerBody, GrillShortcutKind.
  * Depends on: @forge/core (types), schemas/cards, schemas/new-card, schemas/plan, types/plan.types,
  *   types/api.types (types only).
  */
 
-import type { CardType, CardTypeName } from '@forge/core';
+import type {
+  CardEvidenceReply,
+  CardType,
+  CardTypeName,
+  SourceTextReply,
+} from '@forge/core';
 import type {
   CardColumn,
   CardCreateReply,
@@ -70,6 +75,13 @@ export type GrillAnswerBody =
   | { readonly question_id: string; readonly option_id: string }
   | { readonly question_id: string; readonly text: string };
 
+/** What the UI may patch: the type, a close reason, or the budget cap (`null` clears it). */
+export interface CardPatchInput {
+  readonly type?: CardTypeName;
+  readonly closed_reason?: string;
+  readonly budget_cap_usd?: number | null;
+}
+
 export interface CardsApi {
   list(params: CardListParams, options?: RequestOptions): Promise<CardListReply>;
   get(id: string, options?: RequestOptions): Promise<CardDetailReply>;
@@ -81,10 +93,11 @@ export interface CardsApi {
   ): Promise<CardHistoryPage>;
   types(options?: RequestOptions): Promise<readonly CardType[]>;
   /** Changes the type, or closes the card with a reason; returns the card as it now is. */
-  patch(
-    id: string,
-    body: { type?: CardTypeName; closed_reason?: string },
-  ): Promise<CardDetailReply>;
+  patch(id: string, body: CardPatchInput): Promise<CardDetailReply>;
+  /** The card's research evidence, its sources (no text) and how many research runs it has used. */
+  evidence(id: string, options?: RequestOptions): Promise<CardEvidenceReply>;
+  /** One source's stored page text, to be shown as plain text only; 404 for an unknown or foreign ref. */
+  sourceText(id: string, ref: string, options?: RequestOptions): Promise<SourceTextReply>;
   /** Creates a card; the Director starts on it at once. A repeated `dedupe_key` returns the first card. */
   create(
     slug: string,

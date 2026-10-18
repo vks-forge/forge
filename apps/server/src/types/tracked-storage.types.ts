@@ -24,6 +24,12 @@ export type Touch =
   | { readonly kind: 'stage_run'; readonly id: number }
   /** A new pipeline proposal of a project (its slug): the Inbox and the Pipelines banner are stale. */
   | { readonly kind: 'proposal'; readonly project: string }
+  /** A card's research evidence or Director sources changed: its Evidence tab and card view are stale. */
+  | { readonly kind: 'card_evidence'; readonly id: string }
+  /** A Worker read a page: the run's sources (the slug of its project) are stale. */
+  | { readonly kind: 'run_sources'; readonly id: string; readonly project: string }
+  /** A card's budget warning was written or its cap changed: its project's Inbox is stale. */
+  | { readonly kind: 'card_inbox'; readonly id: string }
   /** A proposal decided by its id; its project is read from the row before the commit, and the lane's own settings may have changed too. */
   | { readonly kind: 'proposal_decided'; readonly id: number };
 

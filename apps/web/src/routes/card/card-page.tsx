@@ -29,6 +29,7 @@ import { describeError } from '#/api/describe-error.js';
 import { useCardDetail, useCardEvents, usePatchCard } from '#/api/use-card.js';
 import { useCardEscalations } from '#/api/use-escalations.js';
 import { usePlan } from '#/api/use-plan.js';
+import { useCardEvidence } from '#/api/use-research.js';
 import { useCardTypes } from '#/api/use-card-board.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
@@ -38,7 +39,12 @@ import { TabPanel } from '#/components/ui/tab-panel.js';
 import { cardPath } from '#/domain/card-paths.js';
 import { activeNeedsYou } from '#/domain/director-flow.js';
 import { projectPath } from '#/domain/nav-entries.js';
-import { CARD_TAB_IDS, legacyCardTab, resolveTab } from '#/domain/route-tabs.js';
+import {
+  CARD_TAB_IDS,
+  legacyCardTab,
+  resolveTab,
+  shownCardTabs,
+} from '#/domain/route-tabs.js';
 import { CardHeader } from '#/routes/card/card-header.js';
 import { CloseDialog } from '#/routes/card/close-dialog.js';
 import { EscalationBanner } from '#/routes/card/escalation-banner.js';
@@ -48,6 +54,7 @@ import { PlanTab } from '#/routes/card/plan/plan-tab.js';
 import { usePlanDecisions } from '#/routes/card/plan/use-plan-decisions.js';
 import { ConversationTab } from '#/routes/card/tabs/conversation-tab.js';
 import { DetailsTab } from '#/routes/card/tabs/details-tab.js';
+import { EvidenceTab } from '#/routes/card/tabs/evidence-tab.js';
 import { TicketsTab } from '#/routes/card/tabs/tickets-tab.js';
 import { useBannerActions } from '#/routes/card/use-banner-actions.js';
 import { useEscalationFocus } from '#/routes/card/use-escalation-focus.js';
@@ -60,6 +67,7 @@ import type { RouteTab } from '#/types/route-tabs.types.js';
 const TAB_LABEL: Readonly<Record<CardTab, string>> = {
   conversation: 'Conversation',
   plan: 'Plan',
+  evidence: 'Evidence',
   tickets: 'Tickets',
   details: 'Details',
 };
@@ -84,6 +92,7 @@ export function CardPage() {
   const decisions = usePlanDecisions(id, () => goTab('plan'));
   const history = useCardEvents(id);
   const plan = usePlan(id);
+  const evidence = useCardEvidence(id);
   const raised = activeNeedsYou(history.data?.events ?? []);
   const needs =
     card && card.needs_you && card.closed_reason === undefined ? raised : null;
@@ -163,7 +172,7 @@ export function CardPage() {
     (i) => i.status === 'pending' && !covered.has(i.id),
   );
 
-  const tabs: readonly RouteTab[] = CARD_TAB_IDS.map((tabId) => ({
+  const tabs: readonly RouteTab[] = shownCardTabs(evidence.data, tab).map((tabId) => ({
     id: tabId,
     label: TAB_LABEL[tabId],
     to: cardPath(slug, id, tabId),
@@ -173,6 +182,7 @@ export function CardPage() {
           attention: card.tickets.some((t) => t.needs_you),
         }
       : {}),
+    ...(tabId === 'evidence' ? { count: evidence.data?.evidence.length ?? 0 } : {}),
     ...(tabId === 'plan' && card.phase === 'plan_ready'
       ? {
           ariaLabel: 'Plan, ready for review',
@@ -278,6 +288,7 @@ export function CardPage() {
             <PlanTab card={card} decisions={decisions} />
           </div>
         ) : null}
+        {tab === 'evidence' ? <EvidenceTab card={card} /> : null}
         {tab === 'tickets' ? (
           <TicketsTab slug={card.project} tickets={card.tickets} />
         ) : null}

@@ -58,6 +58,10 @@ export function purgeProject(driver: SqlDriver, slug: string): boolean {
     `DELETE FROM ticket_relations WHERE from_id IN (${TICKETS}) OR to_id IN (${TICKETS})`,
   );
 
+  // Sources and evidence point at cards and tickets, so they go before either.
+  del(`DELETE FROM card_evidence WHERE card_id IN (${CARDS})`);
+  del('DELETE FROM research_sources WHERE project = ?');
+
   del('DELETE FROM intake_events WHERE project = ?');
   del(`DELETE FROM runs WHERE project = ? OR ticket_id IN (${TICKETS})`);
   del('DELETE FROM tickets WHERE project = ?');

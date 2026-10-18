@@ -7,7 +7,7 @@
  *   reaching for globals such as the clock or the process.
  *
  * Exports: RouteDeps.
- * Depends on: @forge/core (StorageAdapter, SecretStore), types/agent-store, @forge/drivers (types), @forge/engine (Engine),
+ * Depends on: @forge/core (StorageAdapter, SecretStore), types/agent-store, types/research, @forge/drivers (types), @forge/engine (Engine),
  *   @forge/hooks (HookHandler), types/auth, types/settings. Types only.
  */
 
@@ -28,6 +28,7 @@ import type { FolderPicker, FolderRevealer } from '#/types/folder-picker.types.j
 import type { HarnessCompat } from '#/types/harness-compat.types.js';
 import type { ProjectEvents } from '#/types/project-events.types.js';
 import type { ProjectRegistry } from '#/types/project-registry.types.js';
+import type { ResearchRoutePort } from '#/types/research.types.js';
 import type { HttpTuning } from '#/types/settings.types.js';
 import type { TriggerRegistry } from '#/types/trigger.types.js';
 
@@ -38,6 +39,8 @@ export interface RouteDeps {
   readonly config: ConfigSource;
   /** Versioned tool catalogue behind `/settings/catalogue`. */
   readonly catalogue: CatalogueStore;
+  /** Tests a research provider and refreshes the live one after a save (`POST /settings/research/test`); absent (route tests) that answers 503 `not_available`. */
+  readonly research?: ResearchRoutePort | undefined;
   /** Harness build checks and tool approvals behind `/harnesses/:id/compat` and `/tools`. */
   readonly compat: HarnessCompat;
   /** The drivers and the Director model behind `/agents/runs-on`, `/agents/test` and `/agents/draft`; absent (route tests) those answer 503 `not_available`. */

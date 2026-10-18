@@ -30,6 +30,10 @@ import {
 import { omitAt, sameValue, setAt } from '#/domain/config-path.js';
 import { DIRECTOR_FIELD_GROUPS } from '#/domain/director-settings.js';
 import { fieldErrors } from '#/domain/settings-errors.js';
+import {
+  RESEARCH_FETCH_FIELDS,
+  RESEARCH_URL_FIELD,
+} from '#/domain/research-settings-fields.js';
 import { GENERAL_GROUPS, LIMIT_GROUPS } from '#/domain/settings-fields.js';
 import { applyPatch, configPatch, overrideAt } from '#/domain/settings-patch.js';
 import type { DecisionForm } from '#/schemas/settings.js';
@@ -42,6 +46,8 @@ const SPECS = [
   ...LIMIT_GROUPS.flatMap((g) => g.fields),
   ...GENERAL_GROUPS.flatMap((g) => g.fields),
   ...DIRECTOR_FIELD_GROUPS,
+  ...RESEARCH_URL_FIELD,
+  ...RESEARCH_FETCH_FIELDS,
 ];
 
 const staleHistory = (): ApiError =>

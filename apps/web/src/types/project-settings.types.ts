@@ -8,7 +8,7 @@
  *   snapshot a load returns, the editable draft, and the save request.
  *
  * Exports: SettingsSnapshot, SettingsSaveRequest, ProjectSettingsApi, FieldKey, FieldDraft,
- *   FormScope, SettingsDraft, DocChange, SettingsIssue, TextFieldSpec.
+ *   FormScope, SettingsDraft, ResearchDraft, DocChange, SettingsIssue, TextFieldSpec.
  * Depends on: @forge/core (types), schemas/project-settings, schemas/projects, types/api.types.
  */
 
@@ -66,7 +66,8 @@ export type FieldKey =
   | 'harness_fallbacks'
   | 'tier_c_globs'
   | 'remote'
-  | 'director';
+  | 'director'
+  | 'research';
 
 /** One field's edit state: whether the project overrides it, and the text or rows being edited. */
 export interface FieldDraft<T> {
@@ -85,6 +86,17 @@ export interface SettingsDraft {
   readonly remote: FieldDraft<string>;
   /** The project's partial Director settings: a key is present exactly when the project overrides it. */
   readonly director: FieldDraft<Partial<DirectorConfig>>;
+  /** The project's research narrowing: on or off, and host lists, one per line. */
+  readonly research: FieldDraft<ResearchDraft>;
+}
+
+/** What the Research tab edits. `enabled: false` switches research off for the project. */
+export interface ResearchDraft {
+  readonly enabled: boolean;
+  /** One host per line; added to the company's denied hosts. */
+  readonly deny_hosts: string;
+  /** One host per line; narrows the company's allowed hosts. */
+  readonly allow_hosts: string;
 }
 
 /** One top-level key that differs between two override documents. */
@@ -103,7 +115,7 @@ export interface SettingsIssue {
 
 /** How one text-like setting is labelled and edited. */
 export interface TextFieldSpec {
-  readonly key: Exclude<FieldKey, 'checks' | 'director'>;
+  readonly key: Exclude<FieldKey, 'checks' | 'director' | 'research'>;
   readonly label: string;
   readonly hint: string;
   /** Where the inherited value comes from, in words. */

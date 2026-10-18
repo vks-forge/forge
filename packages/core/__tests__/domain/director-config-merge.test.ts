@@ -22,7 +22,7 @@ import { STEP_NAMES } from '#/schemas/steps.js';
 import { InvalidInputError } from '#/shared/errors.js';
 
 describe('built-in director config', () => {
-  it('validates and ships the eleven playbooks with real method text', () => {
+  it('validates and ships the twelve playbooks with real method text', () => {
     expect(DirectorConfig.safeParse(BUILTIN_DIRECTOR_CONFIG).success).toBe(true);
     expect(Object.keys(BUILTIN_DIRECTOR_CONFIG.playbooks).sort()).toEqual([
       'adjust-pipeline',
@@ -34,6 +34,7 @@ describe('built-in director config', () => {
       'plan-grill',
       'plan-to-tickets',
       'recover-failure',
+      'research',
       'verify-plan',
       'write-plan',
     ]);
@@ -85,7 +86,9 @@ describe('mergeConfig with a director override', () => {
   });
 
   it('replaces the flow whole when a project names its own', () => {
-    const flow = BUILTIN_DIRECTOR_CONFIG.flow.filter((s) => s.id !== 'enhance');
+    const flow = BUILTIN_DIRECTOR_CONFIG.flow.filter(
+      (s) => s.id !== 'enhance' && s.id !== 'research',
+    );
 
     const effective = mergeConfig(BUILTIN_CONFIG, {}, { director: { flow } });
 

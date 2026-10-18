@@ -11,6 +11,7 @@
     { "path": "./tsconfig.json" },
     { "path": "../core" },
     { "path": "../db" },
+    { "path": "../research" },
     { "path": "../tools" }
   ]
 }

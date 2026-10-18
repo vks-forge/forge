@@ -30,6 +30,7 @@ Public API (`src/index.ts`):
 Layout: `schemas/` zod, `types/` hand-written types (and `types/ports/`), `domain/` policy (the catalogue seed in `catalogue-seed*.ts`), `shared/` canonical JSON, HMAC and matchers. Tests in `__tests__/` mirror `src/`.
 
 - **Agent grant (S5a).** `agentGrant(def)` turns an agent's `tools` and `write_scope` into one more narrowing `Grant` layer, passed as the last argument of `effectiveGrant`: the tool list intersects with the lane and project (the Forge tools a run needs to finish, `RUN_CORE_TOOLS`, always stay), and the write scope becomes path rules that deny every `edit` and `write` outside it (an empty scope denies all writes). Lane-default tools with the whole worktree add no layer. Rule layers combine by severity, so the layer can only tighten: a scope that names a protected path does not unlock it. Property-tested.
+- Research grant (S6, d-0131, d-0144): `admitResearch(request, { allowHosts, denyHosts })` judges the Director's research requests through the one `admit()` door over a dedicated `forge-director` catalogue (`web_search`, `web_fetch`) and an Express grant (an `ask` is a deny). Before `admit()` it refuses any URL that is not http(s), carries credentials, names a loopback or private IP literal (IPv4, IPv6 and embedded IPv4), names a banned host (subdomains included) or falls outside a non-empty allow list; any input it cannot judge is a deny. `lane-defaults` is unchanged: Workers keep their lane rules.
 
 ## Why this approach
 

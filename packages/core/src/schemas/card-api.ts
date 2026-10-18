@@ -113,8 +113,17 @@ export const CardPatchBody = z
   .strictObject({
     type: CardTypeName.optional(),
     closed_reason: z.string().trim().min(1).optional(),
+    /** Warning threshold in dollars (d-0143); null clears it. Never stops a card. */
+    budget_cap_usd: z.number().nonnegative().nullable().optional(),
   })
-  .refine((b) => b.type !== undefined || b.closed_reason !== undefined, {
-    message: 'give a type to change to, a closed_reason to close with, or both',
-  });
+  .refine(
+    (b) =>
+      b.type !== undefined ||
+      b.closed_reason !== undefined ||
+      b.budget_cap_usd !== undefined,
+    {
+      message:
+        'give a type to change to, a closed_reason to close with, a budget_cap_usd, or a combination',
+    },
+  );
 export type CardPatchBody = z.infer<typeof CardPatchBody>;

@@ -112,6 +112,18 @@ export function DirectorPage() {
               />
             </SettingsSection>
             <SettingsSection
+              id="research"
+              title="Research limits"
+              description="How much the Director may look up on the web for one card. Pages are read as data and quotes are checked against the page; the search provider itself is set under Research in Forge settings."
+            >
+              <ConfigFields
+                fields={DIRECTOR_FIELDS.research}
+                config={config}
+                errors={draft.errors}
+                onChange={set}
+              />
+            </SettingsSection>
+            <SettingsSection
               id="escalation"
               title="When a ticket waits"
               description="What the Director does with a Worker’s question or a stopped ticket before it asks you. Tier C tickets, tools and logins always come to you."

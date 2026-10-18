@@ -46,6 +46,12 @@ import {
   EscalationKind,
 } from '#/schemas/escalation.js';
 import { CardId, TicketId } from '#/schemas/ids.js';
+import {
+  EvidenceOrigin,
+  EvidenceRef,
+  EvidenceStatus,
+  SourceRef,
+} from '#/schemas/research.js';
 import { TicketStatus } from '#/schemas/ticket.js';
 
 export const CARD_EVENT_KINDS = [
@@ -73,6 +79,7 @@ export const CARD_EVENT_KINDS = [
   'escalation',
   'escalation_settled',
   'replan_requested',
+  'research',
 ] as const;
 export const CardEventKind = z.enum(CARD_EVENT_KINDS);
 export type CardEventKind = z.infer<typeof CardEventKind>;
@@ -221,6 +228,19 @@ export const NewCardEvent = z.discriminatedUnion('kind', [
       ticket_id: TicketId.optional(),
       comment: z.string().min(1),
       by: z.literal('owner'),
+    }),
+  ),
+  event(
+    'research',
+    z.object({
+      step_id: z.string().min(1),
+      origin: EvidenceOrigin,
+      searches: z.array(z.string()),
+      fetched: z.array(z.object({ ref: SourceRef, url: z.string() })),
+      claims: z.array(z.object({ ref: EvidenceRef, status: EvidenceStatus })),
+      unanswered: z.array(z.string()),
+      note: z.string().optional(),
+      cost_usd: z.number().nonnegative(),
     }),
   ),
 ]);

@@ -20,6 +20,7 @@
     "@forge/hooks": "workspace:*",
     "@forge/mcp": "workspace:*",
     "@forge/memory": "workspace:*",
+    "@forge/research": "workspace:*",
     "@forge/secrets": "workspace:*",
     "@forge/tools": "workspace:*",
     "@forge/triggers": "workspace:*",

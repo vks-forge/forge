@@ -98,7 +98,7 @@ export const FORGE_SEED: readonly Record<string, unknown>[] = [
     risk: 'read',
     exposure: 'direct',
     schema_hash:
-      'sha256:cd07d22d4c86c1227c3a534f9796fb55c10090ed078e1a9a0fdd557601e8ea91',
+      'sha256:487014ccaec0c29bce49b3176a71ccbdb5f1582533b03a680771526b0a197e06',
     support: {
       '*': {
         mechanism: 'mcp',

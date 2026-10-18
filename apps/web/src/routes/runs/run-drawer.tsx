@@ -6,6 +6,7 @@
  *   which harness session it holds, how many tokens each model used, and a way back to the
  *   ticket it serves. The drawer reads `GET /runs/:id`, refreshes while the run is live, and
  *   has its own loading and error states so a failed detail call never blanks the list.
+ *   The pages the run read are listed with links out (components/research/run-sources).
  *   Tokens are shown per model and never priced: Forge has no price table, so a dollar figure
  *   per model would be invented.
  *
@@ -18,6 +19,7 @@ import { Link } from 'react-router';
 import type { GateResult, RunDetail } from '@forge/core';
 import { describeError } from '#/api/describe-error.js';
 import { useRunDetail } from '#/api/use-runs.js';
+import { RunSources } from '#/components/research/run-sources.js';
 import { RunStatusPill } from '#/components/status/run-status-pill.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { SideDrawer } from '#/components/ui/side-drawer.js';
@@ -114,6 +116,13 @@ function Body(props: { run: RunDetail; slug: string }) {
             ))}
           </ul>
         )}
+      </section>
+
+      <section aria-labelledby="run-sources" className="grid gap-2">
+        <h3 id="run-sources" className="text-sm font-semibold">
+          Sources this run read
+        </h3>
+        <RunSources runId={run.id} />
       </section>
 
       <section aria-labelledby="run-tokens" className="grid gap-2">

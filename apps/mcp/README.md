@@ -15,8 +15,8 @@ does not match the run.
 
 - `src/main.ts`: entry; calls `start(process.env, io)` with real exit, stderr and
   stdio. No logic.
-- `src/services/start.ts`: `parseEnv()`, `depsFromEnv()` (opens the database through `services/open-database.ts`, adds the real network ports with `withDefaultNetwork`; the run-token hash is read by `@forge/mcp` through
-  that storage), `start()` (serve, or print to stderr and exit 1 on any startup failure).
+- `src/services/start.ts`: `parseEnv()`, `depsFromEnv()` (async: opens the database through `services/open-database.ts`, which returns the storage and a settings reader on one connection, and builds the research provider from the run's settings; the run-token hash is read by `@forge/mcp` through that storage), `start()` (serve, or print to stderr and exit 1 on any startup failure).
+- `src/services/research-settings.ts`: `resolveResearch()` finds the run's project (run, else its ticket), reads the effective settings, applies the project's narrowing (`effectiveResearch` from core) and builds the `ResearchProvider` with `@forge/research`. Research off or settings that do not load give the Worker no web tools; the server still starts.
 - Bin: `forge-mcp` -> `dist/main.js`.
 
 ## Why this approach
@@ -29,10 +29,7 @@ environment access (code.md rule 1). Process effects are injected (`StartIo`) so
 ## Requirements
 
 - Node 24; `pnpm build` first, then `node apps/mcp/dist/main.js`.
-- Env: `FORGE_RUN_ID`, `FORGE_RUN_TOKEN`, `FORGE_DB_PATH` (required);
-  `FORGE_SEARXNG_URL`, `FORGE_SEARXNG_ALLOW_HOSTS`, `FORGE_FETCH_ALLOW_HOSTS`,
-  `FORGE_DOCS_DIRS` (optional; docs dirs use the OS path delimiter, hosts are
-  comma-separated).
+- Env: `FORGE_RUN_ID`, `FORGE_RUN_TOKEN`, `FORGE_DB_PATH` (required); `FORGE_DOCS_DIRS` (optional, OS path delimiter). `FORGE_SEARXNG_URL`, `FORGE_SEARXNG_ALLOW_HOSTS` and `FORGE_FETCH_ALLOW_HOSTS` (comma-separated) are a development override of the research settings stored in the database; a normal run sets none of them (code.md rule 9).
 - An existing Forge SQLite DB, already migrated to the current schema by the Forge server, with the run row and the run's token hash registered by the driver
   (`tx.runTokens.put(runId, sha256(token), now)`). A missing file, a missing `schema_migrations` table or a schema behind the registry exits 1; the process never creates or migrates the file. With no token registration it exits 1.
 - A run row that is active (`starting` or `running`, no `ended_at`); anything else exits 1.
@@ -40,11 +37,10 @@ environment access (code.md rule 1). Process effects are injected (`StartIo`) so
 
 ## Extending
 
-New settings go in `src/schemas/env.ts`, are mapped in `depsFromEnv()`, and need a
-matching field in `ForgeMcpDeps` in `@forge/mcp`. Keep `main.ts` thin.
+Behaviour that is configuration (research providers, host lists) belongs in the stored settings, not in env; read it in `resolveResearch()`. A dev-only variable goes in `src/schemas/env.ts` and `ResearchOverride`, and a new dependency needs a matching field in `ForgeMcpDeps` in `@forge/mcp`. Keep `main.ts` thin.
 
 ## Limits
 
 - Opens one SQLite connection for the process lifetime and never closes it
-  explicitly; the process is per run.
+  explicitly; the process is per run. The research settings are read once at start: a change saved later reaches the next run, not this one.
 - Never migrates and never registers tokens: the server owns migrations, the driver registers tokens. A revoked or missing token exits 1.

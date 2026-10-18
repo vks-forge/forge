@@ -12,7 +12,7 @@
  *   recorded as card events (`grill_question`, `grill_answer`, `grill_done`) the card page renders.
  *
  * Exports: askQueued(), grillStep(), recordAnswerTx().
- * Depends on: @forge/core (grill schemas), tick/planning-state, tick/planning-step-io, tick/planning-input,
+ * Depends on: @forge/core (grill schemas), tick/planning-detour, tick/planning-state, tick/planning-step-io, tick/planning-input,
  *   tick/card-budget, tick/card-log, types/card-planning. Writes storage.
  */
 
@@ -29,6 +29,7 @@ import type {
   StorageTx,
 } from '@forge/core';
 import { warnOnBudget } from '#/tick/card-budget.js';
+import { detourTurn } from '#/tick/planning-detour.js';
 import { buildStepInput } from '#/tick/planning-input.js';
 import {
   askOwner,
@@ -91,6 +92,7 @@ async function openQuestionTx(
       current: question,
       queued: extras.fromQueue ? fresh.queued.slice(1) : fresh.queued,
       assumptions: mergeUnique(fresh.assumptions, extras.assumptions ?? []),
+      step_decisions: { ...fresh.step_decisions, ...(extras.decisions ?? {}) },
       asked: fresh.asked + 1,
       round_asked: fresh.round_asked + 1,
       open_points: question.open_points,
@@ -122,7 +124,12 @@ async function finishGrill(
   step: FlowStep,
   index: number,
   reason: GrillDoneReason,
-  extra: { assumptions: string[]; cost: number; logDone: boolean },
+  extra: {
+    assumptions: string[];
+    cost: number;
+    logDone: boolean;
+    decisions?: Record<string, boolean> | undefined;
+  },
 ): Promise<void> {
   let assumptions: string[] = [];
   await finishStep(pc, step, {
@@ -141,6 +148,7 @@ async function finishGrill(
         open_points: null,
         round_open: false,
         assumptions,
+        step_decisions: { ...g.step_decisions, ...(extra.decisions ?? {}) },
       };
     },
     after: async (tx) => {
@@ -206,9 +214,20 @@ export async function grillStep(
 
   const previous = g.pending_changes ? await latestPlanOf(pc) : null;
   const input = await buildStepInput(pc, g, step, previous);
-  const call = await callStep(pc, step, 'grill_turn', GrillTurnOutput, input);
+  let call = await callStep(pc, step, 'grill_turn', GrillTurnOutput, input);
   if (!call.ok) {
     return call.outcome;
+  }
+
+  // The next question rests on an outside fact: look it up first, then take the turn again (d-0144).
+  if (call.value.research !== undefined && !call.value.done) {
+    const first = call.cost;
+    const next = await detourTurn(pc, step, g, previous, call.value.research.questions);
+    if (!next.ok) {
+      return next.outcome;
+    }
+
+    call = { ...next, cost: first + next.cost };
   }
 
   const out = call.value;
@@ -217,6 +236,7 @@ export async function grillStep(
       assumptions: out.assumptions,
       cost: call.cost,
       logDone: true,
+      decisions: out.step_decisions,
     });
 
     return 'continue';
@@ -226,6 +246,7 @@ export async function grillStep(
   const opened = await pc.ctx.deps.storage.transaction((tx) =>
     openQuestionTx(tx, pc, asked, out.open_points, call.cost, {
       assumptions: out.assumptions,
+      decisions: out.step_decisions,
     }),
   );
 

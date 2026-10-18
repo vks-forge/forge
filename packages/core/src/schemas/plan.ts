@@ -21,6 +21,7 @@ import { findCycle } from '#/domain/graph-cycle.js';
 import { CardPriority } from '#/schemas/card.js';
 import { CardId, TicketId } from '#/schemas/ids.js';
 import { PlanPipeline } from '#/schemas/pipeline-adjust.js';
+import { EvidenceRef, EvidenceView } from '#/schemas/research.js';
 import { Lane } from '#/schemas/ticket.js';
 
 export const PLAN_TICKET_SIZES = ['S', 'M', 'L'] as const;
@@ -83,6 +84,18 @@ export const PlanVerification = z.object({
   matching_decisions: z.array(z.string()),
   rejected_hits: z.array(z.string()),
   risks: z.array(z.string()),
+  /** Checked research evidence of the card, filled by the engine (d-0144); stored plans without it still parse. */
+  evidence: z.array(EvidenceView).default([]),
+  /** The outside facts the plan rests on, each marked by the engine as supported or unverified. */
+  outside_claims: z
+    .array(
+      z.object({
+        claim: z.string(),
+        evidence: z.array(EvidenceRef),
+        status: z.enum(['supported', 'unverified']),
+      }),
+    )
+    .default([]),
 });
 export type PlanVerification = z.infer<typeof PlanVerification>;
 

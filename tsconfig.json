@@ -28,6 +28,8 @@
     { "path": "./packages/mcp/tsconfig.test.json" },
     { "path": "./packages/memory" },
     { "path": "./packages/memory/tsconfig.test.json" },
+    { "path": "./packages/research" },
+    { "path": "./packages/research/tsconfig.test.json" },
     { "path": "./packages/secrets" },
     { "path": "./packages/secrets/tsconfig.test.json" },
     { "path": "./packages/tools" },

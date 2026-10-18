@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { AgentsRecord } from '#/schemas/agent.js';
 import { DirectorConfig } from '#/schemas/director-config.js';
 import { LanePipelines } from '#/schemas/pipeline.js';
+import { ResearchSettings } from '#/schemas/research-settings.js';
 import { TicketStatus } from '#/schemas/ticket.js';
 
 const Model = z.string().min(1);
@@ -32,6 +33,7 @@ export const ModelMatrix = z.object({
     grill_turn: Model,
     verify: Model,
     enhance: Model,
+    research: Model,
     write_plan: Model,
     approve_plan: Model,
     custom_step: Model,
@@ -100,6 +102,8 @@ export const ForgeConfig = z.object({
   models: ModelMatrix,
   engine: EngineConfig,
   director: DirectorConfig,
+  /** Where Forge searches and fetches outside facts, and the hosts it may reach (d-0144, d-0085). */
+  research: ResearchSettings,
   /** The company's agents: the built-ins merged with the owner's edits and custom agents (d-0147). */
   agents: AgentsRecord,
   /** The company's lane pipelines: the shipped lists with the owner's replacements (d-0151). */

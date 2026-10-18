@@ -31,7 +31,7 @@ export async function runStep<T>(
   const config = ctx.config.forge;
   const opts = {
     model: config.models.director[name],
-    budgetUsd: config.engine.step_budget_usd,
+    budgetUsd: extras.budgetUsd ?? config.engine.step_budget_usd,
     ...(extras.timeoutMs === undefined ? {} : { timeoutMs: extras.timeoutMs }),
     ...(extras.onCost === undefined ? {} : { onCost: extras.onCost }),
   };

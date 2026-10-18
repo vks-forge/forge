@@ -5,17 +5,19 @@
  *   a failed gate to a run, a memory proposal to Memory, a quota wait to its harness. One
  *   function picks the target so every row, on Home and in the Inbox, leads to the same place,
  *   and a kind the UI does not know yet still opens something sensible (the ticket or run it
- *   names, else the Inbox itself) rather than a dead link. A pipeline proposal belongs to no ticket, so it
+ *   names, else the Inbox itself) rather than a dead link. A budget warning belongs to a card, so it opens that card's Details tab,
+ *   where the cap is. A pipeline proposal belongs to no ticket, so it
  *   leads to the project's Pipelines tab. A tool approval or a compatibility
  *   check opens the one harness it names, scrolled to the section where the owner decides
  *   (`#tools`, `#compat`), so "Review tool" lands on the Approve button, not a generic list.
  *
- * Exports: INBOX_KIND_LABEL, inboxLink().
- * Depends on: @forge/core (parseInboxItemId, types), domain/nav-entries. Pure.
+ * Exports: INBOX_KIND_LABEL, budgetCardId(), inboxLink().
+ * Depends on: @forge/core (parseInboxItemId, types), domain/card-paths, domain/nav-entries. Pure.
  */
 
 import { parseInboxItemId } from '@forge/core';
 import type { InboxItem, InboxKind } from '@forge/core';
+import { cardPath } from '#/domain/card-paths.js';
 import { projectPath, settingsPath } from '#/domain/nav-entries.js';
 import { ticketPath } from '#/domain/ticket-paths.js';
 
@@ -31,7 +33,15 @@ export const INBOX_KIND_LABEL: Readonly<Record<InboxKind, string>> = {
   tool_approval: 'Tool approval',
   memory_proposal: 'Memory proposal',
   pipeline_proposal: 'Pipeline change',
+  budget_warning: 'Budget',
 };
+
+/** The card a budget warning is about (`budget_warning:<card>:<threshold>`), or undefined. */
+export function budgetCardId(item: Pick<InboxItem, 'id' | 'kind'>): string | undefined {
+  const parsed = parseInboxItemId(item.id);
+
+  return item.kind === 'budget_warning' ? parsed?.sourceId.split(':')[0] : undefined;
+}
 
 /** The harness kind named by a `<kind>/<version>[/<tool>]` source id, URI-encoded. */
 function harnessSegment(source: string | undefined): string | undefined {
@@ -52,6 +62,14 @@ export function inboxLink(
       to: `${projectPath(slug, 'memory')}?record=${encodeURIComponent(source)}`,
       label: 'Open in Memory',
     };
+  }
+
+  if (item.kind === 'budget_warning') {
+    const card = budgetCardId(item);
+
+    if (card) {
+      return { to: cardPath(slug, card, 'details'), label: 'Open card' };
+    }
   }
 
   if (item.kind === 'pipeline_proposal') {
