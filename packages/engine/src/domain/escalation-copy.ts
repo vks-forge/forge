@@ -32,6 +32,7 @@ const FAILURE_TITLES: Readonly<Record<FailureCause, string>> = {
   max_turns: 'Stopped: the Worker ran out of turns',
   refused: 'Stopped: the model declined the task',
   question_timeout: 'Stopped: a question went unanswered',
+  no_agent_available: 'No agent could run this stage',
 };
 
 const SIGN_OFF_TITLES: Readonly<Record<SignOffCause, string>> = {

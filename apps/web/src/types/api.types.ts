@@ -19,6 +19,7 @@ import type { ProjectView } from '#/schemas/projects.js';
 import type { GithubApi, HarnessesApi, SettingsApi } from '#/types/settings-api.types.js';
 import type { AgentsApi } from '#/types/agents-api.types.js';
 import type { PipelinesApi } from '#/types/pipeline-api.types.js';
+import type { ProposalsApi, ScorecardsApi } from '#/types/proposals-api.types.js';
 import type { MemoryApi } from '#/types/memory.types.js';
 import type { OnboardingApi } from '#/types/onboarding.types.js';
 import type { ProjectSettingsApi } from '#/types/project-settings.types.js';
@@ -111,6 +112,8 @@ export interface ResourceApis {
   readonly escalations: EscalationsApi;
   readonly agents: AgentsApi;
   readonly pipelines: PipelinesApi;
+  readonly proposals: ProposalsApi;
+  readonly scorecards: ScorecardsApi;
 }
 
 export type ResourceName = keyof ResourceApis;

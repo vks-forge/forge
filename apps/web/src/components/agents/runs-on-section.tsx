@@ -126,7 +126,20 @@ export function RunsOnSection(props: {
           disabled={props.disabled}
           errors={fallbackErrors}
           listError={props.issues.find((i) => i.path === 'runs_on.fallbacks')?.message}
+          onExhausted={runsOn.on_exhausted}
           onChange={(fallbacks) => props.onChange({ ...runsOn, fallbacks })}
+          onExhaustedChange={(choice) => {
+            // Choosing the default removes the key, so an agent that never chose keeps its hash.
+            const next: RunsOn = { ...runsOn };
+
+            if (choice === 'pause') {
+              next.on_exhausted = 'pause';
+            } else {
+              delete next.on_exhausted;
+            }
+
+            props.onChange(next);
+          }}
         />
       </div>
     );

@@ -42,6 +42,7 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
       draft_agent: 'sonnet',
       // The Director's check of finished work against its plan is judging, like a recovery.
       ticket_check: 'opus',
+      pick_substitute: 'sonnet',
     },
     worker: { express: 'sonnet', standard: 'sonnet', full: 'sonnet' },
   },

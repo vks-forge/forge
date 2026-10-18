@@ -42,6 +42,7 @@ export function useProjectEvents(slug: string | null): void {
           ['ticket-pipeline'],
           ['tickets', slug],
           ['inbox', slug],
+          ['pipeline-proposals', slug],
         ]) {
           void client.invalidateQueries({ queryKey });
         }

@@ -20,6 +20,8 @@ const NEVER_RETRY: readonly ErrorFamily[] = [
   'refusal',
   'budget',
   'invalid_input',
+  // The harness cannot serve this model; retrying the same model cannot help (the fallback list takes over).
+  'model_unavailable',
 ];
 
 const park = (reason: string): FailureDecision => ({ action: 'park', reason });

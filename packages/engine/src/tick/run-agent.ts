@@ -13,7 +13,7 @@
  *   the implementer, whose built-in definition reproduces the pre-agent run request exactly
  *   (project harness, lane matrix model, no instructions).
  *
- * Exports: agentViews(), resolveAgent(), resolveStageAgent(), modelFor().
+ * Exports: agentViews(), resolveAgent(), resolveStageAgent(), modelFor(), agentChain(), withSlot().
  * Depends on: @forge/core (effectiveAgents, stageAgent, shippedImplementer, Lane), tick/tick-config,
  *   types/run-agent, types/tick. No IO.
  */
@@ -21,10 +21,11 @@
 import {
   IMPLEMENTER_ID,
   effectiveAgents,
+  fallbackChain,
   shippedImplementer,
   stageAgent,
 } from '@forge/core';
-import type { AgentView, HarnessRef, Lane, ModelChoice } from '@forge/core';
+import type { AgentView, ChainEntry, HarnessRef, Lane, ModelChoice } from '@forge/core';
 import { projectSettings } from '#/tick/tick-config.js';
 import type { ResolvedAgent } from '#/types/run-agent.types.js';
 import type { TickConfig } from '#/types/tick.types.js';
@@ -130,4 +131,43 @@ export function modelFor(
   }
 
   return modelOfChoice(config, lane, agent.modelChoice);
+}
+
+/** The agent's `[primary, ...fallbacks]` with every harness resolved against the project's default. */
+export function agentChain(
+  config: TickConfig,
+  slug: string,
+  agent: ResolvedAgent,
+): ChainEntry[] {
+  const projectDefault = projectSettings(config, slug).default_harness;
+
+  return fallbackChain(agent.definition.runs_on, (ref) => harnessOf(ref, projectDefault));
+}
+
+/**
+ * `agent` as it runs on entry `slot` of its chain: a fallback entry swaps the harness and the model (so
+ * `modelFor` and the scheduler both read the entry's), -1 marks a substitute, 0 or absent leaves it as it is.
+ * A slot the chain does not have leaves the agent on its own entry (fail closed: never an invented harness).
+ */
+export function withSlot(
+  config: TickConfig,
+  slug: string,
+  agent: ResolvedAgent,
+  slot: number,
+): ResolvedAgent {
+  if (slot === -1) {
+    return { ...agent, slot };
+  }
+
+  const entry = slot > 0 ? agentChain(config, slug, agent)[slot] : undefined;
+
+  return entry
+    ? {
+        ...agent,
+        harnessId: entry.harness,
+        modelChoice: entry.model,
+        fallbackHarnesses: [],
+        slot,
+      }
+    : { ...agent, slot: 0 };
 }

@@ -13,6 +13,9 @@
  *   connected (services/model-families). The engine runs the same rules again when a ticket takes
  *   its snapshot.
  *
+ *   The owner's doors on the Director's proposals (services/pipeline-proposal-store) are part of the store, so a
+ *   proposal is accepted through this very save door and decided nowhere else.
+ *
  * Exports: createPipelineStore().
  * Depends on: @forge/core (pipeline rules, doc helpers, effectivePipelines), @forge/engine (LIVE_LANES),
  *   services/{agent-state,model-families}, services/http/http-errors, types/pipeline-store. IO: through the
@@ -43,11 +46,13 @@ import { LIVE_LANES } from '@forge/engine';
 import { createAgentState } from '#/services/agent-state.js';
 import { HttpError } from '#/services/http/http-errors.js';
 import { connectedFamilies } from '#/services/model-families.js';
+import { createProposalDoors } from '#/services/pipeline-proposal-store.js';
 import type { AgentDeps, ScopeState } from '#/types/agent-store.types.js';
 import type {
   CompanyPipelinesReply,
   PipelineStore,
   ProjectPipelinesReply,
+  ProposalDoors,
 } from '#/types/pipeline-store.types.js';
 
 const COMPANY = { scope: 'company' } as const;
@@ -131,7 +136,7 @@ export function createPipelineStore(deps: AgentDeps): PipelineStore {
     }
   }
 
-  return {
+  const store: Omit<PipelineStore, keyof ProposalDoors> = {
     async company() {
       return companyReply(await state.read(COMPANY));
     },
@@ -233,4 +238,6 @@ export function createPipelineStore(deps: AgentDeps): PipelineStore {
       };
     },
   };
+
+  return { ...store, ...createProposalDoors(deps, state, store.saveProject) };
 }

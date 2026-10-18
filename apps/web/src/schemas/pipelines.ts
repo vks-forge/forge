@@ -11,7 +11,7 @@
  *
  * Exports: PipelineDefinition, PipelineProblem, PipelineView, RoutingRule, Stage, StageArtifact,
  *   TicketPipelineView, StageView (type), CompanyPipelinesReply, ProjectPipelinesReply, ValidateReply,
- *   TicketPipelineReply, PROBLEM_CODES.
+ *   TicketPipelineReply, MarkFindingReply, PROBLEM_CODES.
  * Depends on: @forge/core, zod.
  */
 
@@ -75,6 +75,9 @@ export const ValidateReply = z.object({
   problems: z.array(PipelineProblem),
   warnings: z.array(z.string()),
 });
+
+/** `PUT /tickets/:id/findings/:row/:index/mark`: the strip as it reads now. */
+export const MarkFindingReply = z.object({ pipeline: TicketPipelineView });
 
 /** `GET /tickets/:id/pipeline`: `null` until the ticket's first dispatch. */
 export const TicketPipelineReply = z.object({ pipeline: TicketPipelineView.nullable() });

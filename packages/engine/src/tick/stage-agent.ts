@@ -7,15 +7,17 @@
  *   cursor's writer or first check afterwards. The scheduler and the dispatch must agree or a
  *   ticket could be given a slot on a harness its stage does not run on, so both read the same
  *   rows. When the stage's agent cannot run, the implementer stands in for the scheduling
- *   decision only; the dispatch itself refuses the run (fail closed) and parks the ticket.
+ *   decision only; the dispatch itself refuses the run (fail closed) and parks the ticket. A stage that fell back
+ *   to another entry of its agent's list (or to a substitute) is read on that entry, from its stage row.
  *
  * Exports: peekAgent(), firstCheckAgent(), memberAgent().
- * Depends on: @forge/core (effectivePipelines, classifyStage), tick/run-agent, tick/stage-state,
+ * Depends on: @forge/core (effectivePipelines, classifyStage), tick/agent-fallback, tick/run-agent, tick/stage-state,
  *   tick/tick-config. Reads storage.
  */
 
 import { classifyStage, effectivePipelines } from '@forge/core';
 import type { AgentRole, CheckMember, Stage, StorageTx, Ticket } from '@forge/core';
+import { slottedAgent } from '#/tick/agent-fallback.js';
 import { agentViews, resolveAgent, resolveStageAgent } from '#/tick/run-agent.js';
 import { readStageState } from '#/tick/stage-state.js';
 import { projectSettings } from '#/tick/tick-config.js';
@@ -68,6 +70,7 @@ export async function peekAgent(
   const { config } = view;
   const state = await readStageState(tx, ticket.id);
   let agentId: string | undefined;
+  let place: { stageId: string; memberId: string } | undefined;
   if (state) {
     const cur = state.cursor;
     agentId =
@@ -76,6 +79,17 @@ export async function peekAgent(
         : cur.kind === 'run_checks' || cur.kind === 'run_writers'
           ? memberAgent(cur.members, member)
           : undefined;
+
+    if (cur.kind === 'run_writer') {
+      place = { stageId: cur.stage.id, memberId: '' };
+    } else if (cur.kind === 'run_checks' || cur.kind === 'run_writers') {
+      const picked =
+        member === undefined
+          ? cur.members.find((m) => m.stage.kind === 'agent')
+          : cur.members.find((m) => m.id === member);
+
+      place = { stageId: cur.stage.id, memberId: picked?.id ?? '' };
+    }
   } else {
     const roster = agentViews(config, slug);
     const roles = Object.fromEntries(roster.map((v) => [v.id, v.definition.role]));
@@ -88,8 +102,13 @@ export async function peekAgent(
     agentId = firstWriterAgent(def.stages, roles);
   }
 
-  return (
-    (agentId === undefined ? null : resolveStageAgent(config, slug, agentId)) ??
-    resolveAgent(config, slug, ticket.lane)
-  );
+  const resolved =
+    agentId === undefined ? null : resolveStageAgent(config, slug, agentId);
+
+  // A stage that fell back (or was handed to a substitute) is scheduled on the entry it is on now.
+  if (resolved && state && place) {
+    return slottedAgent({ config }, slug, resolved, state, place.stageId, place.memberId);
+  }
+
+  return resolved ?? resolveAgent(config, slug, ticket.lane);
 }

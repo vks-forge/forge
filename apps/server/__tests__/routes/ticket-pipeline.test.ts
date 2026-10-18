@@ -57,8 +57,10 @@ async function seed(): Promise<{ artifact: number }> {
         reviewer: 'reviewer',
       },
       hash: pipelineHash(BUILTIN_PIPELINES.standard),
+      base_hash: pipelineHash(BUILTIN_PIPELINES.standard),
       config_version: 'c0:p0',
       routed: [],
+      adjustments: [],
       created_at: NOW,
       updated_at: NOW,
     });

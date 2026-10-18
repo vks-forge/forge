@@ -7,16 +7,27 @@
  *   the one in the current cycle, or the earlier pass that still stands. A stage the current
  *   cycle has not reached again reads as pending, not as the failure that sent work back. A
  *   group rolls its members up; the artifacts listed are what each stage was shown or made,
- *   fetched one by one by id so the strip stays small.
+ *   fetched one by one by id so the strip stays small. What the Director changed shows too: a stage it
+ *   added, swapped or moved carries the change and its reason, a stage it removed is listed with its reason
+ *   (so the owner sees a ghost, not a silent gap), and a stage's `ran_on` says which harness, model and
+ *   fallback slot its latest run really used. Each stage view also carries the id of the row it shows and the
+ *   owner's marks on that row's findings, which is what the "Real" / "False alarm" toggles read and write.
  *
  * Exports: ticketPipelineView().
- * Depends on: domain/stage-cursor, domain/builtin-agent-texts/critic, schemas/pipeline, schemas/stage-run, schemas/ticket,
+ * Depends on: schemas/run, schemas/pipeline-adjust, domain/stage-cursor, domain/builtin-agent-texts/critic, schemas/pipeline, schemas/stage-run, schemas/ticket,
  *   types/pipeline-rules, types/stage-view. No IO.
  */
 
 import { SAME_FAMILY_WARNING } from '#/domain/builtin-agent-texts/critic.js';
 import { MAX_AUTO_REWORKS } from '#/domain/state-machine.js';
 import { currentCycle, cycleStart } from '#/domain/stage-cursor.js';
+import {
+  changesById,
+  markChanged,
+  markedFindings,
+  ranOn,
+  removedStages,
+} from '#/domain/ticket-pipeline-changes.js';
 import { isWriterRole } from '#/domain/stage-kinds.js';
 import type { Severity, Stage } from '#/schemas/pipeline.js';
 import { MAX_VIEW_FINDINGS } from '#/schemas/stage-run.js';
@@ -27,6 +38,8 @@ import type {
   TicketPipeline,
   TicketPipelineView,
 } from '#/schemas/stage-run.js';
+import type { Run } from '#/schemas/run.js';
+import type { FindingMark } from '#/schemas/scorecard.js';
 import type { Ticket } from '#/schemas/ticket.js';
 import type { RosterEntry } from '#/types/pipeline-rules.types.js';
 import type { StageView, ViewContext } from '#/types/stage-view.types.js';
@@ -118,6 +131,9 @@ function leaf(
     ...(counts ? { counts } : {}),
     ...(out?.review ? { findings: out.review.findings.slice(0, MAX_VIEW_FINDINGS) } : {}),
     warnings: out?.same_family ? [SAME_FAMILY_WARNING] : [],
+    ...ranOn(shown, ctx),
+    ...(shown ? { row_id: shown.id } : {}),
+    ...markedFindings(shown, ctx),
     ...(out?.signed_by ? { signed_by: out.signed_by } : {}),
     ...(out?.override ? { override: out.override } : {}),
     ...(scope && scope.length > 0 ? { scope } : {}),
@@ -139,13 +155,23 @@ export function ticketPipelineView(
   artifacts: readonly Pick<StageArtifact, 'id' | 'stage_run_id' | 'kind'>[],
   ticket: Pick<Ticket, 'rework_count' | 'status'>,
   roster: readonly RosterEntry[],
+  runs: readonly Pick<Run, 'id' | 'harness' | 'model' | 'fallback_slot'>[] = [],
+  marks: readonly Pick<FindingMark, 'stage_run_id' | 'finding_index' | 'verdict'>[] = [],
 ): TicketPipelineView {
   const names = new Map(roster.map((e) => [e.id, e.definition.name]));
   const cycle = currentCycle(records);
   const start = cycleStart(snapshot, records, cycle);
   const { stages } = snapshot.definition;
   const rerun = new Set(stages.filter((_, i) => i >= start).map((s) => s.id));
-  const ctx: ViewContext = { records, artifacts, cycle, rerun };
+  const ctx: ViewContext = {
+    records,
+    artifacts,
+    cycle,
+    rerun,
+    runs: new Map(runs.map((r) => [r.id, r])),
+    marks,
+  };
+
   const agentOf = (s: Stage): StageView['agent'] =>
     s.kind === 'agent' ? { id: s.agent, name: names.get(s.agent) ?? s.agent } : undefined;
 
@@ -195,8 +221,11 @@ export function ticketPipelineView(
     lane: snapshot.lane,
     hash: snapshot.hash,
     config_version: snapshot.config_version,
-    stages: views,
+    stages: markChanged(views, changesById(snapshot.adjustments)),
     routed: snapshot.routed,
+    adjustments: snapshot.adjustments,
+    removed: removedStages(snapshot.adjustments, stages),
+    base_hash: snapshot.base_hash,
     rework: { count: ticket.rework_count, cap: MAX_AUTO_REWORKS },
   };
 }

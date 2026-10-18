@@ -11,9 +11,10 @@
  * Exports: PlanPriority, PlanLane, PlanTicket, PlanVerification, PlanOverlap, PlanChange,
  *   PlanVersion, PlanVersionRef, FloorResult, PlanReply, PlanVersionReply, PlanApproveReply
  *   (schemas and inferred types).
- * Depends on: zod.
+ * Depends on: @forge/core, zod.
  */
 
+import { PlanPipeline } from '@forge/core';
 import { z } from 'zod';
 
 export const PlanPriority = z.enum(['low', 'normal', 'high', 'urgent']);
@@ -32,6 +33,8 @@ export const PlanTicket = z.object({
   lane: PlanLane.default('standard'),
   size: z.enum(['S', 'M', 'L']).default('M'),
   files: z.array(z.string()).default([]),
+  /** The Director's changes to this ticket's own copy of its lane, each with a reason; absent when it made none. */
+  pipeline: PlanPipeline.optional(),
 });
 export type PlanTicket = z.infer<typeof PlanTicket>;
 

@@ -5,7 +5,7 @@
  *   asks the installed `claude` for one short reply with the agent's instructions as the
  *   system prompt and the agent's model, and nothing else: `--tools ''` so it cannot touch
  *   anything, `--setting-sources ''` so no project or user settings leak in, no session saved,
- *   and a hard dollar cap from the caller. Every way it can end becomes a value with an error
+ *   and a dollar cap only when the caller sets one (the timeout always bounds the call). Every way it can end becomes a value with an error
  *   family (auth, quota, budget, stall...) so the screen can say what happened in plain words
  *   and the owner never sees a thrown error from a button. The credential goes into the child
  *   only and never into the result.
@@ -39,7 +39,7 @@ const FAMILY: Partial<Record<EngineEndKind, ErrorFamily>> = {
   policy_denied: 'policy_denied',
 };
 
-/** The argument list: tool-less, settings-less, session-less, capped. */
+/** The argument list: tool-less, settings-less, session-less, capped only if asked. */
 export function probeArgs(req: AgentProbeRequest): string[] {
   return [
     '-p',
@@ -50,8 +50,7 @@ export function probeArgs(req: AgentProbeRequest): string[] {
     '--setting-sources',
     '',
     '--no-session-persistence',
-    '--max-budget-usd',
-    String(req.maxUsd),
+    ...(req.maxUsd === undefined ? [] : ['--max-budget-usd', String(req.maxUsd)]),
     ...(req.model ? ['--model', req.model] : []),
     ...(req.instructions.trim() === ''
       ? []

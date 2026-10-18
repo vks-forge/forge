@@ -13,13 +13,14 @@
  *   not-started tickets are replaced only when the new plan is approved (d-0134).
  *
  * Exports: retryReason(), retryTx(), replanTx(), reworkTx().
- * Depends on: @forge/core (escalation schemas, card rules), tick/card-log, tick/card-phase,
+ * Depends on: @forge/core (escalation schemas, card rules), tick/agent-fallback, tick/card-log, tick/card-phase,
  *   tick/escalation-settle, tick/plan-actions, tick/planning-state, tick/ticket-moves, tick/wakes.
  *   Writes inside the caller's transaction.
  */
 
 import { GrillState } from '@forge/core';
 import type { EscalationAnswer, Interaction, StorageTx, Ticket } from '@forge/core';
+import { resetFallbackTx } from '#/tick/no-agent.js';
 import { logCardEvent } from '#/tick/card-log.js';
 import { moveCardTx } from '#/tick/card-phase.js';
 import { settleEscalation } from '#/tick/escalation-settle.js';
@@ -67,6 +68,14 @@ export async function retryTx(
 
   if (!moved.ok) {
     throw new Error(`could not release ${ticket.id}: ${moved.reason}`);
+  }
+
+  // A stage that ran out of places to run starts its chain over from its agent's own place (the owner's Retry).
+  if (
+    answer.action === 'retry' &&
+    (row.payload as { cause?: string } | null)?.cause === 'no_agent_available'
+  ) {
+    await resetFallbackTx(tx, ticket.id);
   }
 
   if (moved.ticket.status === 'planned') {

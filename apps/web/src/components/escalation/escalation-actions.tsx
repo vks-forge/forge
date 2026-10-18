@@ -10,7 +10,7 @@
  *   be undone), Approve and merge / Sign off and merge ask before they merge
  *   (a merge cannot be undone), Cancel asks before it acts, Run as Express and "I fixed
  *   it, check again" act at once. The first action is the primary one (never Merge anyway, which
- *   overrules a hold); Cancel is the only danger-styled button. `answer` has its own form and is skipped here. An action this UI has no
+ *   overrules a hold); Cancel is the only danger-styled button. `answer` has its own form and is skipped here, as are the engine-only `pipeline_ready` and `substitute`. An action this UI has no
  *   button for never reaches this component (the schema drops it).
  *
  * Exports: EscalationActions.
@@ -55,10 +55,13 @@ export function EscalationActions(props: {
 
   const [noting, setNoting] = useState(false);
   const [note, setNote] = useState('');
-  // `pipeline_ready` is engine-only (a held lane went live) and never offered to the owner.
+  // `pipeline_ready` (a held lane went live) and `substitute` (the Director swapped the agent)
+  // are engine-only and never offered to the owner.
   const actions = props.actions.filter(
-    (action): action is Exclude<EscalationAction, 'answer' | 'pipeline_ready'> =>
-      action !== 'answer' && action !== 'pipeline_ready',
+    (
+      action,
+    ): action is Exclude<EscalationAction, 'answer' | 'pipeline_ready' | 'substitute'> =>
+      action !== 'answer' && action !== 'pipeline_ready' && action !== 'substitute',
   );
 
   const busy = controls.pending !== null;

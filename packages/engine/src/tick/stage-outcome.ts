@@ -11,13 +11,14 @@
  *   `blockingRoute`'s call: a reviewer's findings at the rework cap hold the ticket instead of
  *   dead-ending it, and a critic set to hold holds at once. A critic that runs on the Worker's own
  *   model family is labelled on its row (d-0073). A check that failed to run is retried or parked
- *   by its error family under the same bounds as any run, and an out-of-quota harness is parked
+ *   by its error family under the same bounds as any run (a rate limit past its retries, or a model the harness
+ *   cannot serve, moves the check to the next place on its agent's own list first), and an out-of-quota harness is parked
  *   until its reset. All of it is applied inside the settle transaction, through the same doors as
  *   every other ticket change.
  *
  * Exports: afterWriterSuccessTx(), applyCheckOutcome().
- * Depends on: @forge/core (stage policy, cursor, sameFamilyCritics), domain/failure-policy, tick/{quota,run-agent,
- *   stage-artifacts,stage-records,stage-send-back,ticket-moves,verify-outcomes}. Writes inside the caller's transaction.
+ * Depends on: @forge/core (stage policy, cursor, sameFamilyCritics), tick/{run-agent,stage-advance,stage-artifacts,
+ *   stage-check-failure,stage-records,stage-labels,stage-send-back}. Writes inside the caller's transaction.
  */
 
 import { blockingCount, renderBlocking, sameFamilyCritics } from '@forge/core';
@@ -30,19 +31,17 @@ import type {
   Ticket,
   TicketPipeline,
 } from '@forge/core';
-import { decideFailure } from '#/domain/failure-policy.js';
-import { parkHarnessForQuota } from '#/tick/quota.js';
 import { advanceStagesTx } from '#/tick/stage-advance.js';
 import {
   collectArtifacts,
   persistArtifacts,
   pipelineHasChecks,
 } from '#/tick/stage-artifacts.js';
-import { finishStageRun, requestStageWake } from '#/tick/stage-records.js';
+import { checkNotCompleted } from '#/tick/stage-check-failure.js';
+import { finishStageRun } from '#/tick/stage-records.js';
 import { labelOf, policyOf } from '#/tick/stage-labels.js';
 import { routeBlockedTx } from '#/tick/stage-send-back.js';
 import { agentViews } from '#/tick/run-agent.js';
-import { parkVerifyingTx } from '#/tick/verify-outcomes.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { StageState } from '#/types/stage-runner.types.js';
 import type { SettleOptions } from '#/types/tick.types.js';
@@ -83,77 +82,6 @@ async function lastReview(tx: StorageTx, runId: string) {
   }
 
   return undefined;
-}
-
-/**
- * A check attempt failed to produce a verdict: no review, a crash, a quota stop. It is retried or
- * parked bounded by the family, never counted as a pass.
- */
-async function checkNotCompleted(
-  ctx: EngineCtx,
-  tx: StorageTx,
-  ticket: Ticket,
-  writer: Run,
-  run: Run,
-  row: StageRun,
-  result: RunResult,
-  family: ErrorFamily | undefined,
-  why: string,
-): Promise<void> {
-  await finishStageRun(tx, row.id, 'error', { note: why.slice(0, 1000) }, ctx.nowIso);
-  if (family === 'quota') {
-    const until = await parkHarnessForQuota(ctx, tx, run, result);
-    await requestStageWake(
-      ctx,
-      tx,
-      ticket.id,
-      row.stage_id,
-      row.cycle,
-      'stage:quota',
-      until,
-      row.member_id,
-    );
-
-    return;
-  }
-
-  const failed = family === undefined ? [] : await tx.runs.listByTicket(ticket.id);
-  const attempts = failed.filter((r) => r.error_family === family).length;
-  const decision =
-    family === undefined
-      ? ({ action: 'park', reason: why } as const)
-      : decideFailure({
-          status: result.status,
-          family,
-          attempts: Math.max(1, attempts),
-          ...(result.retryNotBefore ? { retryNotBefore: result.retryNotBefore } : {}),
-          now: ctx.now,
-          policy: ctx.config.forge.engine.retry,
-        });
-
-  if (decision.action === 'park') {
-    await parkVerifyingTx(
-      ctx,
-      tx,
-      { ticket, run: writer },
-      `a check could not finish: ${why}; needs you`,
-      [],
-      family,
-    );
-
-    return;
-  }
-
-  await requestStageWake(
-    ctx,
-    tx,
-    ticket.id,
-    row.stage_id,
-    row.cycle,
-    `stage:retry:${decision.family}`,
-    decision.notBefore,
-    row.member_id,
-  );
 }
 
 /** True when the check of `row` is a critic on the Worker's own model family (the strip labels it, d-0073). */

@@ -5,7 +5,8 @@
  *   to do. This panel answers: which agent ran (with a link to that run's thread), when, in
  *   which round, the check's summary and each of its findings (severity, `file:line`, evidence),
  *   the Director check's acceptance answers and the files outside the plan, who signed a
- *   sign-off and why, an owner overrule with the reason given, any warning on the stage (a critic
+ *   sign-off and why, a change the Director made to this stage (added, moved or swapped, with its reason),
+ *   which model and fallback slot the latest run really used, an owner overrule with the reason given, any warning on the stage (a critic
  *   on the Worker's own model family), the folders a writer-group member may write, and the
  *   artifacts the stage was shown or produced (the diff, the plan, the gate report, earlier
  *   findings). An artifact loads only when opened, since a diff can be large, and is shown in a
@@ -15,7 +16,7 @@
  *
  * Exports: StageDetail.
  * Depends on: react, react-router, api/use-ticket-pipeline, components/ticket/findings-list,
- *   routes/ticket/stage-check, domain/{format-time,stage-view-copy,ticket-paths}, schemas/pipelines.
+ *   routes/ticket/stage-check, domain/{director-change-copy,format-time,stage-view-copy,ticket-paths}, schemas/pipelines.
  */
 
 import { Link } from 'react-router';
@@ -24,6 +25,7 @@ import { describeError } from '#/api/describe-error.js';
 import { useStageArtifact } from '#/api/use-ticket-pipeline.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { FindingsList } from '#/components/ticket/findings-list.js';
+import { changedLine, ranOnLine } from '#/domain/director-change-copy.js';
 import { formatWhen } from '#/domain/format-time.js';
 import {
   NARRATIVE_NOTE,
@@ -128,6 +130,16 @@ function Block(props: {
             <dd>{view.agent.name}</dd>
           </>
         ) : null}
+        {view.ran_on === undefined ? null : (
+          <>
+            <dt className="text-muted">Ran on</dt>
+            <dd>
+              {view.ran_on.model === undefined
+                ? view.ran_on.harness
+                : `${view.ran_on.model} (${view.ran_on.harness})`}
+            </dd>
+          </>
+        )}
         {view.status === 'pending' ? null : (
           <>
             <dt className="text-muted">Round</dt>
@@ -174,6 +186,16 @@ function Block(props: {
           </>
         ) : null}
       </dl>
+      {view.changed === undefined ? null : (
+        <p className="max-w-prose rounded-lg border border-signal p-2 text-sm">
+          {changedLine(view.changed)}
+        </p>
+      )}
+      {view.ran_on === undefined || ranOnLine(view.ran_on) === null ? null : (
+        <p role="note" className="max-w-prose rounded-lg bg-attn-soft p-2 text-sm">
+          {ranOnLine(view.ran_on)}
+        </p>
+      )}
       {view.summary && view.check === undefined ? (
         <p className="max-w-prose text-sm">{view.summary}</p>
       ) : null}
@@ -192,7 +214,15 @@ function Block(props: {
         </p>
       )}
       {view.findings === undefined || view.check !== undefined ? null : (
-        <FindingsList findings={view.findings} label={`Findings from ${view.label}`} />
+        <FindingsList
+          findings={view.findings}
+          label={`Findings from ${view.label}`}
+          marking={
+            view.row_id === undefined
+              ? undefined
+              : { ticketId: props.ticketId, rowId: view.row_id, marks: view.marks }
+          }
+        />
       )}
       {/* A Director check lists its findings inside the checklist, so they are not drawn twice. */}
       <StageCheck view={view} />

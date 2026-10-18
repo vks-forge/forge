@@ -46,7 +46,8 @@ export interface AgentProbeRequest {
   readonly instructions: string;
   readonly prompt: string;
   readonly timeoutMs: number;
-  readonly maxUsd: number;
+  /** Absent means no dollar cap; the timeout still bounds the call. */
+  readonly maxUsd?: number;
 }
 
 /** How a probe went; a failure is a value with its error family, never a throw. */

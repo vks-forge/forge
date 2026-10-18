@@ -8,6 +8,9 @@
  *   that has none, and refuse a definition that breaks the schema without writing anything.
  *
  * Exports: describeTicketPipelinesContract().
+ * Also pinned: the Director's changes (`adjust`) rewrite the list, its hash and the whole adjustment log in
+ *   one write while the base hash and creation time stay, a heavier lane's replace keeps writing its own base
+ *   hash and log, and the batch read returns exactly the tickets asked for.
  * Depends on: vitest, @forge/core, helpers/fixtures. IO only through the adapter under test.
  */
 
@@ -30,8 +33,10 @@ const snapshot = (id: string, over: Partial<TicketPipeline> = {}): TicketPipelin
   definition: BUILTIN_PIPELINES.standard,
   roles,
   hash: HASH,
+  base_hash: HASH,
   config_version: 'c1:p0',
   routed: [],
+  adjustments: [],
   created_at: T0,
   updated_at: T0,
   ...over,
@@ -131,6 +136,114 @@ export function describeTicketPipelinesContract(getDb: () => StorageAdapter): vo
       ).rejects.toThrow();
 
       await expect(tx((t) => t.ticketPipelines.replace(snapshot(TID)))).rejects.toThrow();
+    });
+
+    it('adjust rewrites the list, its hash and the whole log in one write, keeping the base and creation time', async () => {
+      await seedTicket();
+      await tx((t) => t.ticketPipelines.insert(snapshot(TID)));
+      const stages = [...BUILTIN_PIPELINES.standard.stages];
+      stages.splice(3, 0, {
+        id: 'dir-sec',
+        kind: 'agent',
+        label: 'Sec',
+        agent: 'reviewer',
+      });
+
+      const adjustments = [
+        {
+          seq: 0,
+          op: {
+            op: 'add' as const,
+            stage: {
+              id: 'dir-sec',
+              kind: 'agent' as const,
+              label: 'Sec',
+              agent: 'reviewer',
+            },
+            after: 'g1',
+            reason: 'The change touches authentication.',
+          },
+          by: 'director' as const,
+          cause: 'plan' as const,
+          key: 'standard:add:reviewer@after:g1',
+          status: 'applied' as const,
+          plan_version: 2,
+          at: T1,
+        },
+      ];
+
+      await tx((t) =>
+        t.ticketPipelines.adjust(TID, {
+          definition: { stages },
+          hash: 'f'.repeat(64),
+          roles: { ...roles, 'security-reviewer': 'reviewer' },
+          adjustments,
+          at: T1,
+        }),
+      );
+
+      const got = await tx((t) => t.ticketPipelines.get(TID));
+
+      expect(got).toMatchObject({
+        hash: 'f'.repeat(64),
+        base_hash: HASH,
+        created_at: T0,
+        updated_at: T1,
+        roles: { ...roles, 'security-reviewer': 'reviewer' },
+      });
+
+      expect(got?.adjustments).toEqual(adjustments);
+      expect(got?.definition.stages.map((s) => s.id)).toContain('dir-sec');
+    });
+
+    it('replace stores the base hash and the log of the new snapshot', async () => {
+      await seedTicket();
+      await tx((t) => t.ticketPipelines.insert(snapshot(TID)));
+
+      await tx((t) =>
+        t.ticketPipelines.replace(
+          snapshot(TID, {
+            lane: 'full',
+            definition: BUILTIN_PIPELINES.full,
+            hash: 'e'.repeat(64),
+            base_hash: 'd'.repeat(64),
+          }),
+        ),
+      );
+
+      expect(await tx((t) => t.ticketPipelines.get(TID))).toMatchObject({
+        hash: 'e'.repeat(64),
+        base_hash: 'd'.repeat(64),
+        adjustments: [],
+      });
+    });
+
+    it('refuses to adjust a ticket that has no snapshot', async () => {
+      await expect(
+        tx((t) =>
+          t.ticketPipelines.adjust(TID, {
+            definition: BUILTIN_PIPELINES.express,
+            hash: HASH,
+            adjustments: [],
+            at: T1,
+          }),
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('reads the snapshots of the tickets asked for and no others', async () => {
+      await seedTicket(1);
+      await seedTicket(2);
+      await seedTicket(3);
+      await tx((t) => t.ticketPipelines.insert(snapshot(makeTicket(1).id)));
+      await tx((t) => t.ticketPipelines.insert(snapshot(makeTicket(2).id)));
+
+      const got = await tx((t) =>
+        t.ticketPipelines.listByTickets([makeTicket(1).id, makeTicket(3).id, 'SF-99']),
+      );
+
+      expect(got.map((s) => s.ticket_id)).toEqual([makeTicket(1).id]);
+      expect(await tx((t) => t.ticketPipelines.listByTickets([]))).toEqual([]);
     });
 
     it('refuses a snapshot whose definition breaks the schema, and writes nothing', async () => {

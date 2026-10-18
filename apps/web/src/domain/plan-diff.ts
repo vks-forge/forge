@@ -5,12 +5,14 @@
  *   see what actually moved before approving, or "v2" is just a bigger thing to re-read. The
  *   server records the diff when it writes a version; when it did not (or this UI is looking at
  *   two versions it fetched itself) the same comparison is made here, field by field, with
- *   tickets compared by key. Values are shown as short text, never as raw JSON.
+ *   tickets compared by key. Values are shown as short text, never as raw JSON. A ticket's line includes the
+ *   Director's pipeline changes, so one added or taken off between versions shows as a changed ticket.
  *
  * Exports: describeValue(), diffPlans(), diffRowsOf().
- * Depends on: schemas/plan (types), types/plan.types. No IO.
+ * Depends on: domain/director-change-copy, schemas/plan (types), types/plan.types. No IO.
  */
 
+import { opWords } from '#/domain/director-change-copy.js';
 import type { PlanChange, PlanTicket, PlanVersion } from '#/schemas/plan.js';
 import type { DiffRow } from '#/types/plan.types.js';
 
@@ -51,7 +53,7 @@ export function diffRowsOf(changes: readonly PlanChange[]): readonly DiffRow[] {
 const ticketLine = (t: PlanTicket): string =>
   `${t.title} (${t.priority}, ${t.lane}/${t.size}${
     t.depends_on.length > 0 ? `, after ${t.depends_on.join(', ')}` : ''
-  })`;
+  }${t.pipeline === undefined ? '' : `, ${t.pipeline.ops.map(opWords).join(' and ')}`})`;
 
 const FIELDS: readonly (readonly [string, (p: PlanVersion) => string[] | string])[] = [
   ['Goal', (p) => p.goal],

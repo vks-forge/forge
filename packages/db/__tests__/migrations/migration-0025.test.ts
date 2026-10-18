@@ -65,6 +65,9 @@ describe('0025 stage runner', () => {
       'routed_json',
       'created_at',
       'updated_at',
+      // Added by 0027 (the Director's per-ticket changes).
+      'base_hash',
+      'adjusted_json',
     ]);
 
     expect(columns(driver, 'stage_runs')).toEqual([

@@ -94,6 +94,50 @@ export function describeRunsContract(getDb: () => StorageAdapter): void {
     });
   });
 
+  describe('fallback record', () => {
+    it('stores the model and fallback slot of a run, absent on older runs, and lets a patch change them', async () => {
+      await db.transaction(async (tx) => {
+        await tx.runs.insert(makeRun('rm', { model: 'sonnet', fallback_slot: 1 }));
+        await tx.runs.insert(makeRun('rn'));
+        await tx.runs.insert(makeRun('rs', { fallback_slot: -1 }));
+      });
+
+      const got = await db.transaction(async (tx) => ({
+        m: await tx.runs.get('rm'),
+        n: await tx.runs.get('rn'),
+        s: await tx.runs.get('rs'),
+      }));
+
+      expect(got.m).toMatchObject({ model: 'sonnet', fallback_slot: 1 });
+      expect('model' in (got.n ?? {})).toBe(false);
+      expect('fallback_slot' in (got.n ?? {})).toBe(false);
+      expect(got.s?.fallback_slot).toBe(-1);
+
+      await db.transaction((tx) =>
+        tx.runs.update('rn', { model: 'opus', fallback_slot: 0 }),
+      );
+
+      expect(await db.transaction((tx) => tx.runs.get('rn'))).toMatchObject({
+        model: 'opus',
+        fallback_slot: 0,
+      });
+    });
+
+    it('lists the runs of the tickets asked for, oldest first', async () => {
+      await db.transaction(async (tx) => {
+        await tx.runs.insert(makeRun('a1', { ticket_id: 'SF-1' }));
+        await tx.runs.insert(makeRun('b1', { ticket_id: 'SF-2' }));
+        await tx.runs.insert(makeRun('a2', { ticket_id: 'SF-1' }));
+        await tx.runs.insert(makeRun('c1', { ticket_id: 'SF-3' }));
+      });
+
+      const got = await db.transaction((tx) => tx.runs.listByTickets(['SF-1', 'SF-2']));
+
+      expect(got.map((r) => r.id)).toEqual(['a1', 'b1', 'a2']);
+      expect(await db.transaction((tx) => tx.runs.listByTickets([]))).toEqual([]);
+    });
+  });
+
   describe('optional run columns', () => {
     it('update clears an optional column given as undefined', async () => {
       await db.transaction(async (tx) => {

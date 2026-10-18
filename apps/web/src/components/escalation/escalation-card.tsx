@@ -33,6 +33,7 @@ import {
   dependentsOf,
   describeEscalationError,
   escalationTitle,
+  retryHintFor,
   settledLine,
 } from '#/domain/escalation-copy.js';
 import type { EscalationView } from '#/schemas/escalation.js';
@@ -199,11 +200,7 @@ export function EscalationCard(props: {
         actions={view.actions}
         controls={controls}
         lead={payload.kind === 'setup' ? <FixLink href={payload.fix_href} /> : undefined}
-        retryHint={
-          payload.kind === 'failure' && payload.cause === 'rework_cap'
-            ? 'This gives it exactly one more attempt.'
-            : undefined
-        }
+        retryHint={payload.kind === 'failure' ? retryHintFor(payload.cause) : undefined}
       />
       {error !== null && dependentsOf(error) === null ? (
         <p role="alert" className="rounded-lg bg-danger-soft p-2 text-sm">

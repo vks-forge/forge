@@ -11,7 +11,7 @@
  *   run used, else the implementer.
  *
  * Exports: chooseWriter(). A group of writers starts the member it is asked for.
- * Depends on: @forge/core (InvalidInputError), steps/run-step, tick/{dispatch-park,run-agent,stage-snapshot,
+ * Depends on: @forge/core (InvalidInputError), steps/run-step, tick/{agent-fallback,dispatch-park,run-agent,stage-snapshot,
  *   stage-state}, types/stage-runner. IO: storage.
  */
 
@@ -19,6 +19,7 @@ import { InvalidInputError } from '@forge/core';
 import type { Run, Ticket } from '@forge/core';
 import { hold } from '#/steps/run-step.js';
 import { parkDispatch } from '#/tick/dispatch-park.js';
+import { slottedAgent } from '#/tick/agent-fallback.js';
 import { resolveAgent, resolveStageAgent } from '#/tick/run-agent.js';
 import { ensureSnapshotTx } from '#/tick/stage-snapshot.js';
 import { readStageState } from '#/tick/stage-state.js';
@@ -76,7 +77,8 @@ export async function chooseWriter(
       return { kind: 'stop' };
     }
 
-    const agent = resolveStageAgent(ctx.config, slug, pick.stage.agent);
+    const plain = resolveStageAgent(ctx.config, slug, pick.stage.agent);
+    const agent = plain && slottedAgent(ctx, slug, plain, state, stage.id, pick.id);
     if (!agent) {
       await parkDispatch(
         ctx,
@@ -100,7 +102,8 @@ export async function chooseWriter(
 
   if (state?.cursor.kind === 'run_writer') {
     const { stage } = state.cursor;
-    const agent = resolveStageAgent(ctx.config, slug, stage.agent);
+    const plain = resolveStageAgent(ctx.config, slug, stage.agent);
+    const agent = plain && slottedAgent(ctx, slug, plain, state, stage.id);
     if (!agent) {
       await parkDispatch(
         ctx,

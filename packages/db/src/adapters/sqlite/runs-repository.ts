@@ -30,6 +30,8 @@ import {
 } from '#/shared/patches.js';
 import type { ColumnCodec, SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
 
+const MAX_BATCH = 500;
+
 const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
   ticket_id: { column: 'ticket_id' },
   project: { column: 'project', clearable: true },
@@ -54,6 +56,8 @@ const COLUMNS: Readonly<Record<string, ColumnCodec>> = {
   config_version: { column: 'config_version', clearable: true },
   agent_id: { column: 'agent_id', clearable: true },
   agent_hash: { column: 'agent_hash', clearable: true },
+  model: { column: 'model', clearable: true },
+  fallback_slot: { column: 'fallback_slot', clearable: true },
   hook_registered_at: { column: 'hook_registered_at', clearable: true },
   generation: { column: 'generation' },
   resumable_session: { column: 'resumable_session', clearable: true },
@@ -84,6 +88,23 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
     async listByTicket(ticketId) {
       return driver
         .all('SELECT * FROM runs WHERE ticket_id = ? ORDER BY rowid', [ticketId])
+        .map(toRun);
+    },
+
+    async listByTickets(ticketIds) {
+      if (ticketIds.length === 0) {
+        return [];
+      }
+
+      if (ticketIds.length > MAX_BATCH) {
+        throw new UnknownForgeError(`at most ${MAX_BATCH} tickets per read`);
+      }
+
+      return driver
+        .all(
+          `SELECT * FROM runs WHERE ticket_id IN (${ticketIds.map(() => '?').join(', ')}) ORDER BY rowid`,
+          [...ticketIds],
+        )
         .map(toRun);
     },
 
@@ -170,9 +191,9 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
       driver.run(
         `INSERT INTO runs (id, ticket_id, project, harness, driver_version, session_ref, cwd, lane,
            started_at, ended_at, status, usage_json, cost_usd, error_family, retry_of, owner,
-           pid, last_event_at, final_chain_hash, catalogue_hash, prompt_hash, config_version, agent_id, agent_hash, hook_registered_at,
+           pid, last_event_at, final_chain_hash, catalogue_hash, prompt_hash, config_version, agent_id, agent_hash, model, fallback_slot, hook_registered_at,
            generation, resumable_session, interrupted_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           r.id,
           r.ticket_id,
@@ -198,6 +219,8 @@ export function createRunRepository(driver: SqlDriver): RunRepository {
           r.config_version ?? null,
           r.agent_id ?? null,
           r.agent_hash ?? null,
+          r.model ?? null,
+          r.fallback_slot ?? null,
           r.hook_registered_at ?? null,
           r.generation ?? 1,
           r.resumable_session ?? null,

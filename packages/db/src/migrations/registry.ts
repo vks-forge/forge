@@ -15,7 +15,7 @@
  *   migrations/0016-scheduling, migrations/0017-run-resume, migrations/0018-inbox-states,
  *   migrations/0019-cards, migrations/0020-project-scope, migrations/0021-card-flow,
  *   migrations/0022-card-planning, migrations/0023-escalations, migrations/0024-run-agent,
- *   migrations/0025-stage-runner. No IO.
+ *   migrations/0025-stage-runner, migrations/0026-full-lane, migrations/0027-director-pipelines. No IO.
  */
 
 import { MIGRATION_0001 } from '#/migrations/0001-state-tables.js';
@@ -42,6 +42,7 @@ import { MIGRATION_0023 } from '#/migrations/0023-escalations.js';
 import { MIGRATION_0024 } from '#/migrations/0024-run-agent.js';
 import { MIGRATION_0025 } from '#/migrations/0025-stage-runner.js';
 import { MIGRATION_0026 } from '#/migrations/0026-full-lane.js';
+import { MIGRATION_0027 } from '#/migrations/0027-director-pipelines.js';
 import type { Migration } from '#/types/migrations.types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -69,4 +70,5 @@ export const MIGRATIONS: readonly Migration[] = [
   MIGRATION_0024,
   MIGRATION_0025,
   MIGRATION_0026,
+  MIGRATION_0027,
 ];

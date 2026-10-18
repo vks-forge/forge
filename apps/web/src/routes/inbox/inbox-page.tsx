@@ -10,7 +10,8 @@
  *   never hides something that has since moved. Long histories load 50 at a time and are
  *   windowed. A ticket waiting on the owner has a "Respond" button that opens its escalation card
  *   in a drawer (rows are fixed-height for the windowed list, so the card does not grow the row);
- *   acting settles the card, the chat and the Ticket page. Loading, empty, error and offline each
+ *   acting settles the card, the chat and the Ticket page. A Director pipeline suggestion has "Review", which
+ *   opens the change and its evidence in a drawer to accept or reject. Loading, empty, error and offline each
  *   have their own state.
  *
  * Exports: InboxPage.
@@ -30,6 +31,7 @@ import { Button } from '#/components/ui/button.js';
 import { SideDrawer } from '#/components/ui/side-drawer.js';
 import { WindowedList } from '#/components/ui/windowed-list.js';
 import { undoOf } from '#/domain/inbox-marks.js';
+import { InboxProposal } from '#/routes/inbox/inbox-proposal.js';
 import { InboxRow, INBOX_ROW_HEIGHT } from '#/routes/inbox/inbox-row.js';
 import { INBOX_VIEW_LABEL, InboxTabs } from '#/routes/inbox/inbox-tabs.js';
 import { useNotify } from '#/state/notify/notify-context.js';
@@ -66,6 +68,8 @@ export function InboxPage() {
   const notify = useNotify();
   // The item being answered, kept whole so the card survives the list dropping it once settled.
   const [responding, setResponding] = useState<InboxItem | null>(null);
+  // The Director's pipeline suggestion being decided, in its own drawer.
+  const [reviewing, setReviewing] = useState<InboxItem | null>(null);
 
   useEffect(() => {
     document.title = 'Inbox · Forge';
@@ -158,6 +162,7 @@ export function InboxPage() {
                 item={item}
                 onMark={(target, name) => void mark(target, name)}
                 onRespond={setResponding}
+                onReview={setReviewing}
                 marksDisabled={!online}
               />
             )}
@@ -202,6 +207,21 @@ export function InboxPage() {
             variant="plain"
             showTicket={false}
           />
+        ) : null}
+      </SideDrawer>
+
+      <SideDrawer
+        open={reviewing !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReviewing(null);
+          }
+        }}
+        title={reviewing?.title ?? 'Pipeline change'}
+        eyebrow="Director suggestion"
+      >
+        {reviewing ? (
+          <InboxProposal key={reviewing.id} slug={slug} itemId={reviewing.id} />
         ) : null}
       </SideDrawer>
     </section>

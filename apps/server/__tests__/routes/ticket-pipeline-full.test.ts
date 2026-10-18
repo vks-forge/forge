@@ -14,16 +14,12 @@
  * Depends on: helpers/agent-rig. IO: a loopback socket and in-memory storage.
  */
 
-import {
-  BUILTIN_PIPELINES,
-  SAME_FAMILY_WARNING,
-  makeTicketId,
-  pipelineHash,
-} from '@forge/core';
+import { BUILTIN_PIPELINES, SAME_FAMILY_WARNING, makeTicketId } from '@forge/core';
 import type { PipelineDefinition, Ticket, TicketPipelineView } from '@forge/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { agentBody, startAgentRig } from '#tests/helpers/agent-rig.js';
 import type { AgentRig } from '#tests/helpers/agent-rig.js';
+import { copyOf } from '#tests/helpers/pipeline-fixtures.js';
 
 let rig: AgentRig;
 
@@ -70,9 +66,7 @@ async function seedFull(rows: Row[]): Promise<void> {
       lane: 'full',
       definition: BUILTIN_PIPELINES.full,
       roles: ROLES,
-      hash: pipelineHash(BUILTIN_PIPELINES.full),
-      config_version: 'c0:p0',
-      routed: [],
+      ...copyOf(BUILTIN_PIPELINES.full),
       created_at: NOW,
       updated_at: NOW,
     });
@@ -279,9 +273,7 @@ describe('writer groups on the strip', () => {
         lane: 'full',
         definition: def,
         roles: { [fe.id]: 'writer', [be.id]: 'writer' },
-        hash: pipelineHash(def),
-        config_version: 'c0:p0',
-        routed: [],
+        ...copyOf(def),
         created_at: NOW,
         updated_at: NOW,
       });

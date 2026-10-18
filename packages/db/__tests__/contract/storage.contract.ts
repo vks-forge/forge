@@ -55,6 +55,7 @@ import { describeWakeRequestsContract } from './wake-requests.contract.js';
 import { describeHarnessCompatContract } from './harness-compat.contract.js';
 import { describeHarnessStateContract } from './harness-state.contract.js';
 import { describeHarnessesContract } from './harnesses.contract.js';
+import { describePipelineProposalsContract } from './pipeline-proposals.contract.js';
 import { describeProjectPurgeContract } from './project-purge.contract.js';
 import { describeStageArtifactsContract } from './stage-artifacts.contract.js';
 import { describeStageRunnerContract } from './stage-runner.contract.js';
@@ -86,6 +87,7 @@ export function describeStorageContract(
     describeTicketPipelinesContract(() => db);
     describeStageRunnerContract(() => db);
     describeStageArtifactsContract(() => db);
+    describePipelineProposalsContract(() => db);
     describeHarnessesContract(() => db);
     describeHarnessStateContract(() => db);
     describeConnectionsContract(() => db);

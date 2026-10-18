@@ -4,9 +4,10 @@
  * Why: approving a plan is the only path that creates tickets (d-0133), so this is the part the
  *   owner scrutinises most: the tickets in the order they would be created, each with what it
  *   does, its priority, what it waits for, its lane and size, and the acceptance criteria that
- *   will decide "done". The graph beside the list shows the dependencies as a picture. While the
+ *   will decide "done", and the pipeline the Director shaped for it (its changes to the lane, each with
+ *   a reason, and a flag when one removes a stage and so needs the owner's approval). The graph beside the list shows the dependencies as a picture. While the
  *   plan is waiting for a decision, "Edit tickets" switches the list into a draft the owner can
- *   change in place (rename, reorder, remove, priority) and send once; any other time the list
+ *   change in place (rename, reorder, remove, priority, take off one of the Director's pipeline changes) and send once; any other time the list
  *   is read-only, so an old version or an approved plan can never be edited by accident.
  *
  * Exports: PlanTickets.
@@ -22,6 +23,7 @@ import { Button } from '#/components/ui/button.js';
 import { canSaveDraft, draftOf, editBody } from '#/domain/plan-edit.js';
 import { describeFlowError } from '#/domain/flow-errors.js';
 import { PlanGraphView } from '#/routes/card/plan/plan-graph-view.js';
+import { PlanPipelineLine } from '#/routes/card/plan/plan-pipeline-ops.js';
 import { PlanSection } from '#/routes/card/plan/plan-sections.js';
 import { PlanTicketEditor } from '#/routes/card/plan/plan-ticket-editor.js';
 import type { PlanVersion } from '#/schemas/plan.js';
@@ -46,6 +48,7 @@ function ReadRow(props: { ticket: PlanVersion['tickets'][number] }) {
       {ticket.body ? (
         <p className="min-w-0 break-words text-sm text-muted">{ticket.body}</p>
       ) : null}
+      <PlanPipelineLine ticket={ticket} />
       {ticket.depends_on.length > 0 ? (
         <p className="text-xs text-muted">Depends on {ticket.depends_on.join(', ')}</p>
       ) : null}
@@ -117,6 +120,7 @@ export function PlanTickets(props: {
             </>
           ) : (
             <PlanTicketEditor
+              tickets={plan.tickets}
               draft={draft}
               onChange={setDraft}
               canSave={canSaveDraft(plan.tickets, draft)}

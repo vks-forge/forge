@@ -15,7 +15,7 @@
  *   RoutedStage, TicketPipeline, StageViewSchema, TicketPipelineView, STAGE_RUN_STATUSES,
  *   STAGE_RUN_KINDS (and their types).
  * Depends on: schemas/agent, schemas/config-override, schemas/finding, schemas/gate-result, schemas/ids,
- *   schemas/pipeline, schemas/ticket, schemas/ticket-check, types/stage-view, zod. No IO.
+ *   schemas/pipeline, schemas/pipeline-adjust, schemas/ticket, schemas/ticket-check, types/stage-view, zod. No IO.
  */
 
 import { z } from 'zod';
@@ -25,6 +25,7 @@ import { Finding } from '#/schemas/finding.js';
 import { GateStatus } from '#/schemas/gate-result.js';
 import { TicketId } from '#/schemas/ids.js';
 import { PipelineDefinition, Severity, StageId } from '#/schemas/pipeline.js';
+import { MAX_ADJUSTMENTS, PipelineAdjustment } from '#/schemas/pipeline-adjust.js';
 import { TicketCheckOutput } from '#/schemas/ticket-check.js';
 import { Lane } from '#/schemas/ticket.js';
 import type { StageView } from '#/types/stage-view.types.js';
@@ -88,6 +89,25 @@ export const StageOutcome = z.object({
   same_family: z.literal(true).optional(),
   /** Director check: how many times the step failed to answer in this cycle, for the retry bound. */
   attempts: z.number().int().positive().max(20).optional(),
+  /**
+   * Which entry of the agent's `[primary, ...fallbacks]` chain this attempt runs on (0 = primary), and
+   * the entries already tried in it, so the next failure moves on instead of repeating one (d-0080).
+   */
+  fallback: z
+    .object({
+      slot: z.number().int().min(-1).max(5),
+      tried: z
+        .array(
+          z.object({
+            slot: z.number().int().min(0).max(5),
+            harness: z.string().min(1),
+            model: z.string().optional(),
+            family: z.string().min(1),
+          }),
+        )
+        .max(8),
+    })
+    .optional(),
 });
 export type StageOutcome = z.infer<typeof StageOutcome>;
 
@@ -142,8 +162,12 @@ export const TicketPipeline = z.object({
   definition: PipelineDefinition,
   roles: z.record(AgentId, AgentRole),
   hash: z.string().regex(/^[0-9a-f]{64}$/),
+  /** Hash of the lane list plus routing as it was before any Director change; equal to `hash` when none applied. */
+  base_hash: z.string().regex(/^[0-9a-f]{64}$/),
   config_version: ConfigVersionRef,
   routed: z.array(RoutedStage),
+  /** Every change the Director made or tried to make to this copy, applied or dropped, in order. */
+  adjustments: z.array(PipelineAdjustment).max(MAX_ADJUSTMENTS),
   created_at: Timestamp,
   updated_at: Timestamp,
 });
@@ -188,6 +212,34 @@ export const StageViewSchema: z.ZodType<StageView> = z.lazy(() =>
     /** Director check: the acceptance verdicts and the files the plan did not cover. */
     check: TicketCheckOutput.optional(),
     unplanned: z.array(z.string()).optional(),
+    /** The Director changed this stage (added, swapped or moved it) and why. */
+    changed: z
+      .object({
+        by: z.literal('director'),
+        op: z.enum(['add', 'swap', 'move']),
+        cause: z.enum(['plan', 'fallback']),
+        reason: z.string(),
+      })
+      .optional(),
+    /** The id of the stage row this view shows: the key of the owner's mark route. */
+    row_id: z.number().int().positive().optional(),
+    /** The owner's marks on this row's findings, by position in `findings`. */
+    marks: z
+      .array(
+        z.object({
+          index: z.number().int().nonnegative(),
+          verdict: z.enum(['real', 'false_alarm']),
+        }),
+      )
+      .optional(),
+    /** What the stage's latest run actually used: the harness, the model and the fallback slot (-1 = substitute). */
+    ran_on: z
+      .object({
+        harness: z.string(),
+        model: z.string().optional(),
+        slot: z.number().int().min(-1).max(5),
+      })
+      .optional(),
     artifacts: z.array(z.object({ id: z.number().int().positive(), kind: ArtifactKind })),
   }),
 );
@@ -199,6 +251,11 @@ export const TicketPipelineView = z.object({
   config_version: ConfigVersionRef,
   stages: z.array(StageViewSchema),
   routed: z.array(RoutedStage),
+  /** The Director's adjustment log for this ticket, applied and dropped. */
+  adjustments: z.array(PipelineAdjustment),
+  /** Stages the Director removed, so the strip can show them as ghosts. */
+  removed: z.array(z.object({ id: z.string(), label: z.string(), reason: z.string() })),
+  base_hash: z.string(),
   rework: z.object({
     count: z.number().int().nonnegative(),
     cap: z.number().int().positive(),

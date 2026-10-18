@@ -6,10 +6,12 @@
  *   once keeps each test a short story about what the server answers, and keeps the broken lists
  *   in one place so the "nothing is stored" assertion covers every rule the brief names.
  *
- * Exports: agent(), g1(), merge(), STANDARD_LIKE, INVALID_LISTS, send().
+ * Exports: agent(), g1(), merge(), STANDARD_LIKE, INVALID_LISTS, send(), copyOf().
  * Depends on: helpers/agent-rig. No IO.
  */
 
+import { pipelineHash } from '@forge/core';
+import type { PipelineDefinition } from '@forge/core';
 import { WHO } from '#tests/helpers/agent-rig.js';
 
 type Stage = Record<string, unknown>;
@@ -109,3 +111,12 @@ export const send = (
   expected_version: number,
   extra: Record<string, unknown> = {},
 ): Record<string, unknown> => ({ expected_version, ...WHO, ...extra });
+
+/** The bookkeeping of a ticket's pipeline copy that no Director has touched. */
+export const copyOf = (def: PipelineDefinition) => ({
+  hash: pipelineHash(def),
+  base_hash: pipelineHash(def),
+  config_version: 'c0:p0',
+  routed: [],
+  adjustments: [],
+});

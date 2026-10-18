@@ -42,6 +42,13 @@ export function memoryRuns(state: MemoryState): RunRepository {
         .filter((r) => r.ticket_id === ticketId)
         .map((r) => structuredClone(r));
     },
+    async listByTickets(ticketIds) {
+      const wanted = new Set<string>(ticketIds);
+
+      return [...state.runs.values()]
+        .filter((r) => wanted.has(r.ticket_id))
+        .map((r) => structuredClone(r));
+    },
     async listByStatus(statuses) {
       return [...state.runs.values()]
         .filter((r) => statuses.includes(r.status))

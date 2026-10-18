@@ -13,7 +13,8 @@
  *   newest checked): an older build can no longer be acted on and would nag forever. A tool
  *   approval is dated by when Forge checked its build. Quota waits show only where open work
  *   is affected. Memory proposals carry no timestamp, so they use the epoch and sort last
- *   (the web shows no date for an epoch item). Tickets of a closed card never show: their work was
+ *   (the web shows no date for an epoch item). A pending proposal of the Director to change a lane is one item
+ *   (`pipeline_proposal:<id>`, needs action, dated by when it was made); accepted, rejected and stale ones drop out. Tickets of a closed card never show: their work was
  *   cancelled with the card.
  *
  * Exports: gatherInboxCandidates().
@@ -35,6 +36,7 @@ import type {
 import { collectRuns, collectTickets } from '#/services/collect-pages.js';
 import { currentHarnessBuilds } from '#/services/current-harness-build.js';
 import { escalationViews } from '#/services/escalation-view.js';
+import { pipelineProposalItems } from '#/services/inbox-proposals.js';
 
 const EPOCH = '1970-01-01T00:00:00.000Z';
 const clip = (text: string, max = 140): string =>
@@ -271,6 +273,8 @@ export async function gatherInboxCandidates(
       });
     }
   }
+
+  items.push(...(await pipelineProposalItems(tx, slug)));
 
   return items;
 }

@@ -9,15 +9,17 @@
  *   message) and says what to do next. Every enum value has a sentence, and a test fails when a
  *   new cause or action arrives without one. Pure.
  *
- * Exports: ACTION_LABEL, FAILURE_TITLE, escalationTitle(), settledWords(), settledLine(), replanConsequence(),
+ * Exports: ACTION_LABEL, FAILURE_TITLE, retryHintFor(), failureHelp(), escalationTitle(), settledWords(), settledLine(), replanConsequence(),
  *   describeEscalationError(), dependentsOf().
  *   (Words for the decision and sign-off bodies live in domain/finished-work-copy.)
- * Depends on: api/api-error, api/describe-error, domain/relative-time, schemas/escalation.
+ * Depends on: api/api-error, api/describe-error, domain/relative-time, schemas/escalation,
+ *   types/escalation-ui.types (types).
  */
 
 import { ApiError } from '#/api/api-error.js';
 import { describeError } from '#/api/describe-error.js';
 import { timeAgo } from '#/domain/relative-time.js';
+import type { FailurePayload } from '#/types/escalation-ui.types.js';
 import type {
   EscalationAction,
   EscalationView,
@@ -39,6 +41,8 @@ export const ACTION_LABEL: Readonly<Record<EscalationAction, string>> = {
   continue: 'Continue',
   // Settled by the engine when a held lane goes live; shown in history, never as a button.
   pipeline_ready: 'Lane went live',
+  // Settled by the Director when it swaps in another agent; never offered to the owner.
+  substitute: 'Switch to a substitute agent',
 };
 
 const LANE_WORD: Readonly<Record<string, string>> = {
@@ -58,7 +62,38 @@ export const FAILURE_TITLE: Readonly<Record<FailureCause, (lane?: string) => str
   max_turns: () => 'Stopped: the Worker ran out of turns',
   refused: () => 'Stopped: the Worker refused the task',
   question_timeout: () => 'Stopped: a question went unanswered',
+  no_agent_available: () => 'No agent could run this stage',
 };
+
+/** One line under a Retry that does something other than it says, or `undefined` when it does what it says. */
+export function retryHintFor(cause: FailureCause): string | undefined {
+  if (cause === 'rework_cap') {
+    return 'This gives it exactly one more attempt.';
+  }
+
+  return cause === 'no_agent_available'
+    ? 'This starts again from the agent’s first choice, with every fallback available again.'
+    : undefined;
+}
+
+/** What a failure cause means for the owner and what each way out does; `undefined` when the summary says enough. */
+export function failureHelp(
+  cause: FailureCause,
+  family: FailurePayload['error_family'],
+): string | undefined {
+  if (cause !== 'no_agent_available') {
+    return undefined;
+  }
+
+  const why =
+    family === 'model_unavailable'
+      ? 'The model it was set to is not available. '
+      : family === 'rate_limit'
+        ? 'The harness kept refusing because of rate limits. '
+        : '';
+
+  return `${why}Every place this agent can run was tried, and the Director could not switch to another agent. Retry tries again, Re-plan changes what the ticket needs, Cancel stops it.`;
+}
 
 const SIGN_OFF_TITLE: Readonly<Record<SignOffCause, string>> = {
   tier_b: 'Ready for your sign-off',
@@ -116,12 +151,17 @@ const SETTLED_VERB: Readonly<Record<string, string>> = {
   sign_off: 'Signed off and merged',
   merge_anyway: 'Merged anyway',
   continue: 'Continued as is',
+  substitute: 'Switched to a substitute agent',
 };
 
 /** "Answered by you": what was done and by whom, without a time. */
 export function settledWords(action: string, by: 'owner' | 'director' | 'auto'): string {
   if (by === 'auto') {
     return 'Resumed by itself once it was fixed';
+  }
+
+  if (action === 'substitute') {
+    return 'The Director switched to a substitute agent';
   }
 
   const verb = SETTLED_VERB[action] ?? 'Settled';

@@ -144,7 +144,10 @@ describe('Ticket page: failure escalation', () => {
     async (cause) => {
       open([failureView(cause)]);
 
-      const card = await screen.findByRole('region', { name: /^(Held|Stopped)/ });
+      const card = await screen.findByRole('region', {
+        name: /^(Held|Stopped|No agent)/,
+      });
+
       const names = within(card)
         .getAllByRole('button')
         .map((button) => button.textContent)

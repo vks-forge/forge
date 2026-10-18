@@ -203,6 +203,9 @@ export const Run = z.object({
   /** The agent that ran and the sha256 of its effective definition at start (S5a); absent on older runs. */
   agent_id: z.string().min(1).optional(),
   agent_hash: Sha256Hex.optional(),
+  /** The model the run asked for (absent: the harness's own default) and which entry of the agent's chain it ran on: 0 primary, 1+ fallback, -1 substitute (d-0080). */
+  model: z.string().min(1).max(120).optional(),
+  fallback_slot: z.number().int().min(-1).max(5).optional(),
   hook_registered_at: Timestamp.optional(),
   /** Run secret generation; absent reads as 1. A resume after a restart adds 1 (d-0100). */
   generation: z.number().int().positive().optional(),

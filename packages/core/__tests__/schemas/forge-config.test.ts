@@ -52,6 +52,7 @@ describe('default .forge/config/forge.yaml', () => {
       ticket_recover: 'opus',
       draft_agent: 'sonnet',
       ticket_check: 'opus',
+      pick_substitute: 'sonnet',
     });
 
     expect(models.worker).toEqual({

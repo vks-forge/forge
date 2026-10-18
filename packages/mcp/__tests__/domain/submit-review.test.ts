@@ -53,8 +53,10 @@ async function seedStage(
       },
       roles,
       hash: 'a'.repeat(64),
+      base_hash: 'a'.repeat(64),
       config_version: 'c1:p0',
       routed: [],
+      adjustments: [],
       created_at: T0,
       updated_at: T0,
     });

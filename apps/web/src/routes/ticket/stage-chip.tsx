@@ -6,11 +6,12 @@
  *   by the Director", "Waiting for you"); a Director check that had no plan says so; a stage the
  *   owner overruled carries an "Overruled by you" badge so a merge-anyway is never invisible; a
  *   routing rule's stage and a stage with a warning (a critic on the Worker's own model family)
- *   say so too. A writer-group member also shows the folders it may write, so side-by-side
+ *   say so too. A stage the Director added, moved or swapped carries a "Director" badge (the reason is in
+ *   its detail), and one that ran on a fallback or a substitute says so in its sub-line. A writer-group member also shows the folders it may write, so side-by-side
  *   writers are told apart by what they own. The chip is the control that opens the detail.
  *
  * Exports: StageChip.
- * Depends on: lucide-react, domain/stage-view-copy, schemas/pipelines (type).
+ * Depends on: lucide-react, domain/director-change-copy, domain/stage-view-copy, schemas/pipelines (type).
  */
 
 import {
@@ -24,6 +25,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { changeBadge, ranOnShort } from '#/domain/director-change-copy.js';
 import { stageWords } from '#/domain/stage-view-copy.js';
 import type { StageView } from '#/schemas/pipelines.js';
 
@@ -82,8 +84,14 @@ export function StageChip(props: {
             : ''}
           {props.addedByRule ? ', added by rule' : ''}
           {stage.override === undefined ? '' : ', overruled by you'}
+          {ranOnShort(stage.ran_on)}
           {stage.warnings.length > 0 ? ', has a note' : ''}
         </span>
+        {stage.changed === undefined ? null : (
+          <span className="w-fit rounded border border-signal px-1 text-xs font-medium text-fg">
+            {changeBadge(stage.changed)}
+          </span>
+        )}
         {stage.scope === undefined || stage.scope.length === 0 ? null : (
           <span className="break-all font-data text-xs text-muted">
             {stage.scope.join(', ')}

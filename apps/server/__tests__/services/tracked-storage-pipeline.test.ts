@@ -51,8 +51,10 @@ const snapshot = (id: string): TicketPipeline => ({
   },
   roles: { implementer: 'writer' },
   hash: 'a'.repeat(64),
+  base_hash: 'a'.repeat(64),
   config_version: 'c0:p0',
   routed: [],
+  adjustments: [],
   created_at: T,
   updated_at: T,
 });

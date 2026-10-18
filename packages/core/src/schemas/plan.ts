@@ -13,13 +13,14 @@
  *
  * Exports: PLAN_TICKET_SIZES, PlanTicket, PlanTickets, PlanVerification, PlanOverlap,
  *   PlanDiffEntry, PlanVersion, PlanVersionRef, FloorResult.
- * Depends on: schemas/card, schemas/ids, schemas/ticket, domain/graph-cycle, zod. No IO.
+ * Depends on: schemas/card, schemas/ids, schemas/pipeline-adjust, schemas/ticket, domain/graph-cycle, zod. No IO.
  */
 
 import { z } from 'zod';
 import { findCycle } from '#/domain/graph-cycle.js';
 import { CardPriority } from '#/schemas/card.js';
 import { CardId, TicketId } from '#/schemas/ids.js';
+import { PlanPipeline } from '#/schemas/pipeline-adjust.js';
 import { Lane } from '#/schemas/ticket.js';
 
 export const PLAN_TICKET_SIZES = ['S', 'M', 'L'] as const;
@@ -37,6 +38,8 @@ export const PlanTicket = z.object({
   lane: Lane,
   size: z.enum(PLAN_TICKET_SIZES),
   files: z.array(z.string().min(1)),
+  /** The Director's changes to this ticket's lane pipeline, each with a reason; the owner approves them with the plan. */
+  pipeline: PlanPipeline.optional(),
 });
 export type PlanTicket = z.infer<typeof PlanTicket>;
 

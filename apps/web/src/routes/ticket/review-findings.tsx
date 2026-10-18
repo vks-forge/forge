@@ -8,11 +8,13 @@
  *   decides whether to approve, so the Review tab lists each check that reported, with its
  *   counts by severity, its words and each finding itself (severity, `file:line`, what is wrong and the
  *   evidence), so the owner can open the file instead of trusting a count. The Director's check
- *   against the plan reports the same way. Nothing is shown for a ticket whose pipeline has no
+ *   against the plan reports the same way. Each finding of a review row carries the owner's "Real" /
+ *   "False alarm" toggle (components/ticket/finding-mark): the owner is the final judge of a check, and the
+ *   verdict is what the scorecards weigh most. Nothing is shown for a ticket whose pipeline has no
  *   reporting check (Express), and the full detail of any stage stays one click away on the strip.
  *
  * Exports: ReviewFindings.
- * Depends on: api/use-ticket-pipeline, components/ticket/findings-list, domain/stage-view-copy,
+ * Depends on: api/use-ticket-pipeline, components/ticket/findings-list (with marks), domain/stage-view-copy,
  *   schemas/pipelines.
  */
 
@@ -84,6 +86,11 @@ export function ReviewFindings(props: { ticketId: string }) {
               <FindingsList
                 findings={row.findings ?? row.check?.findings ?? []}
                 label={`Findings from ${row.label}`}
+                marking={
+                  row.findings !== undefined && row.row_id !== undefined
+                    ? { ticketId: props.ticketId, rowId: row.row_id, marks: row.marks }
+                    : undefined
+                }
               />
             </li>
           );

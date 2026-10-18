@@ -97,6 +97,8 @@ const DEFAULTS: Record<StepName, Scripted> = {
   // does not care about the Director's first look still ends with the owner holding the wait.
   ticket_answer: { decision: 'escalate', confidence: 0.1, grounds: [] },
   ticket_recover: { decision: 'escalate', diagnosis: 'Needs a person.', confidence: 0.1 },
+  // Unscripted, the Director pauses on a missing substitute, so the owner holds the wait (never a silent swap).
+  pick_substitute: { decision: 'pause', reason: 'No good fit; the owner decides.' },
   // The Director's check of finished work against its plan: a clean pass unless a scenario scripts otherwise.
   ticket_check: {
     verdict: 'pass',

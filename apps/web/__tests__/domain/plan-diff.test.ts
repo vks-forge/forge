@@ -86,3 +86,46 @@ describe('describeValue and diffRowsOf', () => {
     ]);
   });
 });
+
+describe('diffPlans: Director pipeline changes', () => {
+  const ops = {
+    pipeline: {
+      ops: [
+        { op: 'remove', stage_id: 'reviewer', reason: 'A reason of ten characters.' },
+      ],
+    },
+  };
+
+  it('shows a ticket as changed when a pipeline change was added between versions', () => {
+    const before = plan();
+    const after = plan({
+      tickets: [
+        { key: 't1', title: 'One', ...ops },
+        { key: 't2', title: 'Two' },
+      ],
+    });
+
+    const rows = diffPlans(before, after);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.field).toBe('Ticket t1');
+    expect(rows[0]?.after).toContain('Remove reviewer');
+    expect(rows[0]?.before).not.toContain('Remove');
+  });
+
+  it('shows a ticket as changed when the owner took the change off', () => {
+    const before = plan({ tickets: [{ key: 't1', title: 'One', ...ops }] });
+    const after = plan({ tickets: [{ key: 't1', title: 'One' }] });
+
+    const rows = diffPlans(before, after);
+
+    expect(rows[0]?.before).toContain('Remove reviewer');
+    expect(rows[0]?.after).not.toContain('Remove');
+  });
+
+  it('has no row for equal pipeline changes', () => {
+    const same = plan({ tickets: [{ key: 't1', title: 'One', ...ops }] });
+
+    expect(diffPlans(same, structuredClone(same))).toEqual([]);
+  });
+});

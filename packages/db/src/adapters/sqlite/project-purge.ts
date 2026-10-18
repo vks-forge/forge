@@ -49,6 +49,7 @@ export function purgeProject(driver: SqlDriver, slug: string): boolean {
   );
 
   // Artifacts point at stage rows, which point at tickets: leaf first.
+  del(`DELETE FROM finding_marks WHERE ticket_id IN (${TICKETS})`);
   del(`DELETE FROM stage_artifacts WHERE ticket_id IN (${TICKETS})`);
   del(`DELETE FROM stage_runs WHERE ticket_id IN (${TICKETS})`);
   del(`DELETE FROM ticket_pipelines WHERE ticket_id IN (${TICKETS})`);
@@ -69,6 +70,7 @@ export function purgeProject(driver: SqlDriver, slug: string): boolean {
 
   del('DELETE FROM cards WHERE project = ?');
   del('DELETE FROM inbox_states WHERE project = ?');
+  del('DELETE FROM pipeline_proposals WHERE project = ?');
 
   return driver.run('DELETE FROM projects WHERE slug = ?', [slug]).changes > 0;
 }

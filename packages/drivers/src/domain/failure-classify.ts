@@ -12,7 +12,9 @@
  *   not recognise becomes `unknown`, never `completed` (fail closed). A used-up account
  *   ("The Claude account has no available quota.", a rejected rate-limit report) is `quota`,
  *   not `rate_limit`: a short backoff cannot fix it, so the engine parks the whole harness
- *   until the reset time the harness named (d-0097); a plain 429 stays `rate_limit`.
+ *   until the reset time the harness named (d-0097); a plain 429 stays `rate_limit`. A model the harness cannot
+ *   serve (unknown, retired, not allowed) is `model_unavailable`: the agent's fallback list takes over, never a
+ *   retry on the same model; the pattern is narrow so anything else stays `unknown`.
  *
  * Exports: classifyStopReason(), classifyRejection(), classifyCliResult(), classifyText(),
  *   retryNotBeforeFrom(), quotaEnd(), resetFromText(), AUTH_REQUIRED_CODE.
@@ -29,6 +31,14 @@ export const AUTH_REQUIRED_CODE = -32000;
 
 const QUOTA =
   /no available quota|quota (exceeded|exhausted|reached)|out of (extra )?usage|usage limit|hit your .{0,24}limit|limit reached/i;
+
+/**
+ * The harness cannot serve the model: unknown, retired or not allowed for this account. Deliberately narrow:
+ * the text must name the model and say it is missing, so an unrelated 404 or a generic error stays `unknown`
+ * (a crash retry) and is never read as "swap the model".
+ */
+const MODEL_GONE =
+  /unknown model|invalid model|no such model|model.{0,40}(not found|not available|does not exist|is not supported|has been retired|deprecated)|(not found|does not exist).{0,20} model/i;
 
 const RATE = /rate.?limit|\b429\b|overloaded|too many requests/i;
 const AUTH =
@@ -107,6 +117,10 @@ export function classifyText(text: string, rate: () => string): EngineEnd {
 
   if (RATE.test(text)) {
     return { kind: 'rate_limit', detail: text, retryNotBefore: rate() };
+  }
+
+  if (MODEL_GONE.test(text)) {
+    return { kind: 'model_unavailable', detail: text };
   }
 
   if (AUTH.test(text)) {
@@ -196,6 +210,10 @@ export function classifyCliResult(r: CliResultLine, rate: () => string): EngineE
     return QUOTA.test(text)
       ? quotaEnd(text, null)
       : { kind: 'rate_limit', detail: text, retryNotBefore: rate() };
+  }
+
+  if (r.api_error_status === 404 && MODEL_GONE.test(text)) {
+    return { kind: 'model_unavailable', detail: text };
   }
 
   if (r.api_error_status === 401 || r.api_error_status === 403) {

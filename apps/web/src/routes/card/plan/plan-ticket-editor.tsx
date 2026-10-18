@@ -8,11 +8,12 @@
  *   edits are saved, so a slip costs nothing. Save sends one request for the whole batch and
  *   stays disabled until something changed; Discard drops the draft. A refusal from the server
  *   (for example a removed ticket others depend on) is shown right here in words and the draft
- *   is kept, so nothing typed is lost.
+ *   is kept, so nothing typed is lost. A ticket the Director gave pipeline changes lists them under its row,
+ *   each with a button to take it off (never to add one), undoable until saved.
  *
  * Exports: PlanTicketEditor.
  * Depends on: react, lucide-react, components/ui/button, components/ui/field, components/ui/picker,
- *   domain/plan-edit, domain/priority, types/plan.types.
+ *   routes/card/plan/plan-pipeline-ops, domain/plan-edit, domain/priority, types/plan.types.
  */
 
 import { ArrowDown, ArrowUp, RotateCcw, Trash2 } from 'lucide-react';
@@ -20,9 +21,10 @@ import type { ReactNode } from 'react';
 import { Button } from '#/components/ui/button.js';
 import { INPUT_CLASS } from '#/components/ui/field.js';
 import { Picker } from '#/components/ui/picker.js';
-import { moveDraft, patchDraft } from '#/domain/plan-edit.js';
+import { moveDraft, patchDraft, toggleDropOp } from '#/domain/plan-edit.js';
 import { PRIORITY_LABEL, PRIORITY_ORDER } from '#/domain/priority.js';
-import type { PlanPriority } from '#/schemas/plan.js';
+import { PlanOpsEditor } from '#/routes/card/plan/plan-pipeline-ops.js';
+import type { PlanPriority, PlanTicket } from '#/schemas/plan.js';
 import type { DraftTicket } from '#/types/plan.types.js';
 
 const PRIORITIES = PRIORITY_ORDER.map((value) => ({
@@ -51,6 +53,7 @@ function IconButton(props: {
 }
 
 export function PlanTicketEditor(props: {
+  tickets: readonly PlanTicket[];
   draft: readonly DraftTicket[];
   onChange: (next: readonly DraftTicket[]) => void;
   canSave: boolean;
@@ -60,6 +63,7 @@ export function PlanTicketEditor(props: {
   onDiscard: () => void;
 }) {
   const { draft, onChange } = props;
+  const planned = new Map(props.tickets.map((t) => [t.key, t]));
 
   return (
     <div className="grid gap-3">
@@ -125,6 +129,16 @@ export function PlanTicketEditor(props: {
                 )}
               </IconButton>
             </div>
+            {planned.get(ticket.key) === undefined ? null : (
+              <PlanOpsEditor
+                ticket={planned.get(ticket.key) as PlanTicket}
+                dropped={ticket.dropOps}
+                disabled={ticket.removed}
+                onToggle={(position) =>
+                  onChange(toggleDropOp(draft, ticket.key, position))
+                }
+              />
+            )}
           </li>
         ))}
       </ol>

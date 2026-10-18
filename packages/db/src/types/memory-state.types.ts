@@ -23,7 +23,9 @@ import type {
   HarnessState,
   GithubConnection,
   HarnessToolSchema,
+  FindingMark,
   InboxStateRow,
+  PipelineProposal,
   PlanVersion,
   HarnessVersion,
   Interaction,
@@ -98,4 +100,10 @@ export interface MemoryState {
   stageArtifacts: StageArtifact[];
   /** Last stage artifact id handed out. */
   stageArtifactSeq: number;
+  /** Pipeline proposals in id order; (project, lane, key, base_hash) is unique in every status. */
+  pipelineProposals: PipelineProposal[];
+  /** Last proposal id handed out. */
+  proposalSeq: number;
+  /** The owner's marks on findings, one per (stage run, finding index). */
+  findingMarks: (FindingMark & { ticket_id: string })[];
 }

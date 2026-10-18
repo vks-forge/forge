@@ -10,11 +10,13 @@
  *   in place. The strip follows the ticket: the server announces every stage write on the project
  *   stream and the strip refetches at once (api/use-ticket-pipeline), with a slow poll behind it.
  *   The Director check and the sign-off are stages of their own, and the members of a group sit
- *   side by side inside a dashed frame so "run together" is visible. Before the first dispatch there is no pipeline to show, and the strip
+ *   side by side inside a dashed frame so "run together" is visible. When the Director changed this ticket's own
+ *   copy of the lane, a "Changed by the Director (N changes)" line opens the log (applied and not applied), changed
+ *   chips carry a badge and a stage the Director removed stays as a dashed ghost with its reason. Before the first dispatch there is no pipeline to show, and the strip
  *   says when it will start; it never shows an empty frame.
  *
  * Exports: PipelineStrip.
- * Depends on: react, api/use-ticket-pipeline, routes/ticket/{stage-chip,stage-detail},
+ * Depends on: react, api/use-ticket-pipeline, routes/ticket/{director-changes,stage-chip,stage-detail},
  *   components/status/state-panel, domain/stage-view-copy, schemas/pipelines.
  */
 
@@ -28,6 +30,7 @@ import {
   reworkBadge,
   ruleFor,
 } from '#/domain/stage-view-copy.js';
+import { DirectorChangesBar, RemovedGhost } from '#/routes/ticket/director-changes.js';
 import { StageChip } from '#/routes/ticket/stage-chip.js';
 import { StageDetail } from '#/routes/ticket/stage-detail.js';
 import type { StageView } from '#/schemas/pipelines.js';
@@ -86,6 +89,8 @@ export function PipelineStrip(props: { slug: string; ticketId: string }) {
         ) : null}
       </div>
 
+      <DirectorChangesBar adjustments={pipeline.adjustments} />
+
       <ol aria-label="Pipeline stages" className="flex flex-wrap items-start gap-2">
         {pipeline.stages.map((stage) => {
           const chip = (member: StageView) => (
@@ -119,6 +124,11 @@ export function PipelineStrip(props: { slug: string; ticketId: string }) {
             </li>
           );
         })}
+        {pipeline.removed.map((removed) => (
+          <li key={`removed-${removed.id}`}>
+            <RemovedGhost removed={removed} />
+          </li>
+        ))}
       </ol>
 
       {open ? (

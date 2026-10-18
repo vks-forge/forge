@@ -19,6 +19,8 @@ import { parseStored } from '#/shared/db-errors.js';
 import { dropNulls, fromJson, toJson } from '#/shared/json.js';
 import type { SqlDriver, SqlRow, SqlValue } from '#/types/storage-driver.types.js';
 
+const MAX_BATCH = 500;
+
 const toRun = (row: SqlRow): StageRun => {
   const { outcome_json: outcomeJson, ...rest } = row;
 
@@ -88,6 +90,23 @@ export function createStageRunRepository(driver: SqlDriver): StageRunRepository 
     async listByTicket(ticketId) {
       return driver
         .all('SELECT * FROM stage_runs WHERE ticket_id = ? ORDER BY id', [ticketId])
+        .map(toRun);
+    },
+
+    async listByTickets(ticketIds) {
+      if (ticketIds.length === 0) {
+        return [];
+      }
+
+      if (ticketIds.length > MAX_BATCH) {
+        throw new UnknownForgeError(`at most ${MAX_BATCH} tickets per read`);
+      }
+
+      return driver
+        .all(
+          `SELECT * FROM stage_runs WHERE ticket_id IN (${ticketIds.map(() => '?').join(', ')}) ORDER BY id`,
+          [...ticketIds],
+        )
         .map(toRun);
     },
 

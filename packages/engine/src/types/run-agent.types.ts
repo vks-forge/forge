@@ -25,4 +25,10 @@ export interface ResolvedAgent {
   readonly modelChoice: ModelChoice;
   /** Harnesses to try, in order, instead of the company list; empty means the company list applies. */
   readonly fallbackHarnesses: readonly string[];
+  /**
+   * Which entry of the agent's `[primary, ...fallbacks]` chain this run uses: absent or 0 is its own `runs_on`,
+   * above 0 a fallback entry (the harness and model above already are that entry's), -1 a substitute the Director
+   * picked for a failed agent. Recorded on the run row.
+   */
+  readonly slot?: number | undefined;
 }

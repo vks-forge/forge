@@ -124,6 +124,18 @@ export function DirectorPage() {
               />
             </SettingsSection>
             <SettingsSection
+              id="pipelines"
+              title="Ticket pipelines"
+              description="Whether the Director may adjust a ticket’s own copy of its lane, and when it suggests a change to the project’s lane. It never changes your lane on its own."
+            >
+              <ConfigFields
+                fields={DIRECTOR_FIELDS.pipelines}
+                config={config}
+                errors={draft.errors}
+                onChange={set}
+              />
+            </SettingsSection>
+            <SettingsSection
               id="timeouts"
               title="Step timeouts"
               description="How long each step may run before Forge gives up on it and retries or asks you."

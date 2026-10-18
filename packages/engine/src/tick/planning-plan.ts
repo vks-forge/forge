@@ -5,7 +5,9 @@
  *   the survey and the verify findings into one versioned, fixed-structure plan (d-0132); the
  *   engine, not the model, fills the decisions (from the stored answers) and the verification
  *   block (from the verify findings and the files it recorded reading), so the plan cannot drift
- *   from what was asked and found, and the approval floor reads facts the model cannot edit. A
+ *   from what was asked and found, and the approval floor reads facts the model cannot edit. The planner may also
+ *   tailor a ticket's pipeline; each op is checked against the lane here and only the ops that hold are kept, the
+ *   others named under the risks. A
  *   revision after Request changes carries a computed diff from the version before.
  *   Approval then runs in the strictest order: the deterministic floor first, and only a plan
  *   that passes (with approval mode "director or user") reaches the tool-less approval step,
@@ -14,7 +16,7 @@
  *   with Approve and Request changes available, never at a dead end (d-0135).
  *
  * Exports: writePlanStep(), approveStep().
- * Depends on: @forge/core (plan schemas and rules), tick/planning-input, tick/planning-floor,
+ * Depends on: @forge/core (plan schemas and rules), tick/planning-input, tick/planning-floor, tick/planning-pipelines,
  *   tick/planning-state, tick/planning-step-io, tick/planning-steps, tick/plan-to-tickets,
  *   tick/card-phase, types/card-planning. Writes storage.
  */
@@ -25,6 +27,7 @@ import { moveCardTx } from '#/tick/card-phase.js';
 import { approvePlanTx } from '#/tick/plan-to-tickets.js';
 import { buildApprovalInput, buildStepInput } from '#/tick/planning-input.js';
 import { computeFloor, factsOf } from '#/tick/planning-floor.js';
+import { pipelinesInput, vetPipelineOps } from '#/tick/planning-pipelines.js';
 import {
   askOwner,
   enterVerifying,
@@ -63,6 +66,9 @@ async function composePlan(
     return found;
   });
 
+  // The planner's pipeline ops are untrusted: only those that hold on their lane stay, the rest are named under the risks.
+  const vetted = vetPipelineOps(pc, body.tickets, stamp(pc));
+
   const plan = PlanVersion.parse({
     card_id: pc.card.id,
     version: (previous?.version ?? 0) + 1,
@@ -83,10 +89,10 @@ async function composePlan(
       rejected_hits: verify?.rejected_hits ?? [],
       risks: mergeUnique(
         mergeUnique(verify?.risks ?? [], grill.survey?.risks ?? []),
-        body.risks,
+        mergeUnique(body.risks, vetted.notes),
       ),
     },
-    tickets: body.tickets,
+    tickets: vetted.tickets,
     card_links: links,
     enhance_report: grill.enhance_report,
   });
@@ -105,6 +111,7 @@ export async function writePlanStep(
   const previous = await latestPlanOf(pc);
   const input = await buildStepInput(pc, planning.grill, step, previous, {
     grill_decisions: planning.grill.answers,
+    pipelines: await pipelinesInput(pc),
   });
 
   const call = await callStep(pc, step, 'write_plan', WritePlanOutput, input);

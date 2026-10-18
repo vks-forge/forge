@@ -13,7 +13,7 @@
  *
  * Exports: sweepEscalations().
  * Depends on: @forge/core (escalation view, ticket rules), tick/escalation-answer-step,
- *   tick/escalation-recover-step, tick/escalation-raise, tick/escalation-settle, tick/planning-state.
+ *   tick/escalation-recover-step, tick/escalation-substitute-step, tick/escalation-raise, tick/escalation-settle, tick/planning-state.
  *   Reads and writes storage.
  */
 
@@ -22,6 +22,7 @@ import type { CardId, Interaction, Ticket, TicketId } from '@forge/core';
 import { isCardClosed } from '#/tick/card-close.js';
 import { lookAtQuestion } from '#/tick/escalation-answer-step.js';
 import { lookAtFailure } from '#/tick/escalation-recover-step.js';
+import { lookAtNoAgent } from '#/tick/escalation-substitute-step.js';
 import { handToOwner } from '#/tick/escalation-raise.js';
 import { cancelLeftovers } from '#/tick/escalation-settle.js';
 import { directorFor } from '#/tick/planning-state.js';
@@ -88,7 +89,10 @@ async function lookAt(ctx: EngineCtx, row: Interaction): Promise<void> {
   }
 
   if (view.payload.kind === 'failure') {
-    return lookAtFailure(ctx, row, ticket, view.payload);
+    // A stage that ran out of places to run is for a substitute, not for one more try with a note.
+    return view.payload.cause === 'no_agent_available'
+      ? lookAtNoAgent(ctx, row, ticket, view.payload)
+      : lookAtFailure(ctx, row, ticket, view.payload);
   }
 }
 

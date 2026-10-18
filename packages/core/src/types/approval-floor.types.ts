@@ -7,7 +7,7 @@
  *   globs of the project, the files other approved cards plan to touch, and the files under
  *   the plan that changed in git since the plan was verified.
  *
- * Exports: OtherCardFiles, ApprovalFloorInput.
+ * Exports: OtherCardFiles, LighterEntry, ApprovalFloorInput.
  * Depends on: schemas/ids, schemas/plan. Types only.
  */
 
@@ -20,10 +20,18 @@ export interface OtherCardFiles {
   readonly files: readonly string[];
 }
 
+/** A planned ticket whose pipeline the Director made lighter than its lane's: what it removes (agent or stage names). */
+export interface LighterEntry {
+  readonly key: string;
+  readonly removed: readonly string[];
+}
+
 export interface ApprovalFloorInput {
   readonly plan: Pick<PlanVersion, 'tickets' | 'verification'>;
   readonly tierCGlobs: readonly string[];
   readonly otherPlannedFiles: readonly OtherCardFiles[];
   /** Files under the plan that changed between the plan's `base_sha` and HEAD. */
   readonly changedSinceBase: readonly string[];
+  /** Tickets whose planned pipeline removes a stage of the lane's list: a person approves those (d-0141 item 6). */
+  readonly lighter?: readonly LighterEntry[];
 }

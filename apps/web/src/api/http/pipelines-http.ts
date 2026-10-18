@@ -16,6 +16,7 @@
 import { requestJson } from '#/api/http/request-json.js';
 import {
   CompanyPipelinesReply,
+  MarkFindingReply,
   PipelineDefinition,
   ProjectPipelinesReply,
   StageArtifact,
@@ -111,6 +112,17 @@ export function createPipelinesHttp(client: HttpClientOptions): PipelinesApi {
         `/tickets/${enc(id)}/pipeline`,
         TicketPipelineReply,
         options,
+      );
+
+      return reply.pipeline;
+    },
+
+    async markFinding(ticketId, rowId, index, verdict) {
+      const reply = await requestJson(
+        client,
+        `/tickets/${enc(ticketId)}/findings/${rowId}/${index}/mark`,
+        MarkFindingReply,
+        { method: 'PUT', body: { verdict } },
       );
 
       return reply.pipeline;

@@ -25,9 +25,17 @@ describe('Test agent', () => {
 
     expect(
       screen.getByText(
-        /Spends one short model call \(up to \$0\.10\) on the project’s default harness/,
+        /one question — "In one line, state your role and the first rule in your instructions\."/,
       ),
     ).toBeVisible();
+
+    expect(
+      screen.getByText(
+        /Spends one model call on the project’s default harness, with no tools/,
+      ),
+    ).toBeVisible();
+
+    expect(screen.queryByText(/\$0\.10/)).toBeNull();
 
     expect(forge.stub.callsTo('POST /agents/test')).toHaveLength(0);
 

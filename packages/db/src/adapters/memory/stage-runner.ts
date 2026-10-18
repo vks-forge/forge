@@ -75,6 +75,27 @@ export function memoryTicketPipelines(state: MemoryState): TicketPipelineReposit
       need(s.ticket_id);
       state.ticketPipelines.set(s.ticket_id, structuredClone(s));
     },
+
+    async adjust(ticketId, update) {
+      const next = TicketPipeline.parse({
+        ...need(ticketId),
+        definition: update.definition,
+        hash: update.hash,
+        ...(update.roles === undefined ? {} : { roles: update.roles }),
+        adjustments: update.adjustments,
+        updated_at: update.at,
+      });
+
+      state.ticketPipelines.set(ticketId, structuredClone(next));
+    },
+
+    async listByTickets(ticketIds) {
+      const wanted = new Set<string>(ticketIds);
+
+      return [...state.ticketPipelines.values()]
+        .filter((p) => wanted.has(p.ticket_id))
+        .map((p) => structuredClone(p));
+    },
   };
 }
 
@@ -125,6 +146,12 @@ export function memoryStageRuns(state: MemoryState): StageRunRepository {
 
     async listByTicket(ticketId) {
       return structuredClone(state.stageRuns.filter((r) => r.ticket_id === ticketId));
+    },
+
+    async listByTickets(ticketIds) {
+      const wanted = new Set<string>(ticketIds);
+
+      return structuredClone(state.stageRuns.filter((r) => wanted.has(r.ticket_id)));
     },
 
     async getByRun(runId) {

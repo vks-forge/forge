@@ -9,9 +9,10 @@
  *
  * Exports: TicketPipelineRepository, StageRunRepository, StageArtifactRepository, NewStageRun,
  *   StageRunPatch, NewStageArtifact, StageArtifactMeta.
- * Depends on: schemas/pipeline, schemas/stage-run. Types only.
+ * Depends on: schemas/pipeline, schemas/pipeline-adjust, schemas/stage-run. Types only.
  */
 
+import type { PipelineAdjustment } from '#/schemas/pipeline-adjust.js';
 import type { PipelineDefinition } from '#/schemas/pipeline.js';
 import type {
   RoutedStage,
@@ -36,8 +37,25 @@ export interface TicketPipelineRepository {
       at: string;
     },
   ): Promise<void>;
-  /** Replaces lane, definition, roles, hash, config version and routed (a heavier lane re-snapshots). */
+  /** Replaces lane, definition, roles, hash, base hash, config version, routed and the adjustment log (a heavier lane re-snapshots). */
   replace(snapshot: TicketPipeline): Promise<void>;
+  /**
+   * Stores the Director's change to the copy: the new definition and hash and the full adjustment log,
+   * in one write. The one writer is the engine's `adjustTicketPipelineTx`; a missing ticket throws.
+   */
+  adjust(
+    ticketId: string,
+    update: {
+      definition: PipelineDefinition;
+      hash: string;
+      /** The role of every agent on the copy; absent keeps the stored roles (an add or swap brings in new agents). */
+      roles?: TicketPipeline['roles'];
+      adjustments: readonly PipelineAdjustment[];
+      at: string;
+    },
+  ): Promise<void>;
+  /** The snapshots of up to 500 tickets (ids with none are absent), for the scorecards and the proposal history. */
+  listByTickets(ticketIds: readonly string[]): Promise<TicketPipeline[]>;
 }
 
 /** What a new stage attempt carries; storage assigns the id and an empty outcome. */
@@ -67,6 +85,8 @@ export interface StageRunRepository {
   ): Promise<StageRun | null>;
   /** Every attempt of the ticket, oldest first. */
   listByTicket(ticketId: string): Promise<StageRun[]>;
+  /** Every attempt of up to 500 tickets, oldest first (the scorecards read this in one go). */
+  listByTickets(ticketIds: readonly string[]): Promise<StageRun[]>;
   /** One attempt by its row id, or null (the live strip resolves a finished row's ticket through this). */
   get(id: number): Promise<StageRun | null>;
   /** The attempt a run belongs to, or null (a writer run of a ticket with no pipeline, a legacy run). */

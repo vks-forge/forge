@@ -3,14 +3,15 @@
  *
  * Why: after "what is it doing?" comes "how many tries has it taken and what did they cost?".
  *   The list shows each run newest first with its status (a word and an icon), harness, when it
- *   started, how long it ran (or "running"), whether it retried another, and its cost: the
+ *   started, how long it ran (or "running"), whether it retried another, the model it used and whether it
+ *   ran on a fallback or as a substitute (who wrote the code), and its cost: the
  *   recorded dollars, or "not recorded" when the harness reported none, never `$0.00`. Picking a
  *   run opens it in the Conversation tab (`?run=`), so the thread of that attempt is one click
  *   away and the link can be shared.
  *
  * Exports: RunsTab.
  * Depends on: react, react-router, lucide-react, components/cost/cost-chip, components/ticket/*,
- *   components/ui/empty-state, domain/relative-time, domain/run-status, domain/stats-format,
+ *   components/ui/empty-state, domain/director-change-copy, domain/relative-time, domain/run-status, domain/stats-format,
  *   domain/ticket-paths, state/use-now, schemas/tickets (type).
  */
 
@@ -19,6 +20,7 @@ import { Link } from 'react-router';
 import { CostChip } from '#/components/cost/cost-chip.js';
 import { RunChip } from '#/components/ticket/status-chips.js';
 import { EmptyState } from '#/components/ui/empty-state.js';
+import { slotWords } from '#/domain/director-change-copy.js';
 import { timeAgo } from '#/domain/relative-time.js';
 import { isRunLive } from '#/domain/run-status.js';
 import { formatDuration } from '#/domain/stats-format.js';
@@ -73,7 +75,16 @@ export function RunsTab(props: {
                   <RunChip status={run.status} />
                 </span>
                 <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-                  <span>{run.harness}</span>
+                  <span>
+                    {run.model === undefined
+                      ? run.harness
+                      : `${run.harness} · ${run.model}`}
+                  </span>
+                  {slotWords(run.fallback_slot) === undefined ? null : (
+                    <span className="font-medium text-fg">
+                      {slotWords(run.fallback_slot)}
+                    </span>
+                  )}
                   <span>started {timeAgo(run.started_at, now)}</span>
                   <span>
                     <span className="sr-only">Duration </span>

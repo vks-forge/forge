@@ -124,6 +124,23 @@ export function directorIssues(
     );
   }
 
+  if (value.pipelines) {
+    const {
+      propose_after: after,
+      propose_min_cards: cards,
+      propose_window_days: days,
+    } = seen.pipelines;
+
+    const within = (n: number, lo: number, hi: number): boolean =>
+      Number.isInteger(n) && n >= lo && n <= hi;
+
+    if (!(within(after, 2, 10) && within(cards, 1, 5) && within(days, 7, 90))) {
+      out.push(
+        'Suggestions need 2 to 10 tickets, 1 to 5 cards and 7 to 90 days, all whole numbers.',
+      );
+    }
+  }
+
   if (value.step_timeouts_ms && !Object.values(seen.step_timeouts_ms).every(whole)) {
     out.push('Every step timeout must be a whole number of 1 or more.');
   }

@@ -6,11 +6,20 @@
  *   fresh effective view of every lane (and, for a project, its routing rules) with the version
  *   the next write must carry.
  *
- * Exports: CompanyPipelinesReply, ProjectLaneView, ProjectPipelinesReply, PipelineCheck, PipelineStore.
+ * Exports: CompanyPipelinesReply, ProjectLaneView, ProjectPipelinesReply, PipelineCheck, ProposalDoors, PipelineStore.
  * Depends on: @forge/core, schemas/pipeline-api. Types only.
  */
 
-import type { Lane, PipelineProblem, PipelineView, RoutingRule } from '@forge/core';
+import type {
+  AcceptProposalBody,
+  Lane,
+  PipelineProblem,
+  PipelineProposal,
+  PipelineProposalView,
+  PipelineView,
+  RejectProposalBody,
+  RoutingRule,
+} from '@forge/core';
 import type {
   PipelineResetBody,
   PipelineSaveBody,
@@ -40,8 +49,30 @@ export interface PipelineCheck {
   readonly warnings: string[];
 }
 
+/** The owner's doors on the Director's pipeline proposals: the only writers of a decided proposal. */
+export interface ProposalDoors {
+  /** A project's proposals, newest first, beside the lane list as it is now; `pending` narrows. 404 `project_not_found`. */
+  proposals(slug: string, status: 'pending' | 'all'): Promise<PipelineProposalView[]>;
+  /**
+   * Accepts a pending proposal through the pipeline save door. 404 `proposal_not_found`; 409 `not_pending`,
+   * `proposal_stale` (the lane changed since: the proposal is marked stale and nothing is written),
+   * `version_conflict`; 400 `pipeline_invalid` (the roster changed since).
+   */
+  acceptProposal(
+    slug: string,
+    id: string,
+    body: AcceptProposalBody,
+  ): Promise<{ proposal: PipelineProposal; pipelines: ProjectPipelinesReply }>;
+  /** Rejects a pending proposal with a reason, for good (the same change on the same base is never proposed again). */
+  rejectProposal(
+    slug: string,
+    id: string,
+    body: RejectProposalBody,
+  ): Promise<{ proposal: PipelineProposal }>;
+}
+
 /** Every pipeline read and write; each write is one `ConfigSource.append` (the one door for pipeline config). */
-export interface PipelineStore {
+export interface PipelineStore extends ProposalDoors {
   company(): Promise<CompanyPipelinesReply>;
   saveCompany(lane: string, body: PipelineSaveBody): Promise<CompanyPipelinesReply>;
   resetCompany(lane: string, body: PipelineResetBody): Promise<CompanyPipelinesReply>;

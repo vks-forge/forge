@@ -68,6 +68,12 @@ export const RunsOn = z.object({
   harness: HarnessRef,
   model: ModelChoice,
   fallbacks: z.array(AgentFallback).max(MAX_AGENT_FALLBACKS),
+  /**
+   * What happens when the primary and every fallback fail: the Director picks a substitute agent, or
+   * the ticket pauses for the owner. Absent reads as `director_substitute`; no default is written so
+   * stored agent hashes do not change.
+   */
+  on_exhausted: z.enum(['director_substitute', 'pause']).optional(),
 });
 export type RunsOn = z.infer<typeof RunsOn>;
 

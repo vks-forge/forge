@@ -58,6 +58,8 @@ export interface DraftTicket {
   readonly title: string;
   readonly priority: PlanPriority;
   readonly removed: boolean;
+  /** Positions of the Director's pipeline ops the owner took off this ticket (they may drop an op, never add one). */
+  readonly dropOps: readonly number[];
 }
 
 /** The `PATCH /cards/:id/plan/:version/tickets` body. */
@@ -67,6 +69,7 @@ export interface PlanEditBody {
     readonly title?: string;
     readonly priority?: PlanPriority;
     readonly removed?: boolean;
+    readonly drop_pipeline_ops?: readonly number[];
   }[];
   readonly order?: readonly string[];
 }

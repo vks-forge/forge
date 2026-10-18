@@ -6,15 +6,21 @@
  *   word (never colour alone), the `file:line` to open, what is wrong and the evidence the check
  *   gave, which is required by the schema so no finding is only an opinion. The same list is used
  *   in the held-decision card, the Review tab and a stage's detail, so a finding reads the same
- *   wherever the owner meets it.
+ *   wherever the owner meets it. Where the list comes from a stored review row (`marking`), each
+ *   finding also carries the owner's "Real" / "False alarm" toggle; the toggle is keyed by the
+ *   finding's position in the check's own list, not its place in the sorted display.
  *
  * Exports: FindingsList.
- * Depends on: domain/finished-work-copy, domain/pipeline-copy, @forge/core (type).
+ * Depends on: components/ticket/finding-mark, domain/finding-marks, domain/finished-work-copy,
+ *   domain/pipeline-copy, types/finding-marks.types, @forge/core (type).
  */
 
 import type { Finding } from '@forge/core';
-import { bySeverity, whereOf } from '#/domain/finished-work-copy.js';
+import { FindingMarkToggle } from '#/components/ticket/finding-mark.js';
+import { verdictAt } from '#/domain/finding-marks.js';
+import { indexedBySeverity, whereOf } from '#/domain/finished-work-copy.js';
 import { SEVERITY_LABEL } from '#/domain/pipeline-copy.js';
+import type { FindingMarking } from '#/types/finding-marks.types.js';
 
 const TONE: Readonly<Record<Finding['severity'], string>> = {
   critical: 'border-danger bg-danger-soft',
@@ -23,14 +29,18 @@ const TONE: Readonly<Record<Finding['severity'], string>> = {
   low: 'border-line bg-surface',
 };
 
-export function FindingsList(props: { findings: readonly Finding[]; label: string }) {
+export function FindingsList(props: {
+  findings: readonly Finding[];
+  label: string;
+  marking?: FindingMarking | undefined;
+}) {
   if (props.findings.length === 0) {
     return null;
   }
 
   return (
     <ul aria-label={props.label} className="grid min-w-0 gap-2">
-      {bySeverity(props.findings).map((finding, index) => {
+      {indexedBySeverity(props.findings).map(({ finding, index }) => {
         const where = whereOf(finding);
 
         return (
@@ -48,6 +58,14 @@ export function FindingsList(props: { findings: readonly Finding[]; label: strin
             <p className="min-w-0 whitespace-pre-wrap break-words text-xs text-muted">
               {finding.evidence}
             </p>
+            {props.marking === undefined ? null : (
+              <FindingMarkToggle
+                ticketId={props.marking.ticketId}
+                rowId={props.marking.rowId}
+                index={index}
+                verdict={verdictAt(props.marking.marks, index)}
+              />
+            )}
           </li>
         );
       })}

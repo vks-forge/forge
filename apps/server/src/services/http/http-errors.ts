@@ -78,6 +78,7 @@ const STATUS_BY_FAMILY: Readonly<Record<ErrorFamily, number>> = {
   refusal: 500,
   crash: 500,
   unknown: 500,
+  model_unavailable: 500,
 };
 
 /**
@@ -96,6 +97,7 @@ const FAMILY_MESSAGE: Readonly<Record<ErrorFamily, string>> = {
   refusal: 'internal server error',
   crash: 'internal server error',
   unknown: 'internal server error',
+  model_unavailable: 'internal server error',
 };
 
 /** Status for any thrown value; anything not a ForgeError is 500. */

@@ -6,7 +6,8 @@
  *   may be hostile or simply wrong. The floor is plain code over typed facts. It refuses when
  *   a planned file is a Tier C path (a human signs those, d-0012), when verification matched a
  *   rejected approach, when another card with an approved, unfinished plan plans to touch the
- *   same file, or when git shows a file under the plan changed since the plan was verified.
+ *   same file, when git shows a file under the plan changed since the plan was verified, or when a ticket's
+ *   planned pipeline removes a stage of its lane's list (a lighter pipeline needs a person's say-so).
  *   It can only make approval stricter: a pass means "the Director may decide", never "approve".
  *   Budget is not a condition (d-0143).
  *
@@ -51,6 +52,12 @@ export function checkFloor(input: ApprovalFloorInput): FloorResult {
   const moved = [...new Set(input.changedSinceBase.map(norm))];
   if (moved.length > 0) {
     reasons.push(`changed since the plan was verified: ${moved.join(', ')}`);
+  }
+
+  for (const l of input.lighter ?? []) {
+    reasons.push(
+      `${l.key} runs a lighter pipeline than its lane (removes ${l.removed.join(', ')})`,
+    );
   }
 
   return { pass: reasons.length === 0, reasons };

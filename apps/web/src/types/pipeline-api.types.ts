@@ -15,6 +15,7 @@
  */
 
 import type {
+  FindingVerdict,
   Lane,
   PipelineDefinition,
   PipelineProblem,
@@ -78,6 +79,13 @@ export interface PipelinesApi {
   validate(body: ValidateBody, options?: RequestOptions): Promise<ValidateResult>;
   /** `null` before the ticket's first dispatch. */
   ticket(id: string, options?: RequestOptions): Promise<TicketPipelineView | null>;
+  /** Marks one finding of a stage row "real" or "false alarm"; `null` clears the mark. */
+  markFinding(
+    ticketId: string,
+    rowId: number,
+    index: number,
+    verdict: FindingVerdict | null,
+  ): Promise<TicketPipelineView>;
   artifact(
     ticketId: string,
     artifactId: number,

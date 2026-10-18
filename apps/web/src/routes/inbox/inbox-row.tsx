@@ -7,7 +7,8 @@
  *   item so a screen reader hears "Archive: Worker asks about migrations". Controls are 44 px
  *   on a phone. They are held while offline, because a mark that cannot be saved would only
  *   bounce back. An item that carries an escalation (a ticket waiting on the owner) gets a primary
- *   "Respond" button that opens the escalation card, so the owner can act without leaving the list.
+ *   "Respond" button that opens the escalation card, so the owner can act without leaving the list; a Director
+ *   pipeline suggestion gets "Review", which opens it for Accept or Reject the same way.
  *
  * Exports: InboxRow, INBOX_ROW_HEIGHT.
  * Depends on: react-router, lucide-react, @forge/core (type), components/inbox/kind-chip, components/ui/button, components/ui/tooltip,
@@ -57,6 +58,8 @@ export function InboxRow(props: {
   onMark: (item: InboxItem, mark: InboxMarkName) => void;
   /** Opens the escalation card for an item that carries one. */
   onRespond: (item: InboxItem) => void;
+  /** Opens a Director pipeline suggestion, to accept or reject it. */
+  onReview: (item: InboxItem) => void;
   marksDisabled: boolean;
 }) {
   const { item } = props;
@@ -92,6 +95,15 @@ export function InboxRow(props: {
           onClick={() => props.onRespond(item)}
         >
           Respond
+        </Button>
+      ) : null}
+      {item.kind === 'pipeline_proposal' ? (
+        <Button
+          variant="primary"
+          aria-label={`Review: ${item.title}`}
+          onClick={() => props.onReview(item)}
+        >
+          Review
         </Button>
       ) : null}
       {item.read ? (

@@ -8,10 +8,11 @@
  *   one click away rather than in the way. The buttons are the shared action bar.
  *
  * Exports: EscalationFailure.
- * Depends on: lucide-react, types/escalation-ui.types.
+ * Depends on: lucide-react, domain/escalation-copy, types/escalation-ui.types.
  */
 
 import { ChevronRight } from 'lucide-react';
+import { failureHelp } from '#/domain/escalation-copy.js';
 import type { FailurePayload } from '#/types/escalation-ui.types.js';
 
 export function EscalationFailure(props: { failure: FailurePayload }) {
@@ -22,6 +23,11 @@ export function EscalationFailure(props: { failure: FailurePayload }) {
       <p className="min-w-0 whitespace-pre-wrap break-words text-base">
         {failure.summary}
       </p>
+      {failureHelp(failure.cause, failure.error_family) ? (
+        <p className="min-w-0 break-words text-sm text-muted">
+          {failureHelp(failure.cause, failure.error_family)}
+        </p>
+      ) : null}
       {failure.diagnosis ? (
         <p className="min-w-0 whitespace-pre-wrap break-words text-sm text-muted">
           The Director&apos;s reading: {failure.diagnosis}

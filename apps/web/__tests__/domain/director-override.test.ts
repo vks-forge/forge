@@ -107,4 +107,31 @@ describe('what would be refused', () => {
       ]),
     );
   });
+
+  it('accepts the shipped suggestion thresholds and refuses each one outside its bounds', () => {
+    const issues = (change: Partial<typeof company.pipelines>) => {
+      const pipelines = { ...company.pipelines, ...change };
+
+      return directorIssues({ ...company, pipelines }, { pipelines });
+    };
+
+    const message =
+      'Suggestions need 2 to 10 tickets, 1 to 5 cards and 7 to 90 days, all whole numbers.';
+
+    expect(issues({})).toEqual([]);
+    expect(issues({ propose_after: 1 })).toEqual([message]);
+    expect(issues({ propose_after: 11 })).toEqual([message]);
+    expect(issues({ propose_min_cards: 6 })).toEqual([message]);
+    expect(issues({ propose_window_days: 3 })).toEqual([message]);
+    expect(issues({ propose_window_days: 91 })).toEqual([message]);
+    expect(issues({ propose_after: 2.5 })).toEqual([message]);
+  });
+
+  it('says nothing about suggestions the project does not override', () => {
+    expect(
+      directorIssues(FALLBACK_DIRECTOR, {
+        grill: FALLBACK_DIRECTOR.grill,
+      }),
+    ).toEqual([]);
+  });
 });

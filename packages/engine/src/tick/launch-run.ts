@@ -6,12 +6,13 @@
  *   (d-0054); the brief is stored as the run's first `prompt` event in that same transaction, and
  *   any stage rows the caller needs (the attempt this run carries, the artifacts it was shown) land
  *   there too, so a stage never exists without its run or the other way round. A start that throws
- *   settles the run as a failure and the error family decides retry or park. This is shared by
+ *   settles the run as a failure and the error family decides retry or park. The run row records the model it
+ *   asked for and the entry of its agent's fallback list it runs on, so the strip and the scorecards say what ran. This is shared by
  *   the dispatch of a writer and the start of a check, which differ only in what surrounds it.
  *
  * Exports: launchRun().
  * Depends on: @forge/core (HarnessChangedError, Run), @forge/tools (scrubSecrets, sha256Hex),
- *   domain/results, tick/project-runtime, tick/pump, tick/run-request, tick/settle, tick/tick-config,
+ *   domain/results, tick/project-runtime, tick/pump, tick/run-agent, tick/run-request, tick/settle, tick/tick-config,
  *   shared/trace, types/launch. IO: storage and the driver.
  */
 
@@ -21,11 +22,19 @@ import { scrubSecrets, sha256Hex } from '@forge/tools';
 import { familyOf, failureResult } from '#/domain/results.js';
 import { emitTrace } from '#/shared/trace.js';
 import { startPump } from '#/tick/pump.js';
+import { modelFor } from '#/tick/run-agent.js';
 import { buildRunRequest } from '#/tick/run-request.js';
 import { settleRun } from '#/tick/settle.js';
 import { configVersionRef } from '#/tick/tick-config.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { LaunchInput } from '#/types/launch.types.js';
+
+/** The model the run asks for and which entry of its agent's chain it runs on (0 own, 1+ fallback, -1 substitute). */
+function recorded(ctx: EngineCtx, a: LaunchInput): Pick<Run, 'model' | 'fallback_slot'> {
+  const model = modelFor(ctx.config, a.agent, a.ticket.lane, a.harness);
+
+  return { ...(model === undefined ? {} : { model }), fallback_slot: a.agent.slot ?? 0 };
+}
 
 const msg = (e: unknown): string => String(e instanceof Error ? e.message : e);
 
@@ -56,6 +65,7 @@ export async function launchRun(
     config_version: configVersionRef(ctx.config, ticket.project),
     agent_id: agent.id,
     agent_hash: agent.hash,
+    ...recorded(ctx, a),
   };
 
   await deps.storage.transaction(async (tx) => {

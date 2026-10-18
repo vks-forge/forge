@@ -16,6 +16,7 @@ import {
   editBody,
   moveDraft,
   patchDraft,
+  toggleDropOp,
 } from '#/domain/plan-edit.js';
 import { PlanTicket } from '#/schemas/plan.js';
 
@@ -76,5 +77,50 @@ describe('canSaveDraft', () => {
     const none = base.map((t) => ({ ...t, removed: true }));
 
     expect(canSaveDraft(tickets, none)).toBe(false);
+  });
+});
+
+describe('taking a Director pipeline change off a ticket', () => {
+  const withOps = ['t1', 't2'].map((key) =>
+    PlanTicket.parse({
+      key,
+      title: `Ticket ${key}`,
+      pipeline: {
+        ops: [
+          { op: 'remove', stage_id: 'reviewer', reason: 'A reason of ten characters.' },
+          { op: 'remove', stage_id: 'critic', reason: 'Another reason, long enough.' },
+        ],
+      },
+    }),
+  );
+
+  it('sends the positions taken off, in order, by ticket', () => {
+    let draft = draftOf(withOps);
+
+    draft = toggleDropOp(draft, 't2', 1);
+    draft = toggleDropOp(draft, 't2', 0);
+
+    expect(editBody(withOps, draft)).toEqual({
+      tickets: [{ key: 't2', drop_pipeline_ops: [0, 1] }],
+    });
+  });
+
+  it('is undone by toggling again, leaving nothing to send', () => {
+    const draft = toggleDropOp(toggleDropOp(draftOf(withOps), 't1', 0), 't1', 0);
+
+    expect(editBody(withOps, draft)).toBeNull();
+    expect(canSaveDraft(withOps, draft)).toBe(false);
+  });
+
+  it('does not send positions for a ticket that is being removed', () => {
+    const draft = patchDraft(toggleDropOp(draftOf(withOps), 't1', 0), 't1', {
+      removed: true,
+    });
+
+    expect(editBody(withOps, draft)).toEqual({ tickets: [{ key: 't1', removed: true }] });
+  });
+
+  it('lets the draft be saved once a change is taken off', () => {
+    expect(canSaveDraft(withOps, toggleDropOp(draftOf(withOps), 't1', 1))).toBe(true);
   });
 });

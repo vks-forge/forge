@@ -179,6 +179,42 @@ Amended by the UI pass U1 (shared surfaces, d-0164):
   refetches when the project stream names its ticket (every stage write), with a slow poll behind
   it. Before the first dispatch it says "Starts when the ticket is dispatched." The Review tab
   lists each check that reported, with counts, words and every finding, and the rework it took.
+- **Director changes on the ticket** (S5d-B, d-0151 / d-0080): the strip shows a stage the Director
+  added, moved or swapped with a badge ("Added by Director", "Moved by Director", "Swapped by
+  Director", "Substitute") and its reason in the detail; a stage it removed stays as a dashed ghost
+  ("Removed by the Director: ..."); a line "Changed by the Director (2 changes)" opens a log of every
+  change, with the ones the engine could not apply listed as "Not applied" and why; a stage that ran
+  on a fallback says "ran on fallback 2" (detail: "Ran on fallback 2 (sonnet)") or "ran as
+  substitute", and the Runs tab shows each run's model and slot. On the Review tab and in a stage's
+  detail every finding of a review has **Real** / **False alarm** buttons (pressed state is a word;
+  pressing the pressed one clears; shown at once, put back with a sentence if the save fails).
+- **Plan tab pipeline line** (S5d-B): a planned ticket with Director changes shows "Standard + 2 Director
+  changes" and each change with its reason; one that removes a stage says "Needs your approval: removes
+  review" (the floor reason says the plan waits for you). Edit tickets lists each change with "Take this
+  change off" (undoable until saved); the owner may narrow, never add. Version diffs show the change.
+- **Pipeline proposals** (S5d-B): after the same change on 3 tickets from 2 cards the Director suggests it
+  for the project. It is an Inbox row of kind **Pipeline change** (Review opens a drawer) and a banner
+  above the editor on that lane's tab: the lane with the change marked (Added, Removed, Moved, Agent
+  changed), up to three of the Director's reasons linked to their tickets, **Accept change** (asks
+  first, showing the lane after the change and an optional note; writes with the project's version) and
+  **Reject** (a reason of 3 characters; "will not suggest this again unless the lane changes"). A
+  lane edited since says "The lane changed since; nothing was applied." with Reject only. States:
+  loading, error with retry, nothing pending (nothing shown), already decided (drawer).
+- **Scorecards** (S5d-B): a project's Agents rows carry one line for 90 days ("Done without rework 75%
+  (9 of 12) - Reworks 0.4 per ticket - $0.42 per ticket - 12 tickets"); the agent editor has a
+  **Scorecard** section (slice: all, type, tier, lane; window 30 or 90 days; headline, reworks, holds,
+  cost with "Priced for 18 of 20 runs", run time, fallbacks, findings verdicts); each lane tab ends with
+  its pipeline shapes ("Standard + security-reviewer", Director-changed ones marked). Under 5 tickets
+  the row says "Too few tickets to judge" and no rate; a figure with no data says "No data"; cost with
+  none recorded says "No cost recorded". States: loading, empty, error with retry.
+- **Fallback and substitute** (S5d-B): an agent's Runs on has "When every fallback fails": **Let the Director
+  pick a substitute** (default) or **Pause and tell me**. A ticket with nowhere left to run waits as
+  "No agent could run this stage" (why: the model is unavailable or rate limits; every try folded;
+  Retry restarts from the first choice / Re-plan / Cancel ticket). When the Director switched agent the
+  card chat says "The Director switched to <agent>: <reason>"; the owner never has a button for it.
+- **Director settings** (S5d-B): Forge settings, Director has a model row "Pick a substitute agent", a
+  **Ticket pipelines** section ("Let the Director adjust ticket pipelines", suggest after N tickets, from M
+  cards, within D days), and a project can override it ("Director on ticket pipelines").
 - **Unsaved dot**: a project-settings tab whose fields differ from the saved version shows a
   small amber dot (spoken as "unsaved changes"; "(unsaved)" in the phone picker).
 - **Empty states** are one component (centred, quiet icon, title, one help line, actions;
@@ -206,6 +242,7 @@ springs). Prototype: https://claude.ai/artifact/1bdAeov3SxXfQYydSrgWrP
 | 6 | Project Settings, Memory, Runs, Cost |
 | 5a | Agents: company roster and editor, project overrides (S5a-B) |
 | 5b | Pipelines: company defaults, project overrides and routing rules, the ticket's stage strip (S5b-B) |
+| 5d | Director pipelines: changes on the ticket strip and plan, finding marks, proposals, scorecards, substitute (S5d-B) |
 | later | Skills editor (after x-0011) |
 
 Screens run on mock data behind the API shapes of build-plan batches B3–B12

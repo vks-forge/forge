@@ -1,7 +1,7 @@
 /**
  * What the Director page says: step names, model choices, locked rules and number fields.
  *
- * Why: the Director page edits fifteen per-step models, a handful of limits and a flow, and
+ * Why: the Director page edits sixteen per-step models, a handful of limits and a flow, and
  *   shows the rules no setting can switch off. Each needs words an owner understands (what the
  *   step is for, what a limit does when it is reached, why a rule is locked), kept as data so
  *   a new Director step is a line here and the screens stay thin. The locked list is the set
@@ -55,6 +55,10 @@ export const STEP_INFO: Readonly<Record<StepName, StepInfo>> = {
   ticket_check: {
     label: 'Check against the plan',
     hint: 'Compares finished work with the plan before sign-off; it never sees the Worker’s own account.',
+  },
+  pick_substitute: {
+    label: 'Pick a substitute agent',
+    hint: 'When an agent and all its fallbacks cannot run, chooses another agent for the same role from a list Forge has already checked.',
   },
 };
 
@@ -204,6 +208,33 @@ const DIRECTOR_FIELD_LIST: Readonly<
       path: 'director.escalation.max_director_retries',
       label: 'Retries before asking you',
       hint: 'How many times the Director retries one failure of one ticket by itself.',
+    },
+  ],
+  pipelines: [
+    {
+      kind: 'switch',
+      path: 'director.pipelines.adjust',
+      label: 'Let the Director adjust ticket pipelines',
+      hint: 'When off, every ticket runs its lane exactly as you set it. Locked stages (merge, gates, sign-off) are never changed either way.',
+    },
+    {
+      kind: 'number',
+      path: 'director.pipelines.propose_after',
+      label: 'Suggest a project pipeline change after this many tickets',
+      hint: 'From 2 to 10. The same change must have been made on this many tickets.',
+    },
+    {
+      kind: 'number',
+      path: 'director.pipelines.propose_min_cards',
+      label: 'from at least this many cards',
+      hint: 'From 1 to 5. One big card repeating a change does not count as a pattern.',
+    },
+    {
+      kind: 'number',
+      path: 'director.pipelines.propose_window_days',
+      label: 'within this many days',
+      unit: 'days',
+      hint: 'From 7 to 90. Nothing is changed until you accept the suggestion.',
     },
   ],
   step_timeouts_ms: (Object.keys(STEP_INFO) as StepName[]).map((name): FieldSpec => ({

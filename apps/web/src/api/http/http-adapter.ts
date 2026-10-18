@@ -18,6 +18,7 @@ import { createCardsHttp } from '#/api/http/cards-http.js';
 import { createEscalationsHttp } from '#/api/http/escalations-http.js';
 import { createMemoryHttp } from '#/api/http/memory-http.js';
 import { createOnboardingHttp } from '#/api/http/onboarding-http.js';
+import { createProposalsHttp, createScorecardsHttp } from '#/api/http/proposals-http.js';
 import { createProjectSettingsHttp } from '#/api/http/project-settings-http.js';
 import { requestJson } from '#/api/http/request-json.js';
 import { createSettingsHttp } from '#/api/http/settings-http.js';
@@ -56,6 +57,8 @@ export function createHttpAdapter(client: HttpClientOptions): ForgeApi {
     ...createWorkHttp(client),
     agents: createAgentsHttp(client),
     pipelines: createPipelinesHttp(client),
+    proposals: createProposalsHttp(client),
+    scorecards: createScorecardsHttp(client),
     cards: createCardsHttp(client),
     escalations: createEscalationsHttp(client),
     memory: createMemoryHttp(client),

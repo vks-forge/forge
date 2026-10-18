@@ -60,6 +60,8 @@ export const PlanEditBody = z.strictObject({
         title: z.string().trim().min(1).max(300).optional(),
         priority: CardPriority.optional(),
         removed: z.boolean().optional(),
+        /** Positions (0-based) of the Director's pipeline ops to take off this ticket; the owner may remove an op, never add one. */
+        drop_pipeline_ops: z.array(z.number().int().nonnegative()).max(6).optional(),
       }),
     )
     .max(200),

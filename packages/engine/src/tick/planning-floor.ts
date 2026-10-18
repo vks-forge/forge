@@ -7,7 +7,8 @@
  *   files), and the files that changed under this plan since it was verified come from git
  *   between the plan's commit and HEAD now. When git cannot answer (the check itself fails) the
  *   floor is given a marker entry and fails: a floor that cannot tell must not pass (fail closed,
- *   code.md rule 6). A project with no repository has nothing to compare and is not blocked by it.
+ *   code.md rule 6). A project with no repository has nothing to compare and is not blocked by it. A plan that
+ *   makes a ticket's pipeline lighter than its lane's (a removed stage) is a breach too: only a person approves it.
  *
  * Exports: factsOf(), floorFactsFor(), computeFloor().
  * Depends on: @forge/core (checkFloor, plannedFiles), types/card-planning. Reads storage and the repo reader.
@@ -15,6 +16,7 @@
 
 import { checkFloor, plannedFiles } from '@forge/core';
 import type { CardId, FloorResult, OtherCardFiles, PlanVersion } from '@forge/core';
+import { removalsOf } from '#/tick/planning-pipelines.js';
 import type { FloorFacts, PlanCtx } from '#/types/card-planning.types.js';
 import type { EngineDeps } from '#/types/engine.types.js';
 
@@ -112,5 +114,7 @@ export async function computeFloor(
     tierCGlobs: facts.tierCGlobs,
     otherPlannedFiles: await otherCardFiles(facts, plan.card_id),
     changedSinceBase: await movedSinceBase(facts, plan),
+    // A ticket whose pipeline loses a stage of its lane's list is for the owner to approve (d-0141 item 6).
+    lighter: removalsOf(plan.tickets),
   });
 }

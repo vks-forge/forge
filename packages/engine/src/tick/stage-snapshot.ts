@@ -9,11 +9,17 @@
  *   adds, d-0069) and records the pipeline's hash and the settings version it came from. A
  *   ticket that was already past its writers when pipelines went live adopts them, so it is not
  *   asked to write again. If the ticket's lane is raised later, the next stage boundary takes the
- *   heavier lane's copy and keeps the passes whose stage ids still exist.
+ *   heavier lane's copy and keeps the passes whose stage ids still exist. The Director's changes ride on top of
+ *   that copy and nowhere else: the approved plan's ops for the ticket are applied once, at the first
+ *   snapshot, and the ops already applied are re-applied onto a heavier lane's copy, both through the one door
+ *   (tick/pipeline-adjust), which drops what no longer holds and never parks the ticket. The copy keeps the
+ *   hash of the list before any change (`base_hash`), and a proposal to change the project's list may follow
+ *   (tick/pipeline-proposals).
  *
  * Exports: ensureSnapshotTx().
  * Depends on: @forge/core (effectivePipelines, pipelineProblems, routeStages, adoptLegacy), tick/plan-keys,
- *   tick/run-agent, tick/tick-config, shared/time. Writes inside the caller's transaction.
+ *   tick/pipeline-adjust, tick/pipeline-proposals, tick/planning-state, tick/run-agent, tick/tick-config,
+ *   shared/time. Writes inside the caller's transaction.
  */
 
 import {
@@ -25,8 +31,18 @@ import {
   pipelineProblems,
   routeStages,
 } from '@forge/core';
-import type { Lane, RoutedStage, StorageTx, Ticket, TicketPipeline } from '@forge/core';
+import type {
+  Lane,
+  PipelineAdjustOp,
+  RoutedStage,
+  StorageTx,
+  Ticket,
+  TicketPipeline,
+} from '@forge/core';
+import { adjustTicketPipelineTx, declineAdjustmentsTx } from '#/tick/pipeline-adjust.js';
+import { maybeProposeTx } from '#/tick/pipeline-proposals.js';
 import { planEntryOf } from '#/tick/plan-keys.js';
+import { directorFor } from '#/tick/planning-state.js';
 import { agentViews } from '#/tick/run-agent.js';
 import { configVersionRef, projectSettings } from '#/tick/tick-config.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
@@ -64,14 +80,18 @@ async function build(
     at: 'snapshot' as const,
   }));
 
+  const hash = pipelineHash(routed.definition);
+
   return {
     ticket_id: ticket.id,
     lane,
     definition: routed.definition,
     roles,
-    hash: pipelineHash(routed.definition),
+    hash,
+    base_hash: hash,
     config_version: configVersionRef(ctx.config, slug),
     routed: stages,
+    adjustments: [],
   };
 }
 
@@ -138,6 +158,66 @@ async function adoptWriters(
 }
 
 /**
+ * Puts the Director's changes on a fresh copy: the approved plan's ops for a first snapshot, or the ops the
+ * earlier copy had applied (plan ones, then fallback ones) for a heavier lane. Each goes through the one door,
+ * which drops what no longer holds. With the owner's switch off the ops are only recorded as dropped.
+ */
+async function applyDirectorOps(
+  tx: StorageTx,
+  ctx: EngineCtx,
+  ticket: Ticket,
+  snapshot: TicketPipeline,
+  earlier: TicketPipeline | null,
+): Promise<TicketPipeline> {
+  const slug = (await tx.projects.get(ticket.project))?.slug ?? ticket.project;
+  const on = directorFor(ctx, slug).director.pipelines.adjust;
+  const batches: {
+    cause: 'plan' | 'fallback';
+    version?: number;
+    ops: PipelineAdjustOp[];
+  }[] = [];
+
+  if (earlier) {
+    for (const cause of ['plan', 'fallback'] as const) {
+      const kept = earlier.adjustments.filter(
+        (a) => a.status === 'applied' && a.cause === cause,
+      );
+
+      const version = kept.find((a) => a.plan_version !== undefined)?.plan_version;
+      batches.push({
+        cause,
+        ...(version === undefined ? {} : { version }),
+        ops: kept.map((a) => a.op),
+      });
+    }
+  } else {
+    const planned = await planEntryOf(tx, ticket);
+    batches.push({
+      cause: 'plan',
+      ...(planned ? { version: planned.version } : {}),
+      ops: planned?.entry.pipeline?.ops ?? [],
+    });
+  }
+
+  let current = snapshot;
+  for (const b of batches.filter((x) => x.ops.length > 0)) {
+    current = on
+      ? await adjustTicketPipelineTx(tx, ctx, ticket, b.ops, b.cause, b.version)
+      : await declineAdjustmentsTx(
+          tx,
+          ctx,
+          ticket,
+          b.ops,
+          b.cause,
+          b.version,
+          'the Director may not change ticket pipelines (switched off in Director settings)',
+        );
+  }
+
+  return current;
+}
+
+/**
  * The ticket's pipeline snapshot, taking it first if it has none (adopting writers for a ticket
  * already past them) and re-taking it when the ticket's lane was raised since. Throws
  * `InvalidInputError` when the lane's pipeline cannot run under the roster as it is now.
@@ -165,8 +245,10 @@ export async function ensureSnapshotTx(
     await tx.ticketPipelines.replace(next);
     // A ticket already past its writers is not asked to write the heavier lane's earlier stages.
     await adoptWriters(tx, ctx, ticket, next);
+    const adjusted = await applyDirectorOps(tx, ctx, ticket, next, existing);
+    await maybeProposeTx(tx, ctx, ticket, adjusted);
 
-    return next;
+    return adjusted;
   }
 
   const snapshot: TicketPipeline = {
@@ -180,6 +262,8 @@ export async function ensureSnapshotTx(
   }
 
   await adoptWriters(tx, ctx, ticket, snapshot);
+  const adjusted = await applyDirectorOps(tx, ctx, ticket, snapshot, null);
+  await maybeProposeTx(tx, ctx, ticket, adjusted);
 
-  return snapshot;
+  return adjusted;
 }

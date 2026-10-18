@@ -13,13 +13,14 @@
  *   reviewer got.
  *
  * Exports: startChecks().
- * Depends on: @forge/core (ArtifactKind, stageInputs), domain/harness-choice, tick/{launch-run,project-runtime,
+ * Depends on: @forge/core (ArtifactKind, stageInputs), domain/harness-choice, tick/{agent-fallback,launch-run,project-runtime,
  *   run-agent,stage-artifacts,stage-prompt,stage-records,stage-state,verify-outcomes}. IO: git diff, storage, driver.
  */
 
 import { ArtifactKind, stageInputs } from '@forge/core';
 import type { AgentStage, Project, StorageTx } from '@forge/core';
 import { chooseHarness } from '#/domain/harness-choice.js';
+import { slottedAgent } from '#/tick/agent-fallback.js';
 import { launchRun } from '#/tick/launch-run.js';
 import { baseRefFor, driverFor, runtimeFor } from '#/tick/project-runtime.js';
 import { resolveStageAgent } from '#/tick/run-agent.js';
@@ -108,7 +109,10 @@ export async function startChecks(
     }
 
     const stage: AgentStage = m.stage;
-    const agent = resolveStageAgent(ctx.config, project.slug, stage.agent);
+    const plain = resolveStageAgent(ctx.config, project.slug, stage.agent);
+    const agent =
+      plain && slottedAgent(ctx, project.slug, plain, state, cursor.stage.id, m.id);
+
     if (!agent) {
       await parkVerifying(
         ctx,

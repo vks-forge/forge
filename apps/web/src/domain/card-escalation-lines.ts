@@ -93,7 +93,7 @@ export function escalationLineOf(
     return {
       ...base,
       tone: 'note',
-      text: `${settledWords(action, by)}${note || comment ? `: ${note || comment}` : ''}`,
+      text: settledText(action, by, note || comment),
       ticketId,
     };
   }
@@ -116,4 +116,17 @@ export function escalationLineOf(
   }
 
   return undefined;
+}
+
+/** The settled line; a Director substitute reads "The Director switched to <agent>: <reason>". */
+function settledText(
+  action: Parameters<typeof settledWords>[0],
+  by: Parameters<typeof settledWords>[1],
+  detail: string | undefined,
+): string {
+  if (action === 'substitute' && detail) {
+    return `The Director switched to ${detail}`;
+  }
+
+  return `${settledWords(action, by)}${detail ? `: ${detail}` : ''}`;
 }

@@ -5,7 +5,7 @@
  *   template copy or the Director's draft, and a project can override a company agent's
  *   instructions and harness. One form for all of them means one set of rules and one place to
  *   learn: identity, instructions, where it runs, tools, write scope, hand-offs, memory, budget,
- *   a test button and the history. Saving is a numbered version with a reason; a newer version
+ *   a scorecard (project agents), a test button and the history. Saving is a numbered version with a reason; a newer version
  *   saved elsewhere pauses the save behind a conflict choice; unsaved edits are guarded. On a
  *   project screen over a company agent only instructions and "Runs on" are editable, because
  *   that is all a project may change (d-0149), and the rest is shown as following the company.
@@ -31,6 +31,7 @@ import {
 import { IdentitySection } from '#/components/agents/identity-section.js';
 import { InstructionsSection } from '#/components/agents/instructions-section.js';
 import { RunsOnSection } from '#/components/agents/runs-on-section.js';
+import { ScorecardPanel } from '#/components/agents/scorecard-panel.js';
 import { TestAgentPanel } from '#/components/agents/test-agent-panel.js';
 import { ToolsSection } from '#/components/agents/tools-section.js';
 import { Notice } from '#/components/settings/form-field.js';
@@ -56,12 +57,20 @@ const TABS = [
   { id: 'handoff', label: 'Inputs and output' },
   { id: 'skills-memory', label: 'Skills and memory' },
   { id: 'budget', label: 'Budget' },
+  { id: 'scorecard', label: 'Scorecard' },
   { id: 'test', label: 'Test' },
 ];
 
 const OVERRIDE_TABS = TABS.filter((t) =>
-  ['instructions', 'runs-on', 'test'].includes(t.id),
+  ['instructions', 'runs-on', 'scorecard', 'test'].includes(t.id),
 );
+
+/** The tabs this editor really shows: Scorecard only for an existing agent of a project. */
+function tabsFor(override: boolean, scorecard: boolean): typeof TABS {
+  return (override ? OVERRIDE_TABS : TABS).filter(
+    (t) => scorecard || t.id !== 'scorecard',
+  );
+}
 
 /** Where a new agent came from, in words. */
 function originWords(origin: string): string {
@@ -167,7 +176,7 @@ export function AgentEditor(props: {
         />
       ) : null}
 
-      <SectionNav tabs={override ? OVERRIDE_TABS : TABS} />
+      <SectionNav tabs={tabsFor(override, props.scope.kind === 'project' && !creating)} />
 
       {override ? null : (
         <IdentitySection
@@ -227,6 +236,9 @@ export function AgentEditor(props: {
           <BudgetSection form={form} issues={issues} disabled={lock} onChange={set} />
         </>
       )}
+      {props.scope.kind === 'project' && props.id ? (
+        <ScorecardPanel slug={props.scope.slug} agentId={props.id} />
+      ) : null}
       <TestAgentPanel form={form} scope={props.scope} />
       {props.id ? <AgentHistoryPanel scope={props.scope} id={props.id} /> : null}
 

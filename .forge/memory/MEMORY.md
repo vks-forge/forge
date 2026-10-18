@@ -79,6 +79,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0164 — (amends d-0160) Continue the plan S5a → S6 autonomously after the live-test fixes; on low memory lower test workers or defer suites, never stop
 - d-0165 — Reviewer blocking findings send the ticket back for rework (gate-failure path, cap then owner), not a merge hold (amends d-0071)
 - d-0166 — Remove the unused GET /projects/:slug/stats route
+- d-0167 — Test agent has no dollar cap (60 s timeout stays); panel states the test question in one line
 - d-0159 — `/` = cross-project Overview dashboard (KPIs, charts by day/week/month, projects table, cost); amends d-0104; brief docs/briefs/forge-overview-dashboard.md
 - d-0122 — Web UI state in zustand + persist (localStorage), UI prefs/drafts only; server data stays in TanStack Query; never tokens/secrets
 - d-0123 — Web uses the real server API only: mock adapter/fixtures/switches removed; missing backends built with their screen; tests stub fetch in __tests__ only

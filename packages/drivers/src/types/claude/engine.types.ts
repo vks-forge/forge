@@ -46,6 +46,7 @@ export type EngineEndKind =
   | 'budget'
   | 'rate_limit'
   | 'quota'
+  | 'model_unavailable'
   | 'auth'
   | 'cancelled'
   | 'policy_denied'

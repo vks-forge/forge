@@ -39,8 +39,10 @@ const snapshot = (): TicketPipeline => ({
     critic: 'reviewer',
   },
   hash: 'a'.repeat(64),
+  base_hash: 'a'.repeat(64),
   config_version: 'c1:p1',
   routed: [],
+  adjustments: [],
   created_at: T,
   updated_at: T,
 });

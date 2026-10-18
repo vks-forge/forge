@@ -54,6 +54,9 @@ export function ticketPipeline(
     config_version: 'c1:p0',
     stages,
     routed: [],
+    adjustments: [],
+    removed: [],
+    base_hash: 'a'.repeat(64),
     rework: { count: 0, cap: 2 },
     ...over,
   };

@@ -7,9 +7,10 @@
  *   plan version on the server, so one request per batch keeps the version list readable. Only
  *   what actually changed is sent, and reordering is sent only when the surviving tickets are
  *   in a different order than the plan has them. A removed ticket stays in the draft (greyed,
- *   restorable) until saved, so a mis-click costs nothing.
+ *   restorable) until saved, so a mis-click costs nothing. The owner may also take one of the Director's
+ *   pipeline changes off a ticket (`drop_pipeline_ops`, by position), never add one.
  *
- * Exports: draftOf(), moveDraft(), patchDraft(), isDraftDirty(), editBody(), canSaveDraft().
+ * Exports: draftOf(), moveDraft(), patchDraft(), toggleDropOp(), isDraftDirty(), editBody(), canSaveDraft().
  * Depends on: schemas/plan (type), types/plan.types. No IO.
  */
 
@@ -22,6 +23,7 @@ export function draftOf(tickets: readonly PlanTicket[]): readonly DraftTicket[] 
     title: t.title,
     priority: t.priority,
     removed: false,
+    dropOps: [],
   }));
 }
 
@@ -52,6 +54,24 @@ export function patchDraft(
   return draft.map((t) => (t.key === key ? { ...t, ...change } : t));
 }
 
+/** Takes the Director's op at `position` off a ticket, or puts it back when it was already taken off. */
+export function toggleDropOp(
+  draft: readonly DraftTicket[],
+  key: string,
+  position: number,
+): readonly DraftTicket[] {
+  return draft.map((t) =>
+    t.key === key
+      ? {
+          ...t,
+          dropOps: t.dropOps.includes(position)
+            ? t.dropOps.filter((p) => p !== position)
+            : [...t.dropOps, position].sort((a, b) => a - b),
+        }
+      : t,
+  );
+}
+
 const keptKeys = (tickets: readonly { key: string; removed?: boolean }[]): string[] =>
   tickets.filter((t) => t.removed !== true).map((t) => t.key);
 
@@ -74,6 +94,9 @@ export function editBody(
       ...(title !== was.title && title !== '' ? { title } : {}),
       ...(item.priority !== was.priority ? { priority: item.priority } : {}),
       ...(item.removed ? { removed: true } : {}),
+      ...(!item.removed && item.dropOps.length > 0
+        ? { drop_pipeline_ops: item.dropOps }
+        : {}),
     };
 
     if (Object.keys(change).length > 0) {

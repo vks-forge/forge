@@ -108,7 +108,11 @@ describe('0026 full lane', () => {
     addArtifact(driver, 4, 'diff', '');
     const before = dump(driver);
 
-    runMigrations(driver);
+    // Only 0026: later migrations add columns to ticket_pipelines, which this test compares whole.
+    runMigrations(
+      driver,
+      MIGRATIONS.filter((m) => m.id <= 26),
+    );
 
     const after = dump(driver);
     const links = driver

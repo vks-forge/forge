@@ -9,7 +9,7 @@
  *   decides from the serious ones and needs to open the file. The tier is said in words, never
  *   as a bare letter, and tier C says outright that only the owner signs it. Pure.
  *
- * Exports: TIER_WORDS, DECISION_LEAD, SIGN_OFF_WHY, bySeverity(), whereOf(), reworkLine(),
+ * Exports: TIER_WORDS, DECISION_LEAD, SIGN_OFF_WHY, indexedBySeverity(), bySeverity(), whereOf(), reworkLine(),
  *   checksLine(), unplannedLine(),
  *   reviewHeadline().
  * Depends on: domain/stage-view-copy, schemas/escalation, schemas/tickets (types), @forge/core (types).
@@ -53,15 +53,21 @@ const ORDER: Readonly<Record<Finding['severity'], number>> = {
   low: 3,
 };
 
-/** Findings worst first; equal severities keep the order the check gave them. */
-export function bySeverity(findings: readonly Finding[]): Finding[] {
+/** Findings worst first, each with its position in the list the check gave; ties keep that order. */
+export function indexedBySeverity(
+  findings: readonly Finding[],
+): { finding: Finding; index: number }[] {
   return findings
     .map((finding, index) => ({ finding, index }))
     .sort(
       (a, b) =>
         ORDER[a.finding.severity] - ORDER[b.finding.severity] || a.index - b.index,
-    )
-    .map((entry) => entry.finding);
+    );
+}
+
+/** Findings worst first; equal severities keep the order the check gave them. */
+export function bySeverity(findings: readonly Finding[]): Finding[] {
+  return indexedBySeverity(findings).map((entry) => entry.finding);
 }
 
 /** `src/a.ts:12`, `src/a.ts`, or nothing when the finding names no file. */

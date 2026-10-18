@@ -29,6 +29,7 @@ export const EFFECTIVE_TABLE: Readonly<
   budget: { status: 'error', family: 'budget' },
   rate_limit: { status: 'error', family: 'rate_limit' },
   quota: { status: 'error', family: 'quota' },
+  model_unavailable: { status: 'error', family: 'model_unavailable' },
   auth: { status: 'error', family: 'auth' },
   cancelled: { status: 'cancelled' },
   policy_denied: { status: 'error', family: 'policy_denied' },

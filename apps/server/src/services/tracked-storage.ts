@@ -14,46 +14,20 @@
  *   by every ticket and interaction write, and `["card", id]` covers the card's events and escalations by prefix.
  *   A write to a ticket's pipeline snapshot, a stage row (started or finished) or a stage artifact
  *   announces `["ticket-pipeline", id]` and `["ticket", id]`, so the strip on the ticket page moves
- *   as the stages do; a finished row is resolved to its ticket by id before the commit.
+ *   as the stages do; a finished row is resolved to its ticket by id before the commit. The Director's change
+ *   to a ticket's copy and the owner's mark on a finding announce the same keys. A pipeline proposal announces
+ *   `["pipeline-proposals", slug]` and `["inbox", slug]` when it is made, and when it is decided also
+ *   `["pipelines", "project", slug]` and `["project-settings", slug]` (an accepted one changed the lane).
  *
  * Exports: trackProjectWrites().
- * Depends on: @forge/core (storage ports), types/project-events, types/tracked-storage. IO: extra
- *   reads inside the caller's transaction.
+ * Depends on: @forge/core (storage ports), services/tracked-watch, types/project-events, types/tracked-storage.
+ *   IO: extra reads inside the caller's transaction.
  */
 
 import type { QueryKey, StorageAdapter, StorageTx } from '@forge/core';
 import type { ProjectEvents } from '#/types/project-events.types.js';
+import { first, watch } from '#/services/tracked-watch.js';
 import type { Recorder, Resolved, Touch } from '#/types/tracked-storage.types.js';
-
-/** Wraps `repo` so that each listed method records what it touched after it succeeds. */
-function watch<R extends object>(
-  repo: R,
-  touches: Touch[],
-  writes: Readonly<Record<string, Recorder>>,
-): R {
-  return new Proxy(repo, {
-    get(target, prop, receiver) {
-      const value = Reflect.get(target, prop, receiver) as unknown;
-      const record = typeof prop === 'string' ? writes[prop] : undefined;
-      if (typeof value !== 'function' || !record) {
-        return value;
-      }
-
-      return async (...args: unknown[]) => {
-        const out = await (value as (...a: unknown[]) => Promise<unknown>).apply(
-          target,
-          args,
-        );
-
-        touches.push(...[record(args)].flat());
-
-        return out;
-      };
-    },
-  });
-}
-
-const first = (args: readonly unknown[]): string => String(args[0]);
 
 function track(tx: StorageTx, touches: Touch[]): StorageTx {
   const card: Recorder = (a) => ({ kind: 'card', id: first(a) });
@@ -124,6 +98,18 @@ function track(tx: StorageTx, touches: Touch[]): StorageTx {
         id: (a[0] as { ticket_id: string }).ticket_id,
       }),
       appendRouted: (a) => ({ kind: 'pipeline', id: first(a) }),
+      adjust: (a) => ({ kind: 'pipeline', id: first(a) }),
+    }),
+    findingMarks: watch(tx.findingMarks, touches, {
+      set: (a) => ({ kind: 'pipeline', id: (a[0] as { ticket_id: string }).ticket_id }),
+      clear: (a) => ({ kind: 'stage_run', id: Number(a[0]) }),
+    }),
+    pipelineProposals: watch(tx.pipelineProposals, touches, {
+      insert: (a) => ({
+        kind: 'proposal',
+        project: (a[0] as { project: string }).project,
+      }),
+      decide: (a) => ({ kind: 'proposal_decided', id: Number(a[0]) }),
     }),
     stageRuns: watch(tx.stageRuns, touches, {
       start: (a) => ({ kind: 'pipeline', id: (a[0] as { ticket_id: string }).ticket_id }),
@@ -197,6 +183,29 @@ async function resolve(tx: StorageTx, touches: readonly Touch[]): Promise<Resolv
             ticket.project,
             ['ticket-pipeline', ticket.id],
             ['ticket', ticket.id],
+          );
+        }
+
+        break;
+      }
+
+      case 'proposal': {
+        const slug = await slugOf(t.project);
+        await add(t.project, ['pipeline-proposals', slug], ['inbox', slug]);
+        break;
+      }
+
+      case 'proposal_decided': {
+        const proposal = await tx.pipelineProposals.get(t.id);
+        if (proposal) {
+          const slug = await slugOf(proposal.project);
+          // An accepted proposal also changed the lane's own list in the project's settings.
+          await add(
+            proposal.project,
+            ['pipeline-proposals', slug],
+            ['inbox', slug],
+            ['pipelines', 'project', slug],
+            ['project-settings', slug],
           );
         }
 

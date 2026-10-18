@@ -1,15 +1,15 @@
 /**
- * Test agent: one short, capped model call with an agent's own model and instructions.
+ * Test agent: one short model call with an agent's own model and instructions.
  *
  * Why: before trusting an agent with a ticket the owner wants to see it answer. The call is
- *   deliberately small: no tools, no worktree, no session, at most $0.10 and 60 seconds, and
- *   only one at a time per harness so a double click cannot spend twice. It runs only on the
+ *   deliberately small: no tools, no worktree, no session, no dollar cap (the owner chose
+ *   that, d-0167) but a 60 second timeout, and only one at a time per harness so a double click cannot spend twice. It runs only on the
  *   owner's click, on a harness that is ready (a paused or signed-out harness would fail in a
  *   confusing way, so the owner is told why instead, 409). A failed call is still a 200 with
  *   `ok: false` and an error family the screen can put in plain words; only the cases where no
  *   call was made are HTTP errors. Nothing it returns is saved.
  *
- * Exports: createAgentTester(), TEST_PROMPT, TEST_TIMEOUT_MS, TEST_MAX_USD.
+ * Exports: createAgentTester(), TEST_PROMPT, TEST_TIMEOUT_MS.
  * Depends on: @forge/core (config, AgentTestResult), services/agent-readiness,
  *   services/http/http-errors, types/agent-store. IO: one probe call through the driver.
  */
@@ -24,7 +24,6 @@ import type { AgentDeps } from '#/types/agent-store.types.js';
 export const TEST_PROMPT =
   'In one line, state your role and the first rule in your instructions.';
 export const TEST_TIMEOUT_MS = 60_000;
-export const TEST_MAX_USD = 0.1;
 
 const REPLY_LIMIT = 2000;
 
@@ -87,7 +86,6 @@ export function createAgentTester(deps: AgentDeps) {
         instructions: body.agent.instructions,
         prompt: TEST_PROMPT,
         timeoutMs: TEST_TIMEOUT_MS,
-        maxUsd: TEST_MAX_USD,
       });
 
       const used = r.modelUsed ?? wanted;

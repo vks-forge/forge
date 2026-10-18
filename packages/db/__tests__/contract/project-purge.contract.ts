@@ -144,8 +144,10 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
         definition: BUILTIN_PIPELINES.express,
         roles: { implementer: 'writer' },
         hash: HASH,
+        base_hash: HASH,
         config_version: 'c0:p0',
         routed: [],
+        adjustments: [],
         created_at: T0,
         updated_at: T0,
       });

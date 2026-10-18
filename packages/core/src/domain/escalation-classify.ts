@@ -58,6 +58,7 @@ const RULES: readonly {
       r.includes('automatic rework cap') || /failed after \d+ automatic reworks/.test(r),
     cause: 'rework_cap',
   },
+  { test: (r) => r.startsWith('no_agent_available'), cause: 'no_agent_available' },
   { test: (r) => r.includes('re-wake cap'), cause: 'rewake_cap' },
   { test: (r) => r.startsWith('max_turns'), cause: 'max_turns' },
   { test: (r) => r.startsWith('refused'), cause: 'refused' },

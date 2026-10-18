@@ -34,6 +34,7 @@ export const FAILURE_ACTIONS: Readonly<Record<string, readonly string[]>> = {
   max_turns: ['retry', 'replan', 'cancel'],
   refused: ['retry', 'replan', 'cancel'],
   question_timeout: ['retry', 'replan', 'cancel'],
+  no_agent_available: ['retry', 'replan', 'cancel'],
 };
 
 function base(over: Raw): Raw {

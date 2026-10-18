@@ -66,6 +66,9 @@ function editInput(body: PlanEditBody): EditPlanInput {
       ...(t.title === undefined ? {} : { title: t.title }),
       ...(t.priority === undefined ? {} : { priority: t.priority }),
       ...(t.removed === undefined ? {} : { removed: t.removed }),
+      ...(t.drop_pipeline_ops === undefined
+        ? {}
+        : { drop_pipeline_ops: t.drop_pipeline_ops }),
     })),
     ...(body.order === undefined ? {} : { order: body.order }),
   };

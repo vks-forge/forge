@@ -21,7 +21,11 @@ export type Touch =
   /** A write to a ticket's pipeline snapshot, a stage row or an artifact: the ticket page's strip is stale. */
   | { readonly kind: 'pipeline'; readonly id: string }
   /** A stage row changed by its id; the ticket is resolved from the row before the commit. */
-  | { readonly kind: 'stage_run'; readonly id: number };
+  | { readonly kind: 'stage_run'; readonly id: number }
+  /** A new pipeline proposal of a project (its slug): the Inbox and the Pipelines banner are stale. */
+  | { readonly kind: 'proposal'; readonly project: string }
+  /** A proposal decided by its id; its project is read from the row before the commit, and the lane's own settings may have changed too. */
+  | { readonly kind: 'proposal_decided'; readonly id: number };
 
 /** Turns the arguments of a successful write into what it touched. */
 export type Recorder = (args: readonly unknown[]) => Touch | readonly Touch[];

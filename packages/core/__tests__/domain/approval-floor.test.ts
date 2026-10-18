@@ -182,3 +182,39 @@ describe('checkFloor', () => {
     });
   });
 });
+
+describe('checkFloor: lighter pipelines (d-0141 item 6)', () => {
+  const lighter = [{ key: 't2', removed: ['reviewer'] }];
+
+  it('a lighter entry always fails the floor and names the ticket and what it drops', () => {
+    const r = checkFloor({ plan: plan(), ...clean, lighter });
+
+    expect(r.pass).toBe(false);
+    expect(r.reasons).toEqual([
+      't2 runs a lighter pipeline than its lane (removes reviewer)',
+    ]);
+  });
+
+  it('writes one reason per entry', () => {
+    const r = checkFloor({
+      plan: plan(),
+      ...clean,
+      lighter: [
+        lighter[0] as (typeof lighter)[number],
+        { key: 't1', removed: ['test-writer', 'reviewer'] },
+      ],
+    });
+
+    expect(r.reasons).toHaveLength(2);
+    expect(r.reasons[1]).toContain('removes test-writer, reviewer');
+  });
+
+  it('no entries, or none given, never adds a reason', () => {
+    expect(checkFloor({ plan: plan(), ...clean, lighter: [] })).toEqual({
+      pass: true,
+      reasons: [],
+    });
+
+    expect(checkFloor({ plan: plan(), ...clean })).toEqual({ pass: true, reasons: [] });
+  });
+});

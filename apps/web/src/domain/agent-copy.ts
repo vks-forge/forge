@@ -222,8 +222,8 @@ const FAILURES: Readonly<Record<string, { what: string; fix: string }>> = {
     fix: 'Wait a minute and test again.',
   },
   budget: {
-    what: 'The call reached its $0.10 limit before it could answer.',
-    fix: 'Shorten the instructions, or choose a cheaper model.',
+    what: 'The harness stopped the call at its spending limit before it could answer.',
+    fix: 'Check the harness’s own spending limit, or choose a cheaper model.',
   },
   stall: {
     what: 'The harness stopped answering.',

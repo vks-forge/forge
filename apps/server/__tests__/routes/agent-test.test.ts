@@ -70,7 +70,6 @@ describe('POST /agents/test', () => {
       model: 'haiku',
       instructions: 'Rule one: be brief.',
       timeoutMs: 60_000,
-      maxUsd: 0.1,
       prompt: 'In one line, state your role and the first rule in your instructions.',
     });
   });
@@ -80,6 +79,7 @@ describe('POST /agents/test', () => {
     await test(r);
 
     expect('model' in (r.probes[0] ?? {})).toBe(false);
+    expect('maxUsd' in (r.probes[0] ?? {})).toBe(false);
   });
 
   it('answers 409 harness_not_ready for a paused harness and makes no call', async () => {

@@ -78,12 +78,16 @@ export type RequestChangesResult =
   | { readonly status: 'phase_mismatch' }
   | { readonly status: 'invalid_comment' };
 
-/** One light edit of a planned ticket: rename, change priority, or remove. */
+/**
+ * One light edit of a planned ticket: rename, change priority, or remove. `drop_pipeline_ops` lists the positions of
+ * the Director's pipeline ops to take off the ticket (the owner may remove a change, never add one).
+ */
 export interface TicketEdit {
   readonly key: string;
   readonly title?: string;
   readonly priority?: CardPriority;
   readonly removed?: boolean;
+  readonly drop_pipeline_ops?: readonly number[];
 }
 
 /** `PATCH /cards/:id/plan/:version/tickets`; `order` lists the surviving keys in the wanted order. */

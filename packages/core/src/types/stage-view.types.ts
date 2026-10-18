@@ -13,6 +13,8 @@
 import type { ArtifactKind } from '#/schemas/agent.js';
 import type { Finding } from '#/schemas/finding.js';
 import type { Severity } from '#/schemas/pipeline.js';
+import type { Run } from '#/schemas/run.js';
+import type { FindingMark } from '#/schemas/scorecard.js';
 import type {
   StageArtifact,
   StageOutcome,
@@ -46,6 +48,21 @@ export interface StageView {
   scope?: string[] | undefined;
   check?: TicketCheckOutput | undefined;
   unplanned?: string[] | undefined;
+  /** The Director changed this stage: what it did, why, and whether the plan or a fallback asked for it. */
+  changed?:
+    | {
+        by: 'director';
+        op: 'add' | 'swap' | 'move';
+        cause: 'plan' | 'fallback';
+        reason: string;
+      }
+    | undefined;
+  /** The id of the stage row this view shows (the key of the owner's mark route), absent while the stage has no row. */
+  row_id?: number | undefined;
+  /** The owner's marks on this row's findings, by position in `findings`. */
+  marks?: { index: number; verdict: 'real' | 'false_alarm' }[] | undefined;
+  /** What the latest run used; `slot` 0 is the agent's own, above 0 a fallback entry, -1 a substitute. */
+  ran_on?: { harness: string; model?: string | undefined; slot: number } | undefined;
   artifacts: { id: number; kind: ArtifactKind }[];
 }
 
@@ -56,4 +73,12 @@ export interface ViewContext {
   readonly cycle: number;
   /** Ids of the stages the current cycle runs again. */
   readonly rerun: ReadonlySet<string>;
+  /** The runs the rows point at, by id, for `ran_on`. */
+  readonly runs?:
+    | ReadonlyMap<string, Pick<Run, 'id' | 'harness' | 'model' | 'fallback_slot'>>
+    | undefined;
+  /** The owner's marks on findings, for `marks` of each stage view. */
+  readonly marks?:
+    | readonly Pick<FindingMark, 'stage_run_id' | 'finding_index' | 'verdict'>[]
+    | undefined;
 }

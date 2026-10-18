@@ -182,3 +182,15 @@ describe('classifyPark for held tickets', () => {
     expect(failureCauseOf(null)).toBe('not_retried');
   });
 });
+
+describe('classifyPark for an agent that could not run', () => {
+  it('reads a no_agent_available reason as that failure cause, ahead of the generic caps', () => {
+    const reason =
+      'no_agent_available: implementer ran out of places to run (rate_limit); retry limit reached';
+
+    expect(classifyPark(park('waiting_human', reason))).toMatchObject({
+      kind: 'failure',
+      cause: 'no_agent_available',
+    });
+  });
+});

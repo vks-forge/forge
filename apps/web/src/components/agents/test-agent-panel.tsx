@@ -2,9 +2,10 @@
  * TestAgentPanel: send the agent as it is on screen one short message and read the answer.
  *
  * Why: instructions and a model choice are guesses until something answers. One tool-less model
- *   call, capped at $0.10 and 60 seconds, shows the owner what the agent says about its role
+ *   call, bounded by a 60 second timeout, shows the owner what the agent says about its role
  *   and which model really replied, before any ticket is spent on it. Because it costs money it
- *   only ever runs when the owner clicks, and the cost note is on the screen before the click.
+ *   only ever runs when the owner clicks, and the card says before the click exactly what is
+ *   asked and that a model call is spent.
  *   It tests what is on screen, saved or not, and a failure is explained in plain words with
  *   what to try (signed out, out of quota, a harness that cannot run), never as a raw code.
  *
@@ -21,6 +22,10 @@ import { Button } from '#/components/ui/button.js';
 import { agentErrorText, errorIssues, testFailureWords } from '#/domain/agent-copy.js';
 import { checkForm } from '#/domain/agent-form.js';
 import type { AgentForm, AgentScope } from '#/types/agent-ui.types.js';
+
+/** Keep identical to the server's TEST_PROMPT (apps/server/src/services/agent-test.ts). */
+const TEST_QUESTION =
+  'In one line, state your role and the first rule in your instructions.';
 
 function seconds(ms: number): string {
   return `${(ms / 1000).toFixed(1)} s`;
@@ -50,12 +55,12 @@ export function TestAgentPanel(props: { form: AgentForm; scope: AgentScope }) {
     <SettingsCard
       id="test"
       title="Test agent"
-      description="Ask the agent, as it is on screen, to state its role and its first rule."
+      description={`Sends the agent, as it is on screen, one question — "${TEST_QUESTION}" — and shows its answer.`}
     >
       <div className="grid gap-3">
         <p className="text-sm text-muted">
-          Spends one short model call (up to $0.10) on {harness}. It runs only when you
-          press the button, uses no tools and saves nothing.
+          Spends one model call on {harness}, with no tools; nothing is saved. It runs
+          only when you press the button.
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <Button

@@ -19,6 +19,7 @@ import type { ForgeApi } from '#/types/api.types.js';
 import { stubEventSource } from '#tests/helpers/event-source-stub.js';
 import type { EventSourceStub } from '#tests/helpers/event-source-stub.js';
 import { agentRoutes } from '#tests/helpers/fake-forge/agent-routes.js';
+import { directorRoutes } from '#tests/helpers/fake-forge/director-routes.js';
 import { cardRoutes } from '#tests/helpers/fake-forge/card-routes.js';
 import { overviewRoutes } from '#tests/helpers/fake-forge/overview-routes.js';
 import { pipelineRoutes } from '#tests/helpers/fake-forge/pipeline-routes.js';
@@ -62,6 +63,7 @@ export function installFakeForge(
     ...overviewRoutes(),
     ...agentRoutes(),
     ...pipelineRoutes(),
+    ...directorRoutes(),
   };
 
   const routes: Routes =

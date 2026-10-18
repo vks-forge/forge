@@ -7,6 +7,8 @@
  *   failure is either retried later through a wake or handed to a human, by the family
  *   table and the hourly re-wake cap (execution-plane.md §8). A run that ended out of quota
  *   is neither: it parks its harness until the reset and the ticket waits (tick/quota, d-0097).
+ *   A stage whose agent is rate-limited past its retries, or whose model the harness cannot serve, moves to the
+ *   next place on the agent's own fallback list; with none left it parks as `no_agent_available` (tick/agent-fallback).
  *   A run that carries a pipeline stage is applied by tick/stage-outcome: a writer passes its stage
  *   and the cursor says what is next, a check applies the review it submitted.
  *   Every ticket change goes
@@ -17,7 +19,7 @@
  *   (tick/outcome-escalate).
  *
  * Exports: applyOutcome().
- * Depends on: @forge/core (isRunActive, TERMINAL_STATUSES), domain/failure-policy,
+ * Depends on: @forge/core (isRunActive, TERMINAL_STATUSES), domain/failure-policy, tick/{agent-fallback,no-agent},
  *   tick/outcome-escalate, tick/quota, tick/stage-{outcome,records,state}, tick/ticket-moves, tick/wakes.
  *   Writes inside the caller's transaction.
  */
@@ -25,6 +27,8 @@
 import { TERMINAL_STATUSES, isRunActive } from '@forge/core';
 import type { ErrorFamily, Run, RunResult, StorageTx, Ticket } from '@forge/core';
 import { decideFailure } from '#/domain/failure-policy.js';
+import { nextSlotTx } from '#/tick/agent-fallback.js';
+import { parkNoAgent } from '#/tick/no-agent.js';
 import { ensureQuestion, parkRun, setupCauseOfRun } from '#/tick/outcome-escalate.js';
 import { parkHarnessForQuota, requestQuotaWake } from '#/tick/quota.js';
 import { afterWriterSuccessTx, applyCheckOutcome } from '#/tick/stage-outcome.js';
@@ -123,7 +127,11 @@ export async function applyOutcome(
       tx,
       row.id,
       'error',
-      { note: family ?? result.status },
+      {
+        // The entry of the agent's chain the attempt is on survives the failure, so the next step knows what was tried.
+        ...(row.outcome.fallback === undefined ? {} : { fallback: row.outcome.fallback }),
+        note: family ?? result.status,
+      },
       ctx.nowIso,
     );
   }
@@ -135,8 +143,13 @@ export async function applyOutcome(
     return;
   }
 
+  // The retries of one place of the agent's chain are counted apart from another's (fallback_slot, 0 for runs before slots).
   const failed = family === undefined ? [] : await tx.runs.listByTicket(ticket.id);
-  const attempts = failed.filter((r) => r.error_family === family).length;
+  const attempts = failed.filter(
+    (r) =>
+      r.error_family === family && (r.fallback_slot ?? 0) === (run.fallback_slot ?? 0),
+  ).length;
+
   const decision = decideFailure({
     status: result.status,
     ...(family ? { family } : {}),
@@ -147,6 +160,26 @@ export async function applyOutcome(
   });
 
   if (decision.action === 'park') {
+    // A stage whose agent keeps being rate-limited, or whose model is gone, moves to the next place on the
+    // agent's own list before anyone is asked; with none left the ticket parks as `no_agent_available`.
+    if (row && staged && (family === 'rate_limit' || family === 'model_unavailable')) {
+      const open = (await tx.stageRuns.get(row.id)) ?? row;
+      const move = await nextSlotTx(ctx, tx, ticket, run, open, family);
+      if (move.kind === 'moved') {
+        return;
+      }
+
+      return parkNoAgent(
+        ctx,
+        tx,
+        ticket,
+        run,
+        family,
+        move,
+        row.agent_id ?? run.agent_id ?? 'the agent',
+      );
+    }
+
     return parkRun(
       ctx,
       tx,

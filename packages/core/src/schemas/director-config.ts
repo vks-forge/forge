@@ -15,9 +15,10 @@
  *   tickets, tools and logins are never the Director's to settle whatever they say. `sign_off`
  *   says up to which tier the Director may sign finished work itself (default B); tier C is not
  *   a value, and a project's override may only lower the company's.
+ *   `pipelines` says whether the Director may adjust a ticket's own pipeline copy and when it proposes a change to a project's list.
  *
  * Exports: PlaybookId, DirectorPlaybook, ApprovalMode, DirectorGrillLimits, DirectorReadCaps,
- *   DirectorEscalation, DirectorSignOff, DirectorConfig.
+ *   DirectorEscalation, DirectorSignOff, DirectorPipelines, DirectorConfig.
  * Depends on: schemas/director-flow, schemas/steps, zod. No IO.
  */
 
@@ -75,6 +76,19 @@ export type DirectorEscalation = z.infer<typeof DirectorEscalation>;
 export const DirectorSignOff = z.object({ max_tier: z.enum(['none', 'A', 'B']) });
 export type DirectorSignOff = z.infer<typeof DirectorSignOff>;
 
+/**
+ * How far the Director goes with ticket pipelines: `adjust` lets it change a ticket's own copy
+ * (never the project's list); a proposal to change the project's list is made once the same change
+ * was applied to `propose_after` tickets from `propose_min_cards` cards in `propose_window_days`.
+ */
+export const DirectorPipelines = z.object({
+  adjust: z.boolean(),
+  propose_after: z.number().int().min(2).max(10),
+  propose_min_cards: z.number().int().min(1).max(5),
+  propose_window_days: z.number().int().min(7).max(90),
+});
+export type DirectorPipelines = z.infer<typeof DirectorPipelines>;
+
 /** The whole section; a flow step may only name a playbook that exists. */
 export const DirectorConfig = z
   .object({
@@ -89,6 +103,7 @@ export const DirectorConfig = z
     step_timeouts_ms: z.record(StepName, PosInt),
     escalation: DirectorEscalation,
     sign_off: DirectorSignOff,
+    pipelines: DirectorPipelines,
   })
   .superRefine((d, ctx) => {
     for (const step of d.flow) {

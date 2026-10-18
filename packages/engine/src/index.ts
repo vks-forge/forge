@@ -23,6 +23,7 @@ export { createEngine } from '#/tick/engine.js';
 export { createIdSource, createOwnerId } from '#/shared/ids.js';
 export { createJsonLogger } from '#/shared/json-logger.js';
 export { requestWake } from '#/tick/wakes.js';
+export { loadScorecardInput } from '#/tick/scorecards.js';
 export type * from '#/types/card-create.types.js';
 export type * from '#/types/card-planning.types.js';
 export type * from '#/types/engine.types.js';

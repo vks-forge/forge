@@ -71,6 +71,7 @@ export const FAILURE_ACTIONS: Readonly<
   max_turns: RETRYABLE,
   refused: RETRYABLE,
   question_timeout: RETRYABLE,
+  no_agent_available: RETRYABLE,
 };
 
 /** The kinds of scheduler wait the ticket page words as `<kind>: ...` (dependencies, a cap, a parked harness, a retry backoff, a card being re-planned). */

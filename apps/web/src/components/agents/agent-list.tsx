@@ -18,6 +18,7 @@ import { Bot } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAgentAction, useDuplicateAgent } from '#/api/use-agents.js';
+import { useScorecards } from '#/api/use-scorecards.js';
 import { AgentActionDialog } from '#/components/agents/agent-action-dialog.js';
 import { AgentRow } from '#/components/agents/agent-row.js';
 import { EmptyState } from '#/components/ui/empty-state.js';
@@ -114,6 +115,30 @@ export function AgentList(props: {
   const act = useAgentAction(scope);
   const copy = useDuplicateAgent(scope);
   const notify = useNotify();
+  const project = scope.kind === 'project';
+  const records = useScorecards(scope.kind === 'project' ? scope.slug : '', '90d', {
+    enabled: project,
+  });
+
+  /** The row's record props: nothing outside a project, else loading, failed or the agent's all-tickets row. */
+  const recordOf = (id: string) => {
+    if (!project) {
+      return {};
+    }
+
+    if (records.data === undefined) {
+      return {
+        recordState: records.isPending ? ('loading' as const) : ('error' as const),
+      };
+    }
+
+    return {
+      recordState: 'ready' as const,
+      record: records.data.agents
+        .find((card) => card.agent_id === id)
+        ?.rows.find((row) => row.by === 'all'),
+    };
+  };
 
   function onAction(view: AgentView, action: RowAction): void {
     if (action === 'edit') {
@@ -214,6 +239,7 @@ export function AgentList(props: {
             key={`${view.scope}-${view.id}`}
             view={view}
             scope={scope}
+            {...recordOf(view.id)}
             onAction={(action) => onAction(view, action)}
           />
         ))}

@@ -51,6 +51,7 @@ export const FAILURE_CAUSES = [
   'max_turns',
   'refused',
   'question_timeout',
+  'no_agent_available',
 ] as const;
 export const FailureCause = z.enum(FAILURE_CAUSES);
 export type FailureCause = z.infer<typeof FailureCause>;
@@ -199,6 +200,8 @@ export const ESCALATION_ACTIONS = [
   'continue',
   /** Engine only: a held ticket's lane went live and the hold lifted by itself; never offered as a button. */
   'pipeline_ready',
+  /** Engine / Director only: a stage's agent was swapped for a substitute after its fallbacks ran out; never a button. */
+  'substitute',
 ] as const;
 export const EscalationAction = z.enum(ESCALATION_ACTIONS);
 export type EscalationAction = z.infer<typeof EscalationAction>;

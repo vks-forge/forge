@@ -27,6 +27,7 @@ import { intakeRoute } from '#/routes/intake.js';
 import { memoryRoutes } from '#/routes/memory.js';
 import { pipelineRoutes } from '#/routes/pipelines.js';
 import { projectAgentRoutes } from '#/routes/project-agents.js';
+import { pipelineProposalRoutes } from '#/routes/pipeline-proposals.js';
 import { projectPipelineRoutes } from '#/routes/project-pipelines.js';
 import { projectEventsRoute } from '#/routes/project-events.js';
 import { projectStatsRoutes } from '#/routes/project-stats.js';
@@ -35,6 +36,7 @@ import { projectInspectRoutes } from '#/routes/project-inspect.js';
 import { projectDeleteRoutes } from '#/routes/project-delete.js';
 import { projectsRoutes } from '#/routes/projects.js';
 import { runEventsRoute } from '#/routes/run-events.js';
+import { scorecardRoutes } from '#/routes/scorecards.js';
 import { runSteerRoute } from '#/routes/run-steer.js';
 import { runsRoutes } from '#/routes/runs.js';
 import { settingsRoutes } from '#/routes/settings.js';
@@ -67,6 +69,7 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ...projectAgentRoutes(deps),
     ...pipelineRoutes(deps),
     ...projectPipelineRoutes(deps),
+    ...pipelineProposalRoutes(deps),
     ...harnessRoutes(deps),
     ...folderRoutes(deps),
     folderPickRoute(deps),
@@ -77,6 +80,7 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ...memoryRoutes(deps),
     ...githubConnectionRoutes(deps),
     ...projectStatsRoutes(deps),
+    ...scorecardRoutes(deps),
     ...statsOverviewRoutes(deps),
     ...inboxRoutes(deps),
     ...runsRoutes(deps),

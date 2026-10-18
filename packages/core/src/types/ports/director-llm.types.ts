@@ -10,13 +10,15 @@
  *   family so retry and park decisions read the family, not message text
  *   (director-core.md §5, d-0032, d-0003).
  *
- * Exports: StepErrorKind, StepError, StepOptions, DirectorLLMCapabilities, TicketCheckInput, DirectorLLM.
+ * Exports: StepErrorKind, StepError, StepOptions, DirectorLLMCapabilities, TicketCheckInput, SubstituteCandidate,
+ *   PickSubstituteInput, DirectorLLM.
  * Depends on: schemas/errors, schemas/steps, types/result. Types only.
  */
 
 import type { ZodType } from 'zod';
-import type { ArtifactKind } from '#/schemas/agent.js';
+import type { AgentId, AgentRole, ArtifactKind } from '#/schemas/agent.js';
 import type { ErrorFamily } from '#/schemas/errors.js';
+import type { ScorecardRow } from '#/schemas/scorecard.js';
 import type { StepName } from '#/schemas/steps.js';
 import type { Result } from '#/types/result.types.js';
 
@@ -58,6 +60,38 @@ export interface TicketCheckInput {
     readonly truncated: boolean;
   }[];
   readonly unplanned: readonly string[];
+  readonly playbook: {
+    readonly id: string;
+    readonly title: string;
+    readonly body: string;
+  } | null;
+  readonly house_rules: string;
+}
+
+/** One agent the engine allows as a substitute, with its track record (null when it has none). */
+export interface SubstituteCandidate {
+  readonly id: AgentId;
+  readonly name: string;
+  readonly role: AgentRole;
+  readonly description: string;
+  readonly write_scope: readonly string[];
+  readonly family: string;
+  readonly card: ScorecardRow | null;
+}
+
+/**
+ * The input of the `pick_substitute` step: the stage that cannot run, the agent that failed with
+ * what was tried, and the candidates the engine already filtered. The model picks from this list
+ * only; an answer outside it is refused.
+ */
+export interface PickSubstituteInput {
+  readonly stage: { readonly id: string; readonly label: string };
+  readonly failed: {
+    readonly agent_id: AgentId;
+    readonly role: AgentRole;
+    readonly tried: readonly string[];
+  };
+  readonly candidates: readonly SubstituteCandidate[];
   readonly playbook: {
     readonly id: string;
     readonly title: string;

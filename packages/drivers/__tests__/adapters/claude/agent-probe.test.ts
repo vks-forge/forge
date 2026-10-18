@@ -31,7 +31,6 @@ const REQ = {
   instructions: 'Rule one: be brief.',
   prompt: 'Say hello.',
   timeoutMs: 60_000,
-  maxUsd: 0.1,
 };
 
 const result = (o: Record<string, unknown>): string =>
@@ -84,8 +83,8 @@ function rig(stdout: string | null, authMode: 'login' | 'api_key' = 'login') {
 }
 
 describe('probeArgs', () => {
-  it('is tool-less, settings-less and session-less, with the dollar cap of the request', () => {
-    const args = probeArgs({ ...REQ, model: 'haiku' });
+  it('is tool-less, settings-less and session-less, with the dollar cap of the request when it has one', () => {
+    const args = probeArgs({ ...REQ, maxUsd: 0.1, model: 'haiku' });
 
     expect(args).toEqual(
       expect.arrayContaining([
@@ -102,6 +101,10 @@ describe('probeArgs', () => {
     expect(args[args.indexOf('--setting-sources') + 1]).toBe('');
     expect(args[args.indexOf('--model') + 1]).toBe('haiku');
     expect(args[args.indexOf('--append-system-prompt') + 1]).toBe('Rule one: be brief.');
+  });
+
+  it('sends no --max-budget-usd when the request has no dollar cap', () => {
+    expect(probeArgs(REQ)).not.toContain('--max-budget-usd');
   });
 
   it('sends no model when the agent follows the harness default, and no system prompt for empty instructions', () => {

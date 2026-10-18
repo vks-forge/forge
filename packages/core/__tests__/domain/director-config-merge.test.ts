@@ -22,13 +22,15 @@ import { STEP_NAMES } from '#/schemas/steps.js';
 import { InvalidInputError } from '#/shared/errors.js';
 
 describe('built-in director config', () => {
-  it('validates and ships the nine playbooks with real method text', () => {
+  it('validates and ships the eleven playbooks with real method text', () => {
     expect(DirectorConfig.safeParse(BUILTIN_DIRECTOR_CONFIG).success).toBe(true);
     expect(Object.keys(BUILTIN_DIRECTOR_CONFIG.playbooks).sort()).toEqual([
+      'adjust-pipeline',
       'answer-worker',
       'approve-plan',
       'check-against-plan',
       'enhance-decisions',
+      'pick-substitute',
       'plan-grill',
       'plan-to-tickets',
       'recover-failure',

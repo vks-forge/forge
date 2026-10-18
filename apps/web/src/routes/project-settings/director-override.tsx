@@ -90,6 +90,15 @@ const ROWS: readonly DirectorRow[] = [
         : 'Everything goes to you',
   },
   {
+    key: 'pipelines',
+    label: 'Director on ticket pipelines',
+    hint: 'Whether the Director may adjust a ticket’s own pipeline, and when it suggests a change to this project’s lanes.',
+    words: (d) =>
+      d.pipelines.adjust
+        ? `Adjusts tickets; suggests after ${d.pipelines.propose_after} tickets from ${d.pipelines.propose_min_cards} cards in ${d.pipelines.propose_window_days} days`
+        : 'Tickets run the lane as set',
+  },
+  {
     key: 'step_timeouts_ms',
     label: 'Director step timeouts',
     hint: 'How long each step may run.',

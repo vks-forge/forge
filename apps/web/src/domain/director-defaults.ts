@@ -29,6 +29,7 @@ export const FALLBACK_STEP_MODELS = {
   ticket_recover: 'opus',
   draft_agent: 'sonnet',
   ticket_check: 'opus',
+  pick_substitute: 'sonnet',
 } as const;
 
 export const DEFAULT_FLOW: readonly FlowStep[] = [
@@ -110,7 +111,14 @@ export const FALLBACK_DIRECTOR: DirectorConfig = {
     ticket_recover: 180_000,
     draft_agent: 120_000,
     ticket_check: 300_000,
+    pick_substitute: 120_000,
   },
   escalation: { director_first: true, answer_confidence: 0.8, max_director_retries: 1 },
   sign_off: { max_tier: 'B' },
+  pipelines: {
+    adjust: true,
+    propose_after: 3,
+    propose_min_cards: 2,
+    propose_window_days: 30,
+  },
 };

@@ -95,6 +95,7 @@ describe('EscalationPayload', () => {
       'max_turns',
       'refused',
       'question_timeout',
+      'no_agent_available',
     ]);
   });
 });

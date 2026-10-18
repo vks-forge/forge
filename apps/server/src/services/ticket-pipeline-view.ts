@@ -9,9 +9,13 @@
  *   always inside their ticket, so one ticket's id can never fetch another's content; the owner
  *   may read the Worker's own narrative here, which reviewers never see.
  *
- * Exports: ticketPipeline(), ticketArtifact().
+ *   The owner's mark on a finding ("Real" or "False alarm") is written here too: it must name a finding
+ *   that exists on a stage row of this very ticket, so a mark can never be hung on another ticket's review, and
+ *   it is the one direct judgement scorecards use.
+ *
+ * Exports: ticketPipeline(), ticketArtifact(), markFinding().
  * Depends on: @forge/core (ticketPipelineView, TicketId), services/agent-state, services/http/http-errors,
- *   types/agent-store. IO: reads storage and settings.
+ *   types/agent-store. IO: reads storage and settings, writes finding marks.
  */
 
 import { TicketId, ticketPipelineView } from '@forge/core';
@@ -45,6 +49,8 @@ export async function ticketPipeline(
       snapshot: await tx.ticketPipelines.get(ticket.id),
       records: await tx.stageRuns.listByTicket(ticket.id),
       artifacts: await tx.stageArtifacts.listByTicket(ticket.id),
+      runs: await tx.runs.listByTicket(ticket.id),
+      marks: await tx.findingMarks.listByTickets([ticket.id]),
     };
   });
 
@@ -67,6 +73,8 @@ export async function ticketPipeline(
     found.artifacts,
     found.ticket,
     roster,
+    found.runs,
+    found.marks,
   );
 }
 
@@ -103,4 +111,67 @@ export async function ticketArtifact(
   }
 
   return found;
+}
+
+const notFinding = (id: string, row: string, index: string): HttpError =>
+  new HttpError(
+    404,
+    'finding_not_found',
+    `no finding ${index} on stage row ${row} of ${id}`,
+  );
+
+/**
+ * Sets (or with `verdict: null` clears) the owner's mark on finding `rawIndex` of stage row `rawRow` of
+ * ticket `rawId`, and answers the fresh strip. 404 `ticket_not_found` for an unknown ticket, 404
+ * `finding_not_found` for a row that is not this ticket's, has no review, or an index out of range.
+ */
+export async function markFinding(
+  deps: AgentDeps,
+  rawId: string,
+  rawRow: string,
+  rawIndex: string,
+  verdict: 'real' | 'false_alarm' | null,
+): Promise<{ pipeline: TicketPipelineView }> {
+  const id = TicketId.safeParse(rawId);
+  if (!id.success) {
+    throw notFound(rawId);
+  }
+
+  const row = /^[1-9][0-9]*$/.test(rawRow) ? Number(rawRow) : null;
+  const index = /^(0|[1-9][0-9]*)$/.test(rawIndex) ? Number(rawIndex) : null;
+  const at = new Date(deps.now()).toISOString();
+  await deps.storage.transaction(async (tx) => {
+    if (!(await tx.tickets.get(id.data))) {
+      throw notFound(rawId);
+    }
+
+    const stage = row === null ? null : await tx.stageRuns.get(row);
+    const findings =
+      stage?.ticket_id === id.data ? stage.outcome.review?.findings : undefined;
+
+    if (row === null || index === null || findings?.[index] === undefined) {
+      throw notFinding(rawId, rawRow, rawIndex);
+    }
+
+    if (verdict === null) {
+      await tx.findingMarks.clear(row, index);
+
+      return;
+    }
+
+    await tx.findingMarks.set({
+      ticket_id: id.data,
+      stage_run_id: row,
+      finding_index: index,
+      verdict,
+      marked_at: at,
+    });
+  });
+
+  const pipeline = await ticketPipeline(deps, rawId);
+  if (!pipeline) {
+    throw notFound(rawId);
+  }
+
+  return { pipeline };
 }

@@ -16,7 +16,8 @@
  * Cards, their history and the type registry (ports/card.types), card planning state and
  * plan versions (ports/card-planning.types), the harness registries
  * (ports/harness-registry.types) and the ticket pipeline snapshots, stage rows and artifacts
- * (ports/stage-storage.types) join the same transaction.
+ * (ports/stage-storage.types), the pipeline proposals and the owner's finding marks
+ * (ports/proposal-storage.types) join the same transaction.
  *
  * Exports: TicketPatch, TicketRepository, TicketRelationRepository, RunRepository,
  *   RunEventRepository, RunInboxRepository, RunTokenRepository, IntakeEventRepository,
@@ -48,6 +49,10 @@ import type {
   StageRunRepository,
   TicketPipelineRepository,
 } from '#/types/ports/stage-storage.types.js';
+import type {
+  FindingMarkRepository,
+  PipelineProposalRepository,
+} from '#/types/ports/proposal-storage.types.js';
 import type { InboxStateRepository } from '#/types/ports/inbox-state.types.js';
 import type {
   GithubConnectionRepository,
@@ -132,6 +137,8 @@ export interface TicketRelationRepository {
 export interface RunRepository {
   get(id: string): Promise<Run | null>;
   listByTicket(ticketId: string): Promise<Run[]>;
+  // Every run of up to 500 tickets, oldest first (the scorecards read this in one go).
+  listByTickets(ticketIds: readonly string[]): Promise<Run[]>;
   // Runs in any of the given statuses, oldest first (reconcile and the stall scan).
   listByStatus(statuses: readonly RunStatus[]): Promise<Run[]>;
   // Newest `started_at` first, `id` descending as tie-break; `project` matches the run's ticket's
@@ -279,6 +286,8 @@ export interface StorageTx {
   readonly ticketPipelines: TicketPipelineRepository;
   readonly stageRuns: StageRunRepository;
   readonly stageArtifacts: StageArtifactRepository;
+  readonly pipelineProposals: PipelineProposalRepository;
+  readonly findingMarks: FindingMarkRepository;
 }
 
 /** Single-writer storage backend; every mutation happens inside `transaction`. */

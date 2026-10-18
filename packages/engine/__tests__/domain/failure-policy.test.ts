@@ -133,3 +133,17 @@ describe('decideFailure', () => {
     expect(d).toMatchObject({ action: 'retry', notBefore: now + 1000 });
   });
 });
+
+describe('decideFailure: model_unavailable', () => {
+  it('is never retried on the same model, however few attempts were made', () => {
+    const d = decideFailure({
+      status: 'error',
+      family: 'model_unavailable',
+      attempts: 1,
+      now,
+      policy,
+    });
+
+    expect(d.action).toBe('park');
+  });
+});

@@ -29,6 +29,8 @@ export function purgeProjectState(state: MemoryState, slug: string): boolean {
     [...state.cards.values()].filter((c) => c.project === slug).map((c) => c.id),
   );
 
+  state.findingMarks = state.findingMarks.filter((m) => !ticketIds.has(m.ticket_id));
+  state.pipelineProposals = state.pipelineProposals.filter((p) => p.project !== slug);
   state.stageArtifacts = state.stageArtifacts.filter((a) => !ticketIds.has(a.ticket_id));
   state.stageRuns = state.stageRuns.filter((r) => !ticketIds.has(r.ticket_id));
   for (const id of ticketIds) {

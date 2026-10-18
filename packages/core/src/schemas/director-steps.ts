@@ -20,14 +20,15 @@
  *
  * Exports: MAX_READ_REQUESTS, ReadRequest, ReadRequests, CardSurveyOutput, VerifyOutput,
  *   GrillTurnOutput, EnhanceOutput, WritePlanOutput, ApprovePlanOutput, CustomStepOutput,
- *   ANSWER_GROUND_KINDS, ESCALATE_REASONS, TicketAnswerOutput, TicketRecoverOutput, DraftAgentOutput.
+ *   ANSWER_GROUND_KINDS, ESCALATE_REASONS, TicketAnswerOutput, TicketRecoverOutput, PickSubstituteOutput,
+ *   DraftAgentOutput.
  * Depends on: schemas/agent, schemas/escalation, schemas/grill, schemas/ids, schemas/plan, zod. No IO.
  */
 
 import { z } from 'zod';
 import { EscalationOption, MAX_OPTIONS } from '#/schemas/escalation.js';
 import { GrillQuestionDraft, SurveyFindings, VerifyFindings } from '#/schemas/grill.js';
-import { AgentInput } from '#/schemas/agent.js';
+import { AgentId, AgentInput } from '#/schemas/agent.js';
 import { CardId } from '#/schemas/ids.js';
 import { PlanTickets } from '#/schemas/plan.js';
 
@@ -191,6 +192,23 @@ export const TicketRecoverOutput = z.object({
   confidence: z.number().min(0).max(1),
 });
 export type TicketRecoverOutput = z.infer<typeof TicketRecoverOutput>;
+
+/**
+ * `pick_substitute`: tool-less. The engine already filtered the candidates (same role, usable, harness
+ * ready, writer scope within the original's, critic family rule); the model chooses one of them or
+ * pauses for the owner. A pick outside the list is refused by the engine, never trusted.
+ */
+export const PickSubstituteOutput = z
+  .object({
+    decision: z.enum(['substitute', 'pause']),
+    agent: AgentId.optional(),
+    reason: z.string().trim().min(10).max(500),
+  })
+  .refine((o) => o.decision !== 'substitute' || o.agent !== undefined, {
+    message: 'decision substitute needs the agent',
+    path: ['agent'],
+  });
+export type PickSubstituteOutput = z.infer<typeof PickSubstituteOutput>;
 
 /** `draft_agent`: a proposed agent definition, why, and what the Director could not decide; nothing is saved from it. */
 export const DraftAgentOutput = z.object({

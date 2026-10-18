@@ -203,4 +203,55 @@ export function describeStageRunnerContract(getDb: () => StorageAdapter): void {
       expect(await tx((t) => t.stageRuns.listByTicket(TID))).toEqual([]);
     });
   });
+
+  describe('stage runs of many tickets', () => {
+    it('lists the attempts of the tickets asked for, oldest first, and no others', async () => {
+      await seedTicket(1);
+      await seedTicket(2);
+      await seedTicket(3);
+      const [a, b, c] = [makeTicket(1).id, makeTicket(2).id, makeTicket(3).id];
+      await tx((t) => t.stageRuns.start(attempt(a, 'implementer')));
+      await tx((t) => t.stageRuns.start(attempt(b, 'implementer')));
+      await tx((t) => t.stageRuns.start(attempt(c, 'implementer')));
+      await tx((t) => t.stageRuns.start(attempt(a, 'reviewer')));
+
+      const got = await tx((t) => t.stageRuns.listByTickets([a, b]));
+
+      expect(got.map((r) => [r.ticket_id, r.stage_id])).toEqual([
+        [a, 'implementer'],
+        [b, 'implementer'],
+        [a, 'reviewer'],
+      ]);
+
+      expect(await tx((t) => t.stageRuns.listByTickets([]))).toEqual([]);
+    });
+
+    it('keeps the fallback record in an attempt outcome and refuses a malformed one', async () => {
+      await seedTicket();
+      const id = (await tx((t) =>
+        t.stageRuns.start(attempt(TID, 'implementer')),
+      )) as number;
+
+      const fallback = {
+        slot: 1,
+        tried: [{ slot: 0, harness: 'claude-code', model: 'opus', family: 'claude' }],
+      };
+
+      await tx((t) =>
+        t.stageRuns.finish(id, {
+          status: 'error',
+          outcome: { note: 'rate_limit', fallback },
+        }),
+      );
+
+      expect((await tx((t) => t.stageRuns.get(id)))?.outcome.fallback).toEqual(fallback);
+      await expect(
+        tx((t) =>
+          t.stageRuns.finish(id, {
+            outcome: { fallback: { slot: 9, tried: [] } } as never,
+          }),
+        ),
+      ).rejects.toThrow();
+    });
+  });
 }

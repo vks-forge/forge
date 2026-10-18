@@ -7,11 +7,12 @@
  *   now. Only the actions that make sense for this agent appear: a built-in is edited or reset,
  *   never archived; a company agent seen from a project is overridden or switched off there, not
  *   edited; the implementer cannot be switched off, and the row says why instead of hiding the
- *   action. Every action is a real button or menu item, reachable with the keyboard.
+ *   action. Every action is a real button or menu item, reachable with the keyboard. In a project the row
+ *   also carries the agent's record over 90 days in one line (or "Too few tickets to judge").
  *
  * Exports: AgentRow.
  * Depends on: @radix-ui/react-dropdown-menu, lucide-react, components/agents/agent-tags,
- *   components/ui/button, domain/agent-copy, domain/agent-models, schemas/agents.
+ *   components/ui/button, domain/agent-copy, domain/agent-models, domain/scorecard-copy, schemas/agents.
  */
 
 import * as Menu from '@radix-ui/react-dropdown-menu';
@@ -20,7 +21,9 @@ import { AgentTags } from '#/components/agents/agent-tags.js';
 import { Button } from '#/components/ui/button.js';
 import { ROLE_INFO } from '#/domain/agent-copy.js';
 import { runsOnLabel } from '#/domain/agent-models.js';
+import { summaryLine } from '#/domain/scorecard-copy.js';
 import type { AgentView } from '#/schemas/agents.js';
+import type { ScorecardRow } from '#/schemas/pipeline-proposals.js';
 import type { AgentScope, RowAction } from '#/types/agent-ui.types.js';
 
 const ITEM =
@@ -78,6 +81,10 @@ function menuEntries(
 export function AgentRow(props: {
   view: AgentView;
   scope: AgentScope;
+  /** This agent's all-tickets row over 90 days; absent outside a project or while it loads. */
+  record?: ScorecardRow | undefined;
+  /** Whether the record is still loading or failed to load, so the row says so instead of staying silent. */
+  recordState?: 'loading' | 'error' | 'ready';
   onAction: (action: RowAction) => void;
 }) {
   const { view, scope } = props;
@@ -109,6 +116,15 @@ export function AgentRow(props: {
             {ready ? 'Ready' : `Cannot run now. ${view.readiness.reasons.join(' ')}`}
           </span>
         </p>
+        {props.recordState === undefined ? null : (
+          <p className="text-xs text-muted">
+            {props.recordState === 'loading'
+              ? 'Loading its record…'
+              : props.recordState === 'error'
+                ? 'Its record could not be loaded.'
+                : `Last 90 days: ${summaryLine(props.record)}`}
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <Button

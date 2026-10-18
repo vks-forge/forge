@@ -5,7 +5,8 @@
  *   a failed gate to a run, a memory proposal to Memory, a quota wait to its harness. One
  *   function picks the target so every row, on Home and in the Inbox, leads to the same place,
  *   and a kind the UI does not know yet still opens something sensible (the ticket or run it
- *   names, else the Inbox itself) rather than a dead link. A tool approval or a compatibility
+ *   names, else the Inbox itself) rather than a dead link. A pipeline proposal belongs to no ticket, so it
+ *   leads to the project's Pipelines tab. A tool approval or a compatibility
  *   check opens the one harness it names, scrolled to the section where the owner decides
  *   (`#tools`, `#compat`), so "Review tool" lands on the Approve button, not a generic list.
  *
@@ -29,6 +30,7 @@ export const INBOX_KIND_LABEL: Readonly<Record<InboxKind, string>> = {
   harness_compat: 'Harness check',
   tool_approval: 'Tool approval',
   memory_proposal: 'Memory proposal',
+  pipeline_proposal: 'Pipeline change',
 };
 
 /** The harness kind named by a `<kind>/<version>[/<tool>]` source id, URI-encoded. */
@@ -49,6 +51,13 @@ export function inboxLink(
     return {
       to: `${projectPath(slug, 'memory')}?record=${encodeURIComponent(source)}`,
       label: 'Open in Memory',
+    };
+  }
+
+  if (item.kind === 'pipeline_proposal') {
+    return {
+      to: projectPath(slug, 'settings/pipelines'),
+      label: 'Open Pipelines',
     };
   }
 

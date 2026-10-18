@@ -8,7 +8,9 @@
  *   built-in (company) or the company default (project) and asks first because it discards the
  *   current list. Full is editable now but cannot run until its runner ships, and the header
  *   says so, so an owner never wonders why a Full ticket sits waiting. When two people save at
- *   once the conflict banner decides; saving is paused until it is answered.
+ *   once the conflict banner decides; saving is paused until it is answered. In a project, the Director's
+ *   pending suggestion for this lane shows above the editor to accept or reject, and the record of the lane's
+ *   pipeline shapes (Director-changed ones marked) sits below it.
  *
  * Exports: LanePane.
  * Depends on: react, lucide-react, components/pipelines/*, components/settings/form-field,
@@ -21,6 +23,8 @@ import type { AgentView, Lane } from '@forge/core';
 import { LaneIdProvider } from '#/components/pipelines/lane-ids.js';
 import { PipelineConflictBanner } from '#/components/pipelines/pipeline-conflict-banner.js';
 import { PipelineEditor } from '#/components/pipelines/pipeline-editor.js';
+import { ShapeTable } from '#/components/pipelines/shape-table.js';
+import { ProposalBanner } from '#/components/pipelines/proposal-banner.js';
 import { PipelineSaveBar } from '#/components/pipelines/pipeline-save-bar.js';
 import { Notice } from '#/components/settings/form-field.js';
 import { Button } from '#/components/ui/button.js';
@@ -106,6 +110,8 @@ export function LanePane(props: {
           />
         ) : null}
 
+        {company ? null : <ProposalBanner slug={scope.slug} lane={lane} />}
+
         <PipelineEditor
           label={name}
           def={editor.draft}
@@ -132,6 +138,8 @@ export function LanePane(props: {
           onSave={editor.save}
           onDiscard={editor.discard}
         />
+
+        {company ? null : <ShapeTable slug={scope.slug} lane={lane} />}
 
         <ConfirmDialog
           open={confirming}
