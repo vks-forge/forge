@@ -156,8 +156,8 @@ models.director += research: Model          // 'sonnet'; also .forge/config/forg
 // schemas/project.ts (ProjectConfigShape → ProjectSettings)
 += research?: ProjectResearch
 // schemas/director-config.ts
-DirectorConfig.research = { max_rounds: int 1..3 /*2*/, max_searches: int 0..20 /*6*/, max_fetches: int 0..20 /*8*/,
-  max_bytes: int 50_000..2_000_000 /*600_000*/, max_runs_per_card: int 1..10 /*4*/, grill_detours: boolean /*true*/,
+DirectorConfig.research = { max_rounds: int 1..10 /*2*/, max_searches: int 0..100 /*6*/, max_fetches: int 0..100 /*8*/,
+  max_bytes: int 50_000..20_000_000 /*600_000*/, max_runs_per_card: int 1..100 /*4*/, grill_detours: boolean /*true*/,
   step_budget_usd?: positive }              // absent = engine.step_budget_usd
 // schemas/director-flow.ts
 FLOW_STEP_KINDS += 'research'               // not lockable; ≤1 research step (flowProblems)
@@ -451,8 +451,8 @@ company doc:
   research: { provider: 'searxng' | 'none',
               searxng: { base_url: <http(s) url>, allow_hosts: string[] },
               fetch:   { allow_hosts: string[], deny_hosts: string[], timeout_ms: 1000..30000 } }
-  director.research: { max_rounds 1..3, max_searches 0..20, max_fetches 0..20, max_bytes 50 000..2 000 000,
-                       max_runs_per_card 1..10, grill_detours: boolean, step_budget_usd?: > 0 }
+  director.research: { max_rounds 1..10, max_searches 0..100, max_fetches 0..100, max_bytes 50 000..20 000 000,
+                       max_runs_per_card 1..100, grill_detours: boolean, step_budget_usd?: > 0 }
   director.flow: the list may hold one step { kind: 'research', ... }
   models.director.research: string
 project doc:

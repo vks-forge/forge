@@ -35,7 +35,7 @@ const INSPECTION = inspection({
 });
 
 describe('first run: when the wizard opens', () => {
-  it('sends a fresh install from / to the first step, naming the data folder', async () => {
+  it('sends a fresh install from / to the harness step, with no data-folder step (d-0170)', async () => {
     const { router } = renderOnboarding('/', {
       ...NO_PROJECTS,
       'GET /system': { body: SYSTEM_FRESH },
@@ -43,17 +43,23 @@ describe('first run: when the wizard opens', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Where Forge keeps its files',
+        name: 'Harnesses and logins',
         level: 1,
       }),
     ).toBeInTheDocument();
 
     expect(router.state.location.pathname).toBe('/welcome');
-    expect(screen.getByLabelText('Data folder')).toHaveTextContent(
-      SYSTEM_FRESH.data_home,
-    );
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+    expect(screen.queryByText(/where forge keeps its files/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Data folder')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /data folder/i }),
+    ).not.toBeInTheDocument();
 
-    expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
+    expect(screen.getByText(`${SYSTEM_FRESH.version}`)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Anything you leave out now can be done later/),
+    ).toBeInTheDocument();
   });
 
   it('opens past the harness step once the server says a harness works', async () => {
@@ -133,16 +139,13 @@ describe('first run: when the wizard opens', () => {
 });
 
 describe('first run: moving through the steps', () => {
-  it('goes data, harness, GitHub (skippable), project, and Esc goes back one step', async () => {
+  it('goes harness, GitHub (skippable), project, and Esc goes back one step', async () => {
     const user = userEvent.setup();
     renderOnboarding('/welcome', {
       ...NO_HARNESSES,
       ...NO_CONNECTIONS,
       'GET /system': { body: SYSTEM_FRESH },
     });
-
-    await screen.findByRole('heading', { name: 'Where Forge keeps its files' });
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
 
     expect(
       await screen.findByRole('heading', { name: 'Harnesses and logins', level: 1 }),

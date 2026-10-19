@@ -147,6 +147,60 @@ describe('Card chat: grill question', () => {
     ).toBeNull();
   });
 
+  it('draws a typed answer once, labels the open question waiting and the answered one answered', async () => {
+    renderApp({
+      path: PAGE,
+      routes: flowRoutes({
+        events: [
+          ...grilling,
+          flowEvent(2, 'user_message', { text: 'Retry until it works' }),
+          flowEvent(3, 'grill_answer', {
+            question_id: 'q1',
+            text: 'Retry until it works',
+            by: 'owner',
+          }),
+          flowEvent(4, 'grill_question', {
+            ...QUESTION,
+            question_id: 'q2',
+            text: 'Should failures page someone?',
+          }),
+        ],
+      }),
+    });
+
+    const log = await screen.findByRole('log', { name: 'Conversation' });
+
+    expect(await within(log).findByText('Should failures page someone?')).toBeVisible();
+    expect(within(log).getAllByText('Retry until it works')).toHaveLength(1);
+    expect(within(log).getByText('Answered')).toBeInTheDocument();
+    expect(within(log).getByText('Waiting for your answer')).toBeInTheDocument();
+    expect(within(log).queryByText('Not answered')).toBeNull();
+    expect(
+      screen.getByPlaceholderText(/Type your answer to the open question/),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the picked option label as the owner bubble', async () => {
+    renderApp({
+      path: PAGE,
+      routes: flowRoutes({
+        events: [
+          ...grilling,
+          flowEvent(2, 'grill_answer', {
+            question_id: 'q1',
+            option_id: 'o2',
+            by: 'owner',
+          }),
+        ],
+      }),
+    });
+
+    const log = await screen.findByRole('log', { name: 'Conversation' });
+
+    expect(await within(log).findByText('Five times')).toBeInTheDocument();
+    expect(within(log).getAllByText('You').length).toBeGreaterThanOrEqual(2);
+  });
+
   it('labels an answer the Director gave from its own recommendation', async () => {
     renderApp({
       path: PAGE,

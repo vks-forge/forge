@@ -12,7 +12,7 @@
  *   untrusted-content envelope with an id the page cannot know. A refusal is a result row, so the model can
  *   adapt; the queries are recorded for the card's log.
  *
- * Exports: newResearchState(), runRequests(), PAGE_EXCERPT_CHARS.
+ * Exports: newResearchState(), runRequests(), fitResultsToPrompt(), PAGE_EXCERPT_CHARS, PROMPT_RESULTS_CHARS.
  * Depends on: @forge/core (fetchAllowed, normaliseUrl, wrapUntrusted), @forge/tools (admitResearch),
  *   shared/ids, types/card-planning, types/research-run. IO: the injected ResearchProvider.
  */
@@ -26,6 +26,12 @@ import type { KnownCardUrls, ResearchState } from '#/types/research-run.types.js
 
 /** What the model sees of one page: the first part, so one source cannot flood the step's input. */
 export const PAGE_EXCERPT_CHARS = 12_000;
+
+/**
+ * Most page text the step's input carries at once (about 100k tokens). The owner may allow up to 100
+ * pages a run (d-0171); without this the pages of a long run would add up past the model's context.
+ */
+export const PROMPT_RESULTS_CHARS = 400_000;
 
 const SEARCH_RESULTS = 8;
 const PAGE_MAX_BYTES = 2 * 1024 * 1024;
@@ -226,4 +232,32 @@ function pageResult(
     text: wrapUntrusted(excerpt, nonce(), url),
     truncated: truncated || excerpt.length < text.length,
   };
+}
+
+/**
+ * The results as the next model call sees them: the newest pages keep their text up to
+ * `PROMPT_RESULTS_CHARS`, older ones keep their row and source ref but lose the text (marked truncated).
+ * The pages stay stored in full, so a quote from one is still checked against it.
+ */
+export function fitResultsToPrompt(
+  results: readonly ResearchResult[],
+  maxChars: number = PROMPT_RESULTS_CHARS,
+): ResearchResult[] {
+  let left = maxChars;
+  const fitted: ResearchResult[] = [];
+  for (let i = results.length - 1; i >= 0; i--) {
+    const r = results[i] as ResearchResult;
+    if (r.text === undefined) {
+      fitted.push(r);
+    } else if (r.text.length <= left) {
+      left -= r.text.length;
+      fitted.push(r);
+    } else {
+      const bare = { ...r, truncated: true };
+      delete bare.text;
+      fitted.push(bare);
+    }
+  }
+
+  return fitted.reverse();
 }

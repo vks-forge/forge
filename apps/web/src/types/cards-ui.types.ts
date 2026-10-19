@@ -46,6 +46,8 @@ export type ChatBlock =
       readonly answered: string | null;
       /** True only for the newest open question on a card that can still be answered. */
       readonly actionable: boolean;
+      /** Where the question stands for the owner: waiting on them, answered, or left unanswered. */
+      readonly state: 'waiting' | 'answered' | 'unanswered';
     }
   | {
       readonly kind: 'plan_ready';

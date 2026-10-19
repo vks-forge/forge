@@ -5,9 +5,10 @@
  *   click per question. The open question shows its text, why it matters, two to four options
  *   (the Director's recommendation badged, never pre-selected), "Other…" for free text, and the
  *   two ways out of the interview: take the recommendations for everything left, or stop asking
- *   and write the plan. Only the newest open question is actionable: an answered question
- *   collapses to its words (the owner's answer is its own bubble below), and one that was
- *   superseded says it got no answer instead of offering buttons the server would refuse
+ *   and write the plan. Only the newest open question is actionable and says it is waiting
+ *   for the owner: an answered question collapses to its words ("Answered"; the owner's answer
+ *   is its own bubble below), and one that was superseded says "Not answered" instead of
+ *   offering buttons the server would refuse
  *   (`question_not_open`). A refusal is shown right here in words. Every control is a real
  *   button, reachable by keyboard, 36 px or taller.
  *
@@ -28,7 +29,7 @@ export const FIRST_OPTION_ID = 'grill-first-option';
 
 export function QuestionBlock(props: {
   question: GrillQuestion;
-  answered: string | null;
+  state: 'waiting' | 'answered' | 'unanswered';
   actionable: boolean;
   flow: FlowHandlers;
 }) {
@@ -40,7 +41,7 @@ export function QuestionBlock(props: {
     return (
       <div className="grid max-w-[88%] gap-0.5 border-l-2 border-line pl-3 text-sm">
         <p className="text-xs font-medium text-muted">
-          {props.answered !== null ? 'Question, answered' : 'Question, not answered'}
+          {props.state === 'answered' ? 'Answered' : 'Not answered'}
         </p>
         <p className="min-w-0 break-words text-muted">{question.text}</p>
       </div>
@@ -55,6 +56,7 @@ export function QuestionBlock(props: {
       className="grid max-w-[92%] gap-3 rounded-2xl border border-line bg-surface p-3 shadow-[0_1px_2px_oklch(25%_0.03_255/0.06)]"
     >
       <div className="grid gap-1">
+        <p className="text-xs font-medium text-signal">Waiting for your answer</p>
         <p className="min-w-0 break-words text-sm font-medium">{question.text}</p>
         {question.why ? (
           <p className="min-w-0 break-words text-xs text-muted">{question.why}</p>

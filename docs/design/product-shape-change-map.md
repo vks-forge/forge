@@ -52,8 +52,8 @@ root (`.forge/data/forge.db`, `runs`, `secrets`, `.forge/memory`,
 `**/.forge/data` (`packages/tools/src/domain/floors.ts:38-80`,
 `argv-paths.ts:111`, `shared/path.ts:11,139`).
 Change:
-- New data-home resolver: `%LOCALAPPDATA%\Forge` default, chosen on first run,
-  stored in a tiny bootstrap file; `FORGE_HOME` env for dev/test only.
+- New data-home resolver: `%LOCALAPPDATA%\Forge` always (d-0170 removed the
+  first-run choice and the bootstrap file); `FORGE_HOME` env for dev/test only.
 - Layout: `forge.db`, `secrets/`, `memory/<slug>/`, `worktrees/<slug>/<ticket>`,
   `runs/<id>/`, `backups/`, `logs/`, `server.json` (pid, port).
 - `MCP_ENTRY` and hook bin resolved relative to the installed package.

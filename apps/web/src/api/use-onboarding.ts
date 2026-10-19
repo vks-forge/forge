@@ -1,8 +1,8 @@
 /**
  * TanStack Query hooks for first run and new project.
  *
- * Why: `/` decides from `GET /system` whether to open the wizard, the wizard's first step
- *   shows the data folder from the same answer, and creating a project changes both the
+ * Why: `/` decides from `GET /system` whether to open the wizard, the wizard
+ *   resumes past a passing harness from the same answer, and creating a project changes both the
  *   project list and whether setup is finished. One key for the system answer means one
  *   request and one place to refresh after a project is created. Inspect and create are
  *   mutations held in component state, not cached, because they are the user's explicit

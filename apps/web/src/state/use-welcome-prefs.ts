@@ -1,11 +1,11 @@
 /**
  * `useWelcomePrefs()`: where the first-run wizard is and whether the user chose "finish later".
  *
- * Why: the wizard spans four steps and leaves the page to reach Forge settings and back, so
+ * Why: the wizard spans three steps and leaves the page to reach Forge settings and back, so
  *   the current step must outlive the step components, and "Finish later" has to stick, or `/`
  *   would send the user straight back to the wizard on every visit. Both are saved in
  *   `localStorage` (`forge.ui.welcome`, d-0122) so they survive a reload. The folder typed in
- *   step 4 is only kept for the visit (a transient store) so Back and Forward do not lose it.
+ *   step 3 is only kept for the visit (a transient store) so Back and Forward do not lose it.
  *   Nothing here is server data and nothing a person types into a credential field is ever kept.
  *
  * Exports: useWelcomePrefs(), welcomePrefsStore.

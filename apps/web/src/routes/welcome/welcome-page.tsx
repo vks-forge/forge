@@ -2,8 +2,9 @@
  * WelcomePage: the first-run wizard at `/welcome`, full screen, outside the app shell.
  *
  * Why: a fresh Forge has no project, so the shell (project switcher, project nav) has nothing
- *   to show. The wizard walks through the four things that make Forge useful (where it keeps
- *   its files, a working harness, optionally GitHub, and a first project) in that order. It
+ *   to show. The wizard walks through the three things that make Forge useful (a working
+ *   harness, optionally GitHub, and a first project) in that order. Where Forge keeps its
+ *   files is fixed (d-0170) and shown under Forge settings, General, not here. It
  *   opens at the first step the server says is not done, keeps the step and the typed folder
  *   across route changes, goes back with Esc, and can be left at any time with "Finish later",
  *   which lands in Forge settings (everything here is also there) and stops `/` from sending
@@ -19,7 +20,6 @@ import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { describeError } from '#/api/describe-error.js';
 import { useSystem } from '#/api/use-onboarding.js';
-import { DataFolderStep } from '#/components/onboarding/data-folder-step.js';
 import { GitHubStep } from '#/components/onboarding/github-step.js';
 import { HarnessStep } from '#/components/onboarding/harness-step.js';
 import { ProjectStepInline } from '#/components/onboarding/project-step-inline.js';
@@ -32,14 +32,10 @@ import { useWelcomePrefs } from '#/state/use-welcome-prefs.js';
 import type { WizardStepId } from '#/types/onboarding.types.js';
 
 const COPY: Readonly<Record<WizardStepId, { title: string; intro: string }>> = {
-  data: {
-    title: 'Where Forge keeps its files',
-    intro: 'Forge stores everything it needs in one folder. Nothing is written yet.',
-  },
   harness: {
     title: 'Harnesses and logins',
     intro:
-      'Workers run the Claude Code you already have installed. Say how it signs in and check that it works.',
+      'Workers run the Claude Code you already have installed. Say how it signs in and check that it works. Anything you leave out now can be done later under Forge settings.',
   },
   github: {
     title: 'Connect GitHub',
@@ -104,10 +100,10 @@ export function WelcomePage() {
         step={step}
         onStep={prefs.setStep}
         onFinishLater={finishLater}
+        version={system.data.version}
         title={title}
         intro={intro}
       >
-        {step === 'data' ? <DataFolderStep system={system.data} /> : null}
         {step === 'harness' ? <HarnessStep /> : null}
         {step === 'github' ? <GitHubStep onSkip={() => prefs.setStep(next)} /> : null}
         {step === 'project' ? (

@@ -1,10 +1,10 @@
 /**
  * The first-run wizard's steps and where it should open.
  *
- * Why: the wizard has four fixed steps (data folder, harnesses, GitHub, first project) and a
+ * Why: the wizard has three fixed steps (harnesses, GitHub, first project) and a
  *   person may leave and come back, so where it opens must come from what the server already
  *   knows, not from memory the browser may have lost. A harness that already passed its test
- *   means step 2 is done; otherwise the wizard opens at the beginning. A step the person was
+ *   means step 1 is done; otherwise the wizard opens at the beginning. A step the person was
  *   on in this visit wins, so Back and a reload within the visit do not jump around.
  *
  * Exports: WIZARD_STEPS, startStep(), stepIndex(), neighbour().
@@ -15,7 +15,6 @@ import type { SystemInfo } from '@forge/core';
 import type { WizardStepId } from '#/types/onboarding.types.js';
 
 export const WIZARD_STEPS: readonly { id: WizardStepId; label: string }[] = [
-  { id: 'data', label: 'Data folder' },
   { id: 'harness', label: 'Harnesses and logins' },
   { id: 'github', label: 'GitHub' },
   { id: 'project', label: 'First project' },
@@ -39,5 +38,5 @@ export function startStep(
     return chosen;
   }
 
-  return system.first_run.harness_ok ? 'github' : 'data';
+  return system.first_run.harness_ok ? 'github' : 'harness';
 }

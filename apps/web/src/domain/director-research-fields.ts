@@ -19,19 +19,19 @@ export const RESEARCH_LIMIT_FIELDS: readonly FieldSpec[] = [
     kind: 'number',
     path: 'director.research.max_rounds',
     label: 'Research rounds',
-    hint: 'From 1 to 3. Each round may search and read pages, then writes down what it found.',
+    hint: 'From 1 to 10. Each round may search and read pages, then writes down what it found.',
   },
   {
     kind: 'number',
     path: 'director.research.max_searches',
     label: 'Searches per run',
-    hint: 'From 0 to 20.',
+    hint: 'From 0 to 100.',
   },
   {
     kind: 'number',
     path: 'director.research.max_fetches',
     label: 'Pages read per run',
-    hint: 'From 0 to 20.',
+    hint: 'From 0 to 100.',
   },
   {
     kind: 'number',
@@ -39,13 +39,13 @@ export const RESEARCH_LIMIT_FIELDS: readonly FieldSpec[] = [
     label: 'Page text per run',
     unit: 'KB',
     scale: 1000,
-    hint: 'From 50 to 2000 KB. Reading stops at this total.',
+    hint: 'From 50 to 20000 KB. Reading stops at this total.',
   },
   {
     kind: 'number',
     path: 'director.research.max_runs_per_card',
     label: 'Research runs per card',
-    hint: 'From 1 to 10. Past this a card goes on without more research.',
+    hint: 'From 1 to 100. Past this a card goes on without more research.',
   },
   {
     kind: 'number',

@@ -11,7 +11,7 @@
  *   plain system lines. A payload that does not parse falls back to a neutral line built from
  *   what can be read, never a crash and never a blank.
  *
- * Exports: flowLineOf(), FLOW_KINDS, answerWords().
+ * Exports: flowLineOf(), FLOW_KINDS, answerWords(), questionState().
  * Depends on: schemas/card-events, schemas/cards (type), domain/research-copy, types/cards-ui.types. No IO.
  */
 
@@ -58,6 +58,18 @@ export function answerWords(
   return label ?? answer.text?.trim() ?? 'Answered';
 }
 
+/** A question reads as answered only when an answer exists; waiting only when it can be answered now. */
+export function questionState(
+  hasAnswer: boolean,
+  actionable: boolean,
+): 'waiting' | 'answered' | 'unanswered' {
+  if (hasAnswer) {
+    return 'answered';
+  }
+
+  return actionable ? 'waiting' : 'unanswered';
+}
+
 const money = (value: unknown): string =>
   typeof value === 'number' && Number.isFinite(value) ? `$${value.toFixed(2)}` : '?';
 
@@ -78,6 +90,9 @@ export function flowLineOf(
       }
 
       const answer = context.grill.answers.get(parsed.data.question_id);
+      const actionable =
+        context.canAnswer &&
+        context.grill.question?.question_id === parsed.data.question_id;
 
       return {
         ...base,
@@ -87,9 +102,8 @@ export function flowLineOf(
           kind: 'question',
           question: parsed.data,
           answered: answer ? answerWords(answer, parsed.data) : null,
-          actionable:
-            context.canAnswer &&
-            context.grill.question?.question_id === parsed.data.question_id,
+          actionable,
+          state: questionState(answer !== undefined, actionable),
         },
       };
     }

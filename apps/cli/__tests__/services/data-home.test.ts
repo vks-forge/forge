@@ -2,75 +2,65 @@
  * Tests for finding the data home on a machine.
  *
  * Why: the data home decides where the database and the encrypted secrets are. A server and
- *   a CLI that read different folders would look at two separate, silently empty homes, and a
- *   hand-edited bootstrap file must stop startup with a message instead of being ignored.
- *   The machine is a literal here, so no test touches the real `%LOCALAPPDATA%` or the real
- *   config directory.
+ *   a CLI that read different folders would look at two separate, silently empty homes. The
+ *   folder is always the platform default (d-0170): there is no user-facing way to pick
+ *   another, so a stray `forge-home.json` left by an older build must change nothing. The
+ *   machine is a literal here, so no test touches the real `%LOCALAPPDATA%`.
  *
- * Pins: default location, FORGE_HOME precedence (the bootstrap file is not even read), the
- *   bootstrap file being honoured, a malformed file failing loudly, a missing file ignored.
- * Depends on: src/services/data-home. No IO.
+ * Pins: default location, FORGE_HOME replacing it (dev and tests only), a relative FORGE_HOME
+ *   refused, and a stray forge-home.json in the config folder being ignored.
+ * Depends on: src/services/data-home, node:fs, node:os. IO: a temp folder.
  */
 
-import { InvalidInputError } from '@forge/core';
-import { describe, expect, it, vi } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
 import { loadDataHome } from '#/services/data-home.js';
 import type { DataHomeIo } from '#/types/data-home.types.js';
 
-const BOOTSTRAP = 'C:\\Users\\Ana\\AppData\\Roaming\\Forge\\forge-home.json';
-
-const machine = (files: Record<string, string> = {}): DataHomeIo => ({
-  platform: 'win32',
-  homedir: 'C:\\Users\\Ana',
-  readText: vi.fn(async (path: string) => files[path]),
-});
+const machine = (): DataHomeIo => ({ platform: 'win32', homedir: 'C:\\Users\\Ana' });
 
 describe('loadDataHome', () => {
-  it('defaults to %LOCALAPPDATA%\\Forge', async () => {
+  it('defaults to %LOCALAPPDATA%\\Forge', () => {
     const env = { LOCALAPPDATA: 'C:\\Users\\Ana\\AppData\\Local' };
 
-    const layout = await loadDataHome(env, machine());
+    const layout = loadDataHome(env, machine());
 
     expect(layout.home).toBe('C:\\Users\\Ana\\AppData\\Local\\Forge');
     expect(layout.dbPath).toBe('C:\\Users\\Ana\\AppData\\Local\\Forge\\forge.db');
   });
 
-  it('honours the folder named in forge-home.json', async () => {
-    const io = machine({ [BOOTSTRAP]: '{"dataHome":"D:\\\\ForgeData"}' });
-
-    const layout = await loadDataHome({}, io);
-
-    expect(layout.home).toBe('D:\\ForgeData');
-    expect(layout.secretsDir).toBe('D:\\ForgeData\\secrets');
-  });
-
-  it('lets FORGE_HOME win and does not read the bootstrap file at all', async () => {
-    const io = machine({ [BOOTSTRAP]: '{"dataHome":"D:\\\\ForgeData"}' });
-
-    const layout = await loadDataHome({ FORGE_HOME: 'E:\\dev-home' }, io);
+  it('lets FORGE_HOME replace the default', () => {
+    const layout = loadDataHome({ FORGE_HOME: 'E:\\dev-home' }, machine());
 
     expect(layout.home).toBe('E:\\dev-home');
-    expect(io.readText).not.toHaveBeenCalled();
   });
 
-  it('treats a missing bootstrap file as no choice', async () => {
-    const layout = await loadDataHome({}, machine());
-
-    expect(layout.home).toBe('C:\\Users\\Ana\\AppData\\Local\\Forge');
-  });
-
-  it.each(['{', '{"dataHome":"relative"}', '{"other":1}'])(
-    'stops startup on a bad bootstrap file %j',
-    async (text) => {
-      const io = machine({ [BOOTSTRAP]: text });
-
-      await expect(loadDataHome({}, io)).rejects.toBeInstanceOf(InvalidInputError);
-    },
-  );
-
-  it('rejects a relative FORGE_HOME', async () => {
-    await expect(loadDataHome({ FORGE_HOME: 'here' }, machine())).rejects.toThrow(
+  it('rejects a relative FORGE_HOME', () => {
+    expect(() => loadDataHome({ FORGE_HOME: 'here' }, machine())).toThrow(
       /FORGE_HOME must be an absolute path/,
     );
+  });
+
+  it('ignores a stray forge-home.json: no user-facing override exists (d-0170)', () => {
+    const base = mkdtempSync(join(tmpdir(), 'forge-stray-'));
+    try {
+      const roaming = join(base, 'AppData', 'Roaming');
+      mkdirSync(join(roaming, 'Forge'), { recursive: true });
+      writeFileSync(
+        join(roaming, 'Forge', 'forge-home.json'),
+        JSON.stringify({ dataHome: 'D:\\ForgeData' }),
+      );
+
+      const env = { APPDATA: roaming, LOCALAPPDATA: join(base, 'Local') };
+
+      const layout = loadDataHome(env, { platform: process.platform, homedir: base });
+
+      expect(layout.home).not.toContain('ForgeData');
+      expect(layout.home).toContain(join(base, 'Local'));
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
   });
 });

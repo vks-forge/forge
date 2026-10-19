@@ -83,6 +83,8 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - x-0013 — (author=director, approved 2026-10-18; amends d-0007, d-0086; reopens part of r-0001) Memory moves into the Forge DB with exact lookup + ranked full-text search (FTS5 first), agents read it through tools, markdown export stays; research before build
 - d-0168 — Memory DB shape: FTS + links/tags with Director query rewrite (vectors later if misses), Workers read-only memory tools, git repos imported then deleted (after verify + backup), dev `.forge/memory` gets `forge memory search/get/related` CLI
 - d-0169 — Build S7 (memory DB) autonomously on the brief's defaults, one commit+push, never stop on low memory
+- d-0170 — Data folder fixed to the platform default (%LOCALAPPDATA%\Forge); no onboarding data-folder step, no forge-home.json override (FORGE_HOME dev/test only); amends d-0098
+- d-0171 — Research limits keep owner-set options but with high ceilings (search and reads are free); model spend still bounded by the step budget; amends d-0144
 - d-0161 — Workers can run in a sandbox with the full codebase as worktree; Windows/macOS/Linux hosts; provider adapter interface for any third-party server (design x-0015, plan docs/briefs/worker-sandbox-plan.md)
 - d-0159 — `/` = cross-project Overview dashboard (KPIs, charts by day/week/month, projects table, cost); amends d-0104; brief docs/briefs/forge-overview-dashboard.md
 - d-0122 — Web UI state in zustand + persist (localStorage), UI prefs/drafts only; server data stays in TanStack Query; never tokens/secrets

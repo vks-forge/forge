@@ -30,11 +30,11 @@ describe('research caps in a project override', () => {
     expect(
       directorIssues(
         seen({
-          max_rounds: 3,
+          max_rounds: 10,
           max_searches: 0,
-          max_fetches: 20,
-          max_bytes: 50_000,
-          max_runs_per_card: 10,
+          max_fetches: 100,
+          max_bytes: 20_000_000,
+          max_runs_per_card: 100,
         }),
         { research: seen({}).research },
       ),
@@ -43,21 +43,33 @@ describe('research caps in a project override', () => {
 
   it('names a cap outside its range or not a whole number', () => {
     for (const bad of [
-      { max_rounds: 4 },
+      { max_rounds: 11 },
       { max_rounds: 0 },
-      { max_searches: 21 },
+      { max_searches: 101 },
+      { max_fetches: 101 },
+      { max_bytes: 20_000_001 },
       { max_fetches: -1 },
       { max_bytes: 10_000 },
-      { max_runs_per_card: 11 },
+      { max_runs_per_card: 101 },
       { max_rounds: 1.5 },
       { max_rounds: Number.NaN },
     ]) {
       const next = seen(bad);
 
       expect(directorIssues(next, { research: next.research })).toEqual([
-        'Research needs 1 to 3 rounds, 0 to 20 searches and pages, 50 to 2000 KB and 1 to 10 runs per card, all whole numbers.',
+        'Research needs 1 to 10 rounds, 0 to 100 searches and pages, 50 to 20000 KB and 1 to 100 runs per card, all whole numbers.',
       ]);
     }
+  });
+
+  it('accepts 40 runs per card and 50 searches, and refuses 101 runs (d-0171)', () => {
+    const ok = seen({ max_runs_per_card: 40, max_searches: 50 });
+
+    expect(directorIssues(ok, { research: ok.research })).toEqual([]);
+
+    const bad = seen({ max_runs_per_card: 101 });
+
+    expect(directorIssues(bad, { research: bad.research })).toHaveLength(1);
   });
 
   it('accepts an empty per-call budget and refuses a zero or negative one', () => {

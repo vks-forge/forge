@@ -75,6 +75,6 @@ export const AuthorPrefsSchema: z.ZodType<AuthorPrefs> = z.object({
 });
 
 export const WelcomePrefsSchema: z.ZodType<WelcomePrefs> = z.object({
-  step: z.enum(['data', 'harness', 'github', 'project']).nullable(),
+  step: z.enum(['harness', 'github', 'project']).nullable(),
   dismissed: z.boolean(),
 });

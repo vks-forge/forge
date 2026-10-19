@@ -34,7 +34,11 @@ import { cardInput, playbookOf, stepOf } from '#/tick/planning-input.js';
 import { logPlanEvent, stamp } from '#/tick/planning-state.js';
 import { callStep, finishStep, startStep } from '#/tick/planning-step-io.js';
 import { claimsToCheck, knownUrls } from '#/tick/research-known.js';
-import { newResearchState, runRequests } from '#/tick/research-run.js';
+import {
+  fitResultsToPrompt,
+  newResearchState,
+  runRequests,
+} from '#/tick/research-run.js';
 import {
   countResearchRuns,
   evidenceInput,
@@ -106,7 +110,7 @@ async function researchInput(
     })),
     previous_steps: g.step_summaries,
     evidence_so_far: evidenceInput(views),
-    results: [...results],
+    results: fitResultsToPrompt(results),
     round,
     rounds_left: caps.max_rounds - round,
     limits: {

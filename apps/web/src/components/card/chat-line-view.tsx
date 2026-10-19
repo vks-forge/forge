@@ -158,7 +158,7 @@ export function ChatLineView(props: {
       {line.block?.kind === 'question' ? (
         <QuestionBlock
           question={line.block.question}
-          answered={line.block.answered}
+          state={line.block.state}
           actionable={line.block.actionable}
           flow={flow}
         />

@@ -12,7 +12,7 @@
  * Exports: transcriptOf(), lineOf(), lineAuthor(), awaitingReply().
  * Depends on: schemas/cards (type), domain/board-columns (STATE_LABEL), domain/card-event-lines,
  *   domain/card-escalation-lines,
- *   domain/director-flow, types/cards-ui.types.
+ *   domain/director-flow, domain/grill-answer-echo, types/cards-ui.types.
  */
 
 import type { CardTypeName } from '@forge/core';
@@ -21,6 +21,7 @@ import { STATE_LABEL } from '#/domain/board-columns.js';
 import { escalationLineOf, raisedIds } from '#/domain/card-escalation-lines.js';
 import { flowLineOf } from '#/domain/card-event-lines.js';
 import { grillOf } from '#/domain/director-flow.js';
+import { echoedAnswerSeqs } from '#/domain/grill-answer-echo.js';
 import type { CardHistoryEvent } from '#/schemas/cards.js';
 import type { ChatAction, ChatLine, FlowLineContext } from '#/types/cards-ui.types.js';
 
@@ -172,10 +173,13 @@ export function transcriptOf(
 ): readonly ChatLine[] {
   const flow: FlowLineContext = { grill: grillOf(events), canAnswer };
   const raised = raisedIds(events);
+  const echoed = echoedAnswerSeqs(events);
 
   return [
     ...events
       .filter((event) => !NOT_IN_TRANSCRIPT.has(event.kind))
+      // A typed answer is also a chat message; one owner bubble per answer.
+      .filter((event) => !echoed.has(event.seq))
       // A settle whose block is already in the chat would only repeat it.
       .filter(
         (event) =>

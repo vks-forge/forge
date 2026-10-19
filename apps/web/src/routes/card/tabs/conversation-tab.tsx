@@ -39,7 +39,7 @@ import { StatePanel } from '#/components/status/state-panel.js';
 import { ChatPane } from '#/components/chat/chat-pane.js';
 import { lineAuthor, transcriptOf } from '#/domain/card-chat.js';
 import { groupChat } from '#/domain/chat-groups.js';
-import { pendingStep } from '#/domain/director-flow.js';
+import { grillOf, pendingStep } from '#/domain/director-flow.js';
 import { describeFlowError } from '#/domain/flow-errors.js';
 import { OWNER } from '#/domain/owner.js';
 import type { CardDetailReply } from '#/schemas/cards.js';
@@ -86,7 +86,11 @@ export function ConversationTab(props: {
   const events = history.data?.events;
 
   // Only a card that is still grilling has a question the server will accept an answer to.
-  const canAnswer = !closed && (card.phase === undefined || card.phase === 'grilling');
+  // The server takes an answer while the card is grilling or verifying (`isShaping`).
+  const canAnswer =
+    !closed &&
+    (card.phase === undefined || card.phase === 'grilling' || card.phase === 'verifying');
+
   const answer = useAnswerGrill(card.id);
   const shortcut = useGrillShortcut(card.id);
   const flowError = answer.error ?? shortcut.error;
@@ -132,6 +136,10 @@ export function ConversationTab(props: {
 
   const director = card.director;
   const step = events === undefined ? null : pendingStep(events);
+  // While a question is open the server takes a typed message as its free-text answer.
+  const questionOpen =
+    canAnswer && events !== undefined && grillOf(events).question !== null;
+
   const thinking = director.state === 'thinking' || step !== null;
   // A new card is `grilling` with no Director message yet: the Director is reading the project.
   const reading =
@@ -175,7 +183,11 @@ export function ConversationTab(props: {
       label="Message the Director"
       draftKey={cardDraftKey(card.id)}
       sendLabel="Send message"
-      placeholder="Ask, refine, or tell it what to do with this card"
+      placeholder={
+        questionOpen
+          ? 'Type your answer to the open question, or pick an option above'
+          : 'Ask, refine, or tell it what to do with this card'
+      }
       hint="The Director replies here. Ctrl+Enter sends."
       disabledReason={
         closed

@@ -64,9 +64,9 @@ describe('Director settings: research limits', () => {
 
     const rounds = screen.getByLabelText('Research rounds');
     await user.clear(rounds);
-    await user.type(rounds, '9');
+    await user.type(rounds, '99');
 
-    expect(await screen.findByText('Must be at most 3.')).toBeVisible();
+    expect(await screen.findByText('Must be at most 10.')).toBeVisible();
 
     const bytes = screen.getByLabelText('Page text per run');
     await user.clear(bytes);

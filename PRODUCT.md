@@ -30,8 +30,7 @@ come later (d-0082).
 
 1. `npm i -g vks-forge`, then `forge start` (d-0091, d-0099). Forge runs in the
    background and opens the web UI on `127.0.0.1` (d-0092, d-0093).
-2. First run: pick the data folder (`%LOCALAPPDATA%\Forge`, d-0098), check
-   installed harnesses and their logins (d-0087), connect GitHub — Forge
+2. First run: check installed harnesses and their logins (d-0087), connect GitHub — Forge
    creates a GitHub App in your org with one click (d-0084).
 3. Create a project: choose any local folder (d-0083, d-0124). With git it is
    used as is; with no git Forge says git is needed and starts a local repository
@@ -122,6 +121,9 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-19: The card chat shows a typed answer to a Director question once instead of twice, an open question reads "Waiting for your answer" (answered ones read "Answered"), and the message box says it answers the open question; a card in the verifying phase can now be answered from the chat too.
+- 2026-10-19: Research limits have high ceilings (d-0171): up to 10 rounds, 100 searches, 100 pages, 20 MB of page text and 100 runs per card, since search and page reads cost nothing; the page text a research call carries stays capped so a long run fits the model.
+- 2026-10-19: The welcome flow no longer has a data-folder step: it opens at harnesses and logins (three steps), and the data folder is always `%LOCALAPPDATA%\Forge` (d-0170), shown under Forge settings, General; the `forge-home.json` override is removed (`FORGE_HOME` stays for dev and tests).
 - 2026-10-19: The sidebar shows one Forge settings entry that opens General (the other sections stay as tabs on that page); `pnpm dev` runs the server and the web app with live reload on both sides, `pnpm prod` builds and starts Forge in the background, `pnpm stop` stops it.
 - 2026-10-19: Memory in the database (S7, x-0013, d-0168): each project's decisions, rejected approaches, proposals and outcomes move from a private git repo into Forge's database (append-only, with version history); the old repo is imported at start, checked record by record and deleted only after a verified backup; the Director rewrites a question into key words and finds relevant and related records by full-text search plus links and tags, so planning prompts carry pinned records, the top matches and every rejected approach instead of all memory (about 15K characters instead of 97K on this repo); Workers get read-only memory search, get and related tools; the Memory screen has search with filters, a record page with history and related records, and markdown export; `forge memory search|get|related` searches this repo's own development memory.
 - 2026-10-18: Research in planning (S6): the Director can research outside facts while planning (SearXNG search and fetch within per-card caps, a grill question can ask for one more round), every claim is cited to a stored source and its quote checked against the page; the card's Evidence tab shows claims as Verified or Unverified with the page text and where it came from, the plan lists the outside facts it rests on and an unverified one sends the plan to you; if research cannot run the plan goes ahead with a note; Worker web fetches are recorded and review findings may cite only pages a run read; Settings get a Research page (provider, test, limits) that projects can only narrow; a card spend cap warns once in the Inbox and never blocks.

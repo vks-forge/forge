@@ -19,7 +19,6 @@ import { loadSettings, readServerEnv } from '#/config/load-settings.js';
 const io = {
   platform: 'win32' as const,
   homedir: 'C:\\Users\\Ana',
-  readText: async () => undefined,
 };
 
 describe('trace env', () => {

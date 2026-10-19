@@ -22,8 +22,6 @@ export interface DataHomeInputs {
   readonly env: DataHomeEnv;
   /** The user's home directory (`os.homedir()`). */
   readonly homedir: string;
-  /** Folder named by the bootstrap file `forge-home.json`, when the app found one. */
-  readonly bootstrapHome?: string | undefined;
 }
 
 /** Absolute paths of everything under the data home. */

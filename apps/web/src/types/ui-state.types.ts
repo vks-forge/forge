@@ -57,7 +57,7 @@ export interface MemoryPrefs {
 
 /** Where the first-run wizard was and whether "Finish later" was chosen; no server data. */
 export interface WelcomePrefs {
-  readonly step: 'data' | 'harness' | 'github' | 'project' | null;
+  readonly step: 'harness' | 'github' | 'project' | null;
   readonly dismissed: boolean;
 }
 

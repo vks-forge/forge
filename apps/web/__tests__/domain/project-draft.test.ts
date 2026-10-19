@@ -275,7 +275,7 @@ describe('wizard steps', () => {
   const fresh = { first_run: { complete: false, project_count: 0, harness_ok: false } };
 
   it('opens at the first step, past the harness once one works, or where the user was', () => {
-    expect(startStep(fresh, null)).toBe('data');
+    expect(startStep(fresh, null)).toBe('harness');
     expect(startStep({ first_run: { ...fresh.first_run, harness_ok: true } }, null)).toBe(
       'github',
     );
@@ -284,7 +284,7 @@ describe('wizard steps', () => {
   });
 
   it('stops at either end', () => {
-    expect(neighbour('data', -1)).toBe('data');
+    expect(neighbour('harness', -1)).toBe('harness');
     expect(neighbour('project', 1)).toBe('project');
     expect(neighbour('harness', 1)).toBe('github');
   });

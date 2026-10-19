@@ -6,17 +6,14 @@
  *   Worker cwd, which the policy floors then deny by absolute path. The server, the CLI
  *   and the floors must all derive paths from the same answer, so the rule is one pure
  *   function over (platform, environment, home directory): `FORGE_HOME` (dev and tests) beats
- *   the choice recorded in the bootstrap file, which beats the platform default. A relative
+ *   the platform default, the only folder a user gets (d-0170). A relative
  *   or empty answer is refused rather than resolved against the cwd, because a home that
  *   moves with the cwd would silently split the data.
  *
- * Exports: BOOTSTRAP_FILE_NAME, resolveDataHome(), bootstrapFilePath(), parseBootstrapFile(),
- *   dataHomeLayout().
- * Depends on: schemas/bootstrap-home, shared/errors,
- *   types/data-home. No IO.
+ * Exports: resolveDataHome(), dataHomeLayout().
+ * Depends on: shared/errors, types/data-home. No IO.
  */
 
-import { BootstrapHomeFile } from '#/schemas/bootstrap-home.js';
 import { InvalidInputError } from '#/shared/errors.js';
 import type {
   DataHomePathOps as PathOps,
@@ -24,9 +21,6 @@ import type {
   DataHomeLayout,
   DataHomePlatform,
 } from '#/types/data-home.types.js';
-
-/** Name of the bootstrap file inside the platform config directory. */
-export const BOOTSTRAP_FILE_NAME = 'forge-home.json';
 
 /** Drops one trailing separator, except on a root such as `/` or `C:\`. */
 const trimEnd = (p: string): string =>
@@ -80,8 +74,7 @@ function defaultHome(i: DataHomeInputs, p: PathOps): string {
 }
 
 /**
- * The data home folder: `FORGE_HOME` (dev/test only), else the bootstrap choice, else the
- * platform default. Throws InvalidInputError for a relative override.
+ * The data home folder: `FORGE_HOME` (dev/test only), else the platform default. Throws InvalidInputError for a relative override.
  */
 export function resolveDataHome(i: DataHomeInputs): string {
   const p = pathFor(i.platform);
@@ -90,62 +83,7 @@ export function resolveDataHome(i: DataHomeInputs): string {
     return requireAbsolute(p, forced, 'FORGE_HOME');
   }
 
-  if (i.bootstrapHome !== undefined) {
-    return requireAbsolute(p, i.bootstrapHome, 'forge-home.json dataHome');
-  }
-
   return defaultHome(i, p);
-}
-
-/** Where `forge-home.json` is looked for: the per-user config directory of the platform. */
-export function bootstrapFilePath(i: Omit<DataHomeInputs, 'bootstrapHome'>): string {
-  const p = pathFor(i.platform);
-  if (i.platform === 'win32') {
-    const roaming =
-      absoluteEnv(p, i.env.APPDATA) ?? p.join(i.homedir, 'AppData', 'Roaming');
-
-    return p.join(roaming, 'Forge', BOOTSTRAP_FILE_NAME);
-  }
-
-  if (i.platform === 'darwin') {
-    return p.join(
-      i.homedir,
-      'Library',
-      'Application Support',
-      'Forge',
-      BOOTSTRAP_FILE_NAME,
-    );
-  }
-
-  const cfg = absoluteEnv(p, i.env.XDG_CONFIG_HOME) ?? p.join(i.homedir, '.config');
-
-  return p.join(cfg, 'forge', BOOTSTRAP_FILE_NAME);
-}
-
-/** Parses the text of `forge-home.json` into the chosen absolute folder; throws InvalidInputError. */
-export function parseBootstrapFile(text: string, platform: DataHomePlatform): string {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch {
-    throw new InvalidInputError(`${BOOTSTRAP_FILE_NAME} is not valid JSON`);
-  }
-
-  const parsed = BootstrapHomeFile.safeParse(raw);
-  if (!parsed.success) {
-    throw new InvalidInputError(
-      `${BOOTSTRAP_FILE_NAME} must be {"dataHome": "<absolute folder>"}`,
-    );
-  }
-
-  const p = pathFor(platform);
-  if (!p.isAbsolute(parsed.data.dataHome)) {
-    throw new InvalidInputError(
-      `${BOOTSTRAP_FILE_NAME} dataHome must be an absolute path, got "${parsed.data.dataHome}"`,
-    );
-  }
-
-  return p.normalize(parsed.data.dataHome);
 }
 
 /** Every path Forge owns under `home`, joined with the separator of `platform`. */

@@ -26,11 +26,10 @@ import type { DataHomeIo } from '#/types/data-home.types.js';
 
 let root: string;
 
-/** A Windows machine with no bootstrap file, so no test reads the real %LOCALAPPDATA% or config dir. */
-const machine = (files: Record<string, string> = {}): DataHomeIo => ({
+/** A Windows machine, so no test reads the real %LOCALAPPDATA%. */
+const machine = (): DataHomeIo => ({
   platform: 'win32',
   homedir: 'C:\\Users\\Ana',
-  readText: async (path) => files[path],
 });
 
 const load = (

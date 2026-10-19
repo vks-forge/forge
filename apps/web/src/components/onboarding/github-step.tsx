@@ -1,5 +1,5 @@
 /**
- * GitHubStep: step 3, optionally connect a GitHub App, or carry on with local git only.
+ * GitHubStep: step 2, optionally connect a GitHub App, or carry on with local git only.
  *
  * Why: GitHub is how Forge opens pull requests and reads issues, but a person can use Forge
  *   on a local clone with no account at all, and a first run that insists on a GitHub App

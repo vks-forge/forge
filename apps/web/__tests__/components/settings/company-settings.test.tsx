@@ -196,7 +196,7 @@ describe('General', () => {
     renderSettings('/settings/general');
 
     expect(await screen.findByRole('heading', { name: 'Data folder' })).toBeVisible();
-    expect(screen.getByText(/cannot be changed from here/)).toBeVisible();
+    expect(screen.getByText(/Forge always keeps its files there/)).toBeVisible();
     expect(screen.getByLabelText('On stop, let running tools finish for')).toHaveValue(
       20,
     );

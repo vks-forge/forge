@@ -16,7 +16,7 @@ Some setup must happen before the server can run, and must not travel through it
 - `forge secret wrap <name> <file>`: reads `<file>`, stores its bytes as secret `<name>` in `<dataHome>/secrets/<name>.dpapi` (Windows DPAPI, current user; the data home is `%LOCALAPPDATA%\Forge` by default), reads it back and compares the bytes, then prints that the plaintext file is still on disk and the exact PowerShell command to delete it (`Remove-Item -LiteralPath '<path>'`). It never deletes, moves or rewrites your file. Names are lowercase letters, digits and dashes.
 - `forge --help` (or no arguments) prints usage.
 - Exit codes: 0 success, 2 usage error (unknown command or bad secret name), 3 `status` found no running server, 1 any other failure. Errors print as one line, no stack trace.
-- The data home is the same folder the server uses, from any working directory: `FORGE_HOME` (development and tests only), else the folder named in `forge-home.json` in the platform config directory, else `%LOCALAPPDATA%\Forge` (macOS `~/Library/Application Support/Forge`, Linux `$XDG_DATA_HOME/forge` or `~/.local/share/forge`). The CLI no longer looks for a `.forge` directory.
+- The data home is the same folder the server uses, from any working directory: `FORGE_HOME` (development and tests only), else `%LOCALAPPDATA%\Forge` (macOS `~/Library/Application Support/Forge`, Linux `$XDG_DATA_HOME/forge` or `~/.local/share/forge`). The CLI no longer looks for a `.forge` directory.
 - Public API: none; it is an app. The `forge` bin entry points at `dist/main.js`.
 
 Layout: `src/main.ts` (composition), `src/services/` (`parse-args`, `memory-{command,dir,format,index-open}`, `secret-wrap`, `run-cli`, `data-home`, `node-daemon-ports`, `daemon/{find-server,start-server,server-status,stop-server,install-token}`), `src/types/`.
@@ -38,7 +38,7 @@ Layout: `src/main.ts` (composition), `src/services/` (`parse-args`, `memory-{com
 ## Requirements
 
 - Node 24.20 and pnpm; Windows for `secret wrap` (DPAPI). Run `pnpm build` first (the CLI and the server); the `forge` bin is `dist/main.js`. Run `forge start` from the Forge checkout (or set `FORGE_ROOT`): the server still reads project memory from `<FORGE_ROOT>/.forge`.
-- No repository needed. Environment: `FORGE_HOME` (optional, dev/test only; an absolute folder that replaces the data home), `FORGE_SERVER_ENTRY` (optional; another server entry to spawn), and everything the server reads (`FORGE_PORT`, `FORGE_ROOT`, ...) is passed on to it. Files: `forge-home.json` in the platform config directory, read if present; in the data home `server.json`, `install-token` and `logs/server.log`.
+- No repository needed. Environment: `FORGE_HOME` (optional, dev/test only; an absolute folder that replaces the data home), `FORGE_SERVER_ENTRY` (optional; another server entry to spawn), and everything the server reads (`FORGE_PORT`, `FORGE_ROOT`, ...) is passed on to it. Files: in the data home `server.json`, `install-token` and `logs/server.log`.
 - Tests: `pnpm test` or `npx vitest run apps/cli`. Most use a temp file, the in-memory store and a scripted machine, so they run on any OS; `node-daemon-ports.test.ts` (heavy project) spawns a real detached child.
 
 ## Extending

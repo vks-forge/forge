@@ -124,7 +124,7 @@ export type ExplainProblem = (context: {
   message: string;
 }) => FieldProblem;
 
-export type WizardStepId = 'data' | 'harness' | 'github' | 'project';
+export type WizardStepId = 'harness' | 'github' | 'project';
 
 /** The steps inside "add a project", in order. */
 export type ProjectStepId = 'folder' | 'git' | 'details' | 'checks' | 'review';

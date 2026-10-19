@@ -33,7 +33,7 @@ export const ServerEnv = z.object({
   FORGE_ROOT: text,
   /**
    * Data home override, an absolute folder, for development and tests only. Production uses
-   * `%LOCALAPPDATA%\Forge` (or the folder named in `forge-home.json`); see config/data-home.
+   * `%LOCALAPPDATA%\Forge`; see config/data-home.
    */
   FORGE_HOME: text,
   /** Bind address. Only `127.0.0.1` is accepted; anything else is refused when the server starts. */

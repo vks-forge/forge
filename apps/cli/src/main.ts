@@ -27,7 +27,7 @@ const stderr = (text: string): boolean => process.stderr.write(text);
 
 process.exitCode = await runCli(process.argv.slice(2), {
   openStore: async () =>
-    createDpapiSecretStore({ dir: (await loadDataHome(process.env)).secretsDir }),
+    createDpapiSecretStore({ dir: loadDataHome(process.env).secretsDir }),
   readFile: async (path) => new Uint8Array(await readFile(path)),
   resolvePath: (path) => resolve(path),
   stdout,

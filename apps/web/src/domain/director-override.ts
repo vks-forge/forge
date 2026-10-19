@@ -116,14 +116,14 @@ export function directorIssues(
       Number.isInteger(n) && n >= lo && n <= hi;
 
     if (!(
-      within(r.max_rounds, 1, 3) &&
-      within(r.max_searches, 0, 20) &&
-      within(r.max_fetches, 0, 20) &&
-      within(r.max_bytes, 50_000, 2_000_000) &&
-      within(r.max_runs_per_card, 1, 10)
+      within(r.max_rounds, 1, 10) &&
+      within(r.max_searches, 0, 100) &&
+      within(r.max_fetches, 0, 100) &&
+      within(r.max_bytes, 50_000, 20_000_000) &&
+      within(r.max_runs_per_card, 1, 100)
     )) {
       out.push(
-        'Research needs 1 to 3 rounds, 0 to 20 searches and pages, 50 to 2000 KB and 1 to 10 runs per card, all whole numbers.',
+        'Research needs 1 to 10 rounds, 0 to 100 searches and pages, 50 to 20000 KB and 1 to 100 runs per card, all whole numbers.',
       );
     }
 

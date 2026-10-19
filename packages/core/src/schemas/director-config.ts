@@ -91,16 +91,17 @@ export type DirectorPipelines = z.infer<typeof DirectorPipelines>;
 
 /**
  * How much outside research one card may do (d-0144, d-0072): per research run, rounds of requests,
- * searches, fetches and page bytes; per card, runs. A cap stops the requests (the step sees "cap
+ * searches, fetches and page bytes; per card, runs. The ceilings are high on purpose (d-0171): search
+ * and page reads cost nothing, only model spend is bounded, by the step budget. A cap stops the requests (the step sees "cap
  * reached"), never the card. `grill_detours` lets the grill pause for outside facts before a question;
  * `step_budget_usd` caps one research model call and defaults to the engine step budget.
  */
 export const DirectorResearchCaps = z.object({
-  max_rounds: z.number().int().min(1).max(3),
-  max_searches: z.number().int().min(0).max(20),
-  max_fetches: z.number().int().min(0).max(20),
-  max_bytes: z.number().int().min(50_000).max(2_000_000),
-  max_runs_per_card: z.number().int().min(1).max(10),
+  max_rounds: z.number().int().min(1).max(10),
+  max_searches: z.number().int().min(0).max(100),
+  max_fetches: z.number().int().min(0).max(100),
+  max_bytes: z.number().int().min(50_000).max(20_000_000),
+  max_runs_per_card: z.number().int().min(1).max(100),
   grill_detours: z.boolean(),
   step_budget_usd: z.number().positive().optional(),
 });

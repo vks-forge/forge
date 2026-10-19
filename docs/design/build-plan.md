@@ -35,8 +35,8 @@ is fixed in this batch or listed for the batch that owns it.
 
 ### B1 Data home and layout (W1) — M
 - New data-home resolver (`apps/server/src/config/`, shared with `apps/cli`):
-  `%LOCALAPPDATA%\Forge` (macOS/Linux equivalents for later), override via
-  bootstrap file; `FORGE_HOME` env for dev/test only.
+  `%LOCALAPPDATA%\Forge` (macOS/Linux equivalents for later), no user
+  override (d-0170); `FORGE_HOME` env for dev/test only.
 - Layout: `forge.db`, `secrets/`, `memory/<slug>/`, `worktrees/<slug>/<ticket>`,
   `runs/<id>/`, `backups/`, `logs/`, `server.json`.
 - `MCP_ENTRY` and the hook bin resolved from the installed package location,

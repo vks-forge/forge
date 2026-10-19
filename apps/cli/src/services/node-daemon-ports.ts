@@ -20,12 +20,12 @@
 import { spawn } from 'node:child_process';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { closeSync, existsSync, openSync } from 'node:fs';
-import { mkdir, open, stat } from 'node:fs/promises';
+import { mkdir, open, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ForgeError } from '@forge/core';
 import type { DataHomeLayout } from '@forge/core';
-import { loadDataHome, nodeDataHomeIo } from '#/services/data-home.js';
+import { loadDataHome } from '#/services/data-home.js';
 import { openBrowser } from '#/services/open-browser.js';
 import type { DaemonPorts, HealthState, Output } from '#/types/daemon.types.js';
 
@@ -127,18 +127,31 @@ async function readLogFrom(path: string, offset: number): Promise<string> {
   }
 }
 
+/** Text of the file, or `undefined` when it does not exist; other read errors throw. */
+async function readTextIfPresent(path: string): Promise<string | undefined> {
+  try {
+    return await readFile(path, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return undefined;
+    }
+
+    throw error;
+  }
+}
+
 /** Ports for the real machine; `entry` and `env` are overridable for tests. */
 export function createNodeDaemonPorts(
   io: Output,
   env: Readonly<Record<string, string | undefined>> = process.env,
   entry: string = env['FORGE_SERVER_ENTRY'] || defaultServerEntry(),
 ): DaemonPorts {
-  let layout: Promise<DataHomeLayout> | undefined;
+  let layout: DataHomeLayout | undefined;
 
   return {
     ...io,
-    layout: () => (layout ??= loadDataHome(env)),
-    readText: nodeDataHomeIo.readText,
+    layout: async () => (layout ??= loadDataHome(env)),
+    readText: readTextIfPresent,
     health,
     proveToken,
     shutdown,
@@ -152,7 +165,7 @@ export function createNodeDaemonPorts(
         );
       }
 
-      const { logsDir } = await (layout ??= loadDataHome(env));
+      const { logsDir } = (layout ??= loadDataHome(env));
       await mkdir(logsDir, { recursive: true });
       const logPath = join(logsDir, 'server.log');
       const logStart = await stat(logPath).then(
@@ -181,10 +194,7 @@ export function createNodeDaemonPorts(
       }
     },
     readLog: async (offset) =>
-      readLogFrom(
-        join((await (layout ??= loadDataHome(env))).logsDir, 'server.log'),
-        offset,
-      ),
+      readLogFrom(join((layout ??= loadDataHome(env)).logsDir, 'server.log'), offset),
     isAlive(pid) {
       try {
         process.kill(pid, 0);

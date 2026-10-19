@@ -70,6 +70,18 @@ export function htmlToText(html: string): string {
     }
 
     out += html.slice(pos, lt);
+    if (html.startsWith('<!--', lt)) {
+      // Comments may hold `>`, so skip to the real end. Framework markers such as Vue's
+      // `<!--[-->` are comments too and must not leak into the stored text.
+      const end = html.indexOf('-->', lt + 4);
+      if (end === -1) {
+        break;
+      }
+
+      pos = end + 3;
+      continue;
+    }
+
     const gt = html.indexOf('>', lt + 1);
     if (gt === -1) {
       out += html.slice(lt);
@@ -78,8 +90,15 @@ export function htmlToText(html: string): string {
 
     const m = /^<\/?([a-z][a-z0-9]*)/.exec(lower.slice(lt, Math.min(gt, lt + 40)));
     const name = m?.[1];
+    const next = html[lt + 1];
+    if (!name && (next === '!' || next === '?')) {
+      // `<!DOCTYPE …>`, `<![CDATA[…]>` or `<?xml …?>`: markup, not page text.
+      pos = gt + 1;
+      continue;
+    }
+
     if (!name) {
-      // `<` not starting a tag (e.g. "a < b" or a comment): keep it as text.
+      // `<` not starting a tag (e.g. "a < b"): keep it as text.
       out += '<';
       pos = lt + 1;
       continue;

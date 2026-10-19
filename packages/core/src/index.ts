@@ -90,7 +90,6 @@ export * from '#/domain/bucketize.js';
 export * from '#/domain/ticket-patch.js';
 export * from '#/schemas/agent-api.js';
 export * from '#/schemas/agent.js';
-export * from '#/schemas/bootstrap-home.js';
 export * from '#/schemas/card-api.js';
 export * from '#/schemas/card-chat.js';
 export * from '#/schemas/card-event.js';

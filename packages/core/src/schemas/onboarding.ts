@@ -2,8 +2,8 @@
  * Shapes of the first-run and new-project answers: `GET /system` and `POST /projects/inspect`.
  *
  * Why: a person installing Forge needs the UI to know, without any hand-edited file, whether
- *   setup is finished (so the wizard shows once), where Forge keeps its files (so the first
- *   step can say it), and what a folder they typed looks like before a project is created on
+ *   setup is finished (so the wizard shows once), where Forge keeps its files (so Forge settings
+ *   can show it), and what a folder they typed looks like before a project is created on
  *   it (so a wrong folder or branch is caught in the form, not on save). One definition here
  *   means the server that builds these answers and the web app that reads them cannot drift.
  *   Neither answer carries a secret: no token, no key, no harness credential.

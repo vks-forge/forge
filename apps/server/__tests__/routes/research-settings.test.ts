@@ -115,7 +115,11 @@ describe('saving research settings', () => {
     ],
     ['an unknown provider', { research: { provider: 'carrier-pigeon' } }],
     ['a timeout past 30 seconds', { research: { fetch: { timeout_ms: 60_000 } } }],
-    ['more than 3 rounds', { director: { research: { max_rounds: 4 } } }],
+    ['more than 10 rounds', { director: { research: { max_rounds: 11 } } }],
+    [
+      'more than 100 runs per card',
+      { director: { research: { max_runs_per_card: 101 } } },
+    ],
     ['bytes under 50 000', { director: { research: { max_bytes: 100 } } }],
     ['a second research step', secondResearchStep()],
   ])('refuses %s with a 400', async (_name, doc) => {
@@ -124,6 +128,14 @@ describe('saving research settings', () => {
     expect(res.status).toBe(400);
     expect(res.body).toMatchObject({ error: { code: 'invalid_request' } });
     expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('accepts 40 runs per card and 50 searches (d-0171)', async () => {
+    const res = await put('/settings/company', {
+      director: { research: { max_runs_per_card: 40, max_searches: 50 } },
+    });
+
+    expect(res.status).toBe(200);
   });
 
   it('lets a project narrow research and refuses an unknown project', async () => {

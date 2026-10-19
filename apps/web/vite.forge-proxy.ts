@@ -52,21 +52,14 @@ export function readInstallToken(source: InstallTokenSource): string | undefined
   }
 }
 
-/** The data home rule of the server and the CLI (`FORGE_HOME`, bootstrap file, platform default). */
+/** The data home rule of the server and the CLI (`FORGE_HOME`, else the platform default). */
 async function dataHomeTokenPath(): Promise<() => string> {
   const core = await import('@forge/core');
   const platform = process.platform;
   const base = { platform, env: process.env, homedir: homedir() };
 
   return () => {
-    const forced =
-      process.env['FORGE_HOME'] !== undefined && process.env['FORGE_HOME'] !== '';
-
-    const text = forced ? undefined : readIfPresent(core.bootstrapFilePath(base));
-    const bootstrapHome =
-      text === undefined ? undefined : core.parseBootstrapFile(text, platform);
-
-    const home = core.resolveDataHome({ ...base, bootstrapHome });
+    const home = core.resolveDataHome(base);
 
     return core.dataHomeLayout(home, platform).installTokenPath;
   };

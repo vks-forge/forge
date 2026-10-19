@@ -1,5 +1,5 @@
 /**
- * HarnessStep: step 2, register the `claude` harness, store a credential if needed, test it.
+ * HarnessStep: step 1, register the `claude` harness, store a credential if needed, test it.
  *
  * Why: Workers run the Claude Code the person already installed (d-0087), and a wrong path or
  *   a signed-out account would otherwise fail the first ticket hours later. This step reuses

@@ -2,7 +2,7 @@
  * WizardFrame: the full-screen frame of the first-run wizard: progress, title, "Finish later".
  *
  * Why: first run is the one time a person sees Forge with nothing in it, so it needs a calm
- *   frame that says where they are (step 2 of 4), what each step is called, how to go back to
+ *   frame that says where they are (step 2 of 3), what each step is called, how to go back to
  *   an earlier one, and, always visible, how to leave and come back later without losing
  *   anything. No sidebar: there is no project yet to show. Steps are plain buttons in an
  *   ordered list so the keyboard can reach any of them, and the current one is marked with
@@ -23,6 +23,7 @@ export function WizardFrame(props: {
   step: WizardStepId;
   onStep: (step: WizardStepId) => void;
   onFinishLater: () => void;
+  version: string;
   title: string;
   intro: string;
   children: ReactNode;
@@ -40,11 +41,14 @@ export function WizardFrame(props: {
         <span className="flex items-center gap-2.5 text-sm font-semibold tracking-tight">
           <ForgeMark size={48} />
           Forge
+          <span className="font-data text-xs font-normal text-muted">
+            {props.version}
+          </span>
         </span>
         <Button onClick={props.onFinishLater}>Finish later</Button>
       </header>
       <nav aria-label="Setup steps">
-        <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {WIZARD_STEPS.map((s, index) => (
             <li key={s.id}>
               <button

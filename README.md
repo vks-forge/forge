@@ -152,7 +152,7 @@ The data folder defaults to `%LOCALAPPDATA%\Forge` and holds the database, secre
 
 ## Using Forge
 
-1. **First-run wizard.** Check the data folder, the installed harness and its login, and connect GitHub by adding your GitHub App's details. One-click App creation is on the roadmap (d-0084).
+1. **First-run wizard.** Check the installed harness and its login, and connect GitHub by adding your GitHub App's details. One-click App creation is on the roadmap (d-0084).
 2. **Add a project.** Point Forge at a git repository on your machine. Forge checks the folder, detects languages and checks, and runs them once. Support for any folder, with or without git, is in progress (d-0124).
 3. **Ask for work.** Describe what you want in the project chat. The Director files a card and tickets.
 4. **Watch and steer.** Use the Board (Cards and Tickets views), open a Card to talk to its Director, open a Ticket to follow the live Worker thread, answer questions and message the Worker.

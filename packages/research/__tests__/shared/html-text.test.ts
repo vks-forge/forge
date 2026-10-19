@@ -40,6 +40,18 @@ describe('htmlToText', () => {
   it('treats a lone < as text', () => {
     expect(htmlToText('a < b')).toBe('a < b');
   });
+
+  it('drops the doctype, comments and framework comment markers', () => {
+    const html =
+      '<!DOCTYPE html><html><body><!--[--><a>Features</a><!----><!-- a > b -->' +
+      '<p>Simple, Transparent Pricing</p><!--]--><?xml version="1.0"?></body></html>';
+
+    expect(htmlToText(html)).toBe('Features\nSimple, Transparent Pricing');
+  });
+
+  it('drops everything after an unclosed comment', () => {
+    expect(htmlToText('<p>kept</p><!-- never closed <p>gone</p>')).toBe('kept');
+  });
 });
 
 describe('htmlTitle', () => {

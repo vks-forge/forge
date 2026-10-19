@@ -9,7 +9,7 @@
  *
  * Exports: readServerEnv(), loadSettings().
  * Depends on: @forge/core (InvalidInputError), config/{paths,data-home,entrypoints}, schemas/env.
- *   IO: through config/data-home, the bootstrap file.
+ *   IO: none of its own.
  */
 
 import { join } from 'node:path';
@@ -49,7 +49,7 @@ export async function loadSettings(
   const env = readServerEnv(rawEnv);
   const layout = resolveLayout(
     env.FORGE_ROOT ?? cwd,
-    await loadDataHome(rawEnv, dataHomeIo),
+    loadDataHome(rawEnv, dataHomeIo),
     resolveEntrypoints(import.meta.url),
   );
 
