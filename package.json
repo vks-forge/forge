@@ -22,6 +22,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "build": "pnpm clean && tsc -b && pnpm --filter @forge/web build",
+    "start": "node apps/server/dist/main.js",
+    "serve": "tsc -b && pnpm --filter @forge/web build && node apps/server/dist/main.js",
+    "dev:web": "pnpm --filter @forge/web dev",
+    "open": "node apps/cli/dist/main.js open",
     "clean": "node scripts/clean.mjs"
   },
   "devDependencies": {
