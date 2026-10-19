@@ -66,12 +66,10 @@ describe('Forge settings tabs', () => {
     ).toBeVisible();
   });
 
-  it('sends the bare settings URL to a section', async () => {
+  it('sends the bare settings URL to General', async () => {
     const { router } = renderApp({ path: '/settings' });
 
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe('/settings/harnesses'),
-    );
+    await waitFor(() => expect(router.state.location.pathname).toBe('/settings/general'));
   });
 
   it('keeps Harnesses highlighted on a harness page', async () => {

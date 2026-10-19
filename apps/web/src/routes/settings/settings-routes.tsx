@@ -24,7 +24,7 @@ import { LimitsPage } from '#/routes/settings/limits-page.js';
 import { ResearchPage } from '#/routes/settings/research-page.js';
 
 export const settingsRoutes: RouteObject[] = [
-  { index: true, element: <Navigate to="harnesses" replace /> },
+  { index: true, element: <Navigate to="general" replace /> },
   {
     element: <ForgeSettingsLayout />,
     children: [

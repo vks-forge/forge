@@ -3,8 +3,9 @@
  *
  * Why: the sidebar is the app's table of contents and has one job order (d-0104, d-0162): the
  *   Forge name (a link to the Overview) and the Overview entry, project
- *   switcher, the current project's screens in the middle, Forge-wide settings at the
- *   foot, kept apart because they are not about any one project. Desktop shows it as a
+ *   switcher, the current project's screens in the middle, one Forge settings entry at
+ *   the foot (its sections are tabs on that page), kept apart because it is not about any one
+ *   project. Desktop shows it as a
  *   column and phones as a drawer; sharing this body means the two can never drift.
  *
  * Exports: SidebarContent.
@@ -16,19 +17,13 @@ import {
   Activity,
   Brain,
   CircleDot,
-  Cpu,
-  Bot,
-  Folder,
   Coins,
-  Gauge,
   House,
   Inbox,
   LayoutDashboard,
   MessageSquare,
-  Plug,
   Settings,
   SquareKanban,
-  Telescope,
   type LucideIcon,
 } from 'lucide-react';
 import { Link } from 'react-router';
@@ -42,8 +37,7 @@ import {
   OVERVIEW_PATH,
   PROJECT_NAV,
   projectPath,
-  SETTINGS_NAV,
-  settingsPath,
+  SETTINGS_PATH,
 } from '#/domain/nav-entries.js';
 import { useCurrentSlug } from '#/state/current-project.js';
 
@@ -57,12 +51,6 @@ const ICONS: Readonly<Record<string, LucideIcon>> = {
   runs: Activity,
   memory: Brain,
   settings: Settings,
-  harnesses: Cpu,
-  github: Plug,
-  limits: Gauge,
-  research: Telescope,
-  agents: Bot,
-  general: Folder,
 };
 
 export function SidebarContent() {
@@ -114,15 +102,7 @@ export function SidebarContent() {
         aria-label="Forge settings"
         className="flex flex-col gap-0.5 border-t border-line pt-3"
       >
-        <span className="px-2.5 pb-1 text-xs font-medium text-faint">Forge settings</span>
-        {SETTINGS_NAV.map((entry) => (
-          <NavLinkItem
-            key={entry.segment}
-            to={settingsPath(entry.segment)}
-            label={entry.label}
-            icon={ICONS[entry.segment] ?? Settings}
-          />
-        ))}
+        <NavLinkItem to={SETTINGS_PATH} label="Forge settings" icon={Settings} />
         <div className="mt-1 flex items-center justify-end">
           <ThemeToggle />
         </div>

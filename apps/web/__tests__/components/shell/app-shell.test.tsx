@@ -16,7 +16,7 @@ import { projectPrefsStore } from '#/state/current-project.js';
 import { locationOf, renderApp } from '#tests/helpers/render-app.js';
 
 describe('AppShell navigation', () => {
-  it('shows every project destination and the Forge settings group', async () => {
+  it('shows every project destination and one Forge settings entry', async () => {
     renderApp({ path: '/p/sample-service' });
 
     const project = await screen.findByRole('navigation', { name: 'Project' });
@@ -43,16 +43,12 @@ describe('AppShell navigation', () => {
       within(forge)
         .getAllByRole('link')
         .map((l) => l.textContent),
-    ).toEqual([
-      'General',
-      'Director',
-      'Agents',
-      'Pipelines',
-      'Limits',
-      'Research',
-      'Harnesses',
-      'GitHub',
-    ]);
+    ).toEqual(['Forge settings']);
+
+    expect(within(forge).getByRole('link', { name: 'Forge settings' })).toHaveAttribute(
+      'href',
+      '/settings',
+    );
 
     expect(within(project).getByRole('link', { name: 'Home' })).toHaveAttribute(
       'aria-current',

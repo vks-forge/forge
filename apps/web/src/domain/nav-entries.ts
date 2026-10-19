@@ -9,7 +9,8 @@
  *   the user on the same screen of the new project, so `swapProjectSlug()` rewrites only the
  *   slug.
  *
- * Exports: OVERVIEW_PATH, PROJECT_NAV, SETTINGS_NAV, projectPath(), settingsPath(), swapProjectSlug().
+ * Exports: OVERVIEW_PATH, PROJECT_NAV, SETTINGS_NAV, SETTINGS_PATH, projectPath(), settingsPath(),
+ *   swapProjectSlug().
  * Depends on: types/nav.types. No IO.
  */
 
@@ -131,6 +132,9 @@ export const SETTINGS_NAV: readonly NavEntry[] = [
 export function projectPath(slug: string, segment = ''): string {
   return segment === '' ? `/p/${slug}` : `/p/${slug}/${segment}`;
 }
+
+/** The sidebar's single Forge settings entry; the bare URL opens General. */
+export const SETTINGS_PATH = '/settings';
 
 export function settingsPath(segment: string): string {
   return `/settings/${segment}`;
