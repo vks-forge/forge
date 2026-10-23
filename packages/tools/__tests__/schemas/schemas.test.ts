@@ -75,8 +75,8 @@ describe('HarnessSupport.native', () => {
 });
 
 describe('Grant and BudgetLimits', () => {
-  it('defaults deny and rules, leaves allow undefined', () => {
-    expect(Grant.parse({})).toEqual({ deny: [], rules: [] });
+  it('defaults deny, rules and approved, leaves allow undefined', () => {
+    expect(Grant.parse({})).toEqual({ deny: [], rules: [], approved: [] });
     expect(BudgetLimits.parse({})).toEqual({ run: {}, per_tool: {} });
   });
 

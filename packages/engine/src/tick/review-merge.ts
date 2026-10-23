@@ -11,13 +11,14 @@
  *   error), never a thrown string, so a late click is a normal answer.
  *
  * Exports: approveAndMerge().
- * Depends on: @forge/core (ForgeError), domain/gate-rows, tick/{verify, verify-merge, tick-config,
+ * Depends on: @forge/core (ForgeError), domain/{gate-rows,decide-merge}, tick/{verify, verify-merge, tick-config,
  *   tick-report, card-notify, stage-records, tick-requests}. IO through the git host and worktree ports.
  */
 
 import { ForgeError } from '@forge/core';
 import type { Interaction, StorageTx, Ticket } from '@forge/core';
-import { latestPerGate, summarizeGates } from '#/domain/gate-rows.js';
+import { decideMerge, describeOverride } from '#/domain/decide-merge.js';
+import { latestPerGate } from '#/domain/gate-rows.js';
 import { iso } from '#/shared/time.js';
 import { notifyCard } from '#/tick/card-notify.js';
 import { settleEscalation } from '#/tick/escalation-settle.js';
@@ -62,13 +63,21 @@ export async function approveAndMerge(
       };
     }
 
-    const stored = await deps.storage.transaction((tx) =>
-      tx.gateResults.listByTicket(ticket.id),
-    );
+    const { stored, stages } = await deps.storage.transaction(async (tx) => ({
+      stored: await tx.gateResults.listByTicket(ticket.id),
+      stages: await tx.stageRuns.listByTicket(ticket.id),
+    }));
 
     const rows = latestPerGate(stored.filter((r) => r.run_id === target.run.id));
-    // Fail closed: the owner approves a pass the gates recorded, never a guess.
-    if (summarizeGates(rows, target.runtime.gates).kind !== 'pass') {
+    // Fail closed: the owner approves a pass the gates recorded (or a check they overruled), never a guess.
+    const decision = decideMerge({
+      rows,
+      gates: target.runtime.gates,
+      stages,
+      runId: target.run.id,
+    });
+
+    if (decision.kind !== 'pass') {
       return {
         status: 'merge_refused',
         detail: 'the gates have no passing verdict for this run',
@@ -77,6 +86,7 @@ export async function approveAndMerge(
 
     // The sign-off item is settled in the transaction that moves the ticket to done, so both doors agree.
     const end = await mergeReviewed(ctx, target, rows, signer, {
+      overrideNote: describeOverride(decision),
       ...(item === undefined
         ? {}
         : {

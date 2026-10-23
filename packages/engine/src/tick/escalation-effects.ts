@@ -8,18 +8,28 @@
  *   follows (a new run with the owner's note, a re-plan turn) is queued in the same transaction,
  *   so a crash leaves either the whole action or none of it. Retry from a rework cap gives the
  *   ticket exactly one more attempt because `rework_count` stays at the cap: if it fails its
- *   gates again it parks again instead of looping. A re-plan parks nothing new: the ticket stays
+ *   gates again it parks again instead of looping; Retry on a merge conflict is the same: the
+ *   writer is woken with the clash again and the owner's note. A re-plan parks nothing new: the ticket stays
  *   parked, the card goes back to the Director with the owner's comment, and the earlier plan's
  *   not-started tickets are replaced only when the new plan is approved (d-0134).
  *
- * Exports: retryReason(), retryTx(), replanTx(), reworkTx().
- * Depends on: @forge/core (escalation schemas, card rules), tick/agent-fallback, tick/card-log, tick/card-phase,
+ * Exports: retryReason(), retryTx(), replanTx(), reworkTx(), replannable().
+ * Depends on: @forge/core (escalation schemas, card rules), domain/conflict-wake, tick/agent-fallback, tick/card-log, tick/card-phase,
  *   tick/escalation-settle, tick/plan-actions, tick/planning-state, tick/ticket-moves, tick/wakes.
  *   Writes inside the caller's transaction.
  */
 
 import { GrillState } from '@forge/core';
-import type { EscalationAnswer, Interaction, StorageTx, Ticket } from '@forge/core';
+import type {
+  EscalationAnswer,
+  EscalationFailure,
+  Interaction,
+  StorageTx,
+  Ticket,
+} from '@forge/core';
+import { conflictFromPayload, conflictWakeReason } from '#/domain/conflict-wake.js';
+import { retryContext } from '#/domain/retry-context.js';
+import { readRetryFacts } from '#/tick/retry-facts.js';
 import { resetFallbackTx } from '#/tick/no-agent.js';
 import { logCardEvent } from '#/tick/card-log.js';
 import { moveCardTx } from '#/tick/card-phase.js';
@@ -33,6 +43,13 @@ import { finishStageRun, humanStageId, sendBackFromHuman } from '#/tick/stage-re
 import { requestWakeTx } from '#/tick/wakes.js';
 import type { EngineDeps } from '#/types/engine.types.js';
 import type { EffectEnd } from '#/types/escalation.types.js';
+
+/** A card the Director can re-plan through: the ticket has one, and it is not a Discussion. */
+export async function replannable(tx: StorageTx, ticket: Ticket): Promise<boolean> {
+  const card = ticket.card_id === undefined ? null : await tx.cards.get(ticket.card_id);
+
+  return card !== null && card.type !== 'discussion' && card.closed_reason === undefined;
+}
 
 /** The wake reason that carries a retry's note to the next run's prompt: `<who>_retry: <note>`. */
 export const retryReason = (by: 'owner' | 'director' | 'auto', note?: string): string =>
@@ -79,6 +96,25 @@ export async function retryTx(
   }
 
   if (moved.ticket.status === 'planned') {
+    // A clash with main: the writer gets the clash again (files, upstream tickets) with the owner's note.
+    // The conflict count stays at its cap, so this is exactly one more attempt, and the ticket
+    // goes to Planned (the park has no `parked_from`), so a Worker really runs.
+    const conflict = (row.payload as EscalationFailure | null)?.conflict;
+    if (
+      answer.action === 'retry' &&
+      (row.payload as EscalationFailure | null)?.cause === 'merge_conflict'
+    ) {
+      await requestWakeTx(tx, deps, {
+        ticketId: ticket.id,
+        kind: 'continuation',
+        reason: conflictWakeReason(conflictFromPayload(conflict, answer.note)),
+        key: row.id,
+        uncapped: true,
+      });
+
+      return 'done';
+    }
+
     // A ticket whose last run reported done (the rework cap) is sent back like a rework: a plain
     // retry wake would be dropped as "its run already reported done".
     const last = ticket.assignee_run_id
@@ -125,6 +161,9 @@ export async function replanTx(
     return 'stale';
   }
 
+  // Read before settling: the stop the owner is re-planning from, in the same words a retry gets.
+  const stop = retryContext(await readRetryFacts(tx, ticket, row.id));
+
   if (
     !(await settleEscalation(
       tx,
@@ -141,7 +180,12 @@ export async function replanTx(
     kind: 'replan_requested',
     at: nowIso,
     actor: { type: 'user', id: author },
-    payload: { ticket_id: ticket.id, comment, by: 'owner' },
+    payload: {
+      ticket_id: ticket.id,
+      comment,
+      by: 'owner',
+      ...(stop ? { stop: { ...stop } } : {}),
+    },
   });
 
   if (card.phase !== 'grilling') {
@@ -158,6 +202,7 @@ export async function replanTx(
     ...planning.grill,
     done: false,
     done_reason: null,
+    replan_from: stop ? { ticket_id: ticket.id, stop: { ...stop } } : null,
     current: null,
     queued: [],
     round_asked: 0,
@@ -209,7 +254,7 @@ export async function reworkTx(
     t.status === 'review' ||
     t.status === 'needs_signoff' ||
     (t.status === 'waiting_human' && t.parked_from === 'verifying')
-      ? { events: [{ type: 'rework' }] }
+      ? { events: [{ type: 'rework' }], reason: `Sent back: ${comment.slice(0, 300)}` }
       : null,
   );
 

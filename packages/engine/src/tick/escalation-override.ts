@@ -97,7 +97,12 @@ export async function overrideTx(
   }
 
   const moved = await moveTicketTx(tx, ticket.id, nowIso, (t) =>
-    t.status === 'waiting_human' ? { events: [{ type: 'unparked' }] } : null,
+    t.status === 'waiting_human'
+      ? {
+          events: [{ type: 'unparked' }],
+          reason: `${action === 'merge_anyway' ? 'You chose to merge anyway' : 'You chose to continue'}: ${text}`,
+        }
+      : null,
   );
 
   if (!moved.ok) {

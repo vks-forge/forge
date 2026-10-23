@@ -119,6 +119,9 @@ describe('crash past the retry cap', () => {
     const delta = JSON.stringify(rig.llm.callsTo('dispatch_prompt').at(-1)!.input);
     expect(delta).toContain('owner_retry');
     expect(delta).toContain('Use the fixture in tests/helpers.');
+    // The retry says why the ticket stopped (the escalation it answers) and what the last run did.
+    expect(delta).toContain('retry_cap');
+    expect(delta).toContain('last_run');
     expect((await rig.ticket(id)).status).toBe('in_progress');
 
     const card = (await rig.ticket(id)).card_id;

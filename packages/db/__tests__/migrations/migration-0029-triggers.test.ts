@@ -192,7 +192,8 @@ describe('0029 memory: triggers', () => {
     }
 
     expect(checked).toBe(16 * 15);
-  });
+    // 240 trigger probes: 12.7 s alone, over the 20 s default when the whole suite runs in parallel.
+  }, 60_000);
 
   it('aborts events and versions on update and on delete, and the same for records, tags and links', () => {
     const driver = fresh();

@@ -5,14 +5,16 @@
  *   keep the server route from guessing at the detector's output.
  *
  * Exports: DetectionInput, DetectedProject.
- * Depends on: @forge/core (ProjectCheck, types only).
+ * Depends on: @forge/core (ProjectCheck, SetupStep, types only).
  */
 
-import type { ProjectCheck } from '@forge/core';
+import type { ProjectCheck, SetupStep } from '@forge/core';
 
 export interface DetectionInput {
   /** File and folder names at the repository root (no paths). */
   readonly rootEntries: readonly string[];
+  /** File and folder names at the repository top, when the project is a subfolder of a larger repository. */
+  readonly repoEntries?: readonly string[];
   /** The parsed root `package.json`, when there is one. */
   readonly packageJson?: unknown;
 }
@@ -22,4 +24,6 @@ export interface DetectedProject {
   readonly ecosystems: readonly string[];
   /** Suggested checks, in the order they should run. */
   readonly checks: readonly ProjectCheck[];
+  /** Default steps Forge runs in each new worktree (installs); empty when the project needs none. */
+  readonly setup: readonly SetupStep[];
 }

@@ -12,8 +12,14 @@
  * Depends on: every module under src/. No IO.
  */
 
+export * from '#/domain/admit-approval.js';
+export * from '#/domain/admit-bypass.js';
 export * from '#/domain/admit.js';
 export * from '#/domain/agent-grant.js';
+export * from '#/domain/approval-always.js';
+export * from '#/domain/approval-key.js';
+export * from '#/domain/approval-what.js';
+export * from '#/domain/approved-rules.js';
 export * from '#/domain/budgets.js';
 export * from '#/domain/call-resource.js';
 export * from '#/domain/check-exact-rules.js';
@@ -24,6 +30,7 @@ export * from '#/domain/data-home-floor.js';
 export * from '#/domain/director-grant.js';
 export * from '#/domain/research-grant.js';
 export * from '#/domain/floors.js';
+export * from '#/domain/hard-floor.js';
 export * from '#/domain/grants.js';
 export * from '#/domain/lane-defaults.js';
 export * from '#/domain/receipt-verify.js';
@@ -44,6 +51,8 @@ export * from '#/shared/canonical-json.js';
 export * from '#/shared/errors.js';
 export * from '#/shared/hmac.js';
 export type * from '#/types/admit.types.js';
+export type * from '#/types/approval.types.js';
+export type * from '#/types/hard-floor.types.js';
 export type * from '#/types/agent-grant.types.js';
 export type * from '#/types/budgets.types.js';
 export type * from '#/types/catalogue.types.js';

@@ -56,7 +56,14 @@ describe('follow-up plan on a done card', () => {
       ],
     });
 
-    const v2 = todoPlan({ tickets: [ticketPlan('t3', 'express', ['src/c.ts'])] });
+    // v2 plans t1 again (its file), so approving it cancels nothing the plan leaves uncovered and the Director may approve.
+    const v2 = todoPlan({
+      tickets: [
+        ticketPlan('t1', 'express', ['src/a.ts']),
+        ticketPlan('t3', 'express', ['src/c.ts']),
+      ],
+    });
+
     scriptTodo(rig, { write_plan: [v1, v2] });
     const card = await planUntilDecision(rig);
     await rig.tick();

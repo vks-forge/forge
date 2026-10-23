@@ -15,20 +15,60 @@
  *   diff stat and gated commit of finished work (null for any other ticket); the PR link is the
  *   ticket's `pr_url` and the G1 report is the gate row's `report_ref`.
  *
+ *   `can_cancel` is true for an unfinished ticket of an open card and `dependents` lists the open tickets that
+ *   wait on it (the cancel dialog names them before a cascade); `open_blockers` is what the ticket still waits for,
+ *   by the scheduler's own rule and empty once it is finished, so the page never says a done ticket is "waiting on"
+ *   a ticket it already got past (`blocked_by` stays the full list of what it depends on).
+ *
  *   `cost` is the sum of the runs' recorded dollars with one line per run (a run that recorded
  *   no cost is 0 and flagged `recorded: false`).
  *
+ *   `needs_you_detail` is the same waits as the dock's items (kind, title, reasons, actions): the
+ *   ticket's owner escalations plus finished work waiting for review or sign-off (d-0172).
+ *
  * Exports: ticketRoute().
- * Depends on: @forge/core (TicketId, rollupTicketCost), services/escalation-view, services/http/http-errors, services/http/respond,
+ * Depends on: @forge/core (TicketId, rollupTicketCost, ticketNeedsYouItems, openBlockerIds, openDependentIds, canCancelTicket), services/escalation-view, services/http/http-errors, services/http/respond,
  *   types/routes. IO: reads storage and the engine's read-only wait explanation.
  */
 
-import { TicketId, rollupTicketCost } from '@forge/core';
+import {
+  TERMINAL_STATUSES,
+  TicketId,
+  TicketStatus,
+  canCancelTicket,
+  openBlockerIds,
+  openDependentIds,
+  rollupTicketCost,
+  ticketNeedsYouItems,
+} from '@forge/core';
+import type { StorageTx, Ticket } from '@forge/core';
 import { escalationViews, waitActionsFor } from '#/services/escalation-view.js';
 import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
 import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
+
+const OPEN_STATUSES = TicketStatus.options.filter((s) => !TERMINAL_STATUSES.includes(s));
+
+/** What the page needs to cancel and to tell the truth about waiting: the engine's own rules, read once. */
+async function cancelAndBlockers(tx: StorageTx, ticket: Ticket) {
+  const card = ticket.card_id ? await tx.cards.get(ticket.card_id) : null;
+  const open: Ticket[] = [];
+  for (const status of OPEN_STATUSES) {
+    open.push(...(await tx.tickets.listByStatus(status)));
+  }
+
+  const status = new Map<string, Ticket['status'] | undefined>();
+  for (const id of ticket.blocked_by) {
+    status.set(id, (await tx.tickets.get(id))?.status);
+  }
+
+  return {
+    can_cancel: canCancelTicket(ticket, card),
+    dependents: openDependentIds(open, ticket.id),
+    open_blockers: openBlockerIds(ticket, (id) => status.get(id)),
+  };
+}
 
 export function ticketRoute(deps: RouteDeps): Route {
   return {
@@ -64,7 +104,19 @@ export function ticketRoute(deps: RouteDeps): Route {
         throw new HttpError(404, 'ticket_not_found', `no ticket ${id.data}`);
       }
 
+      // What the Director's own steps on this ticket cost (escalation answers, recovery, sign-off checks).
+      const directorUsd =
+        (
+          await deps.storage.transaction((tx) =>
+            tx.directorSpend.totalByTicket([id.data]),
+          )
+        )[id.data] ?? 0;
+
       const waitReason = await deps.engine.explainWait(found.ticket.id);
+      const wait = (await deps.engine.explainWaits([found.ticket.id])).get(
+        found.ticket.id,
+      );
+
       const waits = await deps.storage.transaction(async (tx) => {
         const rows = (await tx.interactions.listByTicket(found.ticket.id)).filter(
           (i) => i.status === 'pending',
@@ -72,21 +124,39 @@ export function ticketRoute(deps: RouteDeps): Route {
 
         const escalations = await escalationViews(tx, rows);
 
+        const waitActions = await waitActionsFor(
+          tx,
+          found.ticket,
+          escalations,
+          waitReason,
+        );
+
         return {
           escalations,
-          wait_actions: await waitActionsFor(tx, found.ticket, escalations, waitReason),
+          wait_actions: waitActions,
+          needs_you_detail: ticketNeedsYouItems({
+            ticket: found.ticket,
+            escalations,
+            waitActions,
+          }),
         };
       });
 
       // What approving needs to see: the change's size and the commit the gates judged (null off review).
       const review = await deps.engine.reviewOf(found.ticket.id);
 
+      const status = await deps.storage.transaction((tx) =>
+        cancelAndBlockers(tx, found.ticket),
+      );
+
       sendJson(res, 200, {
         ...found,
+        ...status,
         wait_reason: waitReason,
+        wait: wait ?? null,
         ...waits,
         review,
-        cost: rollupTicketCost(found.runs),
+        cost: rollupTicketCost(found.runs, directorUsd),
       });
     },
   };

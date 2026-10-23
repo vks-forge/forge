@@ -18,5 +18,6 @@
     "FORGE_RUN_TOKEN": "token-1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     "FORGE_TICKET": "FG-1"
   },
-  "isolation": "host"
+  "isolation": "host",
+  "permissions": "bypass"
 }

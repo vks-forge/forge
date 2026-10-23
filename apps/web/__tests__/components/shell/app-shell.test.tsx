@@ -31,8 +31,6 @@ describe('AppShell navigation', () => {
       'Inbox',
       'Board',
       'Tickets',
-      'Issues',
-      'Chat',
       'Runs',
       'Cost',
       'Memory',
@@ -96,14 +94,15 @@ describe('AppShell navigation', () => {
     ).toHaveTextContent('sample-web');
   });
 
-  it('shows a placeholder naming the batch that will build the screen', async () => {
+  it('shows a plain placeholder, with no batch name, for a screen that is not built', async () => {
     renderApp({ path: '/p/sample-service/issues' });
 
     expect(
       await screen.findByRole('heading', { name: 'Issues is not built yet' }),
     ).toBeInTheDocument();
 
-    expect(screen.getByText(/Coming in W8/)).toBeInTheDocument();
+    expect(screen.getByText(/This screen is not built yet\./)).toBeInTheDocument();
+    expect(screen.queryByText(/Coming in W/)).toBeNull();
   });
 
   it('says so when the project in the URL does not exist', async () => {

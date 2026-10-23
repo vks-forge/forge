@@ -118,10 +118,10 @@ export function BucketChart(props: {
         <>
           <div className="relative">
             <svg
-              role="img"
+              role="group"
+              aria-roledescription="chart"
               ref={attach}
               aria-label={props.title}
-
               aria-describedby={`${id}-d`}
               viewBox={`0 0 ${layout.width} ${PLOT_HEIGHT}`}
               preserveAspectRatio="none"
@@ -157,6 +157,7 @@ export function BucketChart(props: {
                 <Tooltip key={`hit-${bar.index}`} content={tip(bar.index)}>
                   <rect
                     data-slot=""
+                    role="img"
                     x={bar.index * (layout.width / count)}
                     y={0}
                     width={layout.width / count}

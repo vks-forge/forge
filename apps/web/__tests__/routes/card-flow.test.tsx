@@ -1,7 +1,7 @@
 /**
  * Pins: a running Director step shows as "thinking" with its label and ends when the step
- * finishes (the files it read expand on demand); a ready plan is a card with a Review plan
- * button that opens the Plan tab; approvals, requested changes, the end of the grill and budget
+ * finishes (the files it read expand on demand); a ready plan is a quiet one-line record with an Open plan link
+ * that opens the Plan tab (the decision itself is in the dock); approvals, requested changes, the end of the grill and budget
  * warnings are system lines; a malformed payload or an unknown kind is a neutral line, never a
  * crash.
  *
@@ -15,7 +15,12 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { flowEvent, flowRoutes, FLOW_CARD } from '#tests/helpers/flow-fixtures.js';
+import {
+  dockItem,
+  flowEvent,
+  flowRoutes,
+  FLOW_CARD,
+} from '#tests/helpers/flow-fixtures.js';
 
 import { renderApp } from '#tests/helpers/render-app.js';
 
@@ -39,6 +44,63 @@ describe('Card chat: Director activity and system lines', () => {
 
     expect(await screen.findByText(/The Director is thinking/)).toBeInTheDocument();
     expect(screen.getByText('Reading the project')).toBeInTheDocument();
+  });
+
+  it('does not say thinking for a step that paused to ask the owner or failed, and says a failure', async () => {
+    const step = (seq: number, kind: string, extra: Record<string, unknown> = {}) =>
+      flowEvent(seq, kind, { step_id: 's1', step_kind: 'k', label: 'Survey', ...extra });
+
+    const { unmount } = renderApp({
+      path: PAGE,
+      routes: flowRoutes({
+        events: [
+          step(0, 'step_started'),
+          step(1, 'step_finished', { outcome: 'paused_for_you' }),
+        ],
+      }),
+    });
+
+    await screen.findByRole('log');
+    expect(screen.queryByText(/The Director is thinking/)).not.toBeInTheDocument();
+    unmount();
+
+    renderApp({
+      path: PAGE,
+      routes: flowRoutes({
+        events: [
+          step(0, 'step_started'),
+          step(1, 'step_finished', { outcome: 'failed' }),
+        ],
+      }),
+    });
+
+    expect(await screen.findByText(/could not finish its last step/)).toBeInTheDocument();
+    expect(screen.queryByText(/The Director is thinking/)).not.toBeInTheDocument();
+  });
+
+  it('never says thinking for an unfinished step while something waits on the owner', async () => {
+    renderApp({
+      path: PAGE,
+      routes: flowRoutes({
+        detail: {
+          needs_you: true,
+          column: 'needs_you',
+          needs_you_detail: [
+            dockItem('plan_approval', ['approve_plan'], { title: 'Budget reached' }),
+          ],
+        },
+        events: [
+          flowEvent(0, 'step_started', {
+            step_id: 's1',
+            step_kind: 'k',
+            label: 'Survey',
+          }),
+        ],
+      }),
+    });
+
+    await screen.findByRole('log');
+    expect(screen.queryByText(/The Director is thinking/)).not.toBeInTheDocument();
   });
 
   it('stops thinking once the step finished and lists the files it read on demand', async () => {
@@ -78,7 +140,7 @@ describe('Card chat: Director activity and system lines', () => {
     expect(screen.getByText('src/b.ts')).toBeInTheDocument();
   });
 
-  it('draws a ready plan as a card with a Review plan button that opens the Plan tab', async () => {
+  it('draws a ready plan as a one-line record with an Open plan link that opens the Plan tab', async () => {
     const user = userEvent.setup();
     const { router } = renderApp({
       path: PAGE,
@@ -97,7 +159,7 @@ describe('Card chat: Director activity and system lines', () => {
     expect(await screen.findByText('Plan v2 is ready.')).toBeInTheDocument();
     expect(screen.getByText('3 tickets')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Review plan' }));
+    await user.click(screen.getByRole('button', { name: 'Open plan →' }));
 
     expect(router.state.location.pathname).toBe(
       `/p/sample-service/cards/${FLOW_CARD}/plan`,

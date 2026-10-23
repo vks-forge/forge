@@ -1,7 +1,7 @@
 /**
  * Reads one project's rows into the shape the Overview sums.
  *
- * Why: the Overview adds up every project's tickets, runs, G1 verdicts, open cards and
+ * Why: the Overview adds up every project's tickets, runs, Director spend rows, G1 verdicts, open cards and
  *   waiting inbox items, and each of those lives behind a different storage call. This reads
  *   them for one project in one transaction (walking pages, so nothing loads unbounded), and
  *   leaves every rule about what they mean to core's `computeOverviewStats`. Inbox items come
@@ -15,6 +15,7 @@
 
 import { applyInboxMarks, inInboxView } from '@forge/core';
 import type {
+  BudgetDefault,
   Card,
   GateResult,
   MemoryListEntry,
@@ -57,6 +58,7 @@ export async function readOverviewProject(
   proposals: readonly MemoryListEntry[],
   nowMs: number,
   installedVersion: (kind: string) => string | null,
+  budgetDefault: BudgetDefault,
 ): Promise<OverviewProjectInput> {
   const runs = await collectRuns(tx, {
     project: project.id,
@@ -79,6 +81,7 @@ export async function readOverviewProject(
     proposals,
     nowMs,
     installedVersion,
+    budgetDefault,
   );
 
   const marks = await tx.inboxStates.listByProject(project.id);
@@ -88,6 +91,9 @@ export async function readOverviewProject(
     status: project.status,
     tickets: await collectTickets(tx, project.id),
     runs,
+    directorSpend: await tx.directorSpend.listByProject(project.id, {
+      ...(since === undefined ? {} : { from: since }),
+    }),
     gates,
     activeRuns: active.length,
     openCards: await countOpenCards(tx, project.id),

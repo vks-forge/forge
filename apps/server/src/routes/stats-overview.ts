@@ -14,7 +14,7 @@
  *   ones. Naming an archived slug includes it whatever the flag says.
  *
  * Exports: statsOverviewRoutes().
- * Depends on: @forge/core (overview rules and schemas), services/overview-source,
+ * Depends on: @forge/core (overview rules and schemas), services/budget-default, services/overview-source,
  *   services/http/*, types/routes. IO: reads storage and each project's memory repository.
  */
 
@@ -24,8 +24,10 @@ import {
   defaultGroup,
   overviewRunsSince,
 } from '@forge/core';
+import type { BudgetDefault } from '@forge/core';
 import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
+import { budgetDefaultForProject } from '#/services/budget-default.js';
 import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
 import { readOverviewProject } from '#/services/overview-source.js';
@@ -67,10 +69,15 @@ export function statsOverviewRoutes(deps: RouteDeps): Route[] {
           memory.set(p.slug, await deps.memory.reader.list(p.slug));
         }
 
+        // Settings are read before the storage transaction (they share one writer queue).
+        const budgets = await Promise.all(
+          chosen.map((p) => budgetDefaultForProject(deps.config, p.slug)),
+        );
+
         const since = overviewRunsSince(query.range, nowMs, utcOffsetMinutes);
         const projects = await deps.storage.transaction(async (tx) => {
           const rows = [];
-          for (const p of chosen) {
+          for (const [i, p] of chosen.entries()) {
             rows.push(
               await readOverviewProject(
                 tx,
@@ -79,6 +86,7 @@ export function statsOverviewRoutes(deps: RouteDeps): Route[] {
                 memory.get(p.slug) ?? [],
                 nowMs,
                 (kind) => deps.compat.installedVersion(kind),
+                budgets[i] as BudgetDefault,
               ),
             );
           }

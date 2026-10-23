@@ -10,17 +10,19 @@
  *   the card that sent it stays mounted), and the snapshot is put back if the server refuses. A choice that opens a dialog
  *   (cancel, re-plan) and the re-check (whose answer is the point) wait for the server, so the
  *   dialog can show a refusal such as "other tickets depend on this". Refusals keep the raw
- *   server error so the caller can say why in words (domain/escalation-errors).
+ *   server error so the caller can say why in words (domain/escalation-errors). A successful act
+ *   shows the reply's `next` line as a short notice (api/announce-next).
  *
  * Exports: cardEscalationsKey(), useCardEscalations(), useActOnEscalation(),
- *   useActOnTicketWait().
- * Depends on: @tanstack/react-query, api/api-error, api/api-provider, api/poll-interval, api/use-card-board,
+ *   useActOnTicketWait(), refreshAfterAct().
+ * Depends on: @tanstack/react-query, api/announce-next, api/api-error, api/api-provider, api/poll-interval, api/use-card-board,
  *   api/use-card (CARD_POLL_MS), api/use-ticket-pipeline, api/use-tickets, schemas/escalation, schemas/tickets,
  *   types/escalation-ui.types (types).
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
+import { announceNext } from '#/api/announce-next.js';
 import { ApiError } from '#/api/api-error.js';
 import { useForgeApi } from '#/api/api-provider.js';
 import { useRefetchMs } from '#/api/poll-interval.js';
@@ -41,6 +43,7 @@ export const cardEscalationsKey = (cardId: string) =>
   [...cardKey(cardId), 'escalations'] as const;
 
 const INBOX_KEY = ['inbox'] as const;
+const SETTINGS_KEY = ['project-settings'] as const;
 
 /** Actions whose result is certain enough to show before the server answers. */
 const OPTIMISTIC: ReadonlySet<EscalationActBody['action']> = new Set([
@@ -63,7 +66,7 @@ export function useCardEscalations(cardId: string) {
   });
 }
 
-function refresh(
+export function refreshAfterAct(
   client: QueryClient,
   target: { ticketId: string; cardId: string | undefined },
 ): Promise<unknown> {
@@ -73,6 +76,8 @@ function refresh(
     client.invalidateQueries({ queryKey: TICKETS_KEY }),
     client.invalidateQueries({ queryKey: CARDS_KEY }),
     client.invalidateQueries({ queryKey: INBOX_KEY }),
+    // "Always for this project" saves a settings version; the Tool approvals tab must see it.
+    client.invalidateQueries({ queryKey: SETTINGS_KEY }),
     ...(target.cardId === undefined
       ? []
       : [client.invalidateQueries({ queryKey: cardKey(target.cardId) })]),
@@ -153,7 +158,10 @@ export function useActOnEscalation(
     },
     // The mutation, not the card, hands a settled item back: the refreshed lists no longer hold it
     // and may unmount the card before the card sees the success.
-    onSuccess: (reply) => onKeep?.(reply.escalation),
+    onSuccess: (reply) => {
+      announceNext(reply.next);
+      onKeep?.(reply.escalation);
+    },
     onError: (error, _body, context) => {
       if (context?.snapshot !== undefined) {
         restore(client, view, context.snapshot);
@@ -167,7 +175,7 @@ export function useActOnEscalation(
     // the refreshed lists no longer hold a settled item, so awaiting would unmount the card before it
     // could say "Merged anyway by you" (the card hands the settled item back through `onKeep`).
     onSettled: () => {
-      void refresh(client, { ticketId: view.ticket_id, cardId: view.card_id });
+      void refreshAfterAct(client, { ticketId: view.ticket_id, cardId: view.card_id });
     },
   });
 }
@@ -179,6 +187,7 @@ export function useActOnTicketWait(ticketId: string, cardId: string | undefined)
 
   return useMutation({
     mutationFn: (body: EscalationActBody) => api.escalations.actOnTicket(ticketId, body),
-    onSettled: () => refresh(client, { ticketId, cardId }),
+    onSuccess: (reply) => announceNext(reply.next),
+    onSettled: () => refreshAfterAct(client, { ticketId, cardId }),
   });
 }

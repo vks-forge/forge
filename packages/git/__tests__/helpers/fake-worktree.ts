@@ -7,20 +7,30 @@
  *   behaviour the contract pins for real git.
  *
  * Exports: createFakeWorktreeHarness().
- * Depends on: @forge/core (InvalidInputError, WorktreeManager), contract/worktree.contract.
+ * Depends on: @forge/core (InvalidInputError, WorktreeManager), contract/{worktree,merge-in}.contract,
+ *   helpers/fake-merge.
  */
 
 import { InvalidInputError } from '@forge/core';
-import type { Worktree, WorktreeDiffFile, WorktreeManager } from '@forge/core';
-import type { WorktreeHarness } from '#tests/contract/worktree.contract.js';
+import type {
+  Worktree,
+  WorktreeDiffFile,
+  WorktreeManager,
+  WorktreePrep,
+} from '@forge/core';
+import type { MergeInHarness } from '#tests/contract/merge-in.contract.js';
+import { threeWayMerge } from '#tests/helpers/fake-merge.js';
 
 interface FakeTree {
   readonly path: string;
   readonly branch: string;
   readonly baseSha: string;
+  /** Index in the base log of the newest base commit this branch holds. */
+  mergedBase: number;
   head: string;
   files: Map<string, string>;
   committed: Map<string, string>;
+  prep: WorktreePrep | null;
 }
 
 const BASE = new Map([
@@ -30,13 +40,27 @@ const BASE = new Map([
 
 const sha = (n: number): string => n.toString(16).padStart(40, '0');
 const ignored = (name: string): boolean => name.endsWith('.log');
+/** A file a recorded setup output covers: the path itself or anything under it. */
+const hidden = (t: FakeTree, name: string): boolean =>
+  (t.prep?.outputs ?? []).some((o) => name === o || name.startsWith(`${o}/`));
 
-export function createFakeWorktreeHarness(): WorktreeHarness {
+/** A commit on the fake `main`: the whole tree after it, and the file it touched. */
+interface BaseCommit {
+  readonly sha: string;
+  readonly file: string;
+  readonly state: ReadonlyMap<string, string>;
+}
+
+const unsafe = (value: string): boolean => value.startsWith('-');
+
+export function createFakeWorktreeHarness(): MergeInHarness {
   const repoRoot = '/fake/repo';
   const worktreeRoot = '/fake/data/worktrees/repo';
   const trees = new Map<string, FakeTree>();
   const branches = new Set<string>(['main']);
   let counter = 1;
+  const baseLog: BaseCommit[] = [{ sha: sha(1000), file: '', state: BASE }];
+  const main = (): BaseCommit => baseLog[baseLog.length - 1] as BaseCommit;
 
   const tree = (path: string): FakeTree => {
     const t = trees.get(path);
@@ -67,27 +91,36 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
         throw new InvalidInputError('branch checked out elsewhere');
       }
 
-      const baseSha = sha(counter++);
+      const baseSha = main().sha;
       branches.add(branch);
       trees.set(path, {
         path,
         branch,
         baseSha,
+        mergedBase: baseLog.length - 1,
         head: baseSha,
-        files: new Map(BASE),
-        committed: new Map(BASE),
+        files: new Map(main().state),
+        committed: new Map(main().state),
+        prep: null,
       });
 
       return { path, baseSha };
     },
-    async remove(path) {
+    async remove(path, opts) {
+      if (opts?.deleteBranch?.startsWith('-')) {
+        throw new InvalidInputError('unsafe ref');
+      }
+
       trees.delete(path);
+      if (opts?.deleteBranch !== undefined) {
+        branches.delete(opts.deleteBranch);
+      }
     },
     async changedFiles(path) {
       const t = tree(path);
       const out: string[] = [];
       for (const [name, content] of t.files) {
-        if (!ignored(name) && BASE.get(name) !== content) {
+        if (!ignored(name) && !hidden(t, name) && BASE.get(name) !== content) {
           out.push(name);
         }
       }
@@ -101,7 +134,7 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
       const added: [string, string][] = [];
       const gone: string[] = [];
       for (const [name, content] of t.files) {
-        if (ignored(name)) {
+        if (ignored(name) || hidden(t, name)) {
           continue;
         }
 
@@ -141,7 +174,7 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
     },
     async commitAll(path) {
       const t = tree(path);
-      const visible = new Map([...t.files].filter(([n]) => !ignored(n)));
+      const visible = new Map([...t.files].filter(([n]) => !ignored(n) && !hidden(t, n)));
       const same =
         visible.size === t.committed.size &&
         [...visible].every(([n, c]) => t.committed.get(n) === c);
@@ -158,6 +191,64 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
     async head(path) {
       return tree(path).head;
     },
+    rootOf: (path) => path,
+    async untracked(path) {
+      const t = tree(path);
+      const tops = [...t.files.keys()]
+        .filter((n) => !ignored(n) && !BASE.has(n))
+        .map((n) => n.split('/')[0] as string);
+
+      return [...new Set(tops)].sort();
+    },
+    async readPrep(path) {
+      return trees.get(path)?.prep ?? null;
+    },
+    async writePrep(path, prep) {
+      tree(path).prep = prep;
+    },
+    async mergeIn(path, target) {
+      if (unsafe(target)) {
+        throw new InvalidInputError('unsafe sha');
+      }
+
+      const t = tree(path);
+      const at = baseLog.findIndex((c) => c.sha === target);
+      if (at < 0) {
+        throw new InvalidInputError(`unknown commit ${target}`);
+      }
+
+      if (at <= t.mergedBase) {
+        return { kind: 'up_to_date' };
+      }
+
+      const base = (baseLog[t.mergedBase] as BaseCommit).state;
+      const theirs = (baseLog[at] as BaseCommit).state;
+      const merged = threeWayMerge(base, t.files, theirs, target);
+      const files = new Set(merged.conflicts.map((c) => c.path));
+      const upstream = baseLog
+        .slice(t.mergedBase + 1, at + 1)
+        .filter((c) => files.has(c.file))
+        .map((c) => ({ sha: c.sha, subject: `upstream: ${c.file}` }));
+
+      t.files = merged.files;
+      t.committed = new Map(merged.files);
+      t.mergedBase = at;
+      t.head = sha(counter++);
+
+      return merged.conflicts.length === 0
+        ? { kind: 'merged', head: t.head }
+        : { kind: 'conflict', head: t.head, files: merged.conflicts, upstream };
+    },
+    async contains(path, target) {
+      if (unsafe(target)) {
+        throw new InvalidInputError('unsafe sha');
+      }
+
+      const t = tree(path);
+      const at = baseLog.findIndex((c) => c.sha === target);
+
+      return target === t.head || (at >= 0 && at <= t.mergedBase);
+    },
   };
 
   return {
@@ -167,6 +258,9 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
     exists: async (p) => trees.has(p),
     branchExists: async (b) => branches.has(b),
     write: async (p, rel, content) => {
+      tree(p).files.set(rel, content);
+    },
+    writeReadOnly: async (p, rel, content) => {
       tree(p).files.set(rel, content);
     },
     remove: async (p, rel) => {
@@ -179,5 +273,18 @@ export function createFakeWorktreeHarness(): WorktreeHarness {
     },
     authorOf: async () => 'Forge',
     close: async () => undefined,
+    async baseCommit(file, content) {
+      const state = new Map(main().state);
+      if (content === null) {
+        state.delete(file);
+      } else {
+        state.set(file, content);
+      }
+
+      baseLog.push({ sha: sha(1000 + baseLog.length), file, state });
+
+      return main().sha;
+    },
+    read: async (p, rel) => tree(p).files.get(rel) ?? null,
   };
 }

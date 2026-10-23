@@ -29,6 +29,7 @@ import {
 import { CompanyScreen } from '#/components/settings/company-screen.js';
 import { ConfigFields } from '#/components/settings/config-fields.js';
 import { SettingsSection } from '#/components/settings/settings-page.js';
+import { PACE_FIELDS } from '#/domain/director-pace-fields.js';
 import { MEMORY_REJECTED_NOTE } from '#/domain/director-memory-fields.js';
 import { DIRECTOR_FIELDS } from '#/domain/director-settings.js';
 
@@ -98,11 +99,12 @@ export function DirectorPage() {
             </SettingsSection>
             <SettingsSection
               id="limits"
-              title="Questions, spend and reading"
-              description="How much the Director asks, when it warns about cost, and how much of the repository a step may read."
+              title="Pace, questions, spend and reading"
+              description="How many things the Director works on at once, how much it asks, when it warns about cost, and how much of the repository a step may read."
             >
               <ConfigFields
                 fields={[
+                  ...PACE_FIELDS,
                   ...DIRECTOR_FIELDS.grill,
                   ...DIRECTOR_FIELDS.budget_warning_usd,
                   ...DIRECTOR_FIELDS.read_caps,
@@ -142,7 +144,7 @@ export function DirectorPage() {
             <SettingsSection
               id="escalation"
               title="When a ticket waits"
-              description="What the Director does with a Worker’s question or a stopped ticket before it asks you. Tier C tickets, tools and logins always come to you."
+              description="What the Director does with a Worker’s question or a stopped ticket before it asks you. Tools and logins always come to you."
             >
               <ConfigFields
                 fields={DIRECTOR_FIELDS.escalation}

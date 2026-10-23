@@ -224,3 +224,30 @@ describe('project tool grants', () => {
     ).toBe('allow');
   });
 });
+
+describe('bypass permissions follow the harness row of the run', () => {
+  const saveHarness = (bypass?: boolean) =>
+    storage.transaction((tx) =>
+      tx.harnesses.upsert({
+        id: 'claude-code',
+        kind: 'claude',
+        auth_mode: 'login',
+        status: 'ok',
+        ...(bypass === undefined ? {} : { bypass_permissions: bypass }),
+      }),
+    );
+
+  it('puts bypass on the grant when the harness has no stored switch', async () => {
+    const ctx = await policy().admitContext(run);
+
+    expect(ctx.grant.bypass).toBe(true);
+  });
+
+  it('puts bypass on the grant when the switch is on and leaves it off when it is off', async () => {
+    await saveHarness(true);
+    expect((await policy().admitContext(run)).grant.bypass).toBe(true);
+
+    await saveHarness(false);
+    expect((await policy().admitContext(run)).grant.bypass).toBeUndefined();
+  });
+});

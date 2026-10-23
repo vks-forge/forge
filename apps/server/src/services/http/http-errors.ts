@@ -79,6 +79,7 @@ const STATUS_BY_FAMILY: Readonly<Record<ErrorFamily, number>> = {
   crash: 500,
   unknown: 500,
   model_unavailable: 500,
+  merge_conflict: 409,
 };
 
 /**
@@ -98,6 +99,7 @@ const FAMILY_MESSAGE: Readonly<Record<ErrorFamily, string>> = {
   crash: 'internal server error',
   unknown: 'internal server error',
   model_unavailable: 'internal server error',
+  merge_conflict: 'the branch conflicts with the base',
 };
 
 /** Status for any thrown value; anything not a ForgeError is 500. */

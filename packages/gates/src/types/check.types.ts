@@ -7,7 +7,7 @@
  *   engine and a markdown section for the Worker's rework prompt. A shared shape is what
  *   lets the gate add a check without touching how verdicts are combined.
  *
- * Exports: CheckOutcome, PatchFile, PatchDraft, ClaimEvidence, EarlierRunEvidence, UnverifiedEarlierRun, RawEarlierRun, Coverage, ProjectCheckInput, ProjectCheckSteps, AllowedCall.
+ * Exports: CheckOutcome, PatchFile, PatchDraft, ClaimEvidence, EarlierRunEvidence, UnverifiedEarlierRun, SetAsideCode, SetAside, RawEarlierRun, Coverage, ProjectCheckInput, ProjectCheckSteps, AllowedCall, ReadBacking.
  * Depends on: @forge/core, @forge/tools, types/g1-deps. Types only.
  */
 
@@ -23,6 +23,8 @@ export interface CheckOutcome {
   readonly findings: readonly GateFinding[];
   /** Markdown body of this check's report section. */
   readonly details: string;
+  /** Claims only: every finding is a lost-proof finding for a file (see `Coverage.provenanceFiles`). */
+  readonly provenanceOnly?: boolean;
 }
 
 /** One file of a unified patch: its added and removed lines without the +/- marker. */
@@ -64,12 +66,28 @@ export interface RawEarlierRun {
 export interface Coverage {
   readonly findings: GateFinding[];
   readonly coveredByEarlier: ReadonlyMap<string, string>;
+  /** Files whose only cover is an earlier run whose run secret is gone; each has its own finding with `file` set. */
+  readonly provenanceFiles: readonly string[];
 }
 
-/** An earlier run G1 set aside because its chain did not verify. */
+/** Why an earlier run was set aside: its run secret is gone, or its chain did not verify (broken or forged). */
+export type SetAsideCode = 'secret_gone' | 'chain_broken';
+
+/** The structured outcome of failing to verify an earlier run: the code and a plain-words reason. */
+export interface SetAside {
+  readonly code: SetAsideCode;
+  readonly reason: string;
+}
+
+/**
+ * An earlier run G1 set aside because its chain did not verify. `receipts` are the unverified
+ * records, read only to say which files the run claims to have edited (never as cover).
+ */
 export interface UnverifiedEarlierRun {
   readonly runId: string;
+  readonly code: SetAsideCode;
   readonly reason: string;
+  readonly receipts: readonly Receipt[];
 }
 
 /** The evidence the claim matcher compares claims against. */
@@ -101,6 +119,8 @@ export interface ProjectCheckInput {
   readonly passEnv?: readonly string[] | undefined;
   readonly run: RunCommand;
   readonly timeoutMs: number;
+  /** The project's tool folders from the worktree's prep record; go first on PATH and may be run from. */
+  readonly pathDirs?: readonly string[] | undefined;
 }
 
 /** Accumulator for the report lines and findings of the project commands. */
@@ -114,4 +134,9 @@ export interface ProjectCheckSteps {
 export interface AllowedCall {
   readonly decision: DecisionReceipt;
   readonly state: string | undefined;
+}
+
+/** What backs a `read` claim: the file itself (`folder` null) or the folder a search covered. */
+export interface ReadBacking {
+  readonly folder: string | null;
 }

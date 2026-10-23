@@ -15,6 +15,7 @@ import {
   dependencyChips,
   phaseLabel,
   phaseLine,
+  progressLabel,
 } from '#/domain/card-phase.js';
 import { CardPhase } from '#/schemas/cards.js';
 
@@ -90,5 +91,36 @@ describe('dependencyChips', () => {
     const chips = dependencyChips({ depends_on: ['A', 'B'], blocks: ['A', 'B'] });
 
     expect(new Set(chips.map((chip) => chip.key)).size).toBe(chips.length);
+  });
+});
+
+describe('cancelled tickets', () => {
+  const base = { open_points: undefined, plan_version: undefined };
+
+  it('says "2 of 2 done, 1 cancelled" on a finished card and names the cancel in the bar label', () => {
+    const card = { ...base, ticket_count: 2, tickets_done: 2, tickets_cancelled: 1 };
+
+    expect(phaseLine({ ...card, phase: 'done' })).toBe('2 of 2 done, 1 cancelled');
+    expect(progressLabel(card)).toBe('2 of 2 tickets done, 1 cancelled');
+  });
+
+  it('keeps the plain wording when nothing was cancelled', () => {
+    const card = { ...base, ticket_count: 3, tickets_done: 1, tickets_cancelled: 0 };
+
+    expect(phaseLine({ ...card, phase: 'in_progress' })).toBe('1/3 tickets');
+    expect(phaseLine({ ...card, phase: 'done' })).toBe('Done');
+    expect(progressLabel({ ...card, ticket_count: 1 })).toBe('1 of 1 ticket done');
+  });
+
+  it('adds the cancelled count to a card still in progress', () => {
+    expect(
+      phaseLine({
+        ...base,
+        phase: 'in_progress',
+        ticket_count: 3,
+        tickets_done: 1,
+        tickets_cancelled: 1,
+      }),
+    ).toBe('1/3 tickets, 1 cancelled');
   });
 });

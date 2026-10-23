@@ -27,7 +27,7 @@ import { SettingsSkeleton } from '#/components/settings/settings-card.js';
 import { SettingsPage, SettingsSection } from '#/components/settings/settings-page.js';
 import { ToolApprovals } from '#/components/settings/tool-approvals.js';
 import { StatePanel } from '#/components/status/state-panel.js';
-import { harnessName, MODE_WORDS } from '#/domain/harness-labels.js';
+import { harnessName, lastRunWords, MODE_WORDS } from '#/domain/harness-labels.js';
 import { timeAgo } from '#/domain/relative-time.js';
 import type { CompatView, HarnessView } from '#/schemas/settings.js';
 import type { Crumb, HeroBadge, HeroFact } from '#/types/settings-ui.types.js';
@@ -63,7 +63,8 @@ function badgeFor(harness: HarnessView | undefined): HeroBadge {
     return { tone: 'attn', label: 'Needs credential' };
   }
 
-  return harness.status === 'ok'
+  // Runs that really worked count: the live-test button is a separate, optional check.
+  return harness.status === 'ok' || harness.last_run?.status === 'success'
     ? { tone: 'good', label: 'Ready' }
     : { tone: 'quiet', label: 'Not tested yet' };
 }
@@ -76,10 +77,16 @@ function factsFor(
     { label: 'Version', value: harness?.version ?? '—', mono: true },
     { label: 'Sign-in', value: harness ? MODE_WORDS[harness.auth_mode] : '—' },
     {
-      label: 'Last tested',
+      label: 'Last run',
+      value: harness
+        ? (lastRunWords(harness)?.replace('last run ', '') ?? 'none yet')
+        : '—',
+    },
+    {
+      label: 'Live test',
       value: harness?.last_checked_at
         ? timeAgo(harness.last_checked_at, Date.now())
-        : '—',
+        : 'not run',
     },
     { label: 'Compatibility', value: compat ? COMPAT_WORDS[compat.compat] : '—' },
   ];

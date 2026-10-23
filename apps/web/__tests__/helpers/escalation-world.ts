@@ -10,16 +10,27 @@
  *   server's refusals (dependents, still broken). Shapes follow the S4a contract in
  *   docs/briefs/s4a-ticket-escalations.md, so a drift between contract and UI fails a test.
  *
- * Exports: questionView(), failureView(), setupView(), FAILURE_ACTIONS, escalationWorld(), EscalationWorld.
+ * Exports: escalationBase(), questionView(), failureView(), setupView(), FAILURE_ACTIONS, escalationWorld(), EscalationWorld.
  * Depends on: helpers/fetch-stub, helpers/forge-data/ticket-fixtures. No IO.
  */
 
+import { ticketNeedsYouItems, type EscalationView, type Ticket } from '@forge/core';
 import type { Routes, StubResponse } from '#tests/helpers/fetch-stub.js';
+import { consequenceRoutes } from '#tests/helpers/consequence-views.js';
 import { json, refusal } from '#tests/helpers/fetch-stub.js';
 import type { SampleTicket } from '#tests/helpers/forge-data/ticket-data.types.js';
 import { buildSampleTickets } from '#tests/helpers/forge-data/ticket-fixtures.js';
 
 type Raw = Record<string, unknown>;
+
+/** The Inbox row title the server writes: a tool approval names the call, the rest the ticket. */
+function inboxTitle(view: Raw): string {
+  const payload = view['payload'] as Raw;
+
+  return payload['kind'] === 'permission'
+    ? `Allow \`${String(payload['what'])}\`?`
+    : `${String(view['ticket_id'])}: ${String(view['ticket_title'])}`;
+}
 
 const at = (minutesAgo: number): string =>
   new Date(Date.now() - minutesAgo * 60_000).toISOString();
@@ -35,9 +46,11 @@ export const FAILURE_ACTIONS: Readonly<Record<string, readonly string[]>> = {
   refused: ['retry', 'replan', 'cancel'],
   question_timeout: ['retry', 'replan', 'cancel'],
   no_agent_available: ['retry', 'replan', 'cancel'],
+  merge_conflict: ['retry', 'replan', 'cancel'],
 };
 
-function base(over: Raw): Raw {
+/** The fields every escalation view carries; the kinds add their payload and actions. */
+export function escalationBase(over: Raw): Raw {
   return {
     id: 'int-q1',
     ticket_id: 'SVC-4',
@@ -52,7 +65,7 @@ function base(over: Raw): Raw {
 }
 
 export function questionView(over: Raw = {}): Raw {
-  return base({
+  return escalationBase({
     kind: 'question',
     payload: {
       kind: 'question',
@@ -71,7 +84,7 @@ export function questionView(over: Raw = {}): Raw {
 }
 
 export function failureView(cause: string, over: Raw = {}): Raw {
-  return base({
+  return escalationBase({
     id: `int-f-${cause}`,
     kind: 'failure',
     payload: {
@@ -91,7 +104,7 @@ export function failureView(cause: string, over: Raw = {}): Raw {
 }
 
 export function setupView(over: Raw = {}): Raw {
-  return base({
+  return escalationBase({
     id: 'int-s1',
     kind: 'setup',
     payload: {
@@ -157,7 +170,7 @@ export function escalationWorld(
         id: `question:${String(view['id'])}`,
         kind: 'question',
         project: 'sample-service',
-        title: `${String(view['ticket_id'])}: ${String(view['ticket_title'])}`,
+        title: inboxTitle(view),
         detail: String(view['ticket_id']),
         ticket_id: view['ticket_id'],
         needs_action: true,
@@ -235,6 +248,7 @@ export function escalationWorld(
       return json({ escalation: settle(id, action, 'owner') });
     },
 
+    ...consequenceRoutes(),
     'POST /tickets/:id/act':
       options.ticketAct ??
       (({ params, body }) =>
@@ -247,15 +261,24 @@ export function escalationWorld(
       }
 
       const status = options.ticketStatus?.[item.ticket.id];
+      const ticket = status === undefined ? item.ticket : { ...item.ticket, status };
+      const escalations = forTicket(item.ticket.id);
+      const waitActions = [...(options.waitActions?.[item.ticket.id] ?? [])];
 
       return json({
-        ticket: status === undefined ? item.ticket : { ...item.ticket, status },
+        ticket,
         runs: [...item.runs],
         gate_results: [...item.gates],
         interactions: [],
         wait_reason: item.waitReason,
-        escalations: forTicket(item.ticket.id),
-        wait_actions: [...(options.waitActions?.[item.ticket.id] ?? [])],
+        escalations,
+        wait_actions: waitActions,
+        // The server's own derivation, so the dock sees what the real page would.
+        needs_you_detail: ticketNeedsYouItems({
+          ticket: ticket as unknown as Ticket,
+          escalations: escalations as unknown as EscalationView[],
+          waitActions: waitActions as never,
+        }),
       });
     },
 

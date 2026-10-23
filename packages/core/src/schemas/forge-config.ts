@@ -95,6 +95,8 @@ export const EngineConfig = z.object({
   harness_fallbacks: z.array(z.string().min(1)),
   /** How long a graceful stop waits for tool calls already running to record their effect before runs are interrupted; 0 interrupts at once. Bounded by half the shutdown grace window. */
   shutdown_drain_ms: z.number().int().nonnegative(),
+  /** Most disk, in GB, the copied-install cache of setup steps may use before the least recently used entries go (default 5). */
+  setup_cache_gb: z.number().min(1).max(500),
 });
 export type EngineConfig = z.infer<typeof EngineConfig>;
 

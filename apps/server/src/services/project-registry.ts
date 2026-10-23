@@ -2,7 +2,8 @@
  * Project registry: one runtime per served project, added and rebuilt while the server runs.
  *
  * Why: a Forge install manages many repositories (d-0082). Each project has its own clone,
- *   worktree folder, git host, gates and base branch, and the engine must use the right
+ *   worktree folder, git host, gates, worktree preparer (it installs the project's packages before a
+ *   Worker starts, d-0180) and base branch, and the engine must use the right
  *   set for every ticket (never project A's worktrees for project B's ticket). The registry
  *   builds those from the project row and its settings, holds them by slug, lets the API
  *   add a project without a restart, and stops serving an archived one. The git host
@@ -19,7 +20,7 @@
  *
  * Exports: createProjectRegistry().
  * Depends on: node:path, @forge/core, @forge/engine (ProjectRuntime), @forge/gates
- *   (createScriptGateRunner), @forge/git (createGitWorktreeManager), services/git-host, types/project-registry.
+ *   (createScriptGateRunner, createWorktreePreparer), @forge/git (createGitWorktreeManager), services/git-host, types/project-registry.
  *   IO: reads storage and settings in load/register; building a runtime only creates objects.
  */
 
@@ -32,9 +33,10 @@ import type {
   ProjectSettings,
 } from '@forge/core';
 import type { ProjectRuntime } from '@forge/engine';
-import { createScriptGateRunner } from '@forge/gates';
+import { createScriptGateRunner, createWorktreePreparer } from '@forge/gates';
 import { createGitWorktreeManager } from '@forge/git';
 import { createProjectGitHost } from '#/services/git-host.js';
+import { setupCacheBudget } from '#/services/setup-cache-admin.js';
 import type {
   ProjectEntry,
   ProjectRegistry,
@@ -90,6 +92,19 @@ export function createProjectRegistry(deps: ProjectRegistryDeps): ProjectRegistr
       gates: deps.gates(worktrees),
       // Script gates and the red proof run owner commands with the same stripped environment as G1.
       scriptGates: createScriptGateRunner({ worktrees, env: process.env }),
+      // Forge installs the project's packages in each new worktree: Workers may not (d-0180).
+      prepare: createWorktreePreparer({
+        worktrees,
+        env: process.env,
+        ...(deps.cacheDir === undefined
+          ? {}
+          : {
+              cacheDir: deps.cacheDir,
+              // Read at every store so a saved change to the limit applies at once.
+              cacheBudgetBytes: setupCacheBudget(deps.config),
+              log: (level, msg) => deps.log(level, msg),
+            }),
+      }),
       worktrees,
       baseRef: config.git_host?.base_branch ?? DEFAULT_BASE,
     };

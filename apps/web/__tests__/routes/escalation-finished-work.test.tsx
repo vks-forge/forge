@@ -16,6 +16,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { escalationWorld } from '#tests/helpers/escalation-world.js';
 import { decisionView } from '#tests/helpers/finished-work-views.js';
+import { openNeedsYou } from '#tests/helpers/needs-you-modal.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
 const TICKET = '/p/sample-service/tickets/SVC-4';
@@ -41,6 +42,7 @@ const bodyOf = (forge: { stub: { callsTo: (p: string) => { body: unknown }[] } }
 describe('held decision: findings', () => {
   it('shows the findings worst first with file and line, and how often it was sent back', async () => {
     open([decisionView('findings_hold')]);
+    await openNeedsYou(userEvent.setup());
 
     const card = await screen.findByRole('region', {
       name: /Held: Critique found problems that need your decision/,
@@ -59,6 +61,7 @@ describe('held decision: findings', () => {
 
   it('offers exactly the actions the server listed, and Merge anyway is not the highlighted one', async () => {
     open([decisionView('findings_hold')]);
+    await openNeedsYou(userEvent.setup());
 
     const card = await screen.findByRole('region', { name: /Held: Critique/ });
     const names = within(card)
@@ -79,6 +82,7 @@ describe('held decision: Merge anyway', () => {
     const user = userEvent.setup();
 
     open([decisionView('findings_hold')]);
+    await openNeedsYou(userEvent.setup());
     await user.click(await screen.findByRole('button', { name: 'Merge anyway' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Merge anyway?' });
@@ -92,7 +96,7 @@ describe('held decision: Merge anyway', () => {
       /Recorded on the card\. Only you can do this\. The gates still passed\./,
     );
 
-    const send = within(dialog).getByRole('button', { name: 'Merge anyway' });
+    const send = within(dialog).getByRole('button', { name: 'Merge SVC-4 anyway' });
 
     expect(send).toBeDisabled();
 
@@ -108,6 +112,7 @@ describe('held decision: Merge anyway', () => {
   it('posts the reason, then says who overruled', async () => {
     const user = userEvent.setup();
     const { forge } = open([decisionView('findings_hold')]);
+    await openNeedsYou(userEvent.setup());
 
     await user.click(await screen.findByRole('button', { name: 'Merge anyway' }));
 
@@ -118,7 +123,7 @@ describe('held decision: Merge anyway', () => {
       'Local time is what this report wants',
     );
 
-    await user.click(within(dialog).getByRole('button', { name: 'Merge anyway' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Merge SVC-4 anyway' }));
 
     await waitFor(() =>
       expect(bodyOf(forge)).toEqual({
@@ -153,6 +158,8 @@ describe('held decision: Merge anyway', () => {
       },
     });
 
+    await openNeedsYou(userEvent.setup());
+
     await user.click(await screen.findByRole('button', { name: 'Merge anyway' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Merge anyway?' });
@@ -162,7 +169,7 @@ describe('held decision: Merge anyway', () => {
       'Just do it',
     );
 
-    await user.click(within(dialog).getByRole('button', { name: 'Merge anyway' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Merge SVC-4 anyway' }));
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
       'The change could not be merged: a conflict in src/a.ts',
@@ -176,6 +183,7 @@ describe('held decision: keyboard', () => {
   it('reaches Merge anyway by keyboard, opens its dialog with Enter and closes it with Escape, keeping the ticket held', async () => {
     const user = userEvent.setup();
     const { forge } = open([decisionView('findings_hold')]);
+    await openNeedsYou(userEvent.setup());
 
     const button = await screen.findByRole('button', { name: 'Merge anyway' });
 
@@ -198,6 +206,7 @@ describe('held decision: keyboard', () => {
 describe('held decision: scope drift', () => {
   it('lists the files the plan did not name and offers Continue, Re-plan and Cancel', async () => {
     open([decisionView('scope_drift')]);
+    await openNeedsYou(userEvent.setup());
 
     const card = await screen.findByRole('region', {
       name: 'Held: the work went beyond its plan',
@@ -216,6 +225,7 @@ describe('held decision: scope drift', () => {
   it('needs a reason to Continue and posts it', async () => {
     const user = userEvent.setup();
     const { forge } = open([decisionView('scope_drift')]);
+    await openNeedsYou(userEvent.setup());
 
     await user.click(await screen.findByRole('button', { name: 'Continue' }));
 

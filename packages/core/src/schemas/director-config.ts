@@ -16,6 +16,8 @@
  *   says up to which tier the Director may sign finished work itself (default B); tier C is not
  *   a value, and a project's override may only lower the company's.
  *   `pipelines` says whether the Director may adjust a ticket's own pipeline copy and when it proposes a change to a project's list.
+ *   `max_concurrent_steps` bounds how many Director model calls run at once beside the tick, so planning
+ *   several cards never makes Workers or other cards wait behind one long turn.
  *
  * Exports: PlaybookId, DirectorPlaybook, ApprovalMode, DirectorGrillLimits, DirectorReadCaps, DirectorResearchCaps, DirectorMemorySettings,
  *   DirectorEscalation, DirectorSignOff, DirectorPipelines, DirectorConfig.
@@ -140,6 +142,12 @@ export const DirectorConfig = z
     escalation: DirectorEscalation,
     sign_off: DirectorSignOff,
     pipelines: DirectorPipelines,
+    /**
+     * Director model calls that may run at once across card turns, triage, steering and escalation
+     * steps. `.default(3)` so a stored override written before this field existed still validates
+     * (a failing override would skip every tick).
+     */
+    max_concurrent_steps: z.number().int().min(1).max(8).default(3),
   })
   .superRefine((d, ctx) => {
     for (const step of d.flow) {

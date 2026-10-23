@@ -9,7 +9,10 @@
  *   request's allow and deny lists are passed through as `--allowedTools` /
  *   `--disallowedTools` (comma-joined: the flags are variadic and would swallow the next
  *   argument, probe 2). The prompt is not here: it goes on stdin so it never appears in a
- *   process listing or hits a Windows command-line length limit.
+ *   process listing or hits a Windows command-line length limit. When the request says
+ *   `permissions: 'bypass'` (the harness's "Bypass permissions" switch, d-0183) the mode is
+ *   `bypassPermissions` so the harness never stops to ask; Forge's PreToolUse hook still runs
+ *   and enforces the hard floor (probe 8), and the allow and deny lists are passed unchanged.
  *
  * Exports: buildCliArgs().
  * Depends on: @forge/core (RunRequest), types/claude/engine. No IO.
@@ -49,7 +52,7 @@ export function buildCliArgs(
     // No model for an agent set to "harness default": the CLI then picks its own.
     ...(req.model === undefined ? [] : ['--model', req.model]),
     '--permission-mode',
-    'default',
+    req.permissions === 'bypass' ? 'bypassPermissions' : 'default',
     ...(resumeSession ? ['--resume', resumeSession] : []),
     ...(allow.length > 0 ? ['--allowedTools', allow.join(',')] : []),
     ...(deny.length > 0 ? ['--disallowedTools', deny.join(',')] : []),

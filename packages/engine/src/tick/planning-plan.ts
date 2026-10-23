@@ -8,9 +8,10 @@
  *   from what was asked and found, and the approval floor reads facts the model cannot edit. The same goes for the
  *   evidence the plan rests on: the engine attaches the card's checked research and marks each outside claim. The planner may also
  *   tailor a ticket's pipeline; each op is checked against the lane here and only the ops that hold are kept, the
- *   others named under the risks. A
- *   revision after Request changes carries a computed diff from the version before.
- *   Approval then runs in the strictest order: the deterministic floor first, and only a plan
+ *   others named under the risks. A revision after Request changes carries a computed diff from the version before.
+ *   The planner must account for every owner answer (`decision_checks`; a missing index is retried once);
+ *   an answer it contradicts, by its own word or a negating non-goal, is stored on the plan and fails the floor.
+ *   Risks and assumptions merge without near-duplicates (`dedupeStatements`). Approval then runs in the strictest order: the deterministic floor first, and only a plan
  *   that passes (with approval mode "director or user") reaches the tool-less approval step,
  *   which sees the plan, the typed findings and the floor result and nothing else (d-0141 item 6).
  *   Anything else, a floor breach, "always ask", or the Director asking back, stops at Needs you
@@ -25,12 +26,16 @@
 import {
   ApprovePlanOutput,
   PlanVersion,
-  WritePlanOutput,
+  dedupeStatements,
   diffPlans,
+  findDecisionConflicts,
   markOutsideClaims,
+  writePlanOutputFor,
 } from '@forge/core';
-import type { CardPlanningState, FlowStep, GrillState } from '@forge/core';
+import type { WritePlanOutput } from '@forge/core';
+import type { CardPlanningState, FlowStep, GrillState, Ticket } from '@forge/core';
 import { moveCardTx } from '#/tick/card-phase.js';
+import { stopCancelledAll } from '#/tick/ticket-cancel.js';
 import { approvePlanTx } from '#/tick/plan-to-tickets.js';
 import { buildApprovalInput, buildStepInput } from '#/tick/planning-input.js';
 import { computeFloor, factsOf } from '#/tick/planning-floor.js';
@@ -41,13 +46,14 @@ import {
   enterVerifying,
   headOf,
   latestPlanOf,
+  knownRisks,
   logPlanEvent,
   mergeUnique,
   stamp,
 } from '#/tick/planning-state.js';
 import { callStep, finishStep, startStep } from '#/tick/planning-step-io.js';
 import { loadEvidenceViews } from '#/tick/research-store.js';
-import type { PlanCtx, StepOutcome } from '#/types/card-planning.types.js';
+import type { OwnerAsk, PlanCtx, StepOutcome } from '#/types/card-planning.types.js';
 
 /** Whether the owner alone approves this card's plan: "always ask", or a card type that never lets the Director approve. */
 export function ownerMustApprove(pc: PlanCtx): boolean {
@@ -84,6 +90,11 @@ async function composePlan(
     loadEvidenceViews(tx, pc.card.id),
   );
 
+  const decisions = grill.answers.map((a) => ({
+    question: a.question,
+    answer: a.answer,
+  }));
+
   const plan = PlanVersion.parse({
     card_id: pc.card.id,
     version: (previous?.version ?? 0) + 1,
@@ -94,8 +105,13 @@ async function composePlan(
     goal: body.goal,
     scope: body.scope,
     non_goals: body.non_goals,
-    decisions: grill.answers.map((a) => ({ question: a.question, answer: a.answer })),
-    assumptions: mergeUnique(grill.assumptions, body.assumptions),
+    decisions,
+    decision_conflicts: findDecisionConflicts(
+      decisions,
+      body.decision_checks,
+      body.non_goals,
+    ),
+    assumptions: dedupeStatements([...grill.assumptions, ...body.assumptions]),
     verification: {
       blast_radius: verify?.blast_radius ?? '',
       files_read: grill.files_read.map((f) => f.path),
@@ -105,9 +121,10 @@ async function composePlan(
         verify?.rejected_hits ?? [],
         await planRejectedHits(pc, body),
       ),
+      // The engine's own notes name distinct stages in near-identical words, so only the written risks are deduped.
       risks: mergeUnique(
-        mergeUnique(verify?.risks ?? [], grill.survey?.risks ?? []),
-        mergeUnique(body.risks, vetted.notes),
+        dedupeStatements([...knownRisks(grill), ...body.risks]),
+        vetted.notes,
       ),
       evidence,
       outside_claims: markOutsideClaims(body.outside_claims, evidence),
@@ -131,10 +148,18 @@ export async function writePlanStep(
   const previous = await latestPlanOf(pc);
   const input = await buildStepInput(pc, planning.grill, step, previous, {
     grill_decisions: planning.grill.answers,
+    known_risks: knownRisks(planning.grill),
     pipelines: await pipelinesInput(pc),
   });
 
-  const call = await callStep(pc, step, 'write_plan', WritePlanOutput, input);
+  const call = await callStep(
+    pc,
+    step,
+    'write_plan',
+    writePlanOutputFor(planning.grill.answers.length),
+    input,
+  );
+
   if (!call.ok) {
     return call.outcome;
   }
@@ -147,7 +172,7 @@ export async function writePlanStep(
     files: [],
     summary: call.value.summary,
     cost: call.cost,
-    patch: (g) => ({ ...g, floor, pending_changes: null }),
+    patch: (g) => ({ ...g, floor, pending_changes: null, replan_from: null }),
     after: async (tx) => {
       await tx.cardPlanning.appendPlan(plan);
       await logPlanEvent(tx, pc.card.id, stamp(pc), {
@@ -166,15 +191,30 @@ export async function writePlanStep(
   return 'continue';
 }
 
-/** What the owner is told when the Director does not approve on its own. */
-function whyOwner(pc: PlanCtx, floorReasons: readonly string[]): string {
+/**
+ * What the owner is told when the Director does not approve on its own: the one-line reason
+ * older readers show, and each floor reason as its own item for the dock.
+ */
+function whyOwner(pc: PlanCtx, floorReasons: readonly string[]): OwnerAsk {
+  const base = {
+    kind: 'plan_approval',
+    actions: ['approve_plan', 'request_changes'],
+  } as const;
+
   if (floorReasons.length > 0) {
-    return `The plan needs your approval: ${floorReasons.join('; ')}.`;
+    return {
+      ...base,
+      reason: `The plan needs your approval: ${floorReasons.join('; ')}.`,
+      title: 'The plan needs your approval',
+      items: floorReasons,
+    };
   }
 
-  return ownerMustApprove(pc)
+  const reason = ownerMustApprove(pc)
     ? 'The plan is ready for your approval.'
     : 'The plan needs your approval.';
+
+  return { ...base, reason, title: reason.replace(/\.$/, ''), items: [reason] };
 }
 
 export async function approveStep(
@@ -190,15 +230,14 @@ export async function approveStep(
 
   await startStep(pc, step);
   const floor = await computeFloor(factsOf(pc), plan);
-  const toOwner = (reason: string, cost: number, summary: string) =>
+  const toOwner = (ask: OwnerAsk, cost: number, summary: string) =>
     finishStep(pc, step, {
       index,
       files: [],
       summary,
       cost,
       patch: (g) => ({ ...g, floor }),
-      after: (tx) =>
-        askOwner(tx, pc.card.id, stamp(pc), reason, ['approve_plan', 'request_changes']),
+      after: (tx) => askOwner(tx, pc.card.id, stamp(pc), ask),
     });
 
   if (!floor.pass || ownerMustApprove(pc)) {
@@ -214,9 +253,15 @@ export async function approveStep(
   }
 
   if (call.value.decision === 'ask_owner') {
-    const asks = call.value.questions.join(' ');
+    const questions = call.value.questions;
     await toOwner(
-      `The Director has questions before approving: ${asks}`,
+      {
+        reason: `The Director has questions before approving: ${questions.join(' ')}`,
+        kind: 'director_questions',
+        title: 'The Director has questions before approving',
+        items: questions,
+        actions: ['approve_plan', 'request_changes'],
+      },
       call.cost,
       'Asked the owner.',
     );
@@ -225,6 +270,7 @@ export async function approveStep(
   }
 
   let approved = false;
+  let cancelled: readonly Ticket[] | undefined;
   await finishStep(pc, step, {
     index,
     files: [],
@@ -244,8 +290,11 @@ export async function approveStep(
       );
 
       approved = out.status === 'approved';
+      cancelled = out.status === 'approved' ? out.cancelled : undefined;
     },
   });
+
+  await stopCancelledAll(pc.ctx.deps, pc.ctx.state, cancelled);
 
   return approved ? 'continue' : 'wait';
 }

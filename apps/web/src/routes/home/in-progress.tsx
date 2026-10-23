@@ -3,18 +3,19 @@
  *
  * Why: after "what waits on me" the next question is "what is moving?". Each ticket shows its
  *   id (a link to its page), title and a track of five stages, and a "Needs you" mark when the
- *   server says it waits on a person. Newest change first, the first eight shown, with the
+ *   server says it waits on a person, otherwise its phase in words (Queued, Working...). Newest change first, the first eight shown, with the
  *   true total and a link to the Board for the rest. The ticket list is the Board's own query,
  *   so Home and Board never disagree.
  *
  * Exports: InProgress, IN_PROGRESS_SHOWN.
- * Depends on: react-router, api/use-tickets, components/ticket/ticket-link, domain/ticket-stage.
+ * Depends on: react-router, api/use-tickets, components/ticket/{phase-chip,ticket-link}, domain/ticket-stage.
  */
 
 import { Link } from 'react-router';
 import { describeError } from '#/api/describe-error.js';
 import { useTicketBoard } from '#/api/use-tickets.js';
 import { StatePanel } from '#/components/status/state-panel.js';
+import { PhaseChip } from '#/components/ticket/phase-chip.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
 import { projectPath } from '#/domain/nav-entries.js';
 import { IN_PROGRESS_STATUSES, stageOf } from '#/domain/ticket-stage.js';
@@ -76,6 +77,8 @@ export function InProgress(props: { slug: string }) {
                     <span className="shrink-0 rounded-md bg-attn-soft px-1.5 py-0.5 text-xs font-medium">
                       Needs you
                     </span>
+                  ) : ticket.wait ? (
+                    <PhaseChip phase={ticket.wait.phase} className="shrink-0" />
                   ) : null}
                 </div>
                 <StageTrack stage={stageOf(ticket.state)} needsYou={ticket.needs_you} />

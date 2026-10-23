@@ -35,6 +35,7 @@ const input = {
   range: '7d' as const,
   nowMs: NOW,
   runs,
+  directorSpend: [],
   titles: new Map<string, string>(),
   budgets: { run_max_usd: 5, step_budget_usd: 1 },
 };

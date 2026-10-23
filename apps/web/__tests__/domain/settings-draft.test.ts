@@ -193,3 +193,70 @@ describe('dirtyFields', () => {
     expect(SCOPE_FIELDS.director).toEqual(['director']);
   });
 });
+
+describe('revoking an approved tool rule', () => {
+  const rule = (id: string) => ({
+    id,
+    action: 'shell',
+    resource: `make ${id}`,
+    effect: 'allow',
+    created_at: '2026-10-18T09:30:00.000Z',
+    source: { ticket_id: 'SVC-4', interaction_id: 'int-1' },
+  });
+
+  const saved = () =>
+    snapshot({
+      default_harness: 'codex',
+      tool_grants: { deny: ['x'], approved: [rule('a'), rule('b')] },
+    });
+
+  it('starts with nothing revoked and nothing unsaved', () => {
+    const snap = saved();
+    const draft = draftFromSnapshot(snap);
+
+    expect(draft.revoked).toEqual([]);
+    expect(isDirty(snap, draft)).toBe(false);
+    expect(dirtyFields(snap, draft).has('tool_grants')).toBe(false);
+  });
+
+  it('removes only the revoked rule from the document and keeps every other grant key', () => {
+    const snap = saved();
+    const doc = docFromDraft(snap.override, {
+      ...draftFromSnapshot(snap),
+      revoked: ['a'],
+    });
+
+    expect(doc['tool_grants']).toEqual({ deny: ['x'], approved: [rule('b')] });
+    expect(doc['default_harness']).toBe('codex');
+  });
+
+  it('is unsaved until undone, and the tool grants tab shows the dot', () => {
+    const snap = saved();
+    const draft = { ...draftFromSnapshot(snap), revoked: ['a'] };
+
+    expect(isDirty(snap, draft)).toBe(true);
+    expect(dirtyFields(snap, draft).has('tool_grants')).toBe(true);
+    expect(SCOPE_FIELDS.approvals).toEqual(['tool_grants']);
+    expect(isDirty(snap, { ...draft, revoked: [] })).toBe(false);
+  });
+
+  it('ignores an id that is not in the list and never adds a rule', () => {
+    const snap = saved();
+    const doc = docFromDraft(snap.override, {
+      ...draftFromSnapshot(snap),
+      revoked: ['zzz'],
+    });
+
+    expect(doc['tool_grants']).toEqual(snap.override['tool_grants']);
+  });
+
+  it('leaves a document with no tool grants alone', () => {
+    const snap = snapshot({ default_harness: 'codex' });
+    const doc = docFromDraft(snap.override, {
+      ...draftFromSnapshot(snap),
+      revoked: ['a'],
+    });
+
+    expect(doc).not.toHaveProperty('tool_grants');
+  });
+});

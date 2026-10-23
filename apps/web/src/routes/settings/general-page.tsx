@@ -8,7 +8,7 @@
  *   (d-0170), and moving it would mean moving files, not changing a setting.
  *
  * Exports: GeneralPage.
- * Depends on: api/use-onboarding, components/settings/* (incl. the per-browser desktop-notification switch),
+ * Depends on: api/use-onboarding, components/settings/* (incl. the per-browser desktop-notification switch, the setup cache size and clear action),
  *   domain/settings-fields.
  */
 
@@ -18,6 +18,8 @@ import { BrowserNotifySetting } from '#/components/settings/browser-notify-setti
 import { CompanyScreen } from '#/components/settings/company-screen.js';
 import { ConfigFields } from '#/components/settings/config-fields.js';
 import { SettingsSection } from '#/components/settings/settings-page.js';
+import { SetupCacheSection } from '#/components/settings/setup-cache-section.js';
+import { APPLY_TIMING } from '#/domain/plain-words.js';
 import { GENERAL_GROUPS } from '#/domain/settings-fields.js';
 
 export function GeneralPage() {
@@ -27,7 +29,7 @@ export function GeneralPage() {
     <CompanyScreen
       title="General"
       icon={Folder}
-      intro="How Forge paces itself and which models it uses. Changes apply on the Director's next tick."
+      intro={`How Forge paces itself and which models it uses. ${APPLY_TIMING}`}
     >
       {(draft, config) => (
         <>
@@ -67,6 +69,11 @@ export function GeneralPage() {
               />
             </SettingsSection>
           ))}
+          <SetupCacheSection
+            config={config}
+            errors={draft.errors}
+            onChange={draft.setField}
+          />
         </>
       )}
     </CompanyScreen>

@@ -6,7 +6,9 @@
  *   `pnpm.cmd` containing `@exit /b 0` would make every check pass. This resolves the
  *   command's first token to an absolute executable using PATH and PATHEXT only (never the
  *   cwd, never a relative PATH entry) and refuses any result inside the worktree, so the
- *   runner spawns the real tool or nothing. Later segments (`a && b`) are left to the
+ *   runner spawns the real tool or nothing. The one exception is a folder the owner listed as a
+ *   tool folder (`trustedDirs`, e.g. `.venv/bin`): setup needs the virtual environment's own
+ *   `python` there. Later segments (`a && b`) are left to the
  *   shell; the runner sets `NoDefaultCurrentDirectoryInExePath` and config-guard flags any
  *   executable the Worker adds.
  *
@@ -101,7 +103,8 @@ function resolveToken(token: string, seam: ResolveSeam): ResolveResult {
     return { ok: false, reason: `command "${token}" not found on PATH` };
   }
 
-  if (isInside(found, seam.cwd, seam.platform)) {
+  const trusted = (seam.trustedDirs ?? []).some((d) => isInside(found, d, seam.platform));
+  if (isInside(found, seam.cwd, seam.platform) && !trusted) {
     return {
       ok: false,
       reason: `command "${token}" resolves to ${found}, inside the worktree; refusing to run Worker-controlled code`,

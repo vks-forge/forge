@@ -7,11 +7,11 @@
  *   of a half-valid object reaching the engine. The intake body is the core `IntakeEvent`
  *   itself, so a second hand-written shape cannot drift from it.
  *
- * Exports: ToolDecisionBody, CataloguePutBody, AnswerBody, LastEventId, SettingsPutBody, HarnessPutBody, HarnessSecretBody, LiveQuery,
+ * Exports: ToolDecisionBody, CataloguePutBody, AnswerBody, AnswerReply, LastEventId, SettingsPutBody, HarnessPutBody, HarnessSecretBody, LiveQuery,
  *   ProjectCreateBody, ProjectInspectBody, ProjectPatchBody, ProjectDeleteBody, MemoryApproveBody, MemoryRejectBody, ConnectionCreateBody,
  *   SseTicketBody, ProofBody, CardCreateBody, CardRelationsBody.
  * Depends on: @forge/core (HarnessAuthMode, HarnessKind, HarnessSecretKind, GitHostConfig, ProjectPrefix,
- *   ProjectCheck, GateRules, CardId, CardPriority), zod. No IO.
+ *   ProjectCheck, SetupSteps, GateRules, CardId, CardPriority), zod. No IO.
  */
 
 import {
@@ -26,6 +26,7 @@ import {
   ProjectCheck,
   ProjectPrefix,
   ProjectScope,
+  SetupSteps,
 } from '@forge/core';
 import { z } from 'zod';
 
@@ -37,6 +38,14 @@ export const AnswerBody = z
     path: ['answer'],
   });
 export type AnswerBody = z.infer<typeof AnswerBody>;
+
+/** The reply of `POST /interactions/:id/answer`; `next` says in plain words what happens to the ticket now. */
+export const AnswerReply = z.object({
+  id: z.string().min(1),
+  status: z.literal('answered'),
+  next: z.string().min(1).optional(),
+});
+export type AnswerReply = z.infer<typeof AnswerReply>;
 
 /** `POST /auth/sse-ticket`: the run, or the project slug, the stream ticket is for. */
 export const SseTicketBody = z.union([
@@ -104,6 +113,8 @@ export const HarnessPutBody = z
     kind: HarnessKind,
     binary_path: z.string().min(1).max(1024).optional(),
     auth_mode: HarnessAuthMode,
+    /** Bypass permissions (d-0183); omitted keeps the stored value. */
+    bypass_permissions: z.boolean().optional(),
   })
   .strict();
 export type HarnessPutBody = z.infer<typeof HarnessPutBody>;
@@ -149,6 +160,7 @@ const LegacyCommands = z
 const StartingSettings = z
   .object({
     checks: z.array(ProjectCheck),
+    setup: SetupSteps,
     ecosystems: z.array(z.string().min(1)),
     gate_rules: GateRules,
     profile: z.enum(['ts', 'generic']),

@@ -3,7 +3,7 @@
  *
  * Why: these dials trade speed against cost and machine load, and the owner reaches for them
  *   when the machine is struggling, when a harness runs dry or when a run costs too much.
- *   Raising a cap takes effect on the next tick, so the screen says plainly what each
+ *   Raising a cap takes effect on the Director's next check, so the screen says plainly what each
  *   setting means and that a project can lower its own cap in its project settings. Edits are
  *   saved as a new version with the author and a reason (see `CompanyScreen`).
  *
@@ -21,6 +21,7 @@ import {
 import { CompanyScreen } from '#/components/settings/company-screen.js';
 import { ConfigFields } from '#/components/settings/config-fields.js';
 import { SettingsSection } from '#/components/settings/settings-page.js';
+import { APPLY_TIMING } from '#/domain/plain-words.js';
 import { LIMIT_GROUPS } from '#/domain/settings-fields.js';
 import { useCompanySettings } from '#/api/use-settings-data.js';
 
@@ -33,7 +34,7 @@ export function LimitsPage() {
     <CompanyScreen
       title="Limits"
       icon={Gauge}
-      intro="Caps on parallel work, what happens when quota runs out, and how much a run may spend. Changes apply on the Director's next tick."
+      intro={`Caps on parallel work, what happens when quota runs out, and how much a run may spend. ${APPLY_TIMING}`}
     >
       {(draft, config) => (
         <>

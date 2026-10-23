@@ -17,6 +17,7 @@ import {
   CompanyConfigResponse,
   ConfigHistoryResponse,
   DeleteResponse,
+  DetectedReply,
   ProjectConfigResponse,
   SavedVersion,
 } from '#/schemas/project-settings.js';
@@ -81,6 +82,17 @@ export function createProjectSettingsHttp(client: HttpClientOptions): ProjectSet
       });
 
       return body.project;
+    },
+
+    detected(slug, options) {
+      return requestJson(client, `/projects/${slug}/detected`, DetectedReply, options);
+    },
+
+    refreshDetected(slug, options) {
+      return requestJson(client, `/projects/${slug}/detected`, DetectedReply, {
+        ...options,
+        method: 'POST',
+      });
     },
 
     async remove(slug, confirm, options) {

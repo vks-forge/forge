@@ -35,10 +35,11 @@ export type TicketEvent =
   | (EventBase & { type: 'gate_failed' })
   | (EventBase & { type: 'gate_passed'; tier_actual: Tier; hold?: true })
   | (EventBase & { type: 'merged' })
-  | (EventBase & { type: 'done'; signer?: string })
+  | (EventBase & { type: 'done'; signer?: string; clean_floor?: true })
   | (EventBase & { type: 'cancelled' })
   | (EventBase & { type: 'rework' })
-  | (EventBase & { type: 'regate' });
+  | (EventBase & { type: 'regate' })
+  | (EventBase & { type: 'conflict_found'; files: readonly string[] });
 
 /** Why an event was rejected: terminal ticket, illegal move, stale CAS version, or unmet precondition. */
 export type TransitionError =

@@ -6,7 +6,8 @@
  *   blob, a rate-limit error) and validates it against the step's schema exactly as the real
  *   adapter does, so "invalid output is retried once with the validation error" is tested
  *   through the same port. It records every call so scenarios can assert on the input the
- *   engine built (memory slice, pre-check reasons, the validation error on a retry).
+ *   engine built (memory slice, pre-check reasons, the validation error on a retry). A
+ *   `write_plan` script without `decision_checks` is filled with "honoured" for each grill decision.
  *
  * Exports: ScriptedLLM, StepCall, fail(), createScriptedLLM().
  * Depends on: @forge/core (DirectorLLM, StepError, schemas), zod. No IO.
@@ -144,6 +145,38 @@ export const fail = (error: StepError): StepError & { __fail: true } => ({
 const isFail = (v: unknown): v is StepError & { __fail: true } =>
   typeof v === 'object' && v !== null && '__fail' in v;
 
+/**
+ * A scripted `write_plan` that leaves `decision_checks` out gets "honoured" for every grill
+ * decision, so the many scenarios that are not about owner answers keep their scripts short.
+ * A script that writes the field itself (even `[]`) is taken as written.
+ */
+function withDecisionChecks(
+  name: StepName,
+  input: Record<string, unknown>,
+  answer: unknown,
+): unknown {
+  if (name !== 'write_plan' || typeof answer !== 'object' || answer === null) {
+    return answer;
+  }
+
+  if ('decision_checks' in answer) {
+    return answer;
+  }
+
+  const decisions = Array.isArray(input['grill_decisions'])
+    ? input['grill_decisions']
+    : [];
+
+  return {
+    ...answer,
+    decision_checks: decisions.map((_, index) => ({
+      index,
+      status: 'honoured',
+      where: 'scope',
+    })),
+  };
+}
+
 export function createScriptedLLM(): ScriptedLLM {
   const calls: StepCall[] = [];
   const queues = new Map<StepName, Scripted[]>();
@@ -169,8 +202,11 @@ export function createScriptedLLM(): ScriptedLLM {
       const head =
         queue && queue.length > 1 ? queue.shift() : (queue?.[0] ?? DEFAULTS[name]);
 
-      const answer =
-        typeof head === 'function' ? head(input as Record<string, unknown>) : head;
+      const answer = withDecisionChecks(
+        name,
+        input as Record<string, unknown>,
+        typeof head === 'function' ? head(input as Record<string, unknown>) : head,
+      );
 
       if (isFail(answer)) {
         const { __fail: _f, ...error } = answer;

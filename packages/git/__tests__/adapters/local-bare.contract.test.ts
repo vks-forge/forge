@@ -13,6 +13,7 @@
 
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { MergeConflictError } from '@forge/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { describeGitHostContract } from '#tests/contract/git-host.contract.js';
 import type { GitHostHarness } from '#tests/contract/git-host.contract.js';
@@ -27,11 +28,19 @@ afterEach(async () => {
 
 describeGitHostContract('local bare', async (): Promise<GitHostHarness> => {
   const r = await makeLocalRemote();
-  const host = hostFor(r);
+  const host = hostFor(r, r.work);
+  let n = 0;
 
   return {
     host,
     baseBranch: 'main',
+    sync: {
+      ref: 'refs/forge/base/main',
+      advanceBase: () => r.commitOnMain(`advance-${(n += 1)}.txt`, 'x\n'),
+      resolveRef: async (ref) =>
+        (await git(r.work, 'rev-parse', '--verify', '--quiet', ref).catch(() => '')) ||
+        null,
+    },
     async seedBranch(branch) {
       const sha = await r.commitOnBranch(
         branch,
@@ -124,7 +133,8 @@ describe('local bare host specifics', { timeout: 60_000 }, () => {
     const err = await host.merge(pr.number, 'squash', sha).catch((e: unknown) => e);
 
     expect(status.mergeable).toBe(false);
-    expect(err).toMatchObject({ errorFamily: 'policy_denied', reason: 'merge_refused' });
+    expect(err).toBeInstanceOf(MergeConflictError);
+    expect(err).toMatchObject({ errorFamily: 'merge_conflict' });
     expect(await r.remoteSha('main')).toBe(moved);
     expect((await host.prStatus(pr.number)).state).toBe('open');
   });

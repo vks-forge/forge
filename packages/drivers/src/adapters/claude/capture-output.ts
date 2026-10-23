@@ -11,6 +11,7 @@
  * Depends on: types/claude/{driver-deps,harness}. IO: spawns one short-lived process.
  */
 
+import { StringDecoder } from 'node:string_decoder';
 import type { Clock, SpawnFn } from '#/types/claude/driver-deps.types.js';
 import type { CaptureOptions } from '#/types/claude/harness.types.js';
 
@@ -39,12 +40,13 @@ export function captureOutput(
 
     try {
       const child = spawn(command, args, { env });
-      child.stdout.on('data', (chunk: Buffer) => (out += chunk.toString('utf8')));
+      const decoder = new StringDecoder('utf8');
+      child.stdout.on('data', (chunk: Buffer) => (out += decoder.write(chunk)));
       child.stdin.on('error', () => undefined);
       child.stdin.end(opts.stdin);
       child.on('error', () => finish(null));
       // stdout 'end', not process 'exit': exit can fire before the last chunk is read.
-      child.stdout.on('end', () => finish(out));
+      child.stdout.on('end', () => finish(out + decoder.end()));
       cancel = clock.after(opts.timeoutMs, () => {
         child.kill('SIGKILL');
         finish(null);

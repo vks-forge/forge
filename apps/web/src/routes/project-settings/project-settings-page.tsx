@@ -29,6 +29,7 @@ import { useAllProjects } from '#/api/use-projects.js';
 import { SettingsLayout } from '#/components/settings/settings-layout.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { projectPath } from '#/domain/nav-entries.js';
+import { APPLY_TIMING } from '#/domain/plain-words.js';
 import {
   dirtyFields,
   docFromDraft,
@@ -119,12 +120,10 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
             restart(fresh);
           }
 
-          setSaved(
-            `Saved as version ${version.version}. Workers use it from the next tick.`,
-          );
+          setSaved(`Saved as version ${version.version}. ${APPLY_TIMING}`);
 
           notify.success('Project settings saved', {
-            description: `Version ${version.version}. Workers use it from the next tick.`,
+            description: `Version ${version.version}. ${APPLY_TIMING}`,
           });
         },
       },
@@ -165,7 +164,7 @@ function Editor(props: { slug: string; latest: SettingsSnapshot }) {
         <p className="font-data text-xs text-muted">{slug}</p>
         <h1 className="text-2xl font-semibold tracking-tight">Project settings</h1>
         <p className="max-w-prose text-sm text-muted">
-          Each setting follows the company or Forge default until you override it here.
+          Each setting follows the Forge-wide default until you override it here.
         </p>
       </header>
 

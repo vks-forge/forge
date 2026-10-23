@@ -10,8 +10,11 @@
  *   its detail), and one that ran on a fallback or a substitute says so in its sub-line. A writer-group member also shows the folders it may write, so side-by-side
  *   writers are told apart by what they own. The chip is the control that opens the detail.
  *
+ *   On a finished (done or cancelled) ticket the chips are history: muted, and the word is what the
+ *   stage last was ("Last check: did not pass (round 4)"), never a present-tense "Failed".
+ *
  * Exports: StageChip.
- * Depends on: lucide-react, domain/director-change-copy, domain/stage-view-copy, schemas/pipelines (type).
+ * Depends on: lucide-react, domain/director-change-copy, domain/stage-view-copy, domain/ticket-status-copy, schemas/pipelines (type).
  */
 
 import {
@@ -27,6 +30,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { changeBadge, ranOnShort } from '#/domain/director-change-copy.js';
 import { stageWords } from '#/domain/stage-view-copy.js';
+import { stageHistoryWords } from '#/domain/ticket-status-copy.js';
 import type { StageView } from '#/schemas/pipelines.js';
 
 const ICON: Readonly<Record<StageView['status'], LucideIcon>> = {
@@ -53,10 +57,13 @@ export function StageChip(props: {
   selected: boolean;
   panelId: string;
   addedByRule: boolean;
+  /** The ticket is done or cancelled: the chip is history, quieter, and says what it last was. */
+  finished?: boolean;
   onToggle: () => void;
 }) {
   const { stage } = props;
   const words = stageWords(stage);
+  const tone = props.finished === true ? 'quiet' : words.tone;
   const Icon = ICON[stage.status];
 
   return (
@@ -65,7 +72,7 @@ export function StageChip(props: {
       aria-expanded={props.selected}
       aria-controls={props.selected ? props.panelId : undefined}
       onClick={props.onToggle}
-      className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 py-1 text-left text-sm transition-colors hover:bg-hover ${TONE[words.tone]} ${
+      className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 py-1 text-left text-sm transition-colors hover:bg-hover ${TONE[tone]} ${
         props.selected ? 'ring-2 ring-signal' : ''
       }`}
     >
@@ -78,8 +85,10 @@ export function StageChip(props: {
       <span className="grid min-w-0">
         <span className="font-medium">{stage.label}</span>
         <span className="text-xs">
-          {words.label}
-          {stage.cycle > 0 && stage.status !== 'pending'
+          {props.finished === true && stage.kind !== 'sign_off'
+            ? stageHistoryWords(stage)
+            : words.label}
+          {props.finished !== true && stage.cycle > 0 && stage.status !== 'pending'
             ? `, round ${stage.cycle + 1}`
             : ''}
           {props.addedByRule ? ', added by rule' : ''}

@@ -93,6 +93,8 @@ export const SurveyFindings = z.object({
   risks: z.array(z.string()).default([]),
   predicted_lane: Lane.optional(),
   predicted_files: z.array(z.string()).default([]),
+  /** Set by the engine when the survey answered without reading any file of a repository that has some; the grill then must not ask what code could answer. */
+  read_nothing: z.boolean().optional(),
 });
 export type SurveyFindings = z.infer<typeof SurveyFindings>;
 
@@ -129,6 +131,12 @@ const PendingChanges = z.object({
   comment: z.string().min(1),
 });
 
+/** The ticket stop a Re-plan came from, held until the next plan is written so every planning step sees it. */
+const ReplanFrom = z.object({
+  ticket_id: z.string().min(1),
+  stop: z.record(z.string(), z.unknown()),
+});
+
 /**
  * Everything the planning flow remembers about one card (`cards.grill_state_json`). Every
  * field has a default so a card that never planned reads as `{}`.
@@ -155,6 +163,7 @@ export const GrillState = z.object({
   files_read: FilesRead.default([]),
   base_sha: z.string().nullable().default(null),
   pending_changes: PendingChanges.nullable().default(null),
+  replan_from: ReplanFrom.nullable().default(null),
   floor: FloorResult.nullable().default(null),
   /** Dollars the card's Director steps cost (the card budget counts them, d-0143). */
   director_spend_usd: z.number().nonnegative().default(0),

@@ -7,7 +7,8 @@
  *
  * Pins: PATH+PATHEXT search order, cwd and relative PATH entries ignored, refusal when the
  *   only hit is inside the worktree, relative and absolute path tokens, builtin and
- *   env-assignment pass-through, rewriting only the first token and keeping the tail.
+ *   env-assignment pass-through, rewriting only the first token and keeping the tail, and the
+ *   one exception: a listed tool folder inside the worktree (`.venv/Scripts`) for setup steps.
  * Depends on: domain/command-resolver.
  */
 
@@ -65,6 +66,35 @@ describe('resolveCommand', () => {
 
     expect(out.ok).toBe(false);
     expect(out.ok === false && out.reason).toContain('inside the worktree');
+  });
+
+  it('runs a tool from a folder the owner listed as a tool folder, and still refuses other worktree folders', () => {
+    const files = [
+      'C:/wt/.venv/Scripts/python.exe',
+      'C:/wt/node_modules/.bin/python.exe',
+    ];
+
+    const env = { PATH: w('C:/wt/.venv/Scripts'), PATHEXT: '.EXE' };
+
+    const listed = resolveCommand(
+      'python -m pip install -e .',
+      seam(files, { env, trustedDirs: [w('C:/wt/.venv/Scripts')] }),
+    );
+
+    const other = resolveCommand(
+      'python -m pip install -e .',
+      seam(files, {
+        env: { ...env, PATH: w('C:/wt/node_modules/.bin') },
+        trustedDirs: [w('C:/wt/.venv/Scripts')],
+      }),
+    );
+
+    expect(listed).toEqual({
+      ok: true,
+      command: `"${w('C:/wt/.venv/Scripts/python.EXE')}" -m pip install -e .`,
+    });
+
+    expect(other.ok).toBe(false);
   });
 
   it('refuses a name found nowhere, and a relative path token', () => {

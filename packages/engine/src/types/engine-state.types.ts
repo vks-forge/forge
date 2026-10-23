@@ -20,6 +20,8 @@ import type { RunHandle, RunResult, WorkerDriver } from '@forge/core';
 import type { EngineDeps, TickReport } from '#/types/engine.types.js';
 import type { TickConfig } from '#/types/tick.types.js';
 import type { CheckJob, StageJob } from '#/types/stage-runner.types.js';
+import type { Briefing, DirectorJob } from '#/types/director-jobs.types.js';
+import type { PrepJob } from '#/types/prep-jobs.types.js';
 import type { GateJob } from '#/types/verify.types.js';
 
 /** One live run: its handle and, once the stream and result are in, the outcome. */
@@ -79,15 +81,25 @@ export interface EngineState {
   requested: boolean;
   /** `onTickRequested` was called and no tick has started since. */
   notified: boolean;
+  /** The timer for the soonest wake, harness pause or hold that ends by time alone (tick/tick-timer). */
+  wakeTimer: { readonly at: number; readonly cancel: () => void } | null;
   readonly pumps: Map<string, Pump>;
   /** The project that got the last Worker slot; the next dispatch rotates to the project after it (d-0097). */
   schedulerCursor: string | undefined;
   /** Projects whose settings failed to validate in the last tick, slug to reason (for GET /projects). */
   unservable: ReadonlyMap<string, string>;
+  /** A cancelled ticket's folder could not be removed (a locked file); the next tick tries again instead of waiting for a restart. */
+  cleanupPending: boolean;
   readonly holds: Map<string, Hold>;
   readonly baseShas: Map<string, string>;
   /** Gate runs in flight or finished-but-unapplied, by `ticket:run`; lost on restart, so the gates simply run again. */
   readonly gateJobs: Map<string, GateJob>;
+  /** Worktree preparations in flight or finished-but-unread, by ticket id; lost on restart, so the next dispatch reads the worktree's record and prepares again if needed. */
+  readonly prepJobs: Map<string, PrepJob>;
+  /** Director steps in flight or finished-but-uncollected, by `card:<id>` / `ticket:<id>`; one per key. Lost on restart: the stored queue and ticket state start them again. */
+  readonly directorJobs: Map<string, DirectorJob>;
+  /** Worker slots reserved for tickets whose brief job is running or waiting to be launched, by ticket id; the scheduler counts them as running and skips those tickets. Lost on restart with the jobs. */
+  readonly briefing: Map<string, Briefing>;
   /** Script gates and red proofs in flight or finished-but-unapplied, by `ticket:run:stage:member`; lost on restart, so the command simply runs again. */
   readonly stageJobs: Map<string, StageJob>;
   /** Director checks in flight or finished-but-unapplied, by `ticket:run:stage:cycle`; lost on restart, so the step simply runs again. */
@@ -98,10 +110,10 @@ export interface EngineState {
   readonly regates: Map<string, number>;
   replies: QueuedReply[];
   readonly chat: CardChatState;
-  /** Interactions the Director's first look is working on now; keeps one tick from looking twice at the same row. */
-  readonly escalating: Set<string>;
   /** Consecutive failed settles per run id; a run that keeps failing is parked, not retried for ever. */
   readonly settleFailures: Map<string, number>;
+  /** Tickets already logged as stuck (waiting on a person with no open item), so the board polling does not repeat the warning. */
+  readonly stuckLogged: Set<string>;
 }
 
 /** What every phase receives. */

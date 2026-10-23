@@ -88,7 +88,11 @@ describe('project Director override', () => {
 
     await user.click(screen.getByRole('switch', { name: 'Override Director sign-off' }));
     await choose(user, 'Director sign-off', 'Never');
-    expect(screen.getByText('Tier C always needs you.')).toBeVisible();
+    expect(
+      screen.getByText(
+        'Protected files (auth, migrations, secrets, billing): the Director signs them off only when every check passed and no secret file is touched; otherwise you do.',
+      ),
+    ).toBeVisible();
 
     await saveWith(user, 'every change is mine here', 'Save as v4');
     expect(await screen.findByText(/Saved as version 4/)).toBeInTheDocument();

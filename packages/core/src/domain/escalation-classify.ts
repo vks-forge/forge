@@ -6,7 +6,7 @@
  *   fails the same way and burns a run. Two pure rules read what the engine already writes. The
  *   first gives a parked ticket its failure cause (so the start-up sweep can offer "Run as
  *   Express" for a lane hold and "Retry" for a retry cap, and the Merge anyway card for a ticket held
- *   with a `findings_hold:` or `scope_drift:` reason); the second names the setup the owner
+ *   with a `findings_hold:`, `config_hold:`, `provenance_hold:` or `scope_drift:` reason); the second names the setup the owner
  *   must fix (sign in, approve a tool, grant a tool) from the error family and the denials in the
  *   run's receipts. An unknown reason still gets a cause, so no parked ticket is left without a
  *   way forward.
@@ -16,7 +16,8 @@
  */
 
 import type { ErrorFamily } from '#/schemas/errors.js';
-import type { DecisionCause, FailureCause, SetupCause } from '#/schemas/escalation.js';
+import type { DecisionCause, FailureCause } from '#/schemas/escalation.js';
+import type { SetupCause } from '#/schemas/escalation-setup.js';
 import type { Ticket } from '#/schemas/ticket.js';
 import type { DenyDecision, ParkClass, SetupContext } from '#/types/escalation.types.js';
 
@@ -38,6 +39,8 @@ const DECISION_PREFIXES: readonly {
   readonly cause: DecisionCause;
 }[] = [
   { prefix: 'findings_hold:', cause: 'findings_hold' },
+  { prefix: 'config_hold:', cause: 'config_hold' },
+  { prefix: 'provenance_hold:', cause: 'provenance_hold' },
   { prefix: 'scope_drift:', cause: 'scope_drift' },
 ];
 
@@ -49,6 +52,7 @@ const RULES: readonly {
   readonly test: (reason: string) => boolean;
   readonly cause: FailureCause;
 }[] = [
+  { test: (r) => r.startsWith('merge conflict:'), cause: 'merge_conflict' },
   {
     test: (r) => r.startsWith('pipeline_pending') || r.includes('lane not enabled'),
     cause: 'lane_hold',

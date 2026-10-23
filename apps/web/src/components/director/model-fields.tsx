@@ -100,17 +100,19 @@ export function ModelFields(props: {
   const choices = useMemo(() => directorModelChoices(harnesses.data), [harnesses.data]);
 
   return (
-    <div className="grid max-w-3xl gap-5 sm:grid-cols-2">
-      {STEP_NAMES.map((step) => (
-        <ModelRow
-          key={step}
-          choices={choices}
-          step={step}
-          model={props.models[step] ?? ''}
-          error={props.errors[`models.director.${step}`]}
-          onChange={(model) => props.onChange(step, model)}
-        />
-      ))}
+    <div className="@container max-w-3xl">
+      <div className="grid gap-5 @2xl:grid-cols-2">
+        {STEP_NAMES.map((step) => (
+          <ModelRow
+            key={step}
+            choices={choices}
+            step={step}
+            model={props.models[step] ?? ''}
+            error={props.errors[`models.director.${step}`]}
+            onChange={(model) => props.onChange(step, model)}
+          />
+        ))}
+      </div>
     </div>
   );
 }

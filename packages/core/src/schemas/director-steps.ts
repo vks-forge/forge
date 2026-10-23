@@ -19,7 +19,7 @@
  *   the Director.
  *
  * Exports: MAX_READ_REQUESTS, ReadRequest, ReadRequests, CardSurveyOutput, VerifyOutput,
- *   GrillTurnOutput, EnhanceOutput, WritePlanOutput, ApprovePlanOutput, CustomStepOutput,
+ *   GrillTurnOutput, EnhanceOutput, DecisionCheck, WritePlanOutput, ApprovePlanOutput, CustomStepOutput,
  *   ANSWER_GROUND_KINDS, ESCALATE_REASONS, TicketAnswerOutput, TicketRecoverOutput, PickSubstituteOutput,
  *   DraftAgentOutput, MemoryRewriteInput, MemoryRewriteOutput.
  * Depends on: schemas/agent, schemas/escalation, schemas/grill, schemas/ids, schemas/plan, schemas/research, zod. No IO.
@@ -117,6 +117,14 @@ export const EnhanceOutput = z.object({
 });
 export type EnhanceOutput = z.infer<typeof EnhanceOutput>;
 
+/** The planner's verdict for one grill answer, by its position in `grill_decisions`. */
+export const DecisionCheck = z.object({
+  index: z.number().int().nonnegative(),
+  status: z.enum(['honoured', 'conflict']),
+  where: z.string(),
+});
+export type DecisionCheck = z.infer<typeof DecisionCheck>;
+
 /**
  * `write_plan`: the plan body. Decisions come from the stored grill answers and the
  * verification block from the verify findings, both written by the engine, so the plan
@@ -131,6 +139,8 @@ export const WritePlanOutput = z.object({
   risks: z.array(z.string()),
   tickets: PlanTickets.refine((t) => t.length > 0, { message: 'a plan needs a ticket' }),
   card_links: z.array(CardId),
+  /** One entry per `grill_decisions` answer: does the plan keep it. The engine requires every index (`writePlanOutputFor`). */
+  decision_checks: z.array(DecisionCheck).default([]),
   /** Facts from outside the repository the plan rests on, with the evidence refs behind each; the engine marks them (d-0144). */
   outside_claims: z
     .array(

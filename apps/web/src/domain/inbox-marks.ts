@@ -16,7 +16,13 @@ import { inInboxView } from '@forge/core';
 import type { InboxCounts, InboxItem, InboxPage, InboxView } from '@forge/core';
 import type { InboxMarkName } from '#/types/work-api.types.js';
 
-const VIEWS: readonly InboxView[] = ['needs_action', 'unread', 'all', 'archived'];
+const VIEWS: readonly InboxView[] = [
+  'needs_action',
+  'notices',
+  'unread',
+  'all',
+  'archived',
+];
 
 /** The item after the mark (`archive` does not change read state: they are separate marks). */
 export function withMark(item: InboxItem, mark: InboxMarkName): InboxItem {

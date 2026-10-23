@@ -137,7 +137,7 @@ export function TicketsTable(props: TicketsTableViewProps) {
                     <LaneChip lane={row.lane} />
                   </td>
                   <td className={CELL}>
-                    <StateChip state={row.state} />
+                    <StateChip state={row.state} needsYou={row.needs_you} />
                   </td>
                   <td className={`${CELL} text-right font-data text-xs tabular-nums`}>
                     {formatUsd(row.cost_usd)}

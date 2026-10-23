@@ -12,6 +12,7 @@ Status: proposed, 2026-10-12
 > | Worktree at `.worktrees/<ticket-id>` in the repo (§6) | `<dataHome>/worktrees/<project-slug>/<ticket-id>`, outside the repo (d-0098, d-0059). The Worker's cwd is a worktree inside the data home, so the data-home floor excepts the run's own worktree. |
 > | Claude Code runs through a pinned adapter and the SDK-bundled CLI (§4) | The user's installed `claude` with its own login, an API key or a setup-token OAuth token, per harness in Settings (d-0087). The ACP adapter stays a bundled dependency but is pointed at the installed binary with `CLAUDE_CODE_EXECUTABLE` (d-0101); a missing install fails the run before spawn. Nothing is bundled or pinned. |
 > | Compatibility = the pin | Per-install compatibility check on each new `claude` build (about a minute, no cost), a shipped known-good list, and per-build approval of native tool shapes in Settings; a changed or unknown tool is denied until approved. A failed check pauses the harness. The build is re-read before every run; a changed build parks the ticket (`harness_changed:`) until approved (d-0088, B7). |
+> | A `WorktreeCreate` hook copies files and installs per `.worktreeinclude` (§6) | Forge prepares each worktree itself before the Worker starts: the project's setup steps (settings `setup`, else detected defaults per ecosystem) run outside the Worker's policy with network allowed, in a new Prepare state before Spawn (§8, d-0180). No hand-edited file in the repo. |
 > | Per-run files in `.forge/data/runs/<id>/` (§4) | `<dataHome>/runs/<id>/` (`hook.json`, `settings.json`, `mcp.json`, gate reports). |
 > | A restart kills every in-flight run (§8, d-0054) | A restart interrupts runs and the next start resumes each from its harness session with a new secret generation, else retries in the same worktree (d-0092, d-0100). d-0054 is superseded. |
 > | Concurrency 3 to 4 per provider (§9) | Layered limits: global 2, per project 1, per harness, a priority queue and quota waits with a reset time (d-0097). |
@@ -136,6 +137,23 @@ replaced by the core enum: `process` is now `crash`, `policy` is `policy_denied`
 
 `filesTouched` and the diff come from `git` in the worktree after the run, not
 from the harness output. The agent's own claim is checked against it at G1.
+
+**The base moves under a ticket (eval fix 4).** Tickets run side by side, so main
+is usually ahead by the time one is verified. Forge brings it in, in the Worker's
+own worktree and never by rebase (no rewritten history, no force push, d-0012):
+`GitHost.syncBase()` reads the base tip (a fetch into a private
+`refs/forge/base/<branch>` for hosts with a remote, the user's own branch for a
+project with none) and `WorktreeManager.mergeIn()` merges it into the ticket
+branch with a Forge-authored merge commit. New worktrees are cut from the same
+fetched ref, so they no longer start from a stale base. A clean merge goes on to
+the gates on the merged head. A clash is committed with git's markers left in the
+text files (binary files keep the ticket's side; a file one side deleted keeps the
+ticket's side) and the ticket's own writer, the stage's `rework_to`, is woken with
+the files and the upstream commits that touched them (the ticket id and title when
+the subject names one). That resolver run spends no gate rework; after
+`MAX_CONFLICT_RESOLVES` (2) the owner is asked (Try again, Re-plan this ticket,
+Cancel). A host that refuses a merge late as "not mergeable" raises
+`MergeConflictError`, which re-runs the same sync, not a policy park.
 
 ## 4. Drivers, in build order
 
@@ -263,8 +281,28 @@ the harness boundary where possible and by the OS where not.
 | Lane | Harness permission policy | Isolation on Windows 11 host |
 |---|---|---|
 | Express | Allow read/edit/write inside cwd; allow `Bash(pnpm test*)`, `Bash(pnpm lint*)`, `Bash(git *)` except push; deny network tools; deny everything else. | Host process, per-run `HOME`, worktree. |
-| Standard | Same, plus allow-listed package manager installs; `permission_request` events routed to the Director, which auto-answers from the allow-list and escalates the rest to the user. | WSL2 (Claude Code bubblewrap sandbox) or Codex native Windows sandbox (`unelevated` is enough here). |
+| Standard | Same, plus allow-listed package manager installs; a call the policy marks `ask` is parked for the owner (d-0175): the hook refuses it at once, the Worker is told it is waiting for the owner, and the item goes to Needs-you at the owner's stage. The Director never answers a permission. | WSL2 (Claude Code bubblewrap sandbox) or Codex native Windows sandbox (`unelevated` is enough here). |
 | Full | Ask for anything outside the allow-list; Director may not auto-approve network or install. | WSL2 + Claude sandbox, or Codex `elevated` sandbox, or Docker when the ticket pulls untrusted code. |
+
+**Bypass permissions (d-0183).** Each harness has a "Bypass permissions"
+setting, on by default (`Harness.bypass_permissions`). The run request carries
+the harness-neutral `permissions: 'bypass' | 'ask'`; the driver maps it to the
+harness's own no-prompt mode (Claude Code: `--permission-mode
+bypassPermissions` instead of `default`) and declares it in `capabilities()`
+(`permissionBypass`). With bypass on, `admit()` allows every lane `ask` except
+the hard floor (tool-system.md §5.6), so a Worker is never stopped for an
+approval. Forge's PreToolUse hook is the gate that stays: probe 12 measured that
+the hook still fires and its exit 2 still blocks under `bypassPermissions`. With
+the setting off, the table above applies unchanged. Workers run as the owner's
+Windows account, so the floor is a Forge rule, not an OS boundary (d-0117).
+
+A tool approval is a durable `permission` interaction, not a held hook: the hook
+returns at once (exit 2), the engine parks the run at settle (never `success`
+with a call unanswered), the answer queues one wake keyed by the run, and the
+same harness session resumes with the answers in its brief. No process waits,
+no Worker slot is held, and it is harness-neutral (every driver already gets
+"blocked + reason" and resume). The owner's answers are `allow_once`,
+`allow_always` (a project settings version) and `deny`.
 
 Mechanisms per harness:
 
@@ -288,10 +326,35 @@ Mechanisms per harness:
 
 Shared-resource rules for worktrees (they isolate files, not the machine):
 
-- One worktree per ticket under `<dataHome>/worktrees/<project-slug>/<ticket-id>` (d-0098); a `WorktreeCreate`
-  hook (Claude) or a dispatcher step copies `.env.example`-derived files and
-  symlinks or installs `node_modules` per the project's `.worktreeinclude`.
-- Package caches are shared on purpose (speed); database/ports are not: each
+- One worktree per ticket under `<dataHome>/worktrees/<project-slug>/<ticket-id>` (d-0098). Forge
+  prepares it before the Worker starts (d-0180): the project's `setup` steps
+  run in it (installs, `uv sync`, `cargo fetch`, whatever the project's
+  language needs, d-0176), each in its own folder with its own time limit,
+  outside the Worker's tool policy and with network allowed. The Worker itself
+  stays denied installs. A prep key (the steps plus the contents of their
+  `inputs` files) skips a step that already ran on identical files in the same
+  worktree. Across worktrees there are two recipe-driven layers (4.3a), both
+  language-neutral and both off when Forge has no cache folder. (1) `cache_env`:
+  variables that point the tool's own download cache (`npm_config_cache`,
+  `UV_CACHE_DIR`, `GOMODCACHE`, ...; not Cargo, whose home holds the owner's config and credentials) at one Forge-owned folder per
+  tool under `<dataHome>/cache/downloads/`, set for that step only; downloads are
+  shared, nothing is relocated. (2) `cache_outputs`: install folders a recipe
+  marks relocatable (`node_modules` for npm, yarn classic and bun; `vendor` for
+  composer; never a Python virtual environment, pnpm or Yarn Berry layouts). After
+  a successful run the folders are copied (copy-on-write where the filesystem has
+  it, symlinks kept) to `<dataHome>/cache/setup/<key>/`; a later worktree whose
+  key matches (step command, folder, bytes of the `inputs`, the output of the
+  step's `toolchain` probe such as `node --version`, OS, CPU) gets them copied
+  back and the command does not run; the record marks the step `restored` and
+  the ready note reads "workspace ready in 4 s (restored from cache)". Entries
+  are written in a temporary folder and renamed when complete; a size budget
+  (the company setting `engine.setup_cache_gb`, default 5, read at every store;
+  Settings, General shows the size and has "Clear setup cache") evicts the least recently used; any cache fault runs the step normally
+  and is logged, never failing the ticket.
+  Untracked outputs of setup (an un-ignored `.venv`) are recorded and kept out
+  of the diff. Steps are settings, edited in the UI; absent means the detected
+  defaults, an empty list means no setup. There is no `.worktreeinclude`.
+- Package download caches are shared on purpose (speed); database/ports are not: each
   Standard/Full worker gets a port range and, where the project needs one, a
   disposable database schema.
 - `.git` is shared; the dispatcher serializes `git worktree add/remove` behind
@@ -320,7 +383,9 @@ OpenCode `-s <id>`; Pi `--session <file.jsonl>` owned by the dispatcher; ACP
 ```mermaid
 stateDiagram-v2
   [*] --> Preflight
-  Preflight --> Spawn: binary + auth ok
+  Preflight --> Prepare: binary + auth ok
+  Prepare --> Spawn: setup steps done or skipped
+  Prepare --> Failed: step failed on base content (owner escalation)
   Preflight --> Failed: missing harness / auth
   Spawn --> Streaming
   Streaming --> Streaming: events, steer(), permission answers
@@ -335,6 +400,13 @@ stateDiagram-v2
   Settled --> [*]
 ```
 
+- **Prepare (d-0180)**: a background job beside the tick runs the setup steps in
+  the fresh worktree; the ticket stays Planned, holds its Worker slot and shows
+  "Getting the workspace ready: <step> (m:ss)". A step that fails on the
+  project's own files parks the ticket with a `worktree_setup` escalation (Try
+  again, Edit setup steps, Start without setup, Cancel); no run is spent. A
+  failure after the Worker changed an `inputs` file (its lockfile edit) starts
+  the Worker anyway and shows as a failed `setup` gate row for rework.
 - **Stall**: Symphony defaults (`stall_timeout_ms` 300000, `turn_timeout_ms`
   3600000) are the starting values; Express gets a 10-minute turn timeout.
 - **Kill**: SIGTERM to the process group, SIGKILL after `graceSec` (20). A
@@ -353,8 +425,18 @@ stateDiagram-v2
   with a fresh secret generation and a `resumed` receipt linking the chain
   (G1 verifies each generation, `verification-plane.md` status block). A run
   that cannot be resumed is retried as a new run in the same worktree.
+- **Tool approvals (d-0175)**: a run that raised `permission` items and ends
+  `success` or `paused` settles as a pause on its oldest unanswered item (or,
+  when every item is already answered, parks and queues the resume wake in the
+  same transaction); a run that fails has its open items cancelled
+  (`by: auto`). A restart while the run is live keeps the item (same run row,
+  new generation); a resumed Worker repeating the call finds the same item. An
+  item never expires into Blocked.
 - **Settlement**: diff from git, `outcomes/` record, per-run token revoked,
-  worktree kept until the ticket is Done or Cancelled, then removed.
+  worktree kept until the ticket is Done or Cancelled, then removed. A cancelled
+  ticket (or one a new plan replaces) also has its local and pushed branch
+  deleted and its open PR closed, best effort and never forced, and the card
+  records the branch's last commit id so the work can be recovered (d-0179).
 
 ## 9. Concurrency and rate limits
 

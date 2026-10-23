@@ -8,11 +8,11 @@
  *   can still fill in the checks by hand.
  *
  * Exports: detectProjectAt().
- * Depends on: node:fs/promises, node:path, domain/detect-project. IO: reads a folder and one file.
+ * Depends on: node:fs/promises, node:path, domain/detect-project. IO: reads one or two folders and one file.
  */
 
 import { readdir, readFile, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { detectProject } from '#/domain/detect-project.js';
 import type { DetectedProject } from '#/types/detect-project.types.js';
 
@@ -32,13 +32,25 @@ async function readManifest(root: string): Promise<unknown> {
   }
 }
 
-export async function detectProjectAt(root: string): Promise<DetectedProject> {
+/**
+ * Detects the project at `root`. When the project is a subfolder of a larger repository, pass
+ * the repository top as `repoRoot` so a lockfile there (a monorepo's) is found for setup.
+ */
+export async function detectProjectAt(
+  root: string,
+  repoRoot?: string,
+): Promise<DetectedProject> {
   let rootEntries: string[] = [];
   try {
     rootEntries = await readdir(root);
   } catch {
-    return { ecosystems: [], checks: [] };
+    return { ecosystems: [], checks: [], setup: [] };
   }
+
+  const repoEntries =
+    repoRoot === undefined || resolve(repoRoot) === resolve(root)
+      ? undefined
+      : await readdir(repoRoot).catch(() => undefined);
 
   const packageJson = rootEntries.includes('package.json')
     ? await readManifest(root)
@@ -46,6 +58,7 @@ export async function detectProjectAt(root: string): Promise<DetectedProject> {
 
   return detectProject({
     rootEntries,
+    ...(repoEntries === undefined ? {} : { repoEntries }),
     ...(packageJson === undefined ? {} : { packageJson }),
   });
 }

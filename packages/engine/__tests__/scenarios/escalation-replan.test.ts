@@ -13,12 +13,14 @@
  *   the interaction settled `replan`; v2 approval cancels not-started v1 tickets and keeps the
  *   running one), the dispatch hold while the card is shaping (the wait line says so), the
  *   planner input listing existing tickets with their plan keys, the plan keys recorded on
- *   approval, and the Director not answering a Worker on a file that became Tier C after approval.
+ *   approval, a replaced ticket's worktree and branches removed and its PR closed, and the Director not answering a Worker on a file that became Tier C after approval.
  * Depends on: helpers/escalation-rig, helpers/planning-rig, vitest.
  */
 
 import { describe, expect, it, vi } from 'vitest';
+import type { ProjectRuntime } from '#/types/verify.types.js';
 import { cardEventsOf, pendingOf } from '#tests/helpers/escalation-rig.js';
+import { createFakeGitHost } from '#tests/helpers/fake-git-host.js';
 import {
   cardOf,
   eventsOf,
@@ -86,7 +88,7 @@ describe('Re-plan', () => {
     expect(done.status).toBe('done');
     expect((await cardOf(rig, card)).phase).toBe('grilling');
     const requested = await cardEventsOf(rig, card, 'replan_requested');
-    expect(requested[0]!.payload).toEqual({
+    expect(requested[0]!.payload).toMatchObject({
       ticket_id: t1.id,
       comment: 'Split the heavy part off',
       by: 'owner',
@@ -117,6 +119,34 @@ describe('Re-plan', () => {
     expect(await rig.engine.explainWait(t3.id)).toBe(
       'plan: the card is being re-planned',
     );
+  });
+
+  it('shows the held ticket as waiting for you until Re-plan, then as held by the new plan', async () => {
+    const { rig, card, t1, t3, hold } = await stuckCard();
+
+    expect((await rig.engine.explainWaits([t1.id])).get(t1.id)?.phase).toBe(
+      'waiting_you',
+    );
+
+    await rig.engine.actOnEscalation(
+      hold.id,
+      { action: 'replan', comment: 'Split the heavy part off' },
+      'owner',
+    );
+
+    const waits = await rig.engine.explainWaits([t1.id, t3.id]);
+
+    expect(waits.get(t1.id)).toMatchObject({
+      phase: 'held_by_plan',
+      card_id: card,
+      text: `You chose Re-plan: waiting for the new plan of ${card}`,
+    });
+
+    expect(waits.get(t3.id)).toMatchObject({ phase: 'held_by_plan' });
+    expect(await pendingOf(rig, t1.id)).toEqual([]);
+    expect(
+      rig.logs.filter((l) => l.level === 'warn' && l.message.includes('no owner item')),
+    ).toEqual([]);
   });
 
   it('shows the planner the existing tickets, then v2 approval cancels the not-started v1 tickets', async () => {
@@ -161,6 +191,40 @@ describe('Re-plan', () => {
     const approved = (await eventsOf(rig, card, 'plan_approved')).map((e) => e.payload);
     expect(approved[0]).toMatchObject({ version: 1, plan_keys: ['t1', 't2', 't3'] });
     expect(approved.at(-1)).toMatchObject({ version: 2, plan_keys: ['t1'] });
+  });
+});
+
+describe('Re-plan cleanup', () => {
+  it('removes the worktree and branches of a replaced ticket and closes its PR', async () => {
+    const { rig, card, t3, hold } = await stuckCard();
+    const host = createFakeGitHost();
+    rig.runtime.current = { ...(rig.runtime.current as ProjectRuntime), gitHost: host };
+    const stored = await rig.ticket(t3.id);
+    await rig.storage.transaction((tx) =>
+      tx.tickets.updateTicketCas(t3.id, stored.status_version, {
+        worktree: '/repo/.worktrees/replaced',
+        branch: 'feat/replaced',
+        pr_number: 77,
+      }),
+    );
+
+    await rig.engine.actOnEscalation(
+      hold.id,
+      { action: 'replan', comment: 'Split the heavy part off' },
+      'owner',
+    );
+
+    await rig.tick();
+    if ((await cardOf(rig, card)).phase === 'plan_ready') {
+      await rig.engine.approvePlan(card, 2, 'owner');
+    }
+
+    expect((await rig.ticket(t3.id)).status).toBe('cancelled');
+    expect(rig.worktrees.removed).toContain('/repo/.worktrees/replaced');
+    expect(rig.worktrees.removedBranches).toContain('feat/replaced');
+    expect(host.calls).toEqual(
+      expect.arrayContaining(['closePr:77', 'deleteBranch:feat/replaced']),
+    );
   });
 });
 

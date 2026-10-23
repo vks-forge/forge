@@ -10,7 +10,7 @@
  *   with Needs you.
  *
  * Exports: CARD_BOARD_COLUMNS, COLUMN_LABEL, EMPTY_CARD_FILTER, isCardFilterActive(),
- *   filterCards(), groupCards().
+ *   filterCards(), groupCards(), firstFilledColumn().
  * Depends on: schemas/cards (types), types/cards-ui.types. No IO.
  */
 
@@ -90,4 +90,14 @@ export function groupCards(
   }
 
   return groups;
+}
+
+/**
+ * The first column, in Board order, that holds a card; null when every column is empty. A phone
+ * shows one column at a time, so the Board opens on this one instead of an empty Shaping.
+ */
+export function firstFilledColumn(
+  groups: Readonly<Record<CardColumn, readonly CardSummary[]>>,
+): CardColumn | null {
+  return CARD_BOARD_COLUMNS.find((column) => groups[column.id].length > 0)?.id ?? null;
 }

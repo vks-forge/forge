@@ -13,13 +13,17 @@
  *                in this run or, for a rework, an earlier run of the ticket (that edit is
  *                in the branch already), and P is in the diff (paths folded: slashes,
  *                case, worktree prefix).
- *   read P       allowed `read` decision on P with a `read_completed` effect, in this run or
- *                an earlier verified run of the ticket (the Worker's session may be resumed).
+ *   read P       allowed decision of any tool with a `read_completed` effect (only a read-risk tool
+ *                ends there) on P or on a folder containing P (`grep` over `src` read `src/a.ts`;
+ *                `.` and the worktree root contain everything), in this run or an earlier verified
+ *                run of the ticket (the Worker's session may be resumed). The report says when a
+ *                folder search backed it.
  *   ran_tests    allowed `shell` decision with a completed effect (`mutation_committed`,
  *                or `uncertain` for a failed run, which still ran; the report says so)
  *                one of whose segments starts with the command of ANY test-role check (see shell-match).
  *   added_test N an added line of a test file declares a test (`it(`, `def test_`, `func Test`, `fn`, ...,
- *                per active ecosystem) whose title or name contains N; comments and strings do not count.
+ *                per active ecosystem) whose title or name contains N, or whose title N ends with
+ *                after a group prefix (`describe › it`, `Class::test_x`); comments and strings do not count.
  *
  * Coverage (no vacuous pass, domain/claim-coverage): a non-empty diff with no claims at all is
  * a finding, and every changed file other than lockfiles and deletions must be named by an
@@ -33,7 +37,7 @@
 import type { Claim, GateFinding } from '@forge/core';
 import { coverage, EDIT_TOOLS } from '#/domain/claim-coverage.js';
 import { ALL_RULES } from '#/domain/gate-rules.js';
-import { allowedCalls, touchedPath } from '#/domain/receipt-calls.js';
+import { allowedCalls, readBacking, touchedPath } from '#/domain/receipt-calls.js';
 import { runsAnyTestCommand } from '#/domain/shell-match.js';
 import { declaresTest, isTestPatch } from '#/domain/test-files.js';
 import { foldPath } from '#/shared/paths.js';
@@ -93,15 +97,10 @@ function judge(
     }
 
     case 'read':
-      return touchedPath(
-        provenCalls,
-        new Set(['read']),
-        new Set(['read_completed']),
-        claim.path,
-        ev.worktreePath,
-      )
-        ? null
-        : 'no allowed read receipt with a completed effect for that path';
+      return readBacking(provenCalls, claim.path, ev.worktreePath) === null
+        ? 'no allowed read receipt with a completed effect for that path or a folder containing it'
+        : null;
+
     case 'ran_tests': {
       if (ev.testCommands.length === 0) {
         return 'the project defines no test command to match a shell receipt against';
@@ -149,6 +148,17 @@ export function checkClaims(claims: readonly Claim[], ev: ClaimEvidence): CheckO
   findings.push(...covered.findings);
 
   const notes: string[] = [];
+  for (const claim of claims) {
+    if (claim.kind !== 'read') {
+      continue;
+    }
+
+    const folder = readBacking(provenCalls, claim.path, ev.worktreePath)?.folder;
+    if (typeof folder === 'string') {
+      notes.push(`read ${claim.path} backed by a search over ${folder}.`);
+    }
+  }
+
   for (const [path, runId] of covered.coveredByEarlier) {
     notes.push(`${path} covered by the verified edit receipts of earlier run ${runId}.`);
   }
@@ -176,5 +186,10 @@ export function checkClaims(claims: readonly Claim[], ev: ClaimEvidence): CheckO
     status: findings.length === 0 ? 'passed' : 'failed',
     findings,
     details,
+    // Only lost-proof findings, none about an unsupported claim or an uncovered file (F-D3).
+    ...(covered.provenanceFiles.length > 0 &&
+    findings.length === covered.provenanceFiles.length
+      ? { provenanceOnly: true }
+      : {}),
   };
 }

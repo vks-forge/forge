@@ -24,6 +24,7 @@ import { themePrefsStore } from '#/state/theme-provider.js';
 import { threadPrefsStore, useThreadPrefs } from '#/state/thread-prefs.js';
 import { authorPrefsStore, useAuthorPrefs } from '#/state/use-author-prefs.js';
 import { memoryPrefsStore, useMemoryPrefs } from '#/state/use-memory-prefs.js';
+import { openNeedsYou } from '#tests/helpers/needs-you-modal.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
 const probe = () =>
@@ -171,6 +172,7 @@ describe('what the app persists', () => {
   it('never stores server data, tokens or run content while the app is used', async () => {
     const user = userEvent.setup();
     renderApp({ path: '/p/sample-service/tickets/SVC-4' });
+    await openNeedsYou(user);
     await screen.findByText(/Question: the Worker needs your answer/);
     expect(await screen.findByText(/The window is computed in UTC/)).toBeInTheDocument();
 

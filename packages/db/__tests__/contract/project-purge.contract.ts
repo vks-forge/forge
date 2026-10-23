@@ -7,7 +7,7 @@
  *   neighbour's history. Both backends are held to the same walk: tickets and what hangs
  *   off them, runs and their records, cards with their history, relations, queued replies,
  *   plan versions and card questions, inbox marks, pipeline snapshots with their stage rows and
- *   artifacts, fetched research sources and card evidence, the project row.
+ *   artifacts, fetched research sources, card evidence and Director spend rows, the project row.
  *
  * Exports: describeProjectPurgeContract().
  * Depends on: vitest, @forge/core, helpers/fixtures. IO only through the adapter under test.
@@ -177,6 +177,15 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
       });
 
       await seedResearch(t, slug, cardId, ticket.id, runId);
+      await t.directorSpend.append({
+        project: slug,
+        card_id: cardId,
+        ticket_id: ticket.id,
+        kind: 'card_chat',
+        usd: 0.5,
+        recorded: true,
+        at: T0,
+      });
     });
   }
 
@@ -212,6 +221,7 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
       cardSources: await t.researchSources.listByCard(cardIdOf(slug)),
       runSources: await t.researchSources.listByRun(runId),
       evidence: await t.evidence.listByCard(cardIdOf(slug)),
+      directorSpend: await t.directorSpend.listByProject(slug),
     }));
   }
 
@@ -247,6 +257,7 @@ export function describeProjectPurgeContract(getDb: () => StorageAdapter): void 
         cardSources: [],
         runSources: [],
         evidence: [],
+        directorSpend: [],
       });
     });
 

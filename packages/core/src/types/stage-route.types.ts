@@ -21,4 +21,8 @@ export interface BlockRouteInput {
   readonly policy: 'rework' | 'hold';
   readonly reworkCount: number;
   readonly cap: number;
+  /** A failed G1 whose only findings are gate configuration the Worker changed (d-0173); only a gate can be this. */
+  readonly configOnly?: boolean;
+  /** A failed G1 whose only findings are files whose earlier-run proof is gone (F-D3): rework while the cap allows, then hold. */
+  readonly provenanceOnly?: boolean;
 }

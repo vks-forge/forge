@@ -7,7 +7,8 @@
  *   whether the last check passed, without editing files. This is the database row behind
  *   that Settings page. `kind` names the driver family and is the only place a harness name
  *   appears in core data; the credential itself is never in the row, only in the SecretStore
- *   under `harness/<id>/api-key` or `harness/<id>/oauth-token`.
+ *   under `harness/<id>/api-key` or `harness/<id>/oauth-token`. `bypass_permissions` (default on)
+ *   says whether Workers on it run without asking the owner (d-0183).
  *
  * Exports: HarnessId, HarnessKind, HarnessAuthMode, HarnessSecretKind, HarnessStatus, Harness.
  * Depends on: zod. No IO.
@@ -51,5 +52,10 @@ export const Harness = z.object({
   last_checked_at: z.iso.datetime().optional(),
   /** Plain-language reason shown next to a `paused` status (what failed, what to do). */
   status_note: z.string().min(1).optional(),
+  /**
+   * "Bypass permissions" (d-0183): Workers on this harness start in its no-prompt mode and Forge allows
+   * every `ask`, except the hard floor. Absent means on; `bypassOn()` is the only place that default lives.
+   */
+  bypass_permissions: z.boolean().optional(),
 });
 export type Harness = z.infer<typeof Harness>;

@@ -12,11 +12,11 @@
  *   (present-but-undefined keys) and drops the immutable, storage-owned and derived fields.
  *
  * Exports: toTicketPatch().
- * Depends on: schemas/ticket, types/ports/storage.types. No IO.
+ * Depends on: schemas/ticket, types/ticket-patch.types. No IO.
  */
 
 import type { Ticket } from '#/schemas/ticket.js';
-import type { TicketPatch } from '#/types/ports/storage.types.js';
+import type { TicketPatch } from '#/types/ticket-patch.types.js';
 
 /** The patch that stores `next`; optional fields `next` lacks are explicit clears; `status_version` is left to storage and `parent` / `blocked_by` to the relation repository. */
 export function toTicketPatch(next: Ticket): TicketPatch {

@@ -57,11 +57,39 @@ describe('BarChart tooltips', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent('no data');
   });
 
+  it('names the chart as a group and each day as an image, not the svg as one image', () => {
+    const { container } = renderBars();
+    const svg = container.querySelector('svg');
+
+    expect(svg).toHaveAttribute('role', 'group');
+    expect(svg).toHaveAttribute('aria-roledescription', 'chart');
+    expect(container.querySelectorAll('rect[data-slot][role="img"]')).toHaveLength(3);
+  });
+
   it('keeps one tab stop for all bars', () => {
     const { container } = renderBars();
     const stops = container.querySelectorAll('rect[data-slot][tabindex="0"]');
 
     expect(stops).toHaveLength(1);
+  });
+});
+
+describe('BucketChart roles', () => {
+  it('is a group whose hit areas are images', () => {
+    const { container } = render(
+      <BucketChart
+        title="Spend over time"
+        buckets={['2026-10-15', '2026-10-16']}
+        group="day"
+        mode="stacked"
+        format={(value) => `$${value}`}
+        noData="Nothing"
+        series={[{ key: 'a', label: 'Alpha', color: 'red', values: [1, 2] }]}
+      />,
+    );
+
+    expect(container.querySelector('svg')).toHaveAttribute('role', 'group');
+    expect(container.querySelectorAll('rect[data-slot][role="img"]')).toHaveLength(2);
   });
 });
 
@@ -91,5 +119,48 @@ describe('BucketChart tooltips', () => {
     expect(tip).toHaveTextContent('Alpha');
     expect(tip).toHaveTextContent('Beta');
     expect(tip).toHaveTextContent('Total');
+  });
+});
+
+describe('BarChart split into two series', () => {
+  const PARTS = [
+    { key: 'workers', label: 'Workers', color: 'var(--series-1)' },
+    { key: 'director', label: 'Director', color: 'var(--series-2)' },
+  ];
+
+  const SPLIT = [
+    { date: '2026-10-14', value: 10, parts: [3, 7] },
+    { date: '2026-10-15', value: 0, parts: [0, 0] },
+  ];
+
+  it('stacks both series, keys them in words and gives each part in the tooltip and the table', async () => {
+    const user = userEvent.setup();
+
+    const { container } = render(
+      <BarChart
+        title="Spend per day (USD)"
+        points={SPLIT}
+        parts={PARTS}
+        format={(value) => `$${value.toFixed(2)}`}
+        noData="No spend"
+      />,
+    );
+
+    expect(screen.getByRole('list', { name: 'Legend' })).toHaveTextContent(
+      /Workers.*Director/,
+    );
+
+    // One stacked bar of two rectangles for the day that has spend, plus the quiet tick of the zero day.
+    expect(container.querySelectorAll('rect[fill="var(--series-1)"]')).toHaveLength(1);
+    expect(container.querySelectorAll('rect[fill="var(--series-2)"]')).toHaveLength(1);
+
+    await user.tab();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      '$10.00 (Workers $3.00 · Director $7.00)',
+    );
+
+    expect(screen.getByRole('table')).toHaveTextContent(
+      '$10.00 (Workers $3.00 · Director $7.00)',
+    );
   });
 });

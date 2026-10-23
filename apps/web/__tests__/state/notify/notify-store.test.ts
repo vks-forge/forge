@@ -158,4 +158,17 @@ describe('notifyStore.task', () => {
     expect(items()).toHaveLength(1);
     expect(items()[0]).toMatchObject({ tone: 'error' });
   });
+
+  it('dismissAll closes dismissible items but keeps running tasks and pinned ones', () => {
+    notifyStore.success('a');
+    notifyStore.error('b');
+    notifyStore.info('pinned', { id: 'pinned', dismissible: false });
+    notifyStore.task({ id: 'job', title: 'Working' });
+
+    const closed = notifyStore.dismissAll();
+
+    expect(closed).toBe(2);
+    expect(items().map((i) => i.id)).toEqual(['pinned', 'job']);
+    expect(notifyStore.dismissAll()).toBe(0);
+  });
 });

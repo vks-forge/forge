@@ -5,16 +5,20 @@
  *   what waits on them and what it all costs. Project Home answers that for one project; this
  *   is the same facts summed across projects and cut into day, week or month buckets. Every
  *   number comes from rows Forge already keeps. Money is only what runs recorded: spend never
- *   includes a guess, and `cost_coverage` says how many runs carried a cost so a total is
- *   never read as complete when it is not. Series are arrays aligned to `buckets` (one value
+ *   includes a guess, and `cost_coverage` says how many runs and Director steps carried a cost so
+ *   a total is never read as complete when it is not. Spend has two sources, Workers (runs) and
+ *   the Director (its dated spend ledger): every spend figure is the sum of both and carries the
+ *   split, so the Overview, the Cost page and the card agree on one number. Series are arrays aligned to `buckets` (one value
  *   per bucket, zero where nothing happened) so a chart never has to fill gaps.
  *
- * Exports: OverviewKpis, OverviewProjectSeries, OverviewSpendSlice, OverviewProjectRow,
+ * Exports: OverviewKpis, OverviewProjectSeries, OverviewSpendSlice, OverviewProjectSpendSlice,
+ *   OverviewSourceSeries, OverviewCostCoverage, OverviewProjectRow,
  *   OverviewAttention, OverviewStats, OverviewQuery.
- * Depends on: schemas/inbox, schemas/project, schemas/project-stats, schemas/stats-range, zod. No IO.
+ * Depends on: schemas/director-spend, schemas/inbox, schemas/project, schemas/project-stats, schemas/stats-range, zod. No IO.
  */
 
 import { z } from 'zod';
+import { SpendSource } from '#/schemas/director-spend.js';
 import { InboxKind } from '#/schemas/inbox.js';
 import { ProjectStatus } from '#/schemas/project.js';
 import { CostCoverage, RateStat } from '#/schemas/project-stats.js';
@@ -26,7 +30,10 @@ const PerBucket = z.array(z.number().nonnegative());
 
 /** The headline figures. `spend_prev_usd` is null for `all` (nothing comes before it). */
 export const OverviewKpis = z.object({
+  /** Workers plus Director in the window: `spend_worker_usd + spend_director_usd`. */
   spend_usd: Usd,
+  spend_worker_usd: Usd,
+  spend_director_usd: Usd,
   spend_prev_usd: Usd.nullable(),
   spend_this_month_usd: Usd,
   tickets_done: Count,
@@ -38,16 +45,38 @@ export const OverviewKpis = z.object({
 });
 export type OverviewKpis = z.infer<typeof OverviewKpis>;
 
-/** One project's spend per bucket, for the stacked chart. */
+/** One project's spend per bucket, for the stacked chart: `values` is the total, `director_values` its Director part. */
 export const OverviewProjectSeries = z.object({
   project: z.string().min(1),
   values: PerBucket,
+  director_values: PerBucket,
 });
 export type OverviewProjectSeries = z.infer<typeof OverviewProjectSeries>;
 
-/** One slice of a spend breakdown (by project, harness or lane). */
+/** One slice of a Worker spend breakdown (by harness or lane; the Director has neither). */
 export const OverviewSpendSlice = z.object({ key: z.string().min(1), usd: Usd });
 export type OverviewSpendSlice = z.infer<typeof OverviewSpendSlice>;
+
+/** One project's slice of the whole: `usd` is Workers plus Director, split in the two fields after it. */
+export const OverviewProjectSpendSlice = OverviewSpendSlice.extend({
+  worker_usd: Usd,
+  director_usd: Usd,
+});
+export type OverviewProjectSpendSlice = z.infer<typeof OverviewProjectSpendSlice>;
+
+/** Spend per bucket for one source, across the included projects. */
+export const OverviewSourceSeries = z.object({
+  source: SpendSource,
+  values: PerBucket,
+});
+export type OverviewSourceSeries = z.infer<typeof OverviewSourceSeries>;
+
+/** How much of the spend carries a price: runs and Director steps in the window, and those that reported one. */
+export const OverviewCostCoverage = CostCoverage.extend({
+  director_steps: Count,
+  director_steps_recorded: Count,
+});
+export type OverviewCostCoverage = z.infer<typeof OverviewCostCoverage>;
 
 /** One row of the projects table. `spark` is runs started per bucket. */
 export const OverviewProjectRow = z.object({
@@ -56,7 +85,9 @@ export const OverviewProjectRow = z.object({
   open_cards: Count,
   tickets_in_progress: Count,
   waiting_on_you: Count,
+  /** Workers plus Director. */
   spend_usd: Usd,
+  director_usd: Usd,
   last_activity: z.iso.datetime().nullable(),
   spark: PerBucket,
 });
@@ -88,6 +119,8 @@ export const OverviewStats = z.object({
   unknown: z.array(z.string()),
   kpis: OverviewKpis,
   spend_by_project: z.array(OverviewProjectSeries),
+  /** Spend over time split by source: one series for Workers, one for the Director. */
+  spend_by_source: z.array(OverviewSourceSeries),
   tickets_done: PerBucket,
   /** Tickets created in the bucket. */
   tickets_started: PerBucket,
@@ -96,12 +129,12 @@ export const OverviewStats = z.object({
   runs_failed: PerBucket,
   /** Interrupted or cancelled; runs still in flight are not counted yet. */
   runs_interrupted: PerBucket,
-  spend_by_project_total: z.array(OverviewSpendSlice),
+  spend_by_project_total: z.array(OverviewProjectSpendSlice),
   spend_by_harness: z.array(OverviewSpendSlice),
   spend_by_lane: z.array(OverviewSpendSlice),
   projects: z.array(OverviewProjectRow),
   attention: z.array(OverviewAttention),
-  cost_coverage: CostCoverage,
+  cost_coverage: OverviewCostCoverage,
 });
 export type OverviewStats = z.infer<typeof OverviewStats>;
 

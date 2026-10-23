@@ -142,6 +142,7 @@ describe('PUT /harnesses/:id', () => {
       binary_path: 'C:/Users/me/.local/bin/claude.exe',
       auth_mode: 'api_key',
       status: 'unknown',
+      bypass_permissions_effective: true,
       secrets: { api_key: false, oauth_token: false },
     });
 

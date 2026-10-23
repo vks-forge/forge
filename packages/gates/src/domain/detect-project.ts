@@ -8,34 +8,18 @@
  *   here runs a command, and a repository Forge cannot read gets no checks, never a guessed one.
  *
  * Exports: detectProject().
- * Depends on: @forge/core (ProjectCheck), domain/ecosystems/registry, types/detect-project. No IO.
+ * Depends on: @forge/core (ProjectCheck), domain/detect-setup, domain/ecosystems/registry, types/detect-project. No IO.
  */
 
 import type { ProjectCheck } from '@forge/core';
+import { detectSetup } from '#/domain/detect-setup.js';
 import { ECOSYSTEMS } from '#/domain/ecosystems/registry.js';
+import { hasEntry } from '#/shared/entry-glob.js';
 import type { DetectedProject, DetectionInput } from '#/types/detect-project.types.js';
-
-/** A root-level glob (`go.mod`, `*.py`) as a case-insensitive matcher; patterns with a folder part never match a bare name. */
-function matcher(glob: string): RegExp | null {
-  if (glob.includes('/')) {
-    return null;
-  }
-
-  const source = glob
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*/g, '.*')
-    .replace(/\?/g, '.');
-
-  return new RegExp(`^${source}$`, 'i');
-}
 
 function ecosystemsOf(entries: readonly string[]): string[] {
   return ECOSYSTEMS.filter((eco) =>
-    eco.detect.some((glob) => {
-      const match = matcher(glob);
-
-      return match !== null && entries.some((name) => match.test(name));
-    }),
+    eco.detect.some((glob) => hasEntry(entries, glob)),
   ).map((eco) => eco.id);
 }
 
@@ -95,5 +79,10 @@ export function detectProject(input: DetectionInput): DetectedProject {
     id === 'node' ? nodeChecks(input) : [...(FIXED_CHECKS[id] ?? [])],
   );
 
-  return { ecosystems, checks };
+  const setup = detectSetup({
+    projectEntries: input.rootEntries,
+    ...(input.repoEntries === undefined ? {} : { repoEntries: input.repoEntries }),
+  });
+
+  return { ecosystems, checks, setup };
 }

@@ -47,6 +47,22 @@ describe('EmptyState', () => {
     expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
   });
 
+  it('can be the page heading for a 404, in an empty panel or an error panel', () => {
+    const { rerender } = render(
+      <StatePanel kind="empty" title="Gone" headingLevel={1} />,
+    );
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Gone' })).toBeInTheDocument();
+
+    rerender(<StatePanel kind="error" title="Broken" headingLevel={1} />);
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Broken' })).toBeInTheDocument();
+
+    rerender(<StatePanel kind="error" title="Broken" />);
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Broken' })).toBeInTheDocument();
+  });
+
   it('is what StatePanel renders for its empty kind', () => {
     render(
       <StatePanel kind="empty" title="Nothing matches" actions={<a href="/x">Clear</a>}>

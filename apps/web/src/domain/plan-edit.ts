@@ -7,7 +7,8 @@
  *   plan version on the server, so one request per batch keeps the version list readable. Only
  *   what actually changed is sent, and reordering is sent only when the surviving tickets are
  *   in a different order than the plan has them. A removed ticket stays in the draft (greyed,
- *   restorable) until saved, so a mis-click costs nothing. The owner may also take one of the Director's
+ *   restorable) until saved, so a mis-click costs nothing. The owner may also pick a ticket's care level (lane); it is
+ *   sent only when it differs from the plan, and the server then keeps it as the owner's choice (d-0177). The owner may also take one of the Director's
  *   pipeline changes off a ticket (`drop_pipeline_ops`, by position), never add one.
  *
  * Exports: draftOf(), moveDraft(), patchDraft(), toggleDropOp(), isDraftDirty(), editBody(), canSaveDraft().
@@ -22,6 +23,7 @@ export function draftOf(tickets: readonly PlanTicket[]): readonly DraftTicket[] 
     key: t.key,
     title: t.title,
     priority: t.priority,
+    lane: t.lane,
     removed: false,
     dropOps: [],
   }));
@@ -93,6 +95,7 @@ export function editBody(
     const change = {
       ...(title !== was.title && title !== '' ? { title } : {}),
       ...(item.priority !== was.priority ? { priority: item.priority } : {}),
+      ...(item.lane !== was.lane ? { lane: item.lane } : {}),
       ...(item.removed ? { removed: true } : {}),
       ...(!item.removed && item.dropOps.length > 0
         ? { drop_pipeline_ops: item.dropOps }

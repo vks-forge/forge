@@ -9,10 +9,11 @@
  *   reason), and every other run must lose them, including secrets of runs the database no
  *   longer knows (left by a crash or a wiped database).
  *
- * Pins: kept for starting, running, settling and interrupted runs and for a successful run
- *   while its ticket is open (a rework run re-verifies its chain as evidence for the files it
- *   edited); retired for every other outcome, once the ticket is done or cancelled, and for
- *   unknown runs; a failing store is logged and does not throw.
+ * Pins: kept for starting, running, settling and interrupted runs and for EVERY ended run
+ *   (success, paused, error, turn limit, timeout, cancelled) while its ticket is open, since a
+ *   later run of the ticket re-verifies its chain as evidence for the files it edited or read
+ *   (d-0178); retired once the ticket is done or cancelled or its row is gone, and for unknown
+ *   runs; a failing store is logged and does not throw.
  * Depends on: src/services/secret-retirement, @forge/db (memory), @forge/hooks, @forge/secrets.
  *   No IO.
  */
@@ -98,16 +99,46 @@ describe('secret retirement', () => {
   );
 
   it.each(['error', 'cancelled', 'timeout', 'refused', 'max_turns', 'settled'] as const)(
-    'retires the secrets of a run that ended as %s',
+    'keeps the secrets of a run that ended as %s while its ticket is open (a paused run, an errored run)',
     async (status) => {
       const { retirement, store } = await rig([
-        { run: run('run-1', { status, ended_at: T }) },
+        { run: run('run-1', { status, ended_at: T }), ticket: { status: 'in_progress' } },
+      ]);
+
+      expect(await retirement.sweep()).toBe(0);
+      expect(await store.list('run/')).toEqual(['run/run-1/secret-g1']);
+    },
+  );
+
+  it.each([
+    ['error', 'done'],
+    ['max_turns', 'cancelled'],
+    ['timeout', 'done'],
+    ['cancelled', 'cancelled'],
+    ['settled', 'done'],
+  ] as const)(
+    'retires the secrets of a run that ended as %s once its ticket is %s',
+    async (status, ticketStatus) => {
+      const { retirement, store } = await rig([
+        { run: run('run-1', { status, ended_at: T }), ticket: { status: ticketStatus } },
       ]);
 
       expect(await retirement.sweep()).toBe(1);
       expect(await store.list('run/')).toEqual([]);
     },
   );
+
+  it('retires the secrets of an ended run whose ticket row is missing', async () => {
+    const { retirement, store, registry, storage } = await rig();
+    await storage.transaction((tx) =>
+      tx.runs.insert(run('run-1', { status: 'error', ended_at: T })),
+    );
+
+    await registry.register('run-1', 'token');
+
+    expect(await retirement.sweep()).toBe(1);
+    expect(await store.list('run/')).toEqual([]);
+  });
 
   it.each(['verifying', 'review', 'needs_signoff'] as const)(
     'keeps a successful run while its ticket is %s and the gates may still judge it',
@@ -168,7 +199,7 @@ describe('secret retirement', () => {
 
   it('retires every generation of a run, and the secrets of runs the database does not know', async () => {
     const { retirement, store, registry } = await rig([
-      { run: run('run-1', { status: 'error', ended_at: T }) },
+      { run: run('run-1', { status: 'error', ended_at: T }), ticket: { status: 'done' } },
     ]);
 
     await registry.register('run-1', 'token-2', 2);
@@ -180,7 +211,7 @@ describe('secret retirement', () => {
 
   it('never touches secrets outside run/', async () => {
     const { retirement, store } = await rig([
-      { run: run('run-1', { status: 'error', ended_at: T }) },
+      { run: run('run-1', { status: 'error', ended_at: T }), ticket: { status: 'done' } },
     ]);
 
     await store.put('github/acme/key', new Uint8Array([1]));

@@ -8,7 +8,7 @@
  *   lets a human review a grant file without learning layer-specific formats
  *   (tool-system.md §5.1, §5.2, §13).
  *
- * Exports: Effect, CallRule, Grant.
+ * Exports: Effect, CallRule, ApprovedRule, Grant.
  * Depends on: zod. No IO.
  */
 
@@ -34,6 +34,22 @@ export const CallRule = z.object({
 export type CallRule = z.infer<typeof CallRule>;
 
 /**
+ * A rule the owner created by answering "Always for this project" on a tool approval (d-0175).
+ * Always an `allow`, always exact (no shell wildcard, never a protected path); it records which
+ * ticket and approval created it so Settings can show where it came from and revoke it. It
+ * only lifts a lane `ask`, never a deny.
+ */
+export const ApprovedRule = z.object({
+  id: z.string().min(1),
+  action: z.string().min(1),
+  resource: z.string().min(1),
+  effect: z.literal('allow'),
+  created_at: z.iso.datetime(),
+  source: z.object({ ticket_id: z.string().min(1), interaction_id: z.string().min(1) }),
+});
+export type ApprovedRule = z.infer<typeof ApprovedRule>;
+
+/**
  * A project or ticket grant. `allow` omitted means "no narrowing of the tool set";
  * present means "only these". `deny` always wins. It can never add a tool the lane
  * ceiling excludes, except naming a project-gated tool the lane lets a project grant.
@@ -42,5 +58,7 @@ export const Grant = z.object({
   allow: z.array(z.string().min(1)).optional(),
   deny: z.array(z.string().min(1)).default([]),
   rules: z.array(CallRule).default([]),
+  /** Owner-approved "always" rules; only the project grant's list is read (see `effectiveGrant`). */
+  approved: z.array(ApprovedRule).default([]),
 });
 export type Grant = z.infer<typeof Grant>;

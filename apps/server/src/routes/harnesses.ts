@@ -5,21 +5,26 @@
  *   to say where it is (or leave it to PATH), pick the login, an API key or an OAuth token,
  *   paste the credential and check the whole thing works before a ticket depends on it.
  *   The credential goes straight into the SecretStore and is never returned: the list only
- *   says whether one is stored. A save resets the last test result, because it no longer
- *   describes the new settings. The test costs nothing unless `?live=1` is given, which makes
+ *   says whether one is stored. A save that changes the binary or the sign-in resets the last test
+ *   result, because it no longer describes the new settings; any other save (the Bypass switch, a
+ *   new credential) keeps it. Each row also carries `last_run`: what the newest ended Worker run on
+ *   it did (time, status, version), so a harness that has been working for weeks never reads "Not tested yet". The test costs nothing unless `?live=1` is given, which makes
  *   one real one-word model call. A harness that ran out of quota shows `paused_until` and
  *   `pause_reason` (and the response lists every active pause, registered or not) so the owner
  *   sees why tickets wait; the pause clears itself when the time passes. The `claude setup-token` sign-in flow (a terminal session
  *   driven from the UI) is not here yet; for now the owner pastes a token minted elsewhere.
  *
+ *   `bypass_permissions` (d-0183) is saved with the row and listed with its effective value
+ *   (`bypass_permissions_effective`); a save that omits it keeps the stored one.
+ *
  * Exports: harnessRoutes().
- * Depends on: @forge/core (Harness, HarnessId, harnessSecretName), schemas/api,
- *   services/http/{body,http-errors,respond}, types/routes. IO: storage and SecretStore
+ * Depends on: @forge/core (Harness, HarnessId, bypassOn, harnessSecretName), schemas/api,
+ *   services/harness-view, services/http/{body,http-errors,respond}, types/routes. IO: storage and SecretStore
  *   access, and whatever the injected tester runs.
  */
 
-import { Harness, HarnessId, harnessSecretName } from '@forge/core';
-import type { HarnessState } from '@forge/core';
+import { Harness, HarnessId, bypassOn, harnessSecretName } from '@forge/core';
+import type { HarnessState, Run } from '@forge/core';
 import type { HarnessSetup } from '@forge/drivers';
 import {
   HarnessPutBody,
@@ -30,6 +35,7 @@ import {
 import { readJson } from '#/services/http/body.js';
 import { HttpError } from '#/services/http/http-errors.js';
 import { DEFAULT_HARNESS } from '#/services/harness-source.js';
+import { lastRunOf, recentEndedRuns, testFieldsOf } from '#/services/harness-view.js';
 import { sendJson } from '#/services/http/respond.js';
 import type { Route, RouteContext } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
@@ -72,14 +78,24 @@ async function activePauses(deps: RouteDeps): Promise<HarnessState[]> {
 }
 
 /** Row plus whether a credential of each kind is stored; never the credential. */
-async function describe(deps: RouteDeps, row: Harness, pauses?: HarnessState[]) {
+async function describe(
+  deps: RouteDeps,
+  row: Harness,
+  pauses?: HarnessState[],
+  runs?: readonly Run[],
+) {
   const names = new Set(await deps.secrets.list(`harness/${row.id}/`));
   const pause = (pauses ?? (await activePauses(deps))).find(
     (s) => s.harness_id === row.id,
   );
 
+  const ended = runs ?? (await recentEndedRuns(deps));
+
   return {
     ...row,
+    // The stored value stays as saved (absent = never set); this is what a run will use.
+    bypass_permissions_effective: bypassOn(row),
+    ...lastRunOf(row, ended),
     ...(pause ? { paused_until: pause.paused_until, pause_reason: pause.reason } : {}),
     secrets: {
       api_key: names.has(harnessSecretName(row.id, 'api_key')),
@@ -88,14 +104,12 @@ async function describe(deps: RouteDeps, row: Harness, pauses?: HarnessState[]) 
   };
 }
 
-/** A paused harness stays paused through an edit: only a passing check lifts it. */
-const pausedOf = (row: Harness | null) =>
-  row?.status === 'paused'
-    ? {
-        status: 'paused' as const,
-        ...(row.status_note === undefined ? {} : { status_note: row.status_note }),
-      }
-    : { status: 'unknown' as const };
+/** The stored Bypass switch to carry onto a rebuilt row; absent stays absent. */
+const bypassOf = (row: Harness | null, override?: boolean) => {
+  const value = override ?? row?.bypass_permissions;
+
+  return value === undefined ? {} : { bypass_permissions: value };
+};
 
 const currentRow = (deps: RouteDeps, id: string): Promise<Harness | null> =>
   deps.storage.transaction((tx) => tx.harnesses.get(id));
@@ -135,8 +149,11 @@ export function harnessRoutes(deps: RouteDeps): Route[] {
       async handle({ res }) {
         const rows = await deps.storage.transaction((tx) => tx.harnesses.list());
         const pauses = await activePauses(deps);
+        const runs = await recentEndedRuns(deps);
         sendJson(res, 200, {
-          harnesses: await Promise.all(rows.map((row) => describe(deps, row, pauses))),
+          harnesses: await Promise.all(
+            rows.map((row) => describe(deps, row, pauses, runs)),
+          ),
           paused: pauses,
         });
       },
@@ -147,12 +164,19 @@ export function harnessRoutes(deps: RouteDeps): Route[] {
       async handle(ctx) {
         const id = idOf(ctx);
         const body = await readJson(ctx.req, HarnessPutBody);
+        const before = await currentRow(deps, id);
         const row = Harness.parse({
           id,
           kind: body.kind,
           ...(body.binary_path === undefined ? {} : { binary_path: body.binary_path }),
           auth_mode: body.auth_mode,
-          ...pausedOf(await currentRow(deps, id)),
+          ...testFieldsOf(
+            before,
+            before?.kind === body.kind &&
+              before.binary_path === body.binary_path &&
+              before.auth_mode === body.auth_mode,
+          ),
+          ...bypassOf(before, body.bypass_permissions),
         });
 
         await deps.storage.transaction((tx) => tx.harnesses.upsert(row));
@@ -172,7 +196,7 @@ export function harnessRoutes(deps: RouteDeps): Route[] {
           new TextEncoder().encode(body.value),
         );
 
-        // The value is not echoed, and the last test no longer describes this credential.
+        // The value is not echoed; the last test result stays (a later run or test replaces it).
         await deps.storage.transaction((tx) =>
           tx.harnesses.upsert(
             Harness.parse({
@@ -180,7 +204,8 @@ export function harnessRoutes(deps: RouteDeps): Route[] {
               kind: row.kind,
               ...(row.binary_path === undefined ? {} : { binary_path: row.binary_path }),
               auth_mode: row.auth_mode,
-              ...pausedOf(row),
+              ...testFieldsOf(row),
+              ...bypassOf(row),
             }),
           ),
         );

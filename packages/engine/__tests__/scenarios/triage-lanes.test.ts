@@ -122,7 +122,7 @@ describe('lanes without a runner are parked, lanes with one run', () => {
       type: 'docs',
     });
 
-    const report = await rig.restart('srv-b').tick();
+    const report = await rig.tickOn(rig.restart('srv-b'));
 
     expect(report.triaged).toEqual([{ ticketId: id, lane: 'express', parked: false }]);
     expect(await rig.ticket(id)).toMatchObject({ title: 'Mine', type: 'docs' });

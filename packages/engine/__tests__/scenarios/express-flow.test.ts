@@ -83,14 +83,15 @@ describe('Express flow', () => {
     expect(stored).toBe(sha256Hex(start.env.FORGE_RUN_TOKEN!));
   });
 
-  it('uses the model matrix: opus for Director steps, the budget cap, and the memory slice', async () => {
+  it('uses the model matrix: sonnet for the cheap Director steps, the budget cap, and the memory slice', async () => {
     const rig = await makeRig();
     await rig.request('Fix it');
     await rig.tick();
     const [triage] = rig.llm.callsTo('triage');
     const [prompt] = rig.llm.callsTo('dispatch_prompt');
-    expect(triage!.opts).toEqual({ model: 'opus', budgetUsd: 2 });
-    expect(prompt!.opts.model).toBe('opus');
+    // Triage and the brief are quick structured turns: sonnet (eval fix 5, owner can change it in Director settings).
+    expect(triage!.opts).toEqual({ model: 'sonnet', budgetUsd: 2 });
+    expect(prompt!.opts.model).toBe('sonnet');
     expect(JSON.stringify(triage!.input)).toContain('d-0001');
     expect(JSON.stringify(prompt!.input)).toContain('r-0001');
     expect(rig.memory.calls).toContain('forge');
@@ -243,7 +244,7 @@ describe('Express flow', () => {
     const rig = await makeRig();
     await rig.request('One');
     const [a, b] = await Promise.all([rig.tick(), rig.tick()]);
-    expect(a).toBe(b);
+    expect(a).toEqual(b);
     expect(rig.llm.callsTo('triage')).toHaveLength(1);
   });
 });

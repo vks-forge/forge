@@ -8,6 +8,7 @@
  *   producer words the same cause the same way; the web client adds its own richer copy on top.
  *
  * Exports: titleOf(), setupSummary(), fixHrefFor(), stillBroken(), resolveAnswer().
+ *   A failed worktree setup gets one hint line (missing tool, timeout, or "see the output").
  * Depends on: @forge/core (escalation schemas). No IO.
  */
 
@@ -33,6 +34,7 @@ const FAILURE_TITLES: Readonly<Record<FailureCause, string>> = {
   refused: 'Stopped: the model declined the task',
   question_timeout: 'Stopped: a question went unanswered',
   no_agent_available: 'No agent could run this stage',
+  merge_conflict: "Stopped: this ticket's changes clash with work that merged first",
 };
 
 const SIGN_OFF_TITLES: Readonly<Record<SignOffCause, string>> = {
@@ -48,6 +50,9 @@ const oneLine = (text: string, max: number): string => {
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
 };
 
+/** The harness as the owner knows it. */
+const harnessName = (kind: string): string => (kind === 'claude' ? 'Claude Code' : kind);
+
 function setupTitle(cause: SetupCause): string {
   switch (cause.type) {
     case 'login':
@@ -56,6 +61,8 @@ function setupTitle(cause: SetupCause): string {
       return `A tool needs your decision: ${cause.tool}`;
     case 'harness_build':
       return `A new ${cause.harness_kind} build needs a look: ${cause.version}`;
+    case 'worktree_setup':
+      return `Forge could not get the workspace ready: ${cause.step}`;
   }
 }
 
@@ -69,15 +76,41 @@ export function titleOf(payload: EscalationPayload): string {
     case 'setup':
       return setupTitle(payload.cause);
     case 'decision':
-      return payload.cause === 'scope_drift'
-        ? 'Held: the change is bigger than planned'
-        : oneLine(`Held: ${payload.stage_label} found blocking findings`, TITLE_MAX);
+      if (payload.cause === 'scope_drift') {
+        return 'Held: the change is bigger than planned';
+      }
+
+      if (payload.cause === 'provenance_hold') {
+        return 'Held: Forge cannot prove who changed these files';
+      }
+
+      return oneLine(`Held: ${payload.stage_label} found blocking findings`, TITLE_MAX);
     case 'sign_off':
       return SIGN_OFF_TITLES[payload.cause];
+    case 'permission':
+      return oneLine(`Allow \`${payload.what}\`?`, TITLE_MAX);
   }
 }
 
 const GRANT_REASONS: readonly string[] = ['not_granted', 'unattended'];
+
+const NOT_FOUND =
+  /not found|not recognized|no such file|enoent|cannot find|could not be found/i;
+
+/** The one hint line under a failed setup step: a missing tool, a timeout, or "see the output". */
+function setupHint(cause: Extract<SetupCause, { type: 'worktree_setup' }>): string {
+  if (cause.timed_out) {
+    return 'It ran too long and was stopped. Try again, or raise the time limit in the setup step.';
+  }
+
+  if (cause.exit_code === null || cause.exit_code === 127 || NOT_FOUND.test(cause.tail)) {
+    const tool = cause.command.trim().split(/\s+/)[0] ?? cause.command;
+
+    return `This computer does not have ${tool}, or Forge cannot find it. Install it, or change the setup step.`;
+  }
+
+  return 'The last lines it printed are in the details.';
+}
 
 /** What is wrong and what the owner does, in a sentence or two. */
 export function setupSummary(cause: SetupCause): string {
@@ -93,7 +126,9 @@ export function setupSummary(cause: SetupCause): string {
     }
 
     case 'harness_build':
-      return `The installed ${cause.harness_kind} build is now ${cause.version}, but Forge approved the tools of another build. Review the new build and approve its tools, then check again.`;
+      return `${harnessName(cause.harness_kind)} updated to ${cause.version}. Approve its tools in Settings → Harnesses → ${harnessName(cause.harness_kind)}; the ticket resumes by itself.`;
+    case 'worktree_setup':
+      return `Before a Worker starts, Forge makes a fresh copy of your project and installs what it needs. The step ${cause.step} (${cause.command}) stopped with an error, so no Worker started and nothing was spent. ${setupHint(cause)}`;
   }
 }
 
@@ -105,6 +140,10 @@ export function fixHrefFor(
 ): string {
   if (cause.type === 'login') {
     return `/settings/harnesses/${cause.harness_id}`;
+  }
+
+  if (cause.type === 'worktree_setup') {
+    return `/p/${projectSlug}/settings/checks#setup`;
   }
 
   if (cause.type === 'tool' && GRANT_REASONS.includes(cause.reason_code)) {
@@ -123,6 +162,8 @@ export function stillBroken(cause: SetupCause): string {
       return `The tool ${cause.tool} is still not allowed (${cause.reason_code}). Fix it in Settings, then check again.`;
     case 'harness_build':
       return `The ${cause.harness_kind} build ${cause.version} has not passed its compatibility check yet.`;
+    case 'worktree_setup':
+      return `The setup steps have not changed since ${cause.step} failed.`;
   }
 }
 

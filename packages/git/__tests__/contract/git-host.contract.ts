@@ -29,6 +29,15 @@ export interface GitHostHarness {
   /** Head sha of the base branch on the remote. */
   baseSha(): Promise<string>;
   close(): Promise<void>;
+  /** Present when the host can be asked for the base tip; probes the local repository `syncBase` fetches into. */
+  readonly sync?: {
+    /** The ref `syncBase` is expected to report. */
+    readonly ref: string;
+    /** Commits on the remote's base branch behind the host's back (a merge by someone else) and returns the new tip. */
+    advanceBase(): Promise<string>;
+    /** The commit `ref` resolves to in the local repository, or null. */
+    resolveRef(ref: string): Promise<string | null>;
+  };
 }
 
 export function describeGitHostContract(
@@ -198,6 +207,22 @@ export function describeGitHostContract(
       });
 
       expect(await h.branchExists(h.baseBranch)).toBe(true);
+    });
+
+    it('syncBase reports the remote base tip under a private ref, and follows the base as it moves', async () => {
+      if (!h.sync) {
+        return;
+      }
+
+      const first = await h.host.syncBase();
+      const tip = await h.sync.advanceBase();
+      const second = await h.host.syncBase();
+
+      expect(first.ref).toBe(h.sync.ref);
+      expect(first.sha).toMatch(/^[0-9a-f]{40}$/);
+      expect(await h.sync.resolveRef(first.ref)).toBe(second.sha);
+      expect(second).toEqual({ ref: h.sync.ref, sha: tip });
+      expect(second.sha).not.toBe(first.sha);
     });
   });
 }

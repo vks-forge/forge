@@ -9,7 +9,8 @@
  *   oversight, and the owner should pick knowingly.
  *
  * Exports: HouseRulesField, ApprovalField, SignOffField.
- * Depends on: lucide-react, components/ui/field, components/ui/picker, domain/director-settings.
+ * Depends on: lucide-react, components/ui/field, components/ui/picker, domain/director-settings,
+ *   domain/protected-files-copy.
  */
 
 import { Lock } from 'lucide-react';
@@ -20,6 +21,7 @@ import {
   SIGN_OFF_ITEMS,
   SIGN_OFF_ORDER,
 } from '#/domain/director-settings.js';
+import { PROTECTED_RULE } from '#/domain/protected-files-copy.js';
 import type { ApprovalMode } from '#/schemas/director-config.js';
 import type { SignOffTier } from '#/types/director-ui.types.js';
 
@@ -114,7 +116,7 @@ export function SignOffField(props: {
       </p>
       <p className="flex items-center gap-1.5 text-xs font-medium">
         <Lock aria-hidden="true" className="size-3.5 shrink-0" />
-        Tier C always needs you.
+        {PROTECTED_RULE}
       </p>
     </div>
   );

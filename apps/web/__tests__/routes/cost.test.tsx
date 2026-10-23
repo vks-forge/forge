@@ -22,10 +22,58 @@ describe('Cost', () => {
     renderWork(COST, { [REPORT]: { body: costBody() } });
 
     expect(
-      await screen.findByText('5 of 6 runs reported cost. Spend covers only those runs.'),
+      await screen.findByText(
+        /5 of 6 runs reported cost\. Spend covers only those runs\./,
+      ),
     ).toBeInTheDocument();
 
-    expect(screen.getByText('Spend reported').closest('div')).toHaveTextContent('$4.25');
+    expect(screen.getByText('Total spend').closest('div')).toHaveTextContent('$4.25');
+  });
+
+  it('leads with the total, splits it Workers then Director, stacks the bars with a legend and dates the old Director spend', async () => {
+    const day = costBody().per_day_split.map((point, i) =>
+      i === 29 ? { ...point, worker_usd: 3, director_usd: 7 } : point,
+    );
+
+    renderWork(COST, {
+      [REPORT]: {
+        body: costBody({
+          total_usd: 10,
+          worker_usd: 3,
+          director_usd: 7,
+          director_steps_total: 12,
+          director_steps_recorded: 12,
+          per_day_split: day,
+          per_day: day.map((p) => ({
+            date: p.date,
+            value: p.worker_usd + p.director_usd,
+          })),
+        }),
+      },
+    });
+
+    const tile = (await screen.findByText('Total spend')).closest('div');
+
+    expect(tile).toHaveTextContent('$10.00');
+    expect(tile).toHaveTextContent('Workers $3.00 · Director $7.00');
+    expect(tile).toHaveTextContent(
+      '5 of 6 runs and 12 of 12 Director steps reported cost',
+    );
+
+    const chart = screen.getByRole('group', { name: 'Spend per day (USD)' });
+
+    expect(chart).toHaveAttribute('aria-roledescription', 'chart');
+    expect(
+      within(chart.closest('figure')!).getByRole('list', { name: 'Legend' }),
+    ).toHaveTextContent(/Workers.*Director/);
+
+    expect(within(chart).getAllByRole('img').at(-1)).toHaveAccessibleName(
+      /\$10\.00 \(Workers \$3\.00 · Director \$7\.00\)/,
+    );
+
+    expect(
+      screen.getByText('Director spend before 20 Oct is dated by card.'),
+    ).toBeVisible();
   });
 
   it('shows models as tokens with a no-price note, and the budgets that exist', async () => {
@@ -73,7 +121,10 @@ describe('Cost', () => {
       await screen.findByText('0 of 6 runs reported cost. There is no spend to show.'),
     ).toBeInTheDocument();
 
-    expect(screen.getByText('No run reported a cost in this range.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Nothing reported a cost in this range.'),
+    ).toBeInTheDocument();
+
     expect(screen.queryByRole('img', { name: /Spend per day/ })).not.toBeInTheDocument();
   });
 

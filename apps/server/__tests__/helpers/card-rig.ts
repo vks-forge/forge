@@ -117,6 +117,7 @@ export async function startCardRig(
       ...stubHarnessDeps(),
       engine: {
         explainWait: vi.fn(async () => null),
+        explainWaits: vi.fn(async () => new Map()),
         cardDirector: vi.fn(() => ({ state: 'idle' })),
         closeCardWork: vi.fn(async () => []),
         reviewOf: vi.fn(async () => null),

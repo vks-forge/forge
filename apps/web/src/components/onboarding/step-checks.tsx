@@ -5,18 +5,22 @@
  *   on the merged result, so they must be right. Forge suggests them from the files it found;
  *   this step shows them as the same editable list the project settings screen uses, and says
  *   plainly when none were found, so the person knows an empty list means an unchecked merge
- *   rather than something Forge forgot.
+ *   rather than something Forge forgot. When Forge found steps to run before each ticket (installing
+ *   packages, whatever the language needs) it says so in one read-only line; there is nothing to
+ *   decide now, and nothing is shown for a project with no steps.
  *
  * Exports: StepChecks.
- * Depends on: routes/project-settings/checks-editor, types/onboarding.types.
+ * Depends on: routes/project-settings/checks-editor, domain/setup-draft, types/onboarding.types.
  */
 
+import { commandsLine } from '#/domain/setup-draft.js';
 import { ChecksEditor } from '#/routes/project-settings/checks-editor.js';
 import type { ProjectWizard } from '#/types/onboarding.types.js';
 
 export function StepChecks(props: { wizard: ProjectWizard }) {
   const { wizard } = props;
   const detected = wizard.inspection?.checks.length ?? 0;
+  const setup = wizard.inspection?.setup ?? [];
 
   return (
     <div className="grid gap-4">
@@ -29,6 +33,16 @@ export function StepChecks(props: { wizard: ProjectWizard }) {
         checks={wizard.draft.checks}
         onChange={(checks) => wizard.patch({ checks })}
       />
+      {setup.length > 0 ? (
+        <p className="text-sm">
+          <span className="font-medium">Before each ticket Forge will run: </span>
+          <code className="break-words font-data text-xs">{commandsLine(setup)}</code>
+          <span className="block text-xs text-muted">
+            Workers cannot install packages, so Forge does it first. You can change this
+            later in project settings.
+          </span>
+        </p>
+      ) : null}
       {wizard.shown.checks ? (
         <p role="alert" className="text-xs text-danger">
           {wizard.shown.checks}

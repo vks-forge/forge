@@ -95,6 +95,20 @@ const ask = async (text: string) => {
   }
 };
 
+const countRetiredRejected = async (folder: string): Promise<number> => {
+  let n = 0;
+  for (const e of await readdir(folder)) {
+    if (
+      e.endsWith('.md') &&
+      /^status:\s*superseded\s*$/m.test(await readFile(join(folder, e), 'utf8'))
+    ) {
+      n += 1;
+    }
+  }
+
+  return n;
+};
+
 describe('the local index', () => {
   it('holds every file, none refused, and finds the TDD decision in the top three', async () => {
     const before = await files(dir);
@@ -125,7 +139,11 @@ describe('the local index', () => {
     await opened.close();
 
     expect(opened.rebuilt).toBe(true);
-    expect(list.length).toBe(everything - (await count(join(dir, 'outcomes'))));
+    // The list is every record but outcomes; scopeAdmits hides a rejected approach whose file says
+    // superseded (it is no longer in force), so those are subtracted too.
+    const retired = await countRetiredRejected(join(dir, 'rejected'));
+
+    expect(list.length).toBe(everything - (await count(join(dir, 'outcomes'))) - retired);
     expect(ids(hits).slice(0, 3)).toContain('d-0015');
     expect(view).toMatchObject({ id: 'd-0015', kind: 'decision', pinned: true });
     expect(related).not.toBeNull();

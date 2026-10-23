@@ -15,8 +15,27 @@ import {
   Harness,
   HarnessAuthMode,
   InvalidInputError,
+  bypassOn,
   harnessSecretName,
 } from '#/index.js';
+
+describe('Harness bypass_permissions (d-0183)', () => {
+  const row = { id: 'claude', kind: 'claude', auth_mode: 'login', status: 'ok' };
+
+  it('reads as on when absent, so a Worker is never stopped for an approval', () => {
+    expect(Harness.parse(row).bypass_permissions).toBeUndefined();
+    expect(bypassOn(Harness.parse(row))).toBe(true);
+  });
+
+  it('keeps an explicit off and rejects a non-boolean', () => {
+    expect(Harness.parse({ ...row, bypass_permissions: false }).bypass_permissions).toBe(
+      false,
+    );
+
+    expect(bypassOn(Harness.parse({ ...row, bypass_permissions: false }))).toBe(false);
+    expect(Harness.safeParse({ ...row, bypass_permissions: 'no' }).success).toBe(false);
+  });
+});
 
 describe('Harness', () => {
   it('accepts a minimal row and optional fields', () => {
@@ -27,7 +46,12 @@ describe('Harness', () => {
         auth_mode: 'login',
         status: 'unknown',
       }),
-    ).toEqual({ id: 'claude', kind: 'claude', auth_mode: 'login', status: 'unknown' });
+    ).toEqual({
+      id: 'claude',
+      kind: 'claude',
+      auth_mode: 'login',
+      status: 'unknown',
+    });
 
     expect(
       Harness.safeParse({

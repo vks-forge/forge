@@ -23,17 +23,24 @@ import {
   openPr,
   otherKeys,
 } from '#tests/helpers/github-rig.js';
+import { makeGitHubSyncFixture } from '#tests/helpers/github-sync-fixture.js';
 import { rejection } from '#tests/helpers/rejection.js';
 
 afterEach(closeGitHubRigs);
 
 describeGitHostContract('github app (fake server)', async (): Promise<GitHostHarness> => {
-  const { server, host } = await rig();
+  const fx = await makeGitHubSyncFixture();
+  const { server, host } = await rig({ gitBase: fx.gitBase, localRepo: fx.localRepo });
   let n = 0;
 
   return {
     host,
     baseBranch: 'main',
+    sync: {
+      ref: 'refs/forge/base/main',
+      advanceBase: fx.advanceBase,
+      resolveRef: fx.resolveRef,
+    },
     async seedBranch(branch) {
       const sha = `sha${(n += 1)}`;
       server.branches.set(branch, sha);
@@ -42,7 +49,10 @@ describeGitHostContract('github app (fake server)', async (): Promise<GitHostHar
     },
     branchExists: async (b) => server.branches.has(b),
     baseSha: async () => server.baseSha(),
-    close: server.close,
+    close: async () => {
+      await server.close();
+      await fx.cleanup();
+    },
   };
 });
 

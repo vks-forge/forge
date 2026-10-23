@@ -12,7 +12,8 @@
  *   one door rather than a second hook, and the card's own phase follows its tickets through
  *   `syncCardWithTickets` (the card starts and completes with its work). A ticket that stops
  *   waiting on a person also closes any wait still pending, so no interaction outlives the
- *   state it described.
+ *   state it described. `updated_at` never goes below the ticket's `created_at` or its last write, so a move stamped
+ *   with an older clock (a tick that began before the ticket existed) cannot make history run backwards.
  *
  * Exports: moveTicketTx(), moveTicket(), parkPlan().
  * Depends on: @forge/core (transition, toTicketPatch), tick/card-log, tick/card-phase, tick/escalation-settle,
@@ -39,6 +40,14 @@ const WAITING: readonly Ticket['status'][] = [
   'review',
   'needs_signoff',
 ];
+
+/** The plan's own reason wins; a blocked or parked ticket otherwise carries its visible blocker. */
+function reasonOf(
+  planned: string | undefined,
+  blocked: string | undefined,
+): string | undefined {
+  return planned ?? blocked;
+}
 
 /** Applies `plan(ticket)` inside an open transaction; `null` from the planner means "nothing to do". */
 export async function moveTicketTx(
@@ -67,7 +76,12 @@ export async function moveTicketTx(
     next = r.value;
   }
 
-  next = { ...next, ...p.fields, updated_at: nowIso };
+  // Never before the ticket's own creation or last write: a stamp frozen at an earlier tick must not run time backwards.
+  const updatedAt = [nowIso, current.updated_at, current.created_at].reduce((a, b) =>
+    a >= b ? a : b,
+  );
+
+  next = { ...next, ...p.fields, updated_at: updatedAt };
   const stored = await tx.tickets.updateTicketCas(
     current.id,
     current.status_version,
@@ -79,6 +93,7 @@ export async function moveTicketTx(
   }
 
   if (next.status !== current.status) {
+    const reason = reasonOf(p.reason, next.blocked_reason);
     await logCardEvent(tx, current.card_id, {
       kind: 'ticket_state',
       at: nowIso,
@@ -87,7 +102,7 @@ export async function moveTicketTx(
         ticket_id: current.id,
         from: current.status,
         to: next.status,
-        ...(next.blocked_reason === undefined ? {} : { reason: next.blocked_reason }),
+        ...(reason === undefined ? {} : { reason }),
       },
     });
 

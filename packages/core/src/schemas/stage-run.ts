@@ -76,6 +76,8 @@ export const StageOutcome = z.object({
   signed_by: z.enum(['director', 'owner']).optional(),
   /** Sign-off: why the Director signed, or why it declined and left the signature to the owner. */
   sign_reason: z.string().max(500).optional(),
+  /** Sign-off: the tier the Director signed; the merge door lets only a row saying `C` carry tier C (d-0181). */
+  signed_tier: z.enum(['A', 'B', 'C']).optional(),
   /** The owner overruled a held stage (`merge_anyway` on findings, `continue` on scope drift); the row then reads passed. */
   override: z
     .object({

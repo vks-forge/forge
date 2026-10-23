@@ -1,16 +1,11 @@
 /**
  * Rule test: no waiting state of a ticket is a dead end.
  *
- * Why: the owner can only act on what the screen offers, so a ticket that waits with no action
- *   is stuck until someone edits the database (d-0135). Every way a ticket can wait on a person
- *   or on the scheduler maps to at least one action here, with and without a card, and a new
- *   ticket status, failure cause or setup cause that has no mapping fails this test instead of
- *   shipping a dead end.
- *
- * Pins: the action table of the brief (order is button order), replan offered only for a card
- *   that is not a Discussion, every FailureCause, SetupCause type, escalation kind, ticket
- *   status, scheduler wait kind and card phase with needs_you yields at least one action, and
- *   a property over all of them together.
+ * Why: the owner can only act on what the screen offers, so a ticket that waits with no action is
+ *   stuck until someone edits the database (d-0135). Every wait on a person or the scheduler maps
+ *   to at least one action, with and without a card; an unmapped status or cause fails here.
+ * Pins: the action table (order is button order), replan only for a card that is not a Discussion,
+ *   every cause, kind (permission too), status, wait kind and card phase has an action.
  * Depends on: src/domain/escalation-actions, src/schemas/*, fast-check, vitest.
  */
 
@@ -30,12 +25,17 @@ import {
   EscalationAction,
   EscalationKind,
   FailureCause,
-  SetupCause,
 } from '#/schemas/escalation.js';
 import type { EscalationPayload } from '#/schemas/escalation.js';
+import { SetupCause } from '#/schemas/escalation-setup.js';
 import { Tier, TicketStatus } from '#/schemas/ticket.js';
 import type { EscalationBase } from '#/types/escalation.types.js';
-import { decisionPayload, signOffPayload } from '#tests/helpers/escalation-payloads.js';
+import {
+  decisionPayload,
+  permissionPayload,
+  signOffPayload,
+  worktreeSetupCause,
+} from '#tests/helpers/escalation-payloads.js';
 
 const AT = '2026-10-17T00:00:00.000Z';
 
@@ -49,6 +49,7 @@ const setupCauses = {
     reason_code: 'schema_pending',
   },
   harness_build: { type: 'harness_build', harness_kind: 'claude', version: '1.0.1' },
+  worktree_setup: worktreeSetupCause,
 } as const;
 
 function payloadOf(kind: EscalationKind, detail?: string): EscalationPayload {
@@ -112,15 +113,6 @@ describe('action tables', () => {
     },
   );
 
-  it('offers recheck and cancel for setup, whatever the cause', () => {
-    for (const type of SetupCause.options.map((o) => o.shape.type.value)) {
-      expect(escalationActions(payloadOf('setup', type), { replannable: true })).toEqual([
-        'recheck',
-        'cancel',
-      ]);
-    }
-  });
-
   it('drops replan when the ticket has no card to re-plan', () => {
     expect(
       escalationActions(payloadOf('failure', 'retry_cap'), { replannable: false }),
@@ -129,6 +121,10 @@ describe('action tables', () => {
     expect(
       escalationActions(payloadOf('failure', 'lane_hold'), { replannable: false }),
     ).toEqual(['run_as_express', 'cancel']);
+  });
+
+  it('offers retry, replan, cancel for a merge conflict', () => {
+    expect(FAILURE_ACTIONS.merge_conflict).toEqual(['retry', 'replan', 'cancel']);
   });
 
   it('has a row for every failure cause and nothing else', () => {
@@ -204,6 +200,8 @@ describe('no dead ends', () => {
     ...setups,
     ...decisions,
     ...signOffs,
+    permissionPayload(true),
+    permissionPayload(false),
   ];
 
   it('covers every escalation kind', () => {

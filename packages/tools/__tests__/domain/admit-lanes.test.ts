@@ -75,7 +75,21 @@ describe('Standard defaults (asks go to a human)', () => {
       'allow',
       'rule_allow',
     ],
-    [call('mcp__forge__web_fetch', { url: 'https://example.com/a' }), 'ask', 'rule_ask'],
+    [
+      call('mcp__forge__web_fetch', { url: 'https://example.com/a' }),
+      'allow',
+      'rule_allow',
+    ],
+    [
+      call('mcp__forge__web_fetch', { url: 'https://authjs.dev/a/b' }),
+      'allow',
+      'rule_allow',
+    ],
+    [
+      call('mcp__forge__web_fetch', { url: 'http://example.com/a' }),
+      'allow',
+      'rule_allow',
+    ],
     [call('edit', { path: 'migrations/0003.sql' }), 'ask', 'rule_ask'],
     [call('write', { path: 'auth/login.ts' }), 'ask', 'rule_ask'],
     [call('edit', { path: '.claude/settings.json' }), 'ask', 'rule_ask'],
@@ -137,8 +151,15 @@ describe('Full defaults', () => {
     [call('mcp__forge__web_search', { query: 'x' }), 'allow', 'rule_allow'],
     [
       call('mcp__forge__web_fetch', { url: 'https://docs.example.com/a' }),
-      'ask',
-      'rule_ask',
+      'allow',
+      'rule_allow',
+    ],
+    [
+      call('mcp__forge__web_fetch', {
+        url: 'https://authjs.dev/getting-started/adapters/prisma',
+      }),
+      'allow',
+      'rule_allow',
     ],
     [sh('pnpm add zod'), 'ask', 'rule_ask'],
     [call('edit', { path: 'auth/login.ts' }), 'ask', 'rule_ask'],

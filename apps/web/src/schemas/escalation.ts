@@ -10,11 +10,13 @@
  * Exports: EscalationKind, FAILURE_CAUSES, FailureCause, SetupCause, DecisionCause, SignOffCause,
  *   EscalationDecision, EscalationSignOff, EscalationPayload,
  *   ESCALATION_ACTIONS, EscalationAction, EscalationView, EscalationActBody,
- *   EscalationList, EscalationActReply, TicketActReply (schemas and inferred types).
+ *   EscalationList, EscalationActReply, TicketActReply, ActionConsequences, ConsequenceAction (schemas and inferred types).
  * Depends on: @forge/core.
  */
 
 export {
+  ActionConsequences,
+  ConsequenceAction,
   DecisionCause,
   ESCALATION_ACTIONS,
   EscalationAction,

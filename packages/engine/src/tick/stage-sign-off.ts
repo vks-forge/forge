@@ -2,7 +2,7 @@
  * Sign-off stage: the Director signs low-risk work that passed everything, else the owner does.
  *
  * Why: the routine "looks fine, merge it" click is the Director's to take (d-0137) only when nothing
- *   is in doubt, and a tier C change is always a named person's (d-0012, d-0141 item 9). The call is
+ *   is in doubt, and a tier C change is the Director's only on a clean floor (d-0181). The call is
  *   `signOffDecision`, deterministic and with no second model step that could be talked into agreeing:
  *   it reads the tier of the real diff, the Director's own ceiling from its settings, whether every
  *   check of this round passed outright, whether the Director check passed, and whether the owner
@@ -10,28 +10,30 @@
  *   why) and the merge door finishes the job: tier A merges as always, tier B goes through the owner's
  *   door with the signer `director` and leaves a card note with the reasons. Otherwise the stage
  *   hands the ticket to the merge door to wait for the owner, with the reason the Director declined,
- *   which the owner reads on the sign-off card. Tier C can never be signed here: the guard is also in
- *   the state machine and the merge door.
+ *   which the owner reads on the sign-off card. Tier C is signed here only on a clean floor (d-0181:
+ *   no critical or high finding, no secrets path, not Always ask) and otherwise names the one
+ *   failing condition; the merge door and the state machine re-check it.
  *
- * Exports: signOff(), directorSignature().
- * Depends on: @forge/core (signOffDecision), domain/sign-off-facts, tick/{planning-state,stage-records,
+ * Exports: signOff(), directorSignature(), directorSignedTier().
+ * Depends on: @forge/core (signOffDecision, StageRun, Tier), domain/sign-off-facts, tick/{planning-state,stage-records,
  *   verify-merge-steps}, types/stage-runner. IO: the git diff, storage.
  */
 
 import { signOffDecision } from '@forge/core';
-import type { SignOffStage } from '@forge/core';
+import type { SignOffStage, StageRun, Tier } from '@forge/core';
 import { signOffFacts } from '#/domain/sign-off-facts.js';
 import { directorFor } from '#/tick/planning-state.js';
 import { recordStage } from '#/tick/stage-records.js';
-import { tierOfDiff } from '#/tick/verify-merge-steps.js';
+import { secretPathOfDiff, tierOfDiff } from '#/tick/verify-merge-steps.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { StageState, VerifyHooks } from '#/types/stage-runner.types.js';
 import type { VerifyTarget } from '#/types/verify.types.js';
 
-/** The Director's reasons when the pipeline's sign-off stage holds a passed row it signed, else null. */
-export function directorSignature(state: StageState): string | null {
+/** The passed sign-off row the Director signed, if the pipeline's sign-off stage holds one. */
+function directorRow(state: StageState): StageRun | undefined {
   const stage = state.snapshot.definition.stages.find((s) => s.kind === 'sign_off');
-  const row = stage
+
+  return stage
     ? state.records.find(
         (r) =>
           r.stage_id === stage.id &&
@@ -40,8 +42,18 @@ export function directorSignature(state: StageState): string | null {
           r.outcome.signed_by === 'director',
       )
     : undefined;
+}
+
+/** The Director's reasons when the pipeline's sign-off stage holds a passed row it signed, else null. */
+export function directorSignature(state: StageState): string | null {
+  const row = directorRow(state);
 
   return row ? (row.outcome.sign_reason ?? 'every check passed') : null;
+}
+
+/** The tier the Director's row says it signed; the merge door lets tier C through only on `C`. */
+export function directorSignedTier(state: StageState): Tier | undefined {
+  return directorRow(state)?.outcome.signed_tier;
 }
 
 /**
@@ -67,6 +79,10 @@ export async function signOff(
     checkPassed: facts.checkPassed,
     overrides: facts.overrides,
     stepError: false,
+    openSevere: facts.counts.critical + facts.counts.high,
+    // The diff is only read for tier C: no other tier's rule looks at secrets paths.
+    secretsPath: tier === 'C' ? await secretPathOfDiff(t) : null,
+    approvalMode: director.approval_mode,
   });
 
   if (decision.by === 'director') {
@@ -82,7 +98,11 @@ export async function signOff(
           kind: 'director',
         },
         'passed',
-        { signed_by: 'director', sign_reason: decision.reason.slice(0, 500) },
+        {
+          signed_by: 'director',
+          sign_reason: decision.reason.slice(0, 500),
+          signed_tier: tier,
+        },
       ),
     );
 

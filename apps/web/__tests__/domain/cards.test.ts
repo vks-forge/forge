@@ -13,7 +13,12 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '#/api/api-error.js';
 import { awaitingReply, lineOf } from '#/domain/card-chat.js';
-import { filterCards, groupCards, isCardFilterActive } from '#/domain/card-columns.js';
+import {
+  filterCards,
+  firstFilledColumn,
+  groupCards,
+  isCardFilterActive,
+} from '#/domain/card-columns.js';
 import { describeSteerError } from '#/domain/steer-errors.js';
 import { applyEvent, EMPTY_THREAD } from '#/domain/thread.js';
 import type { CardHistoryEvent, CardSummary } from '#/schemas/cards.js';
@@ -30,6 +35,18 @@ const event = (
   at: '2026-10-16T10:00:00.000Z',
   actor: { type: 'system', id: 'forge' },
   payload,
+});
+
+describe('first filled column', () => {
+  it('is the first column in Board order that holds a card, null when all are empty', () => {
+    const done = cards.filter((c) => c.column === 'done');
+    const first = firstFilledColumn(groupCards(cards));
+
+    expect(first).not.toBeNull();
+    expect(groupCards(cards)[first ?? 'shaping'].length).toBeGreaterThan(0);
+    expect(firstFilledColumn(groupCards([]))).toBeNull();
+    expect(firstFilledColumn(groupCards(done))).toBe(done.length > 0 ? 'done' : null);
+  });
 });
 
 describe('card columns', () => {
@@ -117,8 +134,31 @@ describe('card chat lines', () => {
       }),
     );
 
-    expect(line.text).toBe('moved from Planned to In progress');
+    expect(line.text).toBe('is now In progress (was Planned)');
     expect(line.ticketId).toBe('SVC-3');
+  });
+
+  it('marks only the four ticket kinds as foldable, and words them for the owner', () => {
+    const created = lineOf(
+      event(1, 'ticket_created', { ticket_id: 'FR-5', title: 'Parse' }),
+    );
+
+    const asked = lineOf(event(2, 'interaction_opened', { ticket_id: 'FR-5' }));
+    const answered = lineOf(event(3, 'interaction_answered', { ticket_id: 'FR-5' }));
+    const unlinked = lineOf(event(4, 'ticket_created', { title: 'Parse' }));
+
+    expect(created).toMatchObject({
+      fold: 'ticket',
+      ticketEvent: 'created',
+      text: 'created: Parse',
+    });
+
+    expect(asked.fold).toBe('ticket');
+    expect(answered.fold).toBe('ticket');
+    expect(unlinked.text).toBe('Ticket created: Parse');
+    expect(lineOf(event(5, 'note', { text: 'x' })).fold).toBeUndefined();
+    expect(lineOf(event(6, 'director_message', { text: 'x' })).fold).toBeUndefined();
+    expect(lineOf(event(7, 'card_closed', {})).fold).toBeUndefined();
   });
 
   it('awaits a reply only while the newest speech is the user’s', () => {

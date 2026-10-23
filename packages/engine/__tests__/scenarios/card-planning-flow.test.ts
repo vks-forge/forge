@@ -145,6 +145,22 @@ describe('planning a card', () => {
     ]);
   });
 
+  it('raises the grill question as structured data: kind, a short title and the question as the item', async () => {
+    const rig = await planningRig();
+    const id = await createPlanCard(rig);
+
+    await rig.tick();
+
+    const raised = (await eventsOf(rig, id, 'needs_you'))[0]?.payload;
+    expect(raised).toMatchObject({
+      kind: 'director_questions',
+      title: 'The Director has a question',
+      items: ['Where are todos stored?'],
+    });
+
+    expect(raised?.reason).toBe('The Director has a question for you.');
+  });
+
   it('feeds the structured grill state, playbook, house rules and project rules into each step', async () => {
     const rig = await planningRig();
     const id = await createPlanCard(rig);
@@ -229,7 +245,10 @@ describe('planning a card', () => {
     const id = await createPlanCard(rig);
     await rig.tick();
 
-    expect(await eventsOf(rig, id, 'step_finished')).toEqual([]);
+    expect(
+      (await eventsOf(rig, id, 'step_finished')).map((e) => e.payload.outcome),
+    ).toEqual(['failed']);
+
     expect((await eventsOf(rig, id, 'note'))[0]?.payload.text).toMatch(/survey/i);
 
     await rig.tick();
@@ -238,7 +257,12 @@ describe('planning a card', () => {
     rig.clock.advance(11 * 60 * 1000);
     await rig.tick();
 
-    expect((await eventsOf(rig, id, 'step_finished')).length).toBeGreaterThan(0);
+    expect(
+      (await eventsOf(rig, id, 'step_finished')).some(
+        (e) => e.payload.outcome === undefined,
+      ),
+    ).toBe(true);
+
     expect((await cardOf(rig, id)).phase).toBe('grilling');
   });
 });

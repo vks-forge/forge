@@ -10,7 +10,8 @@
  * Pins: terms and synonyms reach the search, unknown tags dropped, the call is recorded as a step with the
  *   settings budget and timeout, timeout / invalid output / budget stop fall back to keywords and the context is
  *   still built, a cache hit makes no second call, `rewrite: false` and a small memory make none, spend
- *   lands in the card director spend, a trace entry names the source.
+ *   lands in the card director spend and warns at 80 percent of the Forge default on a card with no cap,
+ *   a trace entry names the source.
  * Depends on: helpers/memory-ctx, helpers/planning-rig, src/tick/memory-context, vitest.
  */
 
@@ -135,6 +136,29 @@ describe('memory rewrite', () => {
 
     const grill = (await rig.storage.transaction((tx) => tx.cardPlanning.get(id))).grill;
     expect(grill.director_spend_usd).toBeCloseTo(0.12, 10);
+  });
+
+  it('warns at 80 percent of the Forge default when its cost lifts a card with no cap there', async () => {
+    const rig = await planningRig();
+    const id = await createPlanCard(rig);
+    const { ctx, llm } = memoryCtx(big());
+    llm.script('memory_rewrite', { terms: ['topic9'], synonyms: [], tags: [] });
+    llm.cost('memory_rewrite', 4.4);
+    const withStorage = { ...ctx, deps: { ...ctx.deps, storage: rig.storage } };
+
+    await buildMemoryContext(withStorage as never, 'forge', {
+      question: Q,
+      rewrite: true,
+      cardId: id,
+    });
+
+    const warned = (
+      await rig.storage.transaction((tx) => tx.cardEvents.list(id, { limit: 500 }))
+    )
+      .filter((e) => e.kind === 'budget_warning')
+      .map((e) => (e.payload as { threshold: number }).threshold);
+
+    expect(warned).toEqual([0.8]);
   });
 
   it('leaves a trace entry that says where the terms came from', async () => {

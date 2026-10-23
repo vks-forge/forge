@@ -8,22 +8,31 @@
  *   delivered"), so the owner sees what was said. The sender and time show once per group of
  *   consecutive messages (domain/chat-groups); a lone item with no grouping always shows them.
  *   Tool calls are one collapsed row each (components/thread/thread-tool-line); permission
- *   denials are red and always visible; questions are amber and say whether they are still
+ *   denials are red and always visible; a call waiting for the owner's approval names itself
+ *   and links to its item in the needs-you dock; questions are amber and say whether they are still
  *   waiting; finish and error end the run in plain words. Every other text is plain text,
  *   because it is untrusted model output. Every row can shrink below its content width (min-w-0,
  *   wrapping text) so a long path or summary never pushes the thread wider than its column.
  *
  * Exports: ThreadItemView.
  * Depends on: react, lucide-react, components/chat/*, components/thread/markdown-text,
- *   components/thread/thread-tool-line, types/chat.types, types/thread.types.
+ *   components/thread/thread-tool-line, domain/needs-you-dock, types/chat.types, types/thread.types.
  */
 
-import { CircleAlert, CircleCheck, CircleX, ShieldCheck, ShieldX } from 'lucide-react';
+import {
+  CircleAlert,
+  CircleCheck,
+  CircleX,
+  ShieldCheck,
+  ShieldQuestionMark,
+  ShieldX,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import { ChatBubble } from '#/components/chat/chat-bubble.js';
 import { ChatRow } from '#/components/chat/chat-row.js';
 import { MarkdownText } from '#/components/thread/markdown-text.js';
 import { BriefLine, Time, ToolLine } from '#/components/thread/thread-tool-line.js';
+import { DOCK_OPEN_EVENT } from '#/domain/needs-you-dock.js';
 import type { ChatRowMeta } from '#/types/chat.types.js';
 import type { ThreadItem } from '#/types/thread.types.js';
 
@@ -102,6 +111,40 @@ export function ThreadItemView(props: {
         true,
       );
     case 'decision': {
+      if (item.interactionId !== undefined && item.decision === 'ask') {
+        const { interactionId } = item;
+        const waiting = props.pending.has(interactionId);
+
+        return row(
+          <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-medium">
+            <ShieldQuestionMark
+              aria-hidden="true"
+              className="size-4 shrink-0 text-attn"
+            />
+            <span>
+              {waiting ? 'Waiting for your approval:' : 'Asked for your approval:'}
+            </span>
+            <code className="min-w-0 break-all font-data font-normal">{item.what}</code>
+            {waiting ? (
+              <a
+                href={`#escalation-${interactionId}`}
+                onClick={(event) => {
+                  event.preventDefault();
+                  window.dispatchEvent(
+                    new CustomEvent(DOCK_OPEN_EVENT, { detail: { interactionId } }),
+                  );
+                }}
+                className="font-medium text-signal underline-offset-2 hover:underline"
+              >
+                Open it
+              </a>
+            ) : null}
+            <Time ts={item.ts} />
+          </p>,
+          true,
+        );
+      }
+
       const denied = item.decision === 'deny';
       const asked = item.decision === 'ask';
       const Icon = denied ? ShieldX : ShieldCheck;

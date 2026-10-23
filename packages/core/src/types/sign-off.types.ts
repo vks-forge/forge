@@ -3,8 +3,9 @@
  *
  * Why: who signs finished work (the Director or the owner) is decided from a handful of plain facts:
  *   the stage's signer setting, the tier of the real diff, the Director's own ceiling, whether the
- *   checks passed outright, whether the Director check passed, how many owner overrides stand and
- *   whether the Director's step errored. Naming them keeps the rule a pure function the engine, the
+ *   checks passed outright, whether the Director check passed, how many owner overrides stand,
+ *   whether the Director's step errored and, for tier C, open severe findings, secrets paths and the
+ *   owner's Always ask setting (d-0181). Naming them keeps the rule a pure function the engine, the
  *   sign-off card and the property tests all read the same way.
  *
  * Exports: SignOffInput, SignOffDecision.
@@ -26,6 +27,12 @@ export interface SignOffInput {
   readonly overrides: number;
   /** The Director's check step errored. */
   readonly stepError: boolean;
+  /** Critical and high findings reported by the standing checks (tier C needs none). */
+  readonly openSevere: number;
+  /** The first changed path that is a secrets path, or null (tier C needs null). */
+  readonly secretsPath: string | null;
+  /** Director settings: `always_ask` keeps every tier C sign-off with the owner (d-0150). */
+  readonly approvalMode: 'director_or_user' | 'always_ask';
 }
 
 export interface SignOffDecision {

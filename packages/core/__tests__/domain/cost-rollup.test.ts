@@ -63,7 +63,12 @@ describe('rollupTicketCost', () => {
   });
 
   it('is zero with no runs', () => {
-    expect(rollupTicketCost([])).toEqual({ total_usd: 0, by_run: [] });
+    expect(rollupTicketCost([])).toEqual({
+      total_usd: 0,
+      workers_usd: 0,
+      director_usd: 0,
+      by_run: [],
+    });
   });
 });
 

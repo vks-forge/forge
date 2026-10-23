@@ -11,9 +11,9 @@
  *   a retry would fail the same way. The setup cause is read from the run's receipts (the denial
  *   that stopped it), never guessed from text.
  *
- * Exports: ensureQuestion(), parkRun(), setupCauseOfRun().
+ * Exports: ensureQuestion(), parkRun(), setupCauseOfRun(), turnLimitFor().
  * Depends on: @forge/core (escalation rules and schemas), @forge/tools (receipt types),
- *   domain/escalation-copy, tick/card-log, tick/escalation-raise, tick/ticket-moves.
+ *   domain/escalation-copy, domain/turn-limit, tick/run-agent, tick/card-log, tick/escalation-raise, tick/ticket-moves.
  *   Writes inside the caller's transaction.
  */
 
@@ -27,6 +27,7 @@ import {
 } from '@forge/core';
 import type {
   ErrorFamily,
+  EscalationFailure,
   Interaction,
   Run,
   SetupCause,
@@ -34,9 +35,11 @@ import type {
   Ticket,
 } from '@forge/core';
 import { fixHrefFor, setupSummary } from '#/domain/escalation-copy.js';
+import { turnLimitOf } from '#/domain/turn-limit.js';
 import { iso } from '#/shared/time.js';
 import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
 import { attemptsOf, raiseEscalation, stageFor } from '#/tick/escalation-raise.js';
+import { resolveAgent } from '#/tick/run-agent.js';
 import { moveTicketTx, parkPlan } from '#/tick/ticket-moves.js';
 import type { EngineCtx, Pump } from '#/types/engine-state.types.js';
 import type { RaisedPayload } from '#/types/escalation.types.js';
@@ -108,6 +111,11 @@ export async function ensureQuestion(
     await tx.interactions.insert(row);
   }
 
+  // A tool approval was announced on the card when it was raised (tick/tool-approval-raise).
+  if (row.kind === 'permission') {
+    return;
+  }
+
   await logCardEvent(tx, ticket?.card_id, {
     kind: 'interaction_opened',
     at: ctx.nowIso,
@@ -159,9 +167,28 @@ export async function setupCauseOfRun(
 }
 
 /**
+ * The turn limit `run` was held to, by the rule the run request used: its agent's own turns, else the
+ * company run budget. Read from this tick's settings, so it names what the owner would change today.
+ */
+export async function turnLimitFor(
+  ctx: EngineCtx,
+  tx: StorageTx,
+  ticket: Ticket,
+  run: Run,
+): Promise<NonNullable<EscalationFailure['limit']>> {
+  const slug = (await tx.projects.get(ticket.project))?.slug ?? ticket.project;
+  const agent = resolveAgent(ctx.config, slug, ticket.lane, run.agent_id);
+
+  return turnLimitOf(
+    agent.definition.budget.turns,
+    ctx.config.forge.engine.run_budget.max_turns,
+  );
+}
+
+/**
  * Parks `ticket` with `reason` (one `parked` event) and raises the escalation that says why: a
  * setup (owner's stage at once) or a failure (the Director looks first). `family` is the run's
- * error family, kept on the failure for the owner's diagnosis.
+ * error family, kept on the failure for the owner's diagnosis; `limit` names the limit a run hit.
  */
 export async function parkRun(
   ctx: EngineCtx,
@@ -171,6 +198,7 @@ export async function parkRun(
   reason: string,
   family: ErrorFamily | undefined,
   setup: SetupCause | null,
+  limit?: EscalationFailure['limit'],
 ): Promise<void> {
   const moved = await moveTicketTx(tx, ticket.id, ctx.nowIso, (t) => parkPlan(t, reason));
   if (!moved.ok) {
@@ -192,6 +220,7 @@ export async function parkRun(
           attempts: await attemptsOf(tx, ticket.id),
           ...(family === undefined ? {} : { error_family: family }),
           lane: ticket.lane,
+          ...(limit === undefined ? {} : { limit }),
         }
       : {
           kind: 'setup',

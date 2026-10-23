@@ -7,7 +7,7 @@
  *   without being checked at all. `admit` is the single function all of them use: it
  *   verifies the catalogue, the live schema hash, harness enforcement, the capability
  *   grant, call-time rules, inspectors and budgets, in that order, and can only ever
- *   tighten as it goes. Any error inside it becomes `deny`; an `ask` that nobody can
+ *   tighten as it goes, except that the owner's recorded answer to an `ask` may settle it (approval step) or the grant's bypass flag lifts a non-floor `ask` (bypass step). Any error inside it becomes `deny`; an `ask` that nobody can
  *   answer (Express, unattended) becomes `deny` too, so no gate waits on nobody. A path
  *   tool whose input names no usable string path is refused, never treated as "the cwd".
  *   The lane is read from the grant only, so a context cannot claim a looser lane
@@ -15,10 +15,12 @@
  *
  * Exports: admit(), visibleTools().
  * Depends on: domain/catalogue, domain/data-home-floor, domain/grants, domain/lane-defaults, domain/budgets,
- *   domain/admit-draft, domain/admit-call-rules, schemas/decision, types/admit. No IO.
+ *   domain/admit-draft, domain/admit-call-rules, domain/admit-approval, domain/admit-bypass, schemas/decision, types/admit. No IO.
  */
 
 import { SEVERITY, deny, raise } from '#/domain/admit-draft.js';
+import { applyApproval } from '#/domain/admit-approval.js';
+import { applyBypass } from '#/domain/admit-bypass.js';
 import { callRules } from '#/domain/admit-call-rules.js';
 import { checkBudget } from '#/domain/budgets.js';
 import { schemaMatches } from '#/domain/catalogue.js';
@@ -164,6 +166,8 @@ function decide(
   }
 
   let draft = callRules(ctx, def, call);
+  // An inspector or budget `ask` is not a lane rule: an "always" approval must not lift it.
+  let gated = false;
   if (draft.decision !== 'deny') {
     for (const inspect of ctx.inspectors ?? []) {
       let r: InspectorResult;
@@ -177,6 +181,7 @@ function decide(
         return no(deny('inspector_error', 'inspector'), enf);
       }
 
+      gated ||= r.effect === 'ask';
       draft = raise(draft, {
         decision: r.effect,
         reason: 'inspector_raised',
@@ -198,6 +203,7 @@ function decide(
     if (b.verdict === 'deny') {
       draft = raise(draft, deny('budget_exceeded', 'rule'));
     } else if (b.verdict === 'ask') {
+      gated = true;
       draft = raise(draft, {
         decision: 'ask',
         reason: 'budget_soft_limit',
@@ -208,7 +214,8 @@ function decide(
     }
   }
 
-  return no(draft, enf);
+  // Owner answers settle an `ask` only: attended lanes, after every deny and budget, before the unattended conversion.
+  return no(applyBypass(ctx, applyApproval(ctx, def, call, draft, gated), gated), enf);
 }
 
 /**

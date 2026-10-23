@@ -5,12 +5,20 @@
  *   changing before they change anything. Name, repository, base branch, local folder and
  *   ticket prefix are shown read-only: the API sets them at registration and offers no edit
  *   (only archive), and an editable box that fails on save would be worse than none. The
- *   section says so, so a missing edit button reads as a rule, not a bug.
+ *   section says so, so a missing edit button reads as a rule, not a bug. The one live fact is
+ *   the detected ecosystems: Forge looked once when the project was registered, so a project
+ *   that gained a lockfile since, or was registered before ecosystems were recorded, has a
+ *   "Detect again" button that looks at the folder now, shows that it is working, and says what
+ *   it found or why it could not.
  *
  * Exports: ProjectSection.
- * Depends on: schemas/projects (type), types/project-settings.types.
+ * Depends on: api/{use-detected, describe-error}, components/ui/button, schemas/projects (type),
+ *   types/project-settings.types.
  */
 
+import { describeError } from '#/api/describe-error.js';
+import { useRefreshDetected } from '#/api/use-detected.js';
+import { Button } from '#/components/ui/button.js';
 import type { ProjectView } from '#/schemas/projects.js';
 import type { SettingsSnapshot } from '#/types/project-settings.types.js';
 
@@ -21,6 +29,35 @@ function Fact(props: { label: string; value: string | undefined; data?: boolean 
       <dd className={`min-w-0 break-words text-sm ${props.data ? 'font-data' : ''}`}>
         {props.value ?? 'Not set'}
       </dd>
+    </div>
+  );
+}
+
+function DetectAgain(props: { slug: string }) {
+  const refresh = useRefreshDetected(props.slug);
+
+  return (
+    <div className="grid content-start gap-1">
+      <div>
+        <Button
+          variant="quiet"
+          status={refresh.isPending ? 'loading' : 'idle'}
+          onClick={() => refresh.mutate()}
+        >
+          Detect again
+        </Button>
+      </div>
+      {refresh.isError ? (
+        <p role="alert" className="text-xs text-danger">
+          Could not look at the folder. {describeError(refresh.error).detail}
+        </p>
+      ) : refresh.isSuccess ? (
+        <p role="status" className="text-xs text-muted">
+          {refresh.data.ecosystems.length === 0
+            ? 'Looked again: no ecosystem found.'
+            : `Looked again: ${refresh.data.ecosystems.join(', ')}.`}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -57,6 +94,7 @@ export function ProjectSection(props: {
           label="Detected ecosystems"
           value={project.ecosystems.join(', ') || 'None'}
         />
+        <DetectAgain slug={project.slug} />
       </dl>
       <p className="text-xs text-muted">
         These are set when the project is registered and cannot be edited here. Settings

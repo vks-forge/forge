@@ -39,6 +39,7 @@ export function makeTicket(n = 1, overrides: Partial<Ticket> = {}): Ticket {
     status: 'inbox',
     status_version: 0,
     rework_count: 0,
+    conflict_count: 0,
     priority: 0,
     created_at: T0,
     updated_at: T0,

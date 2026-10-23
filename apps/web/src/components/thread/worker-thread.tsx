@@ -9,7 +9,9 @@
  *   the list scrolls above a docked box (the steer box, when the run can take messages), so
  *   the box never moves. Consecutive Worker messages are grouped under one header and time,
  *   and a new day gets a separator. New lines announce politely to screen readers through a
- *   log region.
+ *   log region. When the page gives the run's own end in words ("Worker run 3 finished / was stopped /
+ *   failed") the footer says that instead of "Run ended (success)", so a run's last word is never read as
+ *   the ticket's.
  *
  * Exports: WorkerThread.
  * Depends on: react, @tanstack/react-virtual, components/chat/chat-pane, components/thread/*,
@@ -52,6 +54,8 @@ export function WorkerThread(props: {
   items: readonly ThreadItem[];
   connection: ThreadConnection;
   endStatus: string | null;
+  /** The run's own end in words ("Worker run 3 finished"); replaces "Run ended (status)" when given. */
+  endLabel?: string | undefined;
   notice: string | null;
   pending: ReadonlySet<string>;
   onRetry: () => void;
@@ -108,8 +112,12 @@ export function WorkerThread(props: {
           aria-hidden="true"
           className={`size-2 rounded-full ${live ? 'bg-signal' : connection === 'failed' ? 'bg-danger' : 'bg-faint'}`}
         />
-        {CONNECTION_LABEL[connection]}
-        {connection === 'ended' && props.endStatus ? ` (${props.endStatus})` : ''}
+        {connection === 'ended' && props.endLabel !== undefined
+          ? props.endLabel
+          : CONNECTION_LABEL[connection]}
+        {connection === 'ended' && props.endLabel === undefined && props.endStatus
+          ? ` (${props.endStatus})`
+          : ''}
       </p>
       {connection === 'failed' ? (
         <Button onClick={props.onRetry}>Reconnect</Button>

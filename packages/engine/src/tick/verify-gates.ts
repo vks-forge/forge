@@ -7,10 +7,12 @@
  *   before anything is decided, so the decision, the Ticket screen and a restart all read
  *   the same record. Each row also records the commit the gates judged, so a merge can be
  *   pinned to it. A gate that throws is recorded as `error`, never as a pass; the
- *   thrown family is kept so the caller can tell a rate limit from a broken gate.
+ *   thrown family is kept so the caller can tell a rate limit from a broken gate. Before the gates, the
+ *   tree's packages are brought up to date: an install the Worker broke by editing a lockfile is a failed
+ *   `setup` gate sent back with the output; any other setup failure is a fault, not a verdict.
  *
  * Exports: readClaims(), runGates().
- * Depends on: @forge/core (Claim, errors), domain/results, schemas/finish-claims, shared/time.
+ * Depends on: @forge/core (Claim, errors), domain/results, schemas/finish-claims, shared/time, tick/prep-checks.
  *   IO through ports.
  */
 
@@ -18,6 +20,7 @@ import { InvalidInputError } from '@forge/core';
 import type { Claim, ErrorFamily, GateResult, GateVerdict } from '@forge/core';
 import { familyOf } from '#/domain/results.js';
 import { FinishClaims } from '#/schemas/finish-claims.js';
+import { prepareForChecks, SETUP_GATE, setupVerdict } from '#/tick/prep-checks.js';
 import { iso } from '#/shared/time.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { EngineDeps } from '#/types/engine.types.js';
@@ -59,6 +62,32 @@ export async function runGates(
   const rows: GateResult[] = [];
   const verdicts = new Map<string, GateVerdict>();
   let errorFamily: ErrorFamily | undefined;
+
+  // The Worker may have changed what the packages come from: bring them up to date first. Its own
+  // broken change is a failed `setup` gate (rework); a failure it did not cause is a fault to retry or park.
+  const setup = await prepareForChecks(t.runtime, t.worktree, t.baseSha);
+  if (setup) {
+    if (!setup.inputs_changed_by_worker) {
+      throw new InvalidInputError(setupVerdict(setup).report);
+    }
+
+    const verdict = setupVerdict(setup);
+    const startedAt = iso(deps.clock.now());
+    const ref = await deps.reports.put(t.run.id, `setup-${headSha}.txt`, verdict.report);
+    const row = await deps.storage.transaction((tx) =>
+      tx.gateResults.insert({
+        run_id: t.run.id,
+        gate: SETUP_GATE,
+        status: verdict.status,
+        ...(ref ? { report_ref: ref } : {}),
+        head_sha: headSha,
+        started_at: startedAt,
+        ended_at: iso(deps.clock.now()),
+      }),
+    );
+
+    return { rows: [row], verdicts: new Map([[SETUP_GATE, verdict]]) };
+  }
 
   for (const gate of t.runtime.gates) {
     const startedAt = iso(deps.clock.now());

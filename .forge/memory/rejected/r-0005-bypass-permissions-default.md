@@ -5,7 +5,9 @@ statement: Launch harnesses with bypass-permission flags by default (`--dangerou
 source: { type: chat, ref: 2026-10-12 Paperclip adapter analysis }
 author: director
 origin: agent
-status: active
+status: superseded
+superseded_by: d-0183
+valid_to: 2026-10-23
 valid_from: 2026-10-12
 confidence: 0.9
 tags: [security, execution-plane, permissions]

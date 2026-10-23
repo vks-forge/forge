@@ -77,7 +77,7 @@ describe('Overview: data', () => {
     expect(figure('Tickets done')).toHaveTextContent('4');
     expect(figure('Waiting on you')).toHaveTextContent('2');
     expect(figure('Workers running')).toHaveTextContent('1');
-    expect(figure('G1 pass rate')).toHaveTextContent('75%');
+    expect(figure('Independent check pass rate')).toHaveTextContent('75%');
 
     expect(screen.getByText('5 of 6 runs reported a cost')).toBeInTheDocument();
     expect(screen.getByText(/never estimated/)).toBeInTheDocument();
@@ -96,7 +96,7 @@ describe('Overview: data', () => {
     }
 
     expect(
-      screen.getByRole('img', { name: 'Spend over time, by project' }),
+      screen.getByRole('group', { name: 'Spend over time, by project' }),
     ).toBeInTheDocument();
   });
 
@@ -140,7 +140,12 @@ describe('Overview: data', () => {
           spend_by_project_total: [],
           spend_by_harness: [],
           spend_by_lane: [],
-          cost_coverage: { runs_total: 3, runs_with_cost: 0 },
+          cost_coverage: {
+            runs_total: 3,
+            runs_with_cost: 0,
+            director_steps: 0,
+            director_steps_recorded: 0,
+          },
           kpis: { ...overviewBody().kpis, spend_usd: 0, spend_prev_usd: null },
         }),
       ),
@@ -149,7 +154,7 @@ describe('Overview: data', () => {
     expect(await screen.findByText('Nothing is waiting on you.')).toBeInTheDocument();
     expect(screen.getByText('0 of 3 runs reported a cost')).toBeInTheDocument();
     expect(
-      screen.getAllByText('No run reported a cost in this range.').length,
+      screen.getAllByText('Nothing reported a cost in this range.').length,
     ).toBeGreaterThan(0);
   });
 

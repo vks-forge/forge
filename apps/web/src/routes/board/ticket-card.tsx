@@ -6,22 +6,32 @@
  *   d-0116), the lane, the exact state when a column holds several, the current run's status,
  *   rework count, why it is blocked, and, in amber with a left edge, that it waits on the
  *   user. A ticket that has spent money shows it as a small muted figure. A ticket that came out of a card links back to it (its id, above the overlay link)
- *   so the user can reach the conversation. Amber appears nowhere else on a card, so it keeps
+ *   so the user can reach the conversation. The phase chip (Queued, Working, Held by re-plan...) and, when it adds something, the one-line reason with links to the tickets and card involved say where the ticket really is; a run chip that only repeats "Working" is dropped. Amber appears nowhere else on a card, so it keeps
  *   its meaning. Hover and keyboard focus (the ring follows the link inside) show the whole
  *   card is the target.
  *
+ *   It also answers "what is it doing now" without opening it (visibility of system status): the pipeline stage ("Stage 2/5 · Review"), a
+ *   ticking "run 2 · implementer · 10m 03s" line with a live dot while a Worker runs, the one action that fits (Retry when the server offered it,
+ *   Open to answer when it waits for the owner), "Cost so far" and "updated 5 min ago".
+ *
  * Exports: TicketCard.
- * Depends on: react, lucide-react, @forge/core (type), components/ticket/*, domain/relative-time.
+ * Depends on: react, lucide-react, @forge/core (type), components/ticket/*, domain/relative-time,
+ *   domain/ticket-phase-copy, domain/tile-progress.
  */
 
 import type { TicketSummary } from '@forge/core';
 import { CircleAlert, CornerLeftUp, OctagonAlert, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router';
 import { CostChip } from '#/components/cost/cost-chip.js';
+import { LiveRunLine } from '#/components/ticket/live-run-line.js';
+import { TileAction } from '#/components/ticket/tile-action.js';
 import { LaneChip, RunChip, StateChip } from '#/components/ticket/status-chips.js';
+import { PhaseChip, WaitLine } from '#/components/ticket/phase-chip.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
 import { cardPath } from '#/domain/card-paths.js';
+import { showsWaitLine } from '#/domain/ticket-phase-copy.js';
 import { timeAgo } from '#/domain/relative-time.js';
+import { stageText } from '#/domain/tile-progress.js';
 
 export function TicketCard(props: {
   ticket: TicketSummary;
@@ -54,6 +64,14 @@ export function TicketCard(props: {
           {ticket.title}
         </TicketLink>
       </h3>
+      {ticket.stage ? (
+        <p
+          className="min-w-0 truncate text-xs text-muted"
+          title={stageText(ticket.stage)}
+        >
+          {stageText(ticket.stage)}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {ticket.needs_you ? (
           <span className="inline-flex items-center gap-1 rounded-md bg-attn-soft px-1.5 py-0.5 text-xs font-medium">
@@ -61,8 +79,14 @@ export function TicketCard(props: {
             Needs you
           </span>
         ) : null}
-        {showState && !ticket.needs_you ? <StateChip state={ticket.state} /> : null}
-        {ticket.run_status ? <RunChip status={ticket.run_status} /> : null}
+        {!ticket.needs_you && ticket.wait ? (
+          <PhaseChip phase={ticket.wait.phase} />
+        ) : showState && !ticket.needs_you ? (
+          <StateChip state={ticket.state} />
+        ) : null}
+        {ticket.run_status && ticket.wait?.phase !== 'working' ? (
+          <RunChip status={ticket.run_status} />
+        ) : null}
         {ticket.rework_count > 0 ? (
           <span
             className="inline-flex items-center gap-1 text-xs text-muted"
@@ -73,13 +97,18 @@ export function TicketCard(props: {
           </span>
         ) : null}
       </div>
+      {ticket.live_run ? <LiveRunLine run={ticket.live_run} /> : null}
+      {ticket.wait && showsWaitLine(ticket.wait.phase) ? (
+        <WaitLine wait={ticket.wait} slug={ticket.project} raised />
+      ) : null}
       {ticket.blocked_reason ? (
         <p className="flex items-start gap-1.5 rounded-lg bg-hover px-2 py-1.5 text-xs text-muted">
           <OctagonAlert aria-hidden="true" className="mt-px size-3.5 shrink-0" />
           {ticket.blocked_reason}
         </p>
       ) : null}
-      <div className="flex items-center justify-between gap-2 text-xs text-muted">
+      <TileAction ticket={ticket} />
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-muted">
         {ticket.card_id ? (
           <Link
             to={cardPath(ticket.project, ticket.card_id)}
@@ -94,13 +123,16 @@ export function TicketCard(props: {
         )}
         <span className="flex items-center gap-2 whitespace-nowrap">
           {ticket.cost_usd !== undefined && ticket.cost_usd > 0 ? (
-            <CostChip
-              usd={ticket.cost_usd}
-              label={`Cost of ${ticket.id}`}
-              className="relative z-10"
-            />
+            <span className="inline-flex items-center gap-1">
+              Cost so far
+              <CostChip
+                usd={ticket.cost_usd}
+                label={`Cost so far of ${ticket.id}`}
+                className="relative z-10"
+              />
+            </span>
           ) : null}
-          {timeAgo(ticket.updated_at, now)}
+          <span>updated {timeAgo(ticket.updated_at, now)}</span>
         </span>
       </div>
     </article>

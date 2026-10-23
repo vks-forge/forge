@@ -29,7 +29,12 @@ import type { ErrorFamily, Run, RunResult, StorageTx, Ticket } from '@forge/core
 import { decideFailure } from '#/domain/failure-policy.js';
 import { nextSlotTx } from '#/tick/agent-fallback.js';
 import { parkNoAgent } from '#/tick/no-agent.js';
-import { ensureQuestion, parkRun, setupCauseOfRun } from '#/tick/outcome-escalate.js';
+import {
+  ensureQuestion,
+  parkRun,
+  setupCauseOfRun,
+  turnLimitFor,
+} from '#/tick/outcome-escalate.js';
 import { parkHarnessForQuota, requestQuotaWake } from '#/tick/quota.js';
 import { afterWriterSuccessTx, applyCheckOutcome } from '#/tick/stage-outcome.js';
 import { finishStageRun } from '#/tick/stage-records.js';
@@ -150,11 +155,16 @@ export async function applyOutcome(
       r.error_family === family && (r.fallback_slot ?? 0) === (run.fallback_slot ?? 0),
   ).length;
 
+  // A turn limit is named in the park text and carried on the failure so the owner can raise it.
+  const limit =
+    result.status === 'max_turns' ? await turnLimitFor(ctx, tx, ticket, run) : undefined;
+
   const decision = decideFailure({
     status: result.status,
     ...(family ? { family } : {}),
     attempts: Math.max(1, attempts),
     ...(result.retryNotBefore ? { retryNotBefore: result.retryNotBefore } : {}),
+    ...(limit === undefined ? {} : { maxTurns: limit.value }),
     now: ctx.now,
     policy: ctx.config.forge.engine.retry,
   });
@@ -188,6 +198,7 @@ export async function applyOutcome(
       opts.parkReason ?? decision.reason,
       family,
       await setupCauseOfRun(ctx, tx, run, family, opts.parkBuild, opts.receipts),
+      limit,
     );
   }
 

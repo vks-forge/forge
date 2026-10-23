@@ -1,6 +1,6 @@
 /**
- * Pins: a not-yet-built screen shows the shared EmptyState (centred title, one help line with the
- * batch) and keeps a heading for assistive tech and the tab title, naming the project when it
+ * Pins: a not-yet-built screen shows the shared EmptyState (centred title, one help line, no
+ * batch name) and keeps a heading for assistive tech and the tab title, naming the project when it
  * sits inside one.
  *
  * Why: the old placeholder was a bare block at the top left that read as an error; every empty
@@ -16,12 +16,12 @@ import { PlaceholderPage } from '#/routes/placeholder-page.js';
 const entry = {
   segment: 'issues',
   label: 'Issues',
-  batch: 'B9',
+  built: false,
   blurb: 'Every GitHub issue Forge knows about.',
 };
 
 describe('PlaceholderPage', () => {
-  it('draws the shared EmptyState with the blurb and the batch', () => {
+  it('draws the shared EmptyState with the blurb and no batch name', () => {
     render(
       <MemoryRouter initialEntries={['/p/alpha/issues']}>
         <Routes>
@@ -41,7 +41,7 @@ describe('PlaceholderPage', () => {
     ).toBeInTheDocument();
 
     expect(status).toHaveTextContent('Every GitHub issue Forge knows about.');
-    expect(status).toHaveTextContent('Coming in B9');
+    expect(status).toHaveTextContent('This screen is not built yet.');
     expect(
       screen.getByRole('heading', { level: 1, name: 'alpha: Issues' }),
     ).toBeInTheDocument();

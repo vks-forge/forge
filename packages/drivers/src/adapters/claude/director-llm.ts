@@ -29,6 +29,7 @@
  */
 
 import { existsSync } from 'node:fs';
+import { StringDecoder } from 'node:string_decoder';
 import { AuthError, err } from '@forge/core';
 import type { DirectorLLM, StepError, StepName, StepOptions } from '@forge/core';
 import type { ZodType } from 'zod';
@@ -75,10 +76,14 @@ async function runChild(
 
   let stdout = '';
   let stderrTail = '';
-  child.stdout.on('data', (d: Buffer) => (stdout += d.toString('utf8')));
+  // One decoder per pipe: a character split across two chunks must not become U+FFFD.
+  const outDecoder = new StringDecoder('utf8');
+  const errDecoder = new StringDecoder('utf8');
+  child.stdout.on('data', (d: Buffer) => (stdout += outDecoder.write(d)));
+  child.stdout.on('end', () => (stdout += outDecoder.end()));
   child.stderr.on(
     'data',
-    (d: Buffer) => (stderrTail = (stderrTail + d.toString('utf8')).slice(-STDERR_TAIL)),
+    (d: Buffer) => (stderrTail = (stderrTail + errDecoder.write(d)).slice(-STDERR_TAIL)),
   );
 
   child.stdin.on('error', () => undefined);

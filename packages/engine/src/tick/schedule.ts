@@ -8,7 +8,11 @@
  *   the dispatch phase and the ticket page's "why is this waiting?" need that same picture;
  *   building it in one place, from one transaction, means the page can only ever explain what
  *   dispatch would do. Only a project that is ready takes a slot: archived ones are history
- *   and onboarding ones are not checked yet. A harness whose quota reset time has passed has
+ *   and onboarding ones are not checked yet. A ticket whose worktree is being prepared holds its slot
+ *   (counted as running) and waits with the reason `prep`. So does a ticket whose brief is being written
+ *   (`state.briefing`): its Worker slot, and its place under the In Progress limit, are counted as taken
+ *   and the ticket is not a candidate again until its run has started or the brief has failed, so the
+ *   d-0097 limits hold while the model writes the prompt. A harness whose quota reset time has passed has
  *   its pause cleared here, as the tick that sees it expire.
  *
  * Exports: planDispatch(), pickFrom().
@@ -16,7 +20,7 @@
  *   tick/stage-agent, tick/wake-candidates, tick/tick-config, shared/time. IO only through the open transaction.
  */
 
-import { PLANNING_PHASES } from '@forge/core';
+import { PLANNING_PHASES, openBlockerIds } from '@forge/core';
 import type { CardId, StorageTx, Ticket, TicketId } from '@forge/core';
 import { chooseHarness } from '#/domain/harness-choice.js';
 import { candidateKey, pickNext } from '#/domain/pick-next.js';
@@ -35,14 +39,12 @@ import type { Candidate, DispatchPlan, ScheduleView } from '#/types/tick.types.j
 
 /** Blockers of `ticket` that are not done; a cancelled blocker never unblocks. */
 async function openBlockers(tx: StorageTx, ticket: Ticket): Promise<string[]> {
-  const open: string[] = [];
+  const status = new Map<string, Ticket['status'] | undefined>();
   for (const id of ticket.blocked_by) {
-    if ((await tx.tickets.get(id))?.status !== 'done') {
-      open.push(id);
-    }
+    status.set(id, (await tx.tickets.get(id))?.status);
   }
 
-  return open;
+  return openBlockerIds(ticket, (id) => status.get(id));
 }
 
 /** Parked harnesses still waiting at `now`; with `consume`, expired rows are deleted. */
@@ -62,6 +64,15 @@ async function pausedHarnesses(
   }
 
   return paused;
+}
+
+/** The `prep` field of a ticket whose worktree is being prepared now (a finished job is not preparing). */
+function prepOf(view: ScheduleView, id: string): Pick<PickCandidate, 'prep'> {
+  const job = view.state.prepJobs.get(id);
+
+  return job && job.outcome === undefined
+    ? { prep: { step: job.step, elapsedMs: view.deps.clock.now() - job.startedAt } }
+    : {};
 }
 
 /**
@@ -130,7 +141,9 @@ export async function planDispatch(
 
   const byId = new Map<string, Candidate>();
   const pickable: PickCandidate[] = [];
-  for (const c of found.filter((x) => ready.has(x.ticket.project))) {
+  for (const c of found.filter(
+    (x) => ready.has(x.ticket.project) && !view.state.briefing.has(x.ticket.id),
+  )) {
     const slug = slugOf.get(c.ticket.project) ?? c.ticket.project;
     const settings = projectSettings(view.config, slug);
     // The ticket's agent names its own harness; its fallback list, when it has one, replaces the company's (quota and harness-down only).
@@ -140,6 +153,7 @@ export async function planDispatch(
         ? agent.fallbackHarnesses
         : (settings.harness_fallbacks ?? engine.harness_fallbacks);
 
+    const prepared = view.state.prepJobs.get(c.ticket.id)?.outcome !== undefined;
     byId.set(candidateKey(c.ticket.id, c.member), c);
     pickable.push({
       id: c.ticket.id,
@@ -148,7 +162,9 @@ export async function planDispatch(
       harness: chooseHarness(agent.harnessId, fallbacks, paused, installed, view.now),
       priority: c.ticket.priority,
       number: ticketNumber(c.ticket.id),
-      wake: c.wake !== undefined,
+      wake: c.wake !== undefined || prepared,
+      // A preparation that has just finished goes before every other candidate, retries included.
+      ...(prepared ? { prepared } : {}),
       // A check of a verifying ticket takes a Worker slot but does not enter In Progress.
       entering: c.ticket.status !== 'in_progress' && c.ticket.status !== 'verifying',
       blockedBy: blockers.get(c.ticket.id) ?? [],
@@ -156,6 +172,7 @@ export async function planDispatch(
         c.ticket.status === 'planned' &&
         c.ticket.card_id !== undefined &&
         shaping.has(c.ticket.card_id),
+      ...prepOf(view, c.ticket.id),
     });
   }
 
@@ -176,6 +193,21 @@ export async function planDispatch(
     running.push({ project, harness: r.harness });
   }
 
+  // A ticket whose packages are being installed holds its Worker slot, one per ticket however many members it has.
+  const preparing = new Set<string>();
+  for (const p of pickable) {
+    if (p.prep && !preparing.has(p.id)) {
+      preparing.add(p.id);
+      running.push({ project: p.project, harness: p.harness });
+    }
+  }
+
+  // A ticket being briefed holds the slot its run will take.
+  const briefing = [...view.state.briefing.values()];
+  for (const b of briefing) {
+    running.push({ project: b.project, harness: b.harness });
+  }
+
   return {
     candidates: byId,
     pickable,
@@ -188,7 +220,9 @@ export async function planDispatch(
         byId: engine.max_concurrent_per_harness.by_id,
       },
       inProgress: {
-        used: (await tx.tickets.listByStatus('in_progress')).length,
+        used:
+          (await tx.tickets.listByStatus('in_progress')).length +
+          briefing.filter((b) => b.entering).length,
         limit: engine.max_concurrent_by_state.in_progress ?? Number.POSITIVE_INFINITY,
       },
       paused,

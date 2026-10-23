@@ -128,6 +128,9 @@ describe('run schemas', () => {
     };
 
     expect(DriverCapabilities.safeParse(caps).success).toBe(true);
+    expect(
+      DriverCapabilities.safeParse({ ...caps, permissionBypass: true }).success,
+    ).toBe(true);
   });
 });
 
@@ -159,6 +162,17 @@ describe('RunRequest (batch C item 9)', () => {
     };
 
     expect(RunRequest.safeParse(withBoth).success).toBe(true);
+  });
+
+  it('carries a harness-neutral permissions mode, absent meaning ask', () => {
+    expect(RunRequest.parse(request).permissions).toBeUndefined();
+    expect(RunRequest.parse({ ...request, permissions: 'bypass' }).permissions).toBe(
+      'bypass',
+    );
+
+    expect(
+      RunRequest.safeParse({ ...request, permissions: 'bypassPermissions' }).success,
+    ).toBe(false);
   });
 
   it.each(['runId', 'projectId', 'lane', 'promptHash', 'mcpIdentity'])(

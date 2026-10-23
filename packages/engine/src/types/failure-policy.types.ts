@@ -22,6 +22,8 @@ export interface FailureInput {
   /** Epoch ms. */
   readonly now: number;
   readonly policy: RetryPolicy;
+  /** The turn limit the run was held to, named in the park reason of a `max_turns` end. */
+  readonly maxTurns?: number;
 }
 
 export type FailureDecision =

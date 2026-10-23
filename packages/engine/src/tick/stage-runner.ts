@@ -37,7 +37,7 @@ import {
 import { applyFinishedChecks } from '#/tick/stage-director-apply.js';
 import { resumeDirectorCheck, startDirectorCheck } from '#/tick/stage-director-check.js';
 import { recordStage, requestStageWake } from '#/tick/stage-records.js';
-import { directorSignature, signOff } from '#/tick/stage-sign-off.js';
+import { directorSignature, directorSignedTier, signOff } from '#/tick/stage-sign-off.js';
 import { ensureSnapshotTx } from '#/tick/stage-snapshot.js';
 import { readStageState } from '#/tick/stage-state.js';
 import { projectSettings } from '#/tick/tick-config.js';
@@ -264,7 +264,15 @@ export async function driveStages(
 
         return hooks.merge(ctx, t, await hooks.rows(ctx, t), {
           hold: cursor.hold,
-          ...(signed === null ? {} : { directorSigned: true, signReason: signed }),
+          ...(signed === null
+            ? {}
+            : {
+                directorSigned: true,
+                signReason: signed,
+                ...(directorSignedTier(state) === 'C'
+                  ? { signedTier: 'C' as const }
+                  : {}),
+              }),
         });
       }
 

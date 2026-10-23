@@ -15,6 +15,8 @@ export interface ResolveSeam {
   readonly cwd: string;
   readonly env: Readonly<Record<string, string>>;
   readonly isFile: (path: string) => boolean;
+  /** Absolute folders inside `cwd` whose executables may run (the owner's listed tool folders). */
+  readonly trustedDirs?: readonly string[];
 }
 
 export type ResolveResult =

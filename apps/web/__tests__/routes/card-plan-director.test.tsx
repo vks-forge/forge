@@ -128,7 +128,7 @@ describe('Plan tab: Director pipeline changes', () => {
       },
     });
 
-    expect(await screen.findByText('Floor check did not pass')).toBeInTheDocument();
+    expect(await screen.findByText('Safety minimum not met')).toBeInTheDocument();
     expect(
       screen.getByText('t2 runs a lighter pipeline than its lane (removes review)'),
     ).toBeInTheDocument();

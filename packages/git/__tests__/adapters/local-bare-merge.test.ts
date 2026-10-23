@@ -9,7 +9,8 @@
  *
  * Pins: head-sha pin (HeadMovedError, base untouched); compare-and-swap refusal when the
  * base moves between reading and updating it; recovery from a crash after `update-ref`
- * for squash and merge methods; not found after the head branch is deleted.
+ * for squash and merge methods; not found after the head branch is deleted; syncBase needs a
+ * local repository and writes only the private base ref.
  * Depends on: helpers/local-bare-rig, helpers/local-remote, src/adapters/git-cli/run-git.
  */
 
@@ -19,7 +20,7 @@ import { HeadMovedError } from '@forge/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createGitRunner } from '#/adapters/git-cli/run-git.js';
 import { createLocalBareGitHost } from '#/index.js';
-import { T0, push } from '#tests/helpers/local-bare-rig.js';
+import { T0, hostFor, push } from '#tests/helpers/local-bare-rig.js';
 import { git, makeLocalRemote } from '#tests/helpers/local-remote.js';
 import type { LocalRemote } from '#tests/helpers/local-remote.js';
 
@@ -148,5 +149,27 @@ describe('local bare host: merge safety', { timeout: 60_000 }, () => {
       reason: 'not_found',
       errorFamily: 'invalid_input',
     });
+  });
+
+  it('refuses to sync the base when it was given no local repository', async () => {
+    const r = await makeLocalRemote();
+    remotes.push(r);
+
+    await expect(hostFor(r).syncBase()).rejects.toMatchObject({
+      errorFamily: 'invalid_input',
+    });
+  });
+
+  it('syncs the base into a private ref and leaves the local main alone', async () => {
+    const r = await makeLocalRemote();
+    remotes.push(r);
+    const localMain = await git(r.work, 'rev-parse', 'main');
+    const tip = await r.commitOnMain('moved.txt', 'x\n');
+    await git(r.work, 'reset', '--hard', localMain);
+
+    const synced = await hostFor(r, r.work).syncBase();
+
+    expect(synced).toEqual({ ref: 'refs/forge/base/main', sha: tip });
+    expect(await git(r.work, 'rev-parse', 'main')).toBe(localMain);
   });
 });

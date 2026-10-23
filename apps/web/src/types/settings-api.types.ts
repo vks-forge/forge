@@ -30,6 +30,8 @@ import type {
   HarnessTestResult,
   HarnessView,
   SecretStored,
+  SetupCacheClearReply,
+  SetupCacheView,
   ToolsView,
 } from '#/schemas/settings.js';
 import type { RequestOptions } from '#/types/api.types.js';
@@ -38,6 +40,7 @@ export interface HarnessSetupBody {
   readonly kind: HarnessKind;
   readonly binary_path?: string;
   readonly auth_mode: HarnessAuthMode;
+  readonly bypass_permissions?: boolean;
 }
 
 export interface SecretBody {
@@ -98,6 +101,10 @@ export interface SettingsApi {
   companyHistory(options?: RequestOptions): Promise<readonly ConfigVersion[]>;
   /** Tries the search provider (with the given unsaved settings, or the saved ones); nothing is saved. */
   testResearch(body: ResearchTestBody): Promise<ResearchTestReply>;
+  /** How much disk the setup cache uses; the server may answer from a measurement up to a minute old. */
+  setupCache(options?: RequestOptions): Promise<SetupCacheView>;
+  /** Empties the copied install folders, and the shared downloads too when asked. */
+  clearSetupCache(body: { include_downloads: boolean }): Promise<SetupCacheClearReply>;
 }
 
 /** An edit in progress: the settings being changed, as they were when loaded, and the version they came from. */

@@ -10,10 +10,10 @@
  *   harness. It only decides whether to try again: the next run still passes `admit()`.
  *
  * Exports: isSetupFixed().
- * Depends on: schemas/escalation, types/escalation. No IO.
+ * Depends on: schemas/escalation-setup, types/escalation. No IO.
  */
 
-import type { SetupCause } from '#/schemas/escalation.js';
+import type { SetupCause } from '#/schemas/escalation-setup.js';
 import type { SetupFacts } from '#/types/escalation.types.js';
 
 const SCHEMA_REASONS: readonly string[] = [
@@ -53,7 +53,11 @@ export function isSetupFixed(
       }
 
       return GRANT_REASONS.includes(cause.reason_code) && facts.granted === true;
+    case 'worktree_setup':
+      // The owner fixes it by saving new setup steps; a retry or skip is answered, not detected.
+      return (facts.setup_version ?? 0) > cause.settings_version;
     case 'harness_build':
-      return facts.build?.compat === 'pass';
+      // A passing check is not enough: a tool left pending is denied, and the run would fail again.
+      return facts.build?.compat === 'pass' && (facts.build.pending_tools ?? 0) === 0;
   }
 }

@@ -90,6 +90,8 @@ export const Ticket = z.object({
   status: TicketStatus,
   status_version: z.number().int().nonnegative(),
   rework_count: z.number().int().nonnegative(),
+  /** Merge-conflict resolver runs spent on this ticket; capped by MAX_CONFLICT_RESOLVES and separate from rework_count. Absent reads as 0 (the column is NOT NULL DEFAULT 0, so stored rows always carry it). */
+  conflict_count: z.number().int().nonnegative().optional(),
   /** Higher starts first among a project's waiting tickets (d-0097); 0 unless someone raised it. */
   priority: z.number().int().default(0),
   blocked_reason: z.string().optional(),

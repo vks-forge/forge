@@ -25,5 +25,7 @@ export const DriverCapabilities = z.object({
   reportsCost: z.boolean(),
   structuredOutput: z.boolean(),
   permissionRequests: z.boolean(),
+  /** The harness has a no-prompt mode that `RunRequest.permissions: 'bypass'` turns on; absent means no. */
+  permissionBypass: z.boolean().optional(),
 });
 export type DriverCapabilities = z.infer<typeof DriverCapabilities>;

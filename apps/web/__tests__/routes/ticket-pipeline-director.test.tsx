@@ -23,8 +23,8 @@ import {
 } from '#tests/helpers/forge-data/pipeline-data.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
-const TICKET = '/p/sample-service/tickets/SVC-1';
-const PIPELINE = 'GET /tickets/SVC-1/pipeline';
+const TICKET = '/p/sample-service/tickets/SVC-3';
+const PIPELINE = 'GET /tickets/SVC-3/pipeline';
 const AT = '2026-10-17T10:00:00.000Z';
 
 const SECURITY = {

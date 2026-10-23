@@ -101,7 +101,7 @@ function summary(stage: Stage, roster: readonly AgentView[]): string {
     case 'sign_off':
       return stage.signer === 'owner'
         ? 'Always you'
-        : 'Director signs tier A and B, you sign tier C';
+        : 'Director signs when every check passed, otherwise you';
     case 'merge':
       return 'Always last';
   }

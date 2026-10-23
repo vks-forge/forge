@@ -10,7 +10,7 @@
  *   its later `inbox_delivered` share an `inbox_seq`: the delivery marks the message's bubble
  *   delivered instead of adding a bare line the owner cannot read, and only a delivery whose
  *   message is not in the thread (history cut) becomes a status line. This reducer pairs a tool call with its
- *   result, keeps questions and denials visible, turns finish and error into status lines,
+ *   result, keeps questions, denials and calls waiting for the owner's approval visible, turns finish and error into status lines,
  *   and drops machine noise (usage, session, liveness). It is idempotent per `seq`: after a
  *   reconnect the server replays from the last `seq` we saw, and a duplicate must never show
  *   twice. Pure and synchronous so every event type is testable without a browser.
@@ -21,6 +21,27 @@
 
 import type { RunEvent } from '@forge/core';
 import type { StatusItem, ThreadItem, ThreadState } from '#/types/thread.types.js';
+
+/**
+ * What a call was about, for a line that names it: the command, path or address of the tool
+ * call with this id when the thread has seen it, else the tool's name.
+ */
+function callText(items: readonly ThreadItem[], callId: string, tool: string): string {
+  const call = items.find((item) => item.kind === 'tool' && item.callId === callId);
+  const input =
+    call?.kind === 'tool' && call.input !== null && typeof call.input === 'object'
+      ? (call.input as Record<string, unknown>)
+      : {};
+
+  for (const key of ['command', 'file_path', 'path', 'url']) {
+    const value = input[key];
+    if (typeof value === 'string' && value !== '') {
+      return value;
+    }
+  }
+
+  return tool;
+}
 
 export const EMPTY_THREAD: ThreadState = { items: [], lastSeq: -1 };
 
@@ -192,6 +213,12 @@ export function applyEvent(state: ThreadState, event: RunEvent): ThreadState {
           ts: event.ts,
           tool: event.tool,
           decision: event.decision,
+          ...(event.interaction_id === undefined
+            ? {}
+            : {
+                interactionId: event.interaction_id,
+                what: callText(state.items, event.call_id, event.tool),
+              }),
         },
       ]);
     default: {

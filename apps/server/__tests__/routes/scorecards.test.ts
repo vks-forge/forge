@@ -21,7 +21,7 @@ import { startAgentRig } from '#tests/helpers/agent-rig.js';
 import type { AgentRig } from '#tests/helpers/agent-rig.js';
 
 let rig: AgentRig;
-const AT = new Date(Date.now() - 2 * 86_400_000).toISOString();
+const AT = '2026-10-15T12:00:00.000Z'; // 2 days before agent-rig's fixed clock, never the real date
 const errorOf = (r: { body: unknown }) => (r.body as { error: { code: string } }).error;
 const get = (path: string) => rig.http.json('GET', path);
 const card = (reply: ScorecardReply, id: string, by = 'all', value?: string) =>

@@ -49,6 +49,7 @@ async function cancelOpenWorkTx(
     tx,
     open.map((t) => t.id),
     nowIso,
+    'The card was closed',
   );
 
   if (cancelled.length > 0) {

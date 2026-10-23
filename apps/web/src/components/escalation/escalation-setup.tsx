@@ -8,7 +8,7 @@
  *   explains what is still broken, right here), and promises that the ticket resumes by itself
  *   once Forge sees it fixed, so nobody has to remember to come back.
  *
- * Exports: EscalationSetup, FixLink.
+ * Exports: EscalationSetup, FixLink, safeHref().
  * Depends on: react-router, lucide-react, types/escalation-ui.types.
  */
 
@@ -17,7 +17,7 @@ import { Link } from 'react-router';
 import type { SetupPayload } from '#/types/escalation-ui.types.js';
 
 /** A same-app path only; anything else (a full URL) is not followed. */
-function safeHref(href: string): string {
+export function safeHref(href: string): string {
   return href.startsWith('/') && !href.startsWith('//') ? href : '/settings';
 }
 

@@ -57,5 +57,5 @@ export interface DirectorRow {
 /** How far the Director may sign finished work: `none`, tier A or tier B (tier C is always the owner's). */
 export type SignOffTier = DirectorConfig['sign_off']['max_tier'];
 
-/** The sections a project may override on its own (playbooks stay company-wide). */
-export type OverridableKey = Exclude<DirectorKey, 'playbooks'>;
+/** The sections a project may override on its own (playbooks and the step limit, one count for the whole engine, stay company-wide). */
+export type OverridableKey = Exclude<DirectorKey, 'playbooks' | 'max_concurrent_steps'>;

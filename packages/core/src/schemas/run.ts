@@ -94,7 +94,18 @@ export const RunRequest = z.object({
   /** Run secret generation (1 for a first start, +1 on each resume); the app registers that generation's secret. */
   generation: z.number().int().positive().optional(),
   env: z.record(z.string(), z.string()),
+  /**
+   * Absolute folders put first on the child's PATH (a virtual environment's `bin`), so the Worker
+   * runs the project's own tools. A list, not an env value: only the driver knows the host's PATH
+   * and its separator.
+   */
+  pathPrepend: z.array(z.string().min(1)).optional(),
   isolation: Isolation,
+  /**
+   * `bypass`: the harness starts in its own no-prompt mode and Forge's policy allows every `ask` outside
+   * the hard floor (d-0183). Absent means `ask`, the harness's prompting mode.
+   */
+  permissions: z.enum(['bypass', 'ask']).optional(),
 });
 export type RunRequest = z.infer<typeof RunRequest>;
 

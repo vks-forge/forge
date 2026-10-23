@@ -47,7 +47,7 @@ describe('Director settings', () => {
     renderSettings('/settings/director');
 
     expect(await screen.findByText('Model per step')).toBeVisible();
-    expect(screen.getByRole('combobox', { name: 'Triage' })).toHaveTextContent('Opus');
+    expect(screen.getByRole('combobox', { name: 'Triage' })).toHaveTextContent('Sonnet');
     expect(screen.getByRole('combobox', { name: 'Grill turn' })).toHaveTextContent(
       'Sonnet',
     );
@@ -78,7 +78,7 @@ describe('Director settings', () => {
     const { forge } = renderSettings('/settings/director');
     await screen.findByText('Model per step');
 
-    await choose(user, 'Triage', 'Sonnet');
+    await choose(user, 'Triage', 'Opus');
     await user.type(screen.getByLabelText('House rules'), 'Never edit billing/.');
     await choose(user, 'Plan approval', 'Always ask me');
     await save(user, 'Tighter planning');
@@ -88,7 +88,7 @@ describe('Director settings', () => {
       expectedVersion: 2,
       doc: {
         engine: { max_concurrent_global: 3, shutdown_drain_ms: 20_000 },
-        models: { director: { triage: 'sonnet' } },
+        models: { director: { triage: 'opus' } },
         director: { house_rules: 'Never edit billing/.', approval_mode: 'always_ask' },
       },
     });
@@ -135,6 +135,28 @@ describe('Director settings', () => {
       budget_warning_usd: 12.5,
       step_timeouts_ms: { verify: 90_000 },
     });
+  });
+
+  it('saves how many steps the Director works on at once as just that key, and refuses 9', async () => {
+    const user = userEvent.setup();
+    const { forge } = renderSettings('/settings/director');
+    const steps = await screen.findByLabelText('Cards and tickets at the same time');
+
+    expect(steps).toHaveValue(3);
+    expect(screen.getByText(/uses your plan.s limits sooner/)).toBeVisible();
+
+    await user.clear(steps);
+    await user.type(steps, '9');
+    expect(
+      await screen.findByText(/at most 8|Must be at most 8|no more than 8/i),
+    ).toBeVisible();
+
+    await user.clear(steps);
+    await user.type(steps, '5');
+    await save(user, 'Work on more at once');
+
+    await screen.findByText('Saved as a new version');
+    expect(lastPut(forge).doc['director']).toEqual({ max_concurrent_steps: 5 });
   });
 
   it('blocks a limit that is not a positive number', async () => {

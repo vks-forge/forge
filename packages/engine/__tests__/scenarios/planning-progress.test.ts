@@ -10,7 +10,7 @@
  * Pins: `step_started` is committed (readable) while the model call is in flight, with no
  *   `step_finished` yet; the step's result events are stamped after the call, not at the tick's
  *   start; the grill question and `needs_you` carry the time of their own write; a step that
- *   failed and is retried ends with exactly one `step_finished`.
+ *   failed and is retried ends with one `failed` finish and exactly one successful `step_finished`.
  * Depends on: helpers/planning-rig, helpers/scripted-llm, vitest.
  */
 
@@ -84,13 +84,16 @@ describe('planning progress is live', () => {
     });
 
     await rig.tick();
-    expect((await eventsOf(rig, id, 'step_finished')).length).toBe(0);
+    // The failed attempt is closed as failed, so nothing reads as still thinking.
+    expect(
+      (await eventsOf(rig, id, 'step_finished')).map((e) => e.payload.outcome),
+    ).toEqual(['failed']);
 
     rig.clock.advance(11 * MINUTE);
     await rig.tick();
 
     const surveyIds = (await eventsOf(rig, id, 'step_finished'))
-      .filter((e) => e.payload.step_kind === 'survey')
+      .filter((e) => e.payload.step_kind === 'survey' && e.payload.outcome === undefined)
       .map((e) => e.payload.step_id);
 
     expect(surveyIds).toHaveLength(1);

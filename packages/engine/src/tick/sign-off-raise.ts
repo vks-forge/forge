@@ -11,7 +11,7 @@
  *   once per wait (a second call finds the pending one), by the merge door when it leaves a ticket
  *   in review, and by the start-up backfill for tickets that were already there.
  *
- * Exports: signOffPayload(), raiseOwnerSignOff(), signOffCause().
+ * Exports: signOffPayload(), raiseOwnerSignOff(), signOffCause(), waitForOwner().
  * Depends on: @forge/core (currentCycle, escalation schemas), domain/sign-off-facts, tick/escalation-finished. Writes storage.
  */
 
@@ -25,6 +25,7 @@ import type {
 } from '@forge/core';
 import { signOffFacts } from '#/domain/sign-off-facts.js';
 import { raiseSignOffTx } from '#/tick/escalation-finished.js';
+import { holdForHuman } from '#/tick/stage-records.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 
 /** Why the owner is asked: tier C always; the Director's decline; a tier B approval; or a pipeline that waits for the owner. */
@@ -98,4 +99,24 @@ export async function raiseOwnerSignOff(
     await signOffPayload(tx, cur, tier, declined),
     runId,
   );
+}
+
+/**
+ * The owner's stage begins: their review is a row and a sign-off item, so every screen shows it.
+ * `hold` also parks a tier A ticket for the human stage the pipeline has open.
+ */
+export async function waitForOwner(
+  ctx: EngineCtx,
+  ticket: Ticket,
+  tier: Tier,
+  opts: { readonly hold: boolean; readonly declined?: string },
+  runId: string,
+): Promise<void> {
+  await ctx.deps.storage.transaction(async (tx) => {
+    if (opts.hold) {
+      await holdForHuman(tx, ctx.nowIso, ticket.id);
+    }
+
+    await raiseOwnerSignOff(ctx, tx, ticket, tier, opts.declined, runId);
+  });
 }

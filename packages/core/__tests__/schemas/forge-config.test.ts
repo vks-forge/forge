@@ -4,8 +4,8 @@
  * Why: the model matrix and engine limits are the dials that decide what the Director
  *   spends and how hard it pushes; they live in yaml (code.md rule 9) and a typo must fail
  *   at load, not mid-ticket. Parsing the file that ships in the repo pins that the default
- *   config is valid and still says what d-0060 decided (opus for Director steps, sonnet for
- *   Workers in every lane).
+ *   config is valid and still says what d-0060 and eval fix 5 decided (opus for the Director steps
+ *   that judge, sonnet for the quick ones and for Workers in every lane).
  *
  * Pins: the default forge.yaml parses; its models match d-0060; tick interval below 10 s,
  *   a missing step model and unknown lanes are rejected; every retry family is configured.
@@ -39,20 +39,20 @@ describe('default .forge/config/forge.yaml', () => {
     expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
   });
 
-  it('matches d-0060 and d-0150: opus for the judging Director steps, sonnet for the quick turns and every Worker lane', () => {
+  it('matches d-0060 and d-0150: opus for the steps that judge, sonnet for the quick turns, the brief, the approval and every Worker lane', () => {
     const { models } = YamlConfig.parse(defaultYaml());
     expect(models.director).toEqual({
-      triage: 'opus',
-      dispatch_prompt: 'opus',
-      steer_reply: 'opus',
+      triage: 'sonnet',
+      dispatch_prompt: 'sonnet',
+      steer_reply: 'sonnet',
       card_chat: 'opus',
       card_survey: 'opus',
       grill_turn: 'sonnet',
-      verify: 'opus',
+      verify: 'sonnet',
       enhance: 'opus',
       research: 'sonnet',
       write_plan: 'opus',
-      approve_plan: 'opus',
+      approve_plan: 'sonnet',
       custom_step: 'sonnet',
       ticket_answer: 'sonnet',
       ticket_recover: 'opus',

@@ -74,7 +74,7 @@ screen must show (each gets a Nielsen-10 pass before build):
 |---|---|---|
 | Projects | pick a project, see health | lane distribution, escalation rate, open "needs you", spend today |
 | Board | kanban per project | columns from `director-core.md` §4; card shows id, lane, tier, harness, blocked-by, cost; relations drawn as chips |
-| Ticket | one ticket | thread (assistant-ui), gate results strip, diff viewer, lane/tier history, memory slice that was injected, run list with cost |
+| Ticket | one ticket | thread (assistant-ui), gate results strip, diff viewer, lane/tier history, memory slice that was injected, run list with cost, History tab (what the ticket went through and why, in plain words: state changes with their reason, questions and answers, runs and waits for a Worker slot, reviews and checks, who signed off; the card's History shows its own phases plus one line per ticket event; the commits Forge makes carry `Forge-Ticket` and `Forge-Run` trailers, so git leads back to both) |
 | Agents | who is running what | `claude agents`-style grouping: Needs input / Working / Completed; per-run usage |
 | Needs you | the human queue | interactions awaiting answer, Tier B reviews, Tier C sign-offs, janitor PRs, canary alerts; each with a timeout countdown |
 | Ledger | autonomy tiers | action class → tier → owner; promotion/demotion history as attributed versions |
@@ -174,8 +174,9 @@ worktrunk's hooks:
 - `git worktree lock` while a run is live; stale-lock sweep each tick;
   `-p` runs do not clean up after themselves, so settlement runs `unlock` +
   `remove`.
-- `.worktreeinclude` (gitignore syntax) lists files to copy into each new
-  worktree (`.env`, local config). Hooks: `create`, `pre-merge`, `post-merge`.
+- Forge prepares each new worktree by running the project's setup steps in it
+  (settings `setup`, else detected defaults; `execution-plane.md` §6, d-0180);
+  there is no `.worktreeinclude`. Hooks: `create`, `pre-merge`, `post-merge`.
 - pnpm store on the same NTFS volume (or a ReFS Dev Drive) so installs
   hardlink; no copy-on-write on NTFS.
 - Worktrees sit outside the repo, so no ignore-list edit in the customer's

@@ -9,7 +9,7 @@
  *   biggest few keep one: the rest fold into one "Other" series so a legend stays readable
  *   and no two lines share a colour.
  *
- * Exports: OTHER_KEY, SERIES_COUNT, bucketLabel(), spendChange(), totalSpend(), assignColors(),
+ * Exports: sourceSpend(), OTHER_KEY, SERIES_COUNT, bucketLabel(), spendChange(), totalSpend(), assignColors(),
  *   stackedSpend(), donutSlices(), coverageSentence().
  * Depends on: @forge/core (types), types/overview.types. Pure.
  */
@@ -17,9 +17,11 @@
 import type {
   CostCoverage,
   OverviewProjectSeries,
+  OverviewSourceSeries,
   OverviewSpendSlice,
   StatsGroup,
 } from '@forge/core';
+import type { ChartPart } from '#/types/chart.types.js';
 import type { ChartSeries, DonutSlice } from '#/types/overview.types.js';
 
 export const OTHER_KEY = '__other';
@@ -195,10 +197,41 @@ export function donutSlices(
 }
 
 /** "5 of 6 runs reported a cost"; the rest are counted, never estimated. */
-export function coverageSentence(coverage: CostCoverage): string {
-  if (coverage.runs_total === 0) {
+export function coverageSentence(
+  coverage: CostCoverage & {
+    director_steps?: number;
+    director_steps_recorded?: number;
+  },
+): string {
+  const steps = coverage.director_steps ?? 0;
+
+  if (coverage.runs_total === 0 && steps === 0) {
     return 'No runs in this range';
   }
 
-  return `${coverage.runs_with_cost} of ${coverage.runs_total} runs reported a cost`;
+  const runs = `${coverage.runs_with_cost} of ${coverage.runs_total} runs`;
+
+  return steps === 0
+    ? `${runs} reported a cost`
+    : `${runs} and ${coverage.director_steps_recorded ?? 0} of ${steps} Director steps reported a cost`;
+}
+
+/**
+ * Spend over time as the two sources, named and coloured like every other split: the series of
+ * `parts` in order, each with the server's per-bucket values (empty when the server sent none).
+ */
+export function sourceSpend(
+  bySource: readonly OverviewSourceSeries[],
+  parts: readonly ChartPart[],
+): ChartSeries[] {
+  const wanted = { workers: 'worker', director: 'director' } as const;
+
+  return parts.map((part) => ({
+    key: part.key,
+    label: part.label,
+    color: part.color,
+    values:
+      bySource.find((series) => series.source === wanted[part.key as keyof typeof wanted])
+        ?.values ?? [],
+  }));
 }

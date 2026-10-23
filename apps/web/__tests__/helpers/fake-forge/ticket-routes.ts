@@ -15,7 +15,13 @@
  *   helpers/forge-data/ticket-*.
  */
 
-import { NEEDS_YOU_STATUSES } from '@forge/core';
+import {
+  NEEDS_YOU_STATUSES,
+  canCancelTicket,
+  openBlockerIds,
+  openDependentIds,
+  ticketNeedsYouItems,
+} from '@forge/core';
 import type { Run, Ticket, TicketSummary } from '@forge/core';
 import { json, refusal } from '#tests/helpers/fetch-stub.js';
 import type { Routes } from '#tests/helpers/fetch-stub.js';
@@ -66,7 +72,10 @@ function ticketCost(runs: readonly Run[]) {
       recorded: run.cost_usd !== undefined,
     }));
 
-  return { total_usd: by_run.reduce((sum, run) => sum + run.usd, 0), by_run };
+  const workers_usd = by_run.reduce((sum, run) => sum + run.usd, 0);
+
+  // The real server also sends the Director's own spend on the ticket (a ledger sum, 0 here).
+  return { total_usd: workers_usd, workers_usd, director_usd: 0, by_run };
 }
 
 export function ticketRoutes(options: { empty: boolean }): Routes {
@@ -125,6 +134,12 @@ export function ticketRoutes(options: { empty: boolean }): Routes {
         return refusal(404, 'not_found', `No ticket ${params['id']}.`);
       }
 
+      // What the server offers for finished work: approve (or sign off), send back, cancel.
+      const finished =
+        item.ticket.status === 'review' || item.ticket.status === 'needs_signoff';
+
+      const waitActions = finished ? ['approve', 'rework', 'cancel'] : [];
+
       return json({
         ticket: item.ticket,
         runs: [...item.runs],
@@ -134,8 +149,22 @@ export function ticketRoutes(options: { empty: boolean }): Routes {
         ),
         wait_reason: item.waitReason,
         escalations: [],
-        wait_actions: [],
+        wait_actions: waitActions,
+        needs_you_detail: ticketNeedsYouItems({
+          ticket: item.ticket,
+          escalations: [],
+          waitActions: waitActions as never,
+        }),
         cost: ticketCost(item.runs),
+        // The server's own derivations (core's shared rules), so the page sees what the real one would.
+        can_cancel: canCancelTicket(item.ticket, null),
+        dependents: openDependentIds(
+          [...store.values()]
+            .map((other) => other.ticket)
+            .filter((t) => t.status !== 'done' && t.status !== 'cancelled'),
+          item.ticket.id,
+        ),
+        open_blockers: openBlockerIds(item.ticket, (id) => store.get(id)?.ticket.status),
       });
     },
 

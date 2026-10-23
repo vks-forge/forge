@@ -6,16 +6,16 @@
  *   `hook_event_name` and `tool_name` on stdin, `PowerShell` on the Windows CLI and
  *   `Bash` on ACP). Building them once keeps every test on the same shapes.
  *
- * Exports: SECRET, TOKEN, RUN_ID, pre(), preWith(), post(), failure(), sessionStart(), makeEnv().
+ * Exports: SECRET, TOKEN, RUN_ID, pre(), preWith(), post(), failure(), sessionStart(), testCtx(), makeEnv().
  * Depends on: @forge/db, @forge/tools, src/index. IO only when `sqlitePath` is given.
  */
 
 import { createMemoryReceiptLog, createMemoryStorage, openSqlite } from '@forge/db';
 import { ToolDefinition, admit as realAdmit, effectiveGrant } from '@forge/tools';
-import type { AdmitCall, AdmitContext, Decision } from '@forge/tools';
+import type { AdmitCall, AdmitContext, ApprovalSet, Decision } from '@forge/tools';
 import type { Run } from '@forge/core';
 import { createHookHandler } from '#/index.js';
-import type { HookAudit, RunCredentials } from '#/index.js';
+import type { HookAudit, RaiseApproval, RunCredentials } from '#/index.js';
 
 export const SECRET = 'run-secret-0123456789abcdef-0123456789';
 export const TOKEN = 'bearer-7f3a91c2';
@@ -64,7 +64,8 @@ const def = (id: string, risk: string, native: string | string[]) =>
     support: { 'claude-code': { native, mechanism: 'allow-flag', enforced: 'hook' } },
   });
 
-const ctx = (dataHome = '/forge-home', cwd?: string): AdmitContext => ({
+/** The standard-lane context the handler tests judge calls in. */
+export const testCtx = (dataHome = '/forge-home', cwd?: string): AdmitContext => ({
   lane: 'standard',
   harness: 'claude-code',
   catalogue: {
@@ -101,6 +102,10 @@ export function makeEnv(
     run?: Partial<Run>;
     /** Judge calls with the real `admit()` over this data home and worktree, not the stub. */
     real?: { dataHome: string; cwd: string };
+    /** The owner's answers the context carries (real mode only). */
+    approvals?: ApprovalSet;
+    /** The engine's door for an ask; absent leaves an `ask` as `admit()` judged it. */
+    raiseApproval?: RaiseApproval;
   } = {},
 ) {
   // Memory by default; `sqlitePath` runs the same handler over the durable SQLite backend.
@@ -118,11 +123,17 @@ export function makeEnv(
       (async (id) =>
         id === RUN_ID ? { token: TOKEN, secret: SECRET, generation: 1 } : null),
     admitContext: async () =>
-      over.real ? ctx(over.real.dataHome, over.real.cwd) : ctx(),
+      over.real
+        ? {
+            ...testCtx(over.real.dataHome, over.real.cwd),
+            ...(over.approvals ? { approvals: over.approvals } : {}),
+          }
+        : testCtx(),
     clock: over.clock ?? (() => new Date(Date.UTC(2026, 9, 13, 0, 0, tick++))),
     ...(over.audit ? { audit: over.audit } : {}),
     ...(over.requireLiveness ? { requireLiveness: true } : {}),
     ...(over.draining ? { draining: over.draining } : {}),
+    ...(over.raiseApproval ? { raiseApproval: over.raiseApproval } : {}),
     onLiveness: async (id) => {
       liveness.push(id);
     },

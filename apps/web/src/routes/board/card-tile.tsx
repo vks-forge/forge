@@ -4,7 +4,8 @@
  * Why: a person scanning the Board decides in a second which request to open. The tile shows
  *   what separates cards: the type (icon and label, so the icon is never the only signal), the
  *   title, how far its tickets have got ("2 of 3 tickets done", from the server's roll-up) with
- *   a thin bar of the same counts (nothing estimated), and in amber with a left edge, only for
+ *   a thin bar of the same counts (nothing estimated; cancelled tickets are out of the count and named
+ *   in the label, so a finished card's bar is full), and in amber with a left edge, only for
  *   a card in Needs you, that it waits on the user. The whole tile is one link to the Card page
  *   (d-0116 style); hover and keyboard focus (the ring follows the link inside) show that. The
  *   phase line sits under the title in words ("Grilling · 3 open points", "Plan v2 ready", "4/7
@@ -17,9 +18,11 @@
  *   hover re-renders only the tiles whose dimming changed. It cannot be dragged: the column is
  *   computed from the card's tickets and questions, never set by hand (d-0107).
  *
+ *   The roll-up line under the bar says how its tickets stand ("4 of 11 done · 2 running · 1 waiting for you", plus cancelled), from the server's counts.
+ *
  * Exports: CardTile.
  * Depends on: react, react-router, lucide-react, motion/react, @forge/core (types), components/card/*,
- *   domain/card-paths, domain/card-phase, domain/relative-time, schemas/cards (types).
+ *   domain/card-paths, domain/card-phase, domain/relative-time, domain/tile-progress, schemas/cards (types).
  */
 
 import type { CardType } from '@forge/core';
@@ -31,8 +34,14 @@ import { CostChip } from '#/components/cost/cost-chip.js';
 import { CardTypeIcon, labelOfType } from '#/components/card/card-type-icon.js';
 import { PriorityMark } from '#/components/card/priority-mark.js';
 import { cardPath } from '#/domain/card-paths.js';
-import { dependencyChips, phaseLine } from '#/domain/card-phase.js';
+import {
+  dependencyChips,
+  phaseLabel,
+  phaseLine,
+  progressLabel,
+} from '#/domain/card-phase.js';
 import { timeAgo } from '#/domain/relative-time.js';
+import { cardRollup } from '#/domain/tile-progress.js';
 import type { CardSummary } from '#/schemas/cards.js';
 
 export const CardTile = memo(function CardTile(props: {
@@ -46,7 +55,11 @@ export const CardTile = memo(function CardTile(props: {
 }) {
   const { card, types, now, onHighlight } = props;
   const needsYou = card.column === 'needs_you';
-  const phase = phaseLine(card);
+  const rollup = cardRollup(card);
+  // The roll-up line already says "4 of 11 done", so an in-progress card's phase line drops its own count.
+  const phase =
+    rollup !== null && card.phase === 'in_progress' ? phaseLabel(card) : phaseLine(card);
+
   const chips = dependencyChips(card);
   const icon = types?.find((type) => type.name === card.type)?.icon;
   const percent =
@@ -123,7 +136,7 @@ export const CardTile = memo(function CardTile(props: {
       {card.ticket_count > 0 ? (
         <div
           role="progressbar"
-          aria-label={`${card.tickets_done} of ${card.ticket_count} ticket${card.ticket_count === 1 ? '' : 's'} done`}
+          aria-label={progressLabel(card)}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={percent}
@@ -134,6 +147,11 @@ export const CardTile = memo(function CardTile(props: {
             style={{ width: `${percent}%` }}
           />
         </div>
+      ) : null}
+      {rollup !== null ? (
+        <p className="min-w-0 truncate text-xs text-muted" title={rollup}>
+          {rollup}
+        </p>
       ) : null}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
         {needsYou ? (

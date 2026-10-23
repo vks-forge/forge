@@ -63,7 +63,7 @@ describe('POST /projects', () => {
         prefix: 'FX',
         local_path: fixture.root,
         status: 'ready',
-        ecosystems: [],
+        ecosystems: ['node'],
       },
       settings_version: 1,
     });

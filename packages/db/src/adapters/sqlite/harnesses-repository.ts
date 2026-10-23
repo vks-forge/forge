@@ -18,8 +18,16 @@ import { parseStored } from '#/shared/db-errors.js';
 import { dropNulls } from '#/shared/json.js';
 import type { SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
 
-const toHarness = (row: SqlRow): Harness =>
-  parseStored(Harness, dropNulls(row), 'harness');
+/** SQLite stores the flag as 0/1; NULL (never set) is dropped so it stays absent. */
+const toHarness = (row: SqlRow): Harness => {
+  const clean = dropNulls(row);
+  const parsed =
+    typeof clean['bypass_permissions'] === 'number'
+      ? { ...clean, bypass_permissions: clean['bypass_permissions'] !== 0 }
+      : clean;
+
+  return parseStored(Harness, parsed, 'harness');
+};
 
 export function createHarnessRepository(driver: SqlDriver): HarnessRepository {
   return {
@@ -32,11 +40,12 @@ export function createHarnessRepository(driver: SqlDriver): HarnessRepository {
     async upsert(harness) {
       const h = Harness.parse(harness);
       driver.run(
-        `INSERT INTO harnesses (id, kind, binary_path, version, auth_mode, status, last_checked_at, status_note)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO harnesses (id, kind, binary_path, version, auth_mode, status, last_checked_at, status_note, bypass_permissions)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (id) DO UPDATE SET kind = excluded.kind, binary_path = excluded.binary_path,
            version = excluded.version, auth_mode = excluded.auth_mode, status = excluded.status,
-           last_checked_at = excluded.last_checked_at, status_note = excluded.status_note`,
+           last_checked_at = excluded.last_checked_at, status_note = excluded.status_note,
+           bypass_permissions = excluded.bypass_permissions`,
         [
           h.id,
           h.kind,
@@ -46,6 +55,7 @@ export function createHarnessRepository(driver: SqlDriver): HarnessRepository {
           h.status,
           h.last_checked_at ?? null,
           h.status_note ?? null,
+          h.bypass_permissions === undefined ? null : h.bypass_permissions ? 1 : 0,
         ],
       );
     },

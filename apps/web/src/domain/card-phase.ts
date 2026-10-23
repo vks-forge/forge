@@ -6,9 +6,12 @@
  *   face says the phase in a word, next to the column that rolled it up. Dependencies decide
  *   when a card can start, so the face lists what a card waits for ("Blocked by") and what
  *   waits for it ("Blocks") by id, with a cap so a card with many links stays one tile.
+ *   Tickets cancelled by the owner or the Director are not counted as work the card stands behind:
+ *   the server's `ticket_count` leaves them out and the line adds "1 cancelled" ("2 of 2 done, 1
+ *   cancelled"), so a finished card never reads as 70 percent done.
  *   A card from a server that sends no phase says nothing rather than something made up.
  *
- * Exports: PHASE_LABEL, phaseLabel(), phaseLine(), dependencyChips(), MAX_CHIPS.
+ * Exports: PHASE_LABEL, phaseLabel(), phaseLine(), progressLabel(), dependencyChips(), MAX_CHIPS.
  * Depends on: schemas/cards (types), types/cards-ui.types. No IO.
  */
 
@@ -35,7 +38,8 @@ export function phaseLine(
   card: Pick<
     CardSummary,
     'phase' | 'open_points' | 'plan_version' | 'ticket_count' | 'tickets_done'
-  >,
+  > &
+    Partial<Pick<CardSummary, 'tickets_cancelled'>>,
 ): string | null {
   const { phase } = card;
   if (phase === undefined) {
@@ -51,10 +55,31 @@ export function phaseLine(
   }
 
   if (phase === 'in_progress' && card.ticket_count > 0) {
-    return `${card.tickets_done}/${card.ticket_count} tickets`;
+    return `${card.tickets_done}/${card.ticket_count} tickets${cancelledTail(card)}`;
+  }
+
+  if (phase === 'done' && cancelled(card) > 0) {
+    return `${card.tickets_done} of ${card.ticket_count} done, ${cancelled(card)} cancelled`;
   }
 
   return PHASE_LABEL[phase];
+}
+
+function cancelled(card: Partial<Pick<CardSummary, 'tickets_cancelled'>>): number {
+  return card.tickets_cancelled ?? 0;
+}
+
+/** ", 1 cancelled" once any ticket of the card was cancelled; cancelled tickets are not in the count before it. */
+function cancelledTail(card: Partial<Pick<CardSummary, 'tickets_cancelled'>>): string {
+  return cancelled(card) > 0 ? `, ${cancelled(card)} cancelled` : '';
+}
+
+/** The Board bar's own label: "2 of 2 done" plus ", 1 cancelled" when some were cancelled. */
+export function progressLabel(
+  card: Pick<CardSummary, 'ticket_count' | 'tickets_done'> &
+    Partial<Pick<CardSummary, 'tickets_cancelled'>>,
+): string {
+  return `${card.tickets_done} of ${card.ticket_count} ticket${card.ticket_count === 1 ? '' : 's'} done${cancelledTail(card)}`;
 }
 
 /** Chips shown per direction before "+n more". */

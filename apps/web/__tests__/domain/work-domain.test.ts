@@ -22,7 +22,7 @@ import { inboxItem } from '#tests/helpers/work-fixtures.js';
 
 describe('inbox marks', () => {
   const item = inboxItem();
-  const counts = { needs_action: 2, unread: 2, all: 2, archived: 0 };
+  const counts = { needs_action: 2, notices: 0, unread: 2, all: 2, archived: 0 };
 
   it('removes an archived item from a view it no longer belongs to', () => {
     const pages = [{ items: [item, inboxItem({ id: 'question:q-2' })], nextCursor: 'c' }];
@@ -47,6 +47,7 @@ describe('inbox marks', () => {
   it('moves the counts like the server would', () => {
     expect(applyMarkToCounts(counts, item, 'archive')).toEqual({
       needs_action: 1,
+      notices: 0,
       unread: 1,
       all: 1,
       archived: 1,

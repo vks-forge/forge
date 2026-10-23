@@ -6,8 +6,8 @@
  *   install reads the flow and playbooks at config version 0 and a later release can improve a
  *   playbook for everyone who never edited it. The default flow is survey, grill, verify,
  *   enhance (Standard and Full lanes only), research (when the Director decides, d-0144), then the two locked steps: write the plan and
- *   approve it (d-0146). Each step names the playbook that carries its method; the twelve
- *   playbooks (seven for planning, two for the escalation steps, one for the check of finished work
+ *   approve it (d-0146). Each step names the playbook that carries its method; the thirteen
+ *   playbooks (eight for planning, two for the escalation steps, one for the check of finished work
  *   against its plan, one for tailoring a ticket's pipeline and one for picking a substitute agent) are real, usable method text,
  *   kept one per file under `playbooks/`. The escalation dials default to "Director first".
  *
@@ -24,6 +24,7 @@ import { PICK_SUBSTITUTE_PLAYBOOK } from '#/domain/playbooks/pick-substitute.js'
 import { PLAN_GRILL_PLAYBOOK } from '#/domain/playbooks/plan-grill.js';
 import { PLAN_TO_TICKETS_PLAYBOOK } from '#/domain/playbooks/plan-to-tickets.js';
 import { RECOVER_FAILURE_PLAYBOOK } from '#/domain/playbooks/recover-failure.js';
+import { SURVEY_CODE_PLAYBOOK } from '#/domain/playbooks/survey-code.js';
 import { RESEARCH_PLAYBOOK } from '#/domain/playbooks/research.js';
 import { VERIFY_PLAN_PLAYBOOK } from '#/domain/playbooks/verify-plan.js';
 import { WRITE_PLAN_PLAYBOOK } from '#/domain/playbooks/write-plan.js';
@@ -60,6 +61,7 @@ export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {
       enabled: true,
       when: 'always',
       depth: 'normal',
+      playbook_id: 'survey-code',
       locked: false,
     },
     {
@@ -122,6 +124,7 @@ export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {
     },
   ],
   playbooks: {
+    'survey-code': SURVEY_CODE_PLAYBOOK,
     'plan-grill': PLAN_GRILL_PLAYBOOK,
     'verify-plan': VERIFY_PLAN_PLAYBOOK,
     'enhance-decisions': ENHANCE_DECISIONS_PLAYBOOK,
@@ -165,4 +168,5 @@ export const BUILTIN_DIRECTOR_CONFIG: DirectorConfig = {
     propose_min_cards: 2,
     propose_window_days: 30,
   },
+  max_concurrent_steps: 3,
 };

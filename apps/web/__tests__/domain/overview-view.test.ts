@@ -50,8 +50,8 @@ describe('spendChange for Today', () => {
 describe('totalSpend', () => {
   it('sums the projects bucket by bucket into one series', () => {
     const [series] = totalSpend([
-      { project: 'a', values: [1, 0, 2] },
-      { project: 'b', values: [0.5, 0, 1] },
+      { project: 'a', values: [1, 0, 2], director_values: [0, 0, 0] },
+      { project: 'b', values: [0.5, 0, 1], director_values: [0, 0, 0] },
     ]);
 
     expect(series?.values).toEqual([1.5, 0, 3]);
@@ -92,9 +92,9 @@ describe('stackedSpend', () => {
   it('keeps the largest projects and sums the others, bucket by bucket', () => {
     const series = stackedSpend(
       [
-        { project: 'a', values: [1, 0] },
-        { project: 'b', values: [2, 2] },
-        { project: 'c', values: [0, 3] },
+        { project: 'a', values: [1, 0], director_values: [0, 0] },
+        { project: 'b', values: [2, 2], director_values: [0, 0] },
+        { project: 'c', values: [0, 3], director_values: [0, 0] },
       ],
       [
         { key: 'c', usd: 3 },

@@ -5,7 +5,7 @@
  *   screens. Naming the calls once lets the http adapter, the hooks and the tests agree on them:
  *   list a card's escalations (pending first, then the recent settled ones), act on one by
  *   interaction id, and act on a ticket's own wait (review, sign-off, scheduler waits) where no
- *   question exists. A refusal keeps the server's error code (`not_pending`, `stale`,
+ *   question exists, and read what a far-reaching action would change before it is confirmed. A refusal keeps the server's error code (`not_pending`, `stale`,
  *   `still_broken`, `ticket_has_dependents`) so the caller can say why in words.
  *
  * Exports: EscalationsApi.
@@ -13,6 +13,8 @@
  */
 
 import type {
+  ActionConsequences,
+  ConsequenceAction,
   EscalationActBody,
   EscalationActReply,
   EscalationList,
@@ -27,4 +29,10 @@ export interface EscalationsApi {
   act(interactionId: string, body: EscalationActBody): Promise<EscalationActReply>;
   /** Acts on a ticket's own wait, one with no pending interaction (review, sign-off, waits). */
   actOnTicket(ticketId: string, body: EscalationActBody): Promise<TicketActReply>;
+  /** What Re-plan, Cancel ticket or Merge anyway would change on this ticket right now (a read; nothing is acted on). */
+  consequences(
+    ticketId: string,
+    action: ConsequenceAction,
+    options?: RequestOptions,
+  ): Promise<ActionConsequences>;
 }

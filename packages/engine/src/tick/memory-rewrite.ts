@@ -19,7 +19,7 @@ import { MemoryRewriteOutput, extractTerms } from '@forge/core';
 import type { CardId, DirectorMemorySettings, MemoryDigest } from '@forge/core';
 import { emitTrace } from '#/shared/trace.js';
 import { runStep } from '#/steps/run-step.js';
-import { addDirectorSpend } from '#/tick/card-budget.js';
+import { addDirectorSpend, warnLevelForCard } from '#/tick/card-budget.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { MemoryRewrite } from '#/types/memory-context.types.js';
 
@@ -158,8 +158,18 @@ async function spend(
   }
 
   try {
-    await ctx.deps.storage.transaction((tx) =>
-      addDirectorSpend(tx, cardId, usd, ctx.nowIso),
+    await ctx.deps.storage.transaction(async (tx) =>
+      addDirectorSpend(
+        tx,
+        cardId,
+        usd,
+        ctx.nowIso,
+        await warnLevelForCard(ctx, tx, cardId),
+        {
+          kind: 'memory_rewrite',
+          model: ctx.config.forge.models.director['memory_rewrite'],
+        },
+      ),
     );
   } catch (error) {
     ctx.deps.log?.('warn', 'memory rewrite spend could not be recorded', {

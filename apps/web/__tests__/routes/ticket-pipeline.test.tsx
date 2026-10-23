@@ -20,8 +20,9 @@ import {
 } from '#tests/helpers/forge-data/pipeline-data.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
-const TICKET = '/p/sample-service/tickets/SVC-1';
-const PIPELINE = 'GET /tickets/SVC-1/pipeline';
+// An open ticket: a finished one shows its stages as muted history (ticket-cancel-status).
+const TICKET = '/p/sample-service/tickets/SVC-3';
+const PIPELINE = 'GET /tickets/SVC-3/pipeline';
 
 const stages = (over: Record<string, Parameters<typeof stageView>[1]>) =>
   STANDARD_STAGES.map((s) => (over[s.id] ? { ...s, ...over[s.id] } : s));

@@ -73,7 +73,7 @@ export async function inspectProject(
     }
   }
 
-  const detected = await detectProjectAt(body.local_path);
+  const detected = await detectProjectAt(body.local_path, top ?? undefined);
   const slug = suggestSlug(
     basename(body.local_path),
     new Set(existing.map((p) => p.slug)),
@@ -87,6 +87,7 @@ export async function inspectProject(
     branches_truncated: listing.truncated,
     ecosystems: [...detected.ecosystems],
     checks: [...detected.checks],
+    setup: [...detected.setup],
     suggested_slug: slug,
     suggested_prefix: suggestPrefix(slug, new Set(existing.map((p) => p.prefix))),
     git,

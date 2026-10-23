@@ -131,7 +131,7 @@ describe('spend and plan reads', () => {
     expect((await cardOf(rig, id)).phase).toBe('in_progress');
   });
 
-  it('lists plan versions with the current plan and the floor result', async () => {
+  it('lists plan versions with the current plan and its frozen floor', async () => {
     const rig = await planningRig();
     const id = await createPlanCard(rig);
     await rig.tick();
@@ -143,7 +143,9 @@ describe('spend and plan reads', () => {
     if (plans.status === 'ok') {
       expect(plans.versions.map((v) => v.version)).toEqual([1]);
       expect(plans.current?.version).toBe(1);
-      expect(plans.floor).toEqual({ pass: true, reasons: [] });
+      // The card was approved on its own: the floor was asked then and is not asked again.
+      expect(plans.floor).toBeNull();
+      expect(plans.floor_frozen_at).toEqual(expect.any(String));
     }
 
     expect((await rig.engine.cardPlan(id, 1)).status).toBe('ok');

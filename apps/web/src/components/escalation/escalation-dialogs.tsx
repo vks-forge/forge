@@ -1,28 +1,31 @@
 /**
  * Escalation dialogs: "Re-plan", "Send back for rework", "Merge anyway" and "Continue" ask for
- * words, "Cancel ticket" asks before it throws work away.
+ * words, and "Approve and merge" asks before it merges.
  *
  * Why: re-planning sends the whole card back to the Director and rework sends one ticket back to
  *   a Worker; both are useless without a reason, so each takes a comment of at least five
  *   characters and keeps Send off until there is one, and Re-plan says what happens to the
  *   card's tickets before the owner commits. Merge anyway and Continue overrule a hold, so they
  *   need the owner's reason too (it is recorded on the card), and Merge anyway says it cannot be
- *   undone. Cancelling cannot be undone, so it asks; when other tickets depend on this one the server refuses a plain cancel, and the dialog then lists them
- *   and offers "Cancel all" instead of leaving the owner with a bare error. A refusal is shown
- *   inside the dialog so it never closes on a failure.
+ *   undone. A refusal is shown inside the dialog so it never closes on a failure. A comment dialog
+ *   can start with a note the owner may edit (the merge-conflict re-plan names its ticket). Re-plan
+ *   and Merge anyway carry a live list of what they change (a `preview`, drawn by
+ *   escalation-consequences), open with Cancel focused, hold their confirm until that list has
+ *   loaded (or failed, when the generic words stand) and name the ticket on the confirm button.
+ *   Cancelling a ticket has its own dialog (escalation-cancel-dialog).
  *
- * Exports: CommentDialog, CancelDialog, MergeDialog.
+ * Exports: CommentDialog, MergeDialog (the cancel dialog is in escalation-cancel-dialog).
  * Depends on: react, components/ui/button, components/ui/confirm-dialog, components/ui/field,
- *   components/ui/modal, components/ticket/ticket-link, domain/escalation-copy.
+ *   components/ui/modal, domain/escalation-copy.
  */
 
 import { useRef, useState } from 'react';
-import { TicketLink } from '#/components/ticket/ticket-link.js';
+import type { ReactNode } from 'react';
 import { Button } from '#/components/ui/button.js';
 import { ConfirmDialog } from '#/components/ui/confirm-dialog.js';
 import { Field, INPUT_CLASS } from '#/components/ui/field.js';
 import { Modal } from '#/components/ui/modal.js';
-import { dependentsOf, describeEscalationError } from '#/domain/escalation-copy.js';
+import { describeEscalationError } from '#/domain/escalation-copy.js';
 import type { EscalationControls } from '#/types/escalation-ui.types.js';
 
 const MIN_COMMENT = 5;
@@ -44,19 +47,28 @@ export function CommentDialog(props: {
   label: string;
   sendLabel: string;
   /** One more line under the field, such as "Recorded on the card. Only you can do this." */
-  footnote?: string;
+  footnote?: string | undefined;
+  /** A note the field starts with and returns to when the dialog is closed; the owner can edit or clear it. */
+  initialComment?: string | undefined;
+  /** What the action changes, listed between the description and the comment field. */
+  preview?: ReactNode;
+  /** Holds Send while the preview loads. */
+  sendDisabled?: boolean;
+  /** Opens with Cancel focused (a far-reaching action). */
+  focusCancel?: boolean;
 }) {
   const { controls } = props;
-  const [comment, setComment] = useState('');
+  const start = props.initialComment ?? '';
+  const [comment, setComment] = useState(start);
   const id = `escalation-${props.action}-comment`;
   const busy = controls.pending === props.action;
   const close = (): void => {
-    setComment('');
+    setComment(start);
     props.onClose();
   };
 
   const done = (): void => {
-    setComment('');
+    setComment(start);
     (props.onDone ?? props.onClose)();
   };
 
@@ -66,12 +78,13 @@ export function CommentDialog(props: {
       onClose={close}
       title={props.title}
       description={props.description}
-      dirty={comment.trim() !== ''}
+      dirty={comment.trim() !== start.trim()}
       busy={busy}
+      focusCancel={props.focusCancel === true}
       primary={
         <Button
           variant="primary"
-          disabled={comment.trim().length < MIN_COMMENT}
+          disabled={comment.trim().length < MIN_COMMENT || props.sendDisabled === true}
           status={busy ? 'loading' : 'idle'}
           onClick={() =>
             controls.act({ action: props.action, comment: comment.trim() }, done)
@@ -81,6 +94,7 @@ export function CommentDialog(props: {
         </Button>
       }
     >
+      {props.preview === undefined ? null : <div className="mb-4">{props.preview}</div>}
       <Field
         id={id}
         label={props.label}
@@ -163,75 +177,6 @@ export function MergeDialog(props: {
         </Field>
       ) : null}
       {hasError ? (
-        <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm">
-          {describeEscalationError(controls.error)}
-        </p>
-      ) : null}
-    </ConfirmDialog>
-  );
-}
-
-/** Asks before cancelling; on a refusal for dependents, lists them and offers "Cancel all". */
-export function CancelDialog(props: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  controls: EscalationControls;
-}) {
-  const { controls } = props;
-  const dependents = dependentsOf(controls.error);
-  const hasError = controls.error !== null && controls.error !== undefined;
-  // The confirm button closes the dialog by itself; while the server decides, a refusal
-  // ("others depend on this") must still have somewhere to be shown, so closing waits for it.
-  const holding = useRef(false);
-  const close = (): void => {
-    holding.current = false;
-    props.onOpenChange(false);
-  };
-
-  return (
-    <ConfirmDialog
-      open={props.open}
-      onOpenChange={(next) => {
-        if (next || !holding.current) {
-          props.onOpenChange(next);
-        }
-      }}
-      title="Cancel this ticket?"
-      description={
-        dependents === null
-          ? 'The ticket stops and is closed as cancelled. This cannot be undone.'
-          : 'Other tickets are waiting on this one, so cancelling it alone is not allowed.'
-      }
-      confirmLabel={dependents === null ? 'Cancel ticket' : 'Cancel all'}
-      tone="danger"
-      onConfirm={() => {
-        holding.current = true;
-        controls.act(
-          dependents === null
-            ? { action: 'cancel' }
-            : { action: 'cancel', cascade: true },
-          close,
-          () => {
-            holding.current = false;
-          },
-        );
-      }}
-    >
-      {dependents !== null && dependents.length > 0 ? (
-        <div className="grid gap-1 text-sm">
-          <p>
-            Cancel all stops this ticket and every ticket that depends on it:{' '}
-            {dependents.map((id, index) => (
-              <span key={id}>
-                {index > 0 ? ', ' : ''}
-                <TicketLink id={id} />
-              </span>
-            ))}
-            .
-          </p>
-        </div>
-      ) : null}
-      {hasError && dependents === null ? (
         <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm">
           {describeEscalationError(controls.error)}
         </p>

@@ -2,8 +2,9 @@
  * NewCardFields: the fields of the New card popup.
  *
  * Why: the first message a card carries decides how good the Director's first questions are,
- *   so the form asks for what it needs and hints at the rest ("What do you want, and why? The
- *   Director will ask the rest."). Type and Priority are Pickers; Depends on and Blocks are
+ *   so the form asks for what it needs and says the minimum up front ("At least 20 characters, so
+ *   the Director has something to start from", with a live count until it is met, and the disabled
+ *   Create button points at that hint). Type and Priority are Pickers; Depends on and Blocks are
  *   searchable multi-Pickers over the project's open cards, read from the same cards query the
  *   Board uses so they share its cache and its live updates. A field shows its problem only
  *   once it has been left (a title that is two letters long mid-typing is not an error yet);
@@ -22,7 +23,12 @@ import { useCardBoard } from '#/api/use-card-board.js';
 import { LinksField } from '#/components/cards/links-field.js';
 import { Field, INPUT_CLASS } from '#/components/ui/field.js';
 import { Picker } from '#/components/ui/picker.js';
-import { PRIORITY_ITEMS, TYPE_ITEMS, openCardItems } from '#/domain/new-card-form.js';
+import {
+  PRIORITY_ITEMS,
+  TYPE_ITEMS,
+  descriptionHint,
+  openCardItems,
+} from '#/domain/new-card-form.js';
 import { TITLE_MAX } from '#/schemas/new-card.js';
 import type { NewCardType } from '#/schemas/new-card.js';
 import type { CardPriority } from '#/schemas/cards.js';
@@ -80,7 +86,7 @@ export function NewCardFields(props: {
       <Field
         id="new-card-description"
         label="Description"
-        hint="What do you want, and why? The Director will ask the rest. Markdown works."
+        hint={descriptionHint(form.description)}
         error={problems.description}
       >
         <textarea

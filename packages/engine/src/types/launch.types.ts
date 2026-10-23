@@ -36,6 +36,8 @@ export interface LaunchInput {
   readonly resumeSession?: string | undefined;
   /** The wake that asked for this run; consumed in the run-row transaction. */
   readonly wake?: WakeRequest | undefined;
+  /** Tool folders the worktree's setup created, first on the Worker's PATH. */
+  readonly pathPrepend?: readonly string[];
   /** Extra rows written in the run-row transaction (the stage attempt, its artifacts). */
   readonly inTx?: ((tx: StorageTx, runId: string) => Promise<void>) | undefined;
 }

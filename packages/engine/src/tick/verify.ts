@@ -10,15 +10,16 @@
  *   stored verdicts. Every step is resumable from stored facts (the PR number on the ticket,
  *   the `gate_results` rows of the run with the sha they judged, `tier_actual`), so a crash
  *   anywhere repeats at most an idempotent push and never opens a second PR or merges
- *   twice. If the branch moved after the gates passed, nothing merges and the new head is
- *   gated again. At most `max_concurrent_by_state.verifying` tickets are worked per tick.
+ *   twice. Before the gates, main is merged into the branch (tick/verify-sync) and a clash goes back
+ *   to the ticket's writer. If the branch or main moved after the gates passed, nothing merges and
+ *   the new head is gated again. At most `max_concurrent_by_state.verifying` tickets are worked per tick.
  *
  * Exports: verifyReady(), resolveTarget().
  * Depends on: domain/{gate-rows,ticket-numbers}, tick/{gate-jobs,project-runtime},
- *   tick/verify-{publish,gates,outcomes,merge}.
+ *   tick/verify-{publish,sync,gates,outcomes,merge}.
  */
 
-import { ForgeError, PolicyDeniedError } from '@forge/core';
+import { ForgeError, PolicyDeniedError, conflictMarkerFiles } from '@forge/core';
 import type { GateVerdict, Ticket } from '@forge/core';
 import { latestPerGate, summarizeGates } from '#/domain/gate-rows.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
@@ -26,6 +27,7 @@ import { isHeld } from '#/steps/run-step.js';
 import { jobKey, pruneGateJobs, startGateJob } from '#/tick/gate-jobs.js';
 import { pruneCheckJobs } from '#/tick/stage-director-check.js';
 import { pruneStageJobs } from '#/tick/stage-script-jobs.js';
+import { createWorktree } from '#/tick/base-sync.js';
 import { baseRefFor, runtimeFor } from '#/tick/project-runtime.js';
 import { driveStages } from '#/tick/stage-runner.js';
 import { reworkOrPark } from '#/tick/stage-send-back.js';
@@ -33,7 +35,8 @@ import { isUnservable } from '#/tick/tick-config.js';
 import { readClaims } from '#/tick/verify-gates.js';
 import { passAndMerge } from '#/tick/verify-merge.js';
 import { handleVerifyFailure, parkVerifying } from '#/tick/verify-outcomes.js';
-import { publishBranch } from '#/tick/verify-publish.js';
+import { commitWork, publishBranch } from '#/tick/verify-publish.js';
+import { g1StageId, routeConflict, syncBaseIntoBranch } from '#/tick/verify-sync.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { G1Result } from '#/types/stage-runner.types.js';
 import type { GateRows, GateRun, MergeOpts, VerifyTarget } from '#/types/verify.types.js';
@@ -71,8 +74,9 @@ export async function resolveTarget(
 
   // One base for the worktree, the diff and the PR: the project's own, never a second default.
   const baseRef = baseRefFor(ctx, project.slug);
-  // `create` is idempotent for the same ticket and branch and returns the original base.
-  const wt = await runtime.worktrees.create(ticket.id, ticket.branch, baseRef);
+  // `create` is idempotent for the same ticket and branch; cut from the host's fetched base it reports
+  // the merge base with it, which is the new base tip once main has been merged into the branch.
+  const wt = await createWorktree(ctx, runtime, project.slug, ticket.id, ticket.branch);
 
   return {
     ticket,
@@ -86,9 +90,23 @@ export async function resolveTarget(
   };
 }
 
-/** Publishes the branch and starts the gates on exactly what was pushed; returns at once. */
+/**
+ * Commits the run's work, brings main into the branch, publishes it and starts the gates on exactly
+ * what was pushed; returns at once. A clash with main goes to the ticket's writer instead (tick/verify-sync).
+ */
 async function startGating(ctx: EngineCtx, t: VerifyTarget): Promise<void> {
-  const target = { ...t, ticket: await publishBranch(ctx, t) };
+  await commitWork(t);
+  const synced = await syncBaseIntoBranch(ctx, t);
+  if (synced.kind === 'handled') {
+    return;
+  }
+
+  const target = {
+    ...t,
+    baseSha: synced.baseSha,
+    ticket: await publishBranch(ctx, t, true),
+  };
+
   const claims = await readClaims(ctx, t.run.id);
   const headSha = await t.runtime.worktrees.head(t.worktree);
   startGateJob(ctx, target, claims, headSha);
@@ -150,15 +168,21 @@ async function runG1(ctx: EngineCtx, t: VerifyTarget): Promise<G1Result> {
   }
 
   if (summary.kind === 'fail') {
-    const g1 = await ctx.deps.storage.transaction((tx) =>
-      tx.ticketPipelines.get(t.ticket.id),
+    // A resolver that left conflict markers behind is the same clash, not a failed check (tick/verify-sync).
+    const markers = conflictMarkerFiles(
+      rows.filter((r) => r.status === 'failed').map((r) => verdicts.get(r.gate)),
     );
 
-    const stage = g1?.definition.stages.find(
-      (s) => s.kind === 'script_gate' && 'builtin' in s.run,
-    );
+    if (markers) {
+      await routeConflict(ctx, t, {
+        files: markers.map((path) => ({ path })),
+        upstream: [],
+      });
 
-    await reworkOrPark(ctx, t, rows, verdicts, stage?.id ?? 'g1');
+      return { kind: 'handled' };
+    }
+
+    await reworkOrPark(ctx, t, rows, verdicts, await g1StageId(ctx, t.ticket.id));
 
     return { kind: 'handled' };
   }
@@ -201,7 +225,7 @@ async function regate(ctx: EngineCtx, t: VerifyTarget, key: string): Promise<voi
     return parkVerifying(
       ctx,
       t,
-      `the PR head moved ${MAX_REGATES} times while the gates ran; needs a human to settle the branch`,
+      `main kept moving: the branch was brought up to date and re-checked ${MAX_REGATES} times and main changed again each time; needs a human to settle the branch`,
     );
   }
 

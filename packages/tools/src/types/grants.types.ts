@@ -41,6 +41,11 @@ export interface FloorInputs {
 /** Merged policy for one run. Built only by `effectiveGrant()`. */
 export interface EffectiveGrant {
   readonly lane: Lane;
+  /**
+   * Bypass permissions (d-0183): a lane `ask` outside the hard floor is allowed. Read from the grant only;
+   * absent or anything but `true` means off.
+   */
+  readonly bypass?: boolean;
   /** Absolute data home to protect; empty or relative means unknown, which denies every path (fail closed). */
   readonly dataHome: string;
   /** Lane allow globs plus any project-gated tool the project grant named. */
@@ -52,6 +57,12 @@ export interface EffectiveGrant {
   readonly narrowing: readonly (readonly string[])[];
   readonly deny: readonly string[];
   readonly ruleLayers: readonly RuleLayer[];
+  /**
+   * The project's owner-approved "always" rules as allow rules (ids `project:approved#<id>`).
+   * Not a rule layer: they are applied only by the approval step of `admit()`, to lift a
+   * lane `ask`, never a deny.
+   */
+  readonly approved: readonly CallRule[];
   /** Operator deny-only rules (floors plus managed), applied last and never overridable. */
   readonly managed: readonly CallRule[];
 }

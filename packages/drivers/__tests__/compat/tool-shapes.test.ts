@@ -116,3 +116,89 @@ describe('diffToolShapes', () => {
     expect(diffToolShapes(shapes, []).pending).toHaveLength(2);
   });
 });
+
+describe('diffToolShapes with earlier builds', () => {
+  const shapes = toolShapes([read, bash], NATIVE);
+  const earlier = (
+    tool: string,
+    status: HarnessToolSchema['status'],
+    over: Partial<HarnessToolSchema> = {},
+  ): HarnessToolSchema => ({
+    harness_kind: 'claude',
+    version: '1',
+    tool,
+    schema_hash: shapes.find((s) => s.tool === tool)?.schema_hash ?? '',
+    status,
+    decided_by: 'owner',
+    decided_at: '2026-10-01T10:00:00.000Z',
+    ...over,
+  });
+
+  it('carries an approved decision on the same hash forward', () => {
+    const diff = diffToolShapes(shapes, [], [earlier('read', 'approved')]);
+
+    expect(diff.pending.map((s) => s.tool)).toEqual(['shell']);
+    expect(diff.carried).toEqual([
+      { shape: shapes.find((s) => s.tool === 'read'), from: earlier('read', 'approved') },
+    ]);
+  });
+
+  it('carries a denied decision on the same hash forward', () => {
+    const diff = diffToolShapes(shapes, [], [earlier('shell', 'denied')]);
+
+    expect(diff.carried.map((c) => [c.shape.tool, c.from.status])).toEqual([
+      ['shell', 'denied'],
+    ]);
+  });
+
+  it('keeps a changed hash pending', () => {
+    const diff = diffToolShapes(
+      shapes,
+      [],
+      [earlier('read', 'approved', { schema_hash: `sha256:${'0'.repeat(64)}` })],
+    );
+
+    expect(diff.carried).toEqual([]);
+    expect(diff.pending.map((s) => s.tool)).toEqual(['read', 'shell']);
+  });
+
+  it('keeps a tool no earlier build knew pending, and ignores undecided rows', () => {
+    const diff = diffToolShapes(shapes, [], [earlier('read', 'pending')]);
+
+    expect(diff.carried).toEqual([]);
+    expect(diff.pending).toHaveLength(2);
+  });
+
+  it('keeps everything pending with no earlier build', () => {
+    expect(diffToolShapes(shapes, [], []).pending).toHaveLength(2);
+  });
+
+  it('follows the most recent decision when builds disagree on the same hash', () => {
+    const diff = diffToolShapes(
+      shapes,
+      [],
+      [
+        earlier('read', 'approved', {
+          version: '1',
+          decided_at: '2026-10-01T10:00:00.000Z',
+        }),
+        earlier('read', 'denied', {
+          version: '2',
+          decided_at: '2026-10-05T10:00:00.000Z',
+        }),
+      ],
+    );
+
+    expect(diff.carried.map((c) => [c.from.version, c.from.status])).toEqual([
+      ['2', 'denied'],
+    ]);
+  });
+
+  it('prefers the build own decided row over an earlier build', () => {
+    const own = { ...earlier('read', 'denied'), version: '3' };
+    const diff = diffToolShapes(shapes, [own], [earlier('read', 'approved')]);
+
+    expect(diff.keep).toEqual(['read']);
+    expect(diff.carried).toEqual([]);
+  });
+});

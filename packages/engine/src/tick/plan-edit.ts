@@ -2,7 +2,7 @@
  * Plan ticket edits: light changes to a ready plan that write a new owner-authored version.
  *
  * Why: before approving, the owner may want to rename a ticket, change its priority, reorder the
- *   list, drop one or take a pipeline change of the Director's off a ticket (d-0133; the owner may remove an op, never add one), without sending the whole plan back. An edit never changes a
+ *   list, drop one, set its lane (kept as the owner's choice, d-0177) or take a pipeline change of the Director's off a ticket (d-0133; the owner may remove an op, never add one), without sending the whole plan back. An edit never changes a
  *   version the owner may already have read: it writes the next version, authored by the owner,
  *   with a computed diff. A removal that would leave another ticket waiting on something that no
  *   longer exists is refused and names who depends on it, so approval can never file a ticket
@@ -63,6 +63,7 @@ function applyEdits(
         ...(ops.length === 0 ? {} : { pipeline: { ops } }),
         ...(edit?.title === undefined ? {} : { title: edit.title }),
         ...(edit?.priority === undefined ? {} : { priority: edit.priority }),
+        ...(edit?.lane === undefined ? {} : { lane: edit.lane, lane_by_owner: true }),
         depends_on: t.depends_on.filter((d) => !removed.has(d)),
       };
     });

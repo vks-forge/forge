@@ -5,7 +5,7 @@
  *   from the page, so it always asks first and always needs a reason. Two places start it: the
  *   "Close card" button in the header, and the "Close card" shortcut on the Director's close
  *   suggestion in the chat, which arrives with the Director's reason prefilled for the user to
- *   keep or edit. The dialog is controlled by the page so both can open it; Escape and Cancel
+ *   keep or edit. It says what closing really does (a running Worker stops, unfinished tickets are cancelled, merged work stays). The dialog is controlled by the page so both can open it; Escape and Cancel
  *   leave the card open.
  *
  * Exports: CloseDialog.
@@ -27,7 +27,7 @@ export function CloseDialog(props: {
       open={props.open}
       onOpenChange={props.onOpenChange}
       title="Close this card?"
-      description="A closed card takes no more messages and cannot be reopened from here. Its tickets keep running. The reason is recorded and shown to anyone who opens the card."
+      description="Closing stops any running Worker and cancels this card’s unfinished tickets. Work already merged stays. You cannot reopen it from here. The reason is recorded and shown to anyone who opens the card."
       confirmLabel="Close card"
       tone="danger"
       confirmDisabled={props.reason.trim() === ''}

@@ -1,5 +1,5 @@
 /**
- * Inbox rules — item ids, the resurface rule, the four views and the counts.
+ * Inbox rules — item ids, the resurface rule, the five views and the counts.
  *
  * Why: the Inbox must never hide something that has moved since the person last looked
  *   (d-0116). A read or archive mark records the item's `updated_at` at that moment; once the
@@ -64,13 +64,15 @@ export function applyInboxMarks(
   });
 }
 
-/** needs_action and unread hide archived items; all is everything not archived. */
+/** Every view but archived hides archived items; notices are the items that only inform; all is everything not archived. */
 export function inInboxView(item: InboxItem, view: InboxView): boolean {
   switch (view) {
     case 'archived':
       return item.archived;
     case 'needs_action':
       return !item.archived && item.needs_action;
+    case 'notices':
+      return !item.archived && !item.needs_action;
     case 'unread':
       return !item.archived && !item.read;
     case 'all':
@@ -84,6 +86,7 @@ export function inboxCounts(items: readonly InboxItem[]): InboxCounts {
 
   return {
     needs_action: count('needs_action'),
+    notices: count('notices'),
     unread: count('unread'),
     all: count('all'),
     archived: count('archived'),

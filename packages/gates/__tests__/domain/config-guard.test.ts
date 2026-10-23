@@ -200,3 +200,72 @@ describe('checkGateConfig guards scripts a check command runs', () => {
     expect(guard(command, path).status).toBe('passed');
   });
 });
+
+describe('checkGateConfig on a project with no checks (d-0173)', () => {
+  const NONE = checksOf({});
+
+  function runWith(
+    checks: typeof NONE,
+    files: readonly { status: 'A' | 'M' | 'D' | 'R'; path: string }[],
+  ) {
+    const patch = files.map((f) => patchFor(f.path, ['x'])).join('');
+
+    return checkGateConfig(diffOf(files, patch), parsePatch(patch), checks);
+  }
+
+  const SCAFFOLD = [
+    { status: 'A', path: 'tsconfig.json' },
+    { status: 'A', path: 'vitest.config.ts' },
+    { status: 'A', path: 'eslint.config.mjs' },
+  ] as const;
+
+  it('allows added config files and says which and why', () => {
+    const out = runWith(NONE, SCAFFOLD);
+
+    expect(out.status).toBe('passed');
+    expect(out.findings).toEqual([]);
+    expect(out.details).toContain('tsconfig.json, vitest.config.ts, eslint.config.mjs');
+    expect(out.details).toContain('no project checks are configured yet');
+    expect(out.details).toContain('nothing to loosen');
+  });
+
+  it('fails the same added files once the project has checks', () => {
+    const out = runWith(COMMANDS, SCAFFOLD);
+
+    expect(out.status).toBe('failed');
+    expect(out.findings.map((f) => f.file)).toEqual([
+      'tsconfig.json',
+      'vitest.config.ts',
+      'eslint.config.mjs',
+    ]);
+  });
+
+  it.each(['M', 'D'] as const)('still fails a config file with status %s', (status) => {
+    const out = runWith(NONE, [{ status, path: 'vitest.config.ts' }]);
+
+    expect(out.status).toBe('failed');
+    expect(out.findings[0]).toMatchObject({
+      check: 'gate-config',
+      file: 'vitest.config.ts',
+    });
+  });
+
+  it('still fails a renamed config file', () => {
+    const out = runWith(NONE, [{ status: 'R', path: 'vitest.config.ts' }]);
+
+    expect(out.status).toBe('failed');
+  });
+
+  it('still fails a planted executable even when the config around it is allowed', () => {
+    const out = runWith(NONE, [...SCAFFOLD, { status: 'A', path: 'pnpm.cmd' }]);
+
+    expect(out.status).toBe('failed');
+    expect(out.findings.map((f) => f.file)).toEqual(['pnpm.cmd']);
+  });
+
+  it('still fails an added .gitattributes, which hides hunks from the diff', () => {
+    const out = runWith(NONE, [{ status: 'A', path: '.gitattributes' }]);
+
+    expect(out.status).toBe('failed');
+  });
+});

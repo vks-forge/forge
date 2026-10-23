@@ -78,7 +78,12 @@ describe('0029 memory: additive', () => {
     const seeded = snapshot();
     expect(seeded['research_sources']).toHaveLength(1);
 
-    expect(runMigrations(driver)).toEqual([29]);
+    expect(
+      runMigrations(
+        driver,
+        MIGRATIONS.filter((m) => m.id <= 29),
+      ),
+    ).toEqual([29]);
 
     expect(snapshot()).toEqual(seeded);
     expect(driver.all('PRAGMA foreign_key_check')).toEqual([]);

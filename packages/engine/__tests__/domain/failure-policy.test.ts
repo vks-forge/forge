@@ -8,7 +8,7 @@
  *   keyed by error family, so it is pinned family by family, with the caps that turn
  *   "retry" into "park".
  *
- * Pins: auth, policy_denied, refusal, budget, invalid_input, max_turns and refused never
+ * Pins: a merge_conflict is retried (re-synced) at once, never parked as policy; auth, policy_denied, refusal, budget, invalid_input, max_turns and refused never
  *   retry; rate_limit honours retryNotBefore else backs off exponentially up to a cap;
  *   crash retries once, stall twice, unknown once; a timeout without a family is a stall;
  *   exceeding max attempts parks with a reason naming the family.
@@ -37,10 +37,46 @@ describe('decideFailure', () => {
     },
   );
 
+  it('does not park a merge conflict as policy: it is re-synced at once', () => {
+    const d = decideFailure({
+      status: 'error',
+      family: 'merge_conflict',
+      attempts: 1,
+      now,
+      policy,
+    });
+
+    expect(d).toEqual({ action: 'retry', notBefore: now, family: 'merge_conflict' });
+  });
+
   it('parks on max_turns, refused and an unexplained cancel', () => {
     for (const status of ['max_turns', 'refused', 'cancelled'] as const) {
       expect(decideFailure({ status, attempts: 1, now, policy }).action).toBe('park');
     }
+  });
+
+  it('parks max_turns on the first hit and names the turns it used', () => {
+    const d = decideFailure({
+      status: 'max_turns',
+      attempts: 1,
+      maxTurns: 3,
+      now,
+      policy,
+    });
+
+    expect(d).toEqual({
+      action: 'park',
+      reason: 'max_turns: the run used all 3 turns without finishing',
+    });
+  });
+
+  it('still parks max_turns, in general words, when the limit is not known', () => {
+    const d = decideFailure({ status: 'max_turns', attempts: 1, now, policy });
+
+    expect(d).toEqual({
+      action: 'park',
+      reason: 'max_turns: the run used all its turns without finishing',
+    });
   });
 
   it('retries a crash once, then parks', () => {

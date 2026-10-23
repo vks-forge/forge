@@ -54,7 +54,7 @@ describe('steering', () => {
       },
     ]);
 
-    expect(rig.llm.callsTo('steer_reply')[0]!.opts.model).toBe('opus');
+    expect(rig.llm.callsTo('steer_reply')[0]!.opts.model).toBe('sonnet');
     expect(JSON.stringify(rig.llm.callsTo('steer_reply')[0]!.input)).toContain(
       'also update the docs',
     );

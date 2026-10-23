@@ -3,18 +3,20 @@
  *
  * Why: the Director owes a reply for each new card and each message the owner writes in a
  *   card's chat (d-0134). Keeping that debt in a table instead of engine memory means a
- *   restart resumes it: rows still unclaimed are answered, and a row claimed by a process that
- *   died is claimed again once the claim is older than the stale cutoff. Claiming runs inside
+ *   restart resumes it: rows still unclaimed are answered, `releaseClaims()` hands back at boot
+ *   every row a dead process held, and a row whose claim is older than the stale cutoff (a hung
+ *   in-process turn) is claimed again. Claiming runs inside
  *   the caller's single-writer transaction, so two ticks can never take the same row. Only
  *   new events are ever enqueued by callers, so existing cards are never auto-answered.
  *
  * Exports: createCardReplyQueueRepository().
- * Depends on: @forge/core, shared/db-errors, shared/json, types/storage-driver.types.
+ * Depends on: @forge/core, shared/{claim-select,db-errors,json}, types/storage-driver.types.
  */
 
 import { CardReplyQueueItem, NewCardReply } from '@forge/core';
 import type { CardReplyQueueRepository } from '@forge/core';
 import { parseStored } from '#/shared/db-errors.js';
+import { selectClaimRows } from '#/shared/claim-select.js';
 import { dropNulls } from '#/shared/json.js';
 import type { SqlDriver, SqlRow } from '#/types/storage-driver.types.js';
 
@@ -39,7 +41,7 @@ export function createCardReplyQueueRepository(
       return { ...i, id: row?.id ?? 0 };
     },
 
-    async claim(at, staleBefore) {
+    async claim(at, staleBefore, options) {
       const rows = driver.all(
         `SELECT * FROM card_reply_queue
          WHERE done_at IS NULL AND (claimed_at IS NULL OR claimed_at < ?)
@@ -47,14 +49,28 @@ export function createCardReplyQueueRepository(
         [staleBefore],
       );
 
-      for (const row of rows) {
+      const chosen = new Set(
+        selectClaimRows(
+          rows.map((row) => toItem(row)),
+          options,
+        ),
+      );
+
+      const taken = rows.filter((row) => chosen.has(row['id'] as number));
+      for (const row of taken) {
         driver.run('UPDATE card_reply_queue SET claimed_at = ? WHERE id = ?', [
           at,
           row['id'] as number,
         ]);
       }
 
-      return rows.map((row) => toItem({ ...row, claimed_at: at }));
+      return taken.map((row) => toItem({ ...row, claimed_at: at }));
+    },
+
+    async releaseClaims() {
+      return driver.run(
+        'UPDATE card_reply_queue SET claimed_at = NULL WHERE done_at IS NULL AND claimed_at IS NOT NULL',
+      ).changes;
     },
 
     async complete(id, at) {

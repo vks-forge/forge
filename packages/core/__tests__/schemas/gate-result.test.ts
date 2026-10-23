@@ -25,6 +25,14 @@ describe('GateResult', () => {
     );
   });
 
+  it('accepts a `setup` row (an install the Worker broke) but no other made-up gate', () => {
+    expect(
+      GateResult.safeParse({ ...gate, gate: 'setup', status: 'failed' }).success,
+    ).toBe(true);
+
+    expect(GateResult.safeParse({ ...gate, gate: 'G9' }).success).toBe(false);
+  });
+
   it('carries the judged head sha when given and rejects an empty one', () => {
     expect(GateResult.parse({ ...gate, head_sha: 'abc123' }).head_sha).toBe('abc123');
     expect(GateResult.parse(gate).head_sha).toBeUndefined();

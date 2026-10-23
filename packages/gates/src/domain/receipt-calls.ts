@@ -6,13 +6,13 @@
  *   place stops the claim matcher and the coverage check drifting apart on path folding or on
  *   which effect states count.
  *
- * Exports: allowedCalls(), touchedPath().
+ * Exports: allowedCalls(), touchedPath(), readBacking().
  * Depends on: @forge/tools (Receipt), shared/paths, types/check.types. No IO.
  */
 
 import type { Receipt } from '@forge/tools';
-import { foldPath } from '#/shared/paths.js';
-import type { AllowedCall as Allowed } from '#/types/check.types.js';
+import { containsPath, foldPath } from '#/shared/paths.js';
+import type { AllowedCall as Allowed, ReadBacking } from '#/types/check.types.js';
 
 /** Allowed decision receipts, each paired with the state of its effect receipt if any. */
 export function allowedCalls(receipts: readonly Receipt[]): Allowed[] {
@@ -31,6 +31,39 @@ export function allowedCalls(receipts: readonly Receipt[]): Allowed[] {
   }
 
   return out;
+}
+
+/**
+ * The evidence for reading `path`: an allowed call whose effect is `read_completed` on the
+ * path itself or on a folder containing it. The effect state, not the tool name, is the
+ * test: only a tool of risk `read` ends `read_completed`, so `Read`, `Grep`, `Glob` or any
+ * other catalogue read tool counts, in any harness. An exact match wins over a folder.
+ */
+export function readBacking(
+  calls: readonly Allowed[],
+  path: string,
+  worktreePath: string,
+): ReadBacking | null {
+  const wanted = foldPath(path, worktreePath);
+  const root = foldPath(worktreePath);
+  let folder: string | undefined;
+
+  for (const c of calls) {
+    if (c.state !== 'read_completed' || c.decision.resource === null) {
+      continue;
+    }
+
+    const got = foldPath(c.decision.resource, worktreePath);
+    if (got === wanted) {
+      return { folder: null };
+    }
+
+    if (folder === undefined && containsPath(c.decision.resource, path, worktreePath)) {
+      folder = got === '' || got === root ? '.' : got;
+    }
+  }
+
+  return folder === undefined ? null : { folder };
 }
 
 /** True when an allowed call of one of `tools` reached one of `state` on `path` (paths folded). */

@@ -1,0 +1,1174 @@
+{
+ "arm": "forge",
+ "instance": {
+  "url": "http://127.0.0.1:4320",
+  "forge_home": "$EVAL/forge-home",
+  "left_running": true,
+  "sign_in": "From D:/VIKASH/software-factory: FORGE_HOME=$EVAL/forge-home FORGE_PORT=4320 FORGE_HOST=127.0.0.1 node apps/cli/dist/main.js open --no-open (or bash $EVAL/scripts/forge.sh open --no-open). Prints a one-time link valid 1 minute. Each new link/restart invalidates older browser sessions."
+ },
+ "setup": {
+  "wizard_steps_ms": {
+   "signin_to_welcome": 1488,
+   "harness_test_live": 166381,
+   "pick_folder_to_inspected": 1707,
+   "git_step": 1594,
+   "details_step": 1582,
+   "checks_step": 1636,
+   "create_project": 1579
+  },
+  "setup_interventions": [
+   "Restarted eval server without parent Claude Code env vars (eval-environment artifact)",
+   "Re-ran compatibility check until it passed (harness paused meanwhile)",
+   "Approved 7 tool schemas for claude 2.1.304",
+   "Added custom 'npm ci' project check (after T1-T3)",
+   "Raised per-project Worker cap 1 -> 2"
+  ]
+ },
+ "totals": {
+  "cost_usd_tasks": 23.89,
+  "cost_usd_all_incl_throwaway_and_extra_ticket": 24.96,
+  "director_share": 0.7,
+  "wall_clock_first_card_to_last_merge_min": 80,
+  "tasks_correct": "7/7 scored 2",
+  "owner_interventions_total": 35
+ },
+ "tasks": [
+  {
+   "task": "T1",
+   "card": "FR-C1",
+   "card_type": "plan",
+   "lane": "express (Director-chosen)",
+   "started_at": "2026-10-20T06:02:26Z",
+   "finished_at": "2026-10-20T06:16:31Z",
+   "wall_seconds": 845,
+   "owner_interventions": {
+    "count": 3,
+    "list": [
+     "Answered Worker question (picked recommended 'Run npm ci' option; no effect, policy still denied npm ci)",
+     "Ran `npm ci` manually inside the FR-1 worktree (manual fix)",
+     "Answered Worker's second question in text: deps installed, finish"
+    ]
+   },
+   "cost_usd": 2.42,
+   "cost_split": {
+    "director": 1.58,
+    "tickets": 0.84
+   },
+   "tokens": {
+    "worker_input": 52,
+    "worker_output": 7267,
+    "worker_cached_input": 1213133,
+    "director_tokens": "not exposed by Forge"
+   },
+   "outcome": {
+    "merged": true,
+    "commit": "358571b",
+    "npm_test": "pass 34/34",
+    "tsc": "pass"
+   },
+   "correctness": {
+    "score": 2,
+    "why": "Regex widened to [a-z0-9], skip removed, extra digits-only test; CLI 'Top 10 Tools' -> top-10-tools."
+   },
+   "diff": {
+    "files": 2,
+    "plus": 6,
+    "minus": 3,
+    "out_of_scope": "none"
+   },
+   "question_count": 0,
+   "plan_ticket_count": 1,
+   "plan_approval": "auto-approved by Director (owner never saw plan before tickets)",
+   "runs": 5,
+   "rework_count": 2,
+   "friction": [
+    "Worktree had no node_modules; Express lane denies npm ci; G1 typecheck failed",
+    "Second G1 failure was a false positive: 'Unsupported claim read package.json'",
+    "5 Worker runs for a one-line fix",
+    "Director spent $1.58 to plan a one-line fix"
+   ],
+   "timeline": {
+    "created": "2026-10-20T06:02:27.052Z (+0s)",
+    "first_director_output": "2026-10-20T06:03:01.160Z (+34s)",
+    "first_question": null,
+    "plan_ready": "2026-10-20T06:03:47.387Z (+80s)",
+    "plan_approved": "2026-10-20T06:03:55.720Z (+89s)",
+    "first_ticket": "2026-10-20T06:03:55.720Z (+89s)",
+    "first_worker_event": "2026-10-20T06:02:27.085Z (+0s)",
+    "merged_done": "2026-10-20T06:16:31.086Z (+844s)"
+   },
+   "idle_gaps_over_60s": [
+    {
+     "after": "217s",
+     "gap_s": 127.079
+    },
+    {
+     "after": "469s",
+     "gap_s": 93.312
+    }
+   ]
+  },
+  {
+   "task": "T2",
+   "card": "FR-C2",
+   "card_type": "plan",
+   "lane": "standard (owner asked for express; plan v2 said express; ticket filed standard)",
+   "started_at": "2026-10-20T06:05:15Z",
+   "finished_at": "2026-10-20T06:26:39Z",
+   "wall_seconds": 1283,
+   "owner_interventions": {
+    "count": 7,
+    "list": [
+     "Answered grill q1 (empty output)",
+     "Answered grill q2 (fields)",
+     "Answered enhance q3 (loadStore scope)",
+     "Request changes on plan v1 (README line + Express)",
+     "Approved plan v2",
+     "Ran npm ci manually in FR-3 worktree (pre-emptive, learned from T1)",
+     "Steered running Worker (keep README short)"
+    ]
+   },
+   "cost_usd": 2.43,
+   "cost_split": {
+    "director": 1.93,
+    "tickets": 0.49
+   },
+   "tokens": {
+    "worker_input": 30,
+    "worker_output": 8984,
+    "worker_cached_input": 748689,
+    "director_tokens": "not exposed by Forge"
+   },
+   "outcome": {
+    "merged": true,
+    "commit": "4b081e2",
+    "npm_test": "pass 48/48",
+    "tsc": "pass"
+   },
+   "correctness": {
+    "score": 2,
+    "why": "list --json prints [] when empty and a full JSON array; boolean flag; README line added (requested)."
+   },
+   "diff": {
+    "files": 4,
+    "plus": 89,
+    "minus": 6,
+    "out_of_scope": "README.md Usage line (owner-requested), otherwise none"
+   },
+   "question_count": 3,
+   "plan_ticket_count": 1,
+   "plan_versions": 2,
+   "friction": [
+    "Survey step read 0 files ('Requesting repo layout...') so q1/q2 asked things readable from code",
+    "Owner lane request ignored at ticket filing",
+    "Steer delivered and acknowledged"
+   ],
+   "timeline": {
+    "created": "2026-10-20T06:05:16.162Z (+0s)",
+    "first_director_output": "2026-10-20T06:05:58.760Z (+43s)",
+    "first_question": "2026-10-20T06:05:58.760Z (+43s)",
+    "plan_ready": "2026-10-20T06:14:45.029Z (+569s)",
+    "plan_approved": "2026-10-20T06:20:21.254Z (+905s)",
+    "first_ticket": "2026-10-20T06:20:21.254Z (+905s)",
+    "first_worker_event": "2026-10-20T06:20:21.301Z (+905s)",
+    "merged_done": "2026-10-20T06:26:38.852Z (+1283s)"
+   },
+   "idle_gaps_over_60s": [
+    {
+     "after": "43s",
+     "gap_s": 275.32
+    },
+    {
+     "after": "345s",
+     "gap_s": 69.11
+    },
+    {
+     "after": "569s",
+     "gap_s": 102.708
+    },
+    {
+     "after": "778s",
+     "gap_s": 126.596
+    },
+    {
+     "after": "1093s",
+     "gap_s": 81.903
+    },
+    {
+     "after": "1217s",
+     "gap_s": 65.247
+    }
+   ]
+  },
+  {
+   "task": "T3",
+   "card": "FR-C3",
+   "card_type": "plan",
+   "lane": "standard (Director-chosen)",
+   "started_at": "2026-10-20T06:05:19Z",
+   "finished_at": "2026-10-20T06:26:22Z",
+   "wall_seconds": 1262,
+   "owner_interventions": {
+    "count": 3,
+    "list": [
+     "Answered Worker question ('Owner approves npm ci' option; granted nothing)",
+     "Ran npm ci manually in FR-2 worktree",
+     "Answered Worker's second question in text"
+    ]
+   },
+   "cost_usd": 2.04,
+   "cost_split": {
+    "director": 0.9,
+    "tickets": 1.14
+   },
+   "tokens": {
+    "worker_input": 84,
+    "worker_output": 12825,
+    "worker_cached_input": 2150315,
+    "director_tokens": "not exposed by Forge"
+   },
+   "outcome": {
+    "merged": true,
+    "commit": "7051519",
+    "npm_test": "pass 48/48",
+    "tsc": "pass"
+   },
+   "correctness": {
+    "score": 2,
+    "why": "Empty/whitespace title and non-http(s) URL rejected with clear messages, exit 1, nothing written; 7 tests."
+   },
+   "diff": {
+    "files": 2,
+    "plus": 76,
+    "minus": 1,
+    "out_of_scope": "none"
+   },
+   "question_count": 0,
+   "plan_ticket_count": 1,
+   "plan_approval": "auto-approved by Director",
+   "runs": 7,
+   "rework_count": 2,
+   "friction": [
+    "Standard lane: npm ci is 'ask' but auto-denied ('needs approval, denied: rule_ask'), no approval surfaced",
+    "G1 claims false positive: implementer claimed added_test for tests the test-writer stage added"
+   ],
+   "timeline": {
+    "created": "2026-10-20T06:05:20.428Z (+0s)",
+    "first_director_output": "2026-10-20T06:06:22.492Z (+62s)",
+    "first_question": null,
+    "plan_ready": "2026-10-20T06:07:59.131Z (+159s)",
+    "plan_approved": "2026-10-20T06:08:11.112Z (+171s)",
+    "first_ticket": "2026-10-20T06:08:11.112Z (+171s)",
+    "first_worker_event": "2026-10-20T06:08:11.132Z (+171s)",
+    "merged_done": "2026-10-20T06:26:22.421Z (+1262s)"
+   },
+   "idle_gaps_over_60s": [
+    {
+     "after": "419s",
+     "gap_s": 80.548
+    },
+    {
+     "after": "883s",
+     "gap_s": 119.825
+    },
+    {
+     "after": "1003s",
+     "gap_s": 85.77
+    }
+   ]
+  },
+  {
+   "task": "T4",
+   "card": "FR-C4",
+   "card_type": "plan",
+   "lane": "standard (Director-chosen), 2 tickets",
+   "started_at": "2026-10-20T06:30:12Z",
+   "finished_at": "2026-10-20T06:59:04Z",
+   "wall_seconds": 1731,
+   "owner_interventions": {
+    "count": 4,
+    "list": [
+     "Answered grill q1 (keep duplicate tags)",
+     "Answered grill q2 (storeExists helper)",
+     "Answered enhance q3 (accept small fixes)",
+     "Approved plan (approval step raised 2 more open questions)"
+    ]
+   },
+   "cost_usd": 2.91,
+   "cost_split": {
+    "director": 1.69,
+    "tickets": 1.22
+   },
+   "tokens": {
+    "worker_input": 78,
+    "worker_output": 22132,
+    "worker_cached_input": 2041447,
+    "director_tokens": "not exposed by Forge"
+   },
+   "outcome": {
+    "merged": true,
+    "commits": [
+     "5978ed6",
+     "56e900e"
+    ],
+    "npm_test": "pass 78/78",
+    "tsc": "pass"
+   },
+   "correctness": {
+    "score": 2,
+    "why": "cli.ts has no node:fs/path; all IO via store; behaviour preserved incl. exact remove message and duplicate tags."
+   },
+   "diff": {
+    "files": 4,
+    "plus": 283,
+    "minus": 68,
+    "out_of_scope": "addBookmark gained a dedupeTags option (needed to keep behaviour); acceptable"
+   },
+   "question_count": 3,
+   "plan_ticket_count": 2,
+   "friction": [
+    "Before T4 the owner added a custom 'npm ci' check in Project settings > Checks to stop the missing-deps loop",
+    "FR-6 merge later caused FR-8 (T5) conflict"
+   ],
+   "timeline": {
+    "created": "2026-10-20T06:30:12.783Z (+0s)",
+    "first_director_output": "2026-10-20T06:31:45.823Z (+93s)",
+    "first_question": "2026-10-20T06:31:45.823Z (+93s)",
+    "plan_ready": "2026-10-20T06:42:10.838Z (+718s)",
+    "plan_approved": "2026-10-20T06:43:30.528Z (+798s)",
+    "first_ticket": "2026-10-20T06:43:30.528Z (+798s)",
+    "first_worker_event": "2026-10-20T06:46:54.340Z (+1002s)",
+    "merged_done": "2026-10-20T06:59:04.065Z (+1731s)"
+   },
+   "idle_gaps_over_60s": [
+    {
+     "after": "0s",
+     "gap_s": 82.78
+    },
+    {
+     "after": "175s",
+     "gap_s": 204.102
+    },
+    {
+     "after": "482s",
+     "gap_s": 204.7
+    },
+    {
+     "after": "730s",
+     "gap_s": 67.44
+    },
+    {
+     "after": "798s",
+     "gap_s": 203.812
+    },
+    {
+     "after": "1273s",
+     "gap_s": 62.972
+    },
+    {
+     "after": "1615s",
+     "gap_s": 92.982
+    }
+   ]
+  },
+  {
+   "task": "T5",
+   "card": "FR-C6",
+   "card_type": "plan",
+   "lane": "standard + express docs ticket",
+   "started_at": "2026-10-20T06:32:41Z",
+   "finished_at": "2026-10-20T07:18:02Z",
+   "wall_seconds": 2721,
+   "owner_interventions": {
+    "count": 7,
+    "list": [
+     "Answered grill q1 (blank tag fails)",
+     "Answered grill q2 (empty message wording)",
+     "Answered enhance q3 (3-tag wording, over-ask)",
+     "Approved plan v1 (3 tickets)",
+     "Retry on FR-8 merge conflict with note (no effect)",
+     "Re-plan card with comment",
+     "Approved plan v2 (2 tickets)"
+    ]
+   },
+   "cost_usd": 4.76,
+   "cost_split": {
+    "director": 3.0,
+    "tickets": 1.76
+   },
+   "tokens": {
+    "worker_input": 138,
+    "worker_output": 32647,
+    "worker_cached_input": 3491058,
+    "director_tokens": "not exposed by Forge"
+   },
+   "outcome": {
+    "merged": true,
+    "commits": [
+     "ac869e9",
+     "927f60b",
+     "330961a"
+    ],
+    "npm_test": "pass 118/118",
+    "tsc": "pass"
+   },
+   "correctness": {
+    "score": 2,
+    "why": "--tag repeated = all, --any = any, blank tag error, messages per owner answers; README search section rewritten."
+   },
+   "diff": {
+    "files": 6,
+    "plus": 247,
+    "minus": 14,
+    "out_of_scope": "none"
+   },
+   "question_count": 3,
+   "plan_ticket_count": 3,
+   "plan_versions": 2,
+   "friction": [
+    "FR-8 merge conflict with T4's FR-6 on src/cli.ts; Retry useless; only Re-plan of whole card",
+    "6.5 min between owner answer and next grill question",
+    "Failure-injection steer (break slug test) refused by Worker"
+   ],
+   "timeline": {
+    "created": "2026-10-20T06:32:42.557Z (+0s)",
+    "first_director_output": "2026-10-20T06:33:58.893Z (+76s)",
+    "first_question": "2026-10-20T06:33:58.893Z (+76s)",
+    "plan_ready": "2026-10-20T06:47:28.002Z (+885s)",
+    "plan_approved": "2026-10-20T06:48:00.435Z (+918s)",
+    "first_ticket": "2026-10-20T06:48:00.435Z (+918s)",
+    "first_worker_event": "2026-10-20T06:51:25.651Z (+1123s)",
+    "merged_done": "2026-10-20T07:18:01.838Z (+2719s)"
+   },
+   "idle_gaps_over_60s": [
+    {
+     "after": "129s",
+     "gap_s": 389.921
+    },
+    {
+     "after": "563s",
+     "gap_s": 123.06
+    },
+    {
+     "after": "765s",
+     "gap_s": 86.764
+    },
+    {
+     "after": "918s",
+     "gap_s": 205.216
+    },
+    {
+     "after": "1462s",
+     "gap_s": 95.145
+    },
+    {
+     "after": "1708s",
+     "gap_s": 78.555
+    },
+    {
+     "after": "1786s",
+     "gap_s": 101.539
+    },
+    {
+     "after": "2503s",
+     "gap_s": 132.633
+    }
+   ]
+  },
+  {
+   "task": "T6",
+   "card": "FR-C5",
+   "card_type": "discussion -> plan (changed mid-flow)",
+   "lane": "standard",
+   "started_at": "2026-10-20T06:30:20Z",
+   "finished_at": "2026-10-20T07:22:31Z",
+   "wall_seconds": 3131,
+   "owner_interventions": {
+    "count": 10,
+    "list": [
+     "Chat answer with spec answer (format, dups by URL, folders->tags)",
+     "Chat reply 'defaults are fine, CLI command'",
+     "Changed card type Discussion -> Plan",
+     "Request changes on plan v1 (it contradicted 'folders become tags')",
+     "Answered grill q (container-folder fallback)",
+     "Approved plan v2",
+     "Raised turn limit back + Retry after injected budget hit (injection-caused)",
+     "Retry after G1 provenance failure (injection-caused)",
+     "Re-plan with comment (injection-caused)",
+     "Approved plan v3"
+    ]
+   },
+   "cost_usd": 8.12,
+   "cost_split": {
+    "director": 5.84,
+    "tickets": 2.29
+   },
+   "tokens": {
+    "worker_input": 160,
+    "worker_output": 43826,
+    "worker_cached_input": 4259863,
+    "director_tokens": "not exposed by Forge"
+   },
+   "outcome": {
+    "merged": true,
+    "commits": [
+     "14aa04f",
+     "e416fa6"
+    ],
+    "npm_test": "pass 131/131",
+    "tsc": "pass"
+   },
+   "correctness": {
+    "score": 2,
+    "why": "shelf import parses Netscape HTML, folders->tags (drops toolbar container), skips dups by URL incl. re-import, summary line, errors exit 1; README documented."
+   },
+   "diff": {
+    "files": 5,
+    "plus": 657,
+    "minus": 0,
+    "out_of_scope": "none"
+   },
+   "question_count": "discussion: 2 multi-question messages (6 + 5 questions); plan: 1 grill question",
+   "plan_ticket_count": 2,
+   "plan_versions": 3,
+   "friction": [
+    "Discussion type does not survey code: questions were generic (upload flow, 10 MB) for a CLI",
+    "Plan v1 said 'Folder (H3) names never become tags' against the owner's explicit answer",
+    "Research ran (4 sources: gists/forum/blog, no browser vendor docs)",
+    "Budget-hit runs reported as 'unknown' then G1 provenance dead end",
+    "~3 of the 10 interventions are consequences of the budget injection"
+   ],
+   "timeline": {
+    "created": "2026-10-20T06:30:20.491Z (+0s)",
+    "first_director_output": "2026-10-20T06:31:45.835Z (+85s)",
+    "first_question": "2026-10-20T06:44:01.866Z (+821s)",
+    "plan_ready": "2026-10-20T06:41:10.555Z (+650s)",
+    "plan_approved": "2026-10-20T06:48:05.663Z (+1065s)",
+    "first_ticket": "2026-10-20T06:48:05.663Z (+1065s)",
+    "first_worker_event": "2026-10-20T06:54:09.897Z (+1429s)",
+    "merged_done": "2026-10-20T07:22:31.188Z (+3131s)"
+   },
+   "idle_gaps_over_60s": [
+    {
+     "after": "0s",
+     "gap_s": 85.344
+    },
+    {
+     "after": "188s",
+     "gap_s": 62.908
+    },
+    {
+     "after": "251s",
+     "gap_s": 204.873
+    },
+    {
+     "after": "994s",
+     "gap_s": 71.339
+    },
+    {
+     "after": "1065s",
+     "gap_s": 364.234
+    },
+    {
+     "after": "1517s",
+     "gap_s": 63.667
+    },
+    {
+     "after": "2054s",
+     "gap_s": 117.873
+    }
+   ]
+  },
+  {
+   "task": "T7",
+   "card": "FR-C7",
+   "card_type": "plan",
+   "lane": "express",
+   "started_at": "2026-10-20T06:32:46Z",
+   "finished_at": "2026-10-20T06:49:14Z",
+   "wall_seconds": 988,
+   "owner_interventions": {
+    "count": 1,
+    "list": [
+     "Approved plan (flagged 2 unverified outside claims)"
+    ]
+   },
+   "cost_usd": 1.21,
+   "cost_split": {
+    "director": 0.78,
+    "tickets": 0.43
+   },
+   "tokens": {
+    "worker_input": 28,
+    "worker_output": 6761,
+    "worker_cached_input": 726525,
+    "director_tokens": "not exposed by Forge"
+   },
+   "outcome": {
+    "merged": true,
+    "commit": "b10b393",
+    "npm_test": "pass 48/48",
+    "tsc": "pass"
+   },
+   "correctness": {
+    "score": 2,
+    "why": "Usage section covers add/list/remove/search/tags/help, every flag, errors, invocation; accurate vs code at the time."
+   },
+   "diff": {
+    "files": 1,
+    "plus": 107,
+    "minus": 1,
+    "out_of_scope": "none"
+   },
+   "question_count": 0,
+   "plan_ticket_count": 1,
+   "friction": [
+    "First run silently stalled 5 min: harness spawned only at 06:41:39 though run start recorded 06:36:14; watchdog cancelled it ('silent for 324219 ms'); retry succeeded",
+    "Floor check did not flag overlap with in-flight T5 (also README)"
+   ],
+   "timeline": {
+    "created": "2026-10-20T06:32:47.655Z (+0s)",
+    "first_director_output": "2026-10-20T06:34:59.169Z (+132s)",
+    "first_question": null,
+    "plan_ready": "2026-10-20T06:36:14.699Z (+207s)",
+    "plan_approved": "2026-10-20T06:36:54.760Z (+247s)",
+    "first_ticket": "2026-10-20T06:36:54.760Z (+247s)",
+    "first_worker_event": "2026-10-20T06:36:14.910Z (+207s)",
+    "merged_done": "2026-10-20T06:49:13.845Z (+986s)"
+   },
+   "idle_gaps_over_60s": [
+    {
+     "after": "0s",
+     "gap_s": 71.253
+    },
+    {
+     "after": "247s",
+     "gap_s": 328.339
+    },
+    {
+     "after": "575s",
+     "gap_s": 185.567
+    },
+    {
+     "after": "847s",
+     "gap_s": 102.345
+    }
+   ]
+  }
+ ],
+ "failures": [
+  {
+   "name": "Ticket whose work breaks tests (via steer)",
+   "steps": [
+    "Steered running FR-7 Worker: delete test/cli.test.ts and commit",
+    "Steered running FR-8 test-writer: change slug test to expect 'top-tools'"
+   ],
+   "observed": "FR-7: hook denied `git rm` ('no matching rule'); Worker did its ticket and mentioned the undone deletion only in its finish summary (no needs-you item). FR-8: Worker refused as out of scope. G1 never received broken tests, so gate-fails-on-broken-tests could not be provoked via steering.",
+   "recovered": "n/a (nothing broke)",
+   "evidence": "run_events of FR-7/FR-8; shots/forge-inject-delete-test.png, forge-inject-break-test.png"
+  },
+  {
+   "name": "Request changes on a plan",
+   "steps": [
+    "T2 plan v1: request changes (README line + Express)",
+    "T6 plan v1: request changes (contradicted folders->tags)"
+   ],
+   "observed": "T2 plan v2 in 1m46s with both changes in scope (ticket still filed standard). T6 plan v2 in 5m18s incl. one new grill question; correct.",
+   "recovered": "yes",
+   "evidence": "FR-C2 event plan_changes_requested seq 26; FR-C5 plan v2"
+  },
+  {
+   "name": "Cancel a ticket mid-run",
+   "steps": [
+    "Opened running FR-12 ticket page: no cancel control",
+    "Asked card Director in chat to cancel FR-12"
+   ],
+   "observed": "Director only steered the Worker to stop and suggested closing; told the owner to 'use the ticket's cancel control', which does not exist for a running ticket.",
+   "recovered": "partly (only by closing the card)",
+   "evidence": "FR-C8 director_message 07:00:43; shots/forge-x1-ticket-running.png"
+  },
+  {
+   "name": "Cancel (close) a card mid-run",
+   "steps": [
+    "Card actions > Close card with reason while FR-12 ran"
+   ],
+   "observed": "Card closed, FR-12 cancelled, run ended, nothing merged. Dialog says 'Its tickets keep running' (opposite). Branch feat/FR-12 left behind.",
+   "recovered": "yes",
+   "evidence": "shots/forge-FR-C8-close-dialog.png"
+  },
+  {
+   "name": "Kill eval server mid-run and restart",
+   "steps": [
+    "taskkill /F eval pid 25008 at 06:49:42 while FR-5 ran, ticket page open",
+    "forge start after 40 s"
+   ],
+   "observed": "Page: 'Could not refresh this ticket. Check that Forge is running', then after restart 'Your session ended or Forge restarted. Run `forge open` in a terminal'. Restart 2 s; log 'run run-6a2b... resumed from its session'; FR-5 finished and merged; state consistent.",
+   "recovered": "yes (browser needs a terminal sign-in link)",
+   "evidence": "results/downwatch.log; server.log 06:50:25; shots/forge-down-*.png"
+  },
+  {
+   "name": "Two cards touching the same file",
+   "steps": [
+    "T4 (FR-6) and T5 (FR-8) both edit src/cli.ts and test/cli.test.ts in parallel",
+    "T5 and T7 both edit README.md"
+   ],
+   "observed": "FR-6 merged first; FR-8 stopped: 'verify: policy_denied ... PR 9 has merge conflicts'. No auto-rebase. Retry (with note) ran no Worker and failed again in 15 s. Re-plan rebuilt the plan (3 min, +$1.8) and re-filed tickets that merged cleanly. README: T7 merged first; T5's re-plan rewrote the search section consistently.",
+   "recovered": "yes, only through card Re-plan",
+   "evidence": "FR-8 needs_you_detail; shots/forge-conflict-dock.png, forge-conflict-replan.png"
+  },
+  {
+   "name": "Step/limit budget hit",
+   "steps": [
+    "Forge settings > Limits: Turns per run 40 -> 3",
+    "FR-11 implementer runs hit the cap",
+    "Raised back to 40, Retry"
+   ],
+   "observed": "Two runs errored; run event 'Internal error: Reached maximum number of turns (3)' but needs-you said 'unknown: failed 2 times', Director: 'gave no error text'. No raise-limit hint. After raising and Retry every later run failed G1 claims ('run secret of generation 1 is gone, chain unverifiable'). Only Re-plan (new ticket FR-15, +$2.7) recovered; FR-11's correct work discarded.",
+   "recovered": "partly (only via re-plan)",
+   "evidence": "run-a1c85e347faf4233953d error event; FR-11 escalations; shots/forge-g1fp-retry.png"
+  },
+  {
+   "name": "Browser offline / server down while page open",
+   "steps": [
+    "Playwright setOffline on Board, navigate to a card, back online"
+   ],
+   "observed": "Board: 'You are offline. These columns are the last data Forge sent and may be out of date.' Navigation while offline: blank main, no message. Back online: content in ~1 s.",
+   "recovered": "yes",
+   "evidence": "shots/forge-offline.png, forge-offline-recovered.png"
+  },
+  {
+   "name": "Bad input",
+   "steps": [
+    "POST card {}",
+    "9-char description",
+    "300 KB / 25 KB chat message",
+    "unknown ids in API and UI URLs",
+    "UI: 20,000-char chat message, 2-char title"
+   ],
+   "observed": "API 400 with zod issues; 8000-char message cap; 404 JSON for unknown card/ticket/run/project; UI 404 pages clear with a way back. UI chat accepts 20k chars and only says 'request failed validation' (no limit named). New card Create stays disabled with only a title hint; 20-char description minimum never explained.",
+   "recovered": "yes",
+   "evidence": "shots/forge-bad-*.png"
+  }
+ ],
+ "latency": {
+  "server_cold_start_s": {
+   "first_start_fresh_home": 30.1,
+   "restart_after_graceful_stop": 46,
+   "restart_after_kill": 2,
+   "note": "server log 05:28:43 boot -> 05:29:13 listening; 05:46:28 -> 05:47:05; 06:50:23 -> 06:50:25"
+  },
+  "signin_link_to_networkidle_ms": 1488,
+  "api_get_seconds_populated_n9": [
+   "cards n=9 median=0.017 max=0.039 min=0.011",
+   "card_detail n=9 median=0.003 max=0.027 min=0.003",
+   "card_events n=9 median=0.004 max=0.024 min=0.002",
+   "card_plan n=9 median=0.081 max=0.098 min=0.072",
+   "ticket_detail n=9 median=0.013 max=0.015 min=0.011",
+   "tickets_list n=9 median=0.006 max=0.021 min=0.004",
+   "inbox n=9 median=0.009 max=0.032 min=0.006",
+   "inbox_counts n=9 median=0.011 max=0.011 min=0.008",
+   "run_detail n=9 median=0.003 max=0.023 min=0.002",
+   "cost n=9 median=0.008 max=0.027 min=0.007",
+   "overview n=9 median=0.018 max=0.035 min=0.015",
+   "projects n=9 median=0.002 max=0.023 min=0.002",
+   "memory n=9 median=0.003 max=0.006 min=0.002"
+  ],
+  "api_get_seconds_empty_n7": [
+   "cards median=0.003 max=0.004",
+   "card median=0.003 max=0.036",
+   "inbox median=0.009 max=0.014",
+   "tickets median=0.003 max=0.005",
+   "cost median=0.006 max=0.009",
+   "overview median=0.009 max=0.013"
+  ],
+  "page_load_networkidle_and_lcp_ms_n5": {
+   "overview": {
+    "networkidle_median_ms": 709,
+    "networkidle_max_ms": 732,
+    "lcp_median_ms": 340,
+    "lcp_max_ms": 380
+   },
+   "home": {
+    "networkidle_median_ms": 718,
+    "networkidle_max_ms": 783,
+    "lcp_median_ms": 240,
+    "lcp_max_ms": 264
+   },
+   "inbox": {
+    "networkidle_median_ms": 674,
+    "networkidle_max_ms": 784,
+    "lcp_median_ms": 208,
+    "lcp_max_ms": 308
+   },
+   "board": {
+    "networkidle_median_ms": 747,
+    "networkidle_max_ms": 817,
+    "lcp_median_ms": 200,
+    "lcp_max_ms": 312
+   },
+   "tickets": {
+    "networkidle_median_ms": 714,
+    "networkidle_max_ms": 815,
+    "lcp_median_ms": 296,
+    "lcp_max_ms": 360
+   },
+   "card": {
+    "networkidle_median_ms": 807,
+    "networkidle_max_ms": 830,
+    "lcp_median_ms": 356,
+    "lcp_max_ms": 364
+   },
+   "ticket": {
+    "networkidle_median_ms": 748,
+    "networkidle_max_ms": 1412,
+    "lcp_median_ms": 308,
+    "lcp_max_ms": 376
+   },
+   "runs": {
+    "networkidle_median_ms": 792,
+    "networkidle_max_ms": 1094,
+    "lcp_median_ms": 344,
+    "lcp_max_ms": 624
+   },
+   "cost": {
+    "networkidle_median_ms": 701,
+    "networkidle_max_ms": 1153,
+    "lcp_median_ms": 248,
+    "lcp_max_ms": 408
+   },
+   "memory": {
+    "networkidle_median_ms": 719,
+    "networkidle_max_ms": 811,
+    "lcp_median_ms": 208,
+    "lcp_max_ms": 292
+   },
+   "project_settings": {
+    "networkidle_median_ms": 669,
+    "networkidle_max_ms": 683,
+    "lcp_median_ms": 216,
+    "lcp_max_ms": 220
+   },
+   "forge_settings": {
+    "networkidle_median_ms": 683,
+    "networkidle_max_ms": 749,
+    "lcp_median_ms": 180,
+    "lcp_max_ms": 268
+   },
+   "route_change_board_to_card": {
+    "median_ms": 110,
+    "max_ms": 154
+   }
+  },
+  "sse_live_update_ms": {
+   "samples": [
+    894,
+    169,
+    92
+   ],
+   "median": 169,
+   "method": "POST /runs/:id/steer -> text visible on open ticket page"
+  },
+  "card_milestones": {
+   "FR-C1": {
+    "created": "2026-10-20T06:02:27.052Z (+0s)",
+    "first_director_output": "2026-10-20T06:03:01.160Z (+34s)",
+    "first_question": null,
+    "plan_ready": "2026-10-20T06:03:47.387Z (+80s)",
+    "plan_approved": "2026-10-20T06:03:55.720Z (+89s)",
+    "first_ticket": "2026-10-20T06:03:55.720Z (+89s)",
+    "first_worker_event": "2026-10-20T06:02:27.085Z (+0s)",
+    "merged_done": "2026-10-20T06:16:31.086Z (+844s)"
+   },
+   "FR-C2": {
+    "created": "2026-10-20T06:05:16.162Z (+0s)",
+    "first_director_output": "2026-10-20T06:05:58.760Z (+43s)",
+    "first_question": "2026-10-20T06:05:58.760Z (+43s)",
+    "plan_ready": "2026-10-20T06:14:45.029Z (+569s)",
+    "plan_approved": "2026-10-20T06:20:21.254Z (+905s)",
+    "first_ticket": "2026-10-20T06:20:21.254Z (+905s)",
+    "first_worker_event": "2026-10-20T06:20:21.301Z (+905s)",
+    "merged_done": "2026-10-20T06:26:38.852Z (+1283s)"
+   },
+   "FR-C3": {
+    "created": "2026-10-20T06:05:20.428Z (+0s)",
+    "first_director_output": "2026-10-20T06:06:22.492Z (+62s)",
+    "first_question": null,
+    "plan_ready": "2026-10-20T06:07:59.131Z (+159s)",
+    "plan_approved": "2026-10-20T06:08:11.112Z (+171s)",
+    "first_ticket": "2026-10-20T06:08:11.112Z (+171s)",
+    "first_worker_event": "2026-10-20T06:08:11.132Z (+171s)",
+    "merged_done": "2026-10-20T06:26:22.421Z (+1262s)"
+   },
+   "FR-C4": {
+    "created": "2026-10-20T06:30:12.783Z (+0s)",
+    "first_director_output": "2026-10-20T06:31:45.823Z (+93s)",
+    "first_question": "2026-10-20T06:31:45.823Z (+93s)",
+    "plan_ready": "2026-10-20T06:42:10.838Z (+718s)",
+    "plan_approved": "2026-10-20T06:43:30.528Z (+798s)",
+    "first_ticket": "2026-10-20T06:43:30.528Z (+798s)",
+    "first_worker_event": "2026-10-20T06:46:54.340Z (+1002s)",
+    "merged_done": "2026-10-20T06:59:04.065Z (+1731s)"
+   },
+   "FR-C5": {
+    "created": "2026-10-20T06:30:20.491Z (+0s)",
+    "first_director_output": "2026-10-20T06:31:45.835Z (+85s)",
+    "first_question": "2026-10-20T06:44:01.866Z (+821s)",
+    "plan_ready": "2026-10-20T06:41:10.555Z (+650s)",
+    "plan_approved": "2026-10-20T06:48:05.663Z (+1065s)",
+    "first_ticket": "2026-10-20T06:48:05.663Z (+1065s)",
+    "first_worker_event": "2026-10-20T06:54:09.897Z (+1429s)",
+    "merged_done": "2026-10-20T07:22:31.188Z (+3131s)"
+   },
+   "FR-C6": {
+    "created": "2026-10-20T06:32:42.557Z (+0s)",
+    "first_director_output": "2026-10-20T06:33:58.893Z (+76s)",
+    "first_question": "2026-10-20T06:33:58.893Z (+76s)",
+    "plan_ready": "2026-10-20T06:47:28.002Z (+885s)",
+    "plan_approved": "2026-10-20T06:48:00.435Z (+918s)",
+    "first_ticket": "2026-10-20T06:48:00.435Z (+918s)",
+    "first_worker_event": "2026-10-20T06:51:25.651Z (+1123s)",
+    "merged_done": "2026-10-20T07:18:01.838Z (+2719s)"
+   },
+   "FR-C7": {
+    "created": "2026-10-20T06:32:47.655Z (+0s)",
+    "first_director_output": "2026-10-20T06:34:59.169Z (+132s)",
+    "first_question": null,
+    "plan_ready": "2026-10-20T06:36:14.699Z (+207s)",
+    "plan_approved": "2026-10-20T06:36:54.760Z (+247s)",
+    "first_ticket": "2026-10-20T06:36:54.760Z (+247s)",
+    "first_worker_event": "2026-10-20T06:36:14.910Z (+207s)",
+    "merged_done": "2026-10-20T06:49:13.845Z (+986s)"
+   },
+   "FR-C8": {
+    "created": "2026-10-20T06:56:55.348Z (+0s)",
+    "first_director_output": "2026-10-20T06:57:51.179Z (+56s)",
+    "first_question": null,
+    "plan_ready": "2026-10-20T06:58:37.580Z (+102s)",
+    "plan_approved": "2026-10-20T06:58:56.891Z (+122s)",
+    "first_ticket": "2026-10-20T06:58:56.891Z (+122s)",
+    "first_worker_event": "2026-10-20T06:59:04.065Z (+129s)",
+    "merged_done": null
+   }
+  },
+  "worktree_and_checks": {
+   "npm_ci_in_worktree_s": [
+    9,
+    16,
+    11
+   ],
+   "G1_gate_duration_s": [
+    "FR-1 6.2",
+    "FR-3 6",
+    "FR-2 6"
+   ],
+   "plain_npm_test_s": 0.9,
+   "card_phase_lag_after_ticket_done_s": "up to 107 (FR-C1)"
+  },
+  "harness_checks_s": {
+   "wizard_harness_test_with_live_call": 166,
+   "compat_check_runs": [
+    174,
+    94,
+    95,
+    49,
+    24,
+    18
+   ]
+  },
+  "long_idle_gaps_owner_waits": [
+   "T7 FR-4: 328 s 'running' with zero Worker output (dispatch blocked by Director steps, then watchdog kill)",
+   "T6: 364 s from plan approval to first Worker event",
+   "T5: 390 s between owner answer (06:34:51) and next grill question (06:41:21)",
+   "T4: three gaps of ~204 s during grill/verify",
+   "T6: owner message at 06:33:28 waited 166 s in the Director reply queue",
+   "T1: 127 s and 93 s gaps while the Worker was blocked on deps",
+   "Some gaps in timeline files include the eval owner's own response time"
+  ],
+  "disk": {
+   "forge_home_total_MB": 158,
+   "forge_db_plus_wal_MB": 9.7,
+   "runs_dir_KB": 624,
+   "worktrees_MB": 147,
+   "worktrees_left": [
+    "FR-8 (cancelled)",
+    "FR-11 (cancelled)"
+   ],
+   "merged_ticket_worktrees_cleaned": true,
+   "stale_branches": [
+    "feat/FR-12",
+    "feat/FR-8",
+    "feat/FR-11"
+   ]
+  }
+ },
+ "bugs": [
+  {
+   "severity": "critical",
+   "title": "Worktrees have no dependencies and Workers may not install them; every Node ticket fails G1 typecheck",
+   "repro": "TS project with @types in devDependencies; any card. Express denies `npm ci` (rule_deny); Standard 'asks' but auto-denies ('needs approval, denied: rule_ask') with no approval UI. Options like 'Owner approves npm ci' grant nothing.",
+   "evidence": "FR-1 G1 report (TS2688 Cannot find type definition file for 'node'); FR-1/FR-2 escalations; only workaround: manual npm ci per worktree or custom 'npm ci' check in Project settings > Checks"
+  },
+  {
+   "severity": "major",
+   "title": "Engine tick blocks Worker dispatch during Director LLM steps; stale run start time makes the stall watchdog kill a just-started run",
+   "repro": "Plan several cards at once; approve an Express plan.",
+   "evidence": "server.log 06:41:39 harness spawn for FR-4 then 'run run-67a3b8a7... silent for 324219 ms; cancelling'; FR-1 run started_at 06:02:27 before ticket created 06:03:55"
+  },
+  {
+   "severity": "major",
+   "title": "Run that errors (turn limit) leaves edits no later run can vouch for: G1 claims fail forever",
+   "repro": "Turns per run = 3, let a run hit it, raise, Retry.",
+   "evidence": "FR-11 G1: 'changed files not covered by any edited claim: src/cli.ts ... run secret of generation 1 is gone, chain unverifiable'; only Re-plan recovered (+$2.73)"
+  },
+  {
+   "severity": "major",
+   "title": "Harness compatibility check flaky under load and pauses all runs",
+   "repro": "Fresh home: wizard Test harness with live call while compat runs.",
+   "evidence": "compat failed twice on 2.1.302 and once on 2.1.304 (94-174 s), passed 3 times (18-49 s) on the same builds; status 'Runs on this harness are paused'"
+  },
+  {
+   "severity": "major",
+   "title": "G1 claims check false positives across pipeline stages",
+   "repro": "Standard lane ticket.",
+   "evidence": "7 of 10 G1 failures were claims-only (read claims for files read in earlier stages, added_test claims for tests added by test-writer); G1 caught 0 real defects"
+  },
+  {
+   "severity": "major",
+   "title": "Merge conflict: no rebase, Retry is a no-op, labelled policy_denied, only fix is re-planning the card",
+   "repro": "Two cards editing src/cli.ts in parallel.",
+   "evidence": "FR-8 'verify: policy_denied ... PR 9 has merge conflicts'; Retry 07:02:29 failed 07:02:44 with no Worker run"
+  },
+  {
+   "severity": "major",
+   "title": "Turn-limit hit shown as 'unknown' with 'no error text'; no hint to raise the limit",
+   "repro": "Turns per run = 3.",
+   "evidence": "run event 'Reached maximum number of turns (3)' vs needs-you 'unknown: failed 2 times (retry limit 1)'"
+  },
+  {
+   "severity": "major",
+   "title": "Cost page and Overview show only Worker spend (~30% of real spend)",
+   "repro": "Open Cost / Overview after planning cards.",
+   "evidence": "Cost page 'Spend reported $7.43'; card totals $24.86 (Director ~$17)"
+  },
+  {
+   "severity": "major",
+   "title": "Owner's lane choice ignored when filing tickets",
+   "repro": "Request changes asking for Express; plan v2 shows lane express.",
+   "evidence": "FR-C2 plan v2 lane 'express'; FR-3 filed 'standard' with test-writer and reviewer"
+  },
+  {
+   "severity": "major",
+   "title": "Plan contradicted the owner's explicit answer (folders become tags)",
+   "repro": "T6 as in spec.",
+   "evidence": "FR-C5 plan v1 scope: 'Folder (H3) names never become tags'"
+  },
+  {
+   "severity": "major",
+   "title": "Survey can finish having read 0 files; grill then asks code-answerable questions",
+   "repro": "T2.",
+   "evidence": "FR-C2 survey files_read [] 'Requesting repo layout...'; q1 why 'The survey has not located the list command yet'"
+  },
+  {
+   "severity": "major",
+   "title": "No way to cancel a running ticket; Director points to a non-existent control",
+   "repro": "Open a running ticket; ask card Director to cancel.",
+   "evidence": "ticket page has no Cancel while running; director_message 07:00:43 'use the ticket's cancel control'"
+  },
+  {
+   "severity": "major",
+   "title": "Director work is serial: answers wait minutes for the next question when several cards plan",
+   "repro": "Plan 4 cards in parallel.",
+   "evidence": "FR-C5 reply queue claimed 166 s after enqueue; FR-C6 next question 390 s after answer"
+  },
+  {
+   "severity": "minor",
+   "title": "Mojibake in Worker/Director text (ellipsis and arrow double-encoded)",
+   "repro": "Any escalation with an ellipsis.",
+   "evidence": "escalation 'keeps dig\\u00e2\\u20ac\\u00a6'; FR-C1 director_message '\\u00e2\\u2020\\u2019'"
+  },
+  {
+   "severity": "minor",
+   "title": "Plan risks/assumptions duplicated 2-3 times",
+   "repro": "T1, T4 plans.",
+   "evidence": "FR-C1 verification.risks: 11 entries, 3-4 risks repeated"
+  },
+  {
+   "severity": "minor",
+   "title": "Close-card dialog says tickets keep running; it cancels them",
+   "repro": "Close a card with a running ticket.",
+   "evidence": "shots/forge-FR-C8-close-dialog.png; FR-12 cancelled"
+  },
+  {
+   "severity": "minor",
+   "title": "Card Details says 'Budget cap: No cap' while $5 budget warnings fire",
+   "repro": "T6 card.",
+   "evidence": "inbox budget_warning:FR-C5:1 '$6.06 of $5.00'"
+  },
+  {
+   "severity": "minor",
+   "title": "Ecosystem not recorded: wizard says 'Found node' but project ecosystems empty",
+   "repro": "Create project.",
+   "evidence": "GET /projects ecosystems []; settings 'Detected ecosystems None'"
+  },
+  {
+   "severity": "minor",
+   "title": "Wizard marks harness step Done after a failed test; live-probe failure gives no reason",
+   "repro": "Fresh home wizard.",
+   "evidence": "shots/forge-02-harness-tested.png 'the live probe reported an error'; same command succeeded in a shell"
+  },
+  {
+   "severity": "minor",
+   "title": "Every server restart signs the browser out; page cannot recover without a terminal",
+   "repro": "forge stop/start.",
+   "evidence": "'Your session ended or Forge restarted. Run `forge open` in a terminal'"
+  },
+  {
+   "severity": "minor",
+   "title": "Worktrees and branches of cancelled tickets not cleaned",
+   "repro": "Cancel/re-plan tickets.",
+   "evidence": "worktrees FR-8, FR-11 remain (147 MB incl. node_modules); branch feat/FR-12"
+  },
+  {
+   "severity": "minor",
+   "title": "Chat message over 8000 chars: vague 'request failed validation'; description minimum never explained",
+   "repro": "Paste 20k chars; New card with short description.",
+   "evidence": "shots/forge-bad-huge-message.png, forge-bad-newcard-short.png"
+  },
+  {
+   "severity": "minor",
+   "title": "Timestamps wrong: run started_at before ticket exists; ticket updated_at < created_at",
+   "repro": "Any card.",
+   "evidence": "FR-1 created 06:03:55.720, updated 06:02:27.085, run started 06:02:27.085"
+  },
+  {
+   "severity": "minor",
+   "title": "New Claude Code build needs 7 tool approvals even when 6 schema hashes equal a known-good build",
+   "repro": "Fresh home with claude 2.1.304.",
+   "evidence": "read/glob/grep/edit/write/shell hashes identical to known-good 2.1.299; all pending"
+  },
+  {
+   "severity": "minor",
+   "title": "Unlabelled inputs on Limits page and reason fields",
+   "repro": "Forge settings > Limits.",
+   "evidence": "inputs have no accessible name"
+  },
+  {
+   "severity": "minor",
+   "title": "Stale/inconsistent status text: 'Waiting on FR-7' after FR-7 done; 'The Director is thinking\u2026' while waiting on the owner",
+   "repro": "FR-8 page; FR-C2 with open question.",
+   "evidence": "shots/forge-conflict-dock.png; forge-t2-question.png"
+  },
+  {
+   "severity": "minor",
+   "title": "Harness child env keeps CLAUDE_CODE_* session variables when Forge is started from a Claude Code shell",
+   "repro": "Start forge from Claude Code.",
+   "evidence": "child-env strips only CLAUDECODE/ENTRYPOINT; compat failed in that env"
+  },
+  {
+   "severity": "minor",
+   "title": "Excessive Director spend on trivial work",
+   "repro": "T1.",
+   "evidence": "FR-C1 Director $1.58 vs Worker $0.84 for a one-character regex fix; Director ~70% of all spend"
+  }
+ ]
+}

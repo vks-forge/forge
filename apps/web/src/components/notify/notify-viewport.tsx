@@ -7,7 +7,9 @@
  *   acted on. While it is hovered, focused or the tab is hidden nothing expires. Success,
  *   info and progress sit in an always-mounted polite live region; errors and warnings carry
  *   `role="alert"` on the card itself (an always-present alert container would read as a
- *   permanent error to assistive tech and tests alike); and F8 moves keyboard focus here from anywhere.
+ *   permanent error to assistive tech and tests alike); and F8 moves keyboard focus here from anywhere. With two or more closable cards a
+ *   "Close all" button sits just outside the stack (never over a card) and closes them in one go,
+ *   leaving running tasks and non-dismissible cards, then announces how many closed.
  *
  * Exports: NotifyViewport.
  * Depends on: react, motion/react, components/notify/notify-item, domain/notify-config,
@@ -19,6 +21,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { NotifyItem } from '#/components/notify/notify-item.js';
 import {
+  isRunningTask,
   selectVisible,
   stackHeight,
   stackOffset,
@@ -61,6 +64,7 @@ export function NotifyViewport() {
   const root = useRef<HTMLElement>(null);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
   const [heights, setHeights] = useState<Readonly<Record<string, number>>>({});
   const pageHidden = usePageHidden();
   const bottom = config.position.startsWith('bottom');
@@ -76,6 +80,16 @@ export function NotifyViewport() {
       current[id] === height ? current : { ...current, [id]: height },
     );
   }, []);
+
+  useEffect(() => {
+    if (announcement === '') {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => setAnnouncement(''), 2000);
+
+    return () => clearTimeout(timer);
+  }, [announcement]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -96,6 +110,17 @@ export function NotifyViewport() {
     ...(config.position.endsWith('right') ? { right: config.offset } : {}),
     height: stackHeight(measured, expanded, config.gap),
   };
+
+  const closable = visible.filter((item) => item.dismissible && !isRunningTask(item));
+  const closeEdge = bottom ? 'bottom-full mb-2' : 'top-full mt-2';
+
+  function closeAll(): void {
+    const closed = notifyStore.dismissAll();
+
+    // The button leaves with the cards; keep keyboard focus in the stack (F8 target).
+    root.current?.focus();
+    setAnnouncement(`Closed ${closed} notification${closed === 1 ? '' : 's'}`);
+  }
 
   function renderCards(list: readonly Item[]) {
     return list.map((item) => {
@@ -148,6 +173,7 @@ export function NotifyViewport() {
         Notifications. Press F8 to move focus here, Escape to dismiss.
       </p>
       <div aria-live="polite" aria-relevant="additions text" className="contents">
+        <p className="sr-only">{announcement}</p>
         <AnimatePresence>
           {renderCards(visible.filter((item) => !isAssertive(item)))}
         </AnimatePresence>
@@ -155,6 +181,16 @@ export function NotifyViewport() {
       <div className="contents">
         <AnimatePresence>{renderCards(visible.filter(isAssertive))}</AnimatePresence>
       </div>
+      {closable.length >= 2 ? (
+        <button
+          type="button"
+          onClick={closeAll}
+          aria-label={`Close all ${closable.length} notifications`}
+          className={`absolute right-0 ${closeEdge} min-h-8 rounded-lg border border-line bg-surface px-3 text-[13px] font-medium text-muted shadow-float transition-colors hover:bg-hover motion-reduce:transition-none`}
+        >
+          Close all
+        </button>
+      ) : null}
     </section>
   );
 }

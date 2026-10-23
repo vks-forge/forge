@@ -86,7 +86,31 @@ describe('lines of the decision and the sign-off', () => {
   });
 });
 
+describe('provenance hold copy', () => {
+  it('says in plain words that Forge cannot prove who changed the files and what the owner can do', () => {
+    const title = escalationTitle(EscalationView.parse(decisionView('provenance_hold')));
+
+    expect(title).toBe('Held: Forge cannot prove who changed these files');
+    expect(DECISION_LEAD.provenance_hold).toContain('earlier run');
+    expect(DECISION_LEAD.provenance_hold).toContain('proof');
+    expect(DECISION_LEAD.provenance_hold).toMatch(/merge anyway/i);
+    expect(DECISION_LEAD.provenance_hold).toMatch(/send it back/i);
+    expect(DECISION_LEAD.provenance_hold).not.toMatch(/receipt|secret|HMAC|chain|G1/);
+  });
+});
+
 describe('titles and labels', () => {
+  it('says why the Director did not sign a protected-files change, from its own note', () => {
+    const raw = signOffView('tier_c');
+
+    (raw['payload'] as Record<string, unknown>)['director_note'] =
+      'A high finding is still open.';
+
+    expect(escalationTitle(EscalationView.parse(raw))).toBe(
+      'Needs your sign-off: it touches protected files. The Director did not sign: A high finding is still open.',
+    );
+  });
+
   it('words every decision cause and every sign-off cause, with the tier in words', () => {
     for (const cause of DecisionCause.options) {
       expect(DECISION_LEAD[cause]).toMatch(/\.$/);
@@ -100,9 +124,13 @@ describe('titles and labels', () => {
       expect(escalationTitle(EscalationView.parse(signOffView(cause)))).not.toBe('');
     }
 
-    expect(Object.values(TIER_WORDS).every((words) => /^Tier [ABC]: /.test(words))).toBe(
-      true,
-    );
+    expect(Object.values(TIER_WORDS)).toEqual([
+      'Low risk',
+      'Moderate risk',
+      'Protected files',
+    ]);
+
+    expect(Object.values(TIER_WORDS).some((words) => /tier/i.test(words))).toBe(false);
   });
 
   it('labels the two overrule actions and says who settled them', () => {

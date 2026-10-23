@@ -6,7 +6,9 @@
  *   API, so the user must be asked first, in words that say what will happen and which way is
  *   the safe one. Escape and "Cancel" always leave; the action button names the act ("Archive
  *   project", never "OK") and is the only red or blue thing in the dialog. Focus is trapped
- *   and restored by Radix. The dialog can carry a form (a rejection reason) as children.
+ *   and restored by Radix. The dialog can carry a form (a rejection reason) as children. When the
+ *   act is itself a cancel, the leave-it-alone button gets its own words ("Keep running") so
+ *   two buttons are never both called Cancel.
  *
  * Exports: ConfirmDialog.
  * Depends on: @radix-ui/react-alert-dialog, motion/react, components/ui/button, theme/motion.
@@ -25,6 +27,8 @@ export function ConfirmDialog(props: {
   description: string;
   confirmLabel: string;
   tone?: 'primary' | 'danger';
+  /** The leave-it-alone button's words; "Cancel" unless the act itself is a cancel ("Keep running"). */
+  cancelLabel?: string;
   /** Holds the confirm button, for a form that is not yet valid. */
   confirmDisabled?: boolean;
   onConfirm: () => void;
@@ -64,7 +68,7 @@ export function ConfirmDialog(props: {
                   {props.children}
                   <div className="mt-2 flex flex-wrap justify-end gap-2">
                     <Alert.Cancel asChild>
-                      <Button variant="quiet">Cancel</Button>
+                      <Button variant="quiet">{props.cancelLabel ?? 'Cancel'}</Button>
                     </Alert.Cancel>
                     <Alert.Action asChild>
                       <Button

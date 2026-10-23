@@ -24,8 +24,10 @@ import type {
   Run,
   StorageTx,
   Ticket,
+  Tier,
   ScriptGateRunner,
   WorktreeManager,
+  WorktreePreparer,
 } from '@forge/core';
 
 /**
@@ -42,6 +44,8 @@ export interface ProjectRuntime {
   readonly baseRef: string;
   /** Runs owner-written script gates and the red proof; absent means those stages cannot run (a script gate parks, a red proof is skipped). */
   readonly scriptGates?: ScriptGateRunner;
+  /** Gets a fresh worktree ready (installs packages); absent means no setup, as for a project with nothing to install (d-0180). */
+  readonly prepare?: WorktreePreparer;
 }
 
 /** A runtime that can publish: verifying needs a git host. */
@@ -60,6 +64,14 @@ export interface VerifyTarget {
   readonly baseRef: string;
   readonly baseSha: string;
 }
+
+/**
+ * What bringing main into a branch led to: `ready` with the base the branch now diverges from (the base
+ * tip once main was merged in; the diff and the checks must start from it), or `handled` when a clash
+ * went to the writer.
+ */
+export type BaseSync =
+  { readonly kind: 'ready'; readonly baseSha: string } | { readonly kind: 'handled' };
 
 /** The latest `gate_results` row per gate for one run. */
 export type GateRows = readonly GateResult[];
@@ -97,20 +109,26 @@ export type GateSummary =
 /**
  * How the merge door is asked to treat a ticket whose stages all passed: `hold` waits for the owner
  * even at tier A (a human or sign-off stage is open); `directorSigned` means the sign-off stage's
- * Director signed (tier A and B only, never C); `declined` carries why the Director did not sign.
+ * Director signed (tier C only on a clean floor, d-0181); `declined` carries why the Director did not sign.
  */
 export interface MergeOpts {
   readonly hold: boolean;
   readonly directorSigned?: boolean;
   readonly declined?: string;
-  /** The Director's reasons, written on the card note when it signs tier B. */
+  /** The Director's reasons, written on the card note when it signs tier B or C. */
   readonly signReason?: string;
+  /** The tier the sign-off row says the Director signed; tier C passes the door only when this is `C` (d-0181). */
+  readonly signedTier?: Tier;
 }
 
 /** What a caller adds to an approval: a card note in place of the default, and writes that join the move to done. */
 export interface ReviewedExtras {
   readonly note?: string;
+  /** Appended to the card note when the merge rests on a check the owner overruled; empty when none. */
+  readonly overrideNote?: string;
   readonly beforeMove?: (tx: StorageTx) => Promise<void>;
+  /** The Director signs a clean tier C change (d-0181); the move to done carries `clean_floor`. */
+  readonly cleanFloor?: boolean;
 }
 
 /** `done`: the cycle ended (merged, or handed to a human). `regate`: the PR head moved and the gates must judge it again. */

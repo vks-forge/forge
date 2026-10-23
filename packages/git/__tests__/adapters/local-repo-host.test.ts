@@ -7,7 +7,7 @@
  *   their work, and otherwise stop with a typed error the engine turns into "Needs you".
  *   Real git, real worktrees made by the same manager the engine uses.
  *
- * Pins: clean checked-out base is fast-forwarded (files appear in the folder, one squash commit);
+ * Pins: syncBase is the local branch; clean checked-out base is fast-forwarded (files appear in the folder, one squash commit);
  *   dirty tracked file => `dirty_tree`, nothing moves, retry works once the user commits;
  *   base not checked out => only the ref moves and the user's tree is untouched; an untracked
  *   file in the way is never overwritten; a head that is not the judged sha => HeadMovedError;
@@ -188,5 +188,22 @@ describe('local repository git host', () => {
 
     await expect(r.host.push(r.repo, 'whatever')).resolves.toBeUndefined();
     expect(git(r.repo, 'remote')).toBe('');
+  });
+
+  it('syncBase reports the local base branch itself, and says so when it is missing', async () => {
+    const r = rig();
+
+    expect(await r.host.syncBase()).toEqual({
+      ref: 'refs/heads/main',
+      sha: git(r.repo, 'rev-parse', 'main'),
+    });
+
+    const gone = createLocalRepoGitHost({
+      repoRoot: r.repo,
+      baseBranch: 'nope',
+      now: () => T0,
+    });
+
+    await expect(gone.syncBase()).rejects.toMatchObject({ reason: 'not_found' });
   });
 });

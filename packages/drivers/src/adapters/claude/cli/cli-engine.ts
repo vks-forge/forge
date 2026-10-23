@@ -226,6 +226,7 @@ export function createCliEngine(deps: EngineDeps): ClaudeEngine {
       reportsCost: true,
       structuredOutput: false,
       permissionRequests: false,
+      permissionBypass: true,
     }),
     async preflight() {
       let installed: string;

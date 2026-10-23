@@ -85,8 +85,15 @@ describe('verify: faults', () => {
     const conflicted = await makeVerifyRig();
     conflicted.host.mergeable = false;
     const a = await startAndFinish(conflicted.rig);
-    await conflicted.rig.tick();
+    // A clash is gated again after a merge-in, not refused as policy; a branch that never becomes mergeable parks.
+    await drive(
+      conflicted.rig,
+      12,
+      async () => (await conflicted.rig.ticket(a)).status === 'waiting_human',
+    );
+
     expect((await conflicted.rig.ticket(a)).status).toBe('waiting_human');
+    expect((await conflicted.rig.ticket(a)).blocked_reason).toContain('main kept moving');
     expect(conflicted.host.count('merge')).toBe(0);
 
     const closed = await makeVerifyRig();

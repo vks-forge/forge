@@ -6,8 +6,8 @@
  *   that showed invented runs or spend would be believed (d-0123). Response and query types
  *   come from `@forge/core`, so the UI and server cannot disagree about a field.
  *
- * Exports: QueryParams, OverviewApi, CostApi, CostPaging, InboxApi, RunsApi, InboxMarkName, InboxListArgs,
- *   RunListArgs.
+ * Exports: QueryParams, OverviewApi, CostApi, CostPaging, InboxApi, RunsApi, InboxMarkName,
+ *   InboxReadAllView, InboxListArgs, RunListArgs.
  * Depends on: @forge/core (types only), types/api.types.
  */
 
@@ -16,6 +16,8 @@ import type {
   InboxCounts,
   InboxItem,
   InboxPage,
+  InboxReadAllBody,
+  InboxReadAllResult,
   InboxView,
   OverviewStats,
   RunDetail,
@@ -30,6 +32,9 @@ import type { OverviewRequest } from '#/types/overview.types.js';
 
 /** Values of a URL query; an array repeats the key. */
 export type QueryParams = Record<string, string | number | readonly string[] | undefined>;
+
+/** The views "Mark all read" may clear. */
+export type InboxReadAllView = InboxReadAllBody['view'];
 
 export type InboxMarkName = 'read' | 'unread' | 'archive' | 'unarchive';
 
@@ -70,6 +75,8 @@ export interface InboxApi {
   counts(slug: string, options?: RequestOptions): Promise<InboxCounts>;
   /** Returns the item as the server now holds it. */
   mark(slug: string, itemId: string, mark: InboxMarkName): Promise<InboxItem>;
+  /** Marks every item of the view read (one request); answers how many it changed. */
+  markAllRead(slug: string, view: InboxReadAllView): Promise<InboxReadAllResult>;
 }
 
 export interface RunsApi {

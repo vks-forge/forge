@@ -5,10 +5,12 @@
  *   must answer instantly. A mark is applied to every cached view and to the counts behind the
  *   sidebar badge at once; if the server refuses (Forge down, the item gone), the snapshot is
  *   put back exactly and the caller can say why. Either way the inbox is refetched afterwards,
- *   so what stays on screen is what the server holds. The counts refetch every 30 seconds and
+ *   so what stays on screen is what the server holds. "Mark all read" is one request for a whole
+ *   view; the screen waits for the server's count (no guessing which items it covered) and then refetches. The counts refetch every 30 seconds and
  *   on window focus so the badge notices new work without a reload.
  *
- * Exports: useInboxList(), useInboxCounts(), useInboxPreview(), useMarkInbox(), INBOX_COUNTS_MS.
+ * Exports: useInboxList(), useInboxCounts(), useInboxPreview(), useMarkInbox(), useMarkAllRead(),
+ *   INBOX_COUNTS_MS.
  * Depends on: @tanstack/react-query, api/api-provider, domain/inbox-marks, @forge/core (types).
  */
 
@@ -22,7 +24,7 @@ import type { InfiniteData, QueryClient } from '@tanstack/react-query';
 import type { InboxCounts, InboxItem, InboxPage, InboxView } from '@forge/core';
 import { useForgeApi } from '#/api/api-provider.js';
 import { applyMarkToCounts, applyMarkToPages, findItem } from '#/domain/inbox-marks.js';
-import type { InboxMarkName } from '#/types/work-api.types.js';
+import type { InboxMarkName, InboxReadAllView } from '#/types/work-api.types.js';
 import type { CacheSnapshot as Snapshot } from '#/types/work-ui.types.js';
 
 export const INBOX_COUNTS_MS = 30_000;
@@ -149,6 +151,17 @@ export function useMarkInbox(slug: string) {
         queryClient.setQueryData(key, data);
       }
     },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: root(slug) }),
+  });
+}
+
+/** Marks every item of a view read; resolves to how many the server changed. */
+export function useMarkAllRead(slug: string) {
+  const api = useForgeApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (view: InboxReadAllView) => api.inbox.markAllRead(slug, view),
     onSettled: () => queryClient.invalidateQueries({ queryKey: root(slug) }),
   });
 }

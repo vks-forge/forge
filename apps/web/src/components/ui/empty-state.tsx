@@ -18,7 +18,7 @@ export function EmptyState(props: EmptyStateProps) {
   const { title, children, actions, variant = 'page', className = '' } = props;
   const Icon = props.icon ?? Inbox;
   const compact = variant === 'compact';
-  const Heading = compact ? 'h3' : 'h2';
+  const Heading = props.headingLevel === 1 ? 'h1' : compact ? 'h3' : 'h2';
 
   return (
     <div

@@ -1,28 +1,28 @@
 /**
- * Plan to tickets: approving a plan files its tickets (and replaces an earlier plan's not-started ones).
+ * Plan to tickets: approving a plan files its tickets (and replaces an earlier plan's untouched ones).
  *
  * Why: approval is the only way tickets come to exist under the card-first flow (d-0129,
  *   d-0133), so it is one function whatever approves (the Director behind the floor, or the
  *   owner). It files the plan's tickets dependencies first (priority urgent 3, high 2, normal 1,
  *   low 0; `blocked_by` mapped from the plan's keys), moves the card through `transitionCard()`,
  *   and gives each ticket its `triaged` event with the stricter of the plan's lane and the
- *   deterministic pre-check, so a ticket can only be raised, never lowered (d-0141 item 9), and
- *   a ticket touching a Tier C path is Tier C. It is idempotent per (card, version): a double
+ *   deterministic pre-check of the ticket's own body and files (`plan-ticket-lane`; the reasons of a raise are
+ *   written to the card), so a ticket can only be raised, never lowered, unless the owner set its lane
+ *   (d-0141 item 9, d-0177), and a ticket touching a Tier C path is Tier C. It is idempotent per (card, version): a double
  *   click or a retry returns the tickets already made. A planned ticket whose lane has no
  *   runner yet (Full, until its pipeline goes live) is held with the wait reason `pipeline_pending`
  *   and a lane-hold escalation offering "Run as Express", Re-plan or Cancel, so the owner always
  *   has a way forward (d-0135); Express and Standard tickets run their lane pipeline. Approving a later version of a re-planned card
- *   also cancels, through `transition()`, the earlier plan's tickets that have not started
- *   (inbox, planned, waiting, blocked); finished and running tickets stay, and the plan keys are
- *   recorded next to the ticket ids so the new plan can tell what already exists.
+ *   also cancels, through `transition()`, the earlier plan's tickets that never started (the core
+ *   keep rule); started tickets stay, and the plan keys are recorded next to the ticket ids so the new plan can tell what already exists. After the approval
+ *   commits, each replaced ticket's run, worktree and local branch are stopped and removed.
  *
  * Exports: PIPELINE_PENDING, approvePlanTx(), approvePlan().
- * Depends on: @forge/core (plan, lane and phase rules), tick/ticket-insert, tick/ticket-moves,
- *   tick/card-phase, tick/card-log, tick/escalation-raise, tick/escalation-settle,
- *   types/card-planning. Writes storage.
+ * Depends on: @forge/core (plan, lane, phase, keep rules), tick/{plan-impact, plan-ticket-lane, ticket-insert, ticket-moves,
+ *   card-phase, card-log, ticket-cancel, escalation-raise, escalation-settle}, types/card-planning. Writes storage.
  */
 
-import { CardId, globMatch, maxLane, orderPlanTickets, preCheckLane } from '@forge/core';
+import { CardId, REPLACEABLE_STATUSES, orderPlanTickets } from '@forge/core';
 import type {
   CardActor,
   PlanTicket,
@@ -36,9 +36,12 @@ import { iso } from '#/shared/time.js';
 import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
 import { moveCardTx } from '#/tick/card-phase.js';
 import { notifyCard } from '#/tick/card-notify.js';
+import { cardKeepStates } from '#/tick/plan-impact.js';
+import { planTicketLane } from '#/tick/plan-ticket-lane.js';
 import { raiseEscalation } from '#/tick/escalation-raise.js';
 import { insertInboxTicket } from '#/tick/ticket-insert.js';
 import { moveTicketTx } from '#/tick/ticket-moves.js';
+import { stopCancelledAll } from '#/tick/ticket-cancel.js';
 import { requestTick } from '#/tick/tick-requests.js';
 import type { ApprovePlanResult } from '#/types/card-planning.types.js';
 import type { EngineState } from '#/types/engine-state.types.js';
@@ -50,14 +53,6 @@ export const PIPELINE_PENDING = 'pipeline_pending';
 const PRIORITY = { urgent: 3, high: 2, normal: 1, low: 0 } as const;
 const PAGE = 200;
 
-/** Tickets of an earlier plan that a newer approved plan replaces: nothing of them has started or finished. */
-const REPLACEABLE: readonly Ticket['status'][] = [
-  'inbox',
-  'planned',
-  'waiting_human',
-  'blocked',
-];
-
 /** Cancels the earlier plan's not-started tickets through `transition()` and says so on the card. */
 async function cancelReplaced(
   tx: StorageTx,
@@ -66,15 +61,17 @@ async function cancelReplaced(
   version: number,
   at: string,
   actor: CardActor,
-): Promise<void> {
-  const cancelled: string[] = [];
+): Promise<Ticket[]> {
+  const cancelled: Ticket[] = [];
   for (const t of tickets) {
     const moved = await moveTicketTx(tx, t.id, at, (cur) =>
-      REPLACEABLE.includes(cur.status) ? { events: [{ type: 'cancelled' }] } : null,
+      REPLACEABLE_STATUSES.includes(cur.status)
+        ? { events: [{ type: 'cancelled' }], reason: 'Replaced by a new plan' }
+        : null,
     );
 
     if (moved.ok) {
-      cancelled.push(t.id);
+      cancelled.push(moved.ticket);
     }
   }
 
@@ -84,10 +81,12 @@ async function cancelReplaced(
       at,
       actor,
       payload: {
-        text: `Replaced by plan v${version}: cancelled ${cancelled.join(', ')}.`,
+        text: `Replaced by plan v${version}: cancelled ${cancelled.map((t) => t.id).join(', ')}.`,
       },
     });
   }
+
+  return cancelled;
 }
 
 /** The ticket text a Worker reads: the plan's body, what done looks like and where to look. */
@@ -175,9 +174,9 @@ export async function approvePlanTx(
   const actor: CardActor = by === 'owner' ? { type: 'user', id: actorId } : ENGINE_ACTOR;
 
   // A re-plan: tickets of the earlier plan that have not started are replaced by this one.
-  const replaced = (await tx.tickets.listByCard(cardId)).filter((t) =>
-    REPLACEABLE.includes(t.status),
-  );
+  const replaced = (await cardKeepStates(tx, cardId))
+    .filter((s) => s.replaced)
+    .map((s) => s.ticket);
 
   const made = new Map<string, TicketId>();
   const created: { plan: PlanTicket; id: TicketId }[] = [];
@@ -210,29 +209,30 @@ export async function approvePlanTx(
     payload: { version, by, ticket_ids: ids, plan_keys: plan.tickets.map((t) => t.key) },
   });
 
-  await cancelReplaced(tx, cardId, replaced, version, at, actor);
+  const cancelled = await cancelReplaced(tx, cardId, replaced, version, at, actor);
 
   for (const { plan: t, id } of created) {
-    const lane = maxLane(
-      t.lane,
-      preCheckLane({
-        touchedPaths: t.files,
-        tierCGlobs,
-        bodyLength: ticketBody(t, plan).length,
-        type: 'feat',
-      }).lane,
-    );
+    const { lane, tierC, note } = planTicketLane(t, tierCGlobs);
 
-    const tierC = t.files.some((f) => tierCGlobs.some((g) => globMatch(g, f, true)));
     // Only a lane with no runner yet is held; the engine releases the hold once the lane is live.
     const held = !isLive(lane);
     const reason = `${PIPELINE_PENDING}: the ${lane} lane goes live in the next update. Run it as Express to start it now.`;
     const moved = await moveTicketTx(tx, id, at, () => ({
+      ...(note === null || held ? {} : { reason: note }),
       events: [
         { type: 'triaged', lane, tier_predicted: tierC ? 'C' : 'A' },
         ...(held ? [{ type: 'parked' as const, reason }] : []),
       ],
     }));
+
+    if (note !== null) {
+      await logCardEvent(tx, cardId, {
+        kind: 'note',
+        at,
+        actor,
+        payload: { text: `${id}: ${note}` },
+      });
+    }
 
     // The hold is an escalation the owner acts on (run as Express, re-plan, cancel), replacing
     // the card-level needs_you note this used to write.
@@ -252,6 +252,7 @@ export async function approvePlanTx(
     status: 'approved',
     card: (await tx.cards.get(cardId)) ?? card,
     ticket_ids: ids,
+    cancelled,
   };
 }
 
@@ -285,6 +286,8 @@ export async function approvePlan(
   );
 
   if (result.status === 'approved') {
+    // The replaced tickets' trees and local branches go once the plan is committed (not inside the transaction).
+    await stopCancelledAll(deps, state, result.cancelled);
     requestTick(deps, state);
     await notifyCard(deps, id.data);
   }

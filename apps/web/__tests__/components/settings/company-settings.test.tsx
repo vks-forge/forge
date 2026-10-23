@@ -174,14 +174,18 @@ describe('Limits', () => {
     const user = userEvent.setup();
     renderSettings('/settings/limits');
 
-    await user.type(await screen.findByLabelText('Add a harness cap'), 'claude');
+    await user.click(
+      await screen.findByRole('combobox', { name: 'Add a cap for an AI coding tool' }),
+    );
+
+    await user.click(await screen.findByRole('option', { name: 'Claude Code' }));
     await user.click(screen.getAllByRole('button', { name: 'Add' })[0]!);
 
-    expect(await screen.findByLabelText('claude')).toHaveValue(1);
+    expect(await screen.findByLabelText('Claude Code')).toHaveValue(1);
 
-    await user.click(screen.getByRole('button', { name: 'Remove claude' }));
+    await user.click(screen.getByRole('button', { name: 'Remove Claude Code' }));
 
-    expect(screen.queryByLabelText('claude')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Claude Code')).not.toBeInTheDocument();
   });
 
   it('shows a retryable error when settings cannot load', async () => {

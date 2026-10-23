@@ -15,6 +15,7 @@
  * Depends on: helpers/rig, vitest.
  */
 
+import type { CardId } from '@forge/core';
 import { describe, expect, it } from 'vitest';
 import { intake, makeRig } from '#tests/helpers/rig.js';
 import type { Rig } from '#tests/helpers/rig.js';
@@ -111,6 +112,26 @@ describe('pause and resume', () => {
     expect(delta).toContain('response_wake');
     // The same worktree is reused; no second one is created.
     expect(rig.worktrees.created).toHaveLength(1);
+  });
+
+  it('writes why the ticket moved on its card history, so History never has to guess', async () => {
+    const rig = await makeRig();
+    const id = await pausedTicket(rig);
+    await rig.tick();
+    await rig.engine.answerInteraction('int-q1', 'blue');
+    await rig.tick();
+
+    const cardId = (await rig.ticket(id)).card_id;
+    const events = await rig.storage.transaction((tx) =>
+      tx.cardEvents.list(cardId as CardId, { order: 'asc', limit: 100 }),
+    );
+
+    const reasons = events.flatMap((e) =>
+      e.kind === 'ticket_state' ? [`${e.payload.to}: ${e.payload.reason}`] : [],
+    );
+
+    expect(reasons).toContain('in_progress: A Worker slot was free, so a Worker started');
+    expect(reasons).toContain('in_progress: You answered, so the Worker resumed');
   });
 
   it('starts fresh with the handoff when the driver cannot resume', async () => {

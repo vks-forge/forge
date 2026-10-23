@@ -26,9 +26,15 @@ export const TicketRunCost = z.object({
 });
 export type TicketRunCost = z.infer<typeof TicketRunCost>;
 
-/** `cost` on `GET /tickets/:id`: the sum of its runs, oldest run first. */
+/**
+ * `cost` on `GET /tickets/:id`: `workers_usd` is the sum of its runs (listed oldest first),
+ * `director_usd` what the Director's steps on this ticket cost (escalation answers, recovery
+ * and sign-off checks), and `total_usd` their sum.
+ */
 export const TicketCost = z.object({
   total_usd: Usd,
+  workers_usd: Usd,
+  director_usd: Usd,
   by_run: z.array(TicketRunCost),
 });
 export type TicketCost = z.infer<typeof TicketCost>;

@@ -2,14 +2,16 @@
  * Cost report schema — where a project's money and tokens went.
  *
  * Why: Workers bill by the token and a project owner wants to know which tickets, runs and
- *   harnesses ate the budget. Forge records a run's `cost_usd` (when the harness reported
+ *   harnesses ate the budget. The Director's own steps cost money too, so the report adds both
+ *   sources: `worker_usd` (runs), `director_usd` (the dated Director spend ledger) and their sum
+ *   `total_usd`, with the same split per day, so the project total matches the sum of its cards. Forge records a run's `cost_usd` (when the harness reported
  *   one) and its token usage per model, and nothing else: there is no per-model price table
  *   and no spend budget per period. So this report adds up what was recorded, shows tokens
  *   per model (never a made-up dollar figure), says how many runs had a cost
  *   (`runs_with_cost` of `runs_total`) and returns only the budgets that settings really
  *   hold (the per-run and per-step caps), with `null` where none exists.
  *
- * Exports: TokenTotals, CostByTicket, CostByRun, CostByHarness, CostByModel, CostBudgets,
+ * Exports: TokenTotals, CostDayPoint, CostByTicket, CostByRun, CostByHarness, CostByModel, CostBudgets,
  *   CostReport, CostPageQuery, COST_TOP_N, COST_PAGE_MAX.
  * Depends on: schemas/stats-range, zod. No IO.
  */
@@ -28,6 +30,15 @@ export const TokenTotals = z.object({
 });
 export type TokenTotals = z.infer<typeof TokenTotals>;
 
+/** One UTC day of spend, split by source; `worker_usd + director_usd` is that day's total. */
+export const CostDayPoint = z.object({
+  date: z.iso.date(),
+  worker_usd: z.number().nonnegative(),
+  director_usd: z.number().nonnegative(),
+});
+export type CostDayPoint = z.infer<typeof CostDayPoint>;
+
+/** Worker spend of one ticket (its runs); the Director's share of a ticket is on the ticket page. */
 export const CostByTicket = z.object({
   ticket_id: z.string().min(1),
   title: z.string().optional(),
@@ -88,11 +99,22 @@ export type CostPageQuery = z.infer<typeof CostPageQuery>;
 /** `GET /projects/:slug/cost`. */
 export const CostReport = StatsWindow.extend({
   project: z.string().min(1),
+  /** Workers plus Director: `worker_usd + director_usd`. */
   total_usd: z.number().nonnegative(),
+  /** Dollars the runs recorded. */
+  worker_usd: z.number().nonnegative(),
+  /** Dollars the Director's steps recorded (planning, chat, escalation answers, checks). */
+  director_usd: z.number().nonnegative(),
   runs_total: Count,
   runs_with_cost: Count,
+  /** Director steps in the window, and how many of them carried a price. */
+  director_steps_total: Count,
+  director_steps_recorded: Count,
   tokens: TokenTotals,
+  /** Total (Workers plus Director) per UTC day. */
   per_day: z.array(SeriesPoint),
+  /** The same days split by source; each day's two figures add up to its `per_day` value. */
+  per_day_split: z.array(CostDayPoint),
   /** Highest spend first: the page `ticket_offset`/`ticket_limit` asks for (default the top `COST_TOP_N`). */
   by_ticket: z.array(CostByTicket),
   /** Tickets with a run in the window, all pages together (absent from older servers). */

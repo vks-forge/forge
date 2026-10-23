@@ -7,7 +7,7 @@
  *   "intake, tick, run does X, tick, assert" and lets a second engine be created over the
  *   same storage to simulate a server restart (d-0054).
  *
- * Exports: Rig, makeRig(), intake(), tickToIdle().
+ * Exports: Rig, makeRig(), intake().
  * Depends on: @forge/core, @forge/db (in-memory storage, dev-only fake), src/tick/engine,
  *   helpers/*. No IO.
  */
@@ -36,7 +36,7 @@ import {
 import { createFakeRepoReader } from '#tests/helpers/fake-repo-reader.js';
 import type { FakeRepoReader } from '#tests/helpers/fake-repo-reader.js';
 import { createFakeResearch } from '#tests/helpers/fake-research.js';
-import { mergeReports } from '#tests/helpers/merge-reports.js';
+import { tickToIdle } from '#tests/helpers/tick-to-idle.js';
 import type { FakeResearch } from '#tests/helpers/fake-research.js';
 import { createScriptedDriver } from '#tests/helpers/scripted-driver.js';
 import { createScriptedLLM } from '#tests/helpers/scripted-llm.js';
@@ -94,29 +94,6 @@ export function intake(over: Partial<IntakeEvent> = {}, now = Date.now()): Intak
     received_at: new Date(now).toISOString(),
     ...over,
   };
-}
-
-/**
- * One tick, plus the follow-up tick a finished gate job asks for. Gates run beside the tick
- * (verify-gates jobs), so a scenario that reads "tick: merged" needs both. Use `engine.tick()`
- * directly to look at the in-between state.
- */
-export async function tickToIdle(
-  engine: Engine,
-  flush: () => Promise<void>,
-  gateJobsStarted: () => number,
-): Promise<TickReport> {
-  const before = gateJobsStarted();
-  const first = await engine.tick();
-  if (gateJobsStarted() === before) {
-    return first;
-  }
-
-  for (let i = 0; i < 20 && engine.gateJobsInFlight() > 0; i++) {
-    await flush();
-  }
-
-  return mergeReports(first, await engine.tick());
 }
 
 export interface RigOptions {

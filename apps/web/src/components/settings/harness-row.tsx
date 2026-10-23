@@ -2,7 +2,8 @@
  * HarnessRow: one installed harness in the list, with what the owner scans for.
  *
  * Why: the first question on this screen is "is my harness OK, and is anything waiting on
- *   me?". Each row answers it in one glance: the harness, its last-tested version, the build
+ *   me?". Each row answers it in one glance: the harness, what its last Worker run did ("last
+ *   run 07:12 (2.1.304)") apart from the live test button's result ("live test not run"), the build
  *   actually installed now (read live, so an update is visible before it breaks a run), how it
  *   signs in, and a status pill. A paused harness (out of quota) shows why and until when.
  *   The whole row is one link to its detail page, a target large enough for a thumb, and
@@ -19,24 +20,19 @@ import { useCompat } from '#/api/use-settings-data.js';
 import { SettingsRow } from '#/components/settings/settings-box.js';
 import { StatusPill } from '#/components/settings/status-pill.js';
 import { formatWhen } from '#/domain/format-time.js';
-import { harnessName, MODE_WORDS } from '#/domain/harness-labels.js';
+import {
+  harnessHealth,
+  harnessName,
+  lastRunWords,
+  liveTestWords,
+  MODE_WORDS,
+} from '#/domain/harness-labels.js';
 import type { HarnessView } from '#/schemas/settings.js';
 
 function Status(props: { harness: HarnessView }) {
-  const { harness } = props;
-  if (harness.status === 'paused') {
-    return <StatusPill tone="attn">Paused</StatusPill>;
-  }
+  const { tone, label } = harnessHealth(props.harness);
 
-  if (harness.status === 'ok') {
-    return <StatusPill tone="good">Working</StatusPill>;
-  }
-
-  if (harness.status === 'error') {
-    return <StatusPill tone="bad">Needs attention</StatusPill>;
-  }
-
-  return <StatusPill tone="quiet">Not tested yet</StatusPill>;
+  return <StatusPill tone={tone}>{label}</StatusPill>;
 }
 
 export function HarnessRow(props: { harness: HarnessView }) {
@@ -47,10 +43,13 @@ export function HarnessRow(props: { harness: HarnessView }) {
     harness.auth_mode !== 'login' && !harness.secrets[harness.auth_mode];
 
   const meta = [
-    `Tested ${harness.version ?? 'not yet'}`,
+    lastRunWords(harness),
+    liveTestWords(harness),
     `Installed ${installed ?? (compat.isPending ? 'reading…' : 'not found')}`,
     MODE_WORDS[harness.auth_mode],
-  ].join(' · ');
+  ]
+    .filter((part): part is string => part !== null)
+    .join(' · ');
 
   const pausedNote = `${harness.pause_reason ?? harness.status_note ?? 'Out of quota.'}${
     harness.paused_until ? ` Resumes ${formatWhen(harness.paused_until)}.` : ''

@@ -31,8 +31,9 @@ export function AppShell() {
   // The drawer is "open on this path": choosing a destination changes the path, which closes it
   // with no effect needed.
   const [openOn, setOpenOn] = useState<string | null>(null);
-  // The Board is a row of columns and needs more room than a reading column.
-  const wide = /^\/p\/[^/]+\/board\/?$/.test(pathname);
+  // The Board is a row of columns and the Card page is a chat beside a 400 px rail: both need
+  // more room than a reading column.
+  const wide = /^\/p\/[^/]+\/(board\/?|cards\/[^/]+(\/[^/]+)?\/?)$/.test(pathname);
   const drawerOpen = openOn === pathname;
   const setDrawerOpen = (open: boolean): void => setOpenOn(open ? pathname : null);
 

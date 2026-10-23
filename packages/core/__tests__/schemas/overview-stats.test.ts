@@ -27,6 +27,7 @@ describe('OverviewStats', () => {
           status: 'ready',
           tickets: [],
           runs: [],
+          directorSpend: [],
           gates: [],
           activeRuns: 0,
           openCards: 0,

@@ -6,18 +6,18 @@
 models:
   # Director LLM steps run on the logged-in harness subscription (d-0032).
   director:
-    triage: opus
-    dispatch_prompt: opus
-    steer_reply: opus
+    triage: sonnet
+    dispatch_prompt: sonnet
+    steer_reply: sonnet
     card_chat: opus
     # Card planning steps (d-0150): judging steps on opus, quick turns on sonnet.
     card_survey: opus
     grill_turn: sonnet
-    verify: opus
+    verify: sonnet
     enhance: opus
     research: sonnet
     write_plan: opus
-    approve_plan: opus
+    approve_plan: sonnet
     custom_step: sonnet
     # Escalation steps: the Director's first look at a Worker question and at a failure.
     ticket_answer: sonnet
@@ -63,3 +63,4 @@ engine:
   quota_default_pause_ms: 3600000 # harness wait after a quota error that names no reset time
   harness_fallbacks: [] # harnesses to try when a ticket's own is out of quota; empty = wait
   shutdown_drain_ms: 10000 # graceful stop waits this long for running tool calls to record their effect, then interrupts runs (0 = at once)
+  setup_cache_gb: 5 # most disk (GB) the copied-install cache of setup steps may use; the least recently used entries go first

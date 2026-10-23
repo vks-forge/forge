@@ -31,6 +31,9 @@ const SURVEY_OK = {
   findings: { summary: 'ok', predicted_lane: 'standard' },
 };
 
+/** A survey that opens a file first: the project has tracked files, so a survey that read none is sent back. */
+const SURVEY_READS = { read_requests: [{ op: 'read', path: 'package.json' }] };
+
 describe('a planning step over its budget', () => {
   it('raises Needs you with both actions and a note that says what to do', async () => {
     const rig = await planningRig({ engine: { step_budget_usd: 0.5 } });
@@ -48,6 +51,12 @@ describe('a planning step over its budget', () => {
     expect(raised.at(-1)?.payload.reason).toBe(
       'The Director\'s per-step budget ($0.50) is too small for "Survey the code".',
     );
+
+    expect(raised.at(-1)?.payload).toMatchObject({
+      kind: 'step_budget',
+      title: 'The Director ran out of step budget',
+      items: ['Survey the code: the per-step budget is $0.50.'],
+    });
 
     expect(notes.at(-1)?.payload.text).toBe(
       'The Director\'s step budget ($0.50) ran out during "Survey the code". Raise it in Settings → Limits, then Retry.',
@@ -72,9 +81,7 @@ describe('a planning step over its budget', () => {
 
   it('re-queues the same step on retry and carries on to the grill question', async () => {
     const rig = await planningRig();
-    rig.llm.script('card_survey', fail(BUDGET), {
-      findings: { summary: 'ok', predicted_lane: 'standard' },
-    });
+    rig.llm.script('card_survey', fail(BUDGET), SURVEY_READS, SURVEY_OK);
 
     const id = await createPlanCard(rig);
     await rig.tick();
@@ -87,7 +94,8 @@ describe('a planning step over its budget', () => {
     const card = await cardOf(rig, id);
     const finished = await eventsOf(rig, id, 'step_finished');
 
-    expect(rig.llm.callsTo('card_survey')).toHaveLength(2);
+    // The failed call, then the retried step's read round and its findings.
+    expect(rig.llm.callsTo('card_survey')).toHaveLength(3);
     expect(finished.map((e) => e.payload.step_id)).toContain('survey');
     // The grill asks its first question: the card waits on the owner for an answer now.
     expect((await eventsOf(rig, id, 'grill_question')).length).toBe(1);
@@ -124,7 +132,12 @@ describe('a planning step over its budget', () => {
 
   it('still retries a crash on its own after the stale window', async () => {
     const rig = await planningRig();
-    rig.llm.script('card_survey', fail({ kind: 'crash', message: 'died' }), SURVEY_OK);
+    rig.llm.script(
+      'card_survey',
+      fail({ kind: 'crash', message: 'died' }),
+      SURVEY_READS,
+      SURVEY_OK,
+    );
 
     const id = await createPlanCard(rig);
     await rig.tick();
@@ -134,6 +147,6 @@ describe('a planning step over its budget', () => {
     rig.clock.advance(11 * 60 * 1000);
     await rig.tick();
 
-    expect(rig.llm.callsTo('card_survey')).toHaveLength(2);
+    expect(rig.llm.callsTo('card_survey')).toHaveLength(3);
   });
 });

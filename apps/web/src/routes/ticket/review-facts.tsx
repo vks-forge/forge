@@ -3,15 +3,16 @@
  *
  * Why: merging is the one step Forge cannot take back, so approving needs more than a button. The
  *   panel shows the size of the change (files, lines added and removed, read from the worktree),
- *   the commit the gates judged, the G1 report and the pull request, so the owner can open them
+ *   the commit the gates judged, the independent check report and the pull request, so the owner can open them
  *   before deciding. Each fact is shown only when the server has it: a missing diff (the worktree
  *   is gone) never hides the rest. A ticket that is not in review or sign-off draws nothing.
  *
  * Exports: ReviewFacts.
- * Depends on: lucide-react, schemas/tickets (type), routes/ticket/ticket-side (latestGates).
+ * Depends on: lucide-react, components/ui/whats-this, schemas/tickets (type), routes/ticket/ticket-side (latestGates).
  */
 
 import { ExternalLink, FileDiff } from 'lucide-react';
+import { WhatsThis } from '#/components/ui/whats-this.js';
 import { latestGates } from '#/routes/ticket/ticket-side.js';
 import type { TicketDetail } from '#/schemas/tickets.js';
 
@@ -51,7 +52,10 @@ export function ReviewFacts(props: { detail: TicketDetail }) {
       )}
       {g1?.report_ref === undefined ? null : (
         <div className="flex flex-wrap items-center gap-x-2">
-          <dt className="font-medium">G1 report</dt>
+          <dt className="inline-flex items-center gap-1 font-medium">
+            Independent check report
+            <WhatsThis term="check" />
+          </dt>
           <dd className="min-w-0 max-w-full font-data text-xs [overflow-wrap:anywhere]">
             {g1.report_ref}
           </dd>

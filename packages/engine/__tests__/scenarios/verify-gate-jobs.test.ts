@@ -70,7 +70,8 @@ describe('verify: gate jobs', () => {
     const a = await startAndFinish(rig);
     const b = await rig.request('Another request');
 
-    const report = await rig.engine.tick();
+    // Triage, the brief and the launch of B all happen while A's gate is still running.
+    const report = await rig.tick();
 
     expect(rig.engine.gateJobsInFlight()).toBe(1);
     expect(gate.contexts).toHaveLength(1);

@@ -8,13 +8,14 @@
  *   come from two code paths (tool-system.md §5.5).
  *
  * Exports: AdmitContext, AdmitCall, AdmitDraft, Inspector, InspectorResult, CallPhase, CallVia.
- * Depends on: @forge/core (Lane), types/catalogue, types/grants, types/tokenizer, schemas/budget. No IO.
+ * Depends on: @forge/core (Lane), types/approval, types/catalogue, types/grants, types/tokenizer, schemas/budget. No IO.
  */
 
 import type { Lane } from '@forge/core';
 import type { BudgetLimits, BudgetUsage } from '#/schemas/budget.js';
 import type { DecisionLayer, ReasonCode } from '#/schemas/decision.js';
 import type { Effect } from '#/schemas/grant.js';
+import type { ApprovalSet } from '#/types/approval.types.js';
 import type { CatalogueState } from '#/types/catalogue.types.js';
 import type { EffectiveGrant } from '#/types/grants.types.js';
 
@@ -42,6 +43,12 @@ export interface AdmitContext {
   /** Worker cwd, used to turn absolute paths into cwd-relative ones before rule matching. */
   readonly cwd?: string;
   readonly inspectors?: readonly Inspector[];
+  /**
+   * The owner's answers to earlier asks of this run (and the run it retries). Read only on
+   * attended lanes; absent means none. They turn an `ask` into an allow or a deny, never a
+   * deny into an allow (d-0175).
+   */
+  readonly approvals?: ApprovalSet;
   readonly budget?: { readonly limits: BudgetLimits; readonly usage: BudgetUsage };
 }
 

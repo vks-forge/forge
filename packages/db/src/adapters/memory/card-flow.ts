@@ -9,7 +9,7 @@
  *   A divergence would let a cycle or restart test pass against behaviour production lacks.
  *
  * Exports: memoryCardRelations(), memoryCardReplyQueue().
- * Depends on: @forge/core, types/memory-state.types. No IO.
+ * Depends on: @forge/core, shared/claim-select, types/memory-state.types. No IO.
  */
 
 import {
@@ -19,6 +19,7 @@ import {
   NewCardReply,
 } from '@forge/core';
 import type { CardRelationRepository, CardReplyQueueRepository } from '@forge/core';
+import { selectClaimRows } from '#/shared/claim-select.js';
 import type { MemoryState } from '#/types/memory-state.types.js';
 
 export function memoryCardRelations(state: MemoryState): CardRelationRepository {
@@ -103,14 +104,15 @@ export function memoryCardReplyQueue(state: MemoryState): CardReplyQueueReposito
       return structuredClone(stored);
     },
 
-    async claim(at, staleBefore) {
+    async claim(at, staleBefore, options) {
+      const free = (row: CardReplyQueueItem): boolean =>
+        row.done_at === undefined &&
+        (row.claimed_at === undefined || row.claimed_at < staleBefore);
+
+      const chosen = new Set(selectClaimRows(state.cardReplies.filter(free), options));
       const claimed: CardReplyQueueItem[] = [];
       state.cardReplies = state.cardReplies.map((row) => {
-        const free =
-          row.done_at === undefined &&
-          (row.claimed_at === undefined || row.claimed_at < staleBefore);
-
-        if (!free) {
+        if (!chosen.has(row.id)) {
           return row;
         }
 
@@ -121,6 +123,23 @@ export function memoryCardReplyQueue(state: MemoryState): CardReplyQueueReposito
       });
 
       return claimed;
+    },
+
+    async releaseClaims() {
+      let released = 0;
+      state.cardReplies = state.cardReplies.map((row) => {
+        if (row.done_at !== undefined || row.claimed_at === undefined) {
+          return row;
+        }
+
+        released += 1;
+        const { claimed_at: _claimed, ...open } = row;
+        void _claimed;
+
+        return open;
+      });
+
+      return released;
     },
 
     async complete(id, at) {

@@ -2,11 +2,11 @@
  * Card chat schemas — the message body, the Director's actions and its answer.
  *
  * Why: the user talks to a card's Director about the whole request (d-0109), and the
- *   Director may act on what it hears: file a ticket, steer a Worker, retype the card, or
- *   suggest closing it. What the model returns is untrusted, so the reply and every action
+ *   Director may act on what it hears: file a ticket, steer a Worker, retype the card,
+ *   suggest closing it, cancel a ticket (only when the owner asked), or edit a ticket's dependencies, priority and description. What the model returns is untrusted, so the reply and every action
  *   are one zod shape parsed at the boundary; an action with a missing field is a rejected
  *   step, never a half-run ticket. The same schema becomes the JSON Schema the model is held
- *   to. Actions are a closed union: the engine executes only these four, each through its
+ *   to. Actions are a closed union: the engine executes only these (file, steer, retype, suggest close, and edit a ticket's dependencies, priority or description), each through its
  *   existing door, and a card type's registry actions decide which of them it allows
  *   (domain/card-chat-actions). `ActionTaken` is the record of one action's outcome, shared
  *   by the history events and the `director_message` it rode with. `CardDirectorStatus` is
@@ -14,12 +14,17 @@
  *
  * Exports: CARD_MESSAGE_MAX_CHARS, CardMessageBody, CHAT_ACTION_KINDS, ChatActionKind,
  *   CardChatAction, CardChatOutput, ActionTaken, CardDirectorStatus.
- * Depends on: schemas/card, schemas/ticket, zod. No IO.
+ * Depends on: schemas/card, schemas/ticket, schemas/ticket-edit, zod. No IO.
  */
 
 import { z } from 'zod';
 import { CardTypeName } from '#/schemas/card.js';
 import { Lane } from '#/schemas/ticket.js';
+import {
+  TICKET_BODY_MAX_CHARS,
+  TICKET_PRIORITY_MAX,
+  TICKET_PRIORITY_MIN,
+} from '#/schemas/ticket-edit.js';
 
 export const CARD_MESSAGE_MAX_CHARS = 8000;
 
@@ -35,6 +40,10 @@ export const CHAT_ACTION_KINDS = [
   'steer_run',
   'change_type',
   'suggest_close',
+  'set_ticket_dependencies',
+  'set_ticket_priority',
+  'edit_ticket_description',
+  'cancel_ticket',
 ] as const;
 export const ChatActionKind = z.enum(CHAT_ACTION_KINDS);
 export type ChatActionKind = z.infer<typeof ChatActionKind>;
@@ -46,6 +55,8 @@ export const CardChatAction = z.discriminatedUnion('kind', [
     title: z.string().min(1).max(120),
     body: z.string().min(1).max(CARD_MESSAGE_MAX_CHARS),
     lane: Lane.optional(),
+    /** A cancelled ticket of this card whose work this one restores: the new ticket takes its priority. */
+    restores: z.string().min(1).optional(),
   }),
   z.object({
     kind: z.literal('steer_run'),
@@ -54,6 +65,30 @@ export const CardChatAction = z.discriminatedUnion('kind', [
   }),
   z.object({ kind: z.literal('change_type'), type: CardTypeName }),
   z.object({ kind: z.literal('suggest_close'), reason: z.string().min(1).max(500) }),
+  z.object({
+    kind: z.literal('set_ticket_dependencies'),
+    ticket_id: z.string().min(1),
+    /** The complete set of ticket ids it waits for; an empty list clears its dependencies. */
+    depends_on: z.array(z.string().min(1)).max(20),
+  }),
+  z.object({
+    kind: z.literal('set_ticket_priority'),
+    ticket_id: z.string().min(1),
+    priority: z.number().int().min(TICKET_PRIORITY_MIN).max(TICKET_PRIORITY_MAX),
+  }),
+  z.object({
+    kind: z.literal('edit_ticket_description'),
+    ticket_id: z.string().min(1),
+    body: z.string().min(1).max(TICKET_BODY_MAX_CHARS),
+  }),
+  z.object({
+    kind: z.literal('cancel_ticket'),
+    ticket_id: z.string().min(1),
+    /** Why, in the owner's words; it is written on the ticket's history next to "the Director cancelled it". */
+    reason: z.string().min(1).max(500),
+    /** Also cancel every open ticket that waits on this one; without it a ticket others wait on is refused. */
+    cascade: z.boolean().optional(),
+  }),
 ]);
 export type CardChatAction = z.infer<typeof CardChatAction>;
 

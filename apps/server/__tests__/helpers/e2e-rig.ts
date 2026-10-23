@@ -24,7 +24,12 @@ import { KNOWN_GOOD_BUILDS } from '@forge/drivers';
 import { createMemorySecretStore } from '@forge/secrets';
 import { assembleServer } from '#/services/assemble.js';
 import { bearer, readInstallToken } from '#tests/helpers/install-token.js';
-import type { ExternalPorts, ForgeServer, ServerAddress } from '#/types/server.types.js';
+import type {
+  DriverFactoryDeps,
+  ExternalPorts,
+  ForgeServer,
+  ServerAddress,
+} from '#/types/server.types.js';
 import type { ServerSettings } from '#/types/settings.types.js';
 import { createFixtureRepo, fixtureProjectBody } from '#tests/helpers/fixture-repo.js';
 import type { FixtureRepo } from '#tests/helpers/fixture-repo.js';
@@ -76,6 +81,8 @@ export interface E2eOptions {
   readonly llm?: ExternalPorts['llm'];
   /** Extra environment variables for the server, such as `FORGE_TRACE`. */
   readonly env?: Record<string, string>;
+  /** A Worker of the caller's own (a text-editing script) instead of the scripted `behaviours`. */
+  readonly worker?: (deps: DriverFactoryDeps, getServer: () => ForgeServer) => FakeWorker;
 }
 
 /**
@@ -147,7 +154,10 @@ export async function startE2eRig(
       log: (level, message, fields) =>
         logs.push(`${level} ${message} ${fields ? JSON.stringify(fields) : ''}`),
       driver: (deps) => {
-        worker = createFakeWorker(deps, () => server as ForgeServer, behaviours);
+        const getServer = () => server as ForgeServer;
+        worker =
+          options.worker?.(deps, getServer) ??
+          createFakeWorker(deps, getServer, behaviours);
 
         return worker.driver;
       },

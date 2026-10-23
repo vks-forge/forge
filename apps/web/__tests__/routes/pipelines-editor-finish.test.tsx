@@ -59,7 +59,7 @@ describe('Director check and sign-off', () => {
 
     expect((await stageNames('Express')).slice(-2)).toEqual(['Sign-off', 'Merge']);
     expect(await stageRow('Express', 'Sign-off')).toHaveTextContent(
-      'Director signs tier A and B, you sign tier C',
+      'Director signs when every check passed, otherwise you',
     );
 
     await openDetails(user, 'Sign-off');

@@ -72,7 +72,7 @@ const ENTRIES: readonly {
     kind: 'sign_off',
     icon: Stamp,
     title: 'Sign-off',
-    hint: 'The Director signs tier A and B; you sign tier C.',
+    hint: 'The Director signs when every check passed and the change is within its limit; otherwise you sign.',
   },
 ];
 

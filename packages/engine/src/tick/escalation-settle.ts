@@ -58,17 +58,19 @@ export async function settleEscalation(
 }
 
 /**
- * Cancels every interaction of `ticketId` still pending, for a ticket that left its waiting state
- * without anyone settling them; each is closed as settled by the system (`cancel`, `auto`).
+ * Cancels every interaction of `ticketId` still pending (or only those `only` accepts, such as
+ * one run's tool approvals), for a ticket that left its waiting state without anyone settling them;
+ * each is closed as settled by the system (`cancel`, `auto`).
  */
 export async function cancelLeftovers(
   tx: StorageTx,
   nowIso: string,
   ticketId: string,
   note: string,
+  only: (row: Interaction) => boolean = () => true,
 ): Promise<void> {
   for (const row of await tx.interactions.listByTicket(ticketId)) {
-    if (row.status !== 'pending') {
+    if (row.status !== 'pending' || !only(row)) {
       continue;
     }
 

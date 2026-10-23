@@ -6,7 +6,8 @@
  *   ever. Without `cascade` the owner is told which tickets depend on it (409); with it the ticket
  *   and every open dependent are cancelled through `transition()` in one transaction, the
  *   escalation that was acted on is settled in the same one, and only then are live runs stopped
- *   and worktrees removed.
+ *   and worktrees removed. It is the only cancel door: the owner (ticket page, escalation) and the
+ *   card's Director (`cancel_ticket`, d-0179) both come through it, and the history line says who and why.
  *
  * Exports: cancelFlow().
  * Depends on: @forge/core (escalation schemas), tick/card-notify, tick/escalation-settle,
@@ -21,9 +22,23 @@ import { cancelTicketsTx, openDependents, stopCancelled } from '#/tick/ticket-ca
 import { requestTick } from '#/tick/tick-requests.js';
 import type { EngineState } from '#/types/engine-state.types.js';
 import type { EngineDeps } from '#/types/engine.types.js';
-import type { ActOutcome } from '#/types/escalation.types.js';
+import type { ActOutcome, CancelBy } from '#/types/escalation.types.js';
 
-/** Cancels the ticket, and its dependents with `cascade`; refuses when others wait on it. */
+/** The history line of a cancel: who did it and why, in words the owner reads on the ticket and the card. */
+function cancelReason(who: CancelBy, reason: string | undefined): string {
+  if (who === 'director') {
+    return `The Director cancelled it: ${reason ?? 'no reason given'}`;
+  }
+
+  return reason === undefined
+    ? 'You cancelled the stuck ticket and what waited on it'
+    : `You cancelled it: ${reason}`;
+}
+
+/**
+ * The one cancel door: cancels the ticket, and its dependents with `cascade`; refuses when others
+ * wait on it. `by` and `reason` go on the ticket's history line.
+ */
 export async function cancelFlow(
   deps: EngineDeps,
   state: EngineState,
@@ -31,6 +46,7 @@ export async function cancelFlow(
   row: Interaction | null,
   cascade: boolean,
   author: string,
+  who: { readonly by: CancelBy; readonly reason?: string } = { by: 'owner' },
 ): Promise<ActOutcome> {
   const nowIso = iso(deps.clock.now());
   const out = await deps.storage.transaction(
@@ -58,7 +74,12 @@ export async function cancelFlow(
         return { status: 'not_pending' };
       }
 
-      const cancelled = await cancelTicketsTx(tx, [ticketId, ...dependents], nowIso);
+      const cancelled = await cancelTicketsTx(
+        tx,
+        [ticketId, ...dependents],
+        nowIso,
+        cancelReason(who.by, who.reason),
+      );
 
       return cancelled.length === 0 ? { status: 'stale' } : cancelled;
     },

@@ -55,6 +55,7 @@ describe('detectProject', () => {
     expect(detectProject({ rootEntries: ['README.md', 'LICENSE'] })).toEqual({
       ecosystems: [],
       checks: [],
+      setup: [],
     });
   });
 });

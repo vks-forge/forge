@@ -11,13 +11,15 @@
  *   the only one that tints and outlines itself, and only while something is waiting there, so
  *   amber keeps its meaning. Counts are words for a screen reader ("3 cards"). The scroller is
  *   the only thing that scrolls sideways: the page itself never does, at any width.
- *   A ColumnScroller needs `min-w-0` parents, which the app shell provides.
+ *   A ColumnScroller needs `min-w-0` parents, which the app shell provides. On a phone it can
+ *   open on a given column (`startAt`) so the first screen is not an empty one.
  *
  * Exports: ColumnShell, ColumnScroller, TONE_DOT.
  * Depends on: react, lucide-react, state/closed-strip, types/board.types.
  */
 
 import { ChevronsLeft, ChevronsRight, CircleCheck, Inbox, SearchX } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useClosedStrip } from '#/state/closed-strip.js';
 import type { ColumnTone } from '#/types/board.types.js';
@@ -128,9 +130,35 @@ export function ColumnShell(props: {
   );
 }
 
-export function ColumnScroller(props: { children: ReactNode }) {
+export function ColumnScroller(props: {
+  children: ReactNode;
+  /** Index of the column to bring into view on mount, below the `md` width only. */
+  startAt?: number;
+}) {
+  const scroller = useRef<HTMLDivElement>(null);
+  const { startAt } = props;
+
+  useEffect(() => {
+    const phone = window.matchMedia?.('(max-width: 767px)').matches ?? false;
+    const column =
+      startAt === undefined ? undefined : scroller.current?.children[startAt];
+
+    if (phone && startAt !== undefined && startAt > 0) {
+      column?.scrollIntoView?.({
+        behavior: 'instant',
+        inline: 'start',
+        block: 'nearest',
+      });
+    }
+    // Once, when the board first shows: a later card move must not yank the scroll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <div className="-mx-4 flex snap-x snap-mandatory gap-3 scroll-area overflow-x-auto overscroll-x-contain scroll-px-4 px-4 pb-3 motion-safe:scroll-smooth md:-mx-8 md:snap-none md:scroll-px-8 md:px-8">
+    <div
+      ref={scroller}
+      className="-mx-4 flex snap-x snap-mandatory gap-3 scroll-area overflow-x-auto overscroll-x-contain scroll-px-4 px-4 pb-3 motion-safe:scroll-smooth md:-mx-8 md:snap-none md:scroll-px-8 md:px-8"
+    >
       {props.children}
     </div>
   );

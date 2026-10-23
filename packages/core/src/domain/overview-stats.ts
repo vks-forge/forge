@@ -5,22 +5,23 @@
  * Why: the owner of several projects wants one answer to "how is all the work going, what
  *   waits on me, what does it cost". The numbers are the per-project facts (same window rules
  *   as Home and Cost) summed and cut into UTC day, week or month buckets. Spend is only what
- *   runs recorded: a run with no cost is counted in `cost_coverage` but adds no dollars, and
- *   nothing is priced from tokens. Keeping this pure, away from storage and HTTP, lets tests
+ *   runs and the Director's dated spend rows recorded: a run with no cost is counted in
+ *   `cost_coverage` but adds no dollars, and nothing is priced from tokens. Every spend figure is
+ *   Workers plus Director and carries the split. Keeping this pure, away from storage and HTTP, lets tests
  *   pin the rules that would otherwise mislead: money landing in the wrong project or bucket,
  *   this-month spend shifting with the range, or a quiet project looking active.
  *
- * Exports: computeOverviewStats(), overviewRunsSince().
- * Depends on: domain/bucketize, domain/overview-lists, domain/stats-window, schemas/*, types/overview-stats-input.types. No IO.
+ * Exports: computeOverviewStats().
+ * Depends on: domain/bucketize, domain/overview-lists, domain/overview-range, domain/stats-window, schemas/*, types/overview-stats-input.types. No IO.
  */
 
 import { bucketKeyOf, bucketize } from '#/domain/bucketize.js';
+import { monthStartMs } from '#/domain/overview-range.js';
 import { rateStat, statsWindow } from '#/domain/stats-window.js';
 import { attentionOf, byWaitingThenActivity } from '#/domain/overview-lists.js';
 import type { OverviewStats } from '#/schemas/overview-stats.js';
 import type { Run } from '#/schemas/run.js';
 import { STATS_RANGE_DAYS } from '#/schemas/stats-range.js';
-import type { StatsRange } from '#/schemas/stats-range.js';
 import type {
   OverviewProjectInput,
   OverviewStatsInput,
@@ -33,31 +34,6 @@ const MOVING = new Set(['in_progress', 'verifying']);
 const FAILED = new Set(['refused', 'max_turns', 'timeout', 'error']);
 const STOPPED = new Set(['interrupted', 'cancelled']);
 
-const monthStartMs = (nowMs: number): number => {
-  const d = new Date(nowMs);
-
-  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1);
-};
-
-/**
- * Earliest run start the server must read: the start of the previous period (for the change
- * figure) or of this month, whichever is earlier. `all` reads everything (undefined).
- */
-export function overviewRunsSince(
-  range: StatsRange,
-  nowMs: number,
-  utcOffsetMinutes = 0,
-): string | undefined {
-  if (range === 'all') {
-    return undefined;
-  }
-
-  const { from } = statsWindow(range, nowMs, undefined, utcOffsetMinutes);
-  const prevFromMs = Date.parse(from) - STATS_RANGE_DAYS[range] * DAY_MS;
-
-  return new Date(Math.min(prevFromMs, monthStartMs(nowMs))).toISOString();
-}
-
 function earliestMs(projects: readonly OverviewProjectInput[]): number | undefined {
   let first: number | undefined;
 
@@ -65,6 +41,7 @@ function earliestMs(projects: readonly OverviewProjectInput[]): number | undefin
     for (const iso of [
       ...p.tickets.map((t) => t.created_at),
       ...p.runs.map((r) => r.started_at),
+      ...p.directorSpend.map((d) => d.at),
     ]) {
       const ms = Date.parse(iso);
       first = first === undefined ? ms : Math.min(first, ms);
@@ -128,14 +105,20 @@ export function computeOverviewStats(input: OverviewStatsInput): OverviewStats {
   const byHarness = new Map<string, number>();
   const byLane = new Map<string, number>();
   const byProject = new Map<string, number>();
+  const workerBySource = zeros(buckets.length);
+  const directorBySource = zeros(buckets.length);
+  const byProjectSplit = new Map<string, { worker: number; director: number }>();
   const spendSeries: OverviewStats['spend_by_project'] = [];
   const rows: OverviewStats['projects'] = [];
 
-  let spend = 0;
+  let spendWorker = 0;
+  let spendDirector = 0;
   let spendPrev = 0;
   let spendMonth = 0;
   let runsTotal = 0;
   let withCost = 0;
+  let directorSteps = 0;
+  let directorRecorded = 0;
   let inProgress = 0;
   let workers = 0;
   let waiting = 0;
@@ -146,8 +129,10 @@ export function computeOverviewStats(input: OverviewStatsInput): OverviewStats {
 
   for (const p of projects) {
     const values = zeros(buckets.length);
+    const directorValues = zeros(buckets.length);
     const spark = zeros(buckets.length);
-    let projectSpend = 0;
+    let projectWorker = 0;
+    let projectDirector = 0;
     let projectRuns = 0;
     let latest: string | null = null;
     const seen = (iso: string): void => {
@@ -198,12 +183,32 @@ export function computeOverviewStats(input: OverviewStatsInput): OverviewStats {
 
       if (cost !== undefined) {
         withCost += 1;
-        spend += cost;
-        projectSpend += cost;
+        spendWorker += cost;
+        projectWorker += cost;
         values[i] = (values[i] ?? 0) + cost;
+        workerBySource[i] = (workerBySource[i] ?? 0) + cost;
         add(byHarness, r.harness, cost);
         add(byLane, r.lane, cost);
       }
+    }
+
+    for (const d of p.directorSpend) {
+      spendMonth += d.at >= monthFrom ? d.usd : 0;
+      spendPrev += prevFrom !== null && d.at >= prevFrom && d.at < prevTo ? d.usd : 0;
+
+      if (!inWindow(d.at)) {
+        continue;
+      }
+
+      const i = at(d.at);
+      seen(d.at);
+      directorSteps += 1;
+      directorRecorded += d.recorded ? 1 : 0;
+      spendDirector += d.usd;
+      projectDirector += d.usd;
+      values[i] = (values[i] ?? 0) + d.usd;
+      directorValues[i] = (directorValues[i] ?? 0) + d.usd;
+      directorBySource[i] = (directorBySource[i] ?? 0) + d.usd;
     }
 
     for (const g of p.gates) {
@@ -216,15 +221,17 @@ export function computeOverviewStats(input: OverviewStatsInput): OverviewStats {
     workers += p.activeRuns;
     waiting += p.needsAction.length;
     activeProjects += projectRuns > 0 || p.activeRuns > 0 ? 1 : 0;
-    byProject.set(p.slug, projectSpend);
-    spendSeries.push({ project: p.slug, values });
+    byProject.set(p.slug, projectWorker + projectDirector);
+    byProjectSplit.set(p.slug, { worker: projectWorker, director: projectDirector });
+    spendSeries.push({ project: p.slug, values, director_values: directorValues });
     rows.push({
       slug: p.slug,
       status: p.status,
       open_cards: p.openCards,
       tickets_in_progress: p.tickets.filter((t) => MOVING.has(t.status)).length,
       waiting_on_you: p.needsAction.length,
-      spend_usd: projectSpend,
+      spend_usd: projectWorker + projectDirector,
+      director_usd: projectDirector,
       last_activity: latest,
       spark,
     });
@@ -241,7 +248,9 @@ export function computeOverviewStats(input: OverviewStatsInput): OverviewStats {
     projects_included: projects.map((p) => p.slug),
     unknown: [...input.unknown],
     kpis: {
-      spend_usd: spend,
+      spend_usd: spendWorker + spendDirector,
+      spend_worker_usd: spendWorker,
+      spend_director_usd: spendDirector,
       spend_prev_usd: prevFrom === null ? null : spendPrev,
       spend_this_month_usd: spendMonth,
       tickets_done: done.reduce((a, b) => a + b, 0),
@@ -252,16 +261,29 @@ export function computeOverviewStats(input: OverviewStatsInput): OverviewStats {
       g1_pass_rate: rateStat(g1.hits, g1.total),
     },
     spend_by_project: spendSeries,
+    spend_by_source: [
+      { source: 'worker', values: workerBySource },
+      { source: 'director', values: directorBySource },
+    ],
     tickets_done: done,
     tickets_started: started,
     runs_passed: passed,
     runs_failed: failed,
     runs_interrupted: stopped,
-    spend_by_project_total: slices(byProject),
+    spend_by_project_total: slices(byProject).map((s) => ({
+      ...s,
+      worker_usd: byProjectSplit.get(s.key)?.worker ?? 0,
+      director_usd: byProjectSplit.get(s.key)?.director ?? 0,
+    })),
     spend_by_harness: slices(byHarness),
     spend_by_lane: slices(byLane),
     projects: rows,
     attention: attentionOf(projects),
-    cost_coverage: { runs_total: runsTotal, runs_with_cost: withCost },
+    cost_coverage: {
+      runs_total: runsTotal,
+      runs_with_cost: withCost,
+      director_steps: directorSteps,
+      director_steps_recorded: directorRecorded,
+    },
   };
 }

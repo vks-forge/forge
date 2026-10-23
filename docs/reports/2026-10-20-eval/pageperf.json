@@ -1,0 +1,78 @@
+{
+ "overview": {
+  "networkidle_median_ms": 709,
+  "networkidle_max_ms": 732,
+  "lcp_median_ms": 340,
+  "lcp_max_ms": 380
+ },
+ "home": {
+  "networkidle_median_ms": 718,
+  "networkidle_max_ms": 783,
+  "lcp_median_ms": 240,
+  "lcp_max_ms": 264
+ },
+ "inbox": {
+  "networkidle_median_ms": 674,
+  "networkidle_max_ms": 784,
+  "lcp_median_ms": 208,
+  "lcp_max_ms": 308
+ },
+ "board": {
+  "networkidle_median_ms": 747,
+  "networkidle_max_ms": 817,
+  "lcp_median_ms": 200,
+  "lcp_max_ms": 312
+ },
+ "tickets": {
+  "networkidle_median_ms": 714,
+  "networkidle_max_ms": 815,
+  "lcp_median_ms": 296,
+  "lcp_max_ms": 360
+ },
+ "card": {
+  "networkidle_median_ms": 807,
+  "networkidle_max_ms": 830,
+  "lcp_median_ms": 356,
+  "lcp_max_ms": 364
+ },
+ "ticket": {
+  "networkidle_median_ms": 748,
+  "networkidle_max_ms": 1412,
+  "lcp_median_ms": 308,
+  "lcp_max_ms": 376
+ },
+ "runs": {
+  "networkidle_median_ms": 792,
+  "networkidle_max_ms": 1094,
+  "lcp_median_ms": 344,
+  "lcp_max_ms": 624
+ },
+ "cost": {
+  "networkidle_median_ms": 701,
+  "networkidle_max_ms": 1153,
+  "lcp_median_ms": 248,
+  "lcp_max_ms": 408
+ },
+ "memory": {
+  "networkidle_median_ms": 719,
+  "networkidle_max_ms": 811,
+  "lcp_median_ms": 208,
+  "lcp_max_ms": 292
+ },
+ "project_settings": {
+  "networkidle_median_ms": 669,
+  "networkidle_max_ms": 683,
+  "lcp_median_ms": 216,
+  "lcp_max_ms": 220
+ },
+ "forge_settings": {
+  "networkidle_median_ms": 683,
+  "networkidle_max_ms": 749,
+  "lcp_median_ms": 180,
+  "lcp_max_ms": 268
+ },
+ "route_change_board_to_card": {
+  "median_ms": 110,
+  "max_ms": 154
+ }
+}

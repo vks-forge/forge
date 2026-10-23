@@ -75,6 +75,12 @@ export function createWakeRequestRepository(driver: SqlDriver): WakeRequestRepos
         .map(toWake);
     },
 
+    async listByTicket(ticketId) {
+      return driver
+        .all('SELECT * FROM wake_requests WHERE ticket_id = ? ORDER BY rowid', [ticketId])
+        .map(toWake);
+    },
+
     async markConsumed(id, at) {
       const res = driver.run(
         `UPDATE wake_requests SET status = 'consumed', consumed_at = ?

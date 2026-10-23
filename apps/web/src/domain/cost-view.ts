@@ -8,8 +8,8 @@
  *   module turns a `CostReport` into exactly those words and rows, so the screen is layout and
  *   the honesty rules are testable without a DOM.
  *
- * Exports: costSeries(), coverageNote(), ticketEntries(), runEntries(), harnessEntries(),
- *   modelEntries(), tokenLine().
+ * Exports: coverageNote(), ticketEntries(), runEntries(), harnessEntries(),
+ *   modelEntries(), tokenLine(), costParts, splitSeries(), hasRecordedCost(), DIRECTOR_DATING_NOTE.
  * Depends on: @forge/core (types), domain/stats-format, domain/nav-entries, types/chart.types.
  */
 
@@ -17,36 +17,79 @@ import type { CostReport, TokenTotals } from '@forge/core';
 import { projectPath } from '#/domain/nav-entries.js';
 import { ticketPath } from '#/domain/ticket-paths.js';
 import { formatCount, formatTokens, formatUsd, shortDay } from '#/domain/stats-format.js';
-import type { ChartPoint, RankEntry } from '#/types/chart.types.js';
+import { SPLIT_LABEL } from '#/domain/cost-display.js';
+import type { ChartPart, ChartPoint, RankEntry } from '#/types/chart.types.js';
 
-/** Spend per day; every day is "no data" when no run in the window reported a cost. */
-export function costSeries(
-  perDay: CostReport['per_day'],
-  runsWithCost: number,
+/** Workers at the bottom of every bar, the Director on top: one order and one pair of colours on every screen. */
+export const costParts: readonly ChartPart[] = [
+  { key: 'workers', label: SPLIT_LABEL.workers, color: 'var(--series-1)' },
+  { key: 'director', label: SPLIT_LABEL.director, color: 'var(--series-2)' },
+];
+
+/** Said wherever spend is charted by day: the Director's history was kept as one total per card until the ledger began. */
+export const DIRECTOR_DATING_NOTE = 'Director spend before 20 Oct is dated by card.';
+
+/** True when a run or a Director step in the window reported a price; without one there is no spend to chart. */
+export function hasRecordedCost(report: {
+  runs_with_cost: number;
+  director_steps_recorded: number;
+}): boolean {
+  return report.runs_with_cost > 0 || report.director_steps_recorded > 0;
+}
+
+/** Spend per day split into Workers and Director; every day is "no data" when nothing reported a cost. */
+export function splitSeries(
+  perDay: CostReport['per_day_split'],
+  recorded: boolean,
 ): ChartPoint[] {
   return perDay.map((point) => ({
     date: point.date,
-    value: runsWithCost === 0 ? null : point.value,
+    value: recorded ? point.worker_usd + point.director_usd : null,
+    parts: [point.worker_usd, point.director_usd],
   }));
 }
 
-/** `3 of 5 runs reported cost` plus what that means for the totals. */
-export function coverageNote(runsWithCost: number, runsTotal: number): string {
-  if (runsTotal === 0) {
+/**
+ * `3 of 5 runs and 12 of 12 Director steps reported cost` plus what that means for the totals.
+ * Without Director figures it is the runs-only sentence.
+ */
+export function coverageNote(
+  runsWithCost: number,
+  runsTotal: number,
+  director?: { recorded: number; total: number },
+): string {
+  const directorTotal = director?.total ?? 0;
+
+  if (runsTotal === 0 && directorTotal === 0) {
     return 'No runs in this range.';
   }
 
-  const head = `${formatCount(runsWithCost)} of ${formatCount(runsTotal)} runs reported cost`;
+  const parts = [
+    ...(runsTotal > 0
+      ? [`${formatCount(runsWithCost)} of ${formatCount(runsTotal)} runs`]
+      : []),
+    ...(director !== undefined && directorTotal > 0
+      ? [
+          `${formatCount(director.recorded)} of ${formatCount(directorTotal)} Director steps`,
+        ]
+      : []),
+  ];
 
-  if (runsWithCost === 0) {
+  const head = `${parts.join(' and ')} reported cost`;
+  const recorded = runsWithCost + (director?.recorded ?? 0);
+  const total = runsTotal + directorTotal;
+
+  if (recorded === 0) {
     return `${head}. There is no spend to show.`;
   }
 
-  return runsWithCost < runsTotal ? `${head}. Spend covers only those runs.` : `${head}.`;
+  return recorded < total
+    ? `${head}. Spend covers only those${directorTotal === 0 ? ' runs' : ''}.`
+    : `${head}.`;
 }
 
 export const tokenLine = (t: TokenTotals): string =>
-  `in ${formatTokens(t.in)} · out ${formatTokens(t.out)} · cached ${formatTokens(t.cached_in)}`;
+  `${formatTokens(t.in)} new · ${formatTokens(t.out)} written · ${formatTokens(t.cached_in)} re-read from cache`;
 
 export function ticketEntries(slug: string, report: CostReport): RankEntry[] {
   return report.by_ticket.map((t) => ({

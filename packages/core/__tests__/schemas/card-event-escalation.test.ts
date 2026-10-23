@@ -100,6 +100,17 @@ describe('escalation card events', () => {
     ).toBe(false);
   });
 
+  it('keeps the stop a re-plan carries on replan_requested', () => {
+    const stop = { escalation: { kind: 'failure', summary: 'npm ci failed' } };
+    const parsed = NewCardEvent.safeParse({
+      ...base,
+      kind: 'replan_requested',
+      payload: { ticket_id: 'FG-3', comment: 'fix it', by: 'owner', stop },
+    });
+
+    expect(parsed.success && parsed.data.payload).toMatchObject({ stop });
+  });
+
   it('lets plan_approved carry plan_keys next to ticket_ids', () => {
     const payload = { version: 2, by: 'owner', ticket_ids: ['FG-4'], plan_keys: ['t1'] };
 

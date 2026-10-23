@@ -13,7 +13,7 @@
  *
  * Exports: askQueued(), grillStep(), recordAnswerTx().
  * Depends on: @forge/core (grill schemas), tick/planning-detour, tick/planning-state, tick/planning-step-io, tick/planning-input,
- *   tick/card-budget, tick/card-log, types/card-planning. Writes storage.
+ *   tick/planning-question, tick/card-log, types/card-planning. Writes storage.
  */
 
 import { GrillTurnOutput } from '@forge/core';
@@ -23,39 +23,31 @@ import type {
   FlowStep,
   GrillAnswer,
   GrillDoneReason,
-  GrillQuestion,
   GrillQuestionDraft,
   GrillState,
   StorageTx,
 } from '@forge/core';
-import { warnOnBudget } from '#/tick/card-budget.js';
 import { detourTurn } from '#/tick/planning-detour.js';
 import { buildStepInput } from '#/tick/planning-input.js';
+import { spendOnQuestion, toQuestion } from '#/tick/planning-question.js';
 import {
-  askOwner,
+  askGrillQuestion,
   latestPlanOf,
   logPlanEvent,
   mergeUnique,
   setNeedsYou,
   stamp,
 } from '#/tick/planning-state.js';
-import { callStep, finishStep, startStep } from '#/tick/planning-step-io.js';
+import {
+  callStep,
+  finishStep,
+  recordCarriedSpend,
+  startStep,
+} from '#/tick/planning-step-io.js';
 import type { OpenExtras, PlanCtx, StepOutcome } from '#/types/card-planning.types.js';
 
 const LIMIT_ASSUMPTION =
   'The question limit was reached, so the remaining open points are treated as assumptions.';
-
-/** The model's draft as the card shows it: the question and its options numbered. */
-function toQuestion(draft: GrillQuestionDraft, n: number, open: number): GrillQuestion {
-  return {
-    question_id: `q${n}`,
-    text: draft.text,
-    ...(draft.why === undefined ? {} : { why: draft.why }),
-    options: draft.options.map((o, i) => ({ id: `o${i + 1}`, ...o })),
-    allow_other: true,
-    open_points: open,
-  };
-}
 
 /**
  * Stores `draft` as the open question, logs it and raises the card to Needs you (true), or drops it (false). The state is
@@ -73,14 +65,11 @@ async function openQuestionTx(
 ): Promise<boolean> {
   const at = stamp(pc);
   const fresh = (await tx.cardPlanning.get(pc.card.id)).grill;
-  const spent = fresh.director_spend_usd + cost;
   // A queued question comes from the enhance pass, which runs after the grill step has finished
   // (`done`), so `done` cannot veto it. The owner's shortcuts empty the queue instead.
   const ended = fresh.done && !extras.fromQueue;
   if (ended || fresh.current !== null) {
-    await tx.cardPlanning.update(pc.card.id, {
-      grill: { ...fresh, director_spend_usd: spent },
-    });
+    await spendOnQuestion(tx, pc, cost, at);
 
     return false;
   }
@@ -96,13 +85,12 @@ async function openQuestionTx(
       asked: fresh.asked + 1,
       round_asked: fresh.round_asked + 1,
       open_points: question.open_points,
-      director_spend_usd: spent,
     },
   });
 
   await logPlanEvent(tx, pc.card.id, at, { kind: 'grill_question', payload: question });
-  await askOwner(tx, pc.card.id, at, 'The Director has a question for you.', ['answer']);
-  await warnOnBudget(tx, pc.card.id, at, pc.director.budget_warning_usd);
+  await askGrillQuestion(tx, pc.card.id, at, question.text);
+  await spendOnQuestion(tx, pc, cost, at);
 
   return true;
 }
@@ -224,6 +212,8 @@ export async function grillStep(
     const first = call.cost;
     const next = await detourTurn(pc, step, g, previous, call.value.research.questions);
     if (!next.ok) {
+      await recordCarriedSpend(pc, step, first);
+
       return next.outcome;
     }
 

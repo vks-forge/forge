@@ -37,9 +37,36 @@ export function isTestPatch(file: PatchFile, rules: ResolvedRules): boolean {
   );
 }
 
+/** Characters that may end a group prefix (`describe › `, `Class::`, `Mod.`, `a/b/`, `file#`). */
+const GROUP_END = /[\s:./#>›]/;
+
+function collapse(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * True when `name` is the declared `title` behind a group prefix: it ends with the title and
+ * the character before is a separator. A bare short title (one word under 12 characters)
+ * cannot back a longer name, or `it("works")` would back "parser works".
+ */
+function endsWithTitle(name: string, title: string): boolean {
+  const n = collapse(name);
+  const t = collapse(title);
+  if (t.split(' ').length < 2 && t.length < 12) {
+    return false;
+  }
+
+  return (
+    n.length > t.length &&
+    n.endsWith(t) &&
+    GROUP_END.test(n[n.length - t.length - 1] ?? '')
+  );
+}
+
 /**
  * True when `line` opens a test declaration in one of the active ecosystems (`it(`,
- * `def test_x`, `func TestX`, `fn x`, ...) and its title or name contains `name`.
+ * `def test_x`, `func TestX`, `fn x`, ...) and its title or name contains `name`, or `name`
+ * is the declared title qualified by its group (`shelf add rejects x`, `Class::test_x`).
  * Comments, strings and calls that merely mention the name do not count.
  */
 export function declaresTest(
@@ -51,6 +78,8 @@ export function declaresTest(
     const m = re.exec(line);
     const title = m?.at(-1);
 
-    return typeof title === 'string' && title.includes(name);
+    return (
+      typeof title === 'string' && (title.includes(name) || endsWithTitle(name, title))
+    );
   });
 }

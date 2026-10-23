@@ -6,7 +6,7 @@
  *   `listDue` call with a far-future `now`. One place for both conversions keeps every
  *   phase agreeing on the format storage validates.
  *
- * Exports: iso(), FAR_FUTURE.
+ * Exports: iso(), FAR_FUTURE, CANCEL_GRACE_MS.
  * Depends on: nothing. No IO.
  */
 
@@ -15,3 +15,6 @@ export const iso = (ms: number): string => new Date(ms).toISOString();
 
 /** Passed as `now` to `listDue` to list every pending wake, including future ones. */
 export const FAR_FUTURE = '9999-12-31T23:59:59.999Z';
+
+/** Grace for a cancelled harness to stop before the engine goes on without its result (stall settle, ticket cancel). */
+export const CANCEL_GRACE_MS = 10_000;

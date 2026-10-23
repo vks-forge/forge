@@ -8,7 +8,7 @@
  *   sets mean a row for a gate that does not exist, or an outcome nobody defined, is
  *   rejected instead of being read as a pass (verification-plane.md §1-§2).
  *
- * Exports: GateName, GateStatus, GateResult, NewGateResult.
+ * Exports: GateName, GateRowName, GateStatus, GateResult, NewGateResult.
  * Depends on: zod. No IO.
  */
 
@@ -17,6 +17,14 @@ import { z } from 'zod';
 /** G1..G6 plus the browser check `BR` (director-core.md §3 `gate_results.gate`). */
 export const GateName = z.enum(['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'BR']);
 export type GateName = z.infer<typeof GateName>;
+
+/**
+ * What a `gate_results` row may name: a gate, or `setup` when installing the project's packages
+ * failed because of the Worker's own change to a lockfile (d-0180). `setup` is no gate: nothing
+ * in the pipeline lists it, it only records why the checks could not run on that change.
+ */
+export const GateRowName = z.union([GateName, z.literal('setup')]);
+export type GateRowName = z.infer<typeof GateRowName>;
 
 /** `skipped` carries its reason in `report_ref` (TS-only checks under a generic profile). */
 export const GateStatus = z.enum(['passed', 'failed', 'skipped', 'error']);
@@ -28,7 +36,7 @@ const Timestamp = z.iso.datetime();
 export const GateResult = z.object({
   id: z.number().int().positive(),
   run_id: z.string().min(1),
-  gate: GateName,
+  gate: GateRowName,
   status: GateStatus,
   report_ref: z.string().min(1).optional(),
   /** The commit the gates judged; the merge must still find the PR at this sha. Absent on rows from before it was recorded. */

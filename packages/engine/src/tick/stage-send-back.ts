@@ -16,8 +16,11 @@
  *   a rework nor loses the finished work. Each door has a `Tx` form because a settled check run
  *   applies its verdict inside the settle transaction.
  *
- * Exports: sendBackTx(), sendBack(), routeBlockedTx(), holdForOwnerTx(), holdGateTx(), reworkOrPark(), clip().
- * Depends on: @forge/core (MAX_AUTO_REWORKS, blockingRoute, currentCycle), domain/gate-rows, tick/escalation-finished,
+ * Config-only G1 failures hold for the owner as a `config_hold` decision (d-0173); a G1 failure that is only
+ * the lost proof of an earlier run reworks while the cap allows and then holds as a `provenance_hold` (F-D3).
+ *
+ * Exports: sendBackTx(), sendBack(), routeBlockedTx(), holdForOwnerTx(), holdGateTx(), reworkOrPark(), closeStage(), clip().
+ * Depends on: @forge/core (MAX_AUTO_REWORKS, blockingRoute, currentCycle), domain/gate-rows, tick/gate-hold, tick/escalation-finished,
  *   tick/stage-records, tick/ticket-moves, tick/verify-outcomes, tick/rework-wakes, types/stage-runner.
  */
 
@@ -26,6 +29,7 @@ import type { GateVerdict, StorageTx } from '@forge/core';
 import { describeFailures } from '#/domain/gate-rows.js';
 import { raiseDecisionTx } from '#/tick/escalation-finished.js';
 import { finishStageRun, recordStage } from '#/tick/stage-records.js';
+import { gateHoldFields } from '#/tick/gate-hold.js';
 import { moveTicketTx } from '#/tick/ticket-moves.js';
 import { parkVerifyingTx, raiseFailure, recordVerified } from '#/tick/verify-outcomes.js';
 import { requestReworkWakesTx } from '#/tick/rework-wakes.js';
@@ -44,7 +48,7 @@ export const clip = (text: string): string =>
   text.length > MAX_FINDINGS ? `${text.slice(0, MAX_FINDINGS)}\n...(truncated)` : text;
 
 /** Writes the stage's attempt as `status`: finishes its open row, or records one. */
-async function closeStage(
+export async function closeStage(
   tx: StorageTx,
   ctx: EngineCtx,
   t: StageTarget,
@@ -164,8 +168,10 @@ export async function holdForOwnerTx(
     t,
     {
       kind: 'decision',
-      cause: 'findings_hold',
-      summary: `${a.label} found blocking findings and holds the merge for you. ${clip(a.findings)}`,
+      cause: a.gateHold?.cause ?? 'findings_hold',
+      summary:
+        a.gateHold?.summary ??
+        `${a.label} found blocking findings and holds the merge for you. ${clip(a.findings)}`,
       stage_id: a.stage.id,
       stage_label: a.label,
       findings: [...(a.blocking ?? [])].slice(0, MAX_DECISION_FINDINGS),
@@ -213,6 +219,8 @@ export async function routeBlockedTx(
     policy: a.policy,
     reworkCount: count,
     cap: MAX_AUTO_REWORKS,
+    ...(a.gateHold?.cause === 'config_hold' ? { configOnly: true } : {}),
+    ...(a.gateHold?.cause === 'provenance_hold' ? { provenanceOnly: true } : {}),
   });
 
   if (route === 'hold') {
@@ -226,7 +234,11 @@ export async function routeBlockedTx(
   return sendBackTx(ctx, tx, t, a);
 }
 
-/** A failed G1: send the Worker back with the gate findings, or park at the rework cap. */
+/**
+ * A failed G1: send the Worker back with the gate findings, or park at the rework cap. A failure on
+ * gate configuration alone is held for the owner instead, with no rework spent (d-0173); one that is only
+ * a lost earlier-run proof is held once the reworks are spent (F-D3).
+ */
 export async function reworkOrPark(
   ctx: EngineCtx,
   t: StageTarget,
@@ -240,19 +252,28 @@ export async function reworkOrPark(
     .join(', ');
 
   const failed = rows.find((r) => r.status === 'failed');
+  const hold = gateHoldFields(rows, verdicts);
 
-  await sendBack(ctx, t, {
-    stage: { id: g1StageId, member: '', kind: 'script_gate' },
-    klass: 'gate',
-    policy: 'rework',
-    label: names,
-    findings: describeFailures(rows, verdicts),
-    outcome: {
-      gate: {
-        status: 'failed',
-        ...(failed?.report_ref ? { report_ref: failed.report_ref } : {}),
+  await ctx.deps.storage.transaction((tx) =>
+    routeBlockedTx(ctx, tx, t, {
+      stage: { id: g1StageId, member: '', kind: 'script_gate' },
+      klass: 'gate',
+      policy: 'rework',
+      label: names,
+      findings: describeFailures(rows, verdicts),
+      outcome: {
+        gate: {
+          status: 'failed',
+          ...(failed?.report_ref ? { report_ref: failed.report_ref } : {}),
+        },
       },
-    },
-    rows,
-  });
+      rows,
+      ...(hold
+        ? {
+            gateHold: { cause: hold.cause, files: hold.files, summary: hold.summary },
+            blocking: hold.blocking,
+          }
+        : {}),
+    }),
+  );
 }

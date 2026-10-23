@@ -11,6 +11,14 @@ Status: proposed, 2026-10-12
 >   onboarding by detectors, CI-file reading and the Director, each command run
 >   once. Any language works. G1 runs every configured check in list order and
 >   never reports a role the project did not configure as passed or skipped.
+> - **G1 runs on a prepared tree (d-0180).** Forge installs the project's packages
+>   in each worktree before the Worker starts (settings `setup`, else detected
+>   defaults), so checks never fail for a missing `node_modules` or `.venv`.
+>   Before the checks run the gate re-runs setup (a no-op when the lockfile and
+>   other `inputs` are unchanged). If the Worker changed such a file and the
+>   install now fails, G1 records a failed `setup` gate row with the output tail
+>   and the ticket goes back for rework, not to the owner. The `setup` row is
+>   not a gate in any pipeline; it only says why the checks could not run.
 > - **Ecosystem gate rules (B5).** Test-file patterns, skip and ignore
 >   markers, assertion counting and gate-config guards are data per ecosystem
 >   (node, python, go, rust, jvm, dotnet, ruby, php, cmake) in
@@ -22,9 +30,19 @@ Status: proposed, 2026-10-12
 > - **Receipts across generations (B9, d-0092, d-0100).** A run resumed after a
 >   server restart signs under a new secret generation; a `resumed` receipt
 >   links the segments. G1 verifies each generation under its own secret, which
->   is stored encrypted for the run's life. A missing secret fails the gate
->   (rework on a fresh run), never passes it. Claims also count receipts of the
->   ticket's earlier runs for `edited` only.
+>   is stored encrypted until the run's ticket is done or cancelled, for every
+>   ended run (success, paused, error, turn limit, timeout; d-0178 amends
+>   d-0100), because later runs of the ticket vouch through it. A missing secret
+>   fails the gate, never passes it: the finding says the earlier run's proof is
+>   gone and tells the Worker to re-apply the files through its edit/write tool
+>   (new receipts under the current secret), and when only such findings remain
+>   the verdict is `provenanceOnly`: rework while the cap allows, then a
+>   `provenance_hold` decision beside `config_hold` (Merge anyway, Send back,
+>   Re-plan, Cancel). Claims also count receipts of the
+>   ticket's earlier runs for `edited` and `read` (not for `ran_tests` or
+>   `added_test`). A `read P` claim is backed by any completed read-risk call
+>   on P or on a folder holding P, whatever the tool; `added_test` accepts the
+>   declared title behind a group prefix.
 > - **Gate config lives in the database.** Anything the gates read as policy
 >   (rules, `gate_rules`, checks) is a versioned settings row, not a file in the
 >   customer's repo. `.forge/rules/` and `.forge/intent-tests/` below describe
@@ -90,11 +108,57 @@ call into typed claims (`ran_tests`, `edited <path>`, `added_test <name>`,
 `read <path>`); a deterministic matcher checks each against receipts and
 `git diff --name-status`. Unsupported claims fail G1 with the claim quoted.
 
+*Read evidence.* `read P` is backed by an allowed call whose effect is
+`read_completed` on P or on a folder containing P (`.` and the worktree root
+contain everything). The test is the effect state, not a tool name: only a tool
+of `risk: read` ends there, so `Read`, `Grep`, `Glob` or any catalogue read tool
+counts in every harness. `failed_no_effect` never backs. The report says when a
+folder search backed the claim. Receipts of this run and of verified earlier
+runs of the ticket count; `edited` stays exact-path, `edit|write`, committed.
+Earlier runs back `edited` and `read` only, never `ran_tests` or `added_test`.
+
+*Lost proof.* An earlier run whose run secret is gone is set aside (`secret_gone`
+or `chain_broken`, never trusted). If its unverified receipts name a changed
+file, that file gets its own finding: the run's proof is gone, Forge cannot say
+who changed it, and the Worker must re-apply it through its edit/write tool and
+claim it (F-D2). The rewrite is an ordinary admitted edit, so nothing new is
+trusted. If every finding is of this kind G1 marks the verdict `provenanceOnly`
+(never for a broken chain, an unsupported claim or any other failure). The
+blocking route reworks while the cap allows; once spent it holds for the owner
+as `provenance_hold`, where Merge anyway (reason recorded, then the normal merge
+door; other gates must have passed, as for `config_hold`) vouches for the diff
+shown. Whether the Worker's write scope would deny the rewrite is not visible to
+the route, so that case reaches the hold only after the reworks (F-D3).
+
+*Suite names.* `added_test N` needs an added line of a test file whose declared
+title contains N, or N may be the title behind a group prefix
+(`describe › it`, `Class::test_x`, `Mod.test`, `a/b`, `file#test`): N must end
+with the title at a separator boundary (whitespace collapsed, case kept), and
+the title needs two words or 12 characters, so `it("works")` cannot back
+"parser works". The rule lives in the shared `test-files.ts`, for every
+ecosystem's declarations.
+
 **Test-diff gate** (deterministic, no LLM): fail on removed test files,
 `.skip`/`.only` additions, removed `expect`/`assert` lines, weakened matchers
 (`toEqual` → `toBeTruthy`), or any edit under the frozen G3 directory or test
 config. EvilGenie validated test-file-edit detection against human review and
 found Codex and Claude Code both hardcode and edit tests when pressured.
+
+**Conflict-marker check** (deterministic, any language): fail on any line the
+ticket adds that starts `<<<<<<< ` or `>>>>>>> `, one finding per file. Lines
+already in the base are not in the diff and removed lines are ignored, so
+cleaning markers up passes; a bare `=======` is common in documents and is not
+counted. It is what lets Forge commit a clash with markers for the ticket's
+writer to resolve: unresolved markers can never merge. The engine reads this
+finding to send the ticket back as a clash, not as a failed gate.
+
+**Base-tip rule.** A pass is about one commit, and main keeps moving, so before
+a tier A merge the base tip must be in the gated head. If it is not (or the
+host calls the PR unmergeable) nothing merges: Forge merges the base in and
+gates the new head again, with no Worker unless the merge clashed. The same
+applies to the owner's Approve on a PR whose base moved. Re-gates per ticket
+are capped (`MAX_REGATES`), so a busy base that never settles ends in a question
+to the owner, not a loop.
 
 **Project checks.** Every role-tagged check of the project (test, lint,
 typecheck, build, format, custom), run in the worktree by the dispatcher, not
@@ -199,6 +263,14 @@ tier           = A if score ≤ 2 and no tier-C glob hit
 Weights are a starting point. Calibrate from the project's own merge history
 and the canary catch rates; do not tune by feel. `tier_actual` is written to
 `outcomes/` next to `tier_predicted` so triage drift is measurable.
+
+**Tier C sign-off (d-0181).** A tier C change is signed by the Director, not the owner, only on a
+clean floor: every check stage passed, no critical or high finding open, the Director's check
+against the plan passed, no owner override, the Director setting not Always ask, and the diff
+touches no secrets path (env files except `.example` / `.sample`, key and certificate files,
+secrets folders). The owner then reads a card note with the merge commit to revert; a one-click
+revert is not built yet. Any other tier C change waits for the owner, and the sign-off card says
+which condition failed.
 
 ## 8. Canaries
 

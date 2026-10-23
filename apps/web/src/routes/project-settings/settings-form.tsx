@@ -3,14 +3,15 @@
  *
  * Why: this is the part of the screen that changes how Workers behave on this project, so
  *   each field says where its value comes from and lets the owner depart from it
- *   deliberately. Checks are by role (d-0095). Concurrency can only be lowered below the
+ *   deliberately. Checks are by role (d-0095); the setup steps Forge runs before each ticket sit above them (d-0180). Concurrency can only be lowered below the
  *   company limit (d-0097) and the form says so before the server has to. The Tier C path
  *   list warns that it replaces the safe set, because dropping `.forge/**` quietly lets
  *   Workers change Forge's own policy without a human sign-off. The fields are split over the
  *   Workers, Checks and Repository tabs; one draft serves all three.
  *
  * Exports: SettingsForm.
- * Depends on: react, domain/settings-draft, routes/project-settings/*, components/ui/field.
+ * Depends on: react, domain/settings-draft, routes/project-settings/* (incl. setup-section), components/ui/field,
+ *   domain/protected-files-copy.
  */
 
 import { INPUT_CLASS } from '#/components/ui/field.js';
@@ -21,8 +22,10 @@ import {
   SCOPE_FIELDS,
   setOverridden,
 } from '#/domain/settings-draft.js';
+import { PROTECTED_PATHS_HINT } from '#/domain/protected-files-copy.js';
 import { ChecksEditor } from '#/routes/project-settings/checks-editor.js';
 import { OverrideField } from '#/routes/project-settings/override-field.js';
+import { SetupSection } from '#/routes/project-settings/setup-section.js';
 import type {
   FieldKey,
   FormScope,
@@ -67,8 +70,8 @@ const TEXT_FIELDS: readonly TextFieldSpec[] = [
   },
   {
     key: 'tier_c_globs',
-    label: 'Tier C paths',
-    hint: 'Changes to these paths always need your sign-off. One pattern per line.',
+    label: 'Protected paths',
+    hint: PROTECTED_PATHS_HINT,
     source: 'Forge safe set',
     multiline: true,
     placeholder: '.forge/**',
@@ -110,6 +113,15 @@ export function SettingsForm(props: {
 
   return (
     <div className="rounded-xl border border-line bg-surface px-4 sm:px-5">
+      {shown.includes('setup') ? (
+        <SetupSection
+          field={draft.setup}
+          onChange={(setup) => props.onChange({ ...draft, setup })}
+          error={errorOf('setup')}
+          disabled={props.disabled}
+        />
+      ) : null}
+
       {shown.includes('checks') ? (
         <OverrideField
           id="field-checks"

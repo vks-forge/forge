@@ -141,6 +141,8 @@ export interface NotifyApi {
   update: (id: string, patch: NotifyPatch) => void;
   /** No id dismisses everything. */
   dismiss: (id?: string) => void;
+  /** Closes every dismissible notification except running tasks; returns how many closed. */
+  dismissAll: () => number;
   promise: <T>(promise: Promise<T>, messages: NotifyPromiseMessages<T>) => Promise<T>;
   task: (input: NotifyTaskInput) => NotifyTaskHandle;
   get: (id: string) => NotifyItem | undefined;

@@ -7,15 +7,17 @@
  *   stored facts with what it asked for (core `isSetupFixed`: cheap reads, no harness probe) and,
  *   when it is fixed, resumes the ticket the way a retry does, as an automatic action the card's
  *   history names. It only decides to try again: the next run still passes `admit()`, so a fix
- *   that did not really fix it fails the same denial and comes back as a setup again.
+ *   that did not really fix it fails the same denial and comes back as a setup again. A ticket that has a
+ *   Director job in flight is left for a later tick, so the resume never races a step that is about to write.
  *
  * Exports: resumeFixedSetups().
- * Depends on: @forge/core (isSetupFixed, escalation view), tick/escalation-effects, tick/escalation-facts,
+ * Depends on: @forge/core (isSetupFixed, escalation view), tick/director-jobs, tick/escalation-effects, tick/escalation-facts,
  *   tick/tick-config. Reads storage and writes the resume in its own transaction.
  */
 
 import { isSetupFixed, toEscalation } from '@forge/core';
 import type { TicketId } from '@forge/core';
+import { ticketKey } from '#/tick/director-jobs.js';
 import { retryTx } from '#/tick/escalation-effects.js';
 import { setupFactsFor } from '#/tick/escalation-facts.js';
 import { projectSettings } from '#/tick/tick-config.js';
@@ -31,7 +33,10 @@ export async function resumeFixedSetups(ctx: EngineCtx): Promise<number> {
   let resumed = 0;
   for (const row of open) {
     const view = toEscalation(row);
-    if (view.payload.kind !== 'setup') {
+    if (
+      view.payload.kind !== 'setup' ||
+      ctx.state.directorJobs.has(ticketKey(row.ticket_id))
+    ) {
       continue;
     }
 
@@ -48,6 +53,7 @@ export async function resumeFixedSetups(ctx: EngineCtx): Promise<number> {
         tx,
         cause,
         projectSettings(ctx.config, slug),
+        ctx.config.projects.get(slug)?.version.project ?? 0,
       );
 
       if (!isSetupFixed(cause, facts, row.escalated_at ?? row.asked_at)) {

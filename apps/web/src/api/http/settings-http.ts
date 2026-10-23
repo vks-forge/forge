@@ -1,7 +1,7 @@
 /**
  * The `http` side of the Forge settings resources: harnesses, GitHub connections, company settings.
  *
- * Why: these screens change logins, credentials and concurrency caps, so each call must hit the
+ * Why: these screens change logins, credentials, concurrency caps and the setup cache, so each call must hit the
  *   exact route the server implements and parse the answer before a component sees it. This is
  *   the only place that knows the paths (`/harnesses/*`, `/github/connections`,
  *   `/settings/company*`). Credentials travel only in the request body of a write and are never
@@ -25,6 +25,8 @@ import {
   HarnessView,
   HistoryResponse,
   SecretStored,
+  SetupCacheClearReply,
+  SetupCacheView,
   ToolsView,
 } from '#/schemas/settings.js';
 import type { HttpClientOptions, ResourceApis } from '#/types/api.types.js';
@@ -95,6 +97,13 @@ export function createSettingsHttp(
         requestJson(client, '/settings/company', ConfigVersion, { method: 'PUT', body }),
       testResearch: (body) =>
         requestJson(client, '/settings/research/test', ResearchTestReply, {
+          method: 'POST',
+          body,
+        }),
+      setupCache: (options) =>
+        requestJson(client, '/settings/setup-cache', SetupCacheView, options),
+      clearSetupCache: (body) =>
+        requestJson(client, '/settings/setup-cache/clear', SetupCacheClearReply, {
           method: 'POST',
           body,
         }),

@@ -17,20 +17,24 @@
  *   Worker can run its own project's tests and lint unattended in any language (an interpreter-led
  *   check such as `node scripts/lint.mjs` only as that exact text, from the run's cwd). The run's
  *   agent adds one more narrowing layer (its tools and write scope), rebuilt on every call. Each run's grant carries the data home, so the floors deny a
- *   Worker everything in Forge's folder except its own worktree (d-0098).
+ *   Worker everything in Forge's folder except its own worktree (d-0098). The owner's answers to the
+ *   run's tool approvals (allow once, deny) ride in the context so a resumed Worker's repeated call is
+ *   judged by them (services/approval-set, d-0175). The run's harness row decides Bypass permissions (d-0183): when on,
+ *   the grant says so and `admit()` turns an `ask` into allow, except the hard floor.
  *
  * Exports: createToolPolicy().
- * Depends on: @forge/core (ConfigSource, Run, PolicyDeniedError, StorageAdapter), services/agent-grant-for-run,
+ * Depends on: @forge/core (ConfigSource, Run, PolicyDeniedError, StorageAdapter), services/{agent-grant-for-run,approval-set},
  *   @forge/engine (Logger), @forge/mcp (computeToolSchemaHashes), @forge/tools (CatalogueStore,
  *   effectiveCatalogue, effectiveGrant, Grant), services/harness-source, types/server. IO:
  *   reads the catalogue and approval rows.
  */
 
-import { PolicyDeniedError } from '@forge/core';
+import { PolicyDeniedError, bypassOn } from '@forge/core';
 import { computeToolSchemaHashes } from '@forge/mcp';
 import { Grant, effectiveCatalogue, effectiveGrant } from '@forge/tools';
 import type { EffectiveCatalogue } from '@forge/tools';
 import { agentGrantForRun } from '#/services/agent-grant-for-run.js';
+import { approvalsForRun } from '#/services/approval-set.js';
 import { DEFAULT_HARNESS } from '#/services/harness-source.js';
 import type { ToolPolicy, ToolPolicyDeps } from '#/types/server.types.js';
 
@@ -76,6 +80,10 @@ export function createToolPolicy(deps: ToolPolicyDeps): ToolPolicy {
       const view = run.project ? await deps.config.project(run.project) : null;
       const project = view?.config.project;
       const toolGrants = project?.tool_grants;
+      // Bypass permissions (d-0183) follows the run's harness row, read per call so an edit applies at once.
+      const harness = await deps.storage.transaction((tx) =>
+        tx.harnesses.get(run.harness),
+      );
 
       return {
         lane: run.lane,
@@ -102,7 +110,9 @@ export function createToolPolicy(deps: ToolPolicyDeps): ToolPolicy {
             : undefined,
           // The run's agent narrows tools and write scope further; it can never widen them.
           view ? agentGrantForRun(view.config, run.agent_id) : undefined,
+          bypassOn(harness ?? {}),
         ),
+        approvals: await approvalsForRun(deps.storage, run),
         liveSchemaHashes: { ...eff.liveSchemaHashes, ...(await forgeHashes) },
         schemaStatus: eff.schemaStatus,
         cwd: run.cwd,

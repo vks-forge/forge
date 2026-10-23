@@ -64,7 +64,13 @@ export interface SetupFacts {
   readonly catalogued?: boolean;
   /** The project's tool grant now lists the tool. */
   readonly granted?: boolean;
-  readonly build?: { readonly compat: CompatStatus } | null;
+  /** The build's check result and how many of its tools still wait for an owner decision. */
+  readonly build?: {
+    readonly compat: CompatStatus;
+    readonly pending_tools?: number;
+  } | null;
+  /** The project's current settings version; a worktree setup problem counts as fixed once it passes the cause's version. */
+  readonly setup_version?: number;
 }
 
 /** What a parked ticket's reason text means: a failure, or a held ticket waiting for a decision. */

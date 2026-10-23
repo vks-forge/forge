@@ -4,7 +4,8 @@
  * Why: a Worker run ends badly all the time (a silent hang, a 429, a crash, a revoked
  *   login). A retry fixes some of those and wastes budget on others: retrying an auth
  *   failure, a refusal or a policy denial changes nothing, and retrying a crash forever is
- *   the re-wake-loop failure this engine exists to avoid (execution-plane.md §8). The table
+ *   the re-wake-loop failure this engine exists to avoid (execution-plane.md §8). A merge
+ *   conflict is neither: it is re-synced, not parked as policy. The table
  *   is keyed by error family, with attempt caps from config that turn "retry" into "park".
  *
  * Exports: decideFailure().
@@ -30,7 +31,10 @@ const park = (reason: string): FailureDecision => ({ action: 'park', reason });
 export function decideFailure(input: FailureInput): FailureDecision {
   const { status, attempts, now, policy } = input;
   if (status === 'max_turns') {
-    return park('max_turns: the run used all its turns without finishing');
+    // A turn limit is a setting, not a fault: another run hits it again, so it is never retried.
+    return park(
+      `max_turns: the run used all ${input.maxTurns === undefined ? 'its' : input.maxTurns} turns without finishing`,
+    );
   }
 
   if (status === 'refused') {
@@ -43,6 +47,12 @@ export function decideFailure(input: FailureInput): FailureDecision {
 
   const family: ErrorFamily =
     input.family ?? (status === 'timeout' ? 'stall' : 'unknown');
+
+  // A clash with the base is work for the ticket's writer, not a policy decision: verify syncs the
+  // base into the branch again at once; the hourly re-wake cap bounds how often it can repeat.
+  if (family === 'merge_conflict') {
+    return { action: 'retry', notBefore: now, family };
+  }
 
   if (NEVER_RETRY.includes(family)) {
     return park(`${family}: not retried automatically; needs a human`);

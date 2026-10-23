@@ -1,6 +1,6 @@
 /**
- * The nine tabs of project settings: Project, Workers, Checks, Repository, Director,
- * Agents, Pipelines, History, Archive and delete.
+ * The tabs of project settings: Project, Workers, Checks, Repository, Director, Research,
+ * Agents, Pipelines, Tool approvals, History, Archive and delete.
  *
  * Why: one long page made an owner scroll past everything to reach the one thing they came
  *   for, and hid how much there is. Each tab here is a thin view over the editor's shared
@@ -8,7 +8,7 @@
  *   facts, inherited-versus-overridden fields, the Director override and the destructive
  *   actions each get their own URL, so a link can point at the exact section.
  *
- * Exports: ProjectTab, WorkersTab, ChecksTab, RepositoryTab, DirectorTab, AgentsTab, PipelinesTab, HistoryTab,
+ * Exports: ProjectTab, WorkersTab, ChecksTab, RepositoryTab, DirectorTab, AgentsTab, PipelinesTab, ToolApprovalsTab, HistoryTab,
  *   DangerTab.
  * Depends on: routes/project-settings/*.
  */
@@ -21,6 +21,7 @@ import { PipelinesSection } from '#/routes/project-settings/pipelines-section.js
 import { HistoryPanel } from '#/routes/project-settings/history-panel.js';
 import { ProjectSection } from '#/routes/project-settings/project-section.js';
 import { ResearchOverride } from '#/routes/project-settings/research-override.js';
+import { ToolApprovalsSection } from '#/routes/project-settings/tool-approvals-section.js';
 import { SettingsForm } from '#/routes/project-settings/settings-form.js';
 import type { FormScope } from '#/types/project-settings.types.js';
 import { useProjectSettingsContext } from '#/routes/project-settings/use-project-settings-context.js';
@@ -107,6 +108,10 @@ export function AgentsTab() {
 
 export function PipelinesTab() {
   return <PipelinesSection />;
+}
+
+export function ToolApprovalsTab() {
+  return <ToolApprovalsSection />;
 }
 
 export function HistoryTab() {

@@ -10,10 +10,10 @@
  *
  * Exports: GrillAnswerBody, GrillShortcutBody, PlanApproveBody, PlanChangesBody, PlanEditBody,
  *   PlanVersionParam (schemas and inferred types).
- * Depends on: @forge/core (CardPriority), zod. No IO.
+ * Depends on: @forge/core (CardPriority, Lane), zod. No IO.
  */
 
-import { CardPriority } from '@forge/core';
+import { CardPriority, Lane } from '@forge/core';
 import { z } from 'zod';
 
 /** `POST /cards/:id/grill/answer`: the open question and exactly one of `option_id` and `text`. */
@@ -59,6 +59,8 @@ export const PlanEditBody = z.strictObject({
         key: z.string().min(1).max(100),
         title: z.string().trim().min(1).max(300).optional(),
         priority: CardPriority.optional(),
+        /** The owner's own lane for this ticket; approval honours it (d-0177). */
+        lane: Lane.optional(),
         removed: z.boolean().optional(),
         /** Positions (0-based) of the Director's pipeline ops to take off this ticket; the owner may remove an op, never add one. */
         drop_pipeline_ops: z.array(z.number().int().nonnegative()).max(6).optional(),

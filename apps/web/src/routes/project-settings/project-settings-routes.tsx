@@ -18,6 +18,7 @@ import {
   Info,
   Layers,
   ListChecks,
+  ShieldCheck,
   Telescope,
   Users,
   Workflow,
@@ -36,6 +37,7 @@ import {
   ProjectTab,
   ResearchTab,
   RepositoryTab,
+  ToolApprovalsTab,
   WorkersTab,
 } from '#/routes/project-settings/project-settings-tabs.js';
 
@@ -53,6 +55,7 @@ export const PROJECT_SETTINGS_SECTIONS: readonly {
   { segment: 'research', label: 'Research', icon: Telescope },
   { segment: 'agents', label: 'Agents', icon: Bot },
   { segment: 'pipelines', label: 'Pipelines', icon: Layers },
+  { segment: 'approvals', label: 'Tool approvals', icon: ShieldCheck },
   { segment: 'history', label: 'History', icon: Clock },
   { segment: 'danger', label: 'Archive and delete', icon: Archive },
 ];
@@ -67,6 +70,7 @@ export const projectSettingsRoutes: RouteObject[] = [
   { path: 'research', element: <ResearchTab /> },
   { path: 'agents', element: <AgentsTab /> },
   { path: 'pipelines', element: <PipelinesTab /> },
+  { path: 'approvals', element: <ToolApprovalsTab /> },
   { path: 'history', element: <HistoryTab /> },
   { path: 'danger', element: <DangerTab /> },
   { path: '*', element: <NotFound /> },

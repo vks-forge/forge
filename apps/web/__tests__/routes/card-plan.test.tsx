@@ -98,7 +98,7 @@ describe('Plan tab: content', () => {
       routes: withPlan({ plan: { floor: { pass: true, reasons: [] } } }),
     });
 
-    expect(await screen.findByText('Floor check passed')).toBeInTheDocument();
+    expect(await screen.findByText('Safety minimum met')).toBeInTheDocument();
     unmount();
 
     renderApp({
@@ -108,8 +108,24 @@ describe('Plan tab: content', () => {
       }),
     });
 
-    expect(await screen.findByText('Floor check did not pass')).toBeInTheDocument();
+    expect(await screen.findByText('Safety minimum not met')).toBeInTheDocument();
     expect(screen.getByText('Touches the billing module')).toBeInTheDocument();
+  });
+
+  it('hides the floor banner once the plan was approved (floor null) and says it was checked then', async () => {
+    renderApp({
+      path: PLAN_PAGE,
+      routes: withPlan({
+        plan: { floor: null, floor_frozen_at: '2026-10-20T09:30:00.000Z' },
+      }),
+    });
+
+    expect(
+      await screen.findByText(/checked when this plan was approved/),
+    ).toBeInTheDocument();
+
+    expect(screen.queryByText('Safety minimum not met')).not.toBeInTheDocument();
+    expect(screen.queryByText('Safety minimum met')).not.toBeInTheDocument();
   });
 
   it('says there is no plan yet when the Director has not written one', async () => {
@@ -179,6 +195,43 @@ describe('Plan tab: versions and diff', () => {
     expect(screen.getByText(/older version/i)).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Approve plan' }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe('Plan tab: what approval cancels', () => {
+  it('lists what will be cancelled and what the new plan does not cover', async () => {
+    renderApp({
+      path: PLAN_PAGE,
+      routes: withPlan({
+        plan: {
+          will_cancel: [
+            { id: 'CHE-3', title: 'Auth.js' },
+            { id: 'CHE-6', title: 'LLM client' },
+          ],
+          not_covered: [{ id: 'CHE-6', title: 'LLM client' }],
+        },
+      }),
+    });
+
+    const cancelled = await screen.findByRole('list', {
+      name: 'Will be cancelled when you approve',
+    });
+
+    expect(within(cancelled).getAllByRole('listitem')).toHaveLength(2);
+    const uncovered = screen.getByRole('list', { name: 'Not covered by the new plan' });
+
+    expect(within(uncovered).getByText('CHE-6')).toBeInTheDocument();
+    expect(within(uncovered).queryByText('CHE-3')).not.toBeInTheDocument();
+  });
+
+  it('shows neither list when approval cancels nothing', async () => {
+    renderApp({ path: PLAN_PAGE, routes: withPlan() });
+
+    await screen.findByRole('heading', { level: 3, name: 'Goal' });
+
+    expect(
+      screen.queryByRole('list', { name: 'Will be cancelled when you approve' }),
     ).not.toBeInTheDocument();
   });
 });

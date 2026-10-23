@@ -101,13 +101,13 @@ describe('Message the Worker', () => {
 
   it('offers no box on a finished run', async () => {
     renderApp({ path: ticketPath('SVC-1') });
-    await screen.findByText(/Run ended/);
+    await screen.findByText(/Worker run \d+ finished/);
 
     expect(screen.queryByLabelText('Message the Worker')).not.toBeInTheDocument();
   });
 
-  it('links a ticket back to its parent card', async () => {
-    renderApp({ path: ticketPath('SVC-3') });
+  it('links a ticket back to its parent card from Details', async () => {
+    renderApp({ path: `${ticketPath('SVC-3')}/details` });
 
     expect(await screen.findByRole('link', { name: 'FG-C4' })).toHaveAttribute(
       'href',

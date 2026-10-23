@@ -6,11 +6,14 @@
  * while the login and process basics the harness needs must be. Opt-in passthrough exists
  * for api_key credential mode and must be explicit and name-exact.
  *
+ * The project's own tool folders (a virtual environment's `bin`) go first on PATH, so the Worker
+ * runs the project's `pytest`, under whatever spelling the host uses for the variable.
+ *
  * Depends on: src/domain/child-env. No IO.
  */
 
 import { describe, expect, it } from 'vitest';
-import { allowlistEnv, buildChildEnv } from '#/domain/child-env.js';
+import { allowlistEnv, buildChildEnv, withPathFirst } from '#/domain/child-env.js';
 import { SECRET_ENV, SECRET_NAMES } from '#tests/helpers/secret-env.js';
 
 describe('allowlistEnv', () => {
@@ -69,5 +72,22 @@ describe('buildChildEnv credential variables (d-0087)', () => {
     );
 
     expect(env).toEqual({ PATH: 'p', CLAUDE_CODE_OAUTH_TOKEN: 'tok' });
+  });
+});
+
+describe('withPathFirst', () => {
+  it('puts the folders first, keeping the variable spelling of the host', () => {
+    expect(withPathFirst({ Path: 'C:\Windows' }, ['C:\w\.venv\Scripts'], ';')).toEqual({
+      Path: 'C:\w\.venv\Scripts;C:\Windows',
+    });
+  });
+
+  it('sets PATH when there is none, and changes nothing without folders', () => {
+    expect(withPathFirst({ HOME: 'h' }, ['/w/.venv/bin'], ':')).toEqual({
+      HOME: 'h',
+      PATH: '/w/.venv/bin',
+    });
+
+    expect(withPathFirst({ PATH: 'p' }, [], ':')).toEqual({ PATH: 'p' });
   });
 });

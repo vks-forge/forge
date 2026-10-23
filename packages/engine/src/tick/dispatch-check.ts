@@ -10,10 +10,11 @@
  *   per-project limit of one they run one after the other), and the group passes when every member
  *   has reported. The attempt row and the artifacts the agent was shown are written in the same
  *   transaction as the run row, so what the owner reads on the ticket page is exactly what the
- *   reviewer got.
+ *   reviewer got. The worktree is prepared first, like a writer's (tick/prep-jobs): a slow install
+ *   returns false and a failed step parks the ticket from Verifying for the owner.
  *
  * Exports: startChecks().
- * Depends on: @forge/core (ArtifactKind, stageInputs), domain/harness-choice, tick/{agent-fallback,launch-run,project-runtime,
+ * Depends on: @forge/core (ArtifactKind, stageInputs), domain/harness-choice, tick/{agent-fallback,dispatch-park,launch-run,prep-jobs,project-runtime,
  *   run-agent,stage-artifacts,stage-prompt,stage-records,stage-state,verify-outcomes}. IO: git diff, storage, driver.
  */
 
@@ -21,8 +22,11 @@ import { ArtifactKind, stageInputs } from '@forge/core';
 import type { AgentStage, Project, StorageTx } from '@forge/core';
 import { chooseHarness } from '#/domain/harness-choice.js';
 import { slottedAgent } from '#/tick/agent-fallback.js';
+import { parkForSetup } from '#/tick/dispatch-park.js';
 import { launchRun } from '#/tick/launch-run.js';
-import { baseRefFor, driverFor, runtimeFor } from '#/tick/project-runtime.js';
+import { ensurePrepared, prepPaths } from '#/tick/prep-jobs.js';
+import { startRefFor } from '#/tick/base-sync.js';
+import { driverFor, runtimeFor } from '#/tick/project-runtime.js';
 import { resolveStageAgent } from '#/tick/run-agent.js';
 import { collectArtifacts, persistArtifacts } from '#/tick/stage-artifacts.js';
 import { renderCheckPrompt } from '#/tick/stage-prompt.js';
@@ -89,9 +93,19 @@ export async function startChecks(
   const wt = await runtime.worktrees.create(
     ticket.id,
     ticket.branch,
-    baseRefFor(ctx, project.slug),
+    await startRefFor(ctx, runtime, project.slug),
   );
 
+  // The tree must be ready for a reviewer too (it may run the project's tools): same job as a writer's.
+  const ready = await ensurePrepared(ctx, runtime, ticket, wt, ticket.branch, (failure) =>
+    parkForSetup(ctx, ticket, failure, writer),
+  );
+
+  if (ready !== 'ready') {
+    return false;
+  }
+
+  const pathPrepend = await prepPaths(runtime, wt.path);
   const diff = (await runtime.worktrees.diff(wt.path, wt.baseSha)).patch;
   const settings = projectSettings(ctx.config, project.slug);
   let started = false;
@@ -164,6 +178,7 @@ export async function startChecks(
       ),
       previous: null,
       wake,
+      pathPrepend,
       inTx: async (tx, runId) => {
         const rowId = await beginStageRun(tx, ctx.nowIso, {
           ticket_id: ticket.id,

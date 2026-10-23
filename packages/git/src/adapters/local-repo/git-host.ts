@@ -123,5 +123,25 @@ export function createLocalRepoGitHost(opts: LocalRepoGitHostOptions): GitHost {
     merge: async (n, m, sha) => (await host()).merge(n, m, sha),
     closePr: async (n) => (await host()).closePr(n),
     deleteBranch: async (b) => (await host()).deleteBranch(b),
+
+    // The base is the user's own branch: no remote to fetch, the ref is the branch itself.
+    async syncBase() {
+      const ref = `refs/heads/${opts.baseBranch}`;
+      const found = await git.try(repoRoot, [
+        'rev-parse',
+        '--verify',
+        '--quiet',
+        `${ref}^{commit}`,
+      ]);
+
+      if (found.code !== 0) {
+        throw new GitHostError(
+          'not_found',
+          `base branch ${opts.baseBranch} does not exist`,
+        );
+      }
+
+      return { ref, sha: found.stdout.trim() };
+    },
   };
 }

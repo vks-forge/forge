@@ -47,7 +47,9 @@ const AUTH =
 const BUDGET =
   /error_max_budget_usd|max(imum)? budget|budget.{0,20}(exceeded|exhausted|reached)/i;
 
-const TURNS = /error_max_turns|max(imum)?.?turns?/i;
+/** "error_max_turns", "max turns", "Reached maximum number of turns (3)", "turn limit"; not `turn_timeout`, not "maximum number of tokens". */
+const TURNS = /error_max_turns|max(imum)?[\s_-]*(number\s+of\s+)?turns?|turn\s+limit/i;
+
 const REFUSAL =
   /usage policy|violat\w+ (our|the) .{0,20}polic|can(no|')t (help|assist) with that request/i;
 

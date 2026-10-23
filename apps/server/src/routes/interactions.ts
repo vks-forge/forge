@@ -7,14 +7,14 @@
  *   unknown id is 404, which tells the caller their id is wrong rather than that someone
  *   else got there first. This is the older route: it stays for callers that only answer, and
  *   settles the answer the same way `POST /interactions/:id/act` does (the owner's typed answer),
- *   but at any stage.
+ *   but at any stage. The reply carries `next`, the plain line of what happens to the ticket now.
  *
  * Exports: answerRoute().
  * Depends on: schemas/api, services/http/body, services/http/http-errors,
  *   services/http/respond, types/routes. IO: reads storage, calls the engine.
  */
 
-import { AnswerBody } from '#/schemas/api.js';
+import { AnswerBody, AnswerReply } from '#/schemas/api.js';
 import { readJson } from '#/services/http/body.js';
 import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
@@ -40,7 +40,19 @@ export function answerRoute(deps: RouteDeps): Route {
         throw new HttpError(409, 'not_pending', `interaction ${id} is not pending`);
       }
 
-      sendJson(res, 200, { id, status: 'answered' });
+      const next = (await deps.engine.explainWaits([known.ticket_id])).get(
+        known.ticket_id,
+      )?.text;
+
+      sendJson(
+        res,
+        200,
+        AnswerReply.parse({
+          id,
+          status: 'answered',
+          ...(next === undefined ? {} : { next }),
+        }),
+      );
     },
   };
 }

@@ -112,6 +112,14 @@ describe('GET /projects/:slug/inbox', () => {
     expect(await ids('needs_action')).not.toContain('gate_failed:1');
   });
 
+  it('splits what waits on the owner from news: notices holds only informing items', async () => {
+    const notices = (await get('/projects/fixture/inbox?view=notices')).body as Page;
+
+    expect(notices.items.map((i) => i.id)).toEqual(['gate_failed:1']);
+    expect(notices.items.every((i) => !i.needs_action)).toBe(true);
+    expect(await ids('needs_action')).toEqual(['question:int-1', 'ticket_review:FX-2']);
+  });
+
   it('lists memory proposals and parked harnesses', async () => {
     t.proposals = [
       {
@@ -231,13 +239,20 @@ describe('GET /projects/:slug/inbox/counts', () => {
     const before = await get('/projects/fixture/inbox/counts');
 
     expect(before.status).toBe(200);
-    expect(before.body).toEqual({ needs_action: 2, unread: 3, all: 3, archived: 0 });
+    expect(before.body).toEqual({
+      needs_action: 2,
+      notices: 1,
+      unread: 3,
+      all: 3,
+      archived: 0,
+    });
 
     await post('/projects/fixture/inbox/ticket_review%3AFX-2/archive');
     await post('/projects/fixture/inbox/question%3Aint-1/read');
 
     expect((await get('/projects/fixture/inbox/counts')).body).toEqual({
       needs_action: 1,
+      notices: 1,
       unread: 1,
       all: 2,
       archived: 1,

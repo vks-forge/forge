@@ -9,15 +9,16 @@
  *   a skip or a pass. A command that times out or exits non-zero is a finding; one that
  *   cannot be spawned makes the check `error`, because "could not run" is not "passed". A
  *   check with an empty command or a working directory outside the worktree is a finding
- *   too (fail closed): nothing ran, so nothing may count as passed.
+ *   too (fail closed): nothing ran, so nothing may count as passed. Tool folders from the
+ *   worktree's setup (`pathDirs`) go first on PATH and may be run from.
  *
  * Exports: runProjectChecks(), DEFAULT_COMMAND_TIMEOUT_MS.
  * Depends on: @forge/core (ProjectCheck), shared/env, shared/tail, types. Runs commands through the injected seam.
  */
 
-import { isAbsolute, relative, resolve } from 'node:path';
+import { delimiter, isAbsolute, relative, resolve } from 'node:path';
 import type { ProjectCheck } from '@forge/core';
-import { scrubEnv } from '#/shared/env.js';
+import { prependPath, scrubEnv } from '#/shared/env.js';
 import { tail } from '#/shared/tail.js';
 import type {
   CheckOutcome,
@@ -73,12 +74,14 @@ async function runOne(
   }
 
   const id = `project:${check.name}`;
+  const dirs = input.pathDirs ?? [];
   try {
     const result = await input.run({
       command,
       cwd,
-      env: scrubEnv(input.env, input.passEnv),
+      env: prependPath(scrubEnv(input.env, input.passEnv), dirs, delimiter),
       timeoutMs: input.timeoutMs,
+      ...(dirs.length === 0 ? {} : { trustedDirs: dirs }),
     });
 
     const ok = !result.timedOut && result.exitCode === 0;

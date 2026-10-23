@@ -10,11 +10,12 @@
  *
  * Exports: FirstRunState, SystemInfo, GitState, GitInspection, SnapshotInspection, GitSetup,
  *   ProjectScope, ProjectInspection.
- * Depends on: schemas/project (ProjectCheck), zod. No IO.
+ * Depends on: schemas/project (ProjectCheck), schemas/setup-step, zod. No IO.
  */
 
 import { z } from 'zod';
 import { ProjectCheck } from '#/schemas/project.js';
+import { SetupStep } from '#/schemas/setup-step.js';
 
 /**
  * Where setup stands, derived from what exists rather than stored: a Forge with at least one
@@ -98,6 +99,8 @@ export const ProjectInspection = z.object({
   ecosystems: z.array(z.string().min(1)),
   /** Checks worth running, from the root's manifest; the user edits them before saving. */
   checks: z.array(ProjectCheck),
+  /** The steps Forge would run in each new worktree before a Worker starts (installs); empty when the project needs none. */
+  setup: z.array(SetupStep).default([]),
   /** A slug and ticket prefix no registered project uses. */
   suggested_slug: z.string().min(1),
   suggested_prefix: z.string().min(1),

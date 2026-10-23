@@ -10,7 +10,8 @@
  *   decides whether to use it (domain/escalation-decision): it must be sure enough, cite grounds,
  *   and the ticket must not be Tier C. Any error, parse failure or timeout hands the question to
  *   the owner at once with no suggestion: fail closed means ask the human. The step's cost counts
- *   on the card's budget as a warning, never a block (d-0143).
+ *   on the card's budget as a warning, never a block (d-0143). The look runs in a job and returns
+ *   the write (answer, or hand to the owner) as an `apply` the tick runs after re-checking the wait.
  *
  * Exports: lookAtQuestion().
  * Depends on: tick/memory-context (the memory shown to the Director), @forge/core (step schemas, escalation types), domain/escalation-decision, steps/run-step,
@@ -39,6 +40,7 @@ import { MAX_READ_ROUNDS, runReads } from '#/tick/planning-reads.js';
 import { directorFor } from '#/tick/planning-state.js';
 import { projectSettings } from '#/tick/tick-config.js';
 import type { ReadBudget, ReadResult } from '#/types/card-planning.types.js';
+import type { DirectorApply } from '#/types/director-jobs.types.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 
 /** What the step is told about the card's plan: the parts that settle a Worker's question. */
@@ -70,21 +72,26 @@ async function handOver(
   extra: Partial<EscalationQuestion> = {},
 ): Promise<void> {
   await ctx.deps.storage.transaction(async (tx) => {
-    await addDirectorSpend(tx, row.card_id, cost, ctx.nowIso, warnUsd);
+    await addDirectorSpend(tx, row.card_id, cost, ctx.nowIso, warnUsd, {
+      kind: 'escalation_answer',
+      ticketId: row.ticket_id,
+    });
+
     await handToOwner(tx, ctx.nowIso, row, { ...question, ...extra });
   });
 }
 
 /**
  * Looks at one director-stage question: answers it alone when every safeguard holds, otherwise
- * hands it to the owner (with the model's suggestion and options when it gave any).
+ * hands it to the owner (with the model's suggestion and options when it gave any). Returns the
+ * write for the tick to apply.
  */
 export async function lookAtQuestion(
   ctx: EngineCtx,
   row: Interaction,
   ticket: Ticket,
   question: EscalationQuestion,
-): Promise<void> {
+): Promise<DirectorApply> {
   const loaded = await ctx.deps.storage.transaction(async (tx) => ({
     project: await tx.projects.get(ticket.project),
     card: ticket.card_id === undefined ? null : await tx.cards.get(ticket.card_id),
@@ -97,9 +104,7 @@ export async function lookAtQuestion(
 
   const project: Project | null = loaded.project;
   if (!project) {
-    await handOver(ctx, row, question, 0, 0);
-
-    return;
+    return (tick) => handOver(tick, row, question, 0, 0);
   }
 
   const slug = project.slug;
@@ -188,9 +193,8 @@ export async function lookAtQuestion(
 
     if (!answer.ok) {
       rejectStep(ctx, 'ticket_answer', ticket.id, answer.error);
-      await handOver(ctx, row, question, cost, director.budget_warning_usd);
 
-      return;
+      return (tick) => handOver(tick, row, question, cost, director.budget_warning_usd);
     }
 
     const wanted: ReadRequest[] = answer.value.read_requests ?? [];
@@ -203,9 +207,7 @@ export async function lookAtQuestion(
 
   // Still asking for reads after the last round: nothing usable, ask the owner.
   if (out === null) {
-    await handOver(ctx, row, question, cost, director.budget_warning_usd);
-
-    return;
+    return (tick) => handOver(tick, row, question, cost, director.budget_warning_usd);
   }
 
   const verdict = canAutoAnswer(out, {
@@ -214,45 +216,48 @@ export async function lookAtQuestion(
     approvalMode: director.approval_mode,
   });
 
-  if (verdict.answer) {
-    const answered = await ctx.deps.storage.transaction(async (tx) => {
-      const fresh = await tx.interactions.get(row.id);
-      const done =
-        fresh !== null &&
-        (await answerQuestionTx(
-          ctx.deps,
-          tx,
-          fresh,
-          { action: 'answer', by: 'director', text: verdict.text },
-          'engine',
-        ));
-
-      if (done) {
-        await addDirectorSpend(
-          tx,
-          row.card_id,
-          cost,
-          ctx.nowIso,
-          director.budget_warning_usd,
-        );
-      }
-
-      return done;
-    });
-
-    if (answered) {
-      return;
-    }
-  }
-
   const suggested =
     out.suggested_answer ?? (out.decision === 'answer' ? out.answer : undefined);
 
-  await handOver(ctx, row, question, cost, director.budget_warning_usd, {
-    ...(suggested === undefined ? {} : { suggested_answer: suggested }),
-    options: out.options ?? [],
-    director_note: verdict.answer
-      ? 'The question was answered by someone else while the Director looked.'
-      : verdict.note,
-  });
+  return async (tick) => {
+    if (verdict.answer) {
+      const answered = await tick.deps.storage.transaction(async (tx) => {
+        const fresh = await tx.interactions.get(row.id);
+        const done =
+          fresh !== null &&
+          (await answerQuestionTx(
+            tick.deps,
+            tx,
+            fresh,
+            { action: 'answer', by: 'director', text: verdict.text },
+            'engine',
+          ));
+
+        if (done) {
+          await addDirectorSpend(
+            tx,
+            row.card_id,
+            cost,
+            tick.nowIso,
+            director.budget_warning_usd,
+            { kind: 'escalation_answer', ticketId: row.ticket_id },
+          );
+        }
+
+        return done;
+      });
+
+      if (answered) {
+        return;
+      }
+    }
+
+    await handOver(tick, row, question, cost, director.budget_warning_usd, {
+      ...(suggested === undefined ? {} : { suggested_answer: suggested }),
+      options: out.options ?? [],
+      director_note: verdict.answer
+        ? 'The question was answered by someone else while the Director looked.'
+        : verdict.note,
+    });
+  };
 }

@@ -2,7 +2,7 @@
  * Shapes for navigation entries and the theme choice.
  *
  * Why: the sidebar, the routes and the placeholder pages all read one list of destinations;
- *   a shared shape keeps a label, its URL segment and the build batch that fills it in step.
+ *   a shared shape keeps a label, its URL segment and whether the screen exists yet.
  *
  * Exports: NavEntry, ThemeMode.
  * Depends on: nothing. Types only.
@@ -13,8 +13,8 @@ export interface NavEntry {
   /** Stable id, also the route segment under the project (`''` for Home) or under `/settings`. */
   readonly segment: string;
   readonly label: string;
-  /** Build-plan batch that delivers the screen, shown on its placeholder. */
-  readonly batch: string;
+  /** False while the screen is not built: the sidebar hides it, an old link still lands on a stub. */
+  readonly built: boolean;
   /** One line on what the screen will do. */
   readonly blurb: string;
 }

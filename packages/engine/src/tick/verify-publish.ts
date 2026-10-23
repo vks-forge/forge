@@ -7,25 +7,47 @@
  *   a crash after that point finds the PR on the next tick and only pushes again. A crash
  *   between the host opening the PR and that store is covered by asking the host for the
  *   branch's open PR first, so one ticket never opens two PRs. A rework run reuses the same branch and PR; the push
- *   updates it.
+ *   updates it. Every commit Forge makes carries `Forge-Ticket` and `Forge-Run` trailers, so git history
+ *   leads back to the ticket and the run.
  *
- * Exports: publishBranch().
- * Depends on: tick/ticket-moves, types/verify. IO only through worktrees and GitHost ports.
+ * Exports: commitWork(), publishBranch().
+ * Depends on: @forge/core (commitMessage), tick/ticket-moves, types/verify. IO only through worktrees and GitHost ports.
  */
 
+import { commitMessage } from '@forge/core';
 import type { Ticket } from '@forge/core';
 import { moveTicket } from '#/tick/ticket-moves.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { VerifyTarget } from '#/types/verify.types.js';
 
-/** Commits, pushes and (first time only) opens the PR; returns the ticket as stored afterwards. */
-export async function publishBranch(ctx: EngineCtx, t: VerifyTarget): Promise<Ticket> {
+const titleOf = (t: VerifyTarget): string =>
+  `${t.ticket.type}(${t.ticket.id}): ${t.ticket.title}`;
+
+/** Commits what the run left in the worktree; a no-op when there is nothing new (a rework that changed nothing, or a retry of this step). */
+export async function commitWork(t: VerifyTarget): Promise<void> {
+  await t.runtime.worktrees.commitAll(
+    t.worktree,
+    commitMessage(titleOf(t), { ticketId: t.ticket.id, runId: t.run.id }),
+  );
+}
+
+/**
+ * Commits (unless the caller already did), pushes and (first time only) opens the PR; returns the
+ * ticket as stored afterwards.
+ */
+export async function publishBranch(
+  ctx: EngineCtx,
+  t: VerifyTarget,
+  committed = false,
+): Promise<Ticket> {
   const { deps } = ctx;
   const { ticket, runtime } = t;
-  const title = `${ticket.type}(${ticket.id}): ${ticket.title}`;
+  const title = titleOf(t);
 
-  // Null means nothing new to commit (a rework that changed nothing, or a retry of this step).
-  await runtime.worktrees.commitAll(t.worktree, title);
+  if (!committed) {
+    await commitWork(t);
+  }
+
   await runtime.gitHost.push(t.worktree, t.branch);
   if (ticket.pr_number !== undefined) {
     return ticket;

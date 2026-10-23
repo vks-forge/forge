@@ -8,7 +8,8 @@
  *   the event and plan shapes in the shapes of docs/briefs/s2-director-planning.md, so a drift
  *   between the contract and the UI fails a test instead of passing against a stale fixture.
  *
- * Exports: FLOW_CARD, flowEvent(), planFixture(), flowDetail(), flowRoutes(), FlowRoutesOptions.
+ * Exports: FLOW_CARD, flowEvent(), planFixture(), flowDetail(), dockItem(), flowRoutes(),
+ *   FlowRoutesOptions.
  * Depends on: helpers/fetch-stub. No IO.
  */
 
@@ -125,6 +126,26 @@ export function flowDetail(over: Record<string, unknown> = {}): Record<string, u
   };
 }
 
+/**
+ * One `needs_you_detail` entry as the server sends it (d-0172). The dock reads the card detail,
+ * so a test that wants an item in the dock puts it in `detail.needs_you_detail`.
+ */
+export function dockItem(
+  kind: string,
+  actions: readonly string[],
+  over: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    kind,
+    title: 'Something waits on you',
+    items: [],
+    actions,
+    raised_at: at(10),
+    seq: null,
+    ...over,
+  };
+}
+
 export interface FlowRoutesOptions {
   readonly detail?: Record<string, unknown>;
   readonly events?: readonly Record<string, unknown>[];
@@ -132,6 +153,11 @@ export interface FlowRoutesOptions {
     readonly versions?: readonly { version: number; created_at: string }[];
     readonly current?: Record<string, unknown> | null;
     readonly floor?: unknown;
+    /** When an approved plan's floor was frozen; the server then sends `floor: null`. */
+    readonly floor_frozen_at?: string | null;
+    readonly will_cancel?: readonly { id: string; title: string }[];
+    readonly not_covered?: readonly { id: string; title: string }[];
+    readonly already_exists?: readonly { id: string; title: string }[];
   };
   /** Stored versions served by `GET /cards/:id/plan/:version`. */
   readonly versions?: Readonly<Record<number, Record<string, unknown>>>;
@@ -162,6 +188,10 @@ export function flowRoutes(options: FlowRoutesOptions = {}): Routes {
       versions: plan.versions ?? [],
       current: plan.current ?? null,
       floor: plan.floor ?? null,
+      floor_frozen_at: plan.floor_frozen_at ?? null,
+      will_cancel: plan.will_cancel ?? [],
+      not_covered: plan.not_covered ?? [],
+      already_exists: plan.already_exists ?? [],
     }),
     'GET /cards/:id/plan/:version': ({ params }) => {
       const found = options.versions?.[Number(params['version'])];

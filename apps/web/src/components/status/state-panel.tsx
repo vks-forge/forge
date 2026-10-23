@@ -28,6 +28,8 @@ export function StatePanel(
         icon?: LucideIcon;
         actions?: ReactNode;
         compact?: boolean;
+        /** `1` on a screen with no other heading (a 404); default `2`. */
+        headingLevel?: 1 | 2;
       }
     | {
         kind: 'error';
@@ -36,6 +38,7 @@ export function StatePanel(
         onRetry?: (() => void) | undefined;
         retrying?: boolean | undefined;
         children?: ReactNode;
+        headingLevel?: 1 | 2;
       },
 ) {
   if (props.kind === 'loading') {
@@ -55,11 +58,14 @@ export function StatePanel(
         {...(props.icon ? { icon: props.icon } : {})}
         {...(props.actions ? { actions: props.actions } : {})}
         variant={props.compact ? 'compact' : 'page'}
+        {...(props.headingLevel ? { headingLevel: props.headingLevel } : {})}
       >
         {props.children}
       </EmptyState>
     );
   }
+
+  const Heading = props.headingLevel === 1 ? 'h1' : 'h2';
 
   return (
     <div
@@ -67,7 +73,7 @@ export function StatePanel(
       className="grid max-w-md justify-items-start gap-3 rounded-xl border border-line bg-surface p-5"
     >
       <CircleAlert aria-hidden="true" className="size-5 text-danger" />
-      <h2 className="text-base font-semibold">{props.title}</h2>
+      <Heading className="text-base font-semibold">{props.title}</Heading>
       {props.detail ? <p className="text-sm text-muted">{props.detail}</p> : null}
       {props.children ? <div className="text-sm text-muted">{props.children}</div> : null}
       {props.onRetry ? (

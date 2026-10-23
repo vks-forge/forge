@@ -23,19 +23,19 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
   models: {
     // Director LLM steps run on the logged-in harness subscription (d-0032).
     director: {
-      triage: 'opus',
-      dispatch_prompt: 'opus',
-      steer_reply: 'opus',
+      triage: 'sonnet',
+      dispatch_prompt: 'sonnet',
+      steer_reply: 'sonnet',
       card_chat: 'opus',
       // Planning steps (d-0150): the judging steps on opus, the quick turns on sonnet.
       card_survey: 'opus',
       grill_turn: 'sonnet',
-      verify: 'opus',
+      verify: 'sonnet',
       enhance: 'opus',
       // Research reads pages and reports quoted claims: a quick structured turn.
       research: 'sonnet',
       write_plan: 'opus',
-      approve_plan: 'opus',
+      approve_plan: 'sonnet',
       custom_step: 'sonnet',
       // Escalation steps (d-0141 item 8): answering a Worker is a quick turn, diagnosing a failure is judging.
       ticket_answer: 'sonnet',
@@ -75,6 +75,7 @@ export const BUILTIN_FORGE_CONFIG: ForgeConfig = {
     quota_default_pause_ms: 3_600_000,
     harness_fallbacks: [],
     shutdown_drain_ms: 10_000,
+    setup_cache_gb: 5,
   },
   director: BUILTIN_DIRECTOR_CONFIG,
   // Keyless self-hosted SearXNG on this machine (d-0144); the owner changes it in Settings, Research.

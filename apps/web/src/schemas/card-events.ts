@@ -12,9 +12,10 @@
  *   PlanChangesRequested, NeedsYou, StepStarted, StepFinished, NEEDS_YOU_ACTIONS,
  *   NeedsYouAction, ResearchRan, EscalationRaised, EscalationSettledEvent, ReplanRequested (schemas and
  *   inferred types).
- * Depends on: zod.
+ * Depends on: @forge/core (NeedsYouKind), zod.
  */
 
+import { NeedsYouKind } from '@forge/core';
 import { z } from 'zod';
 
 export const GrillOption = z.object({
@@ -59,6 +60,8 @@ export const PlanApproved = z.object({
   version: z.number().int().positive(),
   by: z.string().default('owner'),
   ticket_ids: z.array(z.string()).default([]),
+  /** The plan key of each ticket, parallel to `ticket_ids`; absent on older events. */
+  plan_keys: z.array(z.string()).optional(),
 });
 export type PlanApproved = z.infer<typeof PlanApproved>;
 
@@ -90,6 +93,10 @@ export const NeedsYou = z.object({
       list.filter((a): a is NeedsYouAction => NeedsYouAction.safeParse(a).success),
     ),
   ticket_id: z.string().optional(),
+  // Absent on events written before the dock; an unknown kind from a newer server reads as absent.
+  kind: NeedsYouKind.optional().catch(undefined),
+  title: z.string().optional(),
+  items: z.array(z.string()).optional().catch(undefined),
 });
 export type NeedsYou = z.infer<typeof NeedsYou>;
 
@@ -133,6 +140,15 @@ export const StepFinished = StepStarted.extend({
     .array(z.object({ path: z.string(), bytes: z.number().default(0) }))
     .default([]),
   summary: z.string().default(''),
+  /**
+   * How the step ended: `finished` normally, `paused_for_you` when it stopped to ask the owner
+   * (a budget question) and `failed` when its model call errored. Absent from an older server,
+   * which reads as finished.
+   */
+  outcome: z
+    .enum(['finished', 'paused_for_you', 'failed'])
+    .catch('finished')
+    .default('finished'),
 });
 export type StepFinished = z.infer<typeof StepFinished>;
 

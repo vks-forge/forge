@@ -9,7 +9,11 @@
  *   user cannot walk away from a half-sent write. Focus is trapped inside and handed back to
  *   the button that opened it. Unlike the side drawer this one blocks the page behind it.
  *
- * Exports: Modal. `size="large"` and `subheader` serve multi-step dialogs such as add project.
+ * Exports: Modal. `size="large"` and `subheader` serve multi-step dialogs such as add project;
+ *   `size="wide"` and `closeLabel` serve a dialog that only shows things to act on (the
+ *   needs-you list), where the footer button closes it and answers nothing; `focusCancel`
+ *   opens with the footer's Cancel focused, for a dialog confirming something far-reaching, so
+ *   a stray Enter leaves instead of commits.
  * Depends on: @radix-ui/react-dialog, motion/react, lucide-react, components/ui/button,
  *   components/ui/confirm-dialog, theme/motion.
  */
@@ -40,14 +44,19 @@ export function Modal(props: {
   discardTitle?: string;
   discardDescription?: string;
   /** `large` is a wide, tall dialog for multi-step forms; its height stays put between steps. */
-  size?: 'default' | 'large';
+  size?: 'default' | 'large' | 'wide';
+  /** The footer button's word; "Close" where leaving answers nothing. */
+  closeLabel?: string;
   /** Pinned under the title, above the scrolling body (a step indicator). */
   subheader?: ReactNode;
+  /** Open with Cancel focused rather than the first control, for a far-reaching confirmation. */
+  focusCancel?: boolean;
 }) {
   const { open, onClose, dirty = false, busy = false, size = 'default' } = props;
   const [asking, setAsking] = useState(false);
   // Radix only restores focus to a Dialog.Trigger, and this modal is opened by any button.
   const opener = useRef<HTMLElement | null>(null);
+  const footer = useRef<HTMLElement | null>(null);
 
   const requestClose = (): void => {
     if (busy) {
@@ -89,8 +98,12 @@ export function Modal(props: {
                 <Dialog.Content
                   forceMount
                   asChild
-                  onOpenAutoFocus={() => {
+                  onOpenAutoFocus={(event) => {
                     opener.current = document.activeElement as HTMLElement | null;
+                    if (props.focusCancel === true) {
+                      event.preventDefault();
+                      footer.current?.querySelector('button')?.focus();
+                    }
                   }}
                   onCloseAutoFocus={(event) => {
                     event.preventDefault();
@@ -112,7 +125,9 @@ export function Modal(props: {
                     className={`pointer-events-auto flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-float ${
                       size === 'large'
                         ? 'h-[min(46rem,calc(100dvh-2rem))] max-w-3xl'
-                        : 'max-w-lg'
+                        : size === 'wide'
+                          ? 'max-w-2xl'
+                          : 'max-w-lg'
                     }`}
                   >
                     <header className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
@@ -142,9 +157,12 @@ export function Modal(props: {
                     <ScrollArea className="min-h-0 flex-1 px-5 py-5">
                       {props.children}
                     </ScrollArea>
-                    <footer className="flex flex-wrap justify-end gap-2 border-t border-line bg-rail px-5 py-3">
+                    <footer
+                      ref={footer}
+                      className="flex flex-wrap justify-end gap-2 border-t border-line bg-rail px-5 py-3"
+                    >
                       <Button disabled={busy} onClick={requestClose}>
-                        Cancel
+                        {props.closeLabel ?? 'Cancel'}
                       </Button>
                       {props.primary}
                     </footer>

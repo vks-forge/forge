@@ -99,6 +99,7 @@ export const grill = (over: Partial<GrillState> = {}): GrillState => ({
   files_read: [],
   base_sha: null,
   pending_changes: null,
+  replan_from: null,
   floor: null,
   director_spend_usd: 0.25,
   ...over,

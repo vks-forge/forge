@@ -58,8 +58,13 @@ export function parseTicketPatch(
   }
 
   const parsed = TicketPatchSchema.parse(patch) as Partial<Ticket>;
+  // Zod fills `priority` with its default (0) when a patch leaves it out; only keys the patch
+  // names may change, or an edit of the body would reset a raised priority.
+  const named = Object.fromEntries(
+    Object.entries(parsed).filter(([key]) => key in patch),
+  ) as Partial<Ticket>;
 
-  return { ...parsed, status_version: expectedVersion + 1 };
+  return { ...named, status_version: expectedVersion + 1 };
 }
 
 export function parseRunPatch(patch: Partial<Omit<Run, 'id'>>): Partial<Omit<Run, 'id'>> {

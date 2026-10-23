@@ -49,7 +49,7 @@ function server(over: { archived?: boolean; card?: Record<string, unknown> } = {
         nextCursor: null,
       },
     }),
-    [COUNTS]: { body: { needs_action: 1, unread: 1, all: 1, archived: 0 } },
+    [COUNTS]: { body: { needs_action: 1, notices: 0, unread: 1, all: 1, archived: 0 } },
     [ARCHIVE]: () => {
       archived = true;
 

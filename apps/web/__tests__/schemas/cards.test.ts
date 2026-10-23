@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CardListReply } from '#/schemas/cards.js';
+import { CardDetailReply, CardListReply } from '#/schemas/cards.js';
 
 const card = {
   id: 'DCP-C1',
@@ -76,5 +76,35 @@ describe('CardListReply', () => {
     // Assert
     expect(parsed.data?.items[0]?.open_points).toBe(3);
     expect(parsed.data?.items[0]?.plan_version).toBe(2);
+  });
+});
+
+describe('CardDetailReply needs_you_detail', () => {
+  const detail = {
+    ...card,
+    tickets: [],
+    pending_interactions: [],
+    director: { state: 'idle' },
+  };
+
+  it('reads a reply from a server that predates the field as no items', () => {
+    const parsed = CardDetailReply.parse(detail);
+
+    expect(parsed.needs_you_detail).toEqual([]);
+  });
+
+  it('keeps the items the server sends', () => {
+    const item = {
+      kind: 'plan_approval',
+      title: 'The plan needs your approval',
+      items: ['a', 'b'],
+      actions: ['approve_plan', 'request_changes'],
+      raised_at: '2026-10-19T10:00:00.000Z',
+      seq: 7,
+    };
+
+    const parsed = CardDetailReply.parse({ ...detail, needs_you_detail: [item] });
+
+    expect(parsed.needs_you_detail).toEqual([item]);
   });
 });

@@ -70,6 +70,7 @@ export function runShellCommand(req: CommandRequest): Promise<CommandResult> {
       cwd: req.cwd,
       env,
       isFile,
+      ...(req.trustedDirs === undefined ? {} : { trustedDirs: req.trustedDirs }),
     });
 
     if (!resolved.ok) {

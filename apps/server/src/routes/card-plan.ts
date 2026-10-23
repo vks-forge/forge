@@ -65,6 +65,7 @@ function editInput(body: PlanEditBody): EditPlanInput {
       key: t.key,
       ...(t.title === undefined ? {} : { title: t.title }),
       ...(t.priority === undefined ? {} : { priority: t.priority }),
+      ...(t.lane === undefined ? {} : { lane: t.lane }),
       ...(t.removed === undefined ? {} : { removed: t.removed }),
       ...(t.drop_pipeline_ops === undefined
         ? {}
@@ -91,6 +92,10 @@ export function cardPlanRoutes(deps: RouteDeps): Route[] {
         versions: out.versions,
         current: out.current,
         floor: out.floor,
+        floor_frozen_at: out.floor_frozen_at,
+        will_cancel: out.will_cancel,
+        not_covered: out.not_covered,
+        already_exists: out.already_exists,
       });
     },
   };

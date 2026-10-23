@@ -13,6 +13,7 @@
 
 import { HeadMovedError } from '@forge/core';
 import type {
+  BaseTip,
   Gate,
   GateContext,
   GateFinding,
@@ -26,13 +27,22 @@ import type {
 } from '@forge/core';
 
 type Call =
-  'push' | 'openPr' | 'findPr' | 'prStatus' | 'merge' | 'closePr' | 'deleteBranch';
+  | 'push'
+  | 'openPr'
+  | 'findPr'
+  | 'prStatus'
+  | 'merge'
+  | 'closePr'
+  | 'deleteBranch'
+  | 'syncBase';
 
 export interface FakeGitHost extends GitHost {
   /** Every call in order, as `name:arg`. */
   readonly calls: string[];
   prState: PrState;
   mergeable: boolean | null;
+  /** What `syncBase` reports as the base tip; move it to play "main moved". */
+  baseTip: BaseTip;
   /** The head the PR reports; the default matches the fake worktree's head. */
   headSha: string;
   /** The sha every `merge` was asked to pin to, in order. */
@@ -67,6 +77,7 @@ export function createFakeGitHost(): FakeGitHost {
     calls,
     prState: 'open',
     mergeable: true,
+    baseTip: { ref: 'refs/forge/base/main', sha: 'base-sha-1' },
     headSha: 'head-sha-1',
     mergeShas,
     opened,
@@ -119,6 +130,11 @@ export function createFakeGitHost(): FakeGitHost {
     },
     async deleteBranch(branch) {
       enter('deleteBranch', branch);
+    },
+    async syncBase() {
+      enter('syncBase', host.baseTip.ref);
+
+      return host.baseTip;
     },
   };
 

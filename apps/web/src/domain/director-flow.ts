@@ -1,38 +1,31 @@
 /**
  * Director flow: what a card's planning events say about the conversation right now.
  *
- * Why: the card chat has to answer three live questions without asking the server again: which
+ * Why: the card chat has to answer two live questions without asking the server again: which
  *   grill question is open (only the newest unanswered one may be answered; answering an old
- *   one is refused with `question_not_open`), is a Director step running (the "thinking"
- *   indicator and its label come from a `step_started` with no `step_finished`), and is the
- *   card waiting on the owner (the pinned banner comes from the newest `needs_you` that nothing
- *   has settled since). All of it is derived from the history so the chat and the Plan tab
- *   agree and a reload shows the same state. Payloads are untrusted, so each is parsed and an
- *   unreadable one is skipped, never thrown on.
+ *   one is refused with `question_not_open`; the dock draws its options) and is a Director
+ *   step running (the "thinking" indicator and its label come from a `step_started` with no
+ *   `step_finished`). Both are derived from the history so the chat and the Plan tab agree and
+ *   a reload shows the same state. What waits on the owner is no longer read from the history:
+ *   the server sends it as `needs_you_detail` on the card (d-0172). Payloads are untrusted, so
+ *   each is parsed and an unreadable one is skipped, never thrown on.
  *
- * Exports: grillOf(), pendingStep(), activeNeedsYou().
+ *   A step ends with an `outcome` the server writes: finished, paused for the owner (a budget
+ *   question) or failed; a step that paused for the owner is never "thinking", and while anything
+ *   waits on the owner a step with no end yet is not shown as thinking either.
+ *
+ * Exports: grillOf(), pendingStep(), lastStepOutcome(), isThinking(), canAnswerGrill().
  * Depends on: schemas/card-events, schemas/cards (type), types/cards-ui.types. No IO.
  */
 
 import {
   GrillAnswer,
   GrillQuestion,
-  NeedsYou,
   StepFinished,
   StepStarted,
 } from '#/schemas/card-events.js';
-import type { CardHistoryEvent } from '#/schemas/cards.js';
+import type { CardHistoryEvent, CardPhase } from '#/schemas/cards.js';
 import type { GrillView } from '#/types/cards-ui.types.js';
-
-/** Events that settle a raised `needs_you`: the owner or the Director moved the card on. */
-const SETTLES_NEEDS_YOU: ReadonlySet<string> = new Set([
-  'grill_answer',
-  'grill_done',
-  'plan_approved',
-  'plan_changes_requested',
-  'step_started',
-  'card_closed',
-]);
 
 /** The grill as the history tells it: answers by question, and the newest question still open. */
 export function grillOf(events: readonly CardHistoryEvent[]): GrillView {
@@ -92,24 +85,55 @@ export function pendingStep(events: readonly CardHistoryEvent[]): StepStarted | 
   return null;
 }
 
-/** The newest `needs_you` raise that nothing after it has settled, or null. */
-export function activeNeedsYou(events: readonly CardHistoryEvent[]): NeedsYou | null {
+/** How the newest finished step ended, when no step has started after it; null while one runs or before any. */
+export function lastStepOutcome(
+  events: readonly CardHistoryEvent[],
+): StepFinished['outcome'] | null {
   for (let i = events.length - 1; i >= 0; i -= 1) {
     const event = events[i];
-    if (event === undefined) {
-      continue;
-    }
 
-    if (event.kind === 'needs_you') {
-      const parsed = NeedsYou.safeParse(event.payload);
-
-      return parsed.success ? parsed.data : null;
-    }
-
-    if (SETTLES_NEEDS_YOU.has(event.kind)) {
+    if (event?.kind === 'step_started') {
       return null;
+    }
+
+    if (event?.kind === 'step_finished') {
+      const parsed = StepFinished.safeParse(event.payload);
+
+      return parsed.success ? parsed.data.outcome : null;
     }
   }
 
   return null;
+}
+
+/**
+ * Whether to say "The Director is thinking". The server's own status comes first (a chat reply it is
+ * working on is real); a step the history shows as started but not finished counts only while nothing
+ * waits on the owner, because a Director that stopped to ask the owner is not thinking.
+ */
+export function isThinking(input: {
+  serverState: 'idle' | 'thinking' | 'error';
+  stepRunning: boolean;
+  waitingOnOwner: boolean;
+}): boolean {
+  if (input.serverState === 'thinking') {
+    return true;
+  }
+
+  return input.stepRunning && !input.waitingOnOwner;
+}
+
+/**
+ * Whether the server would take an answer to the open question: only while the card is
+ * grilling or verifying, and only on an open card (`isShaping`). A card from a server that sends
+ * no phase is treated as answerable.
+ */
+export function canAnswerGrill(card: {
+  phase?: CardPhase | undefined;
+  closed_reason?: string | undefined;
+}): boolean {
+  return (
+    card.closed_reason === undefined &&
+    (card.phase === undefined || card.phase === 'grilling' || card.phase === 'verifying')
+  );
 }

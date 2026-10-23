@@ -5,12 +5,14 @@
  *   needs first is "what happened, and is another go worth it?". Some failures are noise and one
  *   more run with a good note fixes them; others are real, and another run only burns budget. The
  *   step reads the failure, the runs so far and the ticket's plan entry and answers retry or
- *   escalate with a plain diagnosis. The engine bounds it: it may retry a ticket itself only as
+ *   escalate with a plain diagnosis, and it is shown the newest error the runs reported (as data, clipped), so it
+ *   does not have to guess why they stopped. The engine bounds it: it may retry a ticket itself only as
  *   many times, per failure cause, as the owner allowed (default one), so a ticket can never loop
  *   through the Director; the retry itself goes through the same door as the owner's (settle the
  *   escalation, `transition()`, wake with the note). Anything else, and any error, hands the
  *   failure to the owner with the diagnosis when there is one. A lane hold or a timed-out question
- *   never reaches this step: those are the owner's choice.
+ *   never reaches this step: those are the owner's choice. The look runs in a job and returns the
+ *   write (the retry, or the hand-over) as an `apply` the tick runs after re-checking the wait.
  *
  * Exports: lookAtFailure().
  * Depends on: tick/memory-context (the memory shown to the Director), @forge/core (step schemas, escalation types), domain/escalation-decision, steps/run-step,
@@ -19,7 +21,7 @@
  */
 
 import { EscalationAnswer, TicketRecoverOutput } from '@forge/core';
-import type { EscalationFailure, Interaction, Ticket } from '@forge/core';
+import type { EscalationFailure, Interaction, StorageTx, Ticket } from '@forge/core';
 import { directorMayRetry } from '#/domain/escalation-decision.js';
 import { rejectStep, runStep } from '#/steps/run-step.js';
 import { buildMemoryContext, questionOf } from '#/tick/memory-context.js';
@@ -28,6 +30,7 @@ import { retryTx } from '#/tick/escalation-effects.js';
 import { handToOwner } from '#/tick/escalation-raise.js';
 import { planEntryOf } from '#/tick/plan-keys.js';
 import { directorFor } from '#/tick/planning-state.js';
+import type { DirectorApply } from '#/types/director-jobs.types.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 
 /** How many times the Director already retried this ticket for this failure cause. */
@@ -55,16 +58,37 @@ async function directorRetries(
   }).length;
 }
 
-/** Looks at one director-stage failure: one more try with a note, or the owner with a diagnosis. */
+const LAST_ERROR_MAX = 300;
+
+/** The message of the newest `error` event across the ticket's runs (newest run first), clipped; undefined when none. */
+async function lastErrorOf(tx: StorageTx, ticketId: string): Promise<string | undefined> {
+  const runs = [...(await tx.runs.listByTicket(ticketId))].sort((a, b) =>
+    b.started_at.localeCompare(a.started_at),
+  );
+
+  for (const run of runs) {
+    const events = await tx.runEvents.listByRun(run.id);
+    for (const e of [...events].reverse()) {
+      if (e.type === 'error' && e.message.trim() !== '') {
+        return e.message.trim().slice(0, LAST_ERROR_MAX);
+      }
+    }
+  }
+
+  return undefined;
+}
+
+/** Looks at one director-stage failure: one more try with a note, or the owner with a diagnosis. Returns the write for the tick to apply. */
 export async function lookAtFailure(
   ctx: EngineCtx,
   row: Interaction,
   ticket: Ticket,
   failure: EscalationFailure,
-): Promise<void> {
+): Promise<DirectorApply> {
   const loaded = await ctx.deps.storage.transaction(async (tx) => ({
     project: await tx.projects.get(ticket.project),
     entry: await planEntryOf(tx, ticket),
+    lastError: await lastErrorOf(tx, ticket.id),
   }));
 
   const slug = loaded.project?.slug ?? ticket.project;
@@ -101,6 +125,7 @@ export async function lookAtFailure(
         summary: failure.summary,
         attempts: failure.attempts,
         error_family: failure.error_family ?? null,
+        ...(loaded.lastError === undefined ? {} : { last_error: loaded.lastError }),
       },
       director_retries: { used, max: director.escalation.max_director_retries },
       project_rules: {
@@ -127,37 +152,39 @@ export async function lookAtFailure(
     out?.decision === 'retry' &&
     directorMayRetry(used, director.escalation.max_director_retries);
 
-  await ctx.deps.storage.transaction(async (tx) => {
-    await addDirectorSpend(
-      tx,
-      row.card_id,
-      cost,
-      ctx.nowIso,
-      director.budget_warning_usd,
-    );
-
-    if (retry) {
-      const end = await retryTx(
-        ctx.deps,
+  return (tick) =>
+    tick.deps.storage.transaction(async (tx) => {
+      await addDirectorSpend(
         tx,
-        ctx.nowIso,
-        row,
-        {
-          action: 'retry',
-          by: 'director',
-          ...(out.note === undefined ? {} : { note: out.note }),
-        },
-        'engine',
+        row.card_id,
+        cost,
+        tick.nowIso,
+        director.budget_warning_usd,
+        { kind: 'escalation_recover', ticketId: row.ticket_id },
       );
 
-      if (end === 'done') {
-        return;
-      }
-    }
+      if (retry) {
+        const end = await retryTx(
+          tick.deps,
+          tx,
+          tick.nowIso,
+          row,
+          {
+            action: 'retry',
+            by: 'director',
+            ...(out.note === undefined ? {} : { note: out.note }),
+          },
+          'engine',
+        );
 
-    await handToOwner(tx, ctx.nowIso, row, {
-      ...failure,
-      ...(out === null ? {} : { diagnosis: out.diagnosis }),
+        if (end === 'done') {
+          return;
+        }
+      }
+
+      await handToOwner(tx, tick.nowIso, row, {
+        ...failure,
+        ...(out === null ? {} : { diagnosis: out.diagnosis }),
+      });
     });
-  });
 }

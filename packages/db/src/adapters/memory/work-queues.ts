@@ -71,6 +71,11 @@ export function memoryWakeRequests(state: MemoryState): WakeRequestRepository {
 
       return true;
     },
+    async listByTicket(ticketId) {
+      return [...state.wakes.values()]
+        .filter((w) => w.ticket_id === ticketId)
+        .map((w) => structuredClone(w));
+    },
     async countSince(ticketId, since, kinds) {
       return [...state.wakes.values()].filter(
         (w) =>

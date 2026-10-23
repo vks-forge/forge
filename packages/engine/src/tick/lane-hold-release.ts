@@ -60,7 +60,12 @@ export async function releaseLaneHolds(ctx: EngineCtx): Promise<void> {
       }
 
       const moved = await moveTicketTx(tx, ticket.id, ctx.nowIso, (t) =>
-        t.status === 'waiting_human' ? { events: [{ type: 'unparked' }] } : null,
+        t.status === 'waiting_human'
+          ? {
+              events: [{ type: 'unparked' }],
+              reason: 'The pipeline for its lane is ready, so it continued',
+            }
+          : null,
       );
 
       if (!moved.ok) {

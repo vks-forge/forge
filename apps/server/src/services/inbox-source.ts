@@ -3,10 +3,10 @@
  *
  * Why: the Inbox must never disagree with the board, so nothing is copied into an inbox
  *   table: each item is read from its source on every request. A Worker's open question, a
- *   ticket waiting for review or sign-off, a failed gate, an interrupted run, a harness out of
+ *   ticket waiting for review or sign-off (a waiting ticket with no open question is not listed: nothing is asked of the owner), a failed gate, an interrupted run, a harness out of
  *   quota, a harness build or tool awaiting a decision and a memory proposal each become one
  *   item whose `updated_at` is the source's own change time, which is what lets a mark expire
- *   when the source moves (d-0116). Finished work waiting for a name is listed once, through its
+ *   when the source moves (d-0116). A tool approval is listed like a question, titled with the exact call. Finished work waiting for a name is listed once, through its
  *   sign-off item, and falls back to a plain review item only when it has none. Items that wait on a decision are `needs_action`; the
  *   rest inform. Harness-level items (compat, tool approvals) block every project, so they
  *   show in each, but only for the current build of each harness (the installed one, else the
@@ -26,6 +26,7 @@
 
 import { TERMINAL_STATUSES, inboxItemId } from '@forge/core';
 import type {
+  BudgetDefault,
   EscalationView,
   GateResult,
   InboxCandidate,
@@ -44,17 +45,21 @@ const EPOCH = '1970-01-01T00:00:00.000Z';
 const clip = (text: string, max = 140): string =>
   text.length > max ? `${text.slice(0, max - 1)}…` : text;
 
-/** The line an escalation shows in the Inbox: the question, or what went wrong. */
+/** The line an escalation shows in the Inbox: the question, the call to allow, or what went wrong. */
 function titleOf(view: EscalationView): string {
+  const { payload } = view;
   const text =
-    view.payload.kind === 'question' ? view.payload.text : view.payload.summary;
+    payload.kind === 'question'
+      ? payload.text
+      : payload.kind === 'permission'
+        ? `Allow \`${payload.what}\`?`
+        : payload.summary;
 
   return clip(text.replace(/\s+/g, ' ').trim());
 }
 
 const ticketItems = (
   tickets: readonly Ticket[],
-  pending: ReadonlySet<string>,
   signOffs: ReadonlySet<string>,
   project: string,
 ) =>
@@ -89,25 +94,15 @@ const ticketItems = (
       ];
     }
 
-    // A parked ticket with an open question is shown through the question itself.
-    return t.status === 'waiting_human' && !pending.has(t.id)
-      ? [
-          {
-            ...base,
-            id: inboxItemId('ticket_waiting', t.id),
-            kind: 'ticket_waiting',
-            title: `Waiting on you: ${t.title}`,
-            ...(t.blocked_reason === undefined ? {} : { detail: clip(t.blocked_reason) }),
-            needs_action: true,
-          },
-        ]
-      : [];
+    // A waiting ticket is listed only through its open question (or sign-off): with none open there is nothing for the owner to do.
+    return [];
   });
 
 /**
  * Every item of `project` right now, unsorted and without read/archive marks.
  * `proposals` are the project's memory entries (read by the caller, outside the transaction).
  * `installedVersion` is the compat service's installed build of a harness kind, if known.
+ * `budgetDefault` is the warning level a card without its own cap is held to (services/budget-default).
  */
 export async function gatherInboxCandidates(
   tx: StorageTx,
@@ -115,6 +110,7 @@ export async function gatherInboxCandidates(
   proposals: readonly MemoryListEntry[],
   nowMs: number,
   installedVersion: (kind: string) => string | null,
+  budgetDefault: BudgetDefault,
 ): Promise<InboxCandidate[]> {
   const slug = project.slug;
   const nowIso = new Date(nowMs).toISOString();
@@ -132,9 +128,7 @@ export async function gatherInboxCandidates(
   const byId = new Map(tickets.map((t) => [t.id as string, t]));
   const items: InboxCandidate[] = [];
 
-  // Every pending wait explains its ticket; only the ones already with the owner are listed
-  // (a wait the Director is still looking at stays out of the Inbox).
-  const pending = new Set<string>();
+  // Only the waits already with the owner are listed (a wait the Director is still looking at stays out of the Inbox).
   const mine = (await tx.interactions.listPending()).filter((i) => byId.has(i.ticket_id));
   const views = new Map(
     (
@@ -148,7 +142,6 @@ export async function gatherInboxCandidates(
   for (const i of mine) {
     const ticket = byId.get(i.ticket_id) as Ticket;
     const view = views.get(i.id);
-    pending.add(i.ticket_id);
     if (!view) {
       continue;
     }
@@ -173,7 +166,7 @@ export async function gatherInboxCandidates(
       .map((i) => i.ticket_id),
   );
 
-  items.push(...ticketItems(tickets, pending, signOffs, slug));
+  items.push(...ticketItems(tickets, signOffs, slug));
 
   const open = tickets.filter((t) => !TERMINAL_STATUSES.includes(t.status));
   for (const t of open) {
@@ -277,7 +270,7 @@ export async function gatherInboxCandidates(
   }
 
   items.push(...(await pipelineProposalItems(tx, slug)));
-  items.push(...(await budgetWarningItems(tx, project.id, slug)));
+  items.push(...(await budgetWarningItems(tx, project.id, slug, budgetDefault)));
 
   return items;
 }

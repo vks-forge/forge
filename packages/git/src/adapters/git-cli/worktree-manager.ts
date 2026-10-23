@@ -15,18 +15,32 @@
  *   Changed paths are reported relative to the subfolder, so Worker claims, receipts and
  *   diff agree; a change outside the subfolder shows as `../x`, which G1 refuses.
  *
- * Exports: createGitWorktreeManager().
- * Depends on: node:fs, node:os, node:path, @forge/core, adapters/git-cli/{run-git,resolve-base},
- *   domain/{name-status,porcelain,ref-check}. IO: runs git, stats paths.
+ *   Setup (d-0180) installs dependencies into the tree first; what it created is recorded and
+ *   kept out of changed files, the diff and commits, so an install never reads as Worker work.
+ *
+ * Exports: createGitWorktreeManager() (mergeIn and contains come from merge-in.ts).
+ * Depends on: node:fs, node:path, @forge/core, adapters/git-cli/{run-git,resolve-base,
+ *   worktree-prep-store,remove-worktree,scope-frame,untracked-diff,commit-identity,merge-in}, domain/{name-status,porcelain,ref-check}. IO: runs git, stats paths.
  */
 
 import { existsSync } from 'node:fs';
-import { devNull } from 'node:os';
-import { posix, resolve } from 'node:path';
-import { CrashError, InvalidInputError } from '@forge/core';
+import { resolve } from 'node:path';
+import { InvalidInputError } from '@forge/core';
 import type { Worktree, WorktreeDiffFile, WorktreeManager } from '@forge/core';
+import { commitConfig, commitEnv } from '#/adapters/git-cli/commit-identity.js';
+import { createMergeIn } from '#/adapters/git-cli/merge-in.js';
 import { resolveBaseCommit } from '#/adapters/git-cli/resolve-base.js';
+import {
+  deleteLocalBranch,
+  removeWorktreeFolder,
+} from '#/adapters/git-cli/remove-worktree.js';
 import { createGitRunner } from '#/adapters/git-cli/run-git.js';
+import { untrackedAsAdded } from '#/adapters/git-cli/untracked-diff.js';
+import { createScopeFrame } from '#/adapters/git-cli/scope-frame.js';
+import {
+  createPrepStore,
+  excludePathspecs,
+} from '#/adapters/git-cli/worktree-prep-store.js';
 import { parseNameStatus } from '#/domain/name-status.js';
 import { normalizePath, parseWorktreeList, samePath } from '#/domain/porcelain.js';
 import { canonicalPath } from '#/shared/canonical-path.js';
@@ -42,6 +56,8 @@ const DEFAULT_AUTHOR = { name: 'Forge', email: 'forge@localhost' } as const;
  */
 const DIFF_CONFIG = ['-c', 'core.quotePath=false'] as const;
 
+const LONG_PATHS = ['-c', 'core.longpaths=true'] as const;
+
 const names = (out: string): string[] => out.split('\0').filter((n) => n.length > 0);
 
 /** Creates a WorktreeManager that shells out to the `git` binary (no shell string, ever). */
@@ -52,28 +68,10 @@ export function createGitWorktreeManager(
   const author = opts.author ?? DEFAULT_AUTHOR;
   const repoRoot = normalizePath(resolve(opts.repoRoot));
   const worktreeRoot = resolve(opts.worktreeRoot);
+  const prepStore = createPrepStore(worktreeRoot);
   const sub = (opts.subfolder ?? '').replaceAll('\\', '/').replace(/^\/+|\/+$/g, '');
 
-  /** The worktree root for a path that is the root itself or the scoped folder inside it. */
-  const rootOf = (path: string): string => {
-    const p = normalizePath(path);
-    const tail = `/${sub}`;
-
-    return sub !== '' && p.toLowerCase().endsWith(tail.toLowerCase())
-      ? p.slice(0, p.length - tail.length)
-      : p;
-  };
-
-  const scoped = (root: string): string => (sub === '' ? root : `${root}/${sub}`);
-
-  /** A repository-relative path in the frame of the scoped folder (`../x` when outside it). */
-  const inScopeFrame = (p: string): string =>
-    sub === ''
-      ? p
-      : p.startsWith(`${sub}/`)
-        ? p.slice(sub.length + 1)
-        : posix.relative(sub, p);
-
+  const { rootOf, scoped, inScopeFrame } = createScopeFrame(sub);
   const relativeFlag = sub === '' ? [] : [`--relative=${sub}`];
 
   /** The scoped folder, once it is known to exist in the new worktree. */
@@ -90,8 +88,31 @@ export function createGitWorktreeManager(
   const list = async () =>
     parseWorktreeList(await git.run(repoRoot, ['worktree', 'list', '--porcelain']));
 
+  const outputsOf = async (root: string): Promise<string[]> =>
+    (await prepStore.read(root))?.outputs ?? [];
+
+  /** Untracked, not-ignored files (`-z`) minus what setup created. */
+  const untrackedFiles = async (root: string): Promise<string> =>
+    git.run(root, [
+      'ls-files',
+      '--others',
+      '--exclude-standard',
+      '-z',
+      '--',
+      '.',
+      ...excludePathspecs(await outputsOf(root)),
+    ]);
+
   const mergeBase = async (baseRef: string, branch: string) =>
     (await git.run(repoRoot, ['merge-base', baseRef, branch])).trim();
+
+  const merging = createMergeIn({
+    git,
+    author,
+    rootOf,
+    inScopeFrame,
+    excludes: async (root) => excludePathspecs(await outputsOf(root)),
+  });
 
   return {
     async create(ticketId, branch, baseRef): Promise<Worktree> {
@@ -133,7 +154,7 @@ export function createGitWorktreeManager(
       const ref = ['show-ref', '--verify', '--quiet', `refs/heads/${branch}`];
       if ((await git.try(repoRoot, ref)).code === 0) {
         // Branch kept from an earlier removed worktree: re-attach it instead of failing on -b.
-        await git.run(repoRoot, ['worktree', 'add', path, branch]);
+        await git.run(repoRoot, [...LONG_PATHS, 'worktree', 'add', path, branch]);
 
         return {
           path: scopeExists(scoped(path)),
@@ -143,20 +164,30 @@ export function createGitWorktreeManager(
 
       const baseSha = await resolveBaseCommit(git, repoRoot, baseRef);
 
-      await git.run(repoRoot, ['worktree', 'add', '-b', branch, path, baseRef]);
+      await git.run(repoRoot, [
+        ...LONG_PATHS,
+        'worktree',
+        'add',
+        '-b',
+        branch,
+        path,
+        baseRef,
+      ]);
 
       return { path: scopeExists(scoped(path)), baseSha };
     },
 
-    async remove(path) {
+    async remove(path, removeOpts) {
       const target = rootOf(path);
-      const r = await git.try(repoRoot, ['worktree', 'remove', '--force', target]);
-      // Already-gone is fine; a directory that survives a failed remove is a real error.
-      if (r.code !== 0 && existsSync(target)) {
-        await git.run(repoRoot, ['worktree', 'remove', '--force', target]);
+      if (removeOpts?.deleteBranch !== undefined) {
+        assertSafeRefArg('deleteBranch', removeOpts.deleteBranch);
       }
 
-      await git.run(repoRoot, ['worktree', 'prune']);
+      await removeWorktreeFolder(git, repoRoot, target);
+      await prepStore.remove(target);
+      if (removeOpts?.deleteBranch !== undefined) {
+        await deleteLocalBranch(git, repoRoot, removeOpts.deleteBranch);
+      }
     },
 
     async changedFiles(path, baseSha) {
@@ -172,7 +203,7 @@ export function createGitWorktreeManager(
           baseSha,
           '--',
         ]),
-        git.run(root, ['ls-files', '--others', '--exclude-standard', '-z']),
+        untrackedFiles(root),
       ]);
 
       return [
@@ -207,7 +238,7 @@ export function createGitWorktreeManager(
           baseSha,
           '--',
         ]),
-        git.run(root, ['ls-files', '--others', '--exclude-standard', '-z']),
+        untrackedFiles(root),
       ]);
 
       const files: WorktreeDiffFile[] = parseNameStatus(status).map((f) => ({
@@ -216,64 +247,28 @@ export function createGitWorktreeManager(
         ...(f.oldPath === undefined ? {} : { oldPath: inScopeFrame(f.oldPath) }),
       }));
 
-      const patches = [tracked];
-      // Untracked files are in no index: show each as an added file without touching the tree.
-      for (const rootName of names(untrackedOut).sort()) {
-        const name = inScopeFrame(rootName);
-        files.push({ status: 'A', path: name });
-        if (name.startsWith('../')) {
-          continue;
-        }
-
-        // --no-index exits 1 when the files differ, which is the expected case here.
-        const r = await git.try(cwd, [
-          ...DIFF_CONFIG,
-          'diff',
-          '--text',
-          '--no-index',
-          '--no-color',
-          '--no-ext-diff',
-          '--',
-          '/dev/null',
-          name,
-        ]);
-
-        if (r.code > 1) {
-          throw new CrashError(`git diff failed for ${name}: ${r.stderr.trim()}`);
-        }
-
-        patches.push(r.stdout);
-      }
+      const added = await untrackedAsAdded(git, cwd, names(untrackedOut), inScopeFrame);
+      files.push(...added.files);
 
       files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 
-      return { files, patch: patches.join('') };
+      return { files, patch: [tracked, ...added.patches].join('') };
     },
 
     async commitAll(path, message) {
       const root = rootOf(path);
-      await git.run(root, ['add', '-A']);
+      const skip = excludePathspecs(await outputsOf(root));
+      await git.run(root, ['add', '-A', '--', '.', ...skip]);
       const staged = await git.try(root, ['diff', '--cached', '--quiet']);
       if (staged.code === 0) {
         return null;
       }
 
-      const identity = [
-        ...['-c', `user.name=${author.name}`],
-        ...['-c', `user.email=${author.email}`],
-        ...['-c', 'commit.gpgsign=false'],
-        // The tree is Worker-controlled: never run its hooks inside Forge's process.
-        ...['-c', `core.hooksPath=${devNull}`],
-      ];
-
-      await git.run(root, [...identity, 'commit', '--no-verify', '-m', message], {
-        env: {
-          GIT_AUTHOR_NAME: author.name,
-          GIT_AUTHOR_EMAIL: author.email,
-          GIT_COMMITTER_NAME: author.name,
-          GIT_COMMITTER_EMAIL: author.email,
-        },
-      });
+      await git.run(
+        root,
+        [...commitConfig(author), 'commit', '--no-verify', '-m', message],
+        { env: commitEnv(author) },
+      );
 
       return (await git.run(root, ['rev-parse', 'HEAD'])).trim();
     },
@@ -281,5 +276,25 @@ export function createGitWorktreeManager(
     async head(path) {
       return (await git.run(rootOf(path), ['rev-parse', 'HEAD'])).trim();
     },
+
+    rootOf,
+
+    async untracked(path) {
+      const out = await git.run(rootOf(path), [
+        'ls-files',
+        '--others',
+        '--exclude-standard',
+        '--directory',
+        '-z',
+      ]);
+
+      return names(out).map((n) => n.replace(/\/+$/, ''));
+    },
+
+    readPrep: (path) => prepStore.read(rootOf(path)),
+
+    writePrep: (path, prep) => prepStore.write(rootOf(path), prep),
+
+    ...merging,
   };
 }

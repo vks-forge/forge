@@ -52,6 +52,45 @@ describe('Card Details: the budget cap', () => {
     ).toHaveTextContent('Set a cap');
   });
 
+  it('says whose cap is in force and what has been spent against it', async () => {
+    const forge = (source: string, cap: number | null) =>
+      renderApp({
+        path: DETAILS,
+        routes: capRoutes(undefined, {
+          budget: { cap_usd: cap, source, spent_usd: 3.5 },
+        }),
+      });
+
+    const view = forge('forge', 5);
+    const row = (await screen.findByText(/Forge default/)).closest('dd');
+
+    expect(row).toHaveTextContent(
+      '$5.00 (Forge default, change in Director settings) · $3.50 spent so far',
+    );
+
+    expect(within(row!).getByRole('link', { name: 'Director settings' })).toHaveAttribute(
+      'href',
+      '/settings/director',
+    );
+
+    expect(screen.queryByText('No cap')).not.toBeInTheDocument();
+    view.unmount();
+
+    forge('card', 8);
+    expect(await screen.findByText(/set on this card/)).toBeVisible();
+  });
+
+  it('says No cap only when the server says none applies', async () => {
+    renderApp({
+      path: DETAILS,
+      routes: capRoutes(undefined, {
+        budget: { cap_usd: null, source: 'forge', spent_usd: 0 },
+      }),
+    });
+
+    expect(await screen.findByText('No cap')).toBeVisible();
+  });
+
   it('sets a cap and shows it', async () => {
     const user = userEvent.setup();
     const { forge } = renderApp({ path: DETAILS, routes: capRoutes(undefined) });

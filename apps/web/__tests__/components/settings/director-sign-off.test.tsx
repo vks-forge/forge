@@ -1,7 +1,7 @@
 /**
  * Pins: the Director page's sign-off setting and the model row of the check against the plan: how
  * far the Director may sign (up to tier B by default), a lowered ceiling saved as just that key, no
- * tier C choice anywhere and the locked "Tier C always needs you." line.
+ * tier C choice anywhere and the protected-files rule line (the Director signs only clean work).
  *
  * Why: this setting decides which finished work reaches the owner for a signature. A ceiling that
  * saved with every default pinned, a tier C option that looked chooseable, or a missing locked line
@@ -32,7 +32,12 @@ describe('Director sign-off', () => {
       'Up to tier B',
     );
 
-    expect(screen.getByText('Tier C always needs you.')).toBeVisible();
+    expect(
+      screen.getByText(
+        'Protected files (auth, migrations, secrets, billing): the Director signs them off only when every check passed and no secret file is touched; otherwise you do.',
+      ),
+    ).toBeVisible();
+
     expect(
       screen.getByText(/Anything it does not sign comes to you with its reason/),
     ).toBeVisible();

@@ -66,46 +66,92 @@ Shaping, Needs you, Queued, In progress, Done and a collapsed Closed strip, roll
 up from the card's phase and tickets; there is no New column and no Ask bar, the
 Director starts at once) with a toggle to a **Tickets** view. All columns fit at
 1440 px; narrower screens scroll inside the board. A card face shows id, type,
-title, a phase line ("Grilling · 3 open points", "Plan v2 ready", "4/7 tickets"),
-a priority mark, a progress bar and Blocked by / Blocks chips; hovering or
+title, a phase line ("Grilling · 3 open points", "Plan v2 ready", "4/7 tickets",
+"2 of 2 done, 1 cancelled"), a roll-up line ("4 of 11 done · 2 running · 1 waiting for you"), a priority mark, a progress bar (cancelled tickets are
+out of the count, so a finished card's bar is full) and Blocked by / Blocks chips; hovering or
 focusing a card keeps its dependency chain lit and dims the rest, and cards glide
-between columns live (instant swap under reduced motion). Opening a card opens
-the **Card page** (`/p/:slug/cards/:id/<tab>`, U1): a compact header (id, column, phase,
-source, type, a small muted cost with a Director / tickets split on hover, Close card), the
-banners that need you (a pinned **Needs you** banner whose every action works, waiting tickets),
-a tab strip and one panel. Tabs are real links: **Conversation** (default; the chat with the
-card's Director: grill questions with option buttons, steps, a ready-plan card, system lines),
-**Plan** (the fixed plan sections, dependency graph, version picker with diff, Approve plan /
-Request changes / light ticket edits), **Tickets** (a timeline with state, lane and cost) and
-**Details** (source, creator, times, budget cap, summary and the cost breakdown: Director, each
-ticket, total, "not recorded" never shown as free). An unknown tab replaces itself with the
-conversation, Back and Forward step through views, each tab keeps its scroll. The chat is a
-pane: bubbles are narrow (70% / 36rem) and quiet, author and time show once per group with day
-separators, the list scrolls above a composer docked at the bottom. The **Ticket page**
-(`/p/:slug/tickets/:id/<tab>`) is the same frame: **Conversation** (the live Worker thread with
-the steer box docked below), **Review** (only while the ticket waits on review or sign-off, or
-is held for your decision: the pending decision or sign-off card, what will be merged, each check's findings with
-`file:line`, rework, cancel), **Runs** (status,
-duration, cost per run; a run opens in Conversation via `?run=`) and **Details** (metadata,
-gates, cost by run). A question that waits on you and a ready-for-review notice stay above the
-tabs. Cost also shows small on Board tiles.
+between columns live (instant swap under reduced motion). A ticket tile in the Tickets view shows, without opening it, "Stage 2/5 · Review", a ticking "run 2 · implementer · 10m 03s" line with a live dot (still under reduced motion, paused in a hidden tab), the phase chip and why it waits, one action when it fits (Retry, or Open to answer when it waits for you), "Cost so far" and "updated 5 min ago"; text truncates with the full text in its tooltip down to 320 px. Opening a card opens
+the **Card page** (`/p/:slug/cards/:id/<tab>`, d-0172): the chat is the main column and the
+message box is always visible. One-row header (about 48 px): back link, id, title (truncates),
+ONE status pill ("Needs you · Plan v2 ready", "Closed", else the phase), a small muted cost with a
+Director / tickets split on hover, and a `⋯` menu holding Change type and Close card (each keeps
+its confirm dialog; a closed card has no menu). Offline and could-not-refresh are one slim line
+under the header, not boxes. Right under the title row sits the **needs-you alert**
+(`components/work/needs-you-pill.tsx`, fed by `needs_you_detail` of `GET /cards/:id`): one slim
+line, "Needs your attention" (or "Needs your sign-off" / "Needs your approval" when every item
+asks that, with "· N" when several wait) and an **Open** button; nothing is drawn when nothing
+waits. Open shows a scrollable modal (focus trapped, Esc or "Decide later" closes it and focus
+returns to Open, closing answers nothing, it can be reopened, it works at 320 px) listing every
+item newest first, each with a short title, reason chips with a `Reasons` list, its escalation
+card or question in full with all its actions (no Respond step), at most one primary and one
+secondary action; keys 1 to 4 pick an option; when the last item is settled the modal closes
+itself and the alert goes away. Items: plan approval (Approve plan… with the confirm
+that names the tickets, Request changes, Open the plan), the Director's open question (options with
+a Recommended badge, Why it matters on demand, 1 to 4 pick an option, "Use your recommendations for
+the rest", "Enough, write the plan"; typing in the message box is the free-text answer, there is no
+separate Other box), the step budget (Retry the step, Raise the step budget), start planning, a held
+or stuck ticket (its escalation card in the modal, Open the ticket, Run as Express) and
+finished work (Open the ticket). The chat keeps a one-line record of each raise, question and
+ready plan ("Open plan →" is a link, never a primary button) and hides a step line the next raise
+explains. **Plan, Evidence, Tickets, Details** are real links (the tab is the path segment):
+from 1280 px they sit in a rail of 400 to 440 px beside the chat (no Conversation tab; the rail
+opens on the plan while one exists, plan approval reasons at the top, the Approve / Request changes
+bar sticky at the foot); from 1024 to 1279 px they are tabs above the chat (Conversation first);
+below 1024 px the chat is the page and a header button
+opens them as a full-screen sheet (Esc or "Back to chat" closes, Back steps out of it). **Plan**
+(the fixed plan sections, dependency graph, version picker with diff, light ticket edits),
+**Tickets** (a timeline with the ticket's phase in words, the reason line with links, lane and cost) and **Details** (source, creator, times, budget
+cap, summary and the cost breakdown: Director, each ticket, total, "not recorded" never shown as
+free). An unknown tab replaces itself with the conversation, Back and Forward step through views,
+each tab keeps its scroll. The chat is a pane: bubbles are narrow (70% / 36rem) and quiet, author
+and time show once per group with day separators, the list scrolls above the composer and
+stays pinned to the newest line. The **Ticket page**
+(`/p/:slug/tickets/:id/<tab>`) is the same frame (d-0172): a one-row header (back, id,
+truncating title, one status pill showing the phase in words (Queued, Waiting for a slot, Held by re-plan, Working...), cost, a `⋯` "Ticket actions" menu whose one danger entry "Cancel ticket…" opens the shared cancel dialog: what is stopped and deleted, the tickets that wait on it cancelled together, an optional reason, "Cancel <id>" or "Keep running") with a slim line for the reason (tickets and card it names are links; "Waiting on" lists only what is still open; amber "Needs you" only for an open owner item). A finished ticket shows no wait: it leads with one outcome sentence ("Merged at ...", "Ticket cancelled at ..."), its pipeline chips are muted history ("Last check: did not pass (round 4)") and its run ends "Worker run 3 finished / was stopped / failed",
+the pipeline strip, then the **Conversation** (the live Worker thread with the steer box
+docked below) as the main column. Everything waiting on you is behind the same **needs-you
+alert** under the title (on every tab) and its modal, newest first: a Worker question, a failure, a setup, a
+held decision and a sign-off open as the shared escalation card in place, and finished work
+with no escalation shows Approve and merge (behind its confirm), Send back for rework and
+Cancel; each links to the review. **Review** (only while the ticket waits on review or
+sign-off, or is held for your decision: gates, each check's findings with `file:line`, what
+will be merged), **Runs** (status, duration, cost per run; a run opens in Conversation via
+`?run=`), **History** (what the ticket went through and why, below) and **Details** (metadata, PR, card, depends on, gates, cost by run split Workers and Director) sit in a rail
+beside the thread from 1280 px, as tabs above it from 1024 px (the Conversation tab carries
+a dot while something waits; the alert stays under the header on every tab, so the decision
+is one press from its evidence) and as a full-screen sheet below that (Esc closes). Cost also shows small on Board tiles.
+
+**History tab** (Card and Ticket pages, `/<tab>` = `history`): one story per card or ticket, grouped by the
+reader's day (Today, Yesterday, a date), the newest at the bottom, with a "Newest first" toggle. Each row: an
+actor icon with the word (You, Director, Forge, Worker), the plain sentence, from-to state chips in the Board's
+words, a detail folded behind Show more when long, the time as "3 h ago" (exact time on hover) and "waited 2
+days" when work waited. Filters "Status changes only" and "Needs you only" (questions, answers, sign-offs); each row
+links to its run, question or review, and on a card a roll-up line opens that ticket's History. "Load earlier"
+reads older entries. Loading is a skeleton, empty says "Nothing has happened yet", an error says what failed with
+Try again, and a failed refresh keeps the list with one slim line. The project stream refreshes it live.
 
 Waiting tickets (S4a, d-0135 / d-0141): a ticket that cannot go on waits on the owner as
 one **escalation**, drawn by one card in three places, so acting in one settles the
 others. In the card chat it is a block (settled once settled: "Answered by you / by the
 Director · 2 min ago"), a second banner counts the owner's waiting tickets and
-"Show the first" focuses its card; on the Ticket page it sits above the thread; in the
+"Show the first" focuses its card; on the Ticket page it is an item of the needs-you modal; in the
 Inbox the row's **Respond** opens it in a drawer. Kinds: **question** (the Director's
 note, Use suggested, up to four options with Recommended, free text, Cancel), **failure**
 (summary, diagnosis, attempts folded; held lane: Run as Express / Re-plan / Cancel; capped,
 refused, out of turns or timed out: Retry with an optional note / Re-plan / Cancel;
-Re-plan asks for a comment and says what happens to the tickets, Cancel asks and lists
+Re-plan, Cancel ticket and Merge anyway open a confirmation that lists, from live data, what they
+change (held and kept tickets and the stop; the run, branch, pull request and waiting tickets; the
+overruled check), name the ticket on the confirm button ("Re-plan CHE-6"), open with Cancel
+focused, and for a mechanical stop Re-plan offers Send back for rework; a refused cancel lists
 dependents with Cancel all), **setup** (Fix in settings link, I fixed it check again,
 "resumes by itself"), **decision** (S5c, a held ticket: blocking findings worst first with
 `file:line`, how often it was sent back, the files outside the plan; Merge anyway or Continue need
-a reason and say they overrule a hold, then Send back / Re-plan / Cancel) and **sign-off** (the
-tier in words, what the checks said, why the Director did not sign; Approve and merge, or Sign
-off and merge asking who signs for tier C). While the Director is still looking the page says so and offers
+a reason and say they overrule a hold, then Send back / Re-plan / Cancel) and **sign-off** (leads
+with the Director's recommendation and its evidence, then the
+risk in words (Low risk, Moderate risk, Protected files), what the checks said, why the
+Director did not sign (its own note also sits in the title of a protected-files sign-off);
+Approve and merge, or Sign off and merge asking who signs for protected files). The Director
+signs protected files itself only when every check passed and no secret file is touched (d-0181). While the Director is still looking the page says so and offers
 nothing. A ticket in review, sign-off or a scheduler hold shows Send back for rework /
 Cancel or an "it starts by itself" line. The project sidebar gains **Issues** (open GitHub issues with verdict,
 confidence, size, risk and the analysis report; Approve → card, Re-analyse,
@@ -151,7 +197,8 @@ Amended by the UI pass U1 (shared surfaces, d-0164):
   merge locked last and G1 pinned with a lock and the reason, and **Add stage** (Agent, Script
   gate, Run-together group of 2 to 4 checks, Writers together of 2 to 4 writers with their
   folders shown and overlapping folders refused, Director check, Sign-off (the Director signs
-  tier A and B, or always you; tier C is always you); one sign-off or older Human sign-off and
+  when every check passed and the change is within its limit, or always you; protected files
+  follow the clean-record rule); one sign-off or older Human sign-off and
   one Director check at most). Details by kind: an
   agent Picker over the effective roster (switched-off and archived agents shown greyed with the
   reason), the red-proof switch for a tester, for a check the d-0165 policy (send back up to 2
@@ -223,6 +270,27 @@ Amended by the UI pass U1 (shared surfaces, d-0164):
   on hover or scroll.
 - **Cost**: Top tickets and Top runs are server-paged (10/25/50, "x-y of N"); every chart
   shows its value in the app's Tooltip (hover or arrow keys), never a native title bubble.
+  Spend is Workers (runs) plus the Director's own steps (the dated `director_spend` ledger,
+  x-0017): Cost, Overview, card and ticket all show the total first and the split
+  ("Workers $x · Director $y") beside it, so a project's total equals the sum of its cards.
+  The card's budget row names the cap in force and whose it is (the card's own, the
+  project's, or the Forge default), the same number the 80% and 100% warnings use.
+  Per-day spend is two stacked series (Workers, Director) with a written legend, and a
+  note says Director spend before 20 Oct is dated by card.
+- **Message length**: the Director chat and the Worker steer box count from 90% of the
+  8,000-character limit ("7,412 / 8,000"), hold Send over it and say "Shorten it or send
+  it in two parts"; the New card description states its 20-character minimum up front with
+  a live count. Closing a card says it stops any running Worker and cancels unfinished tickets.
+- **Harness rows** say what the last Worker run did ("last run 07:12 (2.1.304)") apart from
+  the live test button ("live test not run"), so a harness that has done real work is Working.
+- **Inbox views and Mark all read**: tabs Needs action (only items that wait on a decision),
+  Notices (items that only inform), Unread, All, Archived, each with a count. Notices and Unread
+  show a **Mark all read** button above the list (not offered when nothing is unread, paused
+  offline); one click, no confirmation (each item can be marked unread), then the notice
+  "Marked 5 read". A refusal says "Could not mark them read. Nothing was changed."
+- **Plan ticket care level**: Edit tickets gives each ticket a care-level picker (Express, Standard,
+  Full, each with a plain sentence). A lane the owner picked shows "Set by you" (the automatic size
+  checks leave it alone); the line also says protected files still run in Full.
 - **Inbox alerts**: a new needs-you item raises a toast with Open, bumps the sidebar badge,
   puts `(n)` in the tab title and, if the owner turned it on in Settings, General (per
   browser), a desktop notification while the tab is hidden.
@@ -242,7 +310,11 @@ Amended by S6-B (research and budget):
   settings. States: loading, error with Try again, empty.
 - **Card, Conversation**: a `research` event is one line, "Researched: 3 searches, 5 pages, 7
   facts (2 unverified)" with See the evidence, or "Research could not run" with the reason and
-  Open Research settings.
+  Open Research settings. Ticket log lines read "FR-5 created: title" and "FR-15 is now Done (was
+  Being checked)", the link, sentence and time in one block with the bullet in its own column; three
+  or more in a row (never across a day, a message or a question) fold into one line, "Show 5
+  updates · 3 tickets moved · 2 created: FR-15 Done, FR-16 In progress, +1", a button with
+  `aria-expanded` that opens to the originals.
 - **Card, Plan, Verification**: "Outside facts the plan rests on" with each claim's status, `E`
   links to the Evidence tab and "Needs your approval: rests on 1 unverified outside fact" when
   one is unverified. **Details** edits the card's budget cap (set, change, clear) and says it
@@ -283,6 +355,22 @@ Amended by S6-B (research and budget):
   **Memory retrieval** section (rewrite on or off, rewrite timeout and budget, relevant decisions, pinned
   decisions, rejected approaches listed) with the note that rejected approaches are always all listed; a
   project can override it ("Director memory retrieval").
+
+## Owner language (eval fix 9, D)
+
+One glossary (`domain/plain-words.ts`) names every term the owner meets and says what it means;
+one "what's this" button (`components/ui/whats-this.tsx`, a `?` that opens a popover, by tap or
+keyboard, Esc returns focus) shows that text, once per screen next to the first use of a term:
+Independent check (Overview tile, ticket review facts), Care level (ticket header, run facts),
+Risk, Attempt, Connector version, AI coding tool, Tool session (run drawer), Re-read from cache
+(Cost tokens tile), Safety minimum (plan tab). Header detail reads "Standard care · moderate risk".
+Settings say "Changes take effect on the Director's next check, usually within a minute. No restart
+needed." Cap lists use the state words ("In progress") and a picker of known AI coding tools.
+Issues and Chat are hidden from the sidebar until built. The pipeline editor keeps G1 and lane
+words, with the term in place, because that screen configures the gate itself.
+
+A Director question with a recommended answer shows a primary **Use recommended: <label>** button
+in the needs-you modal; the other options and digits 1 to 4 still work.
 
 ## Prototype build order
 

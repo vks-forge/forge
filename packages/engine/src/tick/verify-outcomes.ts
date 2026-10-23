@@ -18,7 +18,7 @@
  */
 
 import { classifyPark, failureCauseOf } from '@forge/core';
-import type { StorageTx, Ticket } from '@forge/core';
+import type { EscalationFailure, FailureCause, StorageTx, Ticket } from '@forge/core';
 import { decideFailure } from '#/domain/failure-policy.js';
 import { familyOf } from '#/domain/results.js';
 import { hold } from '#/steps/run-step.js';
@@ -50,13 +50,21 @@ export function recordVerified(
   });
 }
 
-/** Raises the failure escalation of a parked ticket: its cause read off the reason, the Director looking first. */
+/**
+ * Raises the failure escalation of a parked ticket: its cause read off the reason unless the caller
+ * names it (`extra.cause`), the Director looking first. `extra.conflict` carries the clashing files and
+ * the upstream tickets of a `merge_conflict`.
+ */
 export async function raiseFailure(
   ctx: EngineCtx,
   tx: StorageTx,
   ticket: Ticket,
   reason: string,
   family?: VerifiedTicket['errorFamily'],
+  extra: {
+    readonly cause?: FailureCause;
+    readonly conflict?: EscalationFailure['conflict'];
+  } = {},
 ): Promise<void> {
   await raiseEscalation(
     tx,
@@ -65,13 +73,14 @@ export async function raiseFailure(
     ticket,
     {
       kind: 'failure',
-      cause: failureCauseOf(
-        classifyPark({ status: 'waiting_human', blocked_reason: reason }),
-      ),
+      cause:
+        extra.cause ??
+        failureCauseOf(classifyPark({ status: 'waiting_human', blocked_reason: reason })),
       summary: reason,
       attempts: await attemptsOf(tx, ticket.id),
       ...(family ? { error_family: family } : {}),
       lane: ticket.lane,
+      ...(extra.conflict ? { conflict: extra.conflict } : {}),
     },
     await stageFor(ctx, tx, ticket, false),
   );

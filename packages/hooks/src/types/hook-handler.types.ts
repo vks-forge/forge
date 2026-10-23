@@ -12,7 +12,8 @@
  *   run's HMAC secret only ever arrives through `credentials()` and is never persisted,
  *   so a Worker that can read the database file cannot forge a receipt.
  *
- * Exports: FailClosedCode, RunCredentials, AuditEntry, HookAudit, HookHandlerDeps, HookHandler.
+ * Exports: FailClosedCode, RunCredentials, AuditEntry, HookAudit, ApprovalAsk, ApprovalRaised, RaiseApproval, HookHandlerDeps,
+ *   HookHandler.
  * Depends on: @forge/core (Run, StorageAdapter), @forge/tools (HookResponse, AdmitContext,
  *   AdmitCall, Decision, HmacKey, ReceiptLog). Types only.
  */
@@ -59,6 +60,27 @@ export interface AuditEntry {
 /** Side-channel sink for refusals; must not throw into the request path (errors are ignored). */
 export type HookAudit = (runId: string, entry: AuditEntry) => void | Promise<void>;
 
+/** A call `admit()` marked `ask`, with the context and call that produced the verdict (lexical or physical). */
+export interface ApprovalAsk {
+  readonly run: Run;
+  readonly ctx: AdmitContext;
+  readonly call: AdmitCall;
+  readonly decision: Decision;
+  /** The harness's own id of the call, when it sent one. */
+  readonly useId: string | undefined;
+}
+
+/** The owner's pending approval a raised ask points at. */
+export interface ApprovalRaised {
+  readonly interaction_id: string;
+}
+
+/**
+ * Opens (or finds, for a repeated call) the owner's approval for an ask. Resolves `null` when it
+ * was refused (run not live, Express, too many pending); a throw is treated the same way.
+ */
+export type RaiseApproval = (ask: ApprovalAsk) => Promise<ApprovalRaised | null>;
+
 export interface HookHandlerDeps {
   /** Source of run rows (existence, lane, harness). */
   readonly db: StorageAdapter;
@@ -95,6 +117,13 @@ export interface HookHandlerDeps {
     runId: string,
     payload: Record<string, unknown>,
   ) => Promise<void>;
+  /**
+   * The engine's door for a tool approval (hooks may not import the engine, so the server
+   * injects it). With it an `ask` is answered `ask` / `awaiting_owner` with the interaction id,
+   * or `deny` / `approval_unavailable` when no approval could be raised. Without it an `ask`
+   * is answered as `admit()` judged it.
+   */
+  readonly raiseApproval?: RaiseApproval;
 }
 
 export interface HookHandler {

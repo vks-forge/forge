@@ -5,11 +5,13 @@
  *   ticket, a free slot, a harness quota), is not asking anything, but the owner must still be
  *   able to act: approve and merge a reviewed ticket (or sign off tier C), send it back for rework, or cancel something they no longer want.
  *   A wait that clears by itself says so ("it starts by itself when that clears"), so nobody
- *   thinks it is stuck, and still offers Cancel. The server decides which actions apply
+ *   thinks it is stuck, and still offers Cancel. The reason itself is the header's wait line (`wait`); this panel does not repeat it, except for the workspace step. While Forge installs the project's packages in the
+ *   ticket's fresh copy the line says which step is running and for how long, as the server counts it (d-0180). The server decides which actions apply
  *   (`wait_actions`); this draws them with the same buttons and dialogs as an escalation. A ticket
  *   with nothing to do and nothing to say draws nothing.
  *
- *   For finished work the panel also shows what Approve / Sign off will merge (routes/ticket/review-facts).
+ *   `variant="plain"` draws only the actions, for the needs-you dock, whose item already says what waits.
+ *   For finished work the framed panel also shows what Approve / Sign off will merge (routes/ticket/review-facts).
  *
  * Exports: TicketWait.
  * Depends on: api/use-escalations, components/escalation/escalation-actions, domain/escalation-copy,
@@ -38,13 +40,23 @@ function headline(detail: TicketDetail): string {
   }
 
   if (detail.wait_reason !== null) {
-    return `This ticket has not started: ${detail.wait_reason}.`;
+    // The workspace line adds the step and its time ("Getting the workspace ready: <step> (0:42)").
+    // Any other reason is already in the header's wait line, so it is not said twice.
+    return detail.wait_reason.startsWith('Getting the workspace ready')
+      ? `${detail.wait_reason}.`
+      : detail.wait === null || detail.wait === undefined
+        ? `This ticket has not started: ${detail.wait_reason}.`
+        : 'This ticket has not started.';
   }
 
   return 'This ticket is waiting.';
 }
 
-export function TicketWait(props: { detail: TicketDetail }) {
+export function TicketWait(props: {
+  detail: TicketDetail;
+  /** `plain` is the actions and error only, for a surface that already frames and titles them (the dock). */
+  variant?: 'framed' | 'plain';
+}) {
   const { detail } = props;
   const actions: readonly EscalationAction[] = detail.wait_actions;
   const mutation = useActOnTicketWait(detail.ticket.id, detail.ticket.card_id);
@@ -70,6 +82,26 @@ export function TicketWait(props: { detail: TicketDetail }) {
   };
 
   const resumes = detail.wait_reason !== null && !actions.includes('rework');
+  const errorLine =
+    mutation.isError && dependentsOf(mutation.error) === null ? (
+      <p role="alert" className="rounded-lg bg-danger-soft p-2 text-sm">
+        {describeEscalationError(mutation.error)}
+      </p>
+    ) : null;
+
+  if (props.variant === 'plain') {
+    return (
+      <div className="grid gap-2">
+        <EscalationActions
+          id={detail.ticket.id}
+          ticketId={detail.ticket.id}
+          actions={actions}
+          controls={controls}
+        />
+        {errorLine}
+      </div>
+    );
+  }
 
   return (
     <section
@@ -84,12 +116,13 @@ export function TicketWait(props: { detail: TicketDetail }) {
         <p className="text-sm text-muted">It starts by itself when that clears.</p>
       ) : null}
       <ReviewFacts detail={detail} />
-      <EscalationActions id={detail.ticket.id} actions={actions} controls={controls} />
-      {mutation.isError && dependentsOf(mutation.error) === null ? (
-        <p role="alert" className="rounded-lg bg-danger-soft p-2 text-sm">
-          {describeEscalationError(mutation.error)}
-        </p>
-      ) : null}
+      <EscalationActions
+        id={detail.ticket.id}
+        ticketId={detail.ticket.id}
+        actions={actions}
+        controls={controls}
+      />
+      {errorLine}
     </section>
   );
 }

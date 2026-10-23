@@ -20,7 +20,7 @@
  */
 
 import { mkdir } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { openSqlite } from '@forge/db';
 import { createReceiptLookup, systemClock } from '@forge/drivers';
 import { createEngine, createIdSource, createOwnerId } from '@forge/engine';
@@ -64,7 +64,6 @@ export async function assembleServer(
   const log = ports.log ?? (() => undefined);
   const clock = ports.clock ?? systemClock;
   const now = (): number => clock.now();
-
   await mkdir(dirname(layout.data.dbPath), { recursive: true });
   const sqlite = openSqlite(layout.data.dbPath);
   const { receipts, catalogue } = sqlite;
@@ -88,7 +87,6 @@ export async function assembleServer(
     });
 
     const owner = createOwnerId();
-
     // Both are built below; no run starts before the server listens.
     let buildCheck: (runId: string) => Promise<void> = async () => undefined;
     let address: ServerAddress | null = null;
@@ -108,6 +106,7 @@ export async function assembleServer(
       config,
       secrets,
       worktreesDir: layout.data.worktreesDir,
+      cacheDir: join(layout.data.home, 'cache'),
       gates: (worktrees) =>
         createGates({ storage, receipts, worktrees, registry, env: settings.env }),
       now,
@@ -194,6 +193,7 @@ export async function assembleServer(
       policy,
       now,
       requestTick: ticker.requestTick,
+      raiseToolApproval: (request) => engine.raiseToolApproval(request),
       log,
     });
 

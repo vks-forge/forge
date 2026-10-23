@@ -8,23 +8,28 @@
  *   (Full, until its pipeline goes live) parks in WaitingHuman with a plain reason instead of
  *   silently running with too little process (d-0059, brief E1), and the park is a lane-hold
  *   escalation so the owner has a way forward; the engine lifts it when the lane goes live. A rejected triage leaves the
- *   ticket in the inbox and is not retried until its hold passes.
+ *   ticket in the inbox and is not retried until its hold passes. The model call is a job beside the
+ *   tick (one per ticket, within the Director's step limit, after every step a Worker or an owner waits
+ *   on); the tick that collects it applies the move, and drops the answer when the ticket is no longer
+ *   in the inbox (cancelled meanwhile), so a slow triage never holds up a Worker.
  *
  * Exports: triageInbox().
  * Depends on: tick/memory-context (the memory shown to the Director), @forge/core (preCheckLane, TriageOutput), domain/lane-rules, steps/run-step,
- *   tick/ticket-moves.
+ *   tick/director-jobs, tick/ticket-moves.
  */
 
 import { NewRequestPayload, TriageOutput, preCheckLane } from '@forge/core';
-import type { Ticket } from '@forge/core';
+import type { Lane, Ticket } from '@forge/core';
 import { decideLane } from '#/domain/lane-rules.js';
 import { isLive } from '#/domain/live-lanes.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
 import { hold, isHeld, rejectStep, runStep } from '#/steps/run-step.js';
 import { buildMemoryContext, questionOf } from '#/tick/memory-context.js';
+import { directorSlots, startTicketStep, ticketKey } from '#/tick/director-jobs.js';
 import { isUnservable, projectSettings } from '#/tick/tick-config.js';
 import { raiseEscalation } from '#/tick/escalation-raise.js';
 import { moveTicketTx } from '#/tick/ticket-moves.js';
+import type { DirectorApply } from '#/types/director-jobs.types.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { TicketPlan } from '#/types/tick.types.js';
 
@@ -44,7 +49,11 @@ async function requestMeta(
   return parsed.success ? parsed.data : null;
 }
 
-async function triageOne(ctx: EngineCtx, ticket: Ticket): Promise<void> {
+/** Asks the triage step about `ticket` (in a job); returns the move to apply, or nothing when the step was rejected. */
+async function triageOne(
+  ctx: EngineCtx,
+  ticket: Ticket,
+): Promise<DirectorApply | undefined> {
   const { deps } = ctx;
   const project = await deps.storage.transaction((tx) => tx.projects.get(ticket.project));
   if (!project) {
@@ -84,7 +93,9 @@ async function triageOne(ctx: EngineCtx, ticket: Ticket): Promise<void> {
   );
 
   if (!answer.ok) {
-    return rejectStep(ctx, 'triage', ticket.id, answer.error);
+    rejectStep(ctx, 'triage', ticket.id, answer.error);
+
+    return undefined;
   }
 
   const out = answer.value;
@@ -121,6 +132,19 @@ async function triageOne(ctx: EngineCtx, ticket: Ticket): Promise<void> {
     },
   };
 
+  return (tick) => applyTriage(tick, ticket, plan, decision.lane, parked, reason);
+}
+
+/** Writes a triage decision in the tick; dropped when the ticket left the inbox while the step ran. */
+async function applyTriage(
+  ctx: EngineCtx,
+  ticket: Ticket,
+  plan: TicketPlan,
+  lane: Lane,
+  parked: boolean,
+  reason: string,
+): Promise<void> {
+  const { deps } = ctx;
   const moved = await deps.storage.transaction(async (tx) => {
     const made = await moveTicketTx(tx, ticket.id, ctx.nowIso, (t) =>
       t.status === 'inbox' ? plan : null,
@@ -138,7 +162,7 @@ async function triageOne(ctx: EngineCtx, ticket: Ticket): Promise<void> {
           cause: 'lane_hold',
           summary: reason,
           attempts: [],
-          lane: decision.lane,
+          lane,
         },
         'owner',
       );
@@ -153,13 +177,34 @@ async function triageOne(ctx: EngineCtx, ticket: Ticket): Promise<void> {
     return;
   }
 
-  ctx.report.triaged.push({ ticketId: ticket.id, lane: decision.lane, parked });
+  ctx.report.triaged.push({ ticketId: ticket.id, lane, parked });
   if (parked) {
     ctx.report.parked.push({ ticketId: ticket.id, reason });
   }
 }
 
-/** Triages every inbox ticket, oldest first; a failure on one does not stop the others. */
+/** The job body for one inbox ticket: a failure holds the ticket off and is reported, never thrown. */
+async function triageJob(
+  job: EngineCtx,
+  ticket: Ticket,
+): Promise<DirectorApply | undefined> {
+  try {
+    return await triageOne(job, ticket);
+  } catch (e) {
+    hold(job, `triage:${ticket.id}`);
+    job.report.errors.push({
+      where: `triage ${ticket.id}`,
+      message: String(e instanceof Error ? e.message : e),
+    });
+
+    return undefined;
+  }
+}
+
+/**
+ * Starts a triage job for each inbox ticket, oldest first, while Director slots are free; a ticket
+ * with a job in flight waits for it. Returns at once: the answers are applied by the next tick.
+ */
 export async function triageInbox(ctx: EngineCtx): Promise<void> {
   const inbox = await ctx.deps.storage.transaction((tx) =>
     tx.tickets.listByStatus('inbox'),
@@ -168,18 +213,18 @@ export async function triageInbox(ctx: EngineCtx): Promise<void> {
   for (const ticket of [...inbox].sort(
     (a, b) => ticketNumber(a.id) - ticketNumber(b.id),
   )) {
-    if (isHeld(ctx, `triage:${ticket.id}`) || isUnservable(ctx.config, ticket.project)) {
+    if (directorSlots(ctx) === 0) {
+      return;
+    }
+
+    if (
+      isHeld(ctx, `triage:${ticket.id}`) ||
+      isUnservable(ctx.config, ticket.project) ||
+      ctx.state.directorJobs.has(ticketKey(ticket.id))
+    ) {
       continue;
     }
 
-    try {
-      await triageOne(ctx, ticket);
-    } catch (e) {
-      hold(ctx, `triage:${ticket.id}`);
-      ctx.report.errors.push({
-        where: `triage ${ticket.id}`,
-        message: String(e instanceof Error ? e.message : e),
-      });
-    }
+    startTicketStep(ctx, ticket.id, (job) => triageJob(job, ticket));
   }
 }

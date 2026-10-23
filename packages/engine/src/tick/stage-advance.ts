@@ -14,14 +14,16 @@
  *   restart resumes it.
  *
  * Exports: advanceStagesTx(), advanceStages().
- * Depends on: @forge/core (stageCursor, currentCycle), tick/{project-runtime,stage-proof,stage-records,
+ * Depends on: @forge/core (stageCursor, currentCycle), tick/{prep-checks,project-runtime,stage-proof,stage-records,
  *   stage-script-jobs,stage-state,ticket-moves}, types/stage-runner. IO: git worktree, the script runner.
  */
 
 import { currentCycle, stageCursor } from '@forge/core';
 import type { AgentStage, StorageTx, Ticket, TicketPipeline } from '@forge/core';
 import { FAR_FUTURE } from '#/shared/time.js';
-import { baseRefFor, runtimeFor } from '#/tick/project-runtime.js';
+import { withPrepared } from '#/tick/prep-checks.js';
+import { startRefFor } from '#/tick/base-sync.js';
+import { runtimeFor } from '#/tick/project-runtime.js';
 import { finishProof, testCheck } from '#/tick/stage-proof.js';
 import { beginStageRun, finishStageRun, requestStageWake } from '#/tick/stage-records.js';
 import {
@@ -208,7 +210,7 @@ async function advanceOne(ctx: EngineCtx, ticket: Ticket, live: boolean): Promis
   const wt = await runtime.worktrees.create(
     ticket.id,
     ticket.branch,
-    baseRefFor(ctx, slug as string),
+    await startRefFor(ctx, runtime, slug as string),
   );
 
   const rowId = await deps.storage.transaction((tx) =>
@@ -224,15 +226,22 @@ async function advanceOne(ctx: EngineCtx, ticket: Ticket, live: boolean): Promis
     key,
     { ticketId: ticket.id, stageRunId: rowId, purpose: 'proof' },
     () =>
-      scriptGates.run({
-        worktreePath: wt.path,
-        baseSha: wt.baseSha,
-        command: check.command,
-        ...(check.cwd === undefined ? {} : { cwd: check.cwd }),
-        timeoutMs: PROOF_TIMEOUT_MS,
-        guardPaths: [],
-        expect: 'fail',
-      }),
+      withPrepared(
+        runtime,
+        wt.path,
+        wt.baseSha,
+        () =>
+          scriptGates.run({
+            worktreePath: wt.path,
+            baseSha: wt.baseSha,
+            command: check.command,
+            ...(check.cwd === undefined ? {} : { cwd: check.cwd }),
+            timeoutMs: PROOF_TIMEOUT_MS,
+            guardPaths: [],
+            expect: 'fail',
+          }),
+        true,
+      ),
   );
 }
 

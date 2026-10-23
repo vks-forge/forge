@@ -9,6 +9,9 @@
  *   409 and code. Archiving marks the slug so the project list shows it archived, unarchiving (`status: ready`)
  *   brings it back; deleting does the same.
  *
+ * `GET` / `POST /projects/:slug/detected` answer from the sample detection data; the POST also
+ * records the ecosystems on the project row, so the list shows what "Detect again" found.
+ *
  * Exports: projectRoutes().
  * Depends on: @forge/core (mergeConfig), helpers/fetch-stub, helpers/forge-data/*.
  */
@@ -18,6 +21,7 @@ import { BUILTIN_WITH_DIRECTOR } from '#tests/helpers/forge-data/director-data.j
 import type { ConfigVersion, ProjectOverride } from '@forge/core';
 import { json, refusal } from '#tests/helpers/fetch-stub.js';
 import type { Routes } from '#tests/helpers/fetch-stub.js';
+import { detectedOf } from '#tests/helpers/forge-data/detected-data.js';
 import { projectData } from '#tests/helpers/forge-data/project-data.js';
 import { seedVersions } from '#tests/helpers/forge-data/project-settings-data.js';
 
@@ -42,8 +46,11 @@ export function projectRoutes(options: {
   const unknown = (slug: string) =>
     refusal(404, 'project_not_found', `no project ${slug}`);
 
+  // "Detect again" records what it found on the project row, as the real server does.
+  const recorded = new Map<string, string[]>();
   const view = (slug: string) => {
-    const row = project(slug)!;
+    const found = recorded.get(slug);
+    const row = { ...project(slug)!, ...(found ? { ecosystems: found } : {}) };
 
     if (unarchived.has(slug)) {
       return { ...row, status: 'ready' as const };
@@ -55,6 +62,23 @@ export function projectRoutes(options: {
   return {
     'GET /projects': () =>
       json({ projects: options.empty ? [] : projectData.map((p) => view(p.slug)) }),
+
+    'GET /projects/:slug/detected': ({ params }) => {
+      const slug = params['slug']!;
+
+      return project(slug) ? json(detectedOf(slug)) : unknown(slug);
+    },
+
+    'POST /projects/:slug/detected': ({ params }) => {
+      const slug = params['slug']!;
+      if (!project(slug)) {
+        return unknown(slug);
+      }
+
+      recorded.set(slug, [...detectedOf(slug).ecosystems]);
+
+      return json(detectedOf(slug));
+    },
 
     'PATCH /projects/:slug': ({ params, body }) => {
       const slug = params['slug']!;

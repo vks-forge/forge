@@ -7,16 +7,18 @@
  *   changed (not what the Worker claims), the revoked per-run token, and the ticket's next
  *   state. The row goes `settling` first, the slow reads (git, receipts) happen outside the
  *   transaction, and the final writes land together so a crash never leaves a closed run
- *   with an open ticket. The worktree is kept for the PR step; it goes on Done or Cancelled.
+ *   with an open ticket. A run that raised tool approvals is judged first by tick/approval-park: with
+ *   one unanswered it is a pause, not a success. The worktree is kept for the PR step; it goes on Done or Cancelled.
  *
  * Exports: settleRun().
- * Depends on: @forge/core, domain/results, tick/card-budget, tick/outcome, tick/stage-artifacts, shared/time. Reads git and receipts via ports.
+ * Depends on: @forge/core, domain/results, tick/approval-park, tick/card-budget, tick/outcome, tick/stage-artifacts, shared/time. Reads git and receipts via ports.
  */
 
 import type { ErrorFamily, Run, RunResult, TicketId } from '@forge/core';
 import { runStatusFor } from '#/domain/results.js';
 import { emitTrace } from '#/shared/trace.js';
-import { warnOnBudget } from '#/tick/card-budget.js';
+import { warnLevelFor, warnOnBudget } from '#/tick/card-budget.js';
+import { guardApprovals } from '#/tick/approval-park.js';
 import { applyOutcome } from '#/tick/outcome.js';
 import { runtimeFor } from '#/tick/project-runtime.js';
 import { pipelineHasChecks } from '#/tick/stage-artifacts.js';
@@ -104,9 +106,14 @@ export async function settleRun(
   }
 
   const family = resolveFamily(result);
-  const status = opts.status ?? runStatusFor(result);
+  let status = opts.status ?? runStatusFor(result);
   const session = result.session ?? pump?.handle.session ?? null;
   await deps.storage.transaction(async (tx) => {
+    // A run with an unanswered tool approval is a pause, never a success (tick/approval-park).
+    const ended =
+      opts.status === undefined ? await guardApprovals(ctx, tx, run, result) : result;
+
+    status = opts.status ?? runStatusFor(ended);
     await tx.runs.update(run.id, {
       status,
       ended_at: ctx.nowIso,
@@ -118,7 +125,7 @@ export async function settleRun(
     });
 
     await tx.runTokens.revoke(run.id, ctx.nowIso);
-    await applyOutcome(ctx, tx, run, result, family, pump, {
+    await applyOutcome(ctx, tx, run, ended, family, pump, {
       ...opts,
       receipts: opts.receipts ?? receipts,
       diff,
@@ -126,7 +133,12 @@ export async function settleRun(
 
     // The run's cost is now on its row: a card crossing its budget cap is warned, never stopped (d-0143).
     const ticket = await tx.tickets.get(run.ticket_id as TicketId);
-    await warnOnBudget(tx, ticket?.card_id, ctx.nowIso);
+    await warnOnBudget(
+      tx,
+      ticket?.card_id,
+      ctx.nowIso,
+      ticket ? await warnLevelFor(ctx, tx, ticket.project) : undefined,
+    );
   });
 
   emitTrace(deps, {

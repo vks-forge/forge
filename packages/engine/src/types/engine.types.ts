@@ -15,6 +15,7 @@
  */
 
 import type {
+  CardActor,
   Clock,
   CardDirectorStatus,
   CardEvent,
@@ -33,7 +34,10 @@ import type {
   RunStatus,
   StepName,
   StorageAdapter,
+  TicketEditBody,
+  TicketId,
   TicketReview,
+  TicketWait,
   TraceSink,
 } from '@forge/core';
 import type { ReceiptLog } from '@forge/tools';
@@ -45,6 +49,7 @@ import type {
   SetCardRelationsInput,
   SetCardRelationsResult,
 } from '#/types/card-create.types.js';
+import type { EditTicketResult } from '#/types/ticket-edit.types.js';
 import type { ProjectRuntime, VerifiedTicket } from '#/types/verify.types.js';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
@@ -220,6 +225,12 @@ export interface Engine extends PlanningDoors, EscalationDoors {
     cardId: string,
     input: SetCardRelationsInput,
   ): Promise<SetCardRelationsResult>;
+  /** Edits a ticket's priority, description or complete `depends_on` set after the shared checks; one transaction, logged on the card. */
+  editTicket(
+    ticketId: TicketId,
+    edit: TicketEditBody,
+    actor: CardActor,
+  ): Promise<EditTicketResult>;
   /** Answers a pending interaction (CAS) and queues the response wake. False when it was not pending. */
   answerInteraction(interactionId: string, answer: unknown): Promise<boolean>;
   /**
@@ -245,10 +256,15 @@ export interface Engine extends PlanningDoors, EscalationDoors {
   reviewOf(ticketId: string): Promise<TicketReview | null>;
   /** After a card was closed: cancels its unfinished tickets (and their waits), stops their runs; returns the ids. Nothing for a card that is not closed. */
   closeCardWork(cardId: string): Promise<string[]>;
-  /** Cancels a ticket through `transition()` and stops its live run. False when the ticket is terminal or unknown. */
+  /** An alias of the one cancel door (`actOnTicket` with `cancel`): stops the live run, cleans up, cancels through `transition()`. False when the ticket is terminal, unknown or others wait on it. */
   cancelTicket(ticketId: string): Promise<boolean>;
   /** Why the ticket has not started (`quota: claude-code until 14:20 UTC`, `cap: per-project 1/1`, `deps: PAY-231`), or null when nothing holds it back. Read-only. */
   explainWait(ticketId: string): Promise<string | null>;
+  /**
+   * The phase each ticket is really in and one plain line why, slot holders named, from one scheduling
+   * decision for all of them (unknown ids are left out). Read-only; logs a ticket stuck on a person with no open item once.
+   */
+  explainWaits(ticketIds: readonly string[]): Promise<Map<string, TicketWait>>;
   /**
    * Shutdown: marks a live run `interrupted` (its session, worktree, token and receipts are
    * kept for the next start to resume, d-0092) and stops its harness. Unknown runs and runs
@@ -259,6 +275,10 @@ export interface Engine extends PlanningDoors, EscalationDoors {
   unservableProjects(): ReadonlyMap<string, string>;
   /** Ids of runs with a live pump in this process. */
   liveRunIds(): string[];
-  /** Gate runs currently executing in the background (finished ones await the next tick). */
+  /** Gate runs, script jobs, checks and worktree preparations currently executing in the background (finished ones await the next tick). */
   gateJobsInFlight(): number;
+  /** Director steps (card turns) tracked by the engine: executing in the background, or finished and awaiting the next tick's collection. */
+  directorJobsInFlight(): number;
+  /** Resolves once no Director job is executing; shutdown waits on it within the drain budget. */
+  idle(): Promise<void>;
 }

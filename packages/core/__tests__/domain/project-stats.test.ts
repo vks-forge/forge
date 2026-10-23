@@ -147,6 +147,7 @@ describe('computeCostReport', () => {
     project: 'p',
     range: '7d' as const,
     nowMs: NOW,
+    directorSpend: [],
     titles: new Map([['SF-1', 'First']]),
     budgets: { run_max_usd: 5, step_budget_usd: 1 },
   };

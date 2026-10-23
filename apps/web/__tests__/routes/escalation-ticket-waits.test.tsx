@@ -18,6 +18,7 @@ import {
   questionView,
   setupView,
 } from '#tests/helpers/escalation-world.js';
+import { openNeedsYou } from '#tests/helpers/needs-you-modal.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
 const TICKET = '/p/sample-service/tickets/SVC-4';
@@ -36,6 +37,7 @@ describe('Ticket page: setup escalation', () => {
   it('links to the fix, promises to resume by itself and rechecks on request', async () => {
     const user = userEvent.setup();
     const { forge } = open([setupView()]);
+    await openNeedsYou(userEvent.setup());
 
     const fix = await screen.findByRole('link', { name: 'Fix in settings' });
 
@@ -50,6 +52,7 @@ describe('Ticket page: setup escalation', () => {
   it('shows what is still broken right where the owner clicked', async () => {
     const user = userEvent.setup();
     open([setupView()], { stillBroken: 'the login is still missing.' });
+    await openNeedsYou(userEvent.setup());
 
     await user.click(
       await screen.findByRole('button', { name: 'I fixed it, check again' }),
@@ -88,9 +91,9 @@ describe('Ticket page: waiting without a question', () => {
       '/p/sample-service/tickets/SVC-5/review',
     );
 
-    expect(
-      await screen.findByText('This ticket is ready for your review.'),
-    ).toBeInTheDocument();
+    await openNeedsYou(userEvent.setup());
+
+    expect(await screen.findByText('SVC-5 is ready for review')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Send back for rework' }));
     const dialog = await screen.findByRole('dialog');
@@ -112,6 +115,8 @@ describe('Ticket page: waiting without a question', () => {
       { waitActions: { 'SVC-5': ['approve', 'rework', 'cancel'] } },
       '/p/sample-service/tickets/SVC-5/review',
     );
+
+    await openNeedsYou(userEvent.setup());
 
     await user.click(await screen.findByRole('button', { name: 'Approve and merge' }));
     expect(forge.stub.callsTo('POST /tickets/:id/act')).toHaveLength(0);

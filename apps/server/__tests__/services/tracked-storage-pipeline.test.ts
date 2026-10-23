@@ -81,7 +81,7 @@ async function setup() {
   return { raw, storage: trackProjectWrites(raw, events), seen };
 }
 
-const strip = ['ticket-pipeline:FX-1', 'ticket:FX-1'];
+const strip = ['ticket-pipeline:FX-1', 'ticket:FX-1', 'tickets:dcp'];
 
 describe('stage writes announce the ticket strip', () => {
   it('announces a pipeline snapshot insert and replace', async () => {

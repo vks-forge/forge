@@ -106,7 +106,10 @@ describe('0027 director pipelines', () => {
       theRun: driver.get('SELECT * FROM runs WHERE id = ?', ['r1']),
     };
 
-    runMigrations(driver);
+    runMigrations(
+      driver,
+      MIGRATIONS.filter((m) => m.id <= 27),
+    );
 
     expect(driver.all('SELECT * FROM stage_runs ORDER BY id')).toEqual(before.runs);
     expect(driver.all('SELECT * FROM stage_artifacts ORDER BY id')).toEqual(

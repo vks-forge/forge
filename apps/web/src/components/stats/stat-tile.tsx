@@ -21,6 +21,8 @@ export function StatTile(props: {
   note: ReactNode;
   /** Marks work that waits on the person (amber, as everywhere else in the app). */
   attention?: boolean;
+  /** A "what's this" button for the label, placed once per screen. */
+  help?: ReactNode;
 }) {
   return (
     <div
@@ -28,7 +30,10 @@ export function StatTile(props: {
         props.attention ? 'border-attn bg-attn-soft' : 'border-line bg-surface'
       }`}
     >
-      <dt className="text-xs font-medium text-muted">{props.label}</dt>
+      <dt className="flex items-center gap-1 text-xs font-medium text-muted">
+        {props.label}
+        {props.help}
+      </dt>
       <dd className="grid gap-1">
         <span
           className={`font-data text-2xl font-medium tabular-nums ${

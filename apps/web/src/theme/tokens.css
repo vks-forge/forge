@@ -20,7 +20,7 @@
   --surface: oklch(100% 0 0);
   --fg: oklch(22% 0.014 255);
   --muted: oklch(51% 0.013 255);
-  --faint: oklch(68% 0.01 255);
+  --faint: oklch(55% 0.012 255);
   --line: oklch(91% 0.005 255);
   --hover: oklch(94.5% 0.006 255);
   --signal: oklch(50% 0.17 262);
@@ -29,7 +29,7 @@
   --signal-soft: oklch(94% 0.03 262);
   --attn: oklch(64% 0.15 65);
   --attn-soft: oklch(95% 0.045 80);
-  --good: oklch(58% 0.12 155);
+  --good: oklch(50% 0.11 155);
   --danger: oklch(52% 0.18 27);
   --danger-soft: oklch(95% 0.03 27);
   --chart-bar: oklch(83% 0.03 262);
@@ -51,7 +51,7 @@
     --surface: oklch(21% 0.011 255);
     --fg: oklch(93% 0.006 255);
     --muted: oklch(70% 0.012 255);
-    --faint: oklch(52% 0.012 255);
+    --faint: oklch(62% 0.012 255);
     --line: oklch(28% 0.012 255);
     --hover: oklch(25% 0.012 255);
     --signal: oklch(70% 0.14 262);
@@ -82,7 +82,7 @@
   --surface: oklch(21% 0.011 255);
   --fg: oklch(93% 0.006 255);
   --muted: oklch(70% 0.012 255);
-  --faint: oklch(52% 0.012 255);
+  --faint: oklch(62% 0.012 255);
   --line: oklch(28% 0.012 255);
   --hover: oklch(25% 0.012 255);
   --signal: oklch(70% 0.14 262);

@@ -6,10 +6,11 @@
  *   function independent of storage and lets tests build it by hand.
  *
  * Exports: CostReportInput, CostPageWindow, CostBucket.
- * Depends on: schemas/cost-report, schemas/run, schemas/stats-range. Types only.
+ * Depends on: schemas/cost-report, schemas/director-spend, schemas/run, schemas/stats-range. Types only.
  */
 
 import type { CostBudgets, TokenTotals } from '#/schemas/cost-report.js';
+import type { DirectorSpend } from '#/schemas/director-spend.js';
 import type { Run } from '#/schemas/run.js';
 import type { StatsRange } from '#/schemas/stats-range.js';
 
@@ -19,6 +20,8 @@ export interface CostReportInput {
   readonly nowMs: number;
   /** Runs of the project started inside the window. */
   readonly runs: readonly Run[];
+  /** Director spend rows of the project dated inside the window (rows outside it are ignored). */
+  readonly directorSpend: readonly DirectorSpend[];
   /** Ticket titles by id, for the per-ticket rows. */
   readonly titles: ReadonlyMap<string, string>;
   readonly budgets: Omit<CostBudgets, 'period_usd'>;

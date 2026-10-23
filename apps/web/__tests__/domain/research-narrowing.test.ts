@@ -80,12 +80,15 @@ describe('the stored document', () => {
     expect(FIELD_KEYS).toContain('research');
     expect(SCOPE_FIELDS.research).toEqual(['research']);
 
-    const blank = Object.fromEntries(
-      FIELD_KEYS.filter((k) => k !== 'research').map((k) => [
-        k,
-        { overridden: false, value: '' },
-      ]),
-    );
+    const blank = {
+      ...Object.fromEntries(
+        FIELD_KEYS.filter((k) => k !== 'research').map((k) => [
+          k,
+          { overridden: false, value: '' },
+        ]),
+      ),
+      revoked: [],
+    };
 
     expect(docFromDraft({}, { ...blank, ...draft } as unknown as SettingsDraft)).toEqual({
       research: { deny_hosts: ['a.example'] },

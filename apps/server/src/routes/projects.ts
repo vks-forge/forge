@@ -22,10 +22,11 @@
  *   only that subfolder); both are refused with a plain 400 when missing, before anything is
  *   written. Without a `git_host` or GitHub connection the project has no remote and merges
  *   locally into its own repository. Starting the repository is the last step before the
- *   project is registered, so a refused request never changes the user's folder.
+ *   project is registered, so a refused request never changes the user's folder. The row records the
+ *   ecosystems the server detects in the folder (`POST /projects/:slug/detected` looks again).
  *
  * Exports: projectsRoutes().
- * Depends on: @forge/core, @forge/git (inspectRepository, listBranches), schemas/api,
+ * Depends on: @forge/core, @forge/git (inspectRepository, listBranches), @forge/gates (detectProjectAt), schemas/api,
  *   services/http/*, services/project-folder, services/project-conflict, services/project-placement,
  *   services/project-inspect, types/routes. IO: storage, settings, reads the clone through git.
  */
@@ -37,6 +38,7 @@ import {
   mergeConfig,
 } from '@forge/core';
 import type { Project } from '@forge/core';
+import { detectProjectAt } from '@forge/gates';
 import { ProjectCreateBody, ProjectPatchBody } from '#/schemas/api.js';
 import { readJson } from '#/services/http/body.js';
 import { HttpError } from '#/services/http/http-errors.js';
@@ -97,7 +99,10 @@ async function create(
     ...(body.connection_id ? { connection_id: body.connection_id } : {}),
     ...(repoFullName ? { repo_full_name: repoFullName } : {}),
     status: 'ready',
-    ecosystems: [],
+    // Detected here, from the folder itself: a client could lie or leave it out (d-0176).
+    ecosystems: [
+      ...(await detectProjectAt(placement.localPath, placement.repoRoot)).ecosystems,
+    ],
     harness_defaults: {},
     tier_c_globs: [],
   };

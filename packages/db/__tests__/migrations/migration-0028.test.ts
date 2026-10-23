@@ -120,7 +120,10 @@ describe('0028 research', () => {
     expect(seeded['tickets']).toHaveLength(1);
     expect(seeded['cards']).toHaveLength(1);
 
-    runMigrations(driver);
+    runMigrations(
+      driver,
+      MIGRATIONS.filter((m) => m.id <= 28),
+    );
 
     expect(snapshot()).toEqual(seeded);
     expect(driver.all('PRAGMA foreign_key_check')).toEqual([]);

@@ -5,20 +5,29 @@
  *   authored commits) rests on real git behaving as the port promises, including on
  *   Windows paths with spaces. Each case runs on a throwaway repo in the OS temp dir.
  *
- * Depends on: contract/worktree.contract, src/index, node:child_process, node:fs.
+ * Depends on: contract/{worktree,merge-in}.contract, src/index, node:child_process, node:fs.
  */
 
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, realpath, rename, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import { TicketId } from '@forge/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createGitWorktreeManager } from '#/index.js';
+import { describeMergeInContract } from '#tests/contract/merge-in.contract.js';
+import type { MergeInHarness } from '#tests/contract/merge-in.contract.js';
 import { describeWorktreeContract } from '#tests/contract/worktree.contract.js';
-import type { WorktreeHarness } from '#tests/contract/worktree.contract.js';
 import { removeTree, trackTemp } from '#tests/helpers/temp.js';
 
 const run = promisify(execFile);
@@ -49,6 +58,8 @@ async function makeRepo(): Promise<string> {
   await git(dir, 'config', 'user.name', 'Tester');
   await git(dir, 'config', 'user.email', 'tester@example.com');
   await git(dir, 'config', 'commit.gpgsign', 'false');
+  // Contents are compared byte for byte; a machine-wide autocrlf must not rewrite them.
+  await git(dir, 'config', 'core.autocrlf', 'false');
   await writeFile(join(dir, 'README.md'), 'hello\n');
   await writeFile(join(dir, '.gitignore'), '*.log\n');
   await git(dir, 'add', '-A');
@@ -63,7 +74,7 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map(removeTree));
 });
 
-describeWorktreeContract('git cli', async (): Promise<WorktreeHarness> => {
+async function makeHarness(): Promise<MergeInHarness> {
   const repoRoot = await makeRepo();
   const { manager, worktreeRoot } = await makeManager(repoRoot);
 
@@ -78,12 +89,40 @@ describeWorktreeContract('git cli', async (): Promise<WorktreeHarness> => {
       await mkdir(dirname(full), { recursive: true });
       await writeFile(full, content);
     },
+    writeReadOnly: async (wt, rel, content) => {
+      const full = join(wt, rel);
+      await mkdir(dirname(full), { recursive: true });
+      await writeFile(full, content, { mode: 0o444 });
+    },
     remove: (wt, rel) => rm(join(wt, rel)),
     rename: (wt, from, to) => rename(join(wt, from), join(wt, to)),
     authorOf: (wt, sha) => git(wt, 'log', '-1', '--format=%an', sha),
     close: async () => undefined,
+    async baseCommit(file, content) {
+      if (content === null) {
+        await rm(join(repoRoot, file));
+      } else {
+        await mkdir(dirname(join(repoRoot, file)), { recursive: true });
+        await writeFile(join(repoRoot, file), content);
+      }
+
+      await git(repoRoot, 'add', '-A');
+      await git(repoRoot, 'commit', '-m', `upstream: ${file}`);
+
+      return git(repoRoot, 'rev-parse', 'HEAD');
+    },
+    read: async (wt, rel) => {
+      try {
+        return await readFile(join(wt, rel), 'utf8');
+      } catch {
+        return null;
+      }
+    },
   };
-});
+}
+
+describeWorktreeContract('git cli', makeHarness);
+describeMergeInContract('git cli', makeHarness);
 
 // 30s: real git spawns several processes per call and is slow on Windows under suite load.
 describe('git cli worktree manager specifics', { timeout: 30_000 }, () => {
@@ -125,6 +164,51 @@ describe('git cli worktree manager specifics', { timeout: 30_000 }, () => {
     await expect(manager.head(join(repoRoot, 'does-not-exist'))).rejects.toMatchObject({
       errorFamily: 'crash',
     });
+  }, 30_000); // real git is slow on Windows
+
+  it('mergeIn refuses to start over uncommitted changes and leaves the tree as it was', async () => {
+    const repoRoot = await makeRepo();
+    const { manager } = await makeManager(repoRoot);
+    const wt = await manager.create(tid(1), 'feat/a', 'main');
+    await writeFile(join(repoRoot, 'README.md'), 'base edit\n');
+    await git(repoRoot, 'commit', '-am', 'base edit');
+    await writeFile(join(wt.path, 'README.md'), 'uncommitted\n');
+
+    const tip = await git(repoRoot, 'rev-parse', 'HEAD');
+
+    await expect(manager.mergeIn(wt.path, tip, 'merge main')).rejects.toMatchObject({
+      errorFamily: 'crash',
+    });
+
+    expect(await readFile(join(wt.path, 'README.md'), 'utf8')).toBe('uncommitted\n');
+    expect(await manager.contains(wt.path, tip)).toBe(false);
+  }, 30_000); // real git is slow on Windows
+
+  it('mergeIn leaves a conflicted tree that a Worker can finish: committed markers, no merge in progress', async () => {
+    const repoRoot = await makeRepo();
+    const { manager } = await makeManager(repoRoot);
+    const wt = await manager.create(tid(1), 'feat/a', 'main');
+    await writeFile(join(wt.path, 'README.md'), 'ticket\n');
+    await manager.commitAll(wt.path, 'ticket');
+    await writeFile(join(repoRoot, 'README.md'), 'base\n');
+    await git(repoRoot, 'commit', '-am', 'base edit');
+
+    const r = await manager.mergeIn(
+      wt.path,
+      await git(repoRoot, 'rev-parse', 'HEAD'),
+      'merge main',
+    );
+
+    expect(r.kind).toBe('conflict');
+    expect(existsSync(join(wt.path, '.git'))).toBe(true);
+    expect(await git(wt.path, 'status', '--porcelain')).toBe('');
+    expect(await git(wt.path, 'rev-list', '--parents', '-n1', 'HEAD')).toMatch(
+      /^\w{40} \w{40} \w{40}$/,
+    );
+
+    expect(await git(wt.path, 'grep', '-c', '<<<<<<<', 'HEAD', '--', 'README.md')).toBe(
+      'HEAD:README.md:1',
+    );
   }, 30_000); // real git is slow on Windows
 
   it('fails with a typed error when the base ref does not exist', async () => {

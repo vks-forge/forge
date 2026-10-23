@@ -83,6 +83,11 @@ describe('approval floor', () => {
 
     const plans = await rig.engine.cardPlans(id);
     expect(plans).toMatchObject({ status: 'ok', floor: { pass: false } });
+    expect(ask?.kind).toBe('plan_approval');
+    expect(ask?.title).toBe('The plan needs your approval');
+    // One item per floor reason, never the reasons joined into one string.
+    expect(ask?.items).toEqual(plans.status === 'ok' ? plans.floor?.reasons : []);
+    expect(ask?.items?.length).toBeGreaterThan(0);
   });
 
   it('stops at Needs you when another approved card plans the same file', async () => {
@@ -131,6 +136,11 @@ describe('approval floor', () => {
     const ask = (await eventsOf(rig, id, 'needs_you')).at(-1)?.payload;
     expect(ask?.reason).toContain('Is a local-only store acceptable?');
     expect(ask?.actions).toEqual(['approve_plan', 'request_changes']);
+    expect(ask).toMatchObject({
+      kind: 'director_questions',
+      title: 'The Director has questions before approving',
+      items: ['Is a local-only store acceptable?'],
+    });
   });
 });
 

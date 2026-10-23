@@ -13,7 +13,7 @@
  *   Entering verify, enhance or the plan moves the card from grilling to verifying.
  *
  * Exports: surveyStep(), verifyStep(), enhanceStep(), customStep().
- * Depends on: @forge/core (step schemas, preCheckLane), tick/planning-input, tick/planning-reads,
+ * Depends on: @forge/core (step schemas, preCheckLane), tick/planning-input, tick/planning-read-step,
  *   tick/planning-state, tick/planning-step-io, types/card-planning.
  */
 
@@ -30,13 +30,11 @@ import type {
   CardPlanningState,
   FlowStep,
   Lane,
-  StepName,
   SurveyFindings,
   VerifyFindings,
 } from '@forge/core';
-import type { ZodType } from 'zod';
 import { buildStepInput } from '#/tick/planning-input.js';
-import { MAX_READ_ROUNDS, runReads } from '#/tick/planning-reads.js';
+import { readStep } from '#/tick/planning-read-step.js';
 import {
   enterVerifying,
   headOf,
@@ -46,91 +44,7 @@ import {
   stamp,
 } from '#/tick/planning-state.js';
 import { callStep, finishStep, startStep } from '#/tick/planning-step-io.js';
-import type {
-  PlanCtx,
-  ReadBudget,
-  ReadOutput,
-  ReadResult,
-  ReadStepResult,
-  StepOutcome,
-} from '#/types/card-planning.types.js';
-
-/** The read-round loop of survey and verify; the failing outcome when the step failed (already reported on the card). */
-async function readStep<F>(
-  pc: PlanCtx,
-  planning: CardPlanningState,
-  step: FlowStep,
-  name: Extract<StepName, 'card_survey' | 'verify'>,
-  schema: ZodType<ReadOutput<F>>,
-): Promise<ReadStepResult<F> | 'stop' | 'blocked'> {
-  const caps = pc.director.read_caps;
-  const budget: ReadBudget = {
-    filesLeft: caps.max_files,
-    bytesLeft: caps.max_bytes,
-    filesRead: [],
-  };
-
-  const previous = planning.grill.pending_changes ? await latestPlanOf(pc) : null;
-  const results: ReadResult[] = [];
-  let cost = 0;
-  for (let round = 0; round <= MAX_READ_ROUNDS; round++) {
-    const input = await buildStepInput(pc, planning.grill, step, previous, {
-      read_results: results,
-      read_round: round,
-      reads_remaining: MAX_READ_ROUNDS - round,
-      read_caps: { files_left: budget.filesLeft, bytes_left: budget.bytesLeft },
-    });
-
-    const call = await callStep(pc, step, name, schema, input);
-    cost += call.cost;
-    if (!call.ok) {
-      return call.outcome;
-    }
-
-    const out = call.value;
-    if (out.findings !== undefined) {
-      return {
-        findings: out.findings,
-        files: budget.filesRead,
-        cost,
-        decisions: out.step_decisions ?? {},
-      };
-    }
-
-    if (round === MAX_READ_ROUNDS) {
-      break;
-    }
-
-    results.push(...(await runReads(pc, out.read_requests ?? [], budget)));
-  }
-
-  await failedWithReads(pc, step, name);
-
-  return 'stop';
-}
-
-/** The step kept asking for reads after its last round: the answer is unusable, reported like any rejected step. */
-async function failedWithReads(
-  pc: PlanCtx,
-  step: FlowStep,
-  name: StepName,
-): Promise<void> {
-  const message = 'it still asked for reads after the last read round';
-  pc.ctx.report.rejectedSteps.push({
-    step: name,
-    ticketId: pc.card.id,
-    reason: `invalid_output: ${message}`,
-  });
-
-  await pc.ctx.deps.storage.transaction((tx) =>
-    logPlanEvent(tx, pc.card.id, pc.ctx.nowIso, {
-      kind: 'note',
-      payload: {
-        text: `The Director could not finish "${step.label}" (${message}). It will try again shortly.`,
-      },
-    }),
-  );
-}
+import type { PlanCtx, StepOutcome } from '#/types/card-planning.types.js';
 
 /** The lane the survey predicts, raised (never lowered) by the deterministic pre-check over its predicted files. */
 function predictedLane(pc: PlanCtx, f: SurveyFindings): Lane | null {
@@ -176,7 +90,7 @@ export async function surveyStep(
     cost: r.cost,
     patch: (g) => ({
       ...g,
-      survey: r.findings,
+      survey: r.readNothing ? { ...r.findings, read_nothing: true } : r.findings,
       predicted_lane: lane ?? g.predicted_lane,
       step_decisions: { ...g.step_decisions, ...r.decisions },
     }),

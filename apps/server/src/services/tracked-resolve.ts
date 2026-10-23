@@ -103,11 +103,17 @@ export async function resolve(
 
         const ticket = ticketId ? await tx.tickets.get(ticketId as never) : null;
         if (ticket) {
+          // The board tile and the card's ticket rows show the current stage, so they refetch too.
           await add(
             ticket.project,
             ['ticket-pipeline', ticket.id],
             ['ticket', ticket.id],
+            ['tickets', await slugOf(ticket.project)],
           );
+
+          if (ticket.card_id) {
+            await addCard(ticket.card_id, false);
+          }
         }
 
         break;

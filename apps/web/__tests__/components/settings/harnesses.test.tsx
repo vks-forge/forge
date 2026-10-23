@@ -44,6 +44,47 @@ describe('harness list', () => {
   });
 });
 
+describe('harness detail: bypass permissions', () => {
+  it('shows the switch on by default with the plain warning', async () => {
+    renderSettings('/settings/harnesses/claude');
+
+    const toggle = await screen.findByRole('switch', { name: 'Bypass permissions' });
+
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(
+      screen.getByText(/Workers run without asking you\. Forge still blocks secrets/),
+    ).toHaveTextContent(
+      "Forge's own data folder, files outside the ticket's workspace, pushing and destructive commands. Workers run as your Windows account, so this is a Forge rule, not a Windows boundary.",
+    );
+  });
+
+  it('saves the switch off with the sign-in settings and shows it off afterwards', async () => {
+    const user = userEvent.setup();
+    renderSettings('/settings/harnesses/claude');
+    const toggle = await screen.findByRole('switch', { name: 'Bypass permissions' });
+    const save = screen.getByRole('button', { name: 'Save sign-in settings' });
+
+    expect(save).toBeDisabled();
+
+    await user.click(toggle);
+
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    expect(save).toBeEnabled();
+
+    await user.click(save);
+    await screen.findByText('Saved');
+
+    await waitFor(() =>
+      expect(screen.getByRole('switch', { name: 'Bypass permissions' })).toHaveAttribute(
+        'aria-checked',
+        'false',
+      ),
+    );
+
+    expect(screen.getByRole('button', { name: 'Save sign-in settings' })).toBeDisabled();
+  });
+});
+
 describe('harness detail: credential', () => {
   it('never shows a stored secret and clears the field after saving', async () => {
     const user = userEvent.setup();

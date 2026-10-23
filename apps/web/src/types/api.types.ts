@@ -14,7 +14,7 @@
  * Depends on: @forge/core, schemas/projects, schemas/tickets, types/sse.types (types only).
  */
 
-import type { TicketListPage, TicketStatus } from '@forge/core';
+import type { TicketEditBody, TicketListPage, TicketStatus } from '@forge/core';
 import type { ProjectView } from '#/schemas/projects.js';
 import type { GithubApi, HarnessesApi, SettingsApi } from '#/types/settings-api.types.js';
 import type { AgentsApi } from '#/types/agents-api.types.js';
@@ -23,8 +23,14 @@ import type { ProposalsApi, ScorecardsApi } from '#/types/proposals-api.types.js
 import type { MemoryApi } from '#/types/memory.types.js';
 import type { OnboardingApi } from '#/types/onboarding.types.js';
 import type { ProjectSettingsApi } from '#/types/project-settings.types.js';
-import type { AnswerReply, IngestReply, TicketDetail } from '#/schemas/tickets.js';
+import type {
+  AnswerReply,
+  IngestReply,
+  TicketDetail,
+  TicketEditReply,
+} from '#/schemas/tickets.js';
 import type { CardsApi } from '#/types/cards-api.types.js';
+import type { HistoryApi } from '#/types/history-api.types.js';
 import type { TicketsTableApi } from '#/types/tickets-table.types.js';
 import type { EscalationsApi } from '#/types/escalations-api.types.js';
 import type { CostApi, InboxApi, OverviewApi, RunsApi } from '#/types/work-api.types.js';
@@ -59,6 +65,12 @@ export interface TicketsApi {
   list(params: TicketListParams, options?: RequestOptions): Promise<TicketListPage>;
   /** One ticket with its runs, gate results and pending questions. */
   get(id: string, options?: RequestOptions): Promise<TicketDetail>;
+  /** Changes priority, description (before work starts) or the complete set of tickets it waits for; 409 with a code when refused. */
+  edit(
+    id: string,
+    body: TicketEditBody,
+    options?: RequestOptions,
+  ): Promise<TicketEditReply>;
 }
 
 export interface InteractionsApi {
@@ -110,6 +122,7 @@ export interface ResourceApis {
   readonly onboarding: OnboardingApi;
   readonly cards: CardsApi;
   readonly escalations: EscalationsApi;
+  readonly history: HistoryApi;
   readonly agents: AgentsApi;
   readonly pipelines: PipelinesApi;
   readonly proposals: ProposalsApi;

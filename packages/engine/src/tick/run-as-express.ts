@@ -64,7 +64,11 @@ export async function runAsExpress(
 
       const moved = await moveTicketTx(tx, ticketId, at, (t) =>
         t.status === 'waiting_human'
-          ? { events: [{ type: 'unparked' }], fields: { lane: 'express' } }
+          ? {
+              events: [{ type: 'unparked' }],
+              fields: { lane: 'express' },
+              reason: 'You chose to run it as Express',
+            }
           : null,
       );
 

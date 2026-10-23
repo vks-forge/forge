@@ -34,11 +34,24 @@ export interface GateFinding {
   readonly check: string;
   readonly message: string;
   readonly claim?: Claim;
+  /** The worktree path the finding is about, when it is about one file (the gate-config guard sets it). */
+  readonly file?: string;
 }
 
 export interface GateVerdict {
   readonly status: GateStatus;
   readonly findings: readonly GateFinding[];
+  /**
+   * G1 only: true when every check that did not pass is the gate-config guard and no check errored.
+   * Absent means unknown, and unknown is never read as config-only (d-0173).
+   */
+  readonly configOnly?: boolean;
+  /**
+   * G1 only: true when every finding is a claims/coverage finding for a file whose only cover is an
+   * earlier run whose proof (its run secret) is gone, and nothing else failed or errored. A rework
+   * can usually fix it by re-applying the files; if not, the owner vouches (F-D3). Absent means unknown.
+   */
+  readonly provenanceOnly?: boolean;
   /** Human-readable report stored behind `gate_results.report_ref`. */
   readonly report: string;
 }

@@ -5,16 +5,19 @@
  *   (d-0135), and the same set of buttons must read the same in the card chat, on the Ticket
  *   page and in the Inbox. The server decides which actions apply (`view.actions`); this draws
  *   them in the owner's words and wires each to its call: Retry takes an optional note for the
- *   Worker, Re-plan, Send back for rework, Merge anyway and Continue open a dialog that asks for a comment (and Re-plan
- *   says what happens to the tickets; Merge anyway says it merges despite held findings and cannot
- *   be undone), Approve and merge / Sign off and merge ask before they merge
- *   (a merge cannot be undone), Cancel asks before it acts, Run as Express and "I fixed
+ *   Worker, Re-plan, Send back for rework, Merge anyway and Continue open a dialog that asks for a comment (Re-plan,
+ *   Merge anyway and Cancel first list what they would change from live data, in escalation-confirmations, and
+ *   Re-plan offers the cheaper rework for a mechanical stop), Approve and merge / Sign off and merge ask before they merge
+ *   (a merge cannot be undone), Run as Express and "I fixed
  *   it, check again" act at once. The first action is the primary one (never Merge anyway, which
  *   overrules a hold); Cancel is the only danger-styled button. `answer` has its own form and is skipped here, as are the engine-only `pipeline_ready` and `substitute`. An action this UI has no
  *   button for never reaches this component (the schema drops it).
  *
+ *   On a merge-conflict stop two buttons are worded for what they do there (Try again, Re-plan this
+ *   ticket) and the Re-plan comment starts with a note naming the ticket (labels and replan props).
+ *
  * Exports: EscalationActions.
- * Depends on: react, components/escalation/escalation-dialogs, components/ui/button,
+ * Depends on: react, components/escalation/escalation-confirmations, components/escalation/escalation-dialogs, components/ui/button,
  *   components/ui/field, domain/escalation-copy, schemas/escalation (types),
  *   types/escalation-ui.types.
  */
@@ -22,24 +25,34 @@
 import { Fragment, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  CancelDialog,
+  CancelConfirm,
+  MergeAnywayConfirm,
+  ReplanConfirm,
+} from '#/components/escalation/escalation-confirmations.js';
+import {
   CommentDialog,
   MergeDialog,
 } from '#/components/escalation/escalation-dialogs.js';
 import { Button } from '#/components/ui/button.js';
 import { INPUT_CLASS } from '#/components/ui/field.js';
-import { ACTION_LABEL, replanConsequence } from '#/domain/escalation-copy.js';
+import { ACTION_LABEL } from '#/domain/escalation-copy.js';
 import type { EscalationAction } from '#/schemas/escalation.js';
-import type { EscalationControls } from '#/types/escalation-ui.types.js';
+import type { ConflictReplan, EscalationControls } from '#/types/escalation-ui.types.js';
 
 export function EscalationActions(props: {
   id: string;
+  /** The ticket the actions are for; Re-plan, Merge anyway and Cancel read what they change from it and name it. */
+  ticketId: string;
   actions: readonly EscalationAction[];
   controls: EscalationControls;
   /** Rendered before the buttons, such as the "Fix in settings" link. */
   lead?: ReactNode;
   /** One line under a Retry that does something other than it says (the rework-cap case). */
   retryHint?: string | undefined;
+  /** Words for buttons that say more in this situation than their usual name (a merge conflict's "Try again"). */
+  labels?: Readonly<Partial<Record<EscalationAction, string>>> | undefined;
+  /** Replaces the Re-plan dialog's words and starts its comment with a note (a merge conflict re-plans from one ticket). */
+  replan?: ConflictReplan | undefined;
 }) {
   const { controls } = props;
   const [dialog, setDialog] = useState<
@@ -63,6 +76,9 @@ export function EscalationActions(props: {
     ): action is Exclude<EscalationAction, 'answer' | 'pipeline_ready' | 'substitute'> =>
       action !== 'answer' && action !== 'pipeline_ready' && action !== 'substitute',
   );
+
+  const label = (action: EscalationAction): string =>
+    props.labels?.[action] ?? ACTION_LABEL[action];
 
   const busy = controls.pending !== null;
   const open = (which: NonNullable<typeof dialog>): void => {
@@ -111,7 +127,7 @@ export function EscalationActions(props: {
               })
             }
           >
-            {ACTION_LABEL.retry}
+            {label('retry')}
           </Button>
         );
       case 'replan':
@@ -120,14 +136,14 @@ export function EscalationActions(props: {
       case 'continue':
         return (
           <Button {...common} onClick={() => open(action)}>
-            {ACTION_LABEL[action]}
+            {label(action)}
           </Button>
         );
       case 'approve':
       case 'sign_off':
         return (
           <Button {...common} onClick={() => open(action)}>
-            {ACTION_LABEL[action]}
+            {label(action)}
           </Button>
         );
       case 'cancel':
@@ -139,7 +155,7 @@ export function EscalationActions(props: {
       default:
         return (
           <Button {...common} onClick={() => controls.act({ action })}>
-            {ACTION_LABEL[action]}
+            {label(action)}
           </Button>
         );
     }
@@ -181,16 +197,22 @@ export function EscalationActions(props: {
         </div>
       ) : null}
       {actions.includes('replan') ? (
-        <CommentDialog
+        <ReplanConfirm
           open={dialog === 'replan'}
           onClose={close}
           onDone={done}
           controls={controls}
-          action="replan"
-          title="Re-plan this card?"
-          description={replanConsequence()}
-          label="What should the new plan do differently?"
-          sendLabel="Send to the Director"
+          ticketId={props.ticketId}
+          actions={actions}
+          replan={props.replan}
+          onCheaper={(cheaper) => {
+            if (cheaper === 'rework') {
+              open('rework');
+            } else {
+              close();
+              controls.act({ action: 'retry' });
+            }
+          }}
         />
       ) : null}
       {actions.includes('rework') ? (
@@ -207,17 +229,12 @@ export function EscalationActions(props: {
         />
       ) : null}
       {actions.includes('merge_anyway') ? (
-        <CommentDialog
+        <MergeAnywayConfirm
           open={dialog === 'merge_anyway'}
           onClose={close}
           onDone={done}
           controls={controls}
-          action="merge_anyway"
-          title="Merge anyway?"
-          description="This merges the change although a check found blocking problems. The merge cannot be undone from Forge."
-          label="Why is it fine to merge?"
-          sendLabel="Merge anyway"
-          footnote="Recorded on the card. Only you can do this. The gates still passed."
+          ticketId={props.ticketId}
         />
       ) : null}
       {actions.includes('continue') ? (
@@ -247,10 +264,11 @@ export function EscalationActions(props: {
         />
       ) : null}
       {actions.includes('cancel') ? (
-        <CancelDialog
+        <CancelConfirm
           open={dialog === 'cancel'}
           onOpenChange={(next) => (next ? setDialog('cancel') : close())}
           controls={controls}
+          ticketId={props.ticketId}
         />
       ) : null}
     </div>

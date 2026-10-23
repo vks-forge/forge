@@ -7,12 +7,14 @@
  *   or refused failure can be retried, re-planned or cancelled; a setup problem is fixed outside
  *   and re-checked; finished work can be approved and merged (tier B), signed off (tier C), or sent back for rework;
  *   a held ticket can be merged anyway (findings the owner overrules, never a failed gate), sent back,
- *   re-planned or cancelled, and work that outgrew its plan can be continued, re-planned or cancelled. The same tables serve the engine
+ *   re-planned or cancelled, and work that outgrew its plan can be continued, re-planned or cancelled; a tool call waiting on approval can be
+ *   allowed once, allowed always for the project (when a narrow rule exists) or denied (d-0175). The same tables serve the engine
  *   (it refuses an action that was not offered), the server (it returns the list in each view) and
  *   the tests (a rule test fails when a status, cause or setup type has no row). Order is button
  *   order. "Fix in settings" is a link in the setup payload, not an action.
  *
- * Exports: QUESTION_ACTIONS, FAILURE_ACTIONS, SETUP_ACTIONS, REVIEW_ACTIONS, SIGNOFF_ACTIONS, DECISION_ACTIONS,
+ * Exports: QUESTION_ACTIONS, FAILURE_ACTIONS, SETUP_ACTIONS, WORKTREE_SETUP_ACTIONS, REVIEW_ACTIONS, SIGNOFF_ACTIONS, DECISION_ACTIONS,
+ *   PERMISSION_ACTIONS, PERMISSION_ACTIONS_NO_ALWAYS,
  *   SIGN_OFF_ACTIONS(), SCHEDULER_WAIT_KINDS, STATUS_WAIT_CLASS, escalationActions(), ticketWaitActions().
  * Depends on: schemas/escalation, schemas/ticket, types/escalation. No IO.
  */
@@ -33,6 +35,12 @@ import type {
 
 export const QUESTION_ACTIONS: readonly EscalationAction[] = ['answer', 'cancel'];
 export const SETUP_ACTIONS: readonly EscalationAction[] = ['recheck', 'cancel'];
+/** A failed worktree setup: try again, start the Worker without setup, or cancel; fixing the steps is a link. */
+export const WORKTREE_SETUP_ACTIONS: readonly EscalationAction[] = [
+  'retry',
+  'skip_setup',
+  'cancel',
+];
 /** Finished work: tier B is approved and merged by the owner, tier C needs a named sign-off; both can be sent back or cancelled. */
 export const REVIEW_ACTIONS: readonly EscalationAction[] = [
   'approve',
@@ -45,11 +53,26 @@ export const SIGNOFF_ACTIONS: readonly EscalationAction[] = [
   'cancel',
 ];
 
+/** A tool call waiting on the owner: allow it once, remember it for the project, or refuse it. */
+export const PERMISSION_ACTIONS: readonly EscalationAction[] = [
+  'allow_once',
+  'allow_always',
+  'deny',
+];
+
+/** The same without "always", when no narrow rule can be offered (protected path, banned command, chain). */
+export const PERMISSION_ACTIONS_NO_ALWAYS: readonly EscalationAction[] = [
+  'allow_once',
+  'deny',
+];
+
 /** The actions of each decision cause: a hold offers Merge anyway, scope drift offers Continue; both can re-plan or cancel. */
 export const DECISION_ACTIONS: Readonly<
   Record<DecisionCause, readonly EscalationAction[]>
 > = {
   findings_hold: ['merge_anyway', 'rework', 'replan', 'cancel'],
+  config_hold: ['merge_anyway', 'rework', 'replan', 'cancel'],
+  provenance_hold: ['merge_anyway', 'rework', 'replan', 'cancel'],
   scope_drift: ['continue', 'replan', 'cancel'],
 };
 
@@ -72,6 +95,7 @@ export const FAILURE_ACTIONS: Readonly<
   refused: RETRYABLE,
   question_timeout: RETRYABLE,
   no_agent_available: RETRYABLE,
+  merge_conflict: RETRYABLE,
 };
 
 /** The kinds of scheduler wait the ticket page words as `<kind>: ...` (dependencies, a cap, a parked harness, a retry backoff, a card being re-planned). */
@@ -102,11 +126,15 @@ function tableFor(payload: EscalationPayload): readonly EscalationAction[] {
     case 'failure':
       return FAILURE_ACTIONS[payload.cause];
     case 'setup':
-      return SETUP_ACTIONS;
+      return payload.cause.type === 'worktree_setup'
+        ? WORKTREE_SETUP_ACTIONS
+        : SETUP_ACTIONS;
     case 'decision':
       return DECISION_ACTIONS[payload.cause];
     case 'sign_off':
       return SIGN_OFF_ACTIONS(payload.tier);
+    case 'permission':
+      return payload.always.offered ? PERMISSION_ACTIONS : PERMISSION_ACTIONS_NO_ALWAYS;
   }
 }
 

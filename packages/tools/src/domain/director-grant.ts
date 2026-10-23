@@ -81,6 +81,7 @@ function grantFor(dataHome: string): EffectiveGrant {
         })),
       },
     ],
+    approved: [],
     managed: [...FLOOR_RULES],
   };
 }

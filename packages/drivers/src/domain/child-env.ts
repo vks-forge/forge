@@ -16,7 +16,7 @@
  *   carried them, they are removed, and only the harness's configured auth mode puts one
  *   back, so a stray key in the server's environment can never change who pays (d-0087).
  *
- * Exports: STRIPPED_ENV, HARNESS_ENV_ALLOWLIST, allowlistEnv(), buildChildEnv().
+ * Exports: STRIPPED_ENV, HARNESS_ENV_ALLOWLIST, allowlistEnv(), buildChildEnv(), withPathFirst().
  * Depends on: domain/harness-auth, types/claude/driver-deps. No IO.
  */
 
@@ -118,4 +118,28 @@ export function buildChildEnv(
   }
 
   return { ...out, ...authEnv };
+}
+
+/**
+ * A copy of `env` with `dirs` first on PATH, so the project's own tool folders (a virtual
+ * environment's `bin`) win. The variable keeps its own spelling (`Path` on Windows).
+ */
+export function withPathFirst(
+  env: Readonly<Record<string, string>>,
+  dirs: readonly string[],
+  separator: string,
+): Record<string, string> {
+  if (dirs.length === 0) {
+    return { ...env };
+  }
+
+  const key = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') ?? 'PATH';
+  const rest = env[key];
+
+  return {
+    ...env,
+    [key]: [...dirs, ...(rest === undefined || rest === '' ? [] : [rest])].join(
+      separator,
+    ),
+  };
 }

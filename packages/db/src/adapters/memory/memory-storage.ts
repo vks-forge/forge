@@ -14,7 +14,7 @@
  *   backend.
  *
  * Cards, their history, relations, the reply queue, planning state with plan versions and the card type registry (seeded with the built-in types) live here too,
- * as do ticket pipeline snapshots, stage attempts, stage artifacts, pipeline proposals, finding marks, fetched research sources, card evidence and project memory (records, links, history, search, imports).
+ * as do ticket pipeline snapshots, stage attempts, stage artifacts, pipeline proposals, finding marks, fetched research sources, card evidence, the Director spend ledger and project memory (records, links, history, search, imports).
  *
  * Exports: createMemoryStorage().
  * Depends on: adapters/memory/*, shared/db-errors, shared/mutex, types/memory-state. No IO.
@@ -49,6 +49,7 @@ import {
   memoryPipelineProposals,
 } from '#/adapters/memory/proposals.js';
 import { memoryMemory } from '#/adapters/memory/memory.js';
+import { memoryDirectorSpend } from '#/adapters/memory/director-spend.js';
 import { memoryEvidence, memoryResearchSources } from '#/adapters/memory/research.js';
 import { memoryRunTokens } from '#/adapters/memory/run-tokens.js';
 import {
@@ -104,6 +105,8 @@ const emptyState = (): MemoryState => ({
   findingMarks: [],
   researchSources: [],
   researchSourceSeq: 0,
+  directorSpend: [],
+  directorSpendSeq: 0,
   evidence: [],
   evidenceSeq: 0,
   memoryRows: new Map(),
@@ -150,6 +153,7 @@ function buildTx(state: MemoryState): StorageTx {
     pipelineProposals: memoryPipelineProposals(state),
     findingMarks: memoryFindingMarks(state),
     researchSources: memoryResearchSources(state),
+    directorSpend: memoryDirectorSpend(state),
     evidence: memoryEvidence(state),
     memory: memoryMemory(state),
   };

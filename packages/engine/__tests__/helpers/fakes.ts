@@ -18,6 +18,7 @@ import type {
   Clock,
   MemoryFilter,
   MemorySource,
+  MergeInResult,
   ReportStore,
   TicketId,
   WorktreeManager,
@@ -28,7 +29,15 @@ import type { IdSource } from '#/types/engine.types.js';
 export interface FakeWorktrees extends WorktreeManager {
   readonly created: { ticketId: string; branch: string; baseRef: string; path: string }[];
   readonly removed: string[];
+  /** Local branches `remove` was asked to delete, in order. */
+  readonly removedBranches: string[];
   readonly commits: { path: string; message: string }[];
+  /** Every `mergeIn` call, in order. */
+  readonly merges: { path: string; sha: string; message: string }[];
+  /** What `mergeIn` answers; set a `conflict` or `merged` result to play a moved base. */
+  mergeResult: MergeInResult;
+  /** What `contains` answers for every worktree and commit. */
+  contained: boolean;
   /** Files `changedFiles` reports for every worktree. */
   changed: string[];
   /** The unified patch `diff` reports for every worktree. */
@@ -36,6 +45,8 @@ export interface FakeWorktrees extends WorktreeManager {
   /** The commit every worktree reports as its head. */
   headSha: string;
   failCreate: Error | null;
+  /** Makes `remove` throw, as a locked file does on Windows. */
+  failRemove: Error | null;
 }
 
 export function createFakeWorktrees(): FakeWorktrees {
@@ -43,11 +54,16 @@ export function createFakeWorktrees(): FakeWorktrees {
   const fake: FakeWorktrees = {
     created: [],
     removed: [],
+    removedBranches: [],
     commits: [],
+    merges: [],
+    mergeResult: { kind: 'up_to_date' },
+    contained: true,
     changed: ['src/a.ts'],
     patch: '',
     headSha: 'head-sha-1',
     failCreate: null,
+    failRemove: null,
     async create(ticketId: TicketId, branch, baseRef) {
       if (fake.failCreate) {
         throw fake.failCreate;
@@ -62,9 +78,16 @@ export function createFakeWorktrees(): FakeWorktrees {
 
       return { path, baseSha: 'base-sha-1' };
     },
-    async remove(path) {
+    async remove(path, opts) {
+      if (fake.failRemove) {
+        throw fake.failRemove;
+      }
+
       live.delete(path);
       fake.removed.push(path);
+      if (opts?.deleteBranch !== undefined) {
+        fake.removedBranches.push(opts.deleteBranch);
+      }
     },
     changedFiles: async () => [...fake.changed],
     diff: async () => ({
@@ -77,6 +100,16 @@ export function createFakeWorktrees(): FakeWorktrees {
       return 'commit-sha-1';
     },
     head: async () => fake.headSha,
+    rootOf: (path) => path,
+    untracked: async () => [],
+    readPrep: async () => null,
+    writePrep: async () => undefined,
+    async mergeIn(path, sha, message) {
+      fake.merges.push({ path, sha, message });
+
+      return fake.mergeResult;
+    },
+    contains: async () => fake.contained,
   };
 
   return fake;
@@ -133,16 +166,35 @@ export function createFakeReceipts(): FakeReceipts {
 
 export interface FakeClock extends Clock {
   advance(ms: number): void;
+  /** Epoch ms of every timer `after` set and neither fired nor cancelled, soonest first. */
+  pendingAt(): number[];
+  /** Runs the timers that are due at the current time (`advance` does not, so older tests keep their meaning). */
+  fireDue(): void;
 }
 
 export function createFakeClock(start = Date.UTC(2026, 9, 13, 12, 0, 0)): FakeClock {
   let current = start;
+  const timers = new Set<{ at: number; fn: () => void }>();
 
   return {
     now: () => current,
-    after: () => () => undefined,
+    after(ms, fn) {
+      const timer = { at: current + ms, fn };
+      timers.add(timer);
+
+      return () => void timers.delete(timer);
+    },
     advance(ms) {
       current += ms;
+    },
+    pendingAt: () => [...timers].map((t) => t.at).sort((a, b) => a - b),
+    fireDue() {
+      for (const timer of [...timers]) {
+        if (timer.at <= current) {
+          timers.delete(timer);
+          timer.fn();
+        }
+      }
     },
   };
 }

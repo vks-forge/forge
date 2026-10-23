@@ -6,12 +6,12 @@
  *   tier-C signer. If any caller could write status directly, a ticket could skip
  *   Verifying, reach Done without the sign-off its tier requires, or loop through
  *   automatic rework forever. `transition()` is the one pure function that holds those
- *   rules (legal moves, the two-rework cap that hands a failing ticket to a human, the
+ *   rules (legal moves, the two-rework and two-conflict caps that hand a failing ticket to a human, the
  *   named signer for tier C, which is never the Director) and returns the next row with `status_version` bumped, so
  *   storage can compare-and-swap and a stale writer loses instead of double-dispatching
  *   the ticket (director-core.md §3-§4, v1-scope-review.md §4.9).
  *
- * Exports: transition(), MAX_AUTO_REWORKS, DIRECTOR_SIGNER.
+ * Exports: transition(), MAX_AUTO_REWORKS, MAX_CONFLICT_RESOLVES, DIRECTOR_SIGNER.
  * Depends on: domain/lane-triage, schemas/ticket, shared/result, types/result, types/ticket-events.
  *   No IO.
  */
@@ -26,11 +26,14 @@ import type {
   TransitionError,
 } from '#/types/ticket-events.types.js';
 
-/** The signer id of the Director's own sign-off; no person may use it and tier C never accepts it. */
+/** The signer id of the Director's own sign-off; no person may use it and tier C accepts it only on a clean floor (d-0181). */
 export const DIRECTOR_SIGNER = 'director';
 
 /** Cap on automatic Verifying -> InProgress loops (v1-scope-review.md §4.9); beyond it the ticket goes to a human. */
 export const MAX_AUTO_REWORKS = 2;
+
+/** Cap on Verifying -> InProgress loops caused by a merge conflict with the base; separate from the rework cap, and beyond it the ticket goes to a human. */
+export const MAX_CONFLICT_RESOLVES = 2;
 
 const illegal = (t: Ticket, e: TicketEvent): TransitionError => ({
   kind: 'illegal_transition',
@@ -168,11 +171,14 @@ function decide(t: Ticket, e: TicketEvent): Result<TicketDelta, TransitionError>
         return err(precondition(e, 'tier C needs a named signer'));
       }
 
-      // `director` is the Director's reserved signer id: it may finish tier A and B work, never
-      // tier C. Enforced here, the one door, so no caller can sign tier C as the Director.
+      // `director` is the Director's reserved signer id: it may finish tier A and B work, and tier C
+      // only on a clean floor (d-0181), which the caller states with `clean_floor` after the sign-off
+      // decision and the merge door re-checked it. Enforced here, the one door, so a bare
+      // Director signature never finishes tier C.
       if (
         from === 'needs_signoff' &&
-        e.signer?.trim().toLowerCase() === DIRECTOR_SIGNER
+        e.signer?.trim().toLowerCase() === DIRECTOR_SIGNER &&
+        e.clean_floor !== true
       ) {
         return err(precondition(e, 'tier C needs a named person, not the Director'));
       }
@@ -197,6 +203,28 @@ function decide(t: Ticket, e: TicketEvent): Result<TicketDelta, TransitionError>
       }
 
       return ok({ status: 'verifying', tier_actual: undefined });
+    case 'conflict_found':
+      if (from !== 'verifying') {
+        return err(illegal(t, e));
+      }
+
+      // The clash is the base's doing, not a failed gate: rework_count stays, and the cap is
+      // its own. At the cap there is no `parked_from`, so a release goes to planned and a
+      // Worker really runs (verify would find the same clash and park again).
+      const spent = t.conflict_count ?? 0;
+      if (spent >= MAX_CONFLICT_RESOLVES) {
+        return ok({
+          status: 'waiting_human',
+          blocked_reason: `merge conflict: ${e.files.length} file(s) still clash with the base after ${MAX_CONFLICT_RESOLVES} automatic resolves; needs you`,
+          tier_actual: undefined,
+        });
+      }
+
+      return ok({
+        status: 'in_progress',
+        conflict_count: spent + 1,
+        tier_actual: undefined,
+      });
     case 'cancelled':
       return ok({ status: 'cancelled' });
   }

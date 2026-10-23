@@ -25,6 +25,7 @@ export function makeEngineMock(): EngineMock {
     postCardMessage: vi.fn(),
     createCard: vi.fn(),
     setCardRelations: vi.fn(),
+    editTicket: vi.fn(),
     answerGrill: vi.fn(),
     grillShortcut: vi.fn(),
     approvePlan: vi.fn(),
@@ -35,6 +36,7 @@ export function makeEngineMock(): EngineMock {
     runAsExpress: vi.fn(),
     cardPlans: vi.fn(),
     cardPlan: vi.fn(),
+    raiseToolApproval: vi.fn(),
     actOnEscalation: vi.fn(),
     actOnTicket: vi.fn(),
     cardDirector: vi.fn(() => ({ state: 'idle' })),
@@ -42,9 +44,12 @@ export function makeEngineMock(): EngineMock {
     reviewOf: vi.fn(async () => null),
     closeCardWork: vi.fn(async () => []),
     explainWait: vi.fn(async () => null),
+    explainWaits: vi.fn(async () => new Map()),
     interruptRun: vi.fn(),
     liveRunIds: vi.fn(() => ['run-a', 'run-b']),
     unservableProjects: vi.fn(() => new Map()),
     gateJobsInFlight: vi.fn(() => 1),
+    directorJobsInFlight: vi.fn(() => 0),
+    idle: vi.fn(async () => undefined),
   };
 }

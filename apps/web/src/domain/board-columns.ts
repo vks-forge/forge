@@ -8,9 +8,10 @@
  *   shares one amber column so it is never missed: a ticket that stopped (a question nobody
  *   answered, a failure) waits on a person to retry, re-plan or cancel it, so it is not tucked
  *   away with the cancelled ones. Each state belongs to exactly one column, so a ticket can never
- *   be missing or shown twice. Order within a column is the server's (newest change first).
+ *   be missing or shown twice (a `waiting_human` ticket with no open owner item goes to the first
+ *   column instead, see columnOfTicket). Order within a column is the server's (newest change first).
  *
- * Exports: BOARD_COLUMNS, columnOf(), STATE_LABEL, filterTickets(), groupByColumn(), EMPTY_FILTER, isFilterActive().
+ * Exports: BOARD_COLUMNS, columnOf(), columnOfTicket(), STATE_LABEL, filterTickets(), groupByColumn(), EMPTY_FILTER, isFilterActive(), columnOfTicket().
  * Depends on: @forge/core (TicketSummary, TicketStatus), types/board.types. No IO.
  */
 
@@ -103,6 +104,18 @@ export function columnOf(state: TicketStatus): BoardColumnId {
   return id;
 }
 
+/**
+ * The column a ticket is drawn in. A `waiting_human` ticket with no open owner item (the owner
+ * already answered and the card re-plans, or it is stuck) is not waiting on the owner, so it sits
+ * with the tickets waiting to start, where its phase chip says why; the server's `needs_you` flag
+ * decides, never the status alone.
+ */
+export function columnOfTicket(ticket: TicketSummary): BoardColumnId {
+  return ticket.state === 'waiting_human' && !ticket.needs_you
+    ? 'queue'
+    : columnOf(ticket.state);
+}
+
 /** Keeps the tickets matching every part of the filter. */
 export function filterTickets(
   tickets: readonly TicketSummary[],
@@ -134,7 +147,7 @@ export function groupByColumn(
   };
 
   for (const ticket of tickets) {
-    groups[columnOf(ticket.state)].push(ticket);
+    groups[columnOfTicket(ticket)].push(ticket);
   }
 
   return groups;

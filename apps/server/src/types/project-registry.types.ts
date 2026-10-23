@@ -28,6 +28,8 @@ export interface ProjectRegistryDeps {
   readonly secrets: SecretStore;
   /** `<dataHome>/worktrees`; each project's worktrees go under `<worktreesDir>/<slug>`. */
   readonly worktreesDir: string;
+  /** `<dataHome>/cache`: shared download caches and restorable install folders for setup. Absent in tests. */
+  readonly cacheDir?: string;
   /** The gates of a project, over that project's worktrees. */
   readonly gates: (worktrees: WorktreeManager) => Gate[];
   readonly now: () => number;

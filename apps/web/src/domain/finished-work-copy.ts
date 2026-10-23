@@ -7,10 +7,11 @@
  *   the card chat, on the Ticket page and in the Inbox, so the sentences are chosen once. A
  *   finding is shown worst first with the place it points at (`file:line`), because the owner
  *   decides from the serious ones and needs to open the file. The tier is said in words, never
- *   as a bare letter, and tier C says outright that only the owner signs it. Pure.
+ *   as a bare letter, and protected files say when the Director signs them itself (every check
+ *   passed, no secret file touched) and why one waits for the owner. Pure.
  *
  * Exports: TIER_WORDS, DECISION_LEAD, SIGN_OFF_WHY, indexedBySeverity(), bySeverity(), whereOf(), reworkLine(),
- *   checksLine(), unplannedLine(),
+ *   checksLine(), signOffRecommendation(), unplannedLine(),
  *   reviewHeadline().
  * Depends on: domain/stage-view-copy, schemas/escalation, schemas/tickets (types), @forge/core (types).
  */
@@ -26,14 +27,18 @@ import type {
 import type { TicketDetail } from '#/schemas/tickets.js';
 
 export const TIER_WORDS: Readonly<Record<Tier, string>> = {
-  A: 'Tier A: low risk',
-  B: 'Tier B: moderate risk',
-  C: 'Tier C: protected files',
+  A: 'Low risk',
+  B: 'Moderate risk',
+  C: 'Protected files',
 };
 
 export const DECISION_LEAD: Readonly<Record<DecisionCause, string>> = {
   findings_hold:
     'A check found problems that block this change. The gates passed. Merging anyway is your call.',
+  config_hold:
+    'The Worker changed files that control how its work is checked. Review them, then merge anyway or send it back.',
+  provenance_hold:
+    'Forge cannot prove who made some of these changes: the proof from an earlier run is gone. Check the changes yourself, then merge anyway, or send it back, re-plan or cancel.',
   scope_drift:
     'The change touches files the plan did not name. Carry on only if that is fine with you.',
 };
@@ -41,7 +46,7 @@ export const DECISION_LEAD: Readonly<Record<DecisionCause, string>> = {
 export const SIGN_OFF_WHY: Readonly<Record<SignOffCause, string>> = {
   tier_b: 'This is a moderate-risk change. It waits for your name before it merges.',
   tier_c:
-    'This touches protected files. Only you can sign it off; the Director never does.',
+    'This touches protected files. The Director signs these off only when every check passed and no secret file is touched, so this one waits for you.',
   owner_stage: 'This lane asks you to approve before anything merges.',
   director_declined: 'The Director looked first and left the signing to you.',
 };
@@ -103,6 +108,57 @@ export function checksLine(checks: EscalationSignOff['checks']): string {
   }
 
   return `${parts.join('. ')}.`;
+}
+
+/**
+ * The Director's recommendation for a sign-off, led by its evidence: sign off when every check passed, no
+ * critical or high finding is open, nothing was overruled and the Director left no objection; otherwise
+ * "look closer" with each reason. Only what is on the payload is claimed.
+ */
+export function signOffRecommendation(
+  signOff: Pick<EscalationSignOff, 'checks' | 'director_note' | 'tier'>,
+): { verdict: 'sign_off' | 'look_closer'; line: string } {
+  const { checks } = signOff;
+  const serious = (checks.counts['critical'] ?? 0) + (checks.counts['high'] ?? 0);
+  const passed = `${checks.passed} ${checks.passed === 1 ? 'check' : 'checks'} passed`;
+  const reasons: string[] = [];
+
+  if (checks.passed === 0) {
+    reasons.push('no check is on record as passed.');
+  }
+
+  if (serious > 0) {
+    reasons.push(
+      `${serious} critical/high ${serious === 1 ? 'finding is' : 'findings are'} still open.`,
+    );
+  }
+
+  if (checks.overrides > 0) {
+    reasons.push(
+      `you overruled ${checks.overrides} held ${checks.overrides === 1 ? 'finding' : 'findings'}, so the work does not fully match what the checks asked for.`,
+    );
+  }
+
+  if (signOff.director_note !== undefined) {
+    reasons.push('the Director did not sign it off (see its note below).');
+  }
+
+  if (reasons.length > 0) {
+    return {
+      verdict: 'look_closer',
+      line: `Recommend: look closer before signing off. ${passed}, but ${reasons.join(' ')}`,
+    };
+  }
+
+  const protectedNote =
+    signOff.tier === 'C'
+      ? ' It touches protected files, so look at what changed before you sign.'
+      : '';
+
+  return {
+    verdict: 'sign_off',
+    line: `Recommend: sign off. All checks passed (${checks.passed}), 0 critical/high, matches the plan.${protectedNote}`,
+  };
 }
 
 /** The sentence of the banner that leads the owner to the Review tab. */

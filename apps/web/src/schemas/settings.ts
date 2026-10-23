@@ -12,7 +12,7 @@
  *
  * Exports: HarnessView, HarnessesResponse, HarnessTestResult, SecretStored, CompatJob,
  *   CompatView, ToolsView, ConnectionsResponse, ConnectionReply, CompanyView, HistoryResponse,
- *   SecretForm, ConnectionForm, DecisionForm, SaveMetaForm (schemas and inferred types).
+ *   SetupCacheView, SetupCacheClearReply, SecretForm, ConnectionForm, DecisionForm, SaveMetaForm (schemas and inferred types).
  * Depends on: @forge/core, schemas/director-config, zod.
  */
 
@@ -32,7 +32,20 @@ import { CompanyConfigReply } from '#/schemas/director-config.js';
 export const HarnessView = Harness.extend({
   paused_until: z.iso.datetime().optional(),
   pause_reason: z.string().optional(),
+  /** What a run will use: the stored `bypass_permissions`, or on when it was never set (d-0183). */
+  bypass_permissions_effective: z.boolean().optional(),
   secrets: z.object({ api_key: z.boolean(), oauth_token: z.boolean() }),
+  /** What the newest finished Worker run on this harness did: a harness that has done real work is working, tested or not. */
+  last_run: z
+    .object({
+      at: z.iso.datetime(),
+      status: z.string(),
+      version: z
+        .string()
+        .nullish()
+        .transform((v) => v ?? undefined),
+    })
+    .optional(),
 });
 export type HarnessView = z.infer<typeof HarnessView>;
 
@@ -136,3 +149,17 @@ export const DecisionForm = z.object({
   reason: z.string().trim().min(1, 'Give a short reason; it is kept in the record.'),
 });
 export type DecisionForm = z.infer<typeof DecisionForm>;
+
+/** `GET /settings/setup-cache`: bytes held by the copied install folders and by the shared package downloads. */
+export const SetupCacheView = z.object({
+  setup_bytes: z.number().int().nonnegative(),
+  downloads_bytes: z.number().int().nonnegative(),
+});
+export type SetupCacheView = z.infer<typeof SetupCacheView>;
+
+/** `POST /settings/setup-cache/clear`: what was removed. */
+export const SetupCacheClearReply = z.object({
+  freed_bytes: z.number().int().nonnegative(),
+  cleared: z.array(z.enum(['setup', 'downloads'])),
+});
+export type SetupCacheClearReply = z.infer<typeof SetupCacheClearReply>;

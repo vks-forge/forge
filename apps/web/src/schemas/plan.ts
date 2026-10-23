@@ -31,6 +31,8 @@ export const PlanTicket = z.object({
   priority: PlanPriority.default('normal'),
   depends_on: z.array(z.string()).default([]),
   lane: PlanLane.default('standard'),
+  /** True when the owner chose this lane; the automatic size checks then leave it alone (protected files still run in Full). */
+  lane_by_owner: z.boolean().optional(),
   size: z.enum(['S', 'M', 'L']).default('M'),
   files: z.array(z.string()).default([]),
   /** The Director's changes to this ticket's own copy of its lane, each with a reason; absent when it made none. */
@@ -111,11 +113,22 @@ export const FloorResult = z
   }));
 export type FloorResult = z.infer<typeof FloorResult>;
 
+/** A ticket that approving the current plan would cancel. */
+export const PlanImpactTicket = z.object({ id: z.string(), title: z.string() });
+export type PlanImpactTicket = z.infer<typeof PlanImpactTicket>;
+
 /** `GET /cards/:id/plan`. */
 export const PlanReply = z.object({
   versions: z.array(PlanVersionRef).default([]),
   current: PlanVersion.nullable().default(null),
   floor: FloorResult.nullable().catch(null).default(null),
+  /** When the floor was last computed, for a plan already approved (the floor is then frozen and `floor` is null). */
+  floor_frozen_at: z.iso.datetime().nullable().catch(null).default(null),
+  /** Tickets approval would cancel, and the ones of those the plan does not cover (older servers send neither). */
+  will_cancel: z.array(PlanImpactTicket).catch([]).default([]),
+  not_covered: z.array(PlanImpactTicket).catch([]).default([]),
+  /** Kept tickets whose plan key the plan reuses for a new ticket. */
+  already_exists: z.array(PlanImpactTicket).catch([]).default([]),
 });
 export type PlanReply = z.infer<typeof PlanReply>;
 

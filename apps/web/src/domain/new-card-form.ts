@@ -10,7 +10,7 @@
  *   answer into a sentence, and a loop names the cards in it so the user knows which link to
  *   remove.
  *
- * Exports: EMPTY_NEW_CARD, validateNewCard(), toNewCardInput(), openCardItems(), refusalOf(),
+ * Exports: EMPTY_NEW_CARD, descriptionHint(), validateNewCard(), toNewCardInput(), openCardItems(), refusalOf(),
  *   cycleOf(), TYPE_ITEMS, PRIORITY_ITEMS.
  * Depends on: schemas/new-card, schemas/cards (types), api/api-error, api/describe-error,
  *   types/new-card.types, types/picker.types. No IO.
@@ -62,6 +62,19 @@ export const PRIORITY_ITEMS: readonly (PickerItem & { value: CardPriority })[] =
   { value: 'high', label: 'High' },
   { value: 'urgent', label: 'Urgent' },
 ];
+
+/**
+ * The description's hint: what is wanted and why it is wanted, with a live count until the minimum
+ * is met, so a disabled Create always has its reason on screen before anything is typed.
+ */
+export function descriptionHint(description: string): string {
+  const length = description.trim().length;
+  const base = `At least ${DESCRIPTION_MIN} characters, so the Director has something to start from. Markdown works.`;
+
+  return length >= DESCRIPTION_MIN
+    ? base
+    : `${base} ${length} of ${DESCRIPTION_MIN} so far.`;
+}
 
 /** What is wrong with the form, field by field; an empty object means Create may be enabled. */
 export function validateNewCard(form: NewCardForm): NewCardProblems {

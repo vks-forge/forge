@@ -73,13 +73,17 @@ describe('path rules', () => {
       evaluateToolRules(std, 'web_fetch', 'https://docs.example.com/a/b').effect,
     ).toBe('allow');
 
-    expect(evaluateToolRules(std, 'web_fetch', 'https://evil.example.com').effect).toBe(
-      'ask',
+    expect(evaluateToolRules(std, 'web_fetch', 'https://authjs.dev/a').effect).toBe(
+      'allow',
     );
 
-    expect(
-      evaluateToolRules(full, 'web_fetch', 'https://docs.example.com/a').effect,
-    ).toBe('ask');
+    expect(evaluateToolRules(full, 'web_fetch', 'https://authjs.dev/a').effect).toBe(
+      'allow',
+    );
+
+    expect(evaluateToolRules(full, 'web_fetch', 'http://example.com/a').effect).toBe(
+      'allow',
+    );
 
     expect(evaluateToolRules(full, 'web_search', 'vitest coverage').effect).toBe('allow');
   });

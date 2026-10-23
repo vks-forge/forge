@@ -11,7 +11,7 @@
  *   a tick that finds its result writes the row and acts on it.
  *
  * Exports: startScriptMember(), applyFinishedGates().
- * Depends on: @forge/core (stage types), tick/{stage-artifacts,stage-labels,stage-records,stage-script-jobs,
+ * Depends on: @forge/core (stage types), tick/{prep-checks,stage-artifacts,stage-labels,stage-records,stage-script-jobs,
  *   stage-send-back,verify-outcomes}, types/stage-runner. IO: the script runner and the report store.
  */
 
@@ -21,6 +21,7 @@ import {
   persistArtifacts,
   pipelineHasChecks,
 } from '#/tick/stage-artifacts.js';
+import { withPrepared } from '#/tick/prep-checks.js';
 import { labelOf, policyOf } from '#/tick/stage-labels.js';
 import { beginStageRun, finishStageRun } from '#/tick/stage-records.js';
 import {
@@ -103,15 +104,17 @@ export async function startScriptMember(
     key,
     { ticketId: t.ticket.id, stageRunId: rowId, purpose: 'gate' },
     () =>
-      runner.run({
-        worktreePath: t.worktree,
-        baseSha: t.baseSha,
-        command: run.command,
-        ...(run.cwd === undefined ? {} : { cwd: run.cwd }),
-        timeoutMs: run.timeout_ms,
-        guardPaths: run.guard_paths,
-        expect: 'pass',
-      }),
+      withPrepared(t.runtime, t.worktree, t.baseSha, () =>
+        runner.run({
+          worktreePath: t.worktree,
+          baseSha: t.baseSha,
+          command: run.command,
+          ...(run.cwd === undefined ? {} : { cwd: run.cwd }),
+          timeoutMs: run.timeout_ms,
+          guardPaths: run.guard_paths,
+          expect: 'pass',
+        }),
+      ),
   );
 }
 

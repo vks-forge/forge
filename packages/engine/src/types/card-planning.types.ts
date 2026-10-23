@@ -13,8 +13,8 @@
  * Exports: AnswerGrillInput, AnswerGrillResult, GrillShortcutKind, GrillShortcutResult,
  *   ApprovePlanResult, RequestChangesResult, TicketEdit, EditPlanInput, EditPlanResult,
  *   StartPlanningResult, RetryPlanningResult, RunAsExpressResult, PlanReadResult, PlanVersionResult, PlanCtx, ReadCtx,
- *    StepOutcome, PlanEvent, FloorFacts, FlowEnd, ReadResult, ReadBudget, ModelCall, StepFinish,
- *   ReadOutput, ReadStepResult, OpenExtras (the planning doors are in types/planning-doors).
+ *    StepOutcome, PlanEvent, OwnerAsk, FloorFacts, FlowEnd, ReadResult, ReadBudget, ModelCall, StepFinish,
+ *   ReadOutput, ReadStepResult, RepoFilesList, OpenExtras (the planning doors are in types/planning-doors).
  * Depends on: @forge/core (card, plan, ticket and config types), types/engine-state. Types only.
  */
 
@@ -27,6 +27,7 @@ import type {
   FilesRead,
   FloorResult,
   GrillState,
+  Lane,
   NewCardEvent,
   PlanVersion,
   PlanVersionRef,
@@ -66,6 +67,8 @@ export type ApprovePlanResult =
       readonly status: 'approved';
       readonly card: Card;
       readonly ticket_ids: readonly string[];
+      /** Tickets of an earlier plan this approval cancelled; the caller removes their worktrees after commit. */
+      readonly cancelled?: readonly Ticket[];
     }
   | { readonly status: 'not_found' }
   | { readonly status: 'plan_not_found' }
@@ -80,13 +83,15 @@ export type RequestChangesResult =
   | { readonly status: 'invalid_comment' };
 
 /**
- * One light edit of a planned ticket: rename, change priority, or remove. `drop_pipeline_ops` lists the positions of
+ * One light edit of a planned ticket: rename, change priority, set its lane, or remove. `drop_pipeline_ops` lists the positions of
  * the Director's pipeline ops to take off the ticket (the owner may remove a change, never add one).
  */
 export interface TicketEdit {
   readonly key: string;
   readonly title?: string;
   readonly priority?: CardPriority;
+  /** The owner picks this ticket's lane; approval then skips the automatic size raise (Tier C still forces Full, d-0177). */
+  readonly lane?: Lane;
   readonly removed?: boolean;
   readonly drop_pipeline_ops?: readonly number[];
 }
@@ -137,7 +142,16 @@ export type PlanReadResult =
       readonly status: 'ok';
       readonly versions: readonly PlanVersionRef[];
       readonly current: PlanVersion | null;
+      /** The floor as it stands now; null once the plan is approved (see `floor_frozen_at`) or when there is no plan. */
       readonly floor: FloorResult | null;
+      /** When the plan was approved and the floor stopped being asked; null while approval is still ahead. */
+      readonly floor_frozen_at: string | null;
+      /** Tickets approving the current plan would cancel (never started). */
+      readonly will_cancel: readonly { readonly id: string; readonly title: string }[];
+      /** The part of `will_cancel` the plan neither plans nor names as dropped. */
+      readonly not_covered: readonly { readonly id: string; readonly title: string }[];
+      /** Kept tickets whose plan key the plan reuses for a new ticket. */
+      readonly already_exists: readonly { readonly id: string; readonly title: string }[];
     }
   | { readonly status: 'not_found' };
 
@@ -232,6 +246,14 @@ export interface ReadStepResult<F> {
   readonly files: FilesRead;
   readonly cost: number;
   readonly decisions: Record<string, boolean>;
+  /** True when a survey answered without reading a file of a repository that has some (the grill is told). */
+  readonly readNothing?: boolean;
+}
+
+/** The repository's tracked paths at HEAD as a survey is shown them. */
+export interface RepoFilesList {
+  readonly paths: readonly string[];
+  readonly truncated: boolean;
 }
 
 /** What writing a grill question adds to the stored state besides the question itself. */
@@ -241,4 +263,17 @@ export interface OpenExtras {
   readonly decisions?: Record<string, boolean> | undefined;
   /** The question came off the front of the queued list. */
   readonly fromQueue?: boolean;
+}
+
+/**
+ * What the Director raises on a card when it needs the owner: the one-line `reason` older
+ * readers show, the `kind` and `title` the dock names it by, the separate `items` (floor
+ * reasons or questions) and the actions the owner may take.
+ */
+export interface OwnerAsk {
+  readonly reason: string;
+  readonly kind: 'plan_approval' | 'director_questions';
+  readonly title: string;
+  readonly items: readonly string[];
+  readonly actions: readonly ('answer' | 'approve_plan' | 'request_changes')[];
 }

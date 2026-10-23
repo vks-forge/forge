@@ -206,6 +206,7 @@ export async function applyFinishedChecks(
         job.cost,
         ctx.nowIso,
         director.budget_warning_usd,
+        { kind: 'stage_check', ticketId: t.ticket.id },
       );
 
       if (outcome.ok) {

@@ -14,7 +14,7 @@
  * Depends on: helpers/github-rig, helpers/rejection, @forge/core.
  */
 
-import { HeadMovedError } from '@forge/core';
+import { HeadMovedError, MergeConflictError } from '@forge/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   closeGitHubRigs,
@@ -100,11 +100,38 @@ describe('github app host: token refresh and merge pinning', () => {
     },
   );
 
-  it('still parks a merge GitHub refuses for good (405 not mergeable)', async () => {
+  it.each([
+    'Pull Request is not mergeable',
+    'Merge conflict',
+    'Head branch has conflicts with the base',
+  ])(
+    'reports a clash with the base as a merge conflict, not a policy refusal (405 %s)',
+    async (message) => {
+      const r = await rig();
+      r.server.branches.set('feat/a', 'sha1');
+      const pr = await open(r, 'feat/a');
+      r.server.failNext('PUT', '/merge', 405, {}, message);
+
+      const err = await r.host
+        .merge(pr.number, 'squash', 'sha1')
+        .catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(MergeConflictError);
+      expect(err).toMatchObject({ errorFamily: 'merge_conflict' });
+    },
+  );
+
+  it('still parks a merge GitHub refuses for good (405 branch protection)', async () => {
     const r = await rig();
     r.server.branches.set('feat/a', 'sha1');
     const pr = await open(r, 'feat/a');
-    r.server.failNext('PUT', '/merge', 405, {}, 'Pull Request is not mergeable');
+    r.server.failNext(
+      'PUT',
+      '/merge',
+      405,
+      {},
+      'At least 1 approving review is required',
+    );
 
     await expect(r.host.merge(pr.number, 'squash', 'sha1')).rejects.toMatchObject({
       errorFamily: 'policy_denied',

@@ -15,8 +15,8 @@ import type { CardCost, TicketCost } from '#/schemas/cost-rollup.js';
 import type { Run } from '#/schemas/run.js';
 import type { CardCostInput } from '#/types/cost-rollup-input.types.js';
 
-/** The ticket's runs, oldest start first, with their summed recorded cost. */
-export function rollupTicketCost(runs: readonly Run[]): TicketCost {
+/** The ticket's runs, oldest start first, with their summed recorded cost plus the Director's steps on it. */
+export function rollupTicketCost(runs: readonly Run[], directorUsd = 0): TicketCost {
   const by_run = [...runs]
     .sort((a, b) =>
       a.started_at < b.started_at ? -1 : a.started_at > b.started_at ? 1 : 0,
@@ -29,7 +29,14 @@ export function rollupTicketCost(runs: readonly Run[]): TicketCost {
       recorded: r.cost_usd !== undefined,
     }));
 
-  return { total_usd: by_run.reduce((sum, r) => sum + r.usd, 0), by_run };
+  const workers_usd = by_run.reduce((sum, r) => sum + r.usd, 0);
+
+  return {
+    total_usd: workers_usd + directorUsd,
+    workers_usd,
+    director_usd: directorUsd,
+    by_run,
+  };
 }
 
 /** The card's Director spend plus its tickets' run spend, with every ticket listed highest first. */

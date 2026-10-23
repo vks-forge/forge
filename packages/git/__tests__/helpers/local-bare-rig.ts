@@ -15,8 +15,14 @@ import type { LocalRemote } from '#tests/helpers/local-remote.js';
 
 export const T0 = Date.parse('2026-10-13T10:00:00.000Z');
 
-export const hostFor = (r: LocalRemote) =>
-  createLocalBareGitHost({ remotePath: r.remotePath, baseBranch: 'main', now: () => T0 });
+/** A host over the remote; `localRepo` is the repository `syncBase` fetches into. */
+export const hostFor = (r: LocalRemote, localRepo?: string) =>
+  createLocalBareGitHost({
+    remotePath: r.remotePath,
+    baseBranch: 'main',
+    now: () => T0,
+    ...(localRepo === undefined ? {} : { localRepo }),
+  });
 
 /** Commits a branch in the clone and pushes it through the host, as the engine would. */
 export async function push(

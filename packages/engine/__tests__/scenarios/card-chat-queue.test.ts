@@ -87,6 +87,8 @@ describe('card reply queue', () => {
 
   it('leaves a fresh claim alone and takes a stale one again', async () => {
     const rig = await makeRig();
+    // The first tick releases claims held at boot (a dead process's); this claim is made by a live one.
+    await rig.tick();
     await discussion(rig);
     const claimedAt = new Date(rig.clock.now() - 60_000).toISOString();
     await rig.storage.transaction((tx) => tx.cardReplyQueue.claim(claimedAt, claimedAt));

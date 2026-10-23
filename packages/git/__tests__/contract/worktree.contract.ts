@@ -7,15 +7,16 @@
  *   under the configured worktree root (outside the checkout), create is safe to repeat after a crash, changed-file lists
  *   cover committed, modified and untracked files but not ignored ones, the diff reports
  *   added, modified, deleted and renamed files plus a readable patch for the gates, commits carry the
- *   Forge author, removal keeps the branch, and hostile refs are refused before git sees
- *   them. A new implementation passes this before it gets tests of its own.
+ *   Forge author, removal keeps the branch unless told to delete it, setup's prep record round-trips
+ *   and its recorded outputs stay out of changed files, the diff and commits (an install is not the
+ *   Worker's work, d-0180), and hostile refs are refused before git sees them. A new implementation passes this before it gets tests of its own.
  *
  * Exports: WorktreeHarness, describeWorktreeContract().
  * Depends on: vitest, @forge/core (TicketId, WorktreeManager, InvalidInputError).
  */
 
 import { InvalidInputError, TicketId } from '@forge/core';
-import type { WorktreeManager } from '@forge/core';
+import type { WorktreeManager, WorktreePrep } from '@forge/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 /**
@@ -31,6 +32,8 @@ export interface WorktreeHarness {
   branchExists(branch: string): Promise<boolean>;
   /** Writes (or overwrites) a file relative to a worktree path. */
   write(worktreePath: string, relPath: string, content: string): Promise<void>;
+  /** Writes a file and marks it read-only, as package managers do for cached files. */
+  writeReadOnly(worktreePath: string, relPath: string, content: string): Promise<void>;
   /** Deletes a file relative to a worktree path. */
   remove(worktreePath: string, relPath: string): Promise<void>;
   /** Renames a file relative to a worktree path. */
@@ -39,6 +42,15 @@ export interface WorktreeHarness {
   authorOf(worktreePath: string, sha: string): Promise<string>;
   close(): Promise<void>;
 }
+
+const prep = (outputs: string[]): WorktreePrep => ({
+  key: 'a'.repeat(64),
+  status: 'ready',
+  outputs,
+  path: [],
+  steps: [{ name: 'Install', exit_code: 0, ms: 5 }],
+  at: '2026-10-20T10:00:00.000Z',
+});
 
 const tid = (n: number): TicketId => TicketId.parse(`FRG-${n}`);
 
@@ -169,6 +181,91 @@ export function describeWorktreeContract(
       expect(await h.exists(wt.path)).toBe(false);
       expect(await h.branchExists('feat/FRG-1-a')).toBe(true);
       await expect(h.manager.remove(wt.path)).resolves.toBeUndefined();
+    });
+
+    it('removes a tree holding a read-only file', async () => {
+      const wt = await h.manager.create(tid(1), 'feat/FRG-1-a', 'main');
+      await h.writeReadOnly(wt.path, 'cache/pkg/index.js', 'x');
+
+      await h.manager.remove(wt.path);
+
+      expect(await h.exists(wt.path)).toBe(false);
+    });
+
+    it('deletes the local branch with the tree when asked, and tolerates a branch that is already gone', async () => {
+      const wt = await h.manager.create(tid(1), 'feat/FRG-1-a', 'main');
+
+      await h.manager.remove(wt.path, { deleteBranch: 'feat/FRG-1-a' });
+
+      expect(await h.exists(wt.path)).toBe(false);
+      expect(await h.branchExists('feat/FRG-1-a')).toBe(false);
+      await expect(
+        h.manager.remove(wt.path, { deleteBranch: 'feat/FRG-1-a' }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('refuses to delete a branch whose name looks like an option', async () => {
+      const wt = await h.manager.create(tid(1), 'feat/FRG-1-a', 'main');
+
+      await expect(
+        h.manager.remove(wt.path, { deleteBranch: '--all' }),
+      ).rejects.toBeInstanceOf(InvalidInputError);
+    });
+
+    it('stores the prep record beside the tree: none at first, round trip, gone with remove', async () => {
+      const wt = await h.manager.create(tid(1), 'feat/FRG-1-a', 'main');
+      expect(await h.manager.readPrep(wt.path)).toBeNull();
+
+      await h.manager.writePrep(wt.path, prep(['node_modules']));
+
+      expect(await h.manager.readPrep(wt.path)).toEqual(prep(['node_modules']));
+      await h.manager.remove(wt.path);
+      expect(await h.manager.readPrep(wt.path)).toBeNull();
+    });
+
+    it('lists untracked top-level paths once per folder, without ignored files', async () => {
+      const wt = await h.manager.create(tid(1), 'feat/FRG-1-a', 'main');
+      await h.write(wt.path, 'node_modules/a/index.js', 'a');
+      await h.write(wt.path, 'node_modules/b/index.js', 'b');
+      await h.write(wt.path, 'notes.txt', 'n');
+      await h.write(wt.path, 'debug.log', 'ignored');
+
+      expect(await h.manager.untracked(wt.path)).toEqual(['node_modules', 'notes.txt']);
+    });
+
+    it('hides recorded setup outputs from changed files, the diff and commits, but still sees a Worker file beside them', async () => {
+      const wt = await h.manager.create(tid(1), 'feat/FRG-1-a', 'main');
+      await h.write(wt.path, 'node_modules/a/index.js', 'a');
+      await h.manager.writePrep(wt.path, prep(['node_modules']));
+      await h.write(wt.path, 'src/app.ts', 'export {};');
+
+      const changed = await h.manager.changedFiles(wt.path, wt.baseSha);
+      const d = await h.manager.diff(wt.path, wt.baseSha);
+
+      expect(changed).toEqual(['src/app.ts']);
+      expect(d.files).toEqual([{ status: 'A', path: 'src/app.ts' }]);
+      expect(d.patch).not.toContain('node_modules');
+
+      const sha = await h.manager.commitAll(wt.path, 'work');
+
+      expect(sha).toMatch(/^[0-9a-f]{40}$/);
+      expect(await h.manager.changedFiles(wt.path, wt.baseSha)).toEqual(['src/app.ts']);
+    });
+
+    it('commits nothing when the only new files are recorded setup outputs', async () => {
+      const wt = await h.manager.create(tid(1), 'feat/FRG-1-a', 'main');
+      await h.write(wt.path, 'node_modules/a/index.js', 'a');
+      await h.manager.writePrep(wt.path, prep(['node_modules']));
+
+      expect(await h.manager.commitAll(wt.path, 'nothing')).toBeNull();
+    });
+
+    it('reports the tree root for the path it handed out', async () => {
+      const wt = await h.manager.create(tid(1), 'feat/FRG-1-a', 'main');
+
+      const norm = (p: string): string => p.replaceAll('\\', '/');
+
+      expect(norm(h.manager.rootOf(wt.path))).toBe(norm(wt.path));
     });
 
     it('rejects a base ref that looks like an option', async () => {

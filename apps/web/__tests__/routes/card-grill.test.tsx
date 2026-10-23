@@ -1,22 +1,30 @@
 /**
- * Pins: the card chat draws a grill question (text, why, options, a Recommended badge, "Other",
- * two shortcuts and the open-point count), posts the chosen option, free text and both
- * shortcuts, collapses answered questions to the chosen words, labels an answer the Director
- * gave from its own recommendation, lets only the newest open question be answered and says in
- * words when the question is no longer open.
+ * Pins: the open grill question lives in the needs-you dock (text, why on demand, options, a
+ * Recommended badge, a one-tap "Use recommended" button, two shortcuts and the open-point count) and the chat keeps a one-line
+ * record of it; the dock posts the chosen option and both shortcuts, a typed message in the
+ * normal box is the free-text answer (there is no second "Other" box), answered questions
+ * collapse to the chosen words, an answer the Director gave from its own recommendation is
+ * labelled, only the newest open question is answerable and a refusal is said in words.
  *
- * Why: the grill is how the owner steers every card. A question whose buttons post nothing, or
- *   an old question that can still be answered (the server would refuse it), stops the owner
- *   from moving a card forward.
+ * Why: the grill is how the owner steers every card. A question whose buttons post nothing, an
+ *   old question that can still be answered (the server would refuse it), or two free-text
+ *   boxes for one answer stop the owner from moving a card forward.
  * Depends on: the stubbed Forge server via helpers/render-app, helpers/flow-fixtures,
- *   components/card/question-block.
+ *   routes/card/dock-question, components/work/needs-you-dock, components/card/question-record.
  */
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { flowEvent, flowRoutes, FLOW_CARD } from '#tests/helpers/flow-fixtures.js';
+import {
+  dockItem,
+  flowEvent,
+  flowRoutes,
+  FLOW_CARD,
+} from '#tests/helpers/flow-fixtures.js';
+import type { FlowRoutesOptions } from '#tests/helpers/flow-fixtures.js';
 import { refusal } from '#tests/helpers/fetch-stub.js';
+import { openNeedsYou } from '#tests/helpers/needs-you-modal.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
 const PAGE = `/p/sample-service/cards/${FLOW_CARD}`;
@@ -38,33 +46,127 @@ const grilling = [
   flowEvent(1, 'grill_question', QUESTION),
 ];
 
+/** A grilling card whose open question waits in the dock, as the server reports it. */
+const asking = (
+  events: ReturnType<typeof flowEvent>[] = grilling,
+  answers: FlowRoutesOptions['answers'] = {},
+) =>
+  flowRoutes({
+    events,
+    answers,
+    detail: {
+      needs_you: true,
+      needs_you_detail: [
+        dockItem('director_questions', ['answer'], {
+          title: 'The Director has a question',
+          items: [QUESTION.text],
+        }),
+      ],
+    },
+  });
+
 describe('Card chat: grill question', () => {
-  it('shows the question, why, options, the Recommended badge, shortcuts and open points', async () => {
-    renderApp({ path: PAGE, routes: flowRoutes({ events: grilling }) });
+  it('shows the question, why on demand, options, the Recommended badge, shortcuts and open points in the dock', async () => {
+    const user = userEvent.setup();
+    renderApp({ path: PAGE, routes: asking() });
+    const dock = await openNeedsYou(user, 'Waiting on you (1)');
+
+    expect(await within(dock).findByText(QUESTION.text)).toBeInTheDocument();
+    expect(within(dock).queryByText(QUESTION.why)).not.toBeInTheDocument();
+
+    await user.click(within(dock).getByRole('button', { name: /Why it matters/ }));
+
+    expect(within(dock).getByText(QUESTION.why)).toBeInTheDocument();
+    expect(
+      within(dock).getByRole('button', { name: /^Three times/ }),
+    ).toBeInTheDocument();
+
+    expect(within(dock).getByRole('button', { name: /^Five times/ })).toBeInTheDocument();
+    expect(within(dock).getByText('Recommended')).toBeInTheDocument();
+    expect(within(dock).getByText(/3 open points/)).toBeInTheDocument();
+    expect(
+      within(dock).getByRole('button', { name: 'Use your recommendations for the rest' }),
+    ).toBeInTheDocument();
+
+    expect(
+      within(dock).getByRole('button', { name: 'Enough, write the plan' }),
+    ).toBeInTheDocument();
+
+    // No second free-text box: the message box answers.
+    expect(screen.queryByRole('button', { name: 'Other…' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Your answer')).not.toBeInTheDocument();
+  });
+
+  it('offers one tap on the recommended answer and keeps the other options', async () => {
+    const user = userEvent.setup();
+    const { forge } = renderApp({ path: PAGE, routes: asking() });
+    const dock = await openNeedsYou(user, 'Waiting on you (1)');
+
+    const primary = await within(dock).findByRole('button', {
+      name: 'Use recommended: Three times',
+    });
+
+    expect(primary).toBeVisible();
+    expect(within(dock).getByRole('button', { name: /^Five times/ })).toBeVisible();
+
+    await user.click(primary);
+
+    await waitFor(() =>
+      expect(forge.stub.callsTo('POST /cards/:id/grill/answer')[0]?.body).toEqual({
+        question_id: 'q1',
+        option_id: 'o1',
+      }),
+    );
+  });
+
+  it('draws no one-tap button when the Director recommends nothing, and digits still answer', async () => {
+    const user = userEvent.setup();
+    const { forge } = renderApp({
+      path: PAGE,
+      routes: asking([
+        flowEvent(0, 'user_message', { text: 'Retry failed webhooks' }),
+        flowEvent(1, 'grill_question', {
+          ...QUESTION,
+          options: QUESTION.options.map((option) => ({ ...option, recommended: false })),
+        }),
+      ]),
+    });
+
+    const dock = await openNeedsYou(user, 'Waiting on you (1)');
+
+    await within(dock).findByRole('button', { name: /^Five times/ });
+
+    expect(within(dock).queryByRole('button', { name: /Use recommended/ })).toBeNull();
+
+    dock.focus();
+    await user.keyboard('1');
+
+    await waitFor(() =>
+      expect(forge.stub.callsTo('POST /cards/:id/grill/answer')[0]?.body).toEqual({
+        question_id: 'q1',
+        option_id: 'o1',
+      }),
+    );
+  });
+
+  it('keeps only a record of the question in the chat, with no buttons', async () => {
+    renderApp({ path: PAGE, routes: asking() });
     const log = await screen.findByRole('log', { name: 'Conversation' });
 
     expect(await within(log).findByText(QUESTION.text)).toBeInTheDocument();
-    expect(within(log).getByText(QUESTION.why)).toBeInTheDocument();
-    expect(within(log).getByRole('button', { name: /Three times/ })).toBeInTheDocument();
-    expect(within(log).getByRole('button', { name: /Five times/ })).toBeInTheDocument();
-    expect(within(log).getByText('Recommended')).toBeInTheDocument();
-    expect(within(log).getByText('3 open points')).toBeInTheDocument();
+    expect(within(log).getByText('Waiting for your answer')).toBeInTheDocument();
+    expect(within(log).queryByRole('button', { name: /Three times/ })).toBeNull();
     expect(
-      within(log).getByRole('button', { name: 'Use your recommendations for the rest' }),
-    ).toBeInTheDocument();
-
-    expect(
-      within(log).getByRole('button', { name: 'Enough, write the plan' }),
-    ).toBeInTheDocument();
-
-    expect(within(log).getByRole('button', { name: 'Other…' })).toBeInTheDocument();
+      within(log).queryByRole('button', { name: 'Enough, write the plan' }),
+    ).toBeNull();
   });
 
   it('posts the chosen option', async () => {
     const user = userEvent.setup();
-    const { forge } = renderApp({ path: PAGE, routes: flowRoutes({ events: grilling }) });
+    const { forge } = renderApp({ path: PAGE, routes: asking() });
+    await openNeedsYou(userEvent.setup());
 
-    await user.click(await screen.findByRole('button', { name: /Five times/ }));
+    await user.click(await screen.findByRole('button', { name: /^Five times/ }));
 
     await waitFor(() =>
       expect(forge.stub.callsTo('POST /cards/:id/grill/answer')[0]?.body).toEqual({
@@ -74,29 +176,47 @@ describe('Card chat: grill question', () => {
     );
   });
 
-  it('posts a free-text answer from Other', async () => {
+  it('answers with a number key while the dock has focus', async () => {
     const user = userEvent.setup();
-    const { forge } = renderApp({ path: PAGE, routes: flowRoutes({ events: grilling }) });
+    const { forge } = renderApp({ path: PAGE, routes: asking() });
+    const dock = await openNeedsYou(user, 'Waiting on you (1)');
 
-    await user.click(await screen.findByRole('button', { name: 'Other…' }));
-    await user.type(
-      screen.getByLabelText('Your answer'),
-      'Retry until the target answers',
-    );
-
-    await user.click(screen.getByRole('button', { name: 'Send answer' }));
+    await within(dock).findByRole('button', { name: /^Five times/ });
+    dock.focus();
+    await user.keyboard('2');
 
     await waitFor(() =>
       expect(forge.stub.callsTo('POST /cards/:id/grill/answer')[0]?.body).toEqual({
         question_id: 'q1',
-        text: 'Retry until the target answers',
+        option_id: 'o2',
       }),
     );
   });
 
+  it('answers from the message box: a typed message is the free-text answer', async () => {
+    const user = userEvent.setup();
+    const { forge } = renderApp({ path: PAGE, routes: asking() });
+
+    const box = await screen.findByPlaceholderText(
+      /Type your answer to the open question/,
+    );
+
+    await user.type(box, 'Retry until the target answers');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() =>
+      expect(forge.stub.callsTo('POST /cards/:id/messages')[0]?.body).toMatchObject({
+        text: 'Retry until the target answers',
+      }),
+    );
+
+    expect(forge.stub.callsTo('POST /cards/:id/grill/answer')).toHaveLength(0);
+  });
+
   it('posts both shortcuts', async () => {
     const user = userEvent.setup();
-    const { forge } = renderApp({ path: PAGE, routes: flowRoutes({ events: grilling }) });
+    const { forge } = renderApp({ path: PAGE, routes: asking() });
+    await openNeedsYou(userEvent.setup());
 
     await user.click(
       await screen.findByRole('button', {
@@ -119,128 +239,28 @@ describe('Card chat: grill question', () => {
     );
   });
 
-  it('collapses an answered question to the chosen words and shows the owner bubble', async () => {
-    renderApp({
-      path: PAGE,
-      routes: flowRoutes({
-        events: [
-          ...grilling,
-          flowEvent(2, 'grill_answer', {
-            question_id: 'q1',
-            option_id: 'o1',
-            by: 'owner',
-          }),
-        ],
-      }),
-    });
-
-    const log = await screen.findByRole('log', { name: 'Conversation' });
-
-    expect(await within(log).findByText('Three times')).toBeInTheDocument();
-    expect(within(log).getByText(QUESTION.text)).toBeInTheDocument();
-    expect(
-      within(log).queryByRole('button', { name: /Five times/ }),
-    ).not.toBeInTheDocument();
-
-    expect(
-      within(log).queryByRole('button', { name: 'Enough, write the plan' }),
-    ).toBeNull();
-  });
-
-  it('draws a typed answer once, labels the open question waiting and the answered one answered', async () => {
-    renderApp({
-      path: PAGE,
-      routes: flowRoutes({
-        events: [
-          ...grilling,
-          flowEvent(2, 'user_message', { text: 'Retry until it works' }),
-          flowEvent(3, 'grill_answer', {
-            question_id: 'q1',
-            text: 'Retry until it works',
-            by: 'owner',
-          }),
-          flowEvent(4, 'grill_question', {
-            ...QUESTION,
-            question_id: 'q2',
-            text: 'Should failures page someone?',
-          }),
-        ],
-      }),
-    });
-
-    const log = await screen.findByRole('log', { name: 'Conversation' });
-
-    expect(await within(log).findByText('Should failures page someone?')).toBeVisible();
-    expect(within(log).getAllByText('Retry until it works')).toHaveLength(1);
-    expect(within(log).getByText('Answered')).toBeInTheDocument();
-    expect(within(log).getByText('Waiting for your answer')).toBeInTheDocument();
-    expect(within(log).queryByText('Not answered')).toBeNull();
-    expect(
-      screen.getByPlaceholderText(/Type your answer to the open question/),
-    ).toBeInTheDocument();
-  });
-
-  it('shows the picked option label as the owner bubble', async () => {
-    renderApp({
-      path: PAGE,
-      routes: flowRoutes({
-        events: [
-          ...grilling,
-          flowEvent(2, 'grill_answer', {
-            question_id: 'q1',
-            option_id: 'o2',
-            by: 'owner',
-          }),
-        ],
-      }),
-    });
-
-    const log = await screen.findByRole('log', { name: 'Conversation' });
-
-    expect(await within(log).findByText('Five times')).toBeInTheDocument();
-    expect(within(log).getAllByText('You').length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('labels an answer the Director gave from its own recommendation', async () => {
-    renderApp({
-      path: PAGE,
-      routes: flowRoutes({
-        events: [
-          ...grilling,
-          flowEvent(2, 'grill_answer', {
-            question_id: 'q1',
-            option_id: 'o1',
-            by: 'recommendation',
-          }),
-        ],
-      }),
-    });
-
-    expect(await screen.findByText('Recommendation used')).toBeInTheDocument();
-  });
-
   it('lets only the newest open question be answered', async () => {
     renderApp({
       path: PAGE,
-      routes: flowRoutes({
-        events: [
-          ...grilling,
-          flowEvent(2, 'grill_question', {
-            ...QUESTION,
-            question_id: 'q2',
-            text: 'Should failures page someone?',
-            options: [
-              { id: 'p1', label: 'Yes, page', recommended: false },
-              { id: 'p2', label: 'No, log only', recommended: true },
-            ],
-            open_points: 2,
-          }),
-        ],
-      }),
+      routes: asking([
+        ...grilling,
+        flowEvent(2, 'grill_question', {
+          ...QUESTION,
+          question_id: 'q2',
+          text: 'Should failures page someone?',
+          options: [
+            { id: 'p1', label: 'Yes, page', recommended: false },
+            { id: 'p2', label: 'No, log only', recommended: true },
+          ],
+          open_points: 2,
+        }),
+      ]),
     });
 
+    await openNeedsYou(userEvent.setup());
+
     expect(
-      await screen.findByRole('button', { name: /No, log only/ }),
+      await screen.findByRole('button', { name: /^No, log only/ }),
     ).toBeInTheDocument();
 
     expect(screen.queryByRole('button', { name: /Three times/ })).not.toBeInTheDocument();
@@ -253,13 +273,14 @@ describe('Card chat: grill question', () => {
     const user = userEvent.setup();
     renderApp({
       path: PAGE,
-      routes: flowRoutes({
-        events: grilling,
-        answers: { grill_answer: refusal(409, 'question_not_open', 'closed') },
+      routes: asking(grilling, {
+        grill_answer: refusal(409, 'question_not_open', 'closed'),
       }),
     });
 
-    await user.click(await screen.findByRole('button', { name: /Three times/ }));
+    await openNeedsYou(userEvent.setup());
+
+    await user.click(await screen.findByRole('button', { name: /^Three times/ }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/no longer open/i);
   });

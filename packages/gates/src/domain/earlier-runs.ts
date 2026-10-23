@@ -6,7 +6,11 @@
  *   they are intact: each earlier chain is re-verified with that run's own secrets, exactly
  *   like the gated run's. A chain that fails, or whose secret is gone (run secrets are
  *   retired once a ticket closes), is set aside with the reason, never trusted: an earlier
- *   run that cannot be proven covers no file and backs no claim (fail closed).
+ *   run that cannot be proven covers no file and backs no claim (fail closed). The reason is
+ *   structured (`secret_gone` vs `chain_broken`) so the coverage finding can tell a lost proof,
+ *   which the Worker or the owner can repair, from a chain that does not verify, which is never
+ *   excused. Set-aside runs keep their raw receipts only to name the files they claim to have
+ *   edited.
  *
  * Exports: verifyEarlierRuns().
  * Depends on: @forge/tools (verifyGenerations), domain/chain-check (recordedGenerations), types/check.types. No IO.
@@ -17,13 +21,17 @@ import { recordedGenerations } from '#/domain/chain-check.js';
 import type {
   EarlierRunEvidence,
   RawEarlierRun,
+  SetAside,
   UnverifiedEarlierRun,
 } from '#/types/check.types.js';
 
-function unverifiableReason(run: RawEarlierRun): string | null {
+function unverifiable(run: RawEarlierRun): SetAside | null {
   for (let g = 1; g <= recordedGenerations(run.receipts); g++) {
     if (!run.secrets.has(g)) {
-      return `its run secret of generation ${g} is gone, chain unverifiable`;
+      return {
+        code: 'secret_gone',
+        reason: `its run secret of generation ${g} is gone, chain unverifiable`,
+      };
     }
   }
 
@@ -32,9 +40,15 @@ function unverifiableReason(run: RawEarlierRun): string | null {
 
     return result.ok
       ? null
-      : `receipt chain broken at index ${result.error.index}: ${result.error.reason}, unverifiable`;
+      : {
+          code: 'chain_broken',
+          reason: `receipt chain broken at index ${result.error.index}: ${result.error.reason}, unverifiable`,
+        };
   } catch (e) {
-    return `receipt chain unverifiable: ${e instanceof Error ? e.message : String(e)}`;
+    return {
+      code: 'chain_broken',
+      reason: `receipt chain unverifiable: ${e instanceof Error ? e.message : String(e)}`,
+    };
   }
 }
 
@@ -50,11 +64,11 @@ export function verifyEarlierRuns(runs: readonly RawEarlierRun[]): {
       continue;
     }
 
-    const reason = unverifiableReason(run);
-    if (reason === null) {
+    const aside = unverifiable(run);
+    if (aside === null) {
       verified.push({ runId: run.runId, receipts: run.receipts });
     } else {
-      unverified.push({ runId: run.runId, reason });
+      unverified.push({ runId: run.runId, ...aside, receipts: run.receipts });
     }
   }
 

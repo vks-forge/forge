@@ -16,7 +16,12 @@
  *   and the Worker keeps its worktree and conversation (d-0092). Only then does the tick get
  *   a bounded time to finish, and the runs it started in the meantime are interrupted too. Gate jobs
  *   get what is left of the same grace window, because a merge decided on a passed gate
- *   should not be lost to a Ctrl-C, but a hung gate must not hold the process. Last, the
+ *   should not be lost to a Ctrl-C, but a hung gate must not hold the process. The Director's
+ *   own steps (planning and chat turns, triage, steering replies, the brief of a Worker run) run
+ *   as jobs beside the tick: they get the same drain time (`engine.shutdown_drain_ms`, at most
+ *   half of what is left) to finish a write, then are abandoned. Nothing is lost by abandoning:
+ *   a job's debt is stored (the card reply queue, the ticket's own state), the card claims are
+ *   released at the next start, and the step simply runs again (d-0092, d-0134). Last, the
  *   HTTP port, the harness resources and the database close. Every step is best effort and
  *   logged: one failing cancel must not keep the port open.
  *
@@ -80,6 +85,19 @@ export async function shutdownServer(parts: ShutdownParts): Promise<void> {
     }
   };
 
+  // Read once: the drain of tool calls and the wait for Director steps use the same setting.
+  let drainTime: Promise<number> | undefined;
+  const configuredDrain = (): Promise<number> =>
+    (drainTime ??= (parts.drainMs?.() ?? Promise.resolve(DEFAULT_DRAIN_MS)).catch(
+      (error: unknown) => {
+        log('warn', 'shutdown: could not read the drain time; using the default', {
+          error: String(error),
+        });
+
+        return DEFAULT_DRAIN_MS;
+      },
+    ));
+
   // No new tool call is admitted from here on, and the calls already running get a bounded
   // time to record their effect receipt before their run is interrupted (see the header).
   const drainLiveRuns = async (): Promise<void> => {
@@ -89,15 +107,7 @@ export async function shutdownServer(parts: ShutdownParts): Promise<void> {
 
     parts.drain.begin();
     const live = engine.liveRunIds();
-    const configured = await (
-      parts.drainMs?.() ?? Promise.resolve(DEFAULT_DRAIN_MS)
-    ).catch((error: unknown) => {
-      log('warn', 'shutdown: could not read the drain time; using the default', {
-        error: String(error),
-      });
-
-      return DEFAULT_DRAIN_MS;
-    });
+    const configured = await configuredDrain();
 
     // Half the window at most, so the interrupts and the gate jobs keep time of their own.
     const budget = Math.min(configured, Math.floor(remaining() / 2));
@@ -133,6 +143,26 @@ export async function shutdownServer(parts: ShutdownParts): Promise<void> {
 
   // A tick that was mid-dispatch may have started runs after the first sweep.
   await interruptLiveRuns();
+
+  // The ticker is stopped, so no tick will apply what these steps decide: wait only so a step that
+  // is mid-write can finish, then abandon the rest.
+  await step('wait for Director steps', async () => {
+    if (engine.directorJobsInFlight() === 0) {
+      return;
+    }
+
+    const budget = Math.min(await configuredDrain(), Math.floor(remaining() / 2));
+    log('info', `shutdown: waiting up to ${budget} ms for Director steps`, {
+      jobs: engine.directorJobsInFlight(),
+    });
+
+    if (budget <= 0 || !(await within(budget, engine.idle()))) {
+      log(
+        'warn',
+        'shutdown: Director steps still running; abandoning them (their work starts again at the next start)',
+      );
+    }
+  });
 
   while (engine.gateJobsInFlight() > 0 && Date.now() < deadline) {
     await sleep(100);

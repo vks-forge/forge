@@ -63,8 +63,126 @@ describe('blockingRoute table', () => {
   });
 });
 
+describe('blockingRoute for a config-only gate failure (d-0173)', () => {
+  it('holds a gate failure that is only gate configuration, with no rework spent', () => {
+    expect(
+      blockingRoute({
+        klass: 'gate',
+        policy: 'rework',
+        reworkCount: 0,
+        cap: 2,
+        configOnly: true,
+      }),
+    ).toBe('hold');
+  });
+
+  it('treats configOnly false like absent: rework, then the cap', () => {
+    expect(
+      blockingRoute({
+        klass: 'gate',
+        policy: 'rework',
+        reworkCount: 0,
+        cap: 2,
+        configOnly: false,
+      }),
+    ).toBe('rework');
+
+    expect(
+      blockingRoute({
+        klass: 'gate',
+        policy: 'rework',
+        reworkCount: 2,
+        cap: 2,
+        configOnly: false,
+      }),
+    ).toBe('rework_cap');
+  });
+});
+
+describe('blockingRoute for a provenance-only gate failure (F-D3)', () => {
+  it('sends it back for rework while the cap allows, since a rewrite can fix it', () => {
+    for (const reworkCount of [0, 1]) {
+      expect(
+        blockingRoute({
+          klass: 'gate',
+          policy: 'rework',
+          reworkCount,
+          cap: 2,
+          provenanceOnly: true,
+        }),
+      ).toBe('rework');
+    }
+  });
+
+  it('holds for the owner once the automatic reworks are spent, never the rework cap', () => {
+    expect(
+      blockingRoute({
+        klass: 'gate',
+        policy: 'rework',
+        reworkCount: 2,
+        cap: 2,
+        provenanceOnly: true,
+      }),
+    ).toBe('hold');
+  });
+
+  it('treats provenanceOnly false like absent, and ignores it for checks', () => {
+    expect(
+      blockingRoute({
+        klass: 'gate',
+        policy: 'rework',
+        reworkCount: 2,
+        cap: 2,
+        provenanceOnly: false,
+      }),
+    ).toBe('rework_cap');
+
+    expect(
+      blockingRoute({
+        klass: 'check',
+        policy: 'rework',
+        reworkCount: 0,
+        cap: 2,
+        provenanceOnly: true,
+      }),
+    ).toBe('rework');
+  });
+});
+
 describe('blockingRoute properties', () => {
-  it('never routes a gate to hold', () => {
+  it('always holds a config-only gate failure, whatever the policy or rework count', () => {
+    fc.assert(
+      fc.property(policy, count, cap, (p, n, c) => {
+        expect(
+          blockingRoute({
+            klass: 'gate',
+            policy: p,
+            reworkCount: n,
+            cap: c,
+            configOnly: true,
+          }),
+        ).toBe('hold');
+      }),
+    );
+  });
+
+  it('ignores configOnly for checks', () => {
+    fc.assert(
+      fc.property(checkKlass, policy, count, cap, (k, p, n, c) => {
+        expect(
+          blockingRoute({
+            klass: k,
+            policy: p,
+            reworkCount: n,
+            cap: c,
+            configOnly: true,
+          }),
+        ).toBe(blockingRoute({ klass: k, policy: p, reworkCount: n, cap: c }));
+      }),
+    );
+  });
+
+  it('never routes a gate to hold unless its failure is gate configuration only', () => {
     fc.assert(
       fc.property(policy, count, cap, (p, n, c) => {
         expect(

@@ -25,6 +25,11 @@ export interface CommandRequest {
   readonly cwd: string;
   readonly env: Readonly<Record<string, string>>;
   readonly timeoutMs: number;
+  /**
+   * Absolute folders inside `cwd` whose executables may be run despite the rule against running
+   * anything from the worktree: the project's own tool folders the owner listed (`.venv/bin`).
+   */
+  readonly trustedDirs?: readonly string[];
 }
 
 /** `output` is stdout and stderr interleaved; the runner may already have trimmed it. */
@@ -39,7 +44,9 @@ export type RunCommand = (req: CommandRequest) => Promise<CommandResult>;
 
 export interface G1Deps {
   readonly receipts: ReceiptLog;
-  readonly worktrees: Pick<WorktreeManager, 'diff'>;
+  /** `readPrep` lets checks find the tool folders setup created (`.venv/bin`); absent means none. */
+  readonly worktrees: Pick<WorktreeManager, 'diff'> &
+    Partial<Pick<WorktreeManager, 'readPrep'>>;
   /** The run's tool-call events, in order. */
   readonly listToolCalls: (runId: string) => Promise<readonly ToolCallRef[]>;
   /**

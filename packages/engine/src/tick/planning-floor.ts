@@ -16,6 +16,7 @@
 
 import { checkFloor, plannedFiles } from '@forge/core';
 import type { CardId, FloorResult, OtherCardFiles, PlanVersion } from '@forge/core';
+import { planImpact } from '#/tick/plan-impact.js';
 import { removalsOf } from '#/tick/planning-pipelines.js';
 import type { FloorFacts, PlanCtx } from '#/types/card-planning.types.js';
 import type { EngineDeps } from '#/types/engine.types.js';
@@ -109,6 +110,10 @@ export async function computeFloor(
   facts: FloorFacts,
   plan: PlanVersion,
 ): Promise<FloorResult> {
+  const impact = await facts.deps.storage.transaction((tx) =>
+    planImpact(tx, plan.card_id, plan),
+  );
+
   return checkFloor({
     plan,
     tierCGlobs: facts.tierCGlobs,
@@ -120,5 +125,8 @@ export async function computeFloor(
     unverified: plan.verification.outside_claims
       .filter((c) => c.status === 'unverified')
       .map((c) => c.claim),
+    // Approving must not cancel started-less tickets the plan silently drops: the owner decides those.
+    uncovered: impact.notCovered.map((t) => `${t.id} ${t.title}`),
+    duplicates: impact.alreadyExists.map((t) => `${t.id} ${t.title}`),
   });
 }

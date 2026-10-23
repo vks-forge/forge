@@ -6,7 +6,7 @@
  *   one, but a series with unreported cost is mapped to null before it reaches the chart.
  *   Ranked lists (top tickets, harnesses) share one entry shape so every ranking reads alike.
  *
- * Exports: CostTable, CostPagingState, RovingSlots, ChartPoint, RankEntry.
+ * Exports: CostTable, CostPagingState, RovingSlots, ChartPoint, ChartPart, RankEntry.
  * Depends on: react (type only).
  */
 
@@ -17,6 +17,15 @@ export interface ChartPoint {
   readonly date: string;
   /** `null` means no data for that day, which is not the same as 0. */
   readonly value: number | null;
+  /** The day's total split by series, bottom first, in the order of the chart's `parts`; they add up to `value`. */
+  readonly parts?: readonly number[];
+}
+
+/** One series of a split bar chart: its written name and the colour token that draws it. */
+export interface ChartPart {
+  readonly key: string;
+  readonly label: string;
+  readonly color: string;
 }
 
 export interface RankEntry {

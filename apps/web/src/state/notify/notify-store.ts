@@ -11,7 +11,7 @@
  *   user dismissed while it ran is remembered, so a poll that keeps reporting it does not
  *   bring it back.
  *
- * Exports: notifyStore, useNotifyStore.
+ * Exports: notifyStore (incl. dismissAll: close every dismissible card but running tasks), useNotifyStore.
  * Depends on: state/create-transient-store, state/ui-store-registry, types/notify.types. No IO.
  */
 
@@ -127,6 +127,19 @@ function dismiss(id?: string): void {
   write(id === undefined ? [] : items.filter((item) => item.id !== id));
 }
 
+function dismissAll(): number {
+  const items = read();
+  const closing = items.filter((item) => item.dismissible && !isRunningTask(item));
+
+  if (closing.length > 0) {
+    const ids = new Set(closing.map((item) => item.id));
+
+    write(items.filter((item) => !ids.has(item.id)));
+  }
+
+  return closing.length;
+}
+
 function toned(tone: NotifyTone) {
   return (title: string, options: NotifyOptions = {}): string =>
     show({ ...options, tone, title });
@@ -229,6 +242,7 @@ export const notifyStore: NotifyApi = {
   loading: toned('loading'),
   update,
   dismiss,
+  dismissAll,
   promise,
   task,
   get: (id) => read().find((item) => item.id === id),

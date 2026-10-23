@@ -8,7 +8,7 @@
  *   rejected approach, when another card with an approved, unfinished plan plans to touch the
  *   same file, when git shows a file under the plan changed since the plan was verified, or when a ticket's
  *   planned pipeline removes a stage of its lane's list (a lighter pipeline needs a person's say-so), or when the plan rests on an outside claim that no verified
- *   evidence supports (d-0144).
+ *   evidence supports (d-0144), or when approving would cancel earlier tickets whose work the plan does not cover, or when the plan contradicts an answer the owner gave in the grill.
  *   It can only make approval stricter: a pass means "the Director may decide", never "approve".
  *   Budget is not a condition (d-0143).
  *
@@ -63,6 +63,22 @@ export function checkFloor(input: ApprovalFloorInput): FloorResult {
 
   for (const claim of input.unverified ?? []) {
     reasons.push(`Plan rests on an unverified outside claim: ${claim}`);
+  }
+
+  if ((input.uncovered ?? []).length > 0) {
+    reasons.push(
+      `approving cancels tickets this plan does not cover: ${(input.uncovered ?? []).join('; ')}`,
+    );
+  }
+
+  for (const d of input.duplicates ?? []) {
+    reasons.push(`Already exists: ${d}`);
+  }
+
+  for (const c of input.plan.decision_conflicts ?? []) {
+    reasons.push(
+      `Plan conflicts with your answer "${c.answer}" to "${c.question}" (${c.where})`,
+    );
   }
 
   return { pass: reasons.length === 0, reasons };

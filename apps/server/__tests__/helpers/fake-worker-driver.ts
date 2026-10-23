@@ -22,7 +22,7 @@
  *   error recorded in `failures`, so a test fails with the reason instead of parking forever.
  *
  * Exports: Behaviour, FakeWorker, createFakeWorker().
- * Depends on: @forge/core (WorkerDriver, RunEvent), helpers/channel, helpers/harness-session,
+ * Depends on: @forge/core (WorkerDriver, RunEvent), helpers/channel, helpers/fake-worker-math, helpers/harness-session,
  *   helpers/scripted-writes. IO: edits files, HTTP to the server.
  */
 
@@ -32,6 +32,7 @@ import type { RunEvent, RunRequest, RunResult, WorkerDriver } from '@forge/core'
 import type { PreparedRun } from '@forge/drivers';
 import type { DriverFactoryDeps, ForgeServer } from '#/types/server.types.js';
 import { createChannel } from '#tests/helpers/channel.js';
+import { ADD, ADD_TEST, baseHasAdd } from '#tests/helpers/fake-worker-math.js';
 import { createHarnessSession } from '#tests/helpers/harness-session.js';
 import {
   CutOff,
@@ -58,18 +59,6 @@ export interface FakeWorker {
   /** Script errors; empty when every run went to plan. */
   readonly failures: string[];
 }
-
-const ADD = `
-export function add(a, b) {
-  return a + b;
-}
-`;
-
-const ADD_TEST = `
-test('adds two numbers', () => {
-  assert.equal(add(1, 2), 3);
-});
-`;
 
 const USAGE = { in: 0, out: 0, cachedIn: 0, cacheWrite: 0 };
 
@@ -145,6 +134,10 @@ export function createFakeWorker(
     }
 
     const mathPath = join(req.cwd, 'src', 'math.js');
+    // A later ticket of the same project starts from a base that already has `add` (the base is
+    // fetched at dispatch): it adds a second function instead of the same one again.
+    const fn = baseHasAdd(req.cwd) ? 'addAgain' : 'add';
+    const testName = fn === 'add' ? 'adds two numbers' : 'adds again';
     const testPath = join(req.cwd, 'test', 'math.test.js');
     const parked = (): Promise<void> =>
       new Promise<void>((resolve) => stops.set(req.runId, resolve));
@@ -156,7 +149,7 @@ export function createFakeWorker(
         () => readFileSync(mathPath, 'utf8').length,
       );
 
-      const source = readFileSync(mathPath, 'utf8') + ADD;
+      const source = readFileSync(mathPath, 'utf8') + ADD(fn);
       const edit = writeFile(mathPath, source);
       try {
         await tool(
@@ -198,7 +191,11 @@ export function createFakeWorker(
 
     const spec = readFileSync(testPath, 'utf8')
       .replace('import { subtract }', 'import { add, subtract }')
-      .concat(ADD_TEST);
+      .replace(
+        'import { add, subtract }',
+        `import { ${[...new Set(['add', fn])].join(', ')}, subtract }`,
+      )
+      .concat(ADD_TEST(fn, testName));
 
     await tool(
       'Write',
@@ -213,7 +210,7 @@ export function createFakeWorker(
     const claims: Record<string, unknown>[] = [
       { kind: 'edited', path: 'src/math.js' },
       { kind: 'edited', path: 'test/math.test.js' },
-      { kind: 'added_test', name: 'adds two numbers' },
+      { kind: 'added_test', name: testName },
       { kind: 'ran_tests' },
     ];
 

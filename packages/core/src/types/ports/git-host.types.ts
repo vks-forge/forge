@@ -6,9 +6,10 @@
  *   offline runs and tests, GitHub through an App installation), and Workers never push
  *   (d-0012). One port lets the engine run the same verify-then-merge flow against
  *   either, keeps credentials inside the adapter, and gives merging a single door
- *   (d-0062, code.md rule 6).
+ *   (d-0062, code.md rule 6). The same port tells the engine where the base branch is now, so
+ *   it can merge a moved base into a ticket branch instead of parking on a conflict.
  *
- * Exports: PullRequest, PrState, PrStatus, MergeMethod, OpenPrInput, GitHost.
+ * Exports: PullRequest, PrState, PrStatus, MergeMethod, OpenPrInput, BaseTip, GitHost.
  * Depends on: none. Types only.
  */
 
@@ -36,6 +37,12 @@ export interface OpenPrInput {
   readonly body: string;
 }
 
+/** Where the base branch stands now: a ref the local repository can resolve and the commit it holds. */
+export interface BaseTip {
+  readonly ref: string;
+  readonly sha: string;
+}
+
 /** Remote operations for one repository. Failures throw ForgeError subclasses. */
 export interface GitHost {
   /** Pushes `branch` from the worktree to the remote under the same name. */
@@ -60,5 +67,13 @@ export interface GitHost {
     expectedHeadSha: string,
   ): Promise<{ readonly sha: string }>;
   closePr(n: number): Promise<void>;
+  /**
+   * Brings the base branch's current tip into the local repository and returns it. Hosts with
+   * a remote fetch it into a private ref (`refs/forge/base/<branch>`, never a branch the user
+   * works on); a project with no remote reports its own `refs/heads/<branch>`. The returned
+   * `ref` is what `WorktreeManager.create` can cut from and `mergeIn` can merge. Read-only for
+   * the remote: nothing is pushed or forced.
+   */
+  syncBase(): Promise<BaseTip>;
   deleteBranch(branch: string): Promise<void>;
 }

@@ -95,7 +95,9 @@ describe('card chat actions', () => {
     });
 
     await say(rig, 'yes, do it');
-    await rig.tick();
+    // One tick and its turn, no follow-up tick: that one would start the planning the retype makes possible.
+    await rig.engine.tick();
+    await rig.engine.idle();
 
     expect((await card(rig))?.type).toBe('issue');
     expect(await rig.storage.transaction((tx) => tx.tickets.listByCard(C1))).toEqual([]);

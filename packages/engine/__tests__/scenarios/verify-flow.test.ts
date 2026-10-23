@@ -45,17 +45,29 @@ describe('verify: success path', () => {
     const t = await rig.ticket(id);
     expect(t).toMatchObject({ status: 'done', tier_actual: 'A', pr_number: 42 });
     expect(t.pr_url).toBe('https://git.test/pr/42');
+    // The base is fetched once per tick: at dispatch, when the branch is brought up to date, and at the merge door.
     expect(host.calls).toEqual([
+      'syncBase:refs/forge/base/main',
+      'syncBase:refs/forge/base/main',
       'push:fix/FG-1-scripted-triage-title',
       'findPr:fix/FG-1-scripted-triage-title',
       'openPr:fix/FG-1-scripted-triage-title',
+      'syncBase:refs/forge/base/main',
       'prStatus:42',
       'merge:42',
       'deleteBranch:fix/FG-1-scripted-triage-title',
     ]);
 
     expect(rig.worktrees.commits).toEqual([
-      { path: '/repo/.worktrees/FG-1', message: 'fix(FG-1): Scripted triage title' },
+      {
+        path: '/repo/.worktrees/FG-1',
+        message: [
+          'fix(FG-1): Scripted triage title',
+          '',
+          'Forge-Ticket: FG-1',
+          'Forge-Run: run-1',
+        ].join('\n'),
+      },
     ]);
 
     expect(rig.worktrees.removed).toEqual(['/repo/.worktrees/FG-1']);

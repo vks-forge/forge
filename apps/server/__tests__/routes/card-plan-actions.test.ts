@@ -70,6 +70,15 @@ describe('PATCH /cards/:id/plan/:version/tickets', () => {
     expect(mock['editPlanTickets']).toHaveBeenCalledWith(card.id, 2, edits, 'owner');
   });
 
+  it('passes the owner lane of a ticket to the engine and rejects an unknown lane', async () => {
+    mock['editPlanTickets']!.mockResolvedValue({ status: 'edited', plan });
+    const lane = { tickets: [{ key: 'a', lane: 'express' }] };
+
+    expect((await patch(lane)).status).toBe(200);
+    expect(mock['editPlanTickets']).toHaveBeenCalledWith(card.id, 2, lane, 'owner');
+    expect((await patch({ tickets: [{ key: 'a', lane: 'fast' }] })).status).toBe(400);
+  });
+
   it.each([
     [{}],
     [{ tickets: [{ title: 'no key' }] }],

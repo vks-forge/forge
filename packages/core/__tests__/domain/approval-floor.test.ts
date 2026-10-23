@@ -37,6 +37,25 @@ describe('checkFloor', () => {
     expect(r.reasons.join(' ')).toContain('.github/workflows/ci.yml');
   });
 
+  it('fails when the plan contradicts an answer the owner gave, naming the answer and where', () => {
+    const p = {
+      ...plan(),
+      decision_conflicts: [
+        {
+          question: 'Where are todos stored?',
+          answer: 'Local storage',
+          where: 'non_goals: no local storage',
+        },
+      ],
+    };
+
+    const r = checkFloor({ plan: p, ...clean });
+
+    expect(r.pass).toBe(false);
+    expect(r.reasons.join(' ')).toContain('Local storage');
+    expect(r.reasons.join(' ')).toContain('non_goals: no local storage');
+  });
+
   it('reads a backslash path as the same Tier C path', () => {
     const p = plan({ tickets: [ticket('t1', { files: ['.forge\\config\\x.yaml'] })] });
 
@@ -235,5 +254,20 @@ describe('checkFloor: lighter pipelines (d-0141 item 6)', () => {
       pass: true,
       reasons: [],
     });
+  });
+
+  it('adds a reason naming each ticket the approval would cancel without covering', () => {
+    const r = checkFloor({
+      plan: plan(),
+      ...clean,
+      uncovered: ['CHE-3 Auth.js', 'CHE-6 LLM client'],
+    });
+
+    expect(r.pass).toBe(false);
+    expect(r.reasons).toEqual([
+      'approving cancels tickets this plan does not cover: CHE-3 Auth.js; CHE-6 LLM client',
+    ]);
+
+    expect(checkFloor({ plan: plan(), ...clean, uncovered: [] }).pass).toBe(true);
   });
 });

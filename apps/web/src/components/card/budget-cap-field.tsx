@@ -8,19 +8,26 @@
  *   a "cap" is otherwise read as a wall. The box is read before it is sent (a typo is a
  *   sentence under the box, not a refusal), an empty box clears the cap and "No cap" says
  *   there is none, never "$0". A closed card cannot change its cap, and the field says why
- *   instead of hiding the control. Escape or Cancel leaves the cap as it was.
+ *   instead of hiding the control. Escape or Cancel leaves the cap as it was. The row shows the
+ *   cap that is really in force and whose it is, from the server's `budget`: "$5.00 (Forge
+ *   default, change in Director settings)" with a link, "(project setting)" or "(set on this
+ *   card)", plus what the card has spent against it; "No cap" appears only when none applies.
+ *   A server that sends no `budget` falls back to the card's own cap.
  *
- * Exports: BudgetCapForm, BudgetCapField.
- * Depends on: react, api/use-card, api/describe-error, components/settings/form-field,
- *   components/ui/button, domain/research-copy, domain/stats-format, state/notify/notify-context.
+ * Exports: BudgetCapForm, BudgetCapField, budgetSourceWords().
+ * Depends on: react, react-router, api/use-card, api/describe-error, components/settings/form-field,
+ *   components/ui/button, domain/nav-entries, domain/research-copy, domain/stats-format, state/notify/notify-context.
  */
 
+import type { CardBudgetView } from '@forge/core';
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router';
 import { ApiError } from '#/api/api-error.js';
 import { describeError } from '#/api/describe-error.js';
 import { usePatchCard } from '#/api/use-card.js';
 import { FormField, TextInput } from '#/components/settings/form-field.js';
 import { Button } from '#/components/ui/button.js';
+import { settingsPath } from '#/domain/nav-entries.js';
 import { parseBudgetCap } from '#/domain/research-copy.js';
 import { formatUsd } from '#/domain/stats-format.js';
 import { useNotify } from '#/state/notify/notify-context.js';
@@ -118,10 +125,49 @@ export function BudgetCapForm(props: {
   );
 }
 
+/** Whose cap is in force, in the owner's words. */
+export function budgetSourceWords(source: CardBudgetView['source']): string {
+  return source === 'card'
+    ? 'set on this card'
+    : source === 'project'
+      ? 'project setting'
+      : 'Forge default';
+}
+
+function InForce(props: { budget: CardBudgetView | undefined; cap: number | undefined }) {
+  const { budget } = props;
+  const cap = budget === undefined ? props.cap : (budget.cap_usd ?? undefined);
+
+  if (cap === undefined) {
+    return <span>No cap</span>;
+  }
+
+  if (budget === undefined) {
+    return <span>{formatUsd(cap)}</span>;
+  }
+
+  return (
+    <span>
+      {formatUsd(cap)}{' '}
+      <span className="text-muted">
+        ({budgetSourceWords(budget.source)}
+        {budget.source === 'forge' ? (
+          <>
+            , change in <Link to={settingsPath('director')}>Director settings</Link>
+          </>
+        ) : null}
+        ) · {formatUsd(budget.spent_usd)} spent so far
+      </span>
+    </span>
+  );
+}
+
 export function BudgetCapField(props: {
   cardId: string;
   cap: number | undefined;
   closed: boolean;
+  /** The cap in force and its source, from the server; absent from a server that predates it. */
+  budget?: CardBudgetView | undefined;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -138,7 +184,7 @@ export function BudgetCapField(props: {
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <span>{props.cap === undefined ? 'No cap' : formatUsd(props.cap)}</span>
+      <InForce budget={props.budget} cap={props.cap} />
       <Button
         disabled={props.closed}
         aria-label="Change the budget cap"

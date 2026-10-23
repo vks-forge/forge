@@ -11,18 +11,19 @@
  *   anything" (tool-system.md §5.1, §5.2, §13).
  *
  * Exports: effectiveGrant(), checkToolGranted(), assertNotBannedAlwaysAllow(), assertValidRules(),
- *   parseGrant().
- * Depends on: @forge/core (Lane), domain/command-classes, domain/lane-defaults, domain/floors, domain/tool-id,
+ *   assertValidApproved(), parseGrant().
+ * Depends on: @forge/core (Lane), domain/approved-rules, domain/command-classes, domain/lane-defaults, domain/floors, domain/tool-id,
  *   schemas/grant, shared/errors, shared/pattern. No IO.
  */
 
 import type { Lane } from '@forge/core';
+import { approvedRuleProblem, approvedAsRules } from '#/domain/approved-rules.js';
 import { isBannedAllowResource } from '#/domain/command-classes.js';
 import { FLOOR_RULES } from '#/domain/floors.js';
 import { LANE_DEFAULTS, laneRulesFor } from '#/domain/lane-defaults.js';
 import { isProjectMcp } from '#/domain/tool-id.js';
 import { Grant } from '#/schemas/grant.js';
-import type { CallRule } from '#/schemas/grant.js';
+import type { ApprovedRule, CallRule } from '#/schemas/grant.js';
 import { BannedAlwaysAllowError, InvalidGrantError } from '#/shared/errors.js';
 import { toolMatch } from '#/shared/pattern.js';
 import type { ShellAllowInput } from '#/types/shell-allowlist.types.js';
@@ -83,6 +84,21 @@ export function assertValidRules(
   }
 }
 
+/**
+ * Validates the owner-approved "always" rules of a grant: allow only, no `strict`, no shell
+ * wildcard, nothing on the banned always-allow list, nothing that matches a protected path.
+ */
+export function assertValidApproved(approved: readonly ApprovedRule[]): void {
+  for (const r of approved) {
+    const problem = approvedRuleProblem(r);
+    if (problem !== null) {
+      throw new InvalidGrantError(
+        `approved rule ${r.id} refused (${problem}): ${r.action} ${r.resource}`,
+      );
+    }
+  }
+}
+
 /** Parses an untrusted grant (yaml object); schema failure becomes a typed error. */
 export function parseGrant(input: unknown): Grant {
   const r = Grant.safeParse(input);
@@ -91,6 +107,7 @@ export function parseGrant(input: unknown): Grant {
   }
 
   assertValidRules(r.data.rules);
+  assertValidApproved(r.data.approved);
 
   return r.data;
 }
@@ -103,6 +120,7 @@ export function parseGrant(input: unknown): Grant {
  * denied (fail closed). `shell` (the project's check commands and ecosystems) builds the lane's
  * shell allow-list; omitted, every ecosystem's verify commands apply. `agentGrant` is the run's
  * agent layer (see `agentGrant()`): one more narrowing layer, never a widening one.
+ * `bypass` turns on bypass permissions for the run (d-0183); the hard floor still denies.
  */
 export function effectiveGrant(
   lane: Lane,
@@ -112,6 +130,7 @@ export function effectiveGrant(
   floors?: FloorInputs,
   shell?: ShellAllowInput,
   agentGrant?: Grant,
+  bypass = false,
 ): EffectiveGrant {
   const defaults = LANE_DEFAULTS[lane];
   const layers = [projectGrant, ticketGrant, agentGrant];
@@ -122,6 +141,7 @@ export function effectiveGrant(
   for (const g of layers) {
     if (g) {
       assertValidRules(g.rules);
+      assertValidApproved(g.approved);
     }
   }
 
@@ -136,6 +156,7 @@ export function effectiveGrant(
 
   return {
     lane,
+    ...(bypass ? { bypass: true } : {}),
     dataHome: floors?.dataHome ?? '',
     ceiling: [...defaults.allow, ...named],
     projectMcpAllow: projectAllow.filter((p) => p !== '*'),
@@ -143,6 +164,8 @@ export function effectiveGrant(
     narrowing: layers.flatMap((g) => (g?.allow ? [g.allow] : [])),
     deny: [...defaults.deny, ...layers.flatMap((g) => g?.deny ?? [])],
     ruleLayers,
+    // Only the project's own approvals count: a ticket or agent grant cannot grant itself consent.
+    approved: approvedAsRules(projectGrant?.approved ?? []),
     managed: [...FLOOR_RULES, ...managed],
   };
 }

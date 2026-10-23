@@ -42,7 +42,7 @@ function item(id: string, patch: Partial<InboxItem> = {}): InboxItem {
 function setup(initial: Record<string, InboxItem[]>) {
   const lists = { ...initial };
   const counts = vi.fn(() =>
-    Promise.resolve({ needs_action: 0, unread: 0, all: 0, archived: 0 }),
+    Promise.resolve({ needs_action: 0, notices: 0, unread: 0, all: 0, archived: 0 }),
   );
 
   const list = vi.fn((slug: string) =>

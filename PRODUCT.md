@@ -45,8 +45,24 @@ come later (d-0082).
    (d-0128). Planning, approval and ticket creation come next in the card-first
    flow; today the Director triages tickets it is asked to file (lane Express /
    Standard / Full).
-5. Workers run; you watch live, answer their questions, approve what needs you.
-   Gates verify; Forge opens the PR and merges when policy allows.
+5. Forge installs your project's packages before each ticket (any language it
+   detects; you can edit or turn off the steps, and if one fails you are told
+   in plain words and can try again, edit it, skip it or cancel). Workers run;
+   you watch live, answer their questions, approve what needs you.
+   Gates verify; Forge opens the PR and merges when policy allows. On a card, the
+   chat is always the main column with the message box visible, and everything
+   waiting on you (a plan to approve, the Director's question, a held or stuck
+   ticket, or a tool a Worker wants to use that policy asks about) shows as one slim
+   alert under the page title ("Needs your sign-off", "Needs your attention · 2")
+   with an Open button that opens a scrollable window listing each item with its
+   actions; closing it answers nothing and it can be reopened; a tool approval
+   shows the exact command and offers Allow once, Always for this project or Deny,
+   and the Worker waits and then carries on with your answer; the plan,
+   tickets, history and details sit beside the chat on a wide screen (tabs on a medium
+   one, a full-screen sheet on a phone). A ticket can be edited from its Details tab:
+   priority, what it waits for, and (before work starts) its description; you can also ask
+   the card's Director to do the same in the card chat, and it is told which
+   controls you really have, so it never points you to one that does not exist.
 6. Everything — agents, pipelines, models, budgets, limits, credentials — is
    changed in Settings, for the whole company or per project (d-0085, d-0090).
 
@@ -81,7 +97,10 @@ Claude Code driver over ACP with a CLI fallback; receipt hooks; tool policy;
 Director engine (triage, dispatch, settle, verify); G1 gate; git worktrees;
 GitHub App git host; DPAPI secrets; HTTP server with SSE. Realignment B0–B14
 done: one server serves many projects, settings live in the database, runs
-survive a restart, fair scheduling across projects.
+survive a restart, fair scheduling across projects. The Director's planning
+turns, chat answers, triage, replies to Workers and the brief of each Worker run
+happen in the background, up to 3 at once (Settings → Director, 1 to 8), so a
+long planning turn no longer holds up Workers or other cards.
 
 **Web control room (on the real server API, no mock data):** `forge start`
 serves the UI and signs the browser in with a one-time link (the install token
@@ -89,16 +108,36 @@ never reaches the page). First-run wizard and new-project flow; project Home
 with stats graphs; Inbox; Board with Cards and Tickets views; Card page with a
 chat to the card's Director (it can file tickets, steer Workers, change the
 card type, suggest closing); Ticket page with the live Worker thread, answers
-to questions and direct messages to a running Worker; Runs; Cost; Memory;
+to questions and direct messages to a running Worker, and a header menu that
+cancels a ticket you no longer want (with a reason and the tickets that wait
+on it); Runs; Cost (one total, split into what Workers and the Director spent);
+Memory;
 project settings; Forge settings (harnesses, GitHub, limits, general,
 Director flow and playbooks); a cross-project Overview at `/`. UI
 preferences persist across reloads.
+
+**Workspace setup (web and docs built; live check with a Node and a Python demo
+repo still to do):** each ticket's fresh worktree is prepared by Forge before
+the Worker starts (setup steps detected per ecosystem or set in project
+settings, Checks tab, "Before each ticket"); a failed step is a plain-words card
+with Try again, Edit setup steps, Start without setup and Cancel ticket.
+
+**Merge conflicts (built; live check on a real two-ticket repo still to do):**
+when main moves under a ticket Forge merges it into the ticket's branch, and if
+the two clash the ticket's own Worker combines both changes (up to 2 tries, no
+re-plan); only then does a card ask you, in plain words, with the files that
+clash and who changed them first, and Try again, Re-plan this ticket (for now
+this re-plans the whole card and keeps merged work) and Cancel. Cancelling a
+ticket, from its own page or by asking the Director, or replacing it with a new plan, removes its folder, deletes its branch
+and closes its pull request; the card keeps the last commit id.
 
 **Not yet:** GitHub Issues intake and the Issues page (P5); the card Director
 cannot yet pause or restart tickets;
 not packaged or published.
 
-**Known limits:** Workers and project checks run as the user's own Windows
+**Known limits:** A Director-signed tier C merge has no one-click revert yet: the card note names the merge commit to revert by hand (d-0181). With a harness's Bypass permissions on (the default, d-0183)
+Workers are never stopped for an approval; only the hard floor still blocks.
+Workers and project checks run as the user's own Windows
 account, so code a Worker writes (a test, a script) can read Forge's data
 folder, including the install token and secrets. The tool policy floor
 guards tool arguments, not the operating system; real isolation (a separate
@@ -121,6 +160,44 @@ realignment (d-0117, d-0005).
 
 Newest first. One line per milestone.
 
+- 2026-10-23: Inbox Notices tab and "Mark all read" (items Q row 18 and Z): items that only inform get their own tab, Notices and Unread clear in one click with a "Marked N read" notice; the plan editor gets a care-level (Express / Standard / Full) picker per ticket, marked "Set by you" when the owner chose it.
+- 2026-10-23: Live progress on Board tiles (item Y, step 5.2): a ticket tile shows its stage ("Stage 2/5 · Review"), a ticking "run 2 · implementer · 10m 03s" line with a live dot, why it waits, one action when it fits (Retry, Open to answer), cost so far and time since last change; a card tile shows "4 of 11 done · 2 running · 1 waiting for you". Stage, live run and the Retry offer come on the list rows in one pass (no per-tile fetch).
+- 2026-10-23: Director plan quality (eval fix 5, step 3): a ticket's lane is raised from its own text, never from the filed acceptance list, and every raise is written on the card with its reason; a lane you set in the plan editor is kept (a protected path still forces Full, d-0177); the survey is shown the file list and must read before it reports, and the grill says when it could not read; the planner must account for each of your answers and a plan that contradicts one stops at Needs you naming it; repeated risks are listed once; the brief, approval, triage, steer-reply and verify steps now default to the cheaper model (change them in Director settings).
+- 2026-10-23: Honest cost, cancel and trusted status, web half (eval fix 6, step 3): Cost, Overview, card, ticket and the chips show one total first and then "Workers $a · Director $b" (spend per day is two stacked series with a written key and the note that Director spend before 20 Oct is dated by card); a card's Details says which budget is in force and whose it is ("$5.00, Forge default, change in Director settings"); the ticket page's `⋯` menu has "Cancel ticket…" (the shared cancel dialog: what is stopped and deleted, the tickets that wait on it cancelled together, an optional reason, "Keep running"); closing a card says it stops Workers and cancels unfinished tickets; a done or cancelled ticket shows no wait, leads with how it ended, shows muted stage history and ends its run "Worker run 3 finished"; the Board bar and phase line say "2 of 2 done, 1 cancelled"; a done card's plan no longer says the safety minimum failed; "The Director is thinking" no longer shows while it waits on you; a harness row says what its last run did apart from the live test; chat boxes count toward the 8,000-character limit and the New card form states its 20-character minimum up front.
+- 2026-10-23: Setup cache controls (4.3b): Settings, General shows how much disk the setup cache uses, a "Setup cache size limit" (GB, default 5) and "Clear setup cache" (saved installs by default, shared downloads as an extra tick; the confirm names the space freed); each step in project settings says what it reuses and can turn the copy cache off. Saving the setup editor no longer drops a step's cache settings.
+- 2026-10-23: Faster workspace setup (4.3a, any language): Forge shares each package manager's download cache between tickets of every project (npm, pnpm, yarn, bun, uv, poetry, pip, Go, NuGet, Composer) and copies `node_modules` / `vendor` back from an earlier identical install (same lockfile, command, Node/PHP version, OS) instead of reinstalling; the ticket note reads "workspace ready in 4 s (restored from cache)". Python environments are never copied; a cache fault just runs the install. Controls for it are in Settings (see the next line).
+- 2026-10-23: Owner language and protected-files wording (eval fix 9 D, web): one glossary and one "what's this" button replace G1, tier, lane, tick, "Generation", "Driver" and raw states on the Overview, ticket, run, cost, plan and settings screens; saves say "Changes take effect on the Director's next check, usually within a minute. No restart needed."; Issues and Chat leave the sidebar until built; a Director question with a recommended answer has a one-tap "Use recommended" button; every screen that said tier C always needs you now says the Director signs protected files only when every check passed and no secret file is touched, and a protected-files sign-off says why the Director did not sign.
+- 2026-10-23: Cancel and status, backend half (eval fix 6, step 2; d-0179): one cancel door for you and the Director (a reason is kept: "You cancelled it: ..." or "The Director cancelled it: ..."), the Director can cancel a ticket of its card only when you asked it to in chat (otherwise it suggests), cancel waits for the Worker to stop before the folder is removed and a folder still held is retried on the next tick; the ticket read says whether it can be cancelled, which tickets wait on it and what it is really still waiting for (nothing once finished); a card counts cancelled tickets apart; the plan's floor check stops being asked once the plan is approved; a Director step that paused for you or failed now says so; a harness keeps its last test result through a harmless save and shows its last run; the Director's reply no longer garbles a character split between two chunks. The web half (cancel button, status words, harness row) is next.
+- 2026-10-23: History tab on cards and tickets (P5, step 5.1b, web half): each page has a History tab that tells the story in plain words, grouped by day with the newest at the bottom (or on top with Newest first), who did it, when, the states it moved between, how long work waited, and a link to the run, question, review or ticket behind each line; filters for status changes only and for what needed you; long notes fold behind Show more; older entries load on request, and the tab refreshes live while work moves.
+- 2026-10-23: Honest cost, backend half (eval fix 6, step 1; x-0017 pending your approval): the Director's own steps (planning, chat, escalation answers, sign-off checks) now each leave a dated row in a spend ledger, so Cost, Overview and the ticket page add them to the Workers' runs and split the two (the Cost page no longer shows $7.43 while the cards add up to $24.86); a failed step still records what it cost, and one budget answer (the card's cap, else the project's, else the Forge default) drives the warnings, the Inbox and the card's Details data. The screens still show the old totals until the web half lands. Director spend from before this change is dated by card, so it appears as one day's spike.
+
+- 2026-10-23 — Phase 5.1a (backend of the History tab): `GET /tickets/:id/history` and `GET /cards/:id/history` return a plain-language list of what a ticket or card went through and why; ticket moves store their reason; commits Forge makes carry `Forge-Ticket` and `Forge-Run` trailers. The tab itself (5.1b) is next.
+- 2026-10-23: The card chat folds runs of three or more ticket log lines into one line that opens to them, and the log lines read in owner words with the bullet fixed; charts, 404 headings, faint and green text contrast, phone board start and the Director model fields were tidied for accessibility.
+- 2026-10-23: The Director now signs tier C changes itself when the floor is clean (d-0181): every check passed, no critical or high finding, the plan check passed, no owner override and no secrets path (env files, keys, secrets folders) in the diff; a card note names the merge commit to revert. Anything else waits for you and the sign-off card says which condition failed. The one-click revert button is not built yet; Always ask in Director settings still keeps every tier C sign-off with you.
+- 2026-10-23: Work starts the moment it can, not on the next tick: every event that frees work (answer, settled run, finished job, edit, cancel, merge, relation change) asks for a tick at once, and a timer fires a waiting ticket's `not_before` wake, quota reset or hold; the periodic tick stays as the safety sweep.
+- 2026-10-23: Re-plan, Cancel ticket and Merge anyway ask for confirmation with the real consequences listed from live data (held and kept tickets and the stop; the run, branch, pull request and waiting tickets; the overruled check), the ticket named on the confirm button, Cancel focused first, Send back for rework offered for a mechanical stop; sign-off cards lead with the Director's recommendation and evidence.
+- 2026-10-23: Honest status on screen: board tiles, the card's Tickets tab and the ticket header show a phase chip (Queued, Waiting for a slot, Held by re-plan, Working...) with a one-line reason linking the tickets and card involved; a ticket whose question was already answered no longer sits in Needs you, and an answer shows what happens next.
+- 2026-10-23: Re-plan from a ticket passes the Director why the ticket stopped (cause, findings, gate failures, last run), so it fixes that ticket first instead of guessing at plan drift.
+- 2026-10-23: The board says why a ticket waits; Needs you lists only items waiting on you (phase and wait line on every ticket row, slot holders named, a ticket whose answer is given no longer counts, answers reply with what happens next). Backend of step 2.1; the board chip and line come in step 2.2.
+- 2026-10-23: What waits on you is now a slim alert under the title of a card or ticket ("Needs your sign-off", "Needs your attention · 2") with an Open button; Open shows a scrollable window with each item and all its actions, newest first, instead of a big block above the message box. The Inbox keeps its list.
+- 2026-10-23: Tickets can be edited: priority, dependencies, description (`PATCH /tickets/:id`, one engine door, loop and cross-project checks, logged on the card); the Director can set dependencies, priority and description from the card chat and file restored work at the priority of the ticket it restores; ticket ids are shown with their plan keys after approval.
+- 2026-10-23: Bypass permissions, step AA-2 (d-0183): Settings, Harnesses has a "Bypass permissions" switch per harness, on by default, with the plain warning (Workers run without asking; secrets, Forge's data folder, files outside the workspace, pushing and destructive commands stay blocked; Workers run as your Windows account). Every Worker run, Express included, starts in the harness's no-prompt mode and its tool grant follows the switch; turning it off restores the allow and ask rules.
+- 2026-10-23: Bypass permissions, step AA-1 (d-0183): each harness gets a Bypass permissions setting, on by default; when on, the Claude driver starts Claude Code in its no-prompt mode and the tool policy allows every ask except a hard floor (Forge's data folder, secrets, paths outside the worktree, push and publish, destructive commands). A live probe confirmed Forge's hook still blocks under bypass. The engine wiring and the Settings switch follow (AA-2).
+
+- 2026-10-23: Notification stack gets a "Close all" button (two or more closable cards; running jobs and pinned notices stay).
+- 2026-10-23: Retries tell the Worker why it stopped; a ticket whose setup finished starts first.
+- 2026-10-23: A new plan no longer cancels tickets that have started; approval shows what will be cancelled and what is not covered, and the Director will not approve on its own when a cancelled ticket's work is not covered.
+- 2026-10-23: Approve and merge now accepts checks the owner overruled (a held G1 you chose Merge anyway on no longer blocks the final approval); the card note names what was overruled.
+- 2026-10-22: Director planning, chat and triage run in the background, up to 3 at once (Settings → Director); Workers no longer wait behind planning; run start times are the real spawn time so fresh runs are not killed as stalled.
+- 2026-10-22: Conflicts with main resolve without a re-plan (eval fix 4): Forge merges main into the ticket branch, the ticket's Worker resolves, up to 2 tries, then asks you; cancelling a ticket closes its PR and deletes its branch.
+- 2026-10-22: G1 stops failing honest work (eval fix 3): folder searches now count as reads, a group-qualified test name ("shelf add rejects an empty title") matches the test declared under it, the proof of paused and errored runs is kept until the ticket closes, a ticket whose earlier proof is gone is held with Merge anyway (or sent back to re-apply the files) instead of dead-ending, and a Worker that used all its turns is shown as such, not retried, with the turns used and a link to Settings, Limits to raise them.
+- 2026-10-21: Workspace setup in the web app and design docs (d-0180, d-0176): project settings, Checks tab, gets a "Before each ticket" section (detected steps with the file they came from and Customise, Use detected, a No setup switch, per-step Advanced options, validation before Save); the Project tab lists detected ecosystems with Detect again; a failed setup step is a card that names the step and its command, says nothing was spent, shows the last 40 lines it printed and offers Try again, Edit setup steps, Start without setup (after a confirm) and Cancel ticket; a preparing ticket says which step is running; the add-project Checks step shows what Forge will run before each ticket; `execution-plane.md`, `verification-plane.md` and `tool-system.md` describe the Prepare state.
+- 2026-10-20: Real tool approvals in the dock (d-0175): when a Standard or Full Worker's step needs your yes (an install, an edit under a sensitive folder), it pauses and the needs-you dock, the Ticket page and the Inbox show the exact command with Allow once, Always for this project (the rule spelled out) and Deny; the Worker resumes with your answer, and Settings, Project, Tool approvals lists every "always" rule with Revoke.
+- 2026-10-20: Workers can now read web pages on their own: in the Standard and Full lanes a Worker fetching library or API docs is no longer silently denied; private addresses, banned hosts and the size caps still apply, and Express stays without web access.
+- 2026-10-20: A Claude Code update no longer wastes a run or asks for the same approvals again: tools whose shape the owner already decided carry over to the new build, and a ticket whose build still has undecided tools parks with a plain "approve its tools in Settings" item instead of starting a Worker that would be denied on every call.
+- 2026-10-20: G1 no longer dead-ends the owner on gate configuration (d-0173): a new project may add its own tsconfig, vitest and eslint config files, and a G1 failure on config files alone is held for the owner (Merge anyway, Send back, Re-plan, Cancel) instead of reworked.
+- 2026-10-14 — Product shape decided (d-0172, step 3): the Ticket page now has the Card page's frame: a one-row header (id, title, one status pill, cost) with a slim line for blockers and why it is not moving, the Worker thread as the main column, and everything waiting on you (a Worker question, a failure, a held decision, a sign-off, finished work to review) in one dock above the steer box, one item at a time, acted on in place (merging keeps its confirm). Review, Runs and Details sit in a rail beside the thread from 1280 px, as tabs from 1024 px (the review repeats the dock so the decision sits beside the evidence) and as a sheet below that; the old banner stack is gone.
+- 2026-10-20: Card page redesign (d-0172, web half; the server sends `needs_you_detail`): a one-row header (title, one status pill, cost, a `⋯` menu holding Change type and Close card), the chat as the main column with the message box always visible, and everything waiting on you in one needs-you dock above the message box that shows one item at a time (`n of N`, arrow keys, reason chips with a Reasons list, at most a primary and a secondary action, folded to one line on a phone while you type); an open Director question is answered there or by typing in the message box; the chat keeps a one-line record of each raise, question and plan; Plan, Evidence, Tickets and Details sit in a rail beside the chat from 1280 px (tabs from 1024 px, a full-screen sheet below); the old banner stack is gone. The Ticket page moves onto the same frame next.
 - 2026-10-19: The card chat shows a typed answer to a Director question once instead of twice, an open question reads "Waiting for your answer" (answered ones read "Answered"), and the message box says it answers the open question; a card in the verifying phase can now be answered from the chat too.
 - 2026-10-19: Research limits have high ceilings (d-0171): up to 10 rounds, 100 searches, 100 pages, 20 MB of page text and 100 runs per card, since search and page reads cost nothing; the page text a research call carries stays capped so a long run fits the model.
 - 2026-10-19: The welcome flow no longer has a data-folder step: it opens at harnesses and logins (three steps), and the data folder is always `%LOCALAPPDATA%\Forge` (d-0170), shown under Forge settings, General; the `forge-home.json` override is removed (`FORGE_HOME` stays for dev and tests).

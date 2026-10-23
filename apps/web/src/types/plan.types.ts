@@ -11,7 +11,7 @@
  * Depends on: schemas/plan (types). Types only.
  */
 
-import type { PlanPriority, PlanTicket } from '#/schemas/plan.js';
+import type { PlanLane, PlanPriority, PlanTicket } from '#/schemas/plan.js';
 
 /** What the layout reads of a planned ticket. */
 export type GraphInput = Pick<PlanTicket, 'key' | 'depends_on'>;
@@ -57,6 +57,8 @@ export interface DraftTicket {
   readonly key: string;
   readonly title: string;
   readonly priority: PlanPriority;
+  /** The care level (lane) as drafted; sent only when it differs from the plan's. */
+  readonly lane: PlanLane;
   readonly removed: boolean;
   /** Positions of the Director's pipeline ops the owner took off this ticket (they may drop an op, never add one). */
   readonly dropOps: readonly number[];
@@ -68,6 +70,7 @@ export interface PlanEditBody {
     readonly key: string;
     readonly title?: string;
     readonly priority?: PlanPriority;
+    readonly lane?: PlanLane;
     readonly removed?: boolean;
     readonly drop_pipeline_ops?: readonly number[];
   }[];

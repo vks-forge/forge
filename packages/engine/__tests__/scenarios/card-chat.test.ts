@@ -77,7 +77,16 @@ describe('card chat', () => {
         links: [],
       },
       card_type: { name: 'pr_issue', tickets_on_intake: true, plan_approval: 'user' },
-      allowed_actions: ['create_ticket', 'steer_run', 'change_type', 'suggest_close'],
+      allowed_actions: [
+        'create_ticket',
+        'steer_run',
+        'change_type',
+        'suggest_close',
+        'set_ticket_dependencies',
+        'set_ticket_priority',
+        'edit_ticket_description',
+        'cancel_ticket',
+      ],
       tickets: [{ id: 'FG-1' }],
       pending_interactions: [],
     });

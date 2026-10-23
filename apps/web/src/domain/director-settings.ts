@@ -111,9 +111,9 @@ export const LOCKED_RULES: readonly LockedRule[] = [
   },
   {
     id: 'tier-c',
-    title: 'Tier C needs you',
+    title: 'Protected files need a clean record',
     reason:
-      'Changes to Forge’s own policy files always wait for a person. Letting the Director sign them off would let it widen its own powers.',
+      'The Director signs changes to protected files (auth, migrations, secrets, billing) only when every check passed and no secret file is touched. Otherwise they wait for a person, so it cannot widen its own powers.',
   },
   {
     id: 'tool-less-approval',
@@ -213,7 +213,7 @@ const DIRECTOR_FIELD_LIST: Readonly<
       path: 'director.escalation.answer_confidence',
       label: 'Answer a Worker alone at confidence',
       step: 0.05,
-      hint: 'From 0 to 1. Below it the Director asks you instead. Tier C tickets, tools and logins are always yours.',
+      hint: 'From 0 to 1. Below it the Director asks you instead. Tools and logins are always yours.',
     },
     {
       kind: 'number',

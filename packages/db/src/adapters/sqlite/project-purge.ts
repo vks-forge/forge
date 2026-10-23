@@ -61,6 +61,7 @@ export function purgeProject(driver: SqlDriver, slug: string): boolean {
   // Sources and evidence point at cards and tickets, so they go before either.
   del(`DELETE FROM card_evidence WHERE card_id IN (${CARDS})`);
   del('DELETE FROM research_sources WHERE project = ?');
+  del('DELETE FROM director_spend WHERE project = ?');
 
   // Memory: the delete triggers allow this only while the guard row exists, and the guard goes before commit.
   del('INSERT INTO memory_purge_guard (project) VALUES (?)');

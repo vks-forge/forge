@@ -7,7 +7,7 @@
  *   notify (d-0132). The one storage wrapper announces them under the project's slug, and a rolled-back write
  *   announces nothing.
  *
- * Pins: `ticketPipelines.adjust` and a finding mark set announce `ticket-pipeline:<id>` and `ticket:<id>`; a clear
+ * Pins: `ticketPipelines.adjust` and a finding mark set announce `ticket-pipeline:<id>`, `ticket:<id>` and the project's tickets list; a clear
  *   (known only by its row id) the same; a proposal insert announces `pipeline-proposals:<slug>` and `inbox:<slug>`;
  *   a decision also `pipelines:project:<slug>` and `project-settings:<slug>`; a rollback announces nothing.
  * Depends on: src/services/{tracked-storage,project-events}, @forge/db (memory), vitest.
@@ -94,7 +94,7 @@ async function setup() {
   return { raw, storage: trackProjectWrites(raw, events), seen, row: row as number };
 }
 
-const strip = ['ticket-pipeline:FX-1', 'ticket:FX-1'].sort();
+const strip = ['ticket-pipeline:FX-1', 'ticket:FX-1', 'tickets:dcp'].sort();
 
 describe('the Director and the owner write to the ticket strip', () => {
   it('announces an adjustment of the pipeline copy', async () => {

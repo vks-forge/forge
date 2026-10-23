@@ -27,7 +27,8 @@ export interface LighterEntry {
 }
 
 export interface ApprovalFloorInput {
-  readonly plan: Pick<PlanVersion, 'tickets' | 'verification'>;
+  readonly plan: Pick<PlanVersion, 'tickets' | 'verification'> &
+    Partial<Pick<PlanVersion, 'decision_conflicts'>>;
   readonly tierCGlobs: readonly string[];
   readonly otherPlannedFiles: readonly OtherCardFiles[];
   /** Files under the plan that changed between the plan's `base_sha` and HEAD. */
@@ -36,4 +37,8 @@ export interface ApprovalFloorInput {
   readonly lighter?: readonly LighterEntry[];
   /** Outside claims of the plan that no verified evidence supports: the owner approves those (d-0144). */
   readonly unverified?: readonly string[];
+  /** Tickets this approval would cancel that the plan does not cover (`id title`): the owner decides those. */
+  readonly uncovered?: readonly string[];
+  /** Kept tickets (`id title`) whose plan key the plan reuses for a new ticket: it would exist twice. */
+  readonly duplicates?: readonly string[];
 }

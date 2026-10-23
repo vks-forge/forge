@@ -22,6 +22,7 @@ export const CARD_TAB_IDS: readonly CardTab[] = [
   'plan',
   'evidence',
   'tickets',
+  'history',
   'details',
 ];
 
@@ -29,6 +30,7 @@ export const TICKET_TAB_IDS: readonly TicketTab[] = [
   'conversation',
   'review',
   'runs',
+  'history',
   'details',
 ];
 

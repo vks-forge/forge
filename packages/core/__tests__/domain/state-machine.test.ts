@@ -212,7 +212,7 @@ describe('tier C signer', () => {
   );
 });
 
-describe('the Director never signs tier C', () => {
+describe('the Director signs tier C only on a clean floor (d-0181)', () => {
   it.each(['director', ' Director ', 'DIRECTOR'])(
     'refuses done from needs_signoff when the signer is the reserved id %j',
     (signer) => {
@@ -223,6 +223,18 @@ describe('the Director never signs tier C', () => {
       expect(r.ok ? '' : r.error.kind).toBe('precondition');
     },
   );
+
+  it('lets the Director finish tier C when the event states a clean floor', () => {
+    const sign = makeTicket({ status: 'needs_signoff', tier_actual: 'C' });
+    const r = transition(sign, {
+      type: 'done',
+      at: T1,
+      signer: 'director',
+      clean_floor: true,
+    });
+
+    expect(r.ok).toBe(true);
+  });
 
   it('still lets a named person sign tier C, and lets the Director finish tier B in review', () => {
     const sign = makeTicket({ status: 'needs_signoff', tier_actual: 'C' });

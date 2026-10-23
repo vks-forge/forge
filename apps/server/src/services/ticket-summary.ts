@@ -38,6 +38,13 @@ export function summarizeTicket(
       : { blocked_reason: ticket.blocked_reason }),
     ...(ticket.assignee_run_id === undefined ? {} : { run_id: ticket.assignee_run_id }),
     ...(runStatus === undefined ? {} : { run_status: runStatus }),
+    ...(extras.progress?.stage === undefined ? {} : { stage: extras.progress.stage }),
+    ...(extras.progress?.liveRun === undefined
+      ? {}
+      : { live_run: extras.progress.liveRun }),
+    ...(extras.progress?.retryEscalationId === undefined
+      ? {}
+      : { retry_escalation_id: extras.progress.retryEscalationId }),
     ...(ticket.pr_url === undefined ? {} : { pr_url: ticket.pr_url }),
     ...(extras.cardTitle === undefined ? {} : { card_title: extras.cardTitle }),
     ...(extras.costUsd === undefined ? {} : { cost_usd: extras.costUsd }),

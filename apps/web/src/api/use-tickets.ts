@@ -12,9 +12,9 @@
  *   more. Answering is optimistic: the question leaves the page at once and comes back, with
  *   the typed answer kept by the form, if the server refuses.
  *
- * Exports: TICKETS_KEY, ticketKey(), useTicketBoard(), useTicketDetail(), useAnswerInteraction(),
+ * Exports: TICKETS_KEY, ticketKey(), useTicketBoard(), useTicketDetail(), useEditTicket(), useAnswerInteraction(),
  *   BOARD_PAGE_SIZE, BOARD_AUTO_PAGES, POLL_MS.
- * Depends on: @tanstack/react-query, api/api-provider, api/poll-interval, schemas/tickets.
+ * Depends on: @tanstack/react-query, api/announce-next, api/api-provider, api/poll-interval, schemas/tickets.
  */
 
 import {
@@ -23,8 +23,9 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import type { TicketSummary } from '@forge/core';
+import type { TicketEditBody, TicketSummary } from '@forge/core';
 import { useEffect, useMemo } from 'react';
+import { announceNext } from '#/api/announce-next.js';
 import { useForgeApi } from '#/api/api-provider.js';
 import { useRefetchMs } from '#/api/poll-interval.js';
 import type { TicketDetail } from '#/schemas/tickets.js';
@@ -97,6 +98,22 @@ export function useTicketDetail(id: string) {
   });
 }
 
+/** Edits a ticket; its page and the Board refetch so the new waits, priority and brief show at once. */
+export function useEditTicket(id: string) {
+  const api = useForgeApi();
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: TicketEditBody) => api.tickets.edit(id, body),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ticketKey(id) }),
+        client.invalidateQueries({ queryKey: TICKETS_KEY }),
+      ]);
+    },
+  });
+}
+
 /** Answers a pending question; the question disappears at once and returns if refused. */
 export function useAnswerInteraction(ticketId: string) {
   const api = useForgeApi();
@@ -117,6 +134,7 @@ export function useAnswerInteraction(ticketId: string) {
 
       return { previous };
     },
+    onSuccess: (reply) => announceNext(reply.next),
     onError: (_error, _input, context) => {
       if (context?.previous) {
         client.setQueryData(ticketKey(ticketId), context.previous);

@@ -10,7 +10,9 @@
  *   identical tool stays approved with no owner action; a new or changed one becomes pending
  *   and is denied until the owner approves it (d-0088). The hash of a catalogue tool that
  *   maps to several harness names (`shell` is `Bash` and `PowerShell`) covers all the names
- *   that build offers, so the owner approves the whole capability at once.
+ *   that build offers, so the owner approves the whole capability at once. A tool whose
+ *   fingerprint equals one the owner already decided on an earlier build keeps that decision
+ *   (a Claude Code patch release that did not touch a tool must not cost an approval).
  *
  * Exports: hashToolSchema(), toolShapes(), diffToolShapes().
  * Depends on: @forge/core (CompatToolShape, HarnessToolSchema), @forge/tools (canonicalJson,
@@ -21,6 +23,7 @@ import type { CompatToolShape, HarnessToolSchema } from '@forge/core';
 import { canonicalJson, sha256Hex } from '@forge/tools';
 import type {
   CapturedTool,
+  CarriedShape,
   NativeToolNames,
   ShapeDiff,
 } from '#/types/compat/compat.types.js';
@@ -66,26 +69,58 @@ export function toolShapes(
   return shapes;
 }
 
+/** Newest decision wins: later `decided_at`, and on a tie the row listed later. */
+function newest(rows: readonly HarnessToolSchema[]): HarnessToolSchema | undefined {
+  let best: HarnessToolSchema | undefined;
+  for (const r of rows) {
+    if (best === undefined || (r.decided_at ?? '') >= (best.decided_at ?? '')) {
+      best = r;
+    }
+  }
+
+  return best;
+}
+
 /**
- * Compares captured shapes with the stored rows of the same build. Only an approved row with
- * the same hash is kept; a denied row with the same hash stays denied (the owner already said
- * no to exactly this shape); anything else is pending.
+ * Compares captured shapes with the stored rows of the same build, then with the decisions
+ * made on earlier builds of the same harness. Only an approved row with the same hash is kept;
+ * a denied row with the same hash stays denied (the owner already said no to exactly this
+ * shape). Otherwise, if an earlier build has an approved or denied row for the same tool and
+ * the same hash, that decision is carried to this build (`carried`, with the row it came
+ * from); when earlier builds disagree the most recent decision wins. Anything else is pending.
+ * `earlier` must hold rows of other builds only (the caller filters by kind and version).
  */
 export function diffToolShapes(
   shapes: readonly CompatToolShape[],
   rows: readonly HarnessToolSchema[],
+  earlier: readonly HarnessToolSchema[] = [],
 ): ShapeDiff {
   const keep: string[] = [];
   const pending: CompatToolShape[] = [];
+  const carried: CarriedShape[] = [];
   for (const shape of shapes) {
     const row = rows.find((r) => r.tool === shape.tool);
     const same = row?.schema_hash === shape.schema_hash;
     if (row && same && (row.status === 'approved' || row.status === 'denied')) {
       keep.push(shape.tool);
+      continue;
+    }
+
+    const from = newest(
+      earlier.filter(
+        (r) =>
+          r.tool === shape.tool &&
+          r.schema_hash === shape.schema_hash &&
+          (r.status === 'approved' || r.status === 'denied'),
+      ),
+    );
+
+    if (from) {
+      carried.push({ shape, from });
     } else {
       pending.push(shape);
     }
   }
 
-  return { keep, pending };
+  return { keep, pending, carried };
 }

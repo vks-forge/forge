@@ -27,6 +27,7 @@ import {
   reportFixture,
   toolFixtures,
 } from '#tests/helpers/forge-data/settings-data.js';
+import { setupCacheRoutes } from '#tests/helpers/fake-forge/setup-cache-routes.js';
 import type { CompatJob, HarnessView } from '#/schemas/settings.js';
 
 /** The compatibility check shows as running for this many reads after it starts. */
@@ -55,6 +56,8 @@ export function settingsRoutes(options: {
     (history.at(-1)?.doc ?? {}) as Record<string, unknown>;
 
   return {
+    ...setupCacheRoutes(),
+
     'GET /harnesses': () => json({ harnesses: [...harnesses.values()], paused: [] }),
 
     'PUT /harnesses/:id': ({ params, body }) => {
@@ -62,6 +65,7 @@ export function settingsRoutes(options: {
         kind: HarnessView['kind'];
         binary_path?: string;
         auth_mode: HarnessView['auth_mode'];
+        bypass_permissions?: boolean;
       };
 
       const before = harnesses.get(params['id']!);
@@ -71,6 +75,9 @@ export function settingsRoutes(options: {
         ...(input.binary_path === undefined ? {} : { binary_path: input.binary_path }),
         auth_mode: input.auth_mode,
         status: 'unknown',
+        bypass_permissions: input.bypass_permissions ?? before?.bypass_permissions,
+        bypass_permissions_effective:
+          input.bypass_permissions ?? before?.bypass_permissions ?? true,
         secrets: before?.secrets ?? { api_key: false, oauth_token: false },
       };
 

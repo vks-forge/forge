@@ -10,14 +10,15 @@
  *   outside the Worker's control with the same stripped environment as G1. `expect: 'fail'` is
  *   the red proof: the new tests are supposed to fail before the implementation exists, so a
  *   non-zero exit is the pass and a green run is the finding "the tests already pass". A timeout
- *   or a command that cannot start is `error`, never a pass.
+ *   or a command that cannot start is `error`, never a pass. The tool folders the worktree's
+ *   setup recorded (`.venv/bin`) go first on PATH and may be run from.
  *
  * Exports: createScriptGateRunner().
  * Depends on: @forge/core (ScriptGateRunner, globMatch), adapters/command-runner, shared/env,
  *   shared/tail, types/script-gate. Spawns processes through the injected runner.
  */
 
-import { isAbsolute, relative, resolve } from 'node:path';
+import { delimiter, isAbsolute, relative, resolve } from 'node:path';
 import { globMatch } from '@forge/core';
 import type {
   GateFinding,
@@ -26,7 +27,7 @@ import type {
   ScriptGateRunner,
 } from '@forge/core';
 import { runShellCommand } from '#/adapters/command-runner.js';
-import { scrubEnv } from '#/shared/env.js';
+import { prependPath, scrubEnv } from '#/shared/env.js';
 import { tail } from '#/shared/tail.js';
 import type { ScriptGateDeps } from '#/types/script-gate.types.js';
 
@@ -117,13 +118,15 @@ export function createScriptGateRunner(deps: ScriptGateDeps): ScriptGateRunner {
       const cwd =
         req.cwd === undefined ? req.worktreePath : resolve(req.worktreePath, req.cwd);
 
+      const dirs = (await deps.worktrees.readPrep?.(req.worktreePath))?.path ?? [];
       let result;
       try {
         result = await spawn({
           command: req.command,
           cwd,
-          env: scrubEnv(deps.env, deps.passEnv),
+          env: prependPath(scrubEnv(deps.env, deps.passEnv), dirs, delimiter),
           timeoutMs: req.timeoutMs,
+          ...(dirs.length === 0 ? {} : { trustedDirs: dirs }),
         });
       } catch (e) {
         const why = e instanceof Error ? e.message : String(e);

@@ -9,9 +9,9 @@
  *   mid-ticket. `default_harness` is an opaque id because core must not know which
  *   harnesses exist; drivers are chosen by config (d-0095, d-0027).
  *
- * Exports: CheckRole, ProjectCheck, GateRules, GitHostConfig, ToolGrantConfig, ProjectConfigShape, ProjectConfig,
+ * Exports: CheckRole, ProjectCheck, GateRules, GitHostConfig, ApprovedToolRule, ToolGrantConfig, ProjectConfigShape, ProjectConfig,
  *   ProjectStatus, Project.
- * Depends on: domain/legacy-project-doc, schemas/agent, schemas/director-config, schemas/ids, schemas/pipeline, schemas/secret-name,
+ * Depends on: domain/legacy-project-doc, schemas/agent, schemas/director-config, schemas/ids, schemas/pipeline, schemas/relative-dir, schemas/secret-name, schemas/setup-step,
  *   shared/deep-partial, types/config.types, zod. No IO.
  */
 
@@ -24,8 +24,10 @@ import { ProjectAgents } from '#/schemas/agent.js';
 import { DirectorConfig } from '#/schemas/director-config.js';
 import { ProjectPrefix } from '#/schemas/ids.js';
 import { ProjectPipelines } from '#/schemas/pipeline.js';
+import { RelativeDir } from '#/schemas/relative-dir.js';
 import { ProjectResearch } from '#/schemas/research-settings.js';
 import { SecretName } from '#/schemas/secret-name.js';
+import { SetupSteps } from '#/schemas/setup-step.js';
 import { deepPartial } from '#/shared/deep-partial.js';
 import type { DeepPartial } from '#/types/config.types.js';
 
@@ -39,15 +41,6 @@ export const CheckRole = z.enum([
   'custom',
 ]);
 export type CheckRole = z.infer<typeof CheckRole>;
-
-/** A working directory inside the worktree: relative, no `..` segment. */
-const RelativeDir = z
-  .string()
-  .min(1)
-  .refine(
-    (p) => !/^([a-z]:)?[\\/]/i.test(p) && !p.split(/[\\/]/).includes('..'),
-    'must be a relative path inside the repository',
-  );
 
 /**
  * One named command the gates run in the project's worktree (d-0095). `command` is a shell
@@ -132,6 +125,22 @@ export const GitHostConfig = z.discriminatedUnion('kind', [
 export type GitHostConfig = z.infer<typeof GitHostConfig>;
 
 /**
+ * A rule the owner created by answering "Always for this project" on a tool approval (d-0175):
+ * always an exact `allow`, with the ticket and approval it came from so Settings can show and
+ * revoke it. `@forge/tools` parses it again and refuses wildcards, banned commands and
+ * protected paths.
+ */
+export const ApprovedToolRule = z.object({
+  id: z.string().min(1),
+  action: z.string().min(1),
+  resource: z.string().min(1),
+  effect: z.literal('allow'),
+  created_at: z.iso.datetime(),
+  source: z.object({ ticket_id: z.string().min(1), interaction_id: z.string().min(1) }),
+});
+export type ApprovedToolRule = z.infer<typeof ApprovedToolRule>;
+
+/**
  * What the project lets Workers use beyond the lane defaults: the same shape as a tool
  * `Grant` in `@forge/tools` (that package parses it again before use, so a malformed one
  * fails closed). `allow` narrows what the lane offers, or names project MCP tools; `deny`
@@ -151,6 +160,8 @@ export const ToolGrantConfig = z.object({
       }),
     )
     .default([]),
+  /** Owner-approved "always" rules, newest last; only the owner's approval flow adds one. */
+  approved: z.array(ApprovedToolRule).default([]),
 });
 export type ToolGrantConfig = z.infer<typeof ToolGrantConfig>;
 
@@ -165,6 +176,11 @@ export const ProjectConfigShape = z.object({
   prefix: ProjectPrefix,
   /** Run in list order by G1; any role may be absent. */
   checks: Checks.default([]),
+  /**
+   * Steps run in each new worktree before a Worker starts. Absent: the defaults detected from
+   * the worktree's files; empty: no setup (d-0180, d-0176).
+   */
+  setup: SetupSteps.optional(),
   /** `node`, `python`, `go`, ...; empty means the gates detect them from the diff. */
   ecosystems: z.array(z.string().min(1)).default([]),
   gate_rules: GateRules.optional(),

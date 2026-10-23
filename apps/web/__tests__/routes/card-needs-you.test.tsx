@@ -1,83 +1,167 @@
 /**
- * Pins: the pinned Needs you banner states the Director's reason and shows one button per
- * action it listed, each wired to a real call or view (start planning, the plan dialogs, focus
- * on the open question, run as Express or a way to choose the ticket), and goes away once a
- * later event settled it.
+ * Pins: the needs-you dock states the waiting item's short title and offers at most one primary
+ * and one secondary action in the owner's words, each wired to a real call or view (start
+ * planning, the plan dialogs, run as Express, retry the step, a link to the step-budget
+ * setting); a plan's reasons show as chips with the full list on demand; the dock leaves when
+ * the server no longer lists the item, and a failed action is explained inside the item.
  *
- * Why: a card waiting on the owner with a dead button or only reason text is a bug (d-0135):
- *   the owner could not move the card forward from the one place that says it is stuck.
+ * Why: a card waiting on the owner with a dead button or only reason text is a bug (d-0135): the
+ *   owner could not move the card forward from the one place that says it is stuck. The dock is
+ *   the only such place now, and it reads what the server lists (`needs_you_detail`), so these
+ *   tests drive it from that field.
  * Depends on: the stubbed Forge server via helpers/render-app, helpers/flow-fixtures,
- *   routes/card/needs-you-banner, routes/card/use-banner-actions.
+ *   components/work/needs-you-dock, routes/card/use-card-dock.
  */
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { refusal } from '#tests/helpers/fetch-stub.js';
 import {
-  flowDetail,
+  dockItem,
   flowEvent,
   flowRoutes,
   FLOW_CARD,
+  planFixture,
 } from '#tests/helpers/flow-fixtures.js';
-
+import type { FlowRoutesOptions } from '#tests/helpers/flow-fixtures.js';
+import { NO_NEEDS_YOU, openNeedsYou } from '#tests/helpers/needs-you-modal.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
 const PAGE = `/p/sample-service/cards/${FLOW_CARD}`;
 
-const QUESTION = {
-  question_id: 'q1',
-  text: 'How many times should a failed send retry?',
-  why: 'It sets how long a target can be down before we give up.',
-  options: [
-    { id: 'o1', label: 'Three times', recommended: true },
-    { id: 'o2', label: 'Five times', recommended: false },
-  ],
-  allow_other: true,
-  open_points: 3,
-};
+const raised = (
+  kind: string,
+  actions: string[],
+  extra: Record<string, unknown> = {},
+  more: Partial<FlowRoutesOptions> = {},
+) =>
+  flowRoutes({
+    detail: {
+      needs_you: true,
+      column: 'needs_you',
+      needs_you_detail: [dockItem(kind, actions, extra)],
+    },
+    events: [flowEvent(0, 'needs_you', { reason: 'Why.', actions })],
+    ...more,
+  });
 
-const grilling = [
-  flowEvent(0, 'user_message', { text: 'Retry failed webhooks' }),
-  flowEvent(1, 'grill_question', QUESTION),
-];
-
-describe('Card page: Needs you banner', () => {
-  const raised = (
-    reason: string,
-    actions: string[],
-    extra: Record<string, unknown> = {},
-  ) =>
-    flowRoutes({
-      detail: { needs_you: true, column: 'needs_you' },
-      events: [flowEvent(0, 'needs_you', { reason, actions, ...extra })],
-    });
-
-  it('pins the reason and a button for every listed action', async () => {
+describe('Card page: needs-you dock', () => {
+  it('states the title and offers a primary and a secondary action, nothing more', async () => {
+    const user = userEvent.setup();
     renderApp({
       path: PAGE,
-      routes: raised('A plan is waiting for you.', ['approve_plan', 'request_changes']),
+      routes: raised(
+        'plan_approval',
+        ['approve_plan', 'request_changes'],
+        { title: 'Plan v1 needs your approval' },
+        { plan: { versions: [], current: planFixture() } },
+      ),
     });
 
-    const banner = await screen.findByRole('region', { name: 'Needs you' });
+    const dock = await openNeedsYou(user, 'Waiting on you (1)');
 
-    expect(within(banner).getByText('A plan is waiting for you.')).toBeInTheDocument();
+    expect(within(dock).getByText('Plan v1 needs your approval')).toBeInTheDocument();
     expect(
-      within(banner).getByRole('button', { name: 'Review and approve' }),
+      within(dock).getByRole('button', { name: 'Approve plan…' }),
     ).toBeInTheDocument();
 
     expect(
-      within(banner).getByRole('button', { name: 'Request changes' }),
+      within(dock).getByRole('button', { name: 'Request changes' }),
     ).toBeInTheDocument();
 
-    expect(within(banner).getAllByRole('button')).toHaveLength(2);
+    // No stepper for one item.
+    expect(within(dock).queryByRole('button', { name: /Next waiting item/ })).toBeNull();
+  });
+
+  it('shows the plan reasons as chips and the full list under Reasons', async () => {
+    const user = userEvent.setup();
+    const reasons = [
+      'Tier C path: packages/core/src/domain/state-machine.ts',
+      'Unverified claim: Redis 8 supports this',
+      'Overlaps FX-C1',
+      'Changed since the last version',
+    ];
+
+    renderApp({
+      path: PAGE,
+      routes: raised(
+        'plan_approval',
+        ['approve_plan', 'request_changes'],
+        { title: 'Plan v1 needs your approval', items: reasons },
+        { plan: { versions: [], current: planFixture() } },
+      ),
+    });
+
+    const dock = await openNeedsYou(user, 'Waiting on you (1)');
+
+    expect(within(dock).getByText('Overlaps FX-C1')).toBeInTheDocument();
+    expect(within(dock).getByText('+1 more')).toBeInTheDocument();
+    expect(within(dock).queryByRole('list', { name: 'Reasons' })).toBeNull();
+
+    await user.click(within(dock).getByRole('button', { name: /Reasons/ }));
+    const list = within(dock).getByRole('list', { name: 'Reasons' });
+
+    expect(within(list).getAllByRole('listitem')).toHaveLength(4);
+    expect(within(list).getByText(reasons[0] ?? '')).toBeInTheDocument();
+  });
+
+  it('opens the approve confirm from the dock and posts the approval', async () => {
+    const user = userEvent.setup();
+    const { forge } = renderApp({
+      path: PAGE,
+      routes: raised(
+        'plan_approval',
+        ['approve_plan', 'request_changes'],
+        { title: 'Plan v1 needs your approval' },
+        { plan: { versions: [], current: planFixture() } },
+      ),
+    });
+
+    await openNeedsYou(userEvent.setup());
+
+    await user.click(await screen.findByRole('button', { name: 'Approve plan…' }));
+    const dialog = await screen.findByRole('alertdialog');
+
+    expect(dialog).toHaveTextContent(/Approve plan v1/);
+    expect(forge.stub.callsTo('POST /cards/:id/plan/approve')).toHaveLength(0);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Approve plan' }));
+
+    await waitFor(() =>
+      expect(forge.stub.callsTo('POST /cards/:id/plan/approve')).toHaveLength(1),
+    );
+  });
+
+  it('opens the request-changes dialog from the dock', async () => {
+    const user = userEvent.setup();
+    renderApp({
+      path: PAGE,
+      routes: raised(
+        'plan_approval',
+        ['approve_plan', 'request_changes'],
+        {},
+        { plan: { versions: [], current: planFixture() } },
+      ),
+    });
+
+    await openNeedsYou(userEvent.setup());
+
+    await user.click(await screen.findByRole('button', { name: 'Request changes' }));
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent(/Request changes/);
   });
 
   it('wires start_planning to its endpoint', async () => {
     const user = userEvent.setup();
     const { forge } = renderApp({
       path: PAGE,
-      routes: raised('This card has not been planned yet.', ['start_planning']),
+      routes: raised('start_planning', ['start_planning'], {
+        title: 'Start planning this card',
+      }),
     });
+
+    await openNeedsYou(userEvent.setup());
 
     await user.click(await screen.findByRole('button', { name: 'Start planning' }));
 
@@ -86,60 +170,14 @@ describe('Card page: Needs you banner', () => {
     );
   });
 
-  it('wires approve_plan and request_changes to the Plan tab dialogs', async () => {
-    const user = userEvent.setup();
-    renderApp({
-      path: PAGE,
-      routes: {
-        ...raised('Review the plan.', ['approve_plan', 'request_changes']),
-        ...flowRoutes({
-          detail: { needs_you: true, phase: 'plan_ready' },
-          events: [
-            flowEvent(0, 'needs_you', {
-              reason: 'Review the plan.',
-              actions: ['approve_plan', 'request_changes'],
-            }),
-          ],
-          plan: {
-            versions: [{ version: 1, created_at: new Date().toISOString() }],
-            current: planFor(1),
-          },
-        }),
-      },
-    });
-
-    await user.click(await screen.findByRole('button', { name: 'Review and approve' }));
-
-    expect(await screen.findByRole('alertdialog')).toHaveTextContent(/Approve plan v1/);
-  });
-
-  it('wires answer to the open question', async () => {
-    const user = userEvent.setup();
-    renderApp({
-      path: PAGE,
-      routes: flowRoutes({
-        detail: { needs_you: true },
-        events: [
-          ...grilling,
-          flowEvent(2, 'needs_you', {
-            reason: 'The Director needs an answer.',
-            actions: ['answer'],
-          }),
-        ],
-      }),
-    });
-
-    await user.click(await screen.findByRole('button', { name: 'Answer the question' }));
-
-    expect(screen.getByRole('button', { name: /Three times/ })).toHaveFocus();
-  });
-
-  it('wires run_as_express to the held ticket named in the raise', async () => {
+  it('wires run_as_express to the held ticket the raise names', async () => {
     const user = userEvent.setup();
     const { forge } = renderApp({
       path: PAGE,
-      routes: raised('A ticket is held.', ['run_as_express'], { ticket_id: 'SVC-9' }),
+      routes: raised('held_ticket', ['run_as_express'], { ticket_id: 'SVC-9' }),
     });
+
+    await openNeedsYou(userEvent.setup());
 
     await user.click(await screen.findByRole('button', { name: 'Run as Express' }));
 
@@ -150,34 +188,22 @@ describe('Card page: Needs you banner', () => {
     );
   });
 
-  it('leaves no dead end when run_as_express names no ticket: it opens the Tickets tab', async () => {
-    const user = userEvent.setup();
-    const { router } = renderApp({
-      path: PAGE,
-      routes: raised('A ticket is held.', ['run_as_express']),
-    });
-
-    await user.click(await screen.findByRole('button', { name: 'Choose a ticket' }));
-
-    expect(router.state.location.pathname).toMatch(/\/cards\/[^/]+\/tickets$/);
-  });
-
   it('offers a Settings link and a Retry button when a step ran out of budget', async () => {
     const user = userEvent.setup();
     const { forge, router } = renderApp({
       path: PAGE,
-      routes: raised(
-        'The Director per-step budget ($0.50) is too small for "Survey the code".',
-        ['raise_step_budget', 'retry_step'],
-      ),
+      routes: raised('step_budget', ['raise_step_budget', 'retry_step'], {
+        title: 'The Director ran out of step budget',
+        items: ['The per-step budget ($0.50) is too small for "Survey the code".'],
+      }),
     });
 
-    const banner = await screen.findByRole('region', { name: 'Needs you' });
-    const link = within(banner).getByRole('link', { name: 'Raise the step budget' });
+    const dock = await openNeedsYou(user, 'Waiting on you (1)');
+    const link = within(dock).getByRole('link', { name: 'Raise the step budget' });
 
     expect(link).toHaveAttribute('href', '/settings/limits');
 
-    await user.click(within(banner).getByRole('button', { name: 'Retry the step' }));
+    await user.click(within(dock).getByRole('button', { name: 'Retry the step' }));
 
     await waitFor(() =>
       expect(forge.stub.callsTo('POST /cards/:id/planning/retry')).toHaveLength(1),
@@ -186,11 +212,30 @@ describe('Card page: Needs you banner', () => {
     expect(router.state.location.pathname).toBe(PAGE);
   });
 
-  it('goes away once a later event settled it', async () => {
+  it('says in words, inside the item, why an action failed', async () => {
+    const user = userEvent.setup();
+    renderApp({
+      path: PAGE,
+      routes: raised(
+        'start_planning',
+        ['start_planning'],
+        { title: 'Start planning this card' },
+        { answers: { start_planning: refusal(409, 'card_closed', 'closed') } },
+      ),
+    });
+
+    const dock = await openNeedsYou(user, 'Waiting on you (1)');
+
+    await user.click(within(dock).getByRole('button', { name: 'Start planning' }));
+
+    expect(await within(dock).findByRole('alert')).toBeInTheDocument();
+    expect(within(dock).getByRole('button', { name: 'Start planning' })).toBeEnabled();
+  });
+
+  it('is not drawn once the server no longer lists the item', async () => {
     renderApp({
       path: PAGE,
       routes: flowRoutes({
-        detail: flowDetail({ needs_you: false }),
         events: [
           flowEvent(0, 'needs_you', {
             reason: 'Review the plan.',
@@ -203,26 +248,30 @@ describe('Card page: Needs you banner', () => {
 
     await screen.findByText(/approved by you/);
 
-    expect(screen.queryByRole('region', { name: 'Needs you' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', NO_NEEDS_YOU)).not.toBeInTheDocument();
+  });
+
+  it('keeps a record of each raise in the chat, with no action buttons', async () => {
+    renderApp({
+      path: PAGE,
+      routes: flowRoutes({
+        events: [
+          flowEvent(0, 'needs_you', {
+            reason: 'A plan is waiting for you.',
+            title: 'Plan v1 needs your approval',
+            kind: 'plan_approval',
+            actions: ['approve_plan', 'request_changes'],
+          }),
+        ],
+      }),
+    });
+
+    const log = await screen.findByRole('log', { name: 'Conversation' });
+
+    expect(
+      await within(log).findByText('Waiting on you: Plan v1 needs your approval'),
+    ).toBeInTheDocument();
+
+    expect(within(log).queryByRole('button')).toBeNull();
   });
 });
-
-function planFor(version: number): Record<string, unknown> {
-  return {
-    card_id: FLOW_CARD,
-    version,
-    created_at: new Date().toISOString(),
-    author: 'director',
-    goal: 'Goal',
-    tickets: [
-      {
-        key: 't1',
-        title: 'One',
-        priority: 'normal',
-        depends_on: [],
-        lane: 'express',
-        size: 'S',
-      },
-    ],
-  };
-}

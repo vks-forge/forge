@@ -67,7 +67,8 @@ export interface HarnessCompat {
    * it is unchanged (null when none is known); when the installed build differs from the
    * one the approvals were loaded for, starts the first-sight check of the new build in the
    * background and throws `HarnessChangedError` so the start is refused. A build that cannot
-   * be read is not a change.
+   * be read is not a change. An unchanged build that has a tool still `pending`, or whose
+   * check has not finished, throws `HarnessToolsPendingError` (the start is refused too).
    */
   assertCurrent(harnessId: string): Promise<string | null>;
   /** Starts a check now (or returns the one running). */

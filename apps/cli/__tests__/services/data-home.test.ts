@@ -47,18 +47,19 @@ describe('loadDataHome', () => {
     const base = mkdtempSync(join(tmpdir(), 'forge-stray-'));
     try {
       const roaming = join(base, 'AppData', 'Roaming');
+      const env = { APPDATA: roaming, LOCALAPPDATA: join(base, 'Local') };
+      const host = { platform: process.platform, homedir: base };
+      const expected = loadDataHome(env, host).home;
       mkdirSync(join(roaming, 'Forge'), { recursive: true });
       writeFileSync(
         join(roaming, 'Forge', 'forge-home.json'),
         JSON.stringify({ dataHome: 'D:\\ForgeData' }),
       );
 
-      const env = { APPDATA: roaming, LOCALAPPDATA: join(base, 'Local') };
+      const layout = loadDataHome(env, host);
 
-      const layout = loadDataHome(env, { platform: process.platform, homedir: base });
-
+      expect(layout.home).toBe(expected);
       expect(layout.home).not.toContain('ForgeData');
-      expect(layout.home).toContain(join(base, 'Local'));
     } finally {
       rmSync(base, { recursive: true, force: true });
     }

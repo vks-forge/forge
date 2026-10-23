@@ -43,7 +43,7 @@ function open(world = proposalWorld([addReviewerProposal()])) {
         body: { items: world.pending().length > 0 ? items : [], nextCursor: null },
       }),
       'GET /projects/sample-service/inbox/counts': {
-        body: { needs_action: 1, unread: 1, all: 1, archived: 0 },
+        body: { needs_action: 1, notices: 0, unread: 1, all: 1, archived: 0 },
       },
       ...world.routes,
     },

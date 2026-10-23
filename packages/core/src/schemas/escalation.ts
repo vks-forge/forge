@@ -14,18 +14,17 @@
  *   `sign_off` is finished work waiting for the owner's name; both start at the owner (the
  *   Director's first look has nothing to add) and their overriding options need a written reason.
  *
- * Exports: EscalationKind, FAILURE_CAUSES, FailureCause, SetupCause, EscalationOption,
- *   EscalationQuestion, EscalationFailure, EscalationSetup, DECISION_CAUSES, DecisionCause,
- *   EscalationDecision, SIGN_OFF_CAUSES, SignOffCause, EscalationSignOff, EscalationPayload, ESCALATION_ACTIONS,
- *   EscalationAction, EscalationActor, EscalationAnswer, EscalationStage, EscalationSettled,
- *   EscalationView, EscalationList, EscalationActReply, TicketActReply, EscalationActBody, MAX_OPTIONS.
- * Depends on: schemas/errors, schemas/finding, schemas/harness, schemas/ids, schemas/interaction,
- *   schemas/pipeline, schemas/ticket, zod. No IO.
+ * Exports: EscalationKind, FAILURE_CAUSES, FailureCause, EscalationOption, EscalationQuestion, EscalationFailure, EscalationSetup, DECISION_CAUSES,
+ *   DecisionCause, EscalationDecision, SIGN_OFF_CAUSES, SignOffCause, EscalationSignOff, EscalationPayload, ESCALATION_ACTIONS, EscalationAction,
+ *   EscalationActor, EscalationAnswer, EscalationStage, EscalationSettled, EscalationView, EscalationList, EscalationActBody, MAX_OPTIONS.
+ * Depends on: schemas/errors, schemas/escalation-{conflict,permission,setup}, schemas/finding, schemas/ids, schemas/interaction, schemas/pipeline, schemas/ticket, zod. No IO.
  */
 
 import { z } from 'zod';
 import { ErrorFamily } from '#/schemas/errors.js';
-import { HarnessId, HarnessKind } from '#/schemas/harness.js';
+import { EscalationConflict } from '#/schemas/escalation-conflict.js';
+import { EscalationPermission } from '#/schemas/escalation-permission.js';
+import { SetupCause } from '#/schemas/escalation-setup.js';
 import { Finding } from '#/schemas/finding.js';
 import { CardId, TicketId } from '#/schemas/ids.js';
 import { InteractionStatus } from '#/schemas/interaction.js';
@@ -38,6 +37,7 @@ export const EscalationKind = z.enum([
   'setup',
   'decision',
   'sign_off',
+  'permission',
 ]);
 export type EscalationKind = z.infer<typeof EscalationKind>;
 
@@ -52,30 +52,12 @@ export const FAILURE_CAUSES = [
   'refused',
   'question_timeout',
   'no_agent_available',
+  'merge_conflict',
 ] as const;
 export const FailureCause = z.enum(FAILURE_CAUSES);
 export type FailureCause = z.infer<typeof FailureCause>;
 
-/** What the owner must fix outside the ticket; `reason_code` is the `admit()` denial that named the tool. */
-export const SetupCause = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('login'), harness_id: HarnessId }),
-  z.object({
-    type: z.literal('tool'),
-    tool: z.string().min(1),
-    harness_kind: HarnessKind,
-    version: z.string().min(1),
-    reason_code: z.string().min(1),
-  }),
-  z.object({
-    type: z.literal('harness_build'),
-    harness_kind: HarnessKind,
-    version: z.string().min(1),
-  }),
-]);
-export type SetupCause = z.infer<typeof SetupCause>;
-
-/** A question carries at most this many clickable options. */
-export const MAX_OPTIONS = 4;
+export const MAX_OPTIONS = 4; // clickable options per question
 
 export const EscalationOption = z.object({
   id: z.string().min(1),
@@ -113,6 +95,17 @@ export const EscalationFailure = z.object({
   ),
   error_family: ErrorFamily.optional(),
   lane: Lane.optional(),
+  /** The limit a run hit, with whose setting it was and the web path that raises it (a turn limit today). */
+  limit: z
+    .object({
+      kind: z.literal('turns'),
+      value: z.number().int().positive(),
+      source: z.enum(['agent', 'forge']),
+      fix_href: z.string().min(1),
+    })
+    .optional(),
+  /** A merge conflict the resolver could not finish: the clashing files and the upstream tickets that changed them first. */
+  conflict: EscalationConflict.optional(),
 });
 export type EscalationFailure = z.infer<typeof EscalationFailure>;
 
@@ -125,8 +118,13 @@ export const EscalationSetup = z.object({
 });
 export type EscalationSetup = z.infer<typeof EscalationSetup>;
 
-/** Why a held ticket waits for a decision: a stage's findings it will not send back again, or work that outgrew its plan. */
-export const DECISION_CAUSES = ['findings_hold', 'scope_drift'] as const;
+/** Why a held ticket waits for a decision: a stage's findings it will not send back again, gate configuration files the Worker changed, files whose earlier-run proof is gone, or work that outgrew its plan. */
+export const DECISION_CAUSES = [
+  'findings_hold',
+  'config_hold',
+  'provenance_hold',
+  'scope_drift',
+] as const;
 export const DecisionCause = z.enum(DECISION_CAUSES);
 export type DecisionCause = z.infer<typeof DecisionCause>;
 
@@ -173,13 +171,13 @@ export const EscalationSignOff = z.object({
 });
 export type EscalationSignOff = z.infer<typeof EscalationSignOff>;
 
-/** The payload of a new escalation row, told apart by `kind` (which mirrors the row kind). */
 export const EscalationPayload = z.discriminatedUnion('kind', [
   EscalationQuestion,
   EscalationFailure,
   EscalationSetup,
   EscalationDecision,
   EscalationSignOff,
+  EscalationPermission,
 ]);
 export type EscalationPayload = z.infer<typeof EscalationPayload>;
 
@@ -202,6 +200,12 @@ export const ESCALATION_ACTIONS = [
   'pipeline_ready',
   /** Engine / Director only: a stage's agent was swapped for a substitute after its fallbacks ran out; never a button. */
   'substitute',
+  /** Owner only: answers to a tool approval (d-0175). */
+  'allow_once',
+  'allow_always',
+  'deny',
+  /** Owner only: start the Worker although the worktree's setup steps failed (Forge records the skip). */
+  'skip_setup',
 ] as const;
 export const EscalationAction = z.enum(ESCALATION_ACTIONS);
 export type EscalationAction = z.infer<typeof EscalationAction>;
@@ -218,6 +222,8 @@ export const EscalationAnswer = z.object({
   note: z.string().optional(),
   comment: z.string().optional(),
   cascade: z.boolean().optional(),
+  /** `allow_always`: the project settings version that stored the rule. */
+  settings_version: z.number().int().positive().optional(),
 });
 export type EscalationAnswer = z.infer<typeof EscalationAnswer>;
 
@@ -253,18 +259,8 @@ export type EscalationView = z.infer<typeof EscalationView>;
 export const EscalationList = z.object({ items: z.array(EscalationView) });
 export type EscalationList = z.infer<typeof EscalationList>;
 
-/** The reply of `POST /interactions/:id/act`: the escalation as it stands after the action. */
-export const EscalationActReply = z.object({ escalation: EscalationView });
-export type EscalationActReply = z.infer<typeof EscalationActReply>;
+const comment = z.string().trim().min(5);
 
-/** The reply of `POST /tickets/:id/act`: which ticket was acted on and with what (the waits it settles have no interaction to return). */
-export const TicketActReply = z.object({ ticket_id: TicketId, action: EscalationAction });
-export type TicketActReply = z.infer<typeof TicketActReply>;
-
-const MIN_COMMENT = 5;
-const comment = z.string().trim().min(MIN_COMMENT);
-
-/** `POST /interactions/:id/act`: a closed union on `action`. */
 export const EscalationActBody = z.discriminatedUnion('action', [
   z
     .object({
@@ -277,13 +273,22 @@ export const EscalationActBody = z.discriminatedUnion('action', [
     }),
   z.object({ action: z.literal('retry'), note: z.string().trim().max(1000).optional() }),
   z.object({ action: z.literal('replan'), comment }),
-  z.object({ action: z.literal('cancel'), cascade: z.boolean().optional() }),
+  z.object({
+    action: z.literal('cancel'),
+    cascade: z.boolean().optional(),
+    /** Why the owner cancels; written on the ticket's history and shown to the Director. */
+    reason: z.string().trim().min(1).max(500).optional(),
+  }),
   z.object({ action: z.literal('run_as_express') }),
   z.object({ action: z.literal('rework'), comment }),
   z.object({ action: z.literal('recheck') }),
   z.object({ action: z.literal('merge_anyway'), comment }),
   z.object({ action: z.literal('continue'), comment }),
   z.object({ action: z.literal('approve') }),
+  z.object({ action: z.literal('allow_once') }),
+  z.object({ action: z.literal('allow_always') }),
+  z.object({ action: z.literal('deny'), note: z.string().trim().max(1000).optional() }),
+  z.object({ action: z.literal('skip_setup') }),
   z.object({
     action: z.literal('sign_off'),
     signer: z.string().trim().min(1).max(100).optional(),

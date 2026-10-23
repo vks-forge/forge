@@ -6,20 +6,25 @@
  *   steers (components/chat/chat-pane), only while the run is live. The message shows up in the thread itself as the user's
  *   line when the server stores it; this panel only confirms delivery. A refusal says why in
  *   plain words (the run ended, the harness cannot take messages, Forge is shutting down) and
- *   the words stay in the box (state/message-draft). Ctrl+Enter sends.
+ *   the words stay in the box (state/message-draft). Ctrl+Enter sends. The box counts toward the 8,000-character limit.
  *
  * Exports: SteerPanel.
- * Depends on: react, api/use-steer, components/card/message-composer, domain/owner,
+ * Depends on: react, @forge/core (STEER_MESSAGE_MAX), api/use-steer, components/card/message-composer, domain/owner,
  *   domain/steer-errors, state/message-draft.
  */
 
+import { STEER_MESSAGE_MAX } from '@forge/core';
 import { useSteerRun } from '#/api/use-steer.js';
 import { MessageComposer } from '#/components/card/message-composer.js';
 import { OWNER } from '#/domain/owner.js';
 import { describeSteerError } from '#/domain/steer-errors.js';
 import { runDraftKey } from '#/state/message-draft.js';
 
-export function SteerPanel(props: { runId: string }) {
+export function SteerPanel(props: {
+  runId: string;
+  /** Tells the page when the box gains or loses focus (a phone folds the dock while typing). */
+  onFocusChange?: (focused: boolean) => void;
+}) {
   const steer = useSteerRun(props.runId);
 
   return (
@@ -29,8 +34,12 @@ export function SteerPanel(props: { runId: string }) {
         label="Message the Worker"
         draftKey={runDraftKey(props.runId)}
         sendLabel="Send to Worker"
+        maxChars={STEER_MESSAGE_MAX}
         placeholder="Tell the Worker what to do differently"
         hint="Delivered to the running Worker now, and shown in the thread. Ctrl+Enter sends."
+        {...(props.onFocusChange === undefined
+          ? {}
+          : { onFocusChange: props.onFocusChange })}
         sending={steer.isPending}
         error={steer.isError ? describeSteerError(steer.error) : null}
         onSend={(message, clear) =>

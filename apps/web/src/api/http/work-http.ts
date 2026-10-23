@@ -17,6 +17,7 @@ import {
   InboxCounts,
   InboxItem,
   InboxPage,
+  InboxReadAllResult,
   OverviewStats,
   RunDetail,
   RunListPage,
@@ -103,6 +104,11 @@ export function createWorkHttp(
       mark: (slug, itemId, mark) =>
         requestJson(client, project(slug, `/inbox/${enc(itemId)}/${mark}`), InboxItem, {
           method: 'POST',
+        }),
+      markAllRead: (slug, view) =>
+        requestJson(client, project(slug, '/inbox/read-all'), InboxReadAllResult, {
+          method: 'POST',
+          body: { view },
         }),
     },
     runs: {

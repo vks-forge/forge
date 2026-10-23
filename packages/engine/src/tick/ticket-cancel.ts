@@ -7,17 +7,20 @@
  *   database transaction (stopping a live run, removing its worktree) follow once it committed.
  *   A ticket other tickets wait on must not be cancelled quietly: a cancelled blocker never
  *   unblocks, so its dependents would wait for ever. The caller either refuses (and names the
- *   dependents) or cancels the whole chain, dependents and their dependents, in one go.
+ *   dependents) or cancels the whole chain, dependents and their dependents, in one go. The worktree
+ *   and the ticket's local branch are removed with it (tick/workspace-cleanup).
  *
- * Exports: openDependents(), cancelTicketsTx(), stopCancelled().
- * Depends on: @forge/core (TERMINAL_STATUSES, ticket types), tick/escalation-settle, tick/ticket-moves.
+ * Exports: openDependents(), cancelTicketsTx(), stopCancelled(), stopCancelledAll().
+ * Depends on: @forge/core (TERMINAL_STATUSES, ticket types), tick/escalation-settle, tick/ticket-moves, tick/workspace-cleanup.
  *   Writes inside the caller's transaction; the run and worktree go through the EngineDeps ports.
  */
 
-import { TERMINAL_STATUSES } from '@forge/core';
+import { TERMINAL_STATUSES, openDependentIds } from '@forge/core';
 import type { StorageTx, Ticket, TicketId } from '@forge/core';
+import { CANCEL_GRACE_MS } from '#/shared/time.js';
 import { cancelLeftovers } from '#/tick/escalation-settle.js';
 import { moveTicketTx } from '#/tick/ticket-moves.js';
+import { cleanWorkspace } from '#/tick/workspace-cleanup.js';
 import type { EngineState } from '#/types/engine-state.types.js';
 import type { EngineDeps } from '#/types/engine.types.js';
 
@@ -40,19 +43,7 @@ export async function openDependents(
     open.push(...(await tx.tickets.listByStatus(status)));
   }
 
-  const found = new Set<string>();
-  const queue = [ticketId];
-  while (queue.length > 0) {
-    const next = queue.shift() as string;
-    for (const t of open) {
-      if (t.blocked_by.includes(next as TicketId) && !found.has(t.id)) {
-        found.add(t.id);
-        queue.push(t.id);
-      }
-    }
-  }
-
-  return [...found] as TicketId[];
+  return openDependentIds(open, ticketId) as TicketId[];
 }
 
 /** Cancels each ticket through `transition()` and closes its pending waits; returns the tickets that actually moved. */
@@ -60,11 +51,14 @@ export async function cancelTicketsTx(
   tx: StorageTx,
   ids: readonly string[],
   nowIso: string,
+  reason = 'You cancelled it',
 ): Promise<Ticket[]> {
   const cancelled: Ticket[] = [];
   for (const id of ids) {
     const moved = await moveTicketTx(tx, id, nowIso, (t) =>
-      TERMINAL_STATUSES.includes(t.status) ? null : { events: [{ type: 'cancelled' }] },
+      TERMINAL_STATUSES.includes(t.status)
+        ? null
+        : { events: [{ type: 'cancelled' }], reason },
     );
 
     if (moved.ok) {
@@ -76,7 +70,7 @@ export async function cancelTicketsTx(
   return cancelled;
 }
 
-/** After the cancel committed: stop the ticket's live run and remove its worktree. Failures are logged, never thrown. */
+/** After the cancel committed: stop the ticket's live run and remove its worktree and local branch. Failures are logged, never thrown. */
 export async function stopCancelled(
   deps: EngineDeps,
   state: EngineState,
@@ -88,18 +82,32 @@ export async function stopCancelled(
 
   if (pump) {
     pump.cancelled = true;
-    await pump.driver.cancel(pump.handle).catch((e: unknown) => {
+    let stopTimer = (): void => undefined;
+    try {
+      await pump.driver.cancel(pump.handle);
+      const grace = new Promise<void>((r) => {
+        stopTimer = deps.clock.after(CANCEL_GRACE_MS, r);
+      });
+
+      // The harness's process tree can outlive `cancel()` for a moment; its files stay held until it is gone.
+      await Promise.race([pump.finished, grace]);
+    } catch (e) {
       deps.log?.('error', `cancel of ${pump.runId} failed`, { error: String(e) });
-    });
+    }
+
+    stopTimer();
   }
 
-  const settings = await deps.config.project(ticket.project).catch(() => undefined);
-  const runtime = deps.project(ticket.project, settings);
-  if (ticket.worktree && runtime) {
-    await runtime.worktrees.remove(ticket.worktree).catch((e: unknown) => {
-      deps.log?.('warn', `could not remove worktree of ${ticket.id}`, {
-        error: String(e),
-      });
-    });
+  await cleanWorkspace(deps, state, ticket);
+}
+
+/** Stops and cleans up every ticket in `cancelled` (a plan's replaced tickets) once their cancel has committed. */
+export async function stopCancelledAll(
+  deps: EngineDeps,
+  state: EngineState,
+  cancelled: readonly Ticket[] | undefined,
+): Promise<void> {
+  for (const t of cancelled ?? []) {
+    await stopCancelled(deps, state, t);
   }
 }

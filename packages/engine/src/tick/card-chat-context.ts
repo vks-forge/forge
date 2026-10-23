@@ -9,16 +9,30 @@
  *   the driver fences as data, never as instructions. A closed card gets no context: it takes
  *   no chat.
  *
- * Exports: loadChatContext(), cardSpend(), HISTORY_LIMIT.
- * Depends on: tick/memory-context, @forge/core (card schemas, allowedChatActions), types/card-chat, types/engine.
+ * Exports: loadChatContext(), cardSpend(), HISTORY_LIMIT, OWNER_CONTROLS.
+ * Depends on: tick/memory-context, tick/plan-keys, @forge/core (card schemas, allowedChatActions), types/card-chat, types/engine.
  *   Reads storage and project memory.
  */
 
 import { allowedChatActions } from '@forge/core';
 import type { CardEvent, CardId, StorageTx, Ticket } from '@forge/core';
 import { buildMemoryContext } from '#/tick/memory-context.js';
+import { ticketPlanKeys } from '#/tick/plan-keys.js';
 import type { ChatContext } from '#/types/card-chat.types.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
+
+/**
+ * The controls the owner really has, shown to the Director so it never sends the owner to a
+ * button that does not exist (W1b). Keep in step with the web app when a control is added or removed.
+ */
+export const OWNER_CONTROLS: readonly string[] = [
+  'Ticket page: edit priority, dependencies (what the ticket waits for) and, before work starts, the description',
+  'Ticket page: act on a ticket that waits for the owner (answer a question, approve or sign off, rework, cancel)',
+  'Card page: change the card type, close the card, set the budget cap, set card dependencies',
+  'Card page: approve the plan, ask for plan changes, edit plan tickets, restart planning',
+  'Ticket page: cancel any unfinished ticket (stops its Worker, removes its work branch; the Director can do the same with cancel_ticket only when the owner asked in this chat turn)',
+  'No control exists to pause a ticket, to reorder tickets on the board, or to edit a ticket title or lane',
+];
 
 /** History entries the Director sees, newest last. */
 export const HISTORY_LIMIT = 30;
@@ -55,6 +69,34 @@ function eventText(event: CardEvent): string {
   const text = typeof payload['text'] === 'string' ? payload['text'] : null;
 
   return (text ?? JSON.stringify(payload)).slice(0, TEXT_CLIP);
+}
+
+/** Why each cancelled ticket of the card was cancelled, from its history line ("You cancelled it: ..."). */
+async function cancelReasons(
+  tx: StorageTx,
+  cardId: CardId,
+): Promise<Map<string, string>> {
+  const reasons = new Map<string, string>();
+  let afterSeq: number | undefined;
+  for (;;) {
+    const page = await tx.cardEvents.list(cardId, {
+      ...(afterSeq === undefined ? {} : { afterSeq }),
+      limit: PAGE,
+    });
+
+    for (const e of page) {
+      if (e.kind === 'ticket_state' && e.payload.to === 'cancelled') {
+        reasons.set(e.payload.ticket_id, e.payload.reason ?? 'no reason recorded');
+      }
+    }
+
+    const last = page[page.length - 1];
+    if (page.length < PAGE || !last) {
+      return reasons;
+    }
+
+    afterSeq = last.seq;
+  }
 }
 
 /** Dollars spent by the runs of `tickets`; runs without a reported cost count as zero. */
@@ -103,6 +145,8 @@ export async function loadChatContext(
       ids.has(i.ticket_id),
     );
 
+    const planKeys = await ticketPlanKeys(tx, card.id);
+    const cancelled = await cancelReasons(tx, card.id);
     const rows = [];
     for (const ticket of tickets) {
       const run = ticket.assignee_run_id
@@ -111,11 +155,19 @@ export async function loadChatContext(
 
       rows.push({
         id: ticket.id,
+        // The plan key (t4) is only the plan's own label; the id is what every action takes.
+        plan_key: planKeys.get(ticket.id)?.key ?? null,
         title: ticket.title,
+        priority: ticket.priority,
+        depends_on: ticket.blocked_by,
         state: ticket.status,
         lane: ticket.lane,
         run_id: run?.id ?? null,
         run_status: run?.status ?? null,
+        // So the Director never re-files what the owner cancelled unasked (d-0179).
+        ...(ticket.status === 'cancelled'
+          ? { cancel_reason: cancelled.get(ticket.id) ?? 'no reason recorded' }
+          : {}),
       });
     }
 
@@ -127,7 +179,10 @@ export async function loadChatContext(
       rows,
       pending,
       history: await recentEvents(tx, card.id, HISTORY_LIMIT),
-      spend: await cardSpend(tx, tickets),
+      // The card total the budget warning compares: ticket runs plus the Director's own steps.
+      spend:
+        (await cardSpend(tx, tickets)) +
+        (await tx.cardPlanning.get(card.id)).grill.director_spend_usd,
     };
   });
 
@@ -171,6 +226,7 @@ export async function loadChatContext(
         tickets_on_intake: type.tickets_on_intake,
       },
       allowed_actions: allowedChatActions(type, card.phase),
+      owner_controls: OWNER_CONTROLS,
       history: loaded.history.map((e) => ({
         seq: e.seq,
         at: e.at,

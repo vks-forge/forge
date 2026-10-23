@@ -8,7 +8,7 @@
  *   snapshot a load returns, the editable draft, and the save request.
  *
  * Exports: SettingsSnapshot, SettingsSaveRequest, ProjectSettingsApi, FieldKey, FieldDraft,
- *   FormScope, SettingsDraft, ResearchDraft, DocChange, SettingsIssue, TextFieldSpec.
+ *   FormScope, DirtyKey, SettingsDraft, SetupRow, ResearchDraft, DocChange, SettingsIssue, TextFieldSpec.
  * Depends on: @forge/core (types), schemas/project-settings, schemas/projects, types/api.types.
  */
 
@@ -18,7 +18,7 @@ import type {
   ForgeConfig,
   ProjectCheck,
 } from '@forge/core';
-import type { ProjectConfigResponse } from '#/schemas/project-settings.js';
+import type { DetectedReply, ProjectConfigResponse } from '#/schemas/project-settings.js';
 import type { ProjectView } from '#/schemas/projects.js';
 import type { RequestOptions } from '#/types/api.types.js';
 
@@ -53,6 +53,10 @@ export interface ProjectSettingsApi {
   archive(slug: string, options?: RequestOptions): Promise<ProjectView>;
   /** Unarchives the project (status `ready`, served again); a 409 `project_not_servable` means its folder is gone and it stays archived. */
   unarchive(slug: string, options?: RequestOptions): Promise<ProjectView>;
+  /** What Forge detects in the project's folder now (ecosystems, suggested checks, setup steps); writes nothing. */
+  detected(slug: string, options?: RequestOptions): Promise<DetectedReply>;
+  /** Detects again and records the ecosystems on the project ("Detect again"). */
+  refreshDetected(slug: string, options?: RequestOptions): Promise<DetectedReply>;
   /** Deletes the project from Forge (rows, memory, worktrees); `confirm` must be the slug. Never touches the user's folder. */
   remove(slug: string, confirm: string, options?: RequestOptions): Promise<void>;
 }
@@ -60,6 +64,7 @@ export interface ProjectSettingsApi {
 /** The overridable settings the screen edits. */
 export type FieldKey =
   | 'checks'
+  | 'setup'
   | 'ecosystems'
   | 'default_harness'
   | 'max_concurrent'
@@ -69,6 +74,9 @@ export type FieldKey =
   | 'director'
   | 'research';
 
+/** A key a tab can show as unsaved: an overridable field, or the project's tool grants. */
+export type DirtyKey = FieldKey | 'tool_grants';
+
 /** One field's edit state: whether the project overrides it, and the text or rows being edited. */
 export interface FieldDraft<T> {
   readonly overridden: boolean;
@@ -77,6 +85,8 @@ export interface FieldDraft<T> {
 
 export interface SettingsDraft {
   readonly checks: FieldDraft<readonly ProjectCheck[]>;
+  /** "Before each ticket": not overridden means the detected steps; overridden with no rows means no setup. */
+  readonly setup: FieldDraft<readonly SetupRow[]>;
   /** One entry per line. */
   readonly ecosystems: FieldDraft<string>;
   readonly default_harness: FieldDraft<string>;
@@ -88,6 +98,36 @@ export interface SettingsDraft {
   readonly director: FieldDraft<Partial<DirectorConfig>>;
   /** The project's research narrowing: on or off, and host lists, one per line. */
   readonly research: FieldDraft<ResearchDraft>;
+  /** Ids of approved tool rules the owner marked for revoking; they leave the document on save. */
+  readonly revoked: readonly string[];
+}
+
+/**
+ * One setup step as the editor holds it. Lists are text, one entry per line, so a blank line can
+ * be typed; `env`, `at_repo_root` and the cache settings (apart from the copy-cache switch) are not edited here and ride through unchanged.
+ */
+export interface SetupRow {
+  readonly name: string;
+  readonly command: string;
+  readonly cwd: string;
+  readonly at_repo_root: boolean;
+  readonly env: Readonly<Record<string, string>>;
+  /** Files whose change makes the step run again. */
+  readonly inputs: string;
+  /** Folders put first on PATH once they exist. */
+  readonly path: string;
+  /** Names of variables copied from the server's environment. */
+  readonly pass_env: string;
+  /** Minutes, as typed. */
+  readonly timeout: string;
+  /** Download-cache variables of the step (name to folder); carried through unchanged. */
+  readonly cache_env: Readonly<Record<string, string>>;
+  /** Install folders restored by copy from an earlier ticket; carried through unchanged. */
+  readonly cache_outputs: readonly string[];
+  /** The command whose output joins the copy-cache key; carried through unchanged. */
+  readonly toolchain?: string | undefined;
+  /** False once the owner switched the copy cache off for this step; saving then writes no `cache_outputs`. */
+  readonly copy_cache: boolean;
 }
 
 /** What the Research tab edits. `enabled: false` switches research off for the project. */
@@ -115,7 +155,7 @@ export interface SettingsIssue {
 
 /** How one text-like setting is labelled and edited. */
 export interface TextFieldSpec {
-  readonly key: Exclude<FieldKey, 'checks' | 'director' | 'research'>;
+  readonly key: Exclude<FieldKey, 'checks' | 'setup' | 'director' | 'research'>;
   readonly label: string;
   readonly hint: string;
   /** Where the inherited value comes from, in words. */

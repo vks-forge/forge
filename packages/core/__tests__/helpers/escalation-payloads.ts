@@ -5,11 +5,12 @@
  *   a valid sign-off payload per cause and tier. One copy keeps them agreeing on what a held ticket's
  *   decision and an owner's sign-off carry.
  *
- * Exports: decisionPayload(), signOffPayload().
+ * Exports: decisionPayload(), signOffPayload(), permissionPayload(), worktreeSetupCause.
  * Depends on: src/schemas/escalation. No IO.
  */
 
 import type { DecisionCause, EscalationPayload } from '#/schemas/escalation.js';
+import type { SetupCause } from '#/schemas/escalation-setup.js';
 import type { Tier } from '#/schemas/ticket.js';
 
 export const decisionPayload = (cause: DecisionCause): EscalationPayload => ({
@@ -33,3 +34,30 @@ export const signOffPayload = (tier: Tier): EscalationPayload => ({
     overrides: 0,
   },
 });
+
+/** A tool approval waiting on the owner; `always` toggles whether "Always for this project" is offered. */
+export const permissionPayload = (always: boolean): EscalationPayload => ({
+  kind: 'permission',
+  tool: 'shell',
+  action: 'shell',
+  what: 'cargo add serde',
+  approval_key: 'k'.repeat(64),
+  reason_code: 'rule_ask',
+  why: 'The task needs serde for JSON.',
+  lane: 'standard',
+  always: always
+    ? { offered: true, rule: { action: 'shell', resource: 'cargo add serde' } }
+    : { offered: false, why: 'A chain of commands is approved each time.' },
+  summary: 'Installing a dependency needs approval in the Standard lane.',
+});
+
+/** A worktree setup step that failed on the project's own files. */
+export const worktreeSetupCause: SetupCause = {
+  type: 'worktree_setup',
+  step: 'Install packages',
+  command: 'pnpm install --frozen-lockfile',
+  exit_code: 1,
+  timed_out: false,
+  tail: 'ERR_PNPM_NO_LOCKFILE',
+  settings_version: 3,
+};

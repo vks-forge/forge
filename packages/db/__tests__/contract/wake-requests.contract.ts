@@ -95,6 +95,23 @@ export function describeWakeRequestsContract(getDb: () => StorageAdapter): void 
       });
     });
 
+    it('listByTicket returns every wake of one ticket, oldest first, consumed ones included', async () => {
+      await tx(async (t) => {
+        await t.wakeRequests.insertIfNew(makeWake('first'));
+        await t.wakeRequests.insertIfNew(makeWake('second', { id: 'w-2' }));
+        await t.wakeRequests.insertIfNew(
+          makeWake('other', { id: 'w-o', ticket_id: 'SF-2' }),
+        );
+
+        await t.wakeRequests.markConsumed('w-2', at(0));
+      });
+
+      const wakes = await tx((t) => t.wakeRequests.listByTicket('SF-1'));
+
+      expect(wakes.map((w) => w.status)).toEqual(['pending', 'consumed']);
+      expect(wakes.every((w) => w.ticket_id === 'SF-1')).toBe(true);
+    });
+
     it('countSince counts requests created at or after the cut-off for one ticket', async () => {
       await tx(async (t) => {
         await t.wakeRequests.insertIfNew(makeWake('old', { created_at: at(-2 * HOUR) }));

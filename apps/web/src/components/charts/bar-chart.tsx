@@ -12,22 +12,27 @@
  *   takes the signal colour; the rest use the quiet chart colour. Each day's exact value
  *   shows in the app's own Tooltip, never the browser's `title` bubble: a full-height
  *   transparent hit area per day makes short bars easy to hover, and the bars are one
- *   keyboard stop (arrow keys move between days).
+ *   keyboard stop (arrow keys move between days). When the caller passes `parts` (spend split
+ *   into Workers and the Director) each bar stacks the two series, first part at the bottom,
+ *   a text legend names them (colour is never the only key), and the tooltip and hidden
+ *   table give every part's figure. The chart is one `group` named "chart"; each day's hit
+ *   area is an `img` with its figures as its name.
  *
  * Exports: BarChart.
  * Depends on: motion/react, theme/motion, domain/stats-format, types/chart.types,
- *   components/ui/tooltip, components/charts/use-roving-slots.
+ *   components/ui/tooltip, components/charts/use-roving-slots, components/charts/chart-legend.
  */
 
 import { motion } from 'motion/react';
 import { Fragment, useId } from 'react';
+import { ChartLegend } from '#/components/charts/chart-legend.js';
 import { useRovingSlots } from '#/components/charts/use-roving-slots.js';
 import { Tooltip } from '#/components/ui/tooltip.js';
 import { ChartNoAxesColumn } from 'lucide-react';
 import { EmptyState } from '#/components/ui/empty-state.js';
 import { shortDay } from '#/domain/stats-format.js';
 import { springs } from '#/theme/motion.js';
-import type { ChartPoint } from '#/types/chart.types.js';
+import type { ChartPart, ChartPoint } from '#/types/chart.types.js';
 
 const SLOT = 10;
 const HEIGHT = 100;
@@ -40,6 +45,8 @@ export function BarChart(props: {
   format: (value: number) => string;
   /** Text shown instead of the plot when no point has data. */
   noData: string;
+  /** Names the series each point's `parts` hold, bottom first; draws a stacked bar and a legend. */
+  parts?: readonly ChartPart[] | undefined;
 }) {
   const id = useId();
   const { attach, active, setActive } = useRovingSlots(props.points.length);
@@ -49,6 +56,12 @@ export function BarChart(props: {
 
   const max = known.reduce((peak, p) => Math.max(peak, p.value), 0);
   const total = known.reduce((sum, p) => sum + p.value, 0);
+  const parts = props.parts ?? [];
+  const split = (point: ChartPoint): string =>
+    parts.length === 0 || point.parts === undefined
+      ? ''
+      : ` (${parts.map((part, i) => `${part.label} ${props.format(point.parts?.[i] ?? 0)}`).join(' · ')})`;
+
   const first = props.points[0];
   const last = props.points[props.points.length - 1];
   const summary =
@@ -75,7 +88,8 @@ export function BarChart(props: {
       ) : (
         <>
           <svg
-            role="img"
+            role="group"
+            aria-roledescription="chart"
             ref={attach}
             aria-label={props.title}
             aria-describedby={`${id}-d`}
@@ -100,7 +114,7 @@ export function BarChart(props: {
               const text =
                 point.value === null
                   ? `${shortDay(point.date)}: no data`
-                  : `${shortDay(point.date)}: ${props.format(point.value)}`;
+                  : `${shortDay(point.date)}: ${props.format(point.value)}${split(point)}`;
 
               const height =
                 point.value === null
@@ -112,6 +126,7 @@ export function BarChart(props: {
                   <Tooltip content={text}>
                     <rect
                       data-slot=""
+                      role="img"
                       x={index * SLOT}
                       y={0}
                       width={SLOT}
@@ -135,24 +150,20 @@ export function BarChart(props: {
                       pointerEvents="none"
                     />
                   ) : (
-                    <motion.rect
+                    <PointBar
+                      point={point}
+                      parts={parts}
                       x={x}
-                      y={HEIGHT - height}
-                      width={SLOT - 2}
                       height={height}
-                      rx={1}
-                      fill={isToday ? 'var(--signal)' : 'var(--chart-bar)'}
-                      pointerEvents="none"
-                      initial={{ scaleY: 0 }}
-                      animate={{ scaleY: 1 }}
-                      transition={springs.gentle}
-                      style={{ transformBox: 'fill-box', transformOrigin: '50% 100%' }}
+                      max={max}
+                      isToday={isToday}
                     />
                   )}
                 </Fragment>
               );
             })}
           </svg>
+          <ChartLegend items={parts} />
           <p
             aria-hidden="true"
             className="flex justify-between gap-2 font-data text-xs text-muted"
@@ -176,11 +187,79 @@ export function BarChart(props: {
           {props.points.map((point) => (
             <tr key={point.date}>
               <th scope="row">{shortDay(point.date)}</th>
-              <td>{point.value === null ? 'no data' : props.format(point.value)}</td>
+              <td>
+                {point.value === null
+                  ? 'no data'
+                  : `${props.format(point.value)}${split(point)}`}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </figure>
+  );
+}
+
+/** One day's bar: a single rectangle, or the parts stacked bottom to top when the chart is split. */
+function PointBar(props: {
+  point: ChartPoint;
+  parts: readonly ChartPart[];
+  x: number;
+  height: number;
+  max: number;
+  isToday: boolean;
+}) {
+  const { point, parts, x, height } = props;
+  const style = { transformBox: 'fill-box', transformOrigin: '50% 100%' } as const;
+  const stacked = parts.length > 0 && point.parts !== undefined;
+
+  if (!stacked) {
+    return (
+      <motion.rect
+        x={x}
+        y={HEIGHT - height}
+        width={SLOT - 2}
+        height={height}
+        rx={1}
+        fill={props.isToday ? 'var(--signal)' : 'var(--chart-bar)'}
+        pointerEvents="none"
+        initial={{ scaleY: 0 }}
+        animate={{ scaleY: 1 }}
+        transition={springs.gentle}
+        style={style}
+      />
+    );
+  }
+
+  const total = point.value ?? 0;
+  const shares = parts.map((_, index) =>
+    total > 0 ? ((point.parts?.[index] ?? 0) / total) * height : 0,
+  );
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        const share = shares[index] ?? 0;
+        // Each part sits on top of the ones before it.
+        const top =
+          HEIGHT - shares.slice(0, index + 1).reduce((sum, value) => sum + value, 0);
+
+        return share <= 0 ? null : (
+          <motion.rect
+            key={part.key}
+            x={x}
+            y={top}
+            width={SLOT - 2}
+            height={share}
+            fill={part.color}
+            pointerEvents="none"
+            initial={{ scaleY: 0 }}
+            animate={{ scaleY: 1 }}
+            transition={springs.gentle}
+            style={style}
+          />
+        );
+      })}
+    </>
   );
 }

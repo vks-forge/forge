@@ -15,14 +15,15 @@
  *   Failures are `GitHostError` so the engine branches on `errorFamily` (d-0062).
  *
  * Exports: createLocalBareGitHost().
- * Depends on: node:path, node:url, @forge/core, adapters/git-cli/run-git, adapters/local-bare/pr-store,
+ * Depends on: node:path, node:url, @forge/core, adapters/git-cli/{run-git,fetch-base}, adapters/local-bare/pr-store,
  *   domain/ref-check, shared/host-errors, schemas/pr-record. IO: runs git, reads and writes PR records.
  */
 
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { HeadMovedError } from '@forge/core';
+import { HeadMovedError, MergeConflictError } from '@forge/core';
 import type { GitHost, MergeMethod, PrStatus, PullRequest } from '@forge/core';
+import { fetchBase } from '#/adapters/git-cli/fetch-base.js';
 import { createGitRunner } from '#/adapters/git-cli/run-git.js';
 import { createPrStore } from '#/adapters/local-bare/pr-store.js';
 import { assertSafeRefArg } from '#/domain/ref-check.js';
@@ -189,10 +190,8 @@ export function createLocalBareGitHost(opts: LocalBareGitHostOptions): GitHost {
 
         const tree = await mergedTree(base, head);
         if (tree === null) {
-          throw new GitHostError(
-            'merge_refused',
-            `PR ${n} has merge conflicts with ${rec.base}`,
-          );
+          // A clash is work to do, not a policy answer: the engine merges the base in and retries.
+          throw new MergeConflictError(`PR ${n} has merge conflicts with ${rec.base}`);
         }
 
         // A crash between `update-ref` and the record save leaves the base already holding
@@ -263,6 +262,13 @@ export function createLocalBareGitHost(opts: LocalBareGitHostOptions): GitHost {
         }
 
         await store.save({ ...rec, state: 'closed' });
+      }),
+
+    syncBase: () =>
+      fetchBase(git, {
+        localRepo: opts.localRepo,
+        source: remote,
+        branch: opts.baseBranch,
       }),
 
     async deleteBranch(branch) {

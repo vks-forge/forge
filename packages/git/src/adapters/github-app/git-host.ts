@@ -13,14 +13,15 @@
  *   are typed `GitHostError`s the engine branches on (d-0062).
  *
  * Exports: createGitHubAppGitHost() (a GitHost plus gitAuthEnv() for fetches and ls-remote).
- * Depends on: zod, @forge/core, adapters/git-cli/run-git, adapters/github-app/{rest-client,
+ * Depends on: zod, @forge/core, adapters/git-cli/{run-git,fetch-base}, adapters/github-app/{rest-client,
  *   installation-token}, domain/{push-env,ref-check}, schemas/github-responses, shared/host-errors.
  *   IO: HTTPS to the GitHub API, `git push` to github.com.
  */
 
-import { HeadMovedError } from '@forge/core';
+import { HeadMovedError, MergeConflictError } from '@forge/core';
 import type { PrState } from '@forge/core';
 import { z } from 'zod';
+import { fetchBase } from '#/adapters/git-cli/fetch-base.js';
 import { createGitRunner } from '#/adapters/git-cli/run-git.js';
 import { createTokenSource } from '#/adapters/github-app/installation-token.js';
 import { createRestClient } from '#/adapters/github-app/rest-client.js';
@@ -154,6 +155,24 @@ export function createGitHubAppGitHost(o: GitHubAppGitHostOptions): GitHubAppGit
           throw new HeadMovedError(`PR ${n} head moved: ${e.message}`, { cause: e });
         }
 
+        if (kind === 'conflict') {
+          // GitHub words a closed or merged PR the same way ("not mergeable"): only an open PR
+          // can clash with the base.
+          const open = await api('GET', `/pulls/${n}`).then(
+            ({ json }) => parse(PullResponse, json, 'pull request').state === 'open',
+            () => false,
+          );
+
+          if (open) {
+            throw new MergeConflictError(
+              `PR ${n} conflicts with the base: ${e.message}`,
+              {
+                cause: e,
+              },
+            );
+          }
+        }
+
         if (kind === 'merge_busy') {
           throw new GitHostError('merge_busy', e.message, e.status);
         }
@@ -164,6 +183,18 @@ export function createGitHubAppGitHost(o: GitHubAppGitHostOptions): GitHubAppGit
 
     async closePr(n) {
       await api('PATCH', `/pulls/${n}`, { state: 'closed' });
+    },
+
+    async syncBase() {
+      const token = await tokens.token();
+
+      return fetchBase(git, {
+        localRepo: o.localRepo,
+        source: `${gitBase}/${o.owner}/${o.repo}.git`,
+        branch: o.baseBranch,
+        env: buildPushEnv(token, gitBase),
+        secrets: [token],
+      });
     },
 
     async deleteBranch(branch) {

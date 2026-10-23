@@ -12,6 +12,7 @@
 
 import { BUILTIN_DIRECTOR_CONFIG, BUILTIN_FORGE_CONFIG, STEP_NAMES } from '@forge/core';
 import { describe, expect, it } from 'vitest';
+import { FALLBACK_STEP_MODELS } from '#/domain/director-defaults.js';
 import { flowIssues } from '#/domain/director-flow-edit.js';
 import { DIRECTOR_FIELDS, STEP_INFO } from '#/domain/director-settings.js';
 import { CompanyConfigReply } from '#/schemas/director-config.js';
@@ -32,6 +33,18 @@ describe('core built-ins', () => {
     expect(DIRECTOR_FIELDS.step_timeouts_ms.map((f) => f.path).sort()).toEqual(
       STEP_NAMES.map((n) => `director.step_timeouts_ms.${n}`).sort(),
     );
+  });
+
+  it('show the same Director step models as core ships, so the page never misstates a default', () => {
+    for (const [step, model] of Object.entries(FALLBACK_STEP_MODELS)) {
+      expect(
+        BUILTIN_FORGE_CONFIG.models.director[step as keyof typeof FALLBACK_STEP_MODELS],
+      ).toBe(model);
+    }
+
+    // The two steps eval fix 5 moved to sonnet: a deterministic floor guards approval, verify feeds typed findings.
+    expect(FALLBACK_STEP_MODELS.verify).toBe('sonnet');
+    expect(FALLBACK_STEP_MODELS.approve_plan).toBe('sonnet');
   });
 
   it('parse through the lenient company reply as a server that has the section', () => {

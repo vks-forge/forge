@@ -6,7 +6,7 @@
  *   decision, failure policy, invariant check). Everything else in the package is internal
  *   so the tick phases can be reorganised without touching callers (d-0058).
  *
- * Exports: LIVE_LANES, isLive, createEngine, createIdSource, createOwnerId, createJsonLogger, requestWake, decideLane, decideFailure, findViolations,
+ * Exports: replanImpact, openDependents, LIVE_LANES, isLive, createEngine, createIdSource, createOwnerId, createJsonLogger, requestWake, decideLane, decideFailure, findViolations,
  *   pickNext, orderCandidates, chooseHarness, describeWait, nextTicketNumber, ProjectRuntime and the engine types.
  * Depends on: tick/engine, tick/wakes, domain/*, types/*. No IO.
  */
@@ -25,7 +25,11 @@ export { createJsonLogger } from '#/shared/json-logger.js';
 export { requestWake } from '#/tick/wakes.js';
 export { loadScorecardInput } from '#/tick/scorecards.js';
 export { warnOnBudget } from '#/tick/card-budget.js';
+export { replanImpact } from '#/tick/plan-impact.js';
+export { openDependents } from '#/tick/ticket-cancel.js';
+export type * from '#/types/approval.types.js';
 export type * from '#/types/card-create.types.js';
+export type * from '#/types/ticket-edit.types.js';
 export type * from '#/types/card-planning.types.js';
 export type * from '#/types/planning-doors.types.js';
 export type * from '#/types/engine.types.js';

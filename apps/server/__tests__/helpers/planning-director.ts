@@ -80,6 +80,27 @@ const answers = (calls: Map<StepName, number>): Partial<Record<StepName, unknown
   ticket_recover: { decision: 'escalate', diagnosis: 'Needs a person.', confidence: 0.1 },
 });
 
+/**
+ * The plan must account for every grill answer (`decision_checks`, one per index), as a real
+ * planner is told to; this scripted one honours each answer it was handed.
+ */
+function withDecisionChecks(name: StepName, input: unknown, answer: unknown): unknown {
+  if (name !== 'write_plan' || typeof answer !== 'object' || answer === null) {
+    return answer;
+  }
+
+  const decisions = (input as { grill_decisions?: unknown[] }).grill_decisions ?? [];
+
+  return {
+    ...answer,
+    decision_checks: decisions.map((_, index) => ({
+      index,
+      status: 'honoured',
+      where: 'scope',
+    })),
+  };
+}
+
 /** The model factory for `startE2eRig({ llm })`. */
 export function planningDirector(): LlmFactory {
   return (wiring) => {
@@ -93,7 +114,7 @@ export function planningDirector(): LlmFactory {
         opts: StepOptions,
       ) {
         calls.set(name, (calls.get(name) ?? 0) + 1);
-        const answer = answers(calls)[name];
+        const answer = withDecisionChecks(name, input, answers(calls)[name]);
         wiring.onTrace?.({
           step: name,
           prompt: `PROMPT ${name} ${JSON.stringify(input).slice(0, 4000)}`,

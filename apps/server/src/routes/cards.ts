@@ -23,12 +23,14 @@ import { cardCreateRoute } from '#/routes/card-create.js';
 import { cardMessageRoute } from '#/routes/card-messages.js';
 import { cardPatchRoute } from '#/routes/card-patch.js';
 import { cardRelationsRoute } from '#/routes/card-relations.js';
+import { budgetDefaultForCard } from '#/services/budget-default.js';
 import { cardDetail, summarizeCard, viewCard } from '#/services/card-view.js';
 import { findProject } from '#/services/find-project.js';
 import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
 import { decodePageCursor, encodePageCursor } from '#/services/page-cursor.js';
 import { decodeSeqCursor, encodeSeqCursor } from '#/services/seq-cursor.js';
+import { attachWaits } from '#/services/ticket-waits.js';
 import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
 
@@ -125,6 +127,8 @@ export function cardRoutes(deps: RouteDeps): Route[] {
         throw new HttpError(400, 'invalid_card_id', 'card id must look like FG-C12');
       }
 
+      // Read before the transaction: settings and storage share one writer queue.
+      const budgetDefault = await budgetDefaultForCard(deps, id.data);
       const body = await deps.storage.transaction(async (tx) => {
         const card = await tx.cards.get(id.data);
         if (!card) {
@@ -139,14 +143,23 @@ export function cardRoutes(deps: RouteDeps): Route[] {
           await tx.cardRelations.listFor(card.id),
         );
 
-        return cardDetail(tx, view, slug, deps.engine.cardDirector(card.id));
+        return cardDetail(
+          tx,
+          view,
+          slug,
+          deps.engine.cardDirector(card.id),
+          budgetDefault,
+        );
       });
 
       if (!body) {
         throw new HttpError(404, 'card_not_found', `no card ${id.data}`);
       }
 
-      sendJson(res, 200, body);
+      sendJson(res, 200, {
+        ...body,
+        tickets: await attachWaits(deps.engine, body.tickets),
+      });
     },
   };
 

@@ -28,11 +28,12 @@ import type {
 } from '#/types/card-rollup.types.js';
 
 /**
- * Whether the card waits on the owner: its own flag, a ticket in a waiting status, or a
- * pending question. `pendingInteractions` may hold the whole project's questions: only those
- * naming one of the card's tickets and still pending count, and only once they are the
- * owner's: while the Director is still looking at a waiting ticket's only question, the ticket
- * does not count either (S4a: Director first).
+ * Whether the card waits on the owner: its own flag, a ticket parked on a person's review,
+ * sign-off or block, or an open owner item. `pendingInteractions` may hold the whole project's
+ * questions: only those naming one of the card's tickets, still pending and already the
+ * owner's (`escalated_at` set) count. A `waiting_human` ticket with no such item does not:
+ * its answer is already given (the card is re-planning) or the Director still holds the
+ * question, so the owner has nothing to do.
  */
 export function cardNeedsYou(
   card: Pick<Card, 'needs_you'>,
@@ -44,24 +45,14 @@ export function cardNeedsYou(
   }
 
   const ids = new Set<string>(tickets.map((t) => t.id));
-  const pending = pendingInteractions.filter(
-    (i) => i.status === 'pending' && ids.has(i.ticket_id),
-  );
-
-  const ownerTickets = new Set(
-    pending.filter((i) => i.escalated_at !== undefined).map((i) => i.ticket_id),
-  );
-
-  // A waiting ticket whose only pending questions are still with the Director is not the owner's yet.
-  const directorOnly = (id: string): boolean =>
-    !ownerTickets.has(id) && pending.some((i) => i.ticket_id === id);
 
   return (
-    ownerTickets.size > 0 ||
+    pendingInteractions.some(
+      (i) =>
+        i.status === 'pending' && i.escalated_at !== undefined && ids.has(i.ticket_id),
+    ) ||
     tickets.some(
-      (t) =>
-        NEEDS_YOU_STATUSES.includes(t.status) &&
-        !(t.status === 'waiting_human' && directorOnly(t.id)),
+      (t) => t.status !== 'waiting_human' && NEEDS_YOU_STATUSES.includes(t.status),
     )
   );
 }

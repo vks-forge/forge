@@ -9,19 +9,25 @@
  *   event write on its single door (`transitionCard()` for the flag, `logCardEvent` for the
  *   history), so a step cannot flip a card's phase or invent an event shape by hand.
  *
- * Exports: PLANNING_ACTOR, isPlannedType(), isPlanningPhase(), directorFor(), loadPlanCtx(),
- *   stamp(), logPlanEvent(), setNeedsYou(), askOwner(), askStepBudget(), mergeUnique(), enterVerifying(), latestPlanOf(), headOf().
+ * Exports: knownRisks(), PLANNING_ACTOR, isPlannedType(), isPlanningPhase(), directorFor(), loadPlanCtx(),
+ *   stamp(), logPlanEvent(), setNeedsYou(), askOwner(), askGrillQuestion(), askStepBudget(), mergeUnique(), enterVerifying(), latestPlanOf(), headOf().
  * Depends on: @forge/core (card schemas, config), tick/card-log, tick/card-phase, tick/tick-config,
  *   types/card-planning. Reads and writes inside the caller's transaction where it takes one.
  */
 
-import { BUILTIN_DIRECTOR_CONFIG, PLANNING_PHASES, effectiveResearch } from '@forge/core';
+import {
+  BUILTIN_DIRECTOR_CONFIG,
+  PLANNING_PHASES,
+  dedupeStatements,
+  effectiveResearch,
+} from '@forge/core';
 import type {
   Card,
   CardId,
   CardPhase,
   CardType,
   DirectorConfig,
+  GrillState,
   NewCardEvent,
   PlanVersion,
   StorageTx,
@@ -30,7 +36,7 @@ import { iso } from '#/shared/time.js';
 import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
 import { moveCardTx } from '#/tick/card-phase.js';
 import { projectSettings } from '#/tick/tick-config.js';
-import type { PlanCtx, PlanEvent } from '#/types/card-planning.types.js';
+import type { OwnerAsk, PlanCtx, PlanEvent } from '#/types/card-planning.types.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 
 /** Who the card history names for the Director's planning work. */
@@ -153,15 +159,36 @@ export async function askOwner(
   tx: StorageTx,
   cardId: CardId,
   at: string,
-  reason: string,
-  actions: readonly ('answer' | 'approve_plan' | 'request_changes' | 'start_planning')[],
+  ask: OwnerAsk,
 ): Promise<void> {
   await logPlanEvent(tx, cardId, at, {
     kind: 'needs_you',
-    payload: { reason, actions: [...actions] },
+    payload: {
+      reason: ask.reason,
+      actions: [...ask.actions],
+      kind: ask.kind,
+      title: ask.title,
+      items: [...ask.items],
+    },
   });
 
   await setNeedsYou(tx, cardId, true, at);
+}
+
+/** Raises the card to Needs you for the grill question just asked; the question text is the one item. */
+export function askGrillQuestion(
+  tx: StorageTx,
+  cardId: CardId,
+  at: string,
+  text: string,
+): Promise<void> {
+  return askOwner(tx, cardId, at, {
+    reason: 'The Director has a question for you.',
+    kind: 'director_questions',
+    title: 'The Director has a question',
+    items: [text],
+    actions: ['answer'],
+  });
 }
 
 /**
@@ -189,6 +216,9 @@ export async function askStepBudget(
     payload: {
       reason: `The Director's per-step budget (${usd}) is too small for "${stepLabel}".`,
       actions: ['raise_step_budget', 'retry_step'],
+      kind: 'step_budget',
+      title: 'The Director ran out of step budget',
+      items: [`${stepLabel}: the per-step budget is ${usd}.`],
     },
   });
 
@@ -199,6 +229,10 @@ export async function askStepBudget(
 export function mergeUnique(base: readonly string[], more: readonly string[]): string[] {
   return [...new Set([...base, ...more])];
 }
+
+/** The risks verify and survey already found, near-duplicates dropped; the planner adds only new ones. */
+export const knownRisks = (grill: GrillState): string[] =>
+  dedupeStatements([...(grill.verify?.risks ?? []), ...(grill.survey?.risks ?? [])]);
 
 /** Moves the card from grilling to verifying the first time a verify-phase step starts. */
 export async function enterVerifying(pc: PlanCtx): Promise<void> {

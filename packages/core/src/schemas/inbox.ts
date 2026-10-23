@@ -8,10 +8,13 @@
  *   stored: when they read or archived an item, and the item's `updated_at` at that moment.
  *   An item whose source changes afterwards (a newer `updated_at`) shows as unread and
  *   unarchived again, so archiving never hides something that has since moved. `needs_action`
- *   items are the ones that wait on a decision; the rest inform.
+ *   items are the ones that wait on a decision; the rest inform, and the `notices` view is
+ *   exactly those, so the owner can read the news apart from the work. "Mark all read" names
+ *   the view it clears (`notices` or `unread`), so the server marks the whole view, not just
+ *   the page the screen has loaded.
  *
  * Exports: INBOX_KINDS, InboxKind, InboxView, InboxItem, InboxListQuery, InboxPage,
- *   InboxCounts, InboxStateRow, INBOX_DEFAULT_LIMIT, INBOX_MAX_LIMIT.
+ *   InboxCounts, InboxReadAllBody, InboxReadAllResult, InboxStateRow, INBOX_DEFAULT_LIMIT, INBOX_MAX_LIMIT.
  * Depends on: schemas/escalation, zod. No IO.
  */
 
@@ -36,7 +39,7 @@ export const INBOX_KINDS = [
 export const InboxKind = z.enum(INBOX_KINDS);
 export type InboxKind = z.infer<typeof InboxKind>;
 
-export const InboxView = z.enum(['needs_action', 'unread', 'all', 'archived']);
+export const InboxView = z.enum(['needs_action', 'notices', 'unread', 'all', 'archived']);
 export type InboxView = z.infer<typeof InboxView>;
 
 export const INBOX_DEFAULT_LIMIT = 50;
@@ -79,11 +82,25 @@ export type InboxPage = z.infer<typeof InboxPage>;
 /** Size of each view; the sidebar badge shows `needs_action` (or `unread`). */
 export const InboxCounts = z.object({
   needs_action: z.number().int().nonnegative(),
+  /** Items that only inform (no decision waits on the owner), not archived. */
+  notices: z.number().int().nonnegative(),
   unread: z.number().int().nonnegative(),
   all: z.number().int().nonnegative(),
   archived: z.number().int().nonnegative(),
 });
 export type InboxCounts = z.infer<typeof InboxCounts>;
+
+/** `POST /projects/:slug/inbox/read-all`: which view to mark read. Needs-action work is never bulk-cleared by name, only through Unread. */
+export const InboxReadAllBody = z.strictObject({
+  view: z.enum(['notices', 'unread']),
+});
+export type InboxReadAllBody = z.infer<typeof InboxReadAllBody>;
+
+/** How many items the bulk mark changed (items already read are not counted). */
+export const InboxReadAllResult = z.object({
+  marked: z.number().int().nonnegative(),
+});
+export type InboxReadAllResult = z.infer<typeof InboxReadAllResult>;
 
 const Timestamp = z.iso.datetime();
 

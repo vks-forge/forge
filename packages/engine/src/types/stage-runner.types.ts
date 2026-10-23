@@ -14,6 +14,7 @@
 
 import type {
   ArtifactKind,
+  DecisionCause,
   Finding,
   ScriptGateStage,
   StageOutcome,
@@ -98,6 +99,13 @@ export interface CollectInput {
   readonly diff?: string | undefined;
 }
 
+/** A G1 failure only the owner can settle: which decision cause, the files, and the card text. */
+export interface GateHold {
+  readonly cause: Extract<DecisionCause, 'config_hold' | 'provenance_hold'>;
+  readonly files: readonly string[];
+  readonly summary: string;
+}
+
 /** A stage result that stops the merge: which attempt, what to tell the next Worker, what to store. */
 export interface SendBackArgs {
   readonly stage: {
@@ -111,6 +119,12 @@ export interface SendBackArgs {
   readonly policy: 'rework' | 'hold';
   /** The blocking findings, for the decision card a hold raises (capped there). */
   readonly blocking?: readonly Finding[];
+  /**
+   * G1 failed on gate configuration alone (`config_hold`, d-0173) or on files whose earlier-run proof
+   * is gone alone (`provenance_hold`, F-D3): `blockingRoute` decides whether the stage holds for the
+   * owner now (config) or only once the reworks are spent (provenance); `summary` is the card text.
+   */
+  readonly gateHold?: GateHold;
   /** What the owner reads for the stage ("Review", "Gate G1"). */
   readonly label: string;
   /** The findings as text; they travel in the continuation wake, so the next Worker prompt carries them. */

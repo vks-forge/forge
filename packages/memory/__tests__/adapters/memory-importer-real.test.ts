@@ -155,8 +155,22 @@ describe('importing this repository own memory', () => {
       tx.memory.list('forge', { kinds: ['outcome'] }),
     );
 
-    expect(rejected.map((r) => r.status)).toEqual(
-      Array(expected.rejected).fill('rejected'),
+    // A rejected approach stays 'rejected' unless its own file says it was superseded (r-0005 by d-0183).
+    const fileStatus = async (id: string): Promise<string> => {
+      const name = (await readdir(join(DEV_MEMORY_DIR, 'rejected'))).find((f) =>
+        f.startsWith(`${id}-`),
+      );
+
+      const text = await readFile(join(DEV_MEMORY_DIR, 'rejected', name ?? ''), 'utf8');
+
+      return /^status:\s*superseded\s*$/m.test(text) ? 'superseded' : 'rejected';
+    };
+
+    expect(rejected).toHaveLength(expected.rejected);
+    expect(Object.fromEntries(rejected.map((r) => [r.id, r.status]))).toEqual(
+      Object.fromEntries(
+        await Promise.all(rejected.map(async (r) => [r.id, await fileStatus(r.id)])),
+      ),
     );
 
     expect(approved).toMatchObject({ kind: 'decision' });

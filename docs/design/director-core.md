@@ -19,7 +19,9 @@ production, both use a scheduler tick with finite runs.
 ## 2. Engine tick
 
 One process, one SQLite writer (WAL mode), tick every 30 s (min 10 s), plus an
-immediate tick on any intake event or run event. Each tick, in order:
+immediate (coalesced) tick on any event that can make work startable: intake, run events, a settled run, a
+finished job, an answer, an approval, an edit, a cancel, a merge; and one timer for the soonest `not_before`
+wake, quota pause or hold. The 30 s tick is the safety sweep. Each tick, in order:
 
 1. **Reconcile** running work: stall detection against last-event time, dead
    process detection, settle finished runs (git diff, `outcomes/` record, token
@@ -30,6 +32,23 @@ immediate tick on any intake event or run event. Each tick, in order:
 
 All state mutation happens inside the tick under a single writer. UI reads are
 projections. Nothing outside the tick writes ticket state.
+
+The tick never waits on a model call. A Director step runs as a job beside it
+(`tick/director-jobs.ts`): the tick starts the job, the job's end requests a tick,
+and the next tick collects it and merges its report. Two kinds of job differ in
+what they may write. A **card turn** (chat, planning) runs whole in the job: it
+writes only card, planning and card-event rows through `transitionCard()` and the
+plan approval door, with one job per card as the single writer. A **ticket step**
+(triage, a reply to a running Worker, the Director's first look at a wait) only
+computes: it returns the write as an apply, and the tick that collects it
+re-reads the ticket, checks it still matches (still in the inbox, run still
+live, wait still pending) and applies through the existing door, or drops the
+answer. Starting a Worker run is two-phase the same way: the tick picks and
+reserves the Worker slot (`state.briefing`, counted by the scheduler as running
+so the d-0097 limits hold), a brief job cuts and prepares the worktree and has
+the Director write the prompt, and the next tick re-validates the candidate and
+launches the run, stamped with the real spawn time. A lost job is simply run
+again from stored state.
 
 ## 3. State store
 
@@ -111,7 +130,7 @@ stateDiagram-v2
   Verifying --> NeedsSignoff: tier C
   Verifying --> Done: tier A merged
   Review --> Done: human approve + merge
-  NeedsSignoff --> Done: named signer + merge
+  NeedsSignoff --> Done: named signer + merge, or the Director on a clean floor (d-0181)
   Review --> InProgress: changes requested
   NeedsSignoff --> InProgress: changes requested
   Inbox --> Cancelled: cancelled
@@ -127,7 +146,7 @@ stateDiagram-v2
 As implemented (`packages/core/src/domain/state-machine.ts`): `cancelled` is accepted
 from every non-terminal status (inbox, planned, in_progress, blocked, waiting_human,
 verifying, review, needs_signoff); `done` and `cancelled` are terminal and reject all
-events. `asked` and `answered` are the events behind the WaitingHuman edges of a Worker question. `parked` (non-blank reason, sets `blocked_reason`) holds a `planned` or `in_progress` ticket for a human when no question exists (lane not enabled, retry caps), without inventing a dispatch or a question; `unparked` releases it back to `planned`, not `answered`, because a parked ticket may never have run. A
+events. The only door that cancels a ticket is the engine's cancel flow (`tick/escalation-cancel.ts`): the owner's ticket page, an escalation and the card Director's `cancel_ticket` action (only when the owner asked in that chat turn, d-0179) all use it, so a ticket others wait on is refused unless the dependents are cancelled with it, the Worker is stopped (and awaited) before its folder, branch and PR are cleaned up, and the history line names who cancelled and why. A ticket page shows "waiting on" only for open blockers (`openBlockerIds()`: a blocker is open until done; a finished ticket waits on nothing). `asked` and `answered` are the events behind the WaitingHuman edges of a Worker question. `parked` (non-blank reason, sets `blocked_reason`) holds a `planned` or `in_progress` ticket for a human when no question exists (lane not enabled, retry caps), without inventing a dispatch or a question; `unparked` releases it back to `planned`, not `answered`, because a parked ticket may never have run. A
 `gate_failed` beyond `MAX_AUTO_REWORKS` (2) parks the ticket in WaitingHuman with a
 `blocked_reason` instead of looping. Tier A stays in Verifying after `gate_passed` until
 the `merged` event.
@@ -151,6 +170,33 @@ partial state write.
 | `rework_brief` | gate report, prior run summary | `{approach: retry|different, brief}` | all |
 | `epic_summary` | all child outcomes | summary + `proposed/` memory candidates | Standard, Full |
 
+**Concurrency.** `director.max_concurrent_steps` (1 to 8, default 3, Settings →
+Director) bounds the steps executing at once across card turns, triage, steer
+replies and escalation looks; one job per card and per ticket. When slots are
+short the tick starts work in this order: steps a Worker waits on (steer reply,
+ticket answer, recover, substitute), card turns an owner waits on (oldest
+message first), planning starts and new cards, then triage. A brief takes no
+Director slot: the Worker limits already bound it, and counting it would put
+Workers back behind planning. Shutdown waits for in-flight jobs up to
+`engine.shutdown_drain_ms`, then abandons them (their debt is stored and the
+card claims are released at the next start).
+
+**Planning quality (eval fix 5).** The survey step runs on the `survey-code`
+playbook, is shown the tracked file list (`repo_files`, up to 400) and may not
+answer `findings` having read no file of a repository that has some: such an
+answer is sent back as a read round (`previous_error`), and one that still read
+nothing is kept with `read_nothing` so the grill says it could not look instead
+of asking what the code answers. `write_plan` must answer `decision_checks`, one
+per grill answer by position; a missing index is an invalid output (retried
+once), a `conflict` verdict or a non-goal that negates an answer by its key
+words is stored on the plan (`decision_conflicts`) and fails the approval floor,
+so the card stops at Needs you naming the conflict. Risks and assumptions merge
+through `dedupeStatements` (word-set Jaccard >= 0.8, first kept) and the planner
+sees `known_risks`. Defaults: `dispatch_prompt`, `approve_plan`, `triage`,
+`steer_reply` and `verify` run on sonnet (a deterministic floor guards approval);
+survey, write_plan, enhance, recover, check and chat stay on opus. The owner can
+change each model in Director settings.
+
 Deterministic overrides run before and after every step: tier-C glob match
 forces Full; `predicted_files > 6` forces at least Standard; a `rejected/` hit
 in a plan rejects the step with the record quoted.
@@ -171,7 +217,11 @@ signals. `execution-plane.md` §2 defines the lanes; this is the decision rule.
    a G2 violation, a Worker calling `report_blocked` or asking to delegate,
    two stalls. Any signal moves the ticket up one lane; the current run
    continues, but the exit requirements change (more gates, review tier).
-6. Never move down.
+6. Never move down. One exception, the owner's own word: a ticket whose lane
+   the owner set in the plan editor (`lane_by_owner`, d-0177) skips the size
+   raises (files > 3, long body); a tier-C path still forces Full. Whatever is
+   raised at approval is written on the card with its reason, and the size
+   checks read the ticket's own `body`, not the filed text.
 
 Metric: escalation rate per lane. Target < 30% for Express.
 
@@ -226,15 +276,20 @@ Never stall the run on a question. A Worker's `ask_director` tool or a
 permission request outside the allow-list creates an `interactions` row, moves
 the ticket to **WaitingHuman**, and the run either:
 
-- stays open with the harness's pending callback (Claude `canUseTool` may stay
-  pending; OpenCode permission endpoint; ACP `request_permission`) when the
-  expected wait is short (< 10 min), or
-- exits via a deferred permission (Claude PreToolUse hook returning `defer`)
-  with the session persisted, and resumes on `response_wake` when answered.
+- for a question: ends its turn with the session persisted and resumes on
+  `response_wake` when answered; or
+- for a tool approval (d-0175): the PreToolUse hook refuses the call at once
+  and the server writes a `permission` interaction at the owner's stage (the
+  engine door `raiseToolApproval`); the run ends its turn (or is turned into a
+  pause at settle if it finishes anyway), the ticket parks in WaitingHuman, and
+  one `response_wake` keyed by the run (`perm:<run id>`) resumes the same
+  session after the last of the run's items is answered. The Director never
+  answers a permission; only the owner may.
 
-The Director answers from the allow-list automatically where policy permits;
-everything else lands in the control room's "Needs you" pane with a timeout
-(default 4 h, then Blocked with reason).
+The Director answers a question from the allow-list automatically where policy
+permits; everything else lands in the control room's "Needs you" pane with a
+timeout (default 4 h, then Blocked with reason). A tool approval has no timeout:
+nothing runs and nothing is held while it waits.
 
 ## 9. Sources
 

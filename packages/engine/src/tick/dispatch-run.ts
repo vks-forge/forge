@@ -1,56 +1,44 @@
 /**
- * Starts one Worker run for one ticket: stage, worktree, prompt, run row, token, driver, ticket.
+ * Starts one Worker run for one ticket: stage, writer and harness in the tick, then the brief job.
  *
  * Why: dispatch is the moment the Director commits spend and risk, so its order matters.
  *   The ticket's pipeline snapshot comes first (taken at the first dispatch, checked against the
  *   roster as it is now), and its stage cursor says which writer runs: the stage's agent, not a
  *   lane default; a stage whose agent cannot run parks the ticket visibly instead of running
  *   someone else (fail closed). A `stage` wake on a verifying ticket starts a check instead
- *   (tick/dispatch-check). The worktree comes next (d-0059: a Worker never runs in the main
- *   checkout), then the `dispatch_prompt` step renders the brief from the ticket, project memory
- *   and what changed since the last run, plus the Worker contract (shell rules, typed claims for
- *   every edit), which is also appended to the returned prompt verbatim so a paraphrase cannot drop it.
- *   An agent other than the built-in implementer is named to the step so the brief is written for
- *   its role (a tester writes failing tests only); its instructions go between the brief and the
- *   rules. The run row, the stage attempt it carries and the per-run token are written together
- *   (tick/launch-run) before the harness starts. The ticket moves to `in_progress` only once the
- *   harness accepted the run; a start that throws settles the run as a failure and the family
- *   decides retry or park. A resume is a NEW run that names the old one in `retry_of` (d-0055):
- *   an ended run is never reopened.
+ *   (tick/dispatch-check). A harness that is not installed parks the ticket too. Those decisions
+ *   are quick and move ticket state, so they stay in the tick. What is slow (the worktree d-0059,
+ *   its preparation d-0180, the memory slice and the `dispatch_prompt` step that renders the brief
+ *   from the ticket, project memory and what changed since the last run, plus the Worker contract)
+ *   runs as a brief job beside the tick (tick/dispatch-brief), holding the run's Worker slot, so a
+ *   slow brief never holds up the other tickets; the next tick launches the run (tick/dispatch-launch).
+ *   A resume is a NEW run that names the old one in `retry_of` (d-0055): an ended run is never reopened.
  *
  * Exports: startRun().
- * Depends on: tick/memory-context (the memory shown to the Director), @forge/core (branchName, DispatchPromptOutput, IMPLEMENTER_ID), steps/run-step,
- *   domain/worker-contract, tick/{agent-prompt,project-runtime,dispatch-park,dispatch-check,dispatch-stage,
- *   launch-run,stage-records,ticket-moves,wake-delta}, shared/trace.
+ * Depends on: @forge/core (branchName), domain/retry-context, tick/{retry-facts,approval-wake,dispatch-brief,dispatch-check,dispatch-park,
+ *   dispatch-stage,project-runtime}, steps/run-step, types/dispatch-start. IO: storage.
  */
 
-import {
-  DispatchPromptOutput,
-  IMPLEMENTER_ID,
-  InvalidInputError,
-  branchName,
-} from '@forge/core';
-import type { Ticket, Worktree, WorkerDriver } from '@forge/core';
-import { renderWorkerContract, workerContract } from '#/domain/worker-contract.js';
-import { hold, rejectStep, runStep } from '#/steps/run-step.js';
-import { buildMemoryContext, questionOf } from '#/tick/memory-context.js';
-import { workerPrompt } from '#/tick/agent-prompt.js';
+import { branchName } from '@forge/core';
+import type { WorkerDriver } from '@forge/core';
+import { retryContext } from '#/domain/retry-context.js';
+import { hold } from '#/steps/run-step.js';
+import { approvalsOfRun, runOfPermWake } from '#/tick/approval-wake.js';
+import { startBrief } from '#/tick/dispatch-brief.js';
 import { startChecks } from '#/tick/dispatch-check.js';
+import { parkForHarness } from '#/tick/dispatch-park.js';
 import { chooseWriter } from '#/tick/dispatch-stage.js';
-import { parkDispatch, parkForHarness } from '#/tick/dispatch-park.js';
-import { launchRun } from '#/tick/launch-run.js';
-import { baseRefFor, driverFor, runtimeFor } from '#/tick/project-runtime.js';
-import { beginStageRun } from '#/tick/stage-records.js';
-import { moveTicket } from '#/tick/ticket-moves.js';
-import { wakeDelta } from '#/tick/wake-delta.js';
+import { driverFor, runtimeFor } from '#/tick/project-runtime.js';
+import { readRetryFacts } from '#/tick/retry-facts.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type { Candidate } from '#/types/tick.types.js';
 
 const msg = (e: unknown): string => String(e instanceof Error ? e.message : e);
 
 /**
- * Starts a run for `c` on `harnessId` (the agent's own harness unless the scheduler
- * chose a fallback); returns true when a run is now live. Never throws.
+ * Starts the run for `c` on `harnessId` (the agent's own harness unless the scheduler
+ * chose a fallback): a check starts now, a writer's brief starts as a job. Returns true when a
+ * run or a brief is under way. Never throws.
  */
 export async function startRun(
   ctx: EngineCtx,
@@ -76,27 +64,40 @@ async function tryStart(
 ): Promise<boolean> {
   const { deps } = ctx;
   const { ticket } = c;
-  const { project, previous, answered } = await deps.storage.transaction(async (tx) => {
-    // A rework wake of one writer-group member carries `~member` after the run id it follows.
-    const prevId = c.kind === 'retry' ? c.wake?.idempotency_key.split('~')[0] : undefined;
+  const { project, previous, answered, approvals, retry } =
+    await deps.storage.transaction(async (tx) => {
+      // A rework wake of one writer-group member carries `~member` after the run id it follows.
+      const prevId =
+        c.kind === 'retry' ? c.wake?.idempotency_key.split('~')[0] : undefined;
 
-    const interaction =
-      c.kind === 'resume' && c.wake
-        ? await tx.interactions.get(c.wake.idempotency_key)
-        : null;
+      // A tool-approval wake names the run itself (`perm:<run id>`), not one interaction.
+      const permRun =
+        c.kind === 'resume' && c.wake ? runOfPermWake(c.wake.idempotency_key) : null;
 
-    const prev = prevId
-      ? await tx.runs.get(prevId)
-      : interaction?.run_id
-        ? await tx.runs.get(interaction.run_id)
-        : null;
+      const interaction =
+        c.kind === 'resume' && c.wake && permRun === null
+          ? await tx.interactions.get(c.wake.idempotency_key)
+          : null;
 
-    return {
-      project: await tx.projects.get(ticket.project),
-      previous: prev,
-      answered: interaction,
-    };
-  });
+      const prev = prevId
+        ? await tx.runs.get(prevId)
+        : permRun
+          ? await tx.runs.get(permRun)
+          : interaction?.run_id
+            ? await tx.runs.get(interaction.run_id)
+            : null;
+
+      return {
+        project: await tx.projects.get(ticket.project),
+        previous: prev,
+        answered: interaction,
+        approvals: permRun ? await approvalsOfRun(tx, ticket.id, permRun) : [],
+        retry:
+          c.kind === 'retry'
+            ? retryContext(await readRetryFacts(tx, ticket, c.wake?.idempotency_key))
+            : null,
+      };
+    });
 
   if (!project) {
     throw new Error(`ticket ${ticket.id} names unknown project ${ticket.project}`);
@@ -127,144 +128,20 @@ async function tryStart(
     return false;
   }
 
-  const branch = ticket.branch ?? branchName(ticket.type, ticket.id, ticket.title);
-  let wt: Worktree;
-  try {
-    wt = await runtime.worktrees.create(ticket.id, branch, baseRefFor(ctx, project.slug));
-  } catch (e) {
-    // Bad input a retry cannot fix (a repository with no commit yet): the user must act.
-    if (e instanceof InvalidInputError) {
-      await parkDispatch(ctx, ticket, e);
-
-      return false;
-    }
-
-    throw e;
-  }
-
-  const slice = await buildMemoryContext(ctx, project.slug, {
-    question: questionOf(ticket.title, ticket.body),
-    rewrite: false,
-    filter: agent.definition.memory,
-  });
-
-  const contract = workerContract({
-    rework: c.kind === 'retry' && c.wake?.kind === 'continuation',
-    checks: runtime.config.checks,
-  });
-
-  const drafted = await runStep(
-    ctx,
-    'dispatch_prompt',
-    {
-      ticket: {
-        id: ticket.id,
-        title: ticket.title,
-        body: ticket.body,
-        type: ticket.type,
-        lane: ticket.lane,
-      },
-      memory: slice,
-      worktree: { path: wt.path, branch },
-      wake: wakeDelta(c, answered, stage),
-      // The Worker must finish with typed claims for every edit (G1 fails a finish without).
-      worker_contract: contract,
-      // The step writes the brief for the agent's role; the implementer needs no naming.
-      ...(agent.id === IMPLEMENTER_ID
-        ? {}
-        : {
-            agent: {
-              id: agent.id,
-              role: agent.definition.role,
-              instructions: agent.definition.instructions,
-            },
-          }),
-    },
-    DispatchPromptOutput,
-  );
-
-  if (!drafted.ok) {
-    rejectStep(ctx, 'dispatch_prompt', ticket.id, drafted.error);
-    hold(ctx, `dispatch:${ticket.id}`);
-
-    return false;
-  }
-
-  // The rules are facts about the environment: appended verbatim, whatever the step or agent wrote.
-  const prompt = workerPrompt(
-    drafted.value.prompt,
-    agent.definition.instructions,
-    renderWorkerContract(contract),
-  );
-
-  const resumeSession =
-    // A session belongs to the harness that made it: a fallback harness starts fresh.
-    c.kind === 'resume' && driver.capabilities().resume && previous?.harness === driver.id
-      ? previous?.session_ref
-      : undefined;
-
-  const launched = await launchRun(ctx, {
-    ticket,
+  return startBrief(ctx, {
+    candidate: c,
+    project,
+    runtime,
+    previous,
+    answered,
+    approvals,
+    retry,
     agent,
+    ...(stage === undefined ? {} : { stage }),
+    ...(choice.memberId === undefined ? {} : { memberId: choice.memberId }),
+    state,
     harness,
     driver,
-    wt,
-    prompt,
-    previous,
-    resumeSession,
-    wake: c.wake,
-    inTx:
-      stage && state
-        ? async (tx, runId) => {
-            await beginStageRun(tx, ctx.nowIso, {
-              ticket_id: ticket.id,
-              stage_id: stage.id,
-              member_id: choice.memberId ?? '',
-              cycle: state.cycle,
-              kind: 'agent',
-              agent_id: agent.id,
-              agent_hash: agent.hash,
-              run_id: runId,
-            });
-          }
-        : undefined,
+    branch: ticket.branch ?? branchName(ticket.type, ticket.id, ticket.title),
   });
-
-  if (!launched) {
-    return false;
-  }
-
-  const { runId, handle } = launched;
-  const fields = { assignee_run_id: runId, branch, worktree: wt.path };
-  const moved = await moveTicket(deps.storage, ticket.id, ctx.nowIso, (t: Ticket) => {
-    if (t.status === 'planned') {
-      return { events: [{ type: 'dispatched' }], fields };
-    }
-
-    if (t.status === 'waiting_human') {
-      return { events: [{ type: 'answered' }], fields };
-    }
-
-    if (t.status === 'in_progress') {
-      return { events: [], fields };
-    }
-
-    return null;
-  });
-
-  if (!moved.ok) {
-    deps.log?.(
-      'error',
-      `run ${runId} started but ${ticket.id} could not take it; cancelling`,
-      { reason: moved.reason },
-    );
-
-    await driver.cancel(handle).catch(() => undefined);
-
-    return false;
-  }
-
-  ctx.report.dispatched.push({ ticketId: ticket.id, runId, kind: c.kind });
-
-  return true;
 }

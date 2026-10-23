@@ -20,8 +20,8 @@ import {
 } from '#tests/helpers/forge-data/pipeline-data.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
-const TICKET = '/p/sample-service/tickets/SVC-1';
-const PIPELINE = 'GET /tickets/SVC-1/pipeline';
+const TICKET = '/p/sample-service/tickets/SVC-3';
+const PIPELINE = 'GET /tickets/SVC-3/pipeline';
 
 const stages = (over: Record<string, Parameters<typeof stageView>[1]>) =>
   STANDARD_STAGES.map((s) => (over[s.id] ? { ...s, ...over[s.id] } : s));
@@ -58,14 +58,14 @@ describe('pipeline strip: stage detail', () => {
 
   const routes = {
     [PIPELINE]: json({ pipeline: failed }),
-    'GET /tickets/SVC-1/artifacts/:artifactId': ({
+    'GET /tickets/SVC-3/artifacts/:artifactId': ({
       params,
     }: {
       params: Record<string, string>;
     }) =>
       json({
         id: Number(params['artifactId']),
-        ticket_id: 'SVC-1',
+        ticket_id: 'SVC-3',
         stage_run_id: 3,
         kind: params['artifactId'] === '7' ? 'diff' : 'narrative',
         content:
@@ -139,11 +139,11 @@ describe('pipeline strip: stage detail', () => {
       path: TICKET,
       routes: {
         ...routes,
-        'GET /tickets/SVC-1/artifacts/:artifactId': sequence(
+        'GET /tickets/SVC-3/artifacts/:artifactId': sequence(
           refusal(500, 'boom'),
           json({
             id: 7,
-            ticket_id: 'SVC-1',
+            ticket_id: 'SVC-3',
             stage_run_id: 3,
             kind: 'diff',
             content: 'second try',

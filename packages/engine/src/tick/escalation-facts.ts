@@ -8,7 +8,7 @@
  *   check again". This reads those rows for one escalation; the rule that compares them is the
  *   pure `isSetupFixed` in core.
  *
- * Exports: setupFactsFor().
+ * Exports: setupFactsFor(). A failed worktree setup is judged by the project's settings version.
  * Depends on: @forge/core (SetupCause, SetupFacts, project settings), types/engine. Reads storage and the tool catalogue port.
  */
 
@@ -21,6 +21,7 @@ export async function setupFactsFor(
   tx: StorageTx,
   cause: SetupCause,
   settings: ProjectSettings,
+  settingsVersion = 0,
 ): Promise<SetupFacts> {
   switch (cause.type) {
     case 'login': {
@@ -54,8 +55,24 @@ export async function setupFactsFor(
 
     case 'harness_build': {
       const build = await tx.harnessVersions.get(cause.harness_kind, cause.version);
+      if (!build) {
+        return { build: null };
+      }
 
-      return { build: build ? { compat: build.compat } : null };
+      // A passing check leaves new or changed tools pending; the run is only worth trying
+      // again when the owner has decided them all.
+      const tools = await tx.harnessToolSchemas.list(cause.harness_kind, cause.version);
+
+      return {
+        build: {
+          compat: build.compat,
+          pending_tools: tools.filter((t) => t.status === 'pending').length,
+        },
+      };
     }
+
+    case 'worktree_setup':
+      // The owner fixes a failed install by saving new setup steps: a newer settings version.
+      return { setup_version: settingsVersion };
   }
 }

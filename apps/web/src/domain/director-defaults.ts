@@ -20,10 +20,10 @@ import type { DirectorConfig, FlowStep, ResearchSettings } from '@forge/core';
 export const FALLBACK_STEP_MODELS = {
   card_survey: 'opus',
   grill_turn: 'sonnet',
-  verify: 'opus',
+  verify: 'sonnet',
   enhance: 'opus',
   write_plan: 'opus',
-  approve_plan: 'opus',
+  approve_plan: 'sonnet',
   custom_step: 'sonnet',
   ticket_answer: 'sonnet',
   ticket_recover: 'opus',
@@ -148,4 +148,5 @@ export const FALLBACK_DIRECTOR: DirectorConfig = {
     propose_min_cards: 2,
     propose_window_days: 30,
   },
+  max_concurrent_steps: 3,
 };

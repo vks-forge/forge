@@ -16,7 +16,7 @@
  *   backend runs them: tickets (and the project ticket list), transactions, runs, run events, run tokens, ticket
  *   relations and the ticket fields derived from them, the run lifecycle, interaction answer/expire CAS, intake ids and ticket mapping, wake requests,
  *   the run inbox, gate results, projects and GitHub connections (ports batch C), the harness registry, cards with their
- *   history and type registry, card planning (flow snapshot, grill state, plan versions), ticket pipeline
+ *   history and type registry, the card reply queue's claim options and boot release, card planning (flow snapshot, grill state, plan versions), ticket pipeline
  *   snapshots, stage rows and stage artifacts.
  *
  * Also pinned: optional columns can be cleared (a patch from `transition()` leaves no stale
@@ -42,6 +42,7 @@ import { describeTicketListContract } from './ticket-list.contract.js';
 import { describeRunListContract } from './run-list.contract.js';
 import { describeRunCostContract } from './run-cost.contract.js';
 import { describeCardsContract } from './cards.contract.js';
+import { describeCardClaimContract } from './card-claim.contract.js';
 import { describeCardFlowContract } from './card-flow.contract.js';
 import { describeCardPlanningContract } from './card-planning.contract.js';
 import { describeCardPhaseContract } from './card-phase.contract.js';
@@ -58,6 +59,7 @@ import { describeHarnessStateContract } from './harness-state.contract.js';
 import { describeHarnessesContract } from './harnesses.contract.js';
 import { describePipelineProposalsContract } from './pipeline-proposals.contract.js';
 import { describeProjectPurgeContract } from './project-purge.contract.js';
+import { describeDirectorSpendContract } from './director-spend.contract.js';
 import { describeResearchStorageContract } from './research-storage.contract.js';
 import { describeStageArtifactsContract } from './stage-artifacts.contract.js';
 import { describeStageRunnerContract } from './stage-runner.contract.js';
@@ -91,6 +93,7 @@ export function describeStorageContract(
     describeStageArtifactsContract(() => db);
     describePipelineProposalsContract(() => db);
     describeResearchStorageContract(() => db);
+    describeDirectorSpendContract(() => db);
     describeMemoryContract(() => db);
     describeHarnessesContract(() => db);
     describeHarnessStateContract(() => db);
@@ -104,6 +107,7 @@ export function describeStorageContract(
     describeCardsContract(() => db);
     describeCardPhaseContract(() => db);
     describeCardFlowContract(() => db);
+    describeCardClaimContract(() => db);
     describeCardPlanningContract(() => db);
     describeTransactionsContract(() => db);
     describeRunsContract(() => db);

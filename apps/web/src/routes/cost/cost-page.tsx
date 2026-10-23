@@ -6,7 +6,10 @@
  *   overstate: the total is "spend reported", a sentence says how many runs reported cost,
  *   models are shown in tokens (labelled "no price table yet"), and the budgets block lists
  *   the caps that really exist (per run, per step) and says plainly that a per-period budget
- *   is not set. The range switch keeps the previous numbers on screen while the new range
+ *   is not set. The headline is the total first, then the same two sources every screen
+ *   shows, Workers then the Director (planning and answering, with a "what's this" gloss);
+ *   spend per day stacks the two with a written legend, and the note under it says Director
+ *   spend before 20 Oct is dated by card. The range switch keeps the previous numbers on screen while the new range
  *   loads. Loading, empty, error and offline each have their own state.
  *
  * Exports: CostPage.
@@ -23,16 +26,21 @@ import { BarChart } from '#/components/charts/bar-chart.js';
 import { PagedRankList } from '#/components/stats/paged-rank-list.js';
 import { RankList } from '#/components/stats/rank-list.js';
 import { StatTile } from '#/components/stats/stat-tile.js';
+import { WhatsThis } from '#/components/ui/whats-this.js';
 import { OfflineNotice } from '#/components/status/offline-notice.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { EmptyState } from '#/components/ui/empty-state.js';
 import { ToggleGroup } from '#/components/ui/toggle-group.js';
+import { splitLine } from '#/domain/cost-display.js';
 import {
-  costSeries,
+  costParts,
   coverageNote,
+  DIRECTOR_DATING_NOTE,
   harnessEntries,
+  hasRecordedCost,
   modelEntries,
   runEntries,
+  splitSeries,
   ticketEntries,
   tokenLine,
 } from '#/domain/cost-view.js';
@@ -96,7 +104,8 @@ export function CostPage() {
   }
 
   const report = query.data;
-  const none = report.runs_total === 0;
+  const none = report.runs_total === 0 && report.director_steps_total === 0;
+  const recorded = hasRecordedCost(report);
 
   return (
     <section className="grid gap-4">
@@ -104,7 +113,8 @@ export function CostPage() {
         <p className="font-data text-xs text-muted">{slug}</p>
         <h1 className="text-2xl font-semibold tracking-tight">Cost</h1>
         <p className="max-w-prose text-sm text-muted">
-          What Workers spent on this project, as far as their harnesses reported it.
+          What this project cost: the Workers that write the code and the Director that
+          plans and answers, as far as each reported it.
         </p>
       </header>
 
@@ -124,16 +134,31 @@ export function CostPage() {
 
       {none ? (
         <StatePanel kind="empty" icon={Coins} title="No runs in this range">
-          Spend appears here once Workers have run on this project in the{' '}
-          {rangeLabel(report.range)}.
+          Spend appears here once Workers or the Director have worked on this project in
+          the {rangeLabel(report.range)}.
         </StatePanel>
       ) : (
         <>
           <dl className="grid gap-3 sm:grid-cols-3">
             <StatTile
-              label="Spend reported"
-              value={report.runs_with_cost === 0 ? null : formatUsd(report.total_usd)}
-              note={coverageNote(report.runs_with_cost, report.runs_total)}
+              label="Total spend"
+              help={<WhatsThis term="director" />}
+              value={recorded ? formatUsd(report.total_usd) : null}
+              note={
+                recorded
+                  ? `${splitLine(report.worker_usd, report.director_usd)}. ${coverageNote(
+                      report.runs_with_cost,
+                      report.runs_total,
+                      {
+                        recorded: report.director_steps_recorded,
+                        total: report.director_steps_total,
+                      },
+                    )}`
+                  : coverageNote(report.runs_with_cost, report.runs_total, {
+                      recorded: report.director_steps_recorded,
+                      total: report.director_steps_total,
+                    })
+              }
             />
             <StatTile
               label="Runs"
@@ -142,6 +167,7 @@ export function CostPage() {
             />
             <StatTile
               label="Tokens"
+              help={<WhatsThis term="cache" />}
               value={formatTokens(report.tokens.in + report.tokens.out)}
               note={tokenLine(report.tokens)}
             />
@@ -150,10 +176,12 @@ export function CostPage() {
           <div className="rounded-xl border border-line bg-surface p-4">
             <BarChart
               title="Spend per day (USD)"
-              points={costSeries(report.per_day, report.runs_with_cost)}
+              points={splitSeries(report.per_day_split, recorded)}
+              parts={costParts}
               format={formatUsd}
-              noData="No run reported a cost in this range."
+              noData="Nothing reported a cost in this range."
             />
+            <p className="mt-2 text-xs text-muted">{DIRECTOR_DATING_NOTE}</p>
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">

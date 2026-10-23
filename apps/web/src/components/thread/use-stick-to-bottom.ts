@@ -8,13 +8,14 @@
  *   scroll up, counts what arrived meanwhile, and offers "Jump to latest" to resume. Users
  *   who never want following can turn it off (thread prefs). A list that opens at a saved
  *   offset (the owner scrolled up, switched tab and came back) starts un-stuck at that offset
- *   instead of jumping to the newest line.
+ *   instead of jumping to the newest line. When the list itself is resized (the needs-you dock
+ *   above the message box opening or folding) a reader at the bottom stays at the bottom.
  *
  * Exports: useStickToBottom(), NEAR_BOTTOM_PX.
  * Depends on: react.
  */
 
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
 /** Within this many px of the bottom still counts as "at the bottom". */
@@ -65,6 +66,29 @@ export function useStickToBottom(
       el.scrollTop = el.scrollHeight;
     }
   }, [ref, count, size, enabled]);
+
+  // The list's own height changes when the dock above the message box opens, folds or changes
+  // item: a reader who was at the bottom must still be at the bottom, or the newest line hides.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') {
+      return undefined;
+    }
+
+    let height = el.clientHeight;
+    const observer = new ResizeObserver(() => {
+      if (el.clientHeight !== height) {
+        height = el.clientHeight;
+        if (stuckRef.current) {
+          el.scrollTop = el.scrollHeight;
+        }
+      }
+    });
+
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, [ref]);
 
   const jumpToLatest = useCallback(() => {
     const el = ref.current;

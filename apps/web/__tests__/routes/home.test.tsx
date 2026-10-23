@@ -108,7 +108,7 @@ describe('Home: figures scoped to this project', () => {
     expect(within(kpis).getByText('In progress')).toBeInTheDocument();
     expect(within(kpis).getByText('Waiting on you')).toBeInTheDocument();
     expect(within(kpis).getByText('Workers running')).toBeInTheDocument();
-    expect(within(kpis).getByText('G1 pass rate')).toBeInTheDocument();
+    expect(within(kpis).getByText('Independent check pass rate')).toBeInTheDocument();
     expect(within(kpis).queryByText('Active projects')).not.toBeInTheDocument();
   });
 
@@ -116,15 +116,15 @@ describe('Home: figures scoped to this project', () => {
     renderWork(HOME, routes());
 
     expect(
-      await screen.findByRole('img', { name: /Spend over time/ }),
+      await screen.findByRole('group', { name: /Spend over time/ }),
     ).toBeInTheDocument();
 
     expect(screen.queryByText('Spend over time, by project')).not.toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: /Tickets done and started/ }),
+      screen.getByRole('group', { name: /Tickets done and started/ }),
     ).toBeInTheDocument();
 
-    expect(screen.getByRole('img', { name: /Runs by outcome/ })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /Runs by outcome/ })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Spend by harness' })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Spend by lane' })).toBeInTheDocument();
     expect(
@@ -174,7 +174,9 @@ describe('Home: figures scoped to this project', () => {
 
     await screen.findByRole('region', { name: 'Key figures' });
 
-    expect(within(tile('G1 pass rate')).getByText('No data')).toBeInTheDocument();
+    expect(
+      within(tile('Independent check pass rate')).getByText('No data'),
+    ).toBeInTheDocument();
   });
 
   it('does not draw spend as zeros when no run reported a cost', async () => {
@@ -182,7 +184,12 @@ describe('Home: figures scoped to this project', () => {
       HOME,
       routes(
         scoped({
-          cost_coverage: { runs_total: 4, runs_with_cost: 0 },
+          cost_coverage: {
+            runs_total: 4,
+            runs_with_cost: 0,
+            director_steps: 0,
+            director_steps_recorded: 0,
+          },
           spend_by_harness: [],
           spend_by_lane: [],
         }),
@@ -190,7 +197,7 @@ describe('Home: figures scoped to this project', () => {
     );
 
     expect(
-      (await screen.findAllByText('No run reported a cost in this range.')).length,
+      (await screen.findAllByText('Nothing reported a cost in this range.')).length,
     ).toBeGreaterThan(0);
 
     const kpis = screen.getByRole('region', { name: 'Key figures' });

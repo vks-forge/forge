@@ -1,0 +1,258 @@
+{
+  "arm": "baseline (plain claude -p, opus-5-5)",
+  "tasks": {
+    "T1": {
+      "started_at_utc": "2026-10-20T05:27:51Z",
+      "finished_at_utc": "2026-10-20T05:34:10Z",
+      "wall_seconds": 383,
+      "owner_interventions": {
+        "count": 0,
+        "list": []
+      },
+      "questions_asked": 0,
+      "cost_usd": 0.442,
+      "claude_duration_ms": 336,
+      "num_turns": 7,
+      "tokens": {
+        "input": 14,
+        "output": 1784,
+        "cache_read": 344704,
+        "cache_creation": 42164
+      },
+      "model": "claude-opus-5-5",
+      "outcome": {
+        "committed": true,
+        "npm_test": "33 pass",
+        "tsc": "clean"
+      },
+      "correctness": {
+        "score": 2,
+        "why": "slug regex fixed to a-z0-9, test un-skipped, 'known bug' comment removed; CLI gives top-10-tools"
+      },
+      "diff": "2 files +2/-3",
+      "out_of_scope": [],
+      "notes": "wall 383s vs 22s api time reported; most wall is claude startup/test runs"
+    },
+    "T2": {
+      "started_at_utc": "2026-10-20T05:35:38Z",
+      "finished_at_utc": "2026-10-20T05:38:46Z",
+      "wall_seconds": 192,
+      "owner_interventions": {
+        "count": 0,
+        "list": []
+      },
+      "questions_asked": 0,
+      "cost_usd": 0.4502,
+      "claude_duration_ms": 138,
+      "num_turns": 5,
+      "tokens": {
+        "input": 10,
+        "output": 2415,
+        "cache_read": 245714,
+        "cache_creation": 44089
+      },
+      "model": "claude-opus-5-5",
+      "outcome": {
+        "committed": true,
+        "npm_test": "35 pass",
+        "tsc": "clean"
+      },
+      "correctness": {
+        "score": 2,
+        "why": "list --json prints array, [] when no file; usage updated; small refactor of cmdList (collapsed early-return)"
+      },
+      "diff": "3 files +29/-16",
+      "out_of_scope": [
+        "minor cmdList restructure"
+      ]
+    },
+    "T3": {
+      "started_at_utc": "2026-10-20T05:41:25Z",
+      "finished_at_utc": "2026-10-20T05:47:27Z",
+      "wall_seconds": 367,
+      "owner_interventions": {
+        "count": 0,
+        "list": []
+      },
+      "questions_asked": 0,
+      "cost_usd": 0.4632,
+      "claude_duration_ms": 277,
+      "num_turns": 9,
+      "tokens": {
+        "input": 12,
+        "output": 2799,
+        "cache_read": 300563,
+        "cache_creation": 43388
+      },
+      "model": "claude-opus-5-5",
+      "outcome": {
+        "committed": true,
+        "npm_test": "42 pass",
+        "tsc": "clean"
+      },
+      "correctness": {
+        "score": 2,
+        "why": "empty/blank title and non-http(s) URL rejected with message + exit 1 (verified); 7 tests"
+      },
+      "diff": "2 files +39/-1",
+      "out_of_scope": []
+    },
+    "T4": {
+      "started_at_utc": "2026-10-20T05:51:12Z",
+      "finished_at_utc": "2026-10-20T05:57:56Z",
+      "wall_seconds": 406,
+      "owner_interventions": {
+        "count": 0,
+        "list": []
+      },
+      "questions_asked": 0,
+      "cost_usd": 0.7818,
+      "claude_duration_ms": 315,
+      "num_turns": 5,
+      "tokens": {
+        "input": 10,
+        "output": 4368,
+        "cache_read": 263931,
+        "cache_creation": 55083
+      },
+      "model": "claude-opus-5-5",
+      "outcome": {
+        "committed": true,
+        "npm_test": "42 pass",
+        "tsc": "clean"
+      },
+      "correctness": {
+        "score": 2,
+        "why": "cli.ts no longer imports fs; store has load/save/add/remove; behaviour transcript identical before/after; no new tests for add/remove"
+      },
+      "diff": "2 files +50/-62",
+      "out_of_scope": []
+    },
+    "T5": {
+      "started_at_utc": "2026-10-20T05:58:20Z",
+      "finished_at_utc": "2026-10-20T06:00:10Z",
+      "wall_seconds": 110,
+      "owner_interventions": {
+        "count": 0,
+        "list": []
+      },
+      "questions_asked": 0,
+      "cost_usd": 0.7083,
+      "claude_duration_ms": 98,
+      "num_turns": 5,
+      "tokens": {
+        "input": 10,
+        "output": 2900,
+        "cache_read": 265425,
+        "cache_creation": 51427
+      },
+      "model": "claude-opus-5-5",
+      "outcome": {
+        "committed": true,
+        "npm_test": "51 pass",
+        "tsc": "clean"
+      },
+      "correctness": {
+        "score": 2,
+        "why": "multi --tag AND, --any OR verified; tests + help + README (README touched, in scope: 'document it')"
+      },
+      "diff": "6 files +137/-9",
+      "out_of_scope": []
+    },
+    "T6": {
+      "started_at_utc": "2026-10-20T06:00:31Z",
+      "finished_at_utc": "2026-10-20T06:03:02Z",
+      "wall_seconds": 151,
+      "owner_interventions": {
+        "count": 0,
+        "list": []
+      },
+      "questions_asked": 0,
+      "cost_usd": 0.8823,
+      "claude_duration_ms": 145,
+      "num_turns": 5,
+      "tokens": {
+        "input": 10,
+        "output": 3054,
+        "cache_read": 271472,
+        "cache_creation": 55972
+      },
+      "model": "claude-opus-5-5",
+      "outcome": {
+        "committed": true,
+        "npm_test": "69 pass",
+        "tsc": "clean"
+      },
+      "correctness": {
+        "score": 1,
+        "why": "import works, dedupes by URL, skips non-http; but did NOT ask: folder names do NOT become tags (spec answer wants folders as tags); also kept Firefox tags/dates; guessed format correctly"
+      },
+      "diff": "6 files +360/-13",
+      "out_of_scope": [],
+      "notes": "Vague task: made assumptions silently instead of asking; no resume needed per procedure (no question asked)."
+    },
+    "T7": {
+      "started_at_utc": "2026-10-20T06:03:23Z",
+      "finished_at_utc": "2026-10-20T06:04:15Z",
+      "wall_seconds": 52,
+      "owner_interventions": {
+        "count": 0,
+        "list": []
+      },
+      "questions_asked": 0,
+      "cost_usd": 0.4698,
+      "claude_duration_ms": 45,
+      "num_turns": 6,
+      "tokens": {
+        "input": 12,
+        "output": 2528,
+        "cache_read": 304016,
+        "cache_creation": 44802
+      },
+      "model": "claude-opus-5-5",
+      "outcome": {
+        "committed": true,
+        "npm_test": "69 pass",
+        "tsc": "clean"
+      },
+      "correctness": {
+        "score": 2,
+        "why": "Usage section per command with flags; reflowed existing Usage text from T5/T6 (in scope)"
+      },
+      "diff": "1 file +60/-6",
+      "out_of_scope": []
+    }
+  },
+  "totals": {
+    "wall_seconds": 1661,
+    "cost_usd": 4.198,
+    "interventions": 0,
+    "questions": 0
+  },
+  "parallel_experiment": {
+    "tasks": "T5 in baseline-par-a, T7 in baseline-par-b, concurrent",
+    "wall_seconds_together": 113,
+    "individual_wall": {
+      "T5": 113,
+      "T7": 54
+    },
+    "individual_cost": {
+      "T5": 0.7121,
+      "T7": 0.486
+    },
+    "cost_total": 1.198,
+    "sequential_reference_wall": {
+      "from_this_run": 167,
+      "from_serial_run_T5_plus_T7": 162
+    },
+    "speedup": "~1.45-1.5x (bounded by the longer task)",
+    "merge": {
+      "command": "git pull --no-rebase ../baseline-par-b main into par-a",
+      "conflict": true,
+      "files": [
+        "README.md"
+      ],
+      "detail": "Both added a Usage section to README.md at the same spot -> content conflict; manual resolution needed (merge aborted). Code merged cleanly; no automatic post-merge test run (tests 41 pass+1 skip in a before merge)."
+    }
+  }
+}

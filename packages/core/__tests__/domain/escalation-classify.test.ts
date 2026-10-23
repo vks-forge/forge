@@ -60,6 +60,11 @@ describe('classifyPark', () => {
     ],
     ['waiting_human', 'auth: not retried automatically; needs a human', 'not_retried'],
     ['waiting_human', 'cancelled: the run was stopped unexpectedly', 'not_retried'],
+    [
+      'waiting_human',
+      'merge conflict: 1 file(s) still clash with the base after 2 automatic resolves; needs you',
+      'merge_conflict',
+    ],
     ['blocked', 'question timed out unanswered (int-1)', 'question_timeout'],
     ['waiting_human', 'something nobody planned for', 'not_retried'],
     ['waiting_human', undefined, 'not_retried'],
@@ -157,6 +162,14 @@ describe('classifyPark for held tickets', () => {
     [
       'findings_hold: Review found blocking findings and holds the merge for you.',
       'findings_hold',
+    ],
+    [
+      'config_hold: The Worker changed files that control how its work is checked (tsconfig.json).',
+      'config_hold',
+    ],
+    [
+      'provenance_hold: Forge cannot prove who changed src/cli.ts; check the change, then merge anyway or send it back.',
+      'provenance_hold',
     ],
     [
       'scope_drift: the change is bigger than planned (2 files outside the plan).',

@@ -40,7 +40,7 @@ import {
   existingSettingsSources,
   settingsSourcePaths,
 } from '#/adapters/claude/settings-sources.js';
-import { allowlistEnv, buildChildEnv } from '#/domain/child-env.js';
+import { allowlistEnv, buildChildEnv, withPathFirst } from '#/domain/child-env.js';
 import { CLAUDE_MODELS } from '#/domain/claude-models.js';
 import { parseClaudeConfig } from '#/schemas/claude-config.js';
 import type { SupervisedRun } from '#/types/claude/supervisor.types.js';
@@ -120,7 +120,12 @@ export function createClaudeDriver(deps: ClaudeDriverDeps): WorkerDriver {
       log('warn', 'git head failed; files touched will be empty', { error: String(e) });
     }
 
-    const env = buildChildEnv(baseEnv, req.env, prepared.env, harness.authEnv);
+    const env = withPathFirst(
+      buildChildEnv(baseEnv, req.env, prepared.env, harness.authEnv),
+      req.pathPrepend ?? [],
+      platform === 'win32' ? ';' : ':',
+    );
+
     const run = superviseRun({
       req,
       config,

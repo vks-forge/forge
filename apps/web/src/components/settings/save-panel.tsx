@@ -21,6 +21,7 @@ import { Reveal } from '#/components/motion/reveal.js';
 import { FormField, Notice, TextInput } from '#/components/settings/form-field.js';
 import { FormFooter } from '#/components/settings/settings-card.js';
 import { Button } from '#/components/ui/button.js';
+import { APPLY_TIMING } from '#/domain/plain-words.js';
 import { DecisionForm } from '#/schemas/settings.js';
 import { useNotify } from '#/state/notify/notify-context.js';
 import { useAuthorPrefs } from '#/state/use-author-prefs.js';
@@ -50,7 +51,7 @@ export function SavePanel(props: { draft: CompanyDraft }) {
     if (await draft.save.run(parsed.data)) {
       setReason('');
       notify.success('Saved as a new version', {
-        description: 'The Director picks it up on its next tick; no restart is needed.',
+        description: APPLY_TIMING,
       });
     }
   };
@@ -124,7 +125,7 @@ export function SavePanel(props: { draft: CompanyDraft }) {
                   saving.
                 </span>
               ) : (
-                'The Director picks it up on its next tick.'
+                APPLY_TIMING
               )
             }
           >

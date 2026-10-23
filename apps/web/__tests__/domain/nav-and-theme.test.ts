@@ -33,13 +33,19 @@ describe('nav entries', () => {
     expect(swapProjectSlug('/', 'beta')).toBe('/p/beta');
   });
 
-  it('gives every entry a batch and a unique segment', () => {
+  it('gives every entry a unique segment and a built flag', () => {
     for (const list of [PROJECT_NAV, SETTINGS_NAV]) {
       expect(new Set(list.map((e) => e.segment)).size).toBe(list.length);
       for (const entry of list) {
-        expect(entry.batch).toMatch(/^W[1-8]$/);
+        expect(typeof entry.built).toBe('boolean');
       }
     }
+  });
+
+  it('marks Issues and Chat as not built so the sidebar hides them', () => {
+    const hidden = PROJECT_NAV.filter((e) => !e.built).map((e) => e.segment);
+
+    expect(hidden).toEqual(['issues', 'chat']);
   });
 });
 

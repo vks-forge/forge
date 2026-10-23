@@ -29,6 +29,10 @@ const HEAVY = [
   'packages/secrets/__tests__/adapters/secret-stores.contract.test.ts',
   'packages/gates/__tests__/adapters/command-runner.test.ts',
   'packages/gates/__tests__/adapters/any-language-fixtures.test.ts',
+  // A real `npm ci` on a fixture project: skipped where npm is not installed.
+  'packages/gates/__tests__/adapters/worktree-preparer.heavy.test.ts',
+  // A node script as a fake package manager: proves a restored install skips the command.
+  'packages/gates/__tests__/adapters/worktree-preparer-cache.heavy.test.ts',
   'packages/drivers/__tests__/adapters/**/*.test.ts',
   // Project memory is a real git repo per project; every write spawns several git processes.
   'packages/memory/__tests__/**/*.test.ts',
@@ -36,6 +40,7 @@ const HEAVY = [
   'apps/server/__tests__/e2e/**/*.test.ts',
   'apps/server/__tests__/routes/projects.test.ts',
   'apps/server/__tests__/routes/project-inspect.test.ts',
+  'apps/server/__tests__/routes/project-detected.test.ts',
   'apps/server/__tests__/routes/projects-any-folder.test.ts',
   'apps/server/__tests__/routes/projects-archive.test.ts',
   'apps/server/__tests__/routes/project-delete.test.ts',

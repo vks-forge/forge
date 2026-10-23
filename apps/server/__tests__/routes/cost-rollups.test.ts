@@ -137,6 +137,8 @@ describe('GET /tickets/:id cost', () => {
     expect(res.status).toBe(200);
     expect((res.body as { cost: unknown }).cost).toEqual({
       total_usd: 1,
+      workers_usd: 1,
+      director_usd: 0,
       by_run: [
         { run_id: 'c', usd: 1, status: 'error', started_at: at(1), recorded: true },
         { run_id: 'd', usd: 0, status: 'success', started_at: at(3), recorded: false },
@@ -149,7 +151,12 @@ describe('GET /tickets/:id cost', () => {
 
     const body = (await get('/tickets/FX-9')).body as { cost: unknown };
 
-    expect(body.cost).toEqual({ total_usd: 0, by_run: [] });
+    expect(body.cost).toEqual({
+      total_usd: 0,
+      workers_usd: 0,
+      director_usd: 0,
+      by_run: [],
+    });
   });
 
   it('answers 404 for an unknown ticket', async () => {

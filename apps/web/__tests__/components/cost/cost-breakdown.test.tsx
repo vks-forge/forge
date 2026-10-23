@@ -74,6 +74,8 @@ describe('TicketCostBreakdown', () => {
       <TicketCostBreakdown
         cost={{
           total_usd: 0.31,
+          workers_usd: 0.31,
+          director_usd: 0,
           by_run: [
             {
               run_id: 'run-1',
@@ -107,7 +109,11 @@ describe('TicketCostBreakdown', () => {
   });
 
   it('says nothing was spent when no Worker ran, and says so for a missing cost', () => {
-    const { unmount } = view(<TicketCostBreakdown cost={{ total_usd: 0, by_run: [] }} />);
+    const { unmount } = view(
+      <TicketCostBreakdown
+        cost={{ total_usd: 0, workers_usd: 0, director_usd: 0, by_run: [] }}
+      />,
+    );
 
     expect(screen.getByText(/No Worker has run/)).toBeInTheDocument();
     unmount();

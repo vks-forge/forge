@@ -46,6 +46,7 @@ export const APPROVE_PLAN_PLAYBOOK: DirectorPlaybook = {
     '5. Nothing conflicts with `matching_decisions`, and the plan does not repeat a rejected approach.',
     '6. Dependencies are real and the order can run: first tickets have no dependency, no ticket waits on a missing one.',
     '7. A real product choice is not hidden inside an assumption.',
+    '8. Owner answers outrank your own defaults: nothing in `scope`, `non_goals` or a ticket contradicts an entry of `plan.decisions`. If one does, ask the owner.',
     '',
     '## Asking',
     '',

@@ -51,6 +51,10 @@ export interface DecisionItem extends ItemBase {
   readonly kind: 'decision';
   readonly tool: string;
   readonly decision: PermissionDecision;
+  /** Set when the call waits on the owner: the approval item to open. */
+  readonly interactionId?: string;
+  /** The command, path or address of the call, for the "Waiting for your approval" line. */
+  readonly what?: string;
 }
 
 export interface StatusItem extends ItemBase {

@@ -13,4 +13,10 @@ export interface WorkerContract {
   readonly finish_rules: readonly string[];
   readonly shell_rules: readonly string[];
   readonly rework_note?: string;
+  /** Only on a run that resolves a merge conflict with main: how to combine both changes. */
+  readonly conflict_note?: string;
+  /** Standard and Full only: what to do when a call is refused as waiting for the owner. */
+  readonly owner_wait_rule?: string;
+  /** On a resume after the owner answered: one sentence per answered approval. */
+  readonly approval_answers?: readonly string[];
 }

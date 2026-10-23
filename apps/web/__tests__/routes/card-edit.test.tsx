@@ -6,24 +6,42 @@
  * Why: both edits are consequential and neither can be undone from the page. A type change with
  *   no confirmation, or a close with no reason on record, would silently change how the Director
  *   treats a request and leave nobody able to say why.
- * Depends on: the stubbed Forge server via helpers/render-app, routes/card/card-header.
+ * Depends on: the stubbed Forge server via helpers/render-app, routes/card/card-header,
+ *   components/work/header-menu.
  */
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { choose, chosen } from '#tests/helpers/choose.js';
 import { refusal } from '#tests/helpers/fetch-stub.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
 const card = (id: string) => `/p/sample-service/cards/${id}`;
+
+type User = ReturnType<typeof userEvent.setup>;
+
+/** Opens the header's `⋯` menu and picks one row by its name. */
+async function fromMenu(user: User, name: string): Promise<void> {
+  await user.click(await screen.findByRole('button', { name: 'Card actions' }));
+  await user.click(await screen.findByRole('menuitem', { name }));
+}
+
+/** Whether the menu row for this type is the checked, unselectable current one. */
+async function isCurrentType(user: User, name: string): Promise<boolean> {
+  await user.click(await screen.findByRole('button', { name: 'Card actions' }));
+  const row = await screen.findByRole('menuitem', { name });
+  const current = row.getAttribute('aria-disabled') === 'true';
+  await user.keyboard('{Escape}');
+
+  return current;
+}
 
 describe('Card page: type and close', () => {
   it('asks before changing the type and sends only the type', async () => {
     const user = userEvent.setup();
     const { forge } = renderApp({ path: card('FG-C2') });
 
-    await choose(user, 'Type', 'Issue');
+    await fromMenu(user, 'Issue');
     const dialog = await screen.findByRole('alertdialog');
 
     expect(within(dialog).getByText('Change the type to Issue?')).toBeInTheDocument();
@@ -31,7 +49,7 @@ describe('Card page: type and close', () => {
 
     await user.click(within(dialog).getByRole('button', { name: 'Change type' }));
 
-    await waitFor(() => expect(chosen('Type')).toBe('Issue'));
+    await waitFor(async () => expect(await isCurrentType(user, 'Issue')).toBe(true));
     expect(forge.stub.callsTo('PATCH /cards/:id')).toMatchObject([
       { path: '/cards/FG-C2', body: { type: 'issue' } },
     ]);
@@ -41,14 +59,14 @@ describe('Card page: type and close', () => {
     const user = userEvent.setup();
     const { forge } = renderApp({ path: card('FG-C2') });
 
-    await choose(user, 'Type', 'Issue');
+    await fromMenu(user, 'Issue');
     await user.click(
       within(await screen.findByRole('alertdialog')).getByRole('button', {
         name: 'Cancel',
       }),
     );
 
-    expect(chosen('Type')).toBe('Plan');
+    expect(await isCurrentType(user, 'Plan')).toBe(true);
     expect(forge.stub.callsTo('PATCH /cards/:id')).toHaveLength(0);
   });
 
@@ -59,7 +77,7 @@ describe('Card page: type and close', () => {
       routes: { 'PATCH /cards/:id': refusal(409, 'card_type_source', 'source') },
     });
 
-    await choose(user, 'Type', 'PR issue');
+    await fromMenu(user, 'PR issue');
     await user.click(
       within(await screen.findByRole('alertdialog')).getByRole('button', {
         name: 'Change type',
@@ -70,19 +88,23 @@ describe('Card page: type and close', () => {
       await screen.findByText(/does not accept this card’s source/),
     ).toBeInTheDocument();
 
-    expect(chosen('Type')).toBe('Plan');
+    expect(await isCurrentType(user, 'Plan')).toBe(true);
   });
 
   it('requires a reason to close, then shows it and disables the chat', async () => {
     const user = userEvent.setup();
     const { forge } = renderApp({ path: card('FG-C2') });
 
-    // The Director's close suggestion in the chat also has a Close card shortcut; the header's is first.
-    const [header] = await screen.findAllByRole('button', { name: 'Close card' });
-    await user.click(header!);
+    await fromMenu(user, 'Close card…');
     const dialog = await screen.findByRole('alertdialog');
     const confirm = within(dialog).getByRole('button', { name: 'Close card' });
 
+    // It says what closing really does: Workers stop, unfinished tickets are cancelled.
+    expect(dialog).toHaveTextContent(
+      /stops any running Worker and cancels this card.s unfinished tickets/,
+    );
+
+    expect(dialog).not.toHaveTextContent(/keep running/);
     expect(confirm).toBeDisabled();
 
     await user.type(within(dialog).getByLabelText(/Reason/), 'Superseded by FG-C4');
@@ -107,6 +129,9 @@ describe('Card page: type and close', () => {
       screen.getByText(/The Director takes no more messages on it/),
     ).toBeInTheDocument();
 
-    expect(screen.queryByRole('button', { name: 'Close card' })).not.toBeInTheDocument();
+    // A closed card takes no change, so its menu is gone.
+    expect(
+      screen.queryByRole('button', { name: 'Card actions' }),
+    ).not.toBeInTheDocument();
   });
 });

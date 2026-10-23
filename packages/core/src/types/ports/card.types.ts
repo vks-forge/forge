@@ -14,7 +14,7 @@
  *   never saw, and the reply queue's claim is atomic so two ticks never answer one message.
  *
  * Exports: CardPatch, CardListFilter, CardEventListFilter, CardPhaseUpdate, CardRepository,
- *   CardEventRepository, CardTypeRepository, CardRelationRepository, CardReplyQueueRepository.
+ *   CardEventRepository, CardTypeRepository, CardRelationRepository, CardClaimOptions, CardReplyQueueRepository.
  * Depends on: schemas/card, schemas/card-event, schemas/card-reply-queue, schemas/card-type,
  *   schemas/ids. Types only.
  */
@@ -117,12 +117,33 @@ export interface CardRelationRepository {
   add(relation: CardRelation, at: string): Promise<boolean>;
 }
 
+/**
+ * Which cards one claim may take. `exclude` lists cards that already have a Director turn in
+ * flight (their rows wait); `maxCards` is the number of free Director slots, so rows of a card
+ * with no slot are never marked claimed and stranded until the claim goes stale. When more cards
+ * are eligible than `maxCards`, cards with an owner message waiting come first, then the card
+ * whose oldest eligible row is oldest.
+ */
+export interface CardClaimOptions {
+  readonly exclude?: readonly CardId[];
+  readonly maxCards?: number;
+}
+
 /** The durable queue of owed Director replies (d-0134): new events only, claimed atomically. */
 export interface CardReplyQueueRepository {
   enqueue(item: NewCardReply): Promise<CardReplyQueueItem>;
-  // Marks every unfinished row that is unclaimed, or claimed before `staleBefore`, as claimed at
-  // `at`, and returns them oldest first. Inside one transaction this cannot hand a row to two callers.
-  claim(at: string, staleBefore: string): Promise<CardReplyQueueItem[]>;
+  // Marks every unfinished row of the chosen cards that is unclaimed, or claimed before
+  // `staleBefore`, as claimed at `at`, and returns them oldest first. Inside one transaction this
+  // cannot hand a row to two callers. `options` narrows which cards are taken (see CardClaimOptions).
+  claim(
+    at: string,
+    staleBefore: string,
+    options?: CardClaimOptions,
+  ): Promise<CardReplyQueueItem[]>;
+  // Clears the claim of every unfinished row and returns how many rows were released. Forge is one
+  // process per data folder, so a claim found at boot belongs to a dead process: its rows are answered
+  // at once instead of after the stale cutoff.
+  releaseClaims(): Promise<number>;
   // Stamps `done_at`; false when the row is unknown or already done.
   complete(id: number, at: string): Promise<boolean>;
   // Rows not yet done for the card, claimed or not (the "Director is thinking" fact).

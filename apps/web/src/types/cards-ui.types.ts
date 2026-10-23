@@ -5,8 +5,8 @@
  *   those derived shapes keeps the pure functions that build them (domain/card-columns,
  *   domain/card-chat) and the components that draw them apart, so each is testable alone.
  *
- * Exports: CardColumnDef, CardFilter, ChatAction, ChatBlock, ChatLine, CardTab, DependencyChip,
- *   GrillView, FlowHandlers, CardPriorityMark.
+ * Exports: CardColumnDef, CardFilter, ChatAction, ChatBlock, ChatLine, TicketEventKind, ChatFold,
+ *   ChatItem, CardTab, DependencyChip, GrillView, FlowHandlers, CardPriorityMark.
  * Depends on: schemas/cards (types), schemas/card-events (types), types/board.types, types/research-ui.types. Types only.
  */
 
@@ -95,9 +95,32 @@ export interface ChatLine {
   readonly block?: ChatBlock;
   /** Names the owner's answer when the Director used its own recommendation. */
   readonly byRecommendation?: boolean;
+  /** Set on the four ticket log kinds: a run of three or more folds into one line. */
+  readonly fold?: 'ticket';
+  /** Which ticket event a folded-capable line is, so a fold can say what moved. */
+  readonly ticketEvent?: TicketEventKind;
+  /** The state a `moved` line ended in, in words. */
+  readonly toState?: string;
 }
 
-export type CardTab = 'conversation' | 'plan' | 'evidence' | 'tickets' | 'details';
+export type TicketEventKind = 'created' | 'moved' | 'asked' | 'answered';
+
+/** A run of ticket log lines drawn as one quiet line that opens to the originals. */
+export interface ChatFold {
+  /** The first line's key, so open/closed survives a refetch and live appends. */
+  readonly key: string;
+  readonly lines: readonly ChatLine[];
+  /** Words: "3 tickets moved · 2 created", then where tickets stand now. */
+  readonly summary: string;
+}
+
+/** What the chat draws: a line, or a fold. `index` is the first line's place in the transcript. */
+export type ChatItem =
+  | { readonly kind: 'line'; readonly line: ChatLine; readonly index: number }
+  | { readonly kind: 'fold'; readonly fold: ChatFold; readonly index: number };
+
+export type CardTab =
+  'conversation' | 'plan' | 'evidence' | 'tickets' | 'history' | 'details';
 
 /** The grill as the history tells it (domain/director-flow). */
 export interface GrillView {
@@ -117,14 +140,13 @@ export interface FlowLineContext {
   readonly canAnswer: boolean;
 }
 
-/** What the chat's structured lines can do; every button on them calls one of these. */
+/** What the needs-you dock's question can do; every button on it calls one of these. */
 export interface FlowHandlers {
   readonly onAnswer: (
     questionId: string,
     answer: { optionId: string } | { text: string },
   ) => void;
   readonly onShortcut: (kind: 'use_recommendations' | 'write_plan_now') => void;
-  readonly onReviewPlan: () => void;
   /** True while an answer or shortcut is in flight, so a second click does nothing. */
   readonly busy: boolean;
   /** Why the last answer or shortcut failed, in words; null when it did not. */

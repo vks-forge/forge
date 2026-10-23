@@ -21,8 +21,8 @@ import {
 } from '#tests/helpers/forge-data/pipeline-data.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
-const TICKET = '/p/sample-service/tickets/SVC-1';
-const PIPELINE = 'GET /tickets/SVC-1/pipeline';
+const TICKET = '/p/sample-service/tickets/SVC-3';
+const PIPELINE = 'GET /tickets/SVC-3/pipeline';
 
 const stages = (over: Record<string, Parameters<typeof stageView>[1]>) =>
   STANDARD_STAGES.map((s) => (over[s.id] ? { ...s, ...over[s.id] } : s));
@@ -68,7 +68,7 @@ describe('pipeline strip: follows the ticket', () => {
 
     const stream = await streamOf(forge);
 
-    stream.emit('invalidate', { keys: [['ticket-pipeline', 'SVC-1']] });
+    stream.emit('invalidate', { keys: [['ticket-pipeline', 'SVC-3']] });
 
     expect(
       await screen.findByRole('button', { name: /^Implement\s*Running/ }),

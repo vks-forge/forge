@@ -10,6 +10,12 @@
  *   do. After the fact (PostToolUse*) nothing can be undone, so the hook only reports
  *   (d-0033, probe 2).
  *
+ *   An `ask` the server parked for the owner (it carries an `interaction_id`) is worded differently:
+ *   the Worker must learn that the call did NOT run, that the owner has been asked, and that
+ *   it should finish what does not need the call and end its turn, because Forge resumes the
+ *   same session with the answer. A plain "denied" would make it retry or work around the
+ *   call (d-0175, execution-plane.md §6).
+ *
  * Exports: isBlockingEvent(), fromResponse(), failClosed().
  * Depends on: @forge/tools/hook-wire, types/claude/hook-client. No IO.
  */
@@ -23,6 +29,20 @@ export function isBlockingEvent(event: string | undefined): boolean {
 }
 
 const oneLine = (s: string): string => s.replace(/\s+/g, ' ').trim().slice(0, 300);
+
+/** The owner-approval message is longer than a plain refusal, so it has its own cap. */
+const APPROVAL_MESSAGE_MAX = 500;
+
+/** What the Worker is told when its call was parked for the owner's approval. */
+function awaitingOwner(res: HookResponse & { interaction_id: string }): string {
+  const tail =
+    '. Do not retry or work around it; do the rest, then end your turn. Forge resumes you with the answer.';
+
+  const head = `forge-hook: NOT run, waiting for the owner's approval (${res.interaction_id}): `;
+  const room = Math.max(0, APPROVAL_MESSAGE_MAX - head.length - tail.length - 1);
+
+  return `${head}${res.reason.replace(/\s+/g, ' ').trim().slice(0, room)}${tail}\n`;
+}
 
 /** Result for a failure of the hook itself: blocks on blocking events, logs on the rest. */
 export function failClosed(event: string | undefined, code: string): HookResult {
@@ -44,6 +64,14 @@ export function failClosed(event: string | undefined, code: string): HookResult 
 export function fromResponse(event: HookEventName, res: HookResponse): HookResult {
   if (res.decision === 'allow') {
     return { exitCode: 0, stdout: '', stderr: '' };
+  }
+
+  if (res.decision === 'ask' && res.interaction_id !== undefined) {
+    return {
+      exitCode: isBlockingEvent(event) ? 2 : 0,
+      stdout: '',
+      stderr: awaitingOwner({ ...res, interaction_id: res.interaction_id }),
+    };
   }
 
   const receipt = res.receipt_hash ? ` [receipt ${res.receipt_hash.slice(0, 12)}]` : '';

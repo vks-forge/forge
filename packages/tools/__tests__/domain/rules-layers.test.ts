@@ -86,7 +86,25 @@ describe('managed deny layer', () => {
     });
 
     expect(evaluateToolRules(eff, 'web_fetch', 'https://docs.good.com/a').effect).toBe(
-      'ask',
+      'allow',
+    );
+  });
+
+  it('keeps a project or ticket deny and a banned host above the default web allow', () => {
+    const eff = testGrant(
+      'full',
+      grant({ rules: [rule('web_fetch', 'https://blocked.*', 'deny')] }),
+      grant({ rules: [rule('web_fetch', 'https://nope.*', 'deny')] }),
+      managed,
+    );
+
+    expect(evaluateToolRules(eff, 'web_fetch', 'https://blocked.dev/a').effect).toBe(
+      'deny',
+    );
+
+    expect(evaluateToolRules(eff, 'web_fetch', 'https://nope.dev/a').effect).toBe('deny');
+    expect(evaluateToolRules(eff, 'web_fetch', 'https://evil.com/a').reason).toBe(
+      'managed_deny',
     );
   });
 });

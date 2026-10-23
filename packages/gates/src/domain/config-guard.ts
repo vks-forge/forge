@@ -21,6 +21,13 @@
  *   A worktree file a check command runs by path (`./scripts/test.sh`, `./gradlew`, `bin/test`,
  *   `bash x.sh`, see domain/check-scripts) is guarded too: editing it to `exit 0` would pass G1.
  *
+ *   Greenfield exception (d-0173): while the project has no checks configured, an ADDED (status A)
+ *   gate configuration file is allowed and named in the report, since a new tsconfig or vitest
+ *   config cannot loosen a check that does not exist yet. Modified, deleted and renamed config,
+ *   `.gitattributes` (it hides hunks from the diff other checks read), executables and scripts
+ *   still fail. Once checks exist, added config fails like any other change, and G1 hands the
+ *   failure to the owner instead of reworking it (core domain/config-hold).
+ *
  * Exports: checkGateConfig().
  * Depends on: @forge/core (globMatch, ProjectConfig, WorktreeDiff), domain/check-scripts, domain/gate-rules, shared/paths. No IO.
  */
@@ -125,25 +132,35 @@ export function checkGateConfig(
 ): CheckOutcome {
   const findings: GateFinding[] = [];
   const scripts = checkScriptPaths(checks);
+  // No project checks yet means nothing a new config file could loosen (d-0173).
+  const greenfield = checks.length === 0;
+  const allowed: string[] = [];
   for (const f of diff.files) {
     const name = baseName(f.path);
     if (scripts.has(foldPath(f.path))) {
       findings.push({
         check: 'gate-config',
+        file: f.path,
         message: `${f.path}: script run by a project check was changed by the Worker (status ${f.status}); G1 would re-run the edited script`,
       });
     }
 
     if (rules.configGlobs.some((g) => globMatch(g, foldPath(f.path), true))) {
-      findings.push({
-        check: 'gate-config',
-        message: `${f.path}: gate configuration changed by the Worker (status ${f.status})`,
-      });
+      if (greenfield && f.status === 'A' && name !== '.gitattributes') {
+        allowed.push(f.path);
+      } else {
+        findings.push({
+          check: 'gate-config',
+          file: f.path,
+          message: `${f.path}: gate configuration changed by the Worker (status ${f.status})`,
+        });
+      }
     }
 
     if (f.status !== 'D' && EXECUTABLE.test(name)) {
       findings.push({
         check: 'gate-config',
+        file: f.path,
         message: `${f.path}: executable added or modified by the Worker (status ${f.status}); the shell could run it instead of a real tool`,
       });
     }
@@ -152,14 +169,20 @@ export function checkGateConfig(
   for (const name of changedScripts(patch, referencedScripts(checks))) {
     findings.push({
       check: 'gate-config',
+      file: 'package.json',
       message: `package.json: script "${name}" used by a project check was changed`,
     });
   }
 
+  const lines = findings.map((f) => `- ${f.message}`);
+  if (allowed.length > 0) {
+    lines.push(
+      `Allowed: ${allowed.join(', ')} added by the Worker; no project checks are configured yet, so there is nothing to loosen.`,
+    );
+  }
+
   const details =
-    findings.length === 0
-      ? 'No gate configuration was changed.'
-      : findings.map((f) => `- ${f.message}`).join('\n');
+    lines.length === 0 ? 'No gate configuration was changed.' : lines.join('\n');
 
   return {
     name: 'gate-config',

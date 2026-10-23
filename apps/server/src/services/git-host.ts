@@ -53,6 +53,8 @@ export function createProjectGitHost(
     return createLocalBareGitHost({
       remotePath: resolve(deps.root, host.remote_path),
       baseBranch: host.base_branch,
+      // The base is fetched into the project's own clone, where worktrees are cut from.
+      localRepo: deps.root,
       now: deps.now,
     });
   }
@@ -87,6 +89,7 @@ export function createProjectGitHost(
     baseBranch: host.base_branch,
     appId,
     installationId: host.installation_id,
+    localRepo: deps.root,
     now: deps.now,
     privateKey: async () => {
       const key = await deps.secrets.get(keySecret);

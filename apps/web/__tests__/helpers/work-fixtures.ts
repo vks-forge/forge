@@ -52,10 +52,19 @@ export function costBody(over: Partial<CostReport> = {}): CostReport {
     to: NOW,
     project: 'sample-service',
     total_usd: 4.25,
+    worker_usd: 4.25,
+    director_usd: 0,
     runs_total: 6,
     runs_with_cost: 5,
+    director_steps_total: 0,
+    director_steps_recorded: 0,
     tokens: TOKENS,
     per_day: day(30, (i) => (i === 29 ? 4.25 : 0)),
+    per_day_split: day(30, (i) => (i === 29 ? 4.25 : 0)).map((p) => ({
+      date: p.date,
+      worker_usd: p.value,
+      director_usd: 0,
+    })),
     by_ticket: [
       {
         ticket_id: 'SVC-3',
@@ -187,6 +196,8 @@ export function overviewBody(over: Partial<OverviewStats> = {}): OverviewStats {
     unknown: [],
     kpis: {
       spend_usd: 7.5,
+      spend_worker_usd: 7.5,
+      spend_director_usd: 0,
       spend_prev_usd: 5,
       spend_this_month_usd: 21.25,
       tickets_done: 4,
@@ -197,8 +208,20 @@ export function overviewBody(over: Partial<OverviewStats> = {}): OverviewStats {
       g1_pass_rate: { hits: 3, total: 4, rate: 0.75 },
     },
     spend_by_project: [
-      { project: 'sample-service', values: week((i) => (i === 6 ? 4.5 : 0)) },
-      { project: 'sample-web', values: week((i) => (i === 5 ? 3 : 0)) },
+      {
+        project: 'sample-service',
+        values: week((i) => (i === 6 ? 4.5 : 0)),
+        director_values: week(() => 0),
+      },
+      {
+        project: 'sample-web',
+        values: week((i) => (i === 5 ? 3 : 0)),
+        director_values: week(() => 0),
+      },
+    ],
+    spend_by_source: [
+      { source: 'worker', values: week((i) => (i === 6 ? 4.5 : i === 5 ? 3 : 0)) },
+      { source: 'director', values: week(() => 0) },
     ],
     tickets_done: week((i) => (i === 6 ? 4 : 0)),
     tickets_started: week((i) => (i % 2 === 0 ? 1 : 0)),
@@ -206,8 +229,8 @@ export function overviewBody(over: Partial<OverviewStats> = {}): OverviewStats {
     runs_failed: week((i) => (i === 5 ? 1 : 0)),
     runs_interrupted: week(() => 0),
     spend_by_project_total: [
-      { key: 'sample-service', usd: 4.5 },
-      { key: 'sample-web', usd: 3 },
+      { key: 'sample-service', usd: 4.5, worker_usd: 4.5, director_usd: 0 },
+      { key: 'sample-web', usd: 3, worker_usd: 3, director_usd: 0 },
     ],
     spend_by_harness: [
       { key: 'claude', usd: 6 },
@@ -222,6 +245,7 @@ export function overviewBody(over: Partial<OverviewStats> = {}): OverviewStats {
         tickets_in_progress: 1,
         waiting_on_you: 1,
         spend_usd: 4.5,
+        director_usd: 0,
         last_activity: '2026-10-16T10:00:00.000Z',
         spark: week((i) => i % 3),
       },
@@ -232,6 +256,7 @@ export function overviewBody(over: Partial<OverviewStats> = {}): OverviewStats {
         tickets_in_progress: 1,
         waiting_on_you: 1,
         spend_usd: 3,
+        director_usd: 0,
         last_activity: '2026-10-15T08:00:00.000Z',
         spark: week(() => 0),
       },
@@ -253,7 +278,12 @@ export function overviewBody(over: Partial<OverviewStats> = {}): OverviewStats {
         updated_at: '2026-10-15T08:00:00.000Z',
       },
     ],
-    cost_coverage: { runs_total: 6, runs_with_cost: 5 },
+    cost_coverage: {
+      runs_total: 6,
+      runs_with_cost: 5,
+      director_steps: 0,
+      director_steps_recorded: 0,
+    },
     ...over,
   };
 }

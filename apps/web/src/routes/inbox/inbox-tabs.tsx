@@ -1,8 +1,8 @@
 /**
- * InboxTabs: Needs action, Unread, All and Archived, with a count on each.
+ * InboxTabs: Needs action, Notices, Unread, All and Archived, with a count on each.
  *
- * Why: the four views answer different questions ("what waits on me?", "what is new?", "what
- *   is there?", "what did I put away?"). "Needs action" is the one that asks the user to do
+ * Why: the views answer different questions ("what waits on me?", "what is only news?",
+ *   "what is unread?", "what is there?", "what did I put away?"). "Needs action" is the one that asks the user to do
  *   something, so its count alone takes the attention colour when above zero. Built to the
  *   ARIA tabs pattern: one tab stop, Left and Right (and Home and End) move between tabs, and
  *   the active tab's line glides with a spring on `transform` only.
@@ -19,12 +19,19 @@ import { springs } from '#/theme/motion.js';
 
 export const INBOX_VIEW_LABEL: Readonly<Record<InboxView, string>> = {
   needs_action: 'Needs action',
+  notices: 'Notices',
   unread: 'Unread',
   all: 'All',
   archived: 'Archived',
 };
 
-const ORDER: readonly InboxView[] = ['needs_action', 'unread', 'all', 'archived'];
+const ORDER: readonly InboxView[] = [
+  'needs_action',
+  'notices',
+  'unread',
+  'all',
+  'archived',
+];
 
 export function InboxTabs(props: {
   view: InboxView;

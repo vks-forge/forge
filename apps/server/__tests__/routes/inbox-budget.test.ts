@@ -7,7 +7,8 @@
  *   owner changed the cap the warning was written for. A new threshold of a new cap shows again even after an
  *   earlier warning was archived.
  *
- * Pins: the item (id, title, detail, needs action, dated by the event), archive hides it, a changed cap hides
+ * Pins: the item (id, title, detail, needs action, dated by the event), archive hides it, a card with no cap is
+ *   judged against the level in force (Forge default), a changed cap hides
  *   the old warning and a fresh one shows, a closed or done card shows nothing, other projects are untouched.
  * Depends on: helpers/card-rig, vitest. IO: a loopback socket.
  */
@@ -127,6 +128,15 @@ describe('budget_warning items', () => {
     await warn(1, 0.8, 4.9, 6, 30);
 
     expect((await list('needs_action')).map((i) => i.updated_at)).toEqual([at(30)]);
+  });
+
+  it('judges a card with no cap of its own against the level in force, not against old levels', async () => {
+    await ctx.seed([card(5, { phase: 'in_progress' })]);
+    await warn(5, 0.8, 4.2, 5, 10);
+    await warn(5, 1, 3.1, 3, 11);
+
+    // The Forge default is $5: the warning written for $5 shows, the one written for an old $3 is moot.
+    expect((await list()).map((i) => i.id)).toEqual(['budget_warning:FX-C5:0.8']);
   });
 
   it('shows nothing for a closed or finished card, nor for another project', async () => {

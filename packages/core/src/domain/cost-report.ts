@@ -7,7 +7,9 @@
  *   report sums exactly that, keeps runs without a cost in the token and run totals but out of
  *   the dollar sums (and says how many they were), and never prices tokens itself, because a
  *   guessed price shown as spend is worse than a visible gap. Pure so the sums and the
- *   ordering can be pinned by tests.
+ *   ordering can be pinned by tests. The Director's steps are added from their own dated
+ *   ledger and kept as a separate figure, so the total is the whole project's spend and the
+ *   split says how much of it was Workers and how much the Director.
  *
  * Exports: computeCostReport(), tokensOf().
  * Depends on: domain/stats-window, schemas/*, types/cost-report-input.types. No IO.
@@ -71,8 +73,12 @@ export function computeCostReport(input: CostReportInput): CostReport {
   const harnesses = new Map<string, CostBucket>();
   const models = new Map<string, TokenTotals>();
   const total = zero();
-  let totalUsd = 0;
+  const perDayDirector = new Map<string, number>();
+  let workerUsd = 0;
+  let directorUsd = 0;
   let withCost = 0;
+  let directorSteps = 0;
+  let directorRecorded = 0;
 
   for (const r of input.runs) {
     const tokens = tokensOf(r.usage);
@@ -94,9 +100,22 @@ export function computeCostReport(input: CostReportInput): CostReport {
 
     if (r.cost_usd !== undefined) {
       withCost += 1;
-      totalUsd += r.cost_usd;
+      workerUsd += r.cost_usd;
       bump(perDay, dayOf(r.started_at), r.cost_usd);
     }
+  }
+
+  const perDayWorker = new Map(perDay);
+  for (const d of input.directorSpend) {
+    if (d.at < window.from || d.at > window.to) {
+      continue;
+    }
+
+    directorSteps += 1;
+    directorRecorded += d.recorded ? 1 : 0;
+    directorUsd += d.usd;
+    bump(perDayDirector, dayOf(d.at), d.usd);
+    bump(perDay, dayOf(d.at), d.usd);
   }
 
   const byRun = input.runs
@@ -133,11 +152,20 @@ export function computeCostReport(input: CostReportInput): CostReport {
   return {
     ...window,
     project: input.project,
-    total_usd: totalUsd,
+    total_usd: workerUsd + directorUsd,
+    worker_usd: workerUsd,
+    director_usd: directorUsd,
     runs_total: input.runs.length,
     runs_with_cost: withCost,
+    director_steps_total: directorSteps,
+    director_steps_recorded: directorRecorded,
     tokens: total,
     per_day: denseSeries(days, perDay),
+    per_day_split: days.map((date) => ({
+      date,
+      worker_usd: perDayWorker.get(date) ?? 0,
+      director_usd: perDayDirector.get(date) ?? 0,
+    })),
     by_ticket: byTicket,
     by_ticket_total: rankedTickets.length,
     by_run: byRun.slice(runPage.offset, runPage.offset + runPage.limit).map((x) => x.row),

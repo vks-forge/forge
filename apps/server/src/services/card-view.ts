@@ -8,18 +8,30 @@
  *   owner's answer is never hidden. `blocks` is the reverse view of the `depends_on` edges.
  *   The grill's open-point count and the newest plan version come from the card's planning
  *   state. One module reads those inputs and shapes the answer, so no route re-derives them.
- *   Cost is the Director spend stored on that planning state plus the card's tickets' recorded
- *   run cost; a list passes one grouped sum for its whole page so a Board of many cards does
+ *   Cost is the card's cached Director spend (the sum of its ledger rows, kept on that planning
+ *   state) plus the card's tickets' recorded run cost, and the budget row reports the cap in force
+ *   (core's `effectiveCardBudget`) against that same total; a list passes one grouped sum for its whole page so a Board of many cards does
  *   not query per card, and the detail adds the per-ticket split.
  *
+ *   The summary also counts tickets running and tickets waiting on the owner, so a tile can say "2 running,
+ *   1 waiting for you" without the web fetching the card's tickets; the detail's ticket rows carry stage,
+ *   run in flight and Retry offer (services/ticket-progress).
+ *
  * Exports: viewCard(), summarizeCard(), cardDetail().
- * Depends on: @forge/core (rollupCardColumn, rollupCardCost, card schemas), services/ticket-summary,
+ * Depends on: @forge/core (rollupCardColumn, rollupCardCost, effectiveCardBudget, card schemas), services/needs-you-view, services/ticket-summary, services/ticket-progress,
  *   types/card-view. IO:
  *   reads storage inside the caller's transaction.
  */
 
-import { cardNeedsYou, rollupCardColumn, rollupCardCost } from '@forge/core';
+import {
+  NEEDS_YOU_STATUSES,
+  cardNeedsYou,
+  effectiveCardBudget,
+  rollupCardColumn,
+  rollupCardCost,
+} from '@forge/core';
 import type {
+  BudgetDefault,
   Card,
   CardDetail,
   CardDirectorStatus,
@@ -28,6 +40,8 @@ import type {
   Interaction,
   StorageTx,
 } from '@forge/core';
+import { cardNeedsYouDetail } from '#/services/needs-you-view.js';
+import { progressExtra, ticketProgress } from '#/services/ticket-progress.js';
 import { summarizeTicket } from '#/services/ticket-summary.js';
 import type { CardView } from '#/types/card-view.types.js';
 
@@ -65,6 +79,22 @@ export async function viewCard(
   };
 }
 
+/**
+ * Tickets that wait on the owner, by the same rule as the card's Needs you overlay: finished work and
+ * blocked tickets by status, a `waiting_human` ticket only while an owner question is open.
+ */
+function waitingOnOwner(view: CardView): number {
+  const asked = new Set(
+    view.pending.filter((i) => i.escalated_at !== undefined).map((i) => i.ticket_id),
+  );
+
+  return view.tickets.filter((t) =>
+    t.status === 'waiting_human'
+      ? asked.has(t.id)
+      : NEEDS_YOU_STATUSES.includes(t.status),
+  ).length;
+}
+
 /** The Board shape; `project` is reported as the slug. */
 export function summarizeCard(view: CardView, slug: string): CardSummary {
   return {
@@ -74,28 +104,36 @@ export function summarizeCard(view: CardView, slug: string): CardSummary {
     column: view.column,
     depends_on: [...view.dependsOn],
     blocks: [...view.blocks],
-    ticket_count: view.tickets.length,
+    ticket_count: view.tickets.filter((t) => t.status !== 'cancelled').length,
     tickets_done: view.tickets.filter((t) => t.status === 'done').length,
+    tickets_cancelled: view.tickets.filter((t) => t.status === 'cancelled').length,
+    tickets_running: view.tickets.filter(
+      (t) => t.status === 'in_progress' || t.status === 'verifying',
+    ).length,
+    tickets_waiting_you: waitingOnOwner(view),
     open_points: view.openPoints,
     plan_version: view.planVersion,
     cost_usd: view.directorUsd + view.ticketsUsd,
   };
 }
 
-/** The Card page shape: the summary plus ticket summaries (with run status), pending questions and the Director's chat status. */
+/** The Card page shape: the summary plus ticket summaries (with run status), pending questions, the current needs-you items and the Director's chat status. */
 export async function cardDetail(
   tx: StorageTx,
   view: CardView,
   slug: string,
   director: CardDirectorStatus,
+  budgetDefault: BudgetDefault,
 ): Promise<CardDetail> {
   const costByTicket = await tx.runs.costByTicket(view.tickets.map((t) => t.id));
+  const progress = await ticketProgress(tx, view.tickets, view.pending);
   const tickets = [];
   for (const ticket of view.tickets) {
     const run = ticket.assignee_run_id ? await tx.runs.get(ticket.assignee_run_id) : null;
     tickets.push(
       summarizeTicket(ticket, slug, run?.status, {
         costUsd: costByTicket[ticket.id] ?? 0,
+        ...progressExtra(progress, ticket.id),
         cardTitle: view.card.title,
       }),
     );
@@ -109,7 +147,12 @@ export async function cardDetail(
       tickets: view.tickets,
       costByTicket,
     }),
+    budget: {
+      ...effectiveCardBudget(view.card, budgetDefault),
+      spent_usd: view.directorUsd + view.ticketsUsd,
+    },
     pending_interactions: [...view.pending],
+    needs_you_detail: await cardNeedsYouDetail(tx, view.card),
     director,
   };
 }

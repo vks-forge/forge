@@ -30,4 +30,4 @@ export interface RouteTab {
 /** Scroll position per tab, kept by the page for as long as it is open. */
 export type ScrollMemory = Map<string, number>;
 
-export type TicketTab = 'conversation' | 'review' | 'runs' | 'details';
+export type TicketTab = 'conversation' | 'review' | 'runs' | 'history' | 'details';

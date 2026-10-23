@@ -18,7 +18,7 @@ import { defineTool } from '#/shared/define-tool.js';
 export const finishTool = defineTool({
   name: 'finish',
   description:
-    'Declare the work finished. Give a short summary and list what you did as claims: {kind:"ran_tests"}, {kind:"edited",path} for every file you changed, {kind:"added_test",name}, {kind:"read",path}. Claims are checked against tool records. Calling finish again replaces your earlier call until the run ends.',
+    'Declare the work finished. Give a short summary and list what you did as claims: {kind:"ran_tests"}, {kind:"edited",path} for every file you changed, {kind:"added_test",name} (name is the test\'s own title as written in its declaration), {kind:"read",path}. Claims are checked against tool records. Calling finish again replaces your earlier call until the run ends.',
   risk: 'write-cwd',
   inputSchema: FinishInput,
   async handler(ctx, { summary, claims }) {

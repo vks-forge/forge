@@ -18,6 +18,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { escalationWorld, failureView } from '#tests/helpers/escalation-world.js';
 import { flowEvent, flowRoutes, FLOW_CARD } from '#tests/helpers/flow-fixtures.js';
+import { openNeedsYou } from '#tests/helpers/needs-you-modal.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
 const TICKET = '/p/sample-service/tickets/SVC-4';
@@ -50,6 +51,7 @@ describe('No agent could run this stage', () => {
     const world = escalationWorld([noAgent('model_unavailable')]);
 
     renderApp({ path: TICKET, routes: world.routes });
+    await openNeedsYou(userEvent.setup());
 
     const card = await screen.findByRole('region', {
       name: 'No agent could run this stage',
@@ -67,6 +69,7 @@ describe('No agent could run this stage', () => {
     const world = escalationWorld([noAgent('rate_limit')]);
 
     renderApp({ path: TICKET, routes: world.routes });
+    await openNeedsYou(userEvent.setup());
 
     expect(
       await screen.findByText(/The harness kept refusing because of rate limits\./),
@@ -77,6 +80,7 @@ describe('No agent could run this stage', () => {
     const world = escalationWorld([noAgent('rate_limit')]);
 
     renderApp({ path: TICKET, routes: world.routes });
+    await openNeedsYou(userEvent.setup());
 
     const card = await screen.findByRole('region', {
       name: 'No agent could run this stage',
@@ -99,6 +103,7 @@ describe('No agent could run this stage', () => {
     ]);
 
     renderApp({ path: TICKET, routes: world.routes });
+    await openNeedsYou(userEvent.setup());
 
     const card = await screen.findByRole('region', {
       name: 'No agent could run this stage',
@@ -112,6 +117,7 @@ describe('No agent could run this stage', () => {
     const user = userEvent.setup();
     const world = escalationWorld([noAgent('rate_limit')]);
     const { forge } = renderApp({ path: TICKET, routes: world.routes });
+    await openNeedsYou(userEvent.setup());
 
     await user.click(await screen.findByRole('button', { name: 'Retry' }));
 

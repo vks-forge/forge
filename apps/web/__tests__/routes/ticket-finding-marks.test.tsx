@@ -24,6 +24,7 @@ import {
   stageView,
   ticketPipeline,
 } from '#tests/helpers/forge-data/pipeline-data.js';
+import { openNeedsYou } from '#tests/helpers/needs-you-modal.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
 const REVIEW = '/p/sample-service/tickets/SVC-4/review';
@@ -205,10 +206,13 @@ describe('Review tab: finding marks', () => {
     open();
 
     await highGroup();
-    const card = await screen.findByRole('region', { name: /Held: Critique/ });
+    const dock = await openNeedsYou(user);
+    const card = await within(dock).findByRole('region', { name: /Held: Critique/ });
 
     expect(within(card).queryByRole('group', { name: /^Is finding/ })).toBeNull();
 
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await user.click(await screen.findByRole('button', { name: /^Review/ }));
     const detail = await screen.findByRole('region', { name: 'Details of Review' });
 

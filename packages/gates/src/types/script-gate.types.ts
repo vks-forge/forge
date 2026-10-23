@@ -14,7 +14,9 @@ import type { WorktreeManager } from '@forge/core';
 import type { RunCommand } from '#/types/g1-deps.types.js';
 
 export interface ScriptGateDeps {
-  readonly worktrees: Pick<WorktreeManager, 'diff'>;
+  /** `readPrep` lets the command find the tool folders setup created (`.venv/bin`); absent means none. */
+  readonly worktrees: Pick<WorktreeManager, 'diff'> &
+    Partial<Pick<WorktreeManager, 'readPrep'>>;
   /** Parent environment; only an allowlist of it reaches the command (shared/env). */
   readonly env: Readonly<Record<string, string | undefined>>;
   /** Extra variable names to pass from `env` (default: none). */

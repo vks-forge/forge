@@ -8,14 +8,20 @@
  *   announcement), which is exactly what the check exists to catch.
  *
  * Exports: CapturedTool, HookObservation, CompatTrace, ScriptedCall, CompatDeps, CompatJobState,
- *   NativeToolNames, ShapeDiff, KnownGoodBuild, SessionScript, SseEvent,
+ *   NativeToolNames, CarriedShape, ShapeDiff, KnownGoodBuild, SessionScript, SseEvent,
  *   InstalledCompatDeps,
  *   MessagesBody, FakeModelApi, HookServer.
  * Depends on: @forge/core (RunEvent, HarnessKind, CompatReport), types/claude/{driver-deps,
  *   harness}. Types only.
  */
 
-import type { CompatReport, CompatToolShape, HarnessKind, RunEvent } from '@forge/core';
+import type {
+  CompatReport,
+  CompatToolShape,
+  HarnessKind,
+  HarnessToolSchema,
+  RunEvent,
+} from '@forge/core';
 import type { Clock, EnvLike, SpawnFn } from '#/types/claude/driver-deps.types.js';
 import type { HarnessSource } from '#/types/claude/harness.types.js';
 
@@ -89,12 +95,21 @@ export interface CompatJobState {
   readonly report?: CompatReport;
 }
 
+/** A tool whose shape matches a decided row of an earlier build: the decision moves to this build. */
+export interface CarriedShape {
+  readonly shape: CompatToolShape;
+  /** The earlier build's `approved` or `denied` row the decision is copied from. */
+  readonly from: HarnessToolSchema;
+}
+
 /** What to write to `harness_tool_schemas` after a check. */
 export interface ShapeDiff {
   /** Shape unchanged and already decided: keep the row as it is. */
   readonly keep: readonly string[];
   /** New, changed or previously undecided: store as pending with the new hash. */
   readonly pending: readonly CompatToolShape[];
+  /** Same shape as an earlier build's decided row: store with that decision, marked as carried. */
+  readonly carried: readonly CarriedShape[];
 }
 
 /** A build whose tools shipped as verified with this release: its check is skipped (d-0088). */

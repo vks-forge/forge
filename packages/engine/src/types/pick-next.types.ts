@@ -29,6 +29,11 @@ export interface PickCandidate {
   readonly number: number;
   /** A due wake (retry, resume, rework) is already committed work and goes before new tickets. */
   readonly wake: boolean;
+  /**
+   * This ticket's worktree preparation has just finished: it already paid for its setup, so it starts before
+   * every other candidate, retried ones included. Absent means false.
+   */
+  readonly prepared?: boolean;
   /** True when starting the run moves the ticket into In Progress (counts against that cap). */
   readonly entering: boolean;
   /** Ids of blockers that are not done; a ticket with any is never picked. */
@@ -38,6 +43,11 @@ export interface PickCandidate {
    * plan may replace this ticket, so it does not start meanwhile. Absent means false.
    */
   readonly awaitsPlan?: boolean;
+  /**
+   * Forge is getting this ticket's worktree ready (installing its packages). The ticket already
+   * holds its Worker slot, so it is not started again meanwhile. Absent means not preparing.
+   */
+  readonly prep?: { readonly step: string; readonly elapsedMs: number };
 }
 
 /** One live run: which project and harness it occupies. */
@@ -72,6 +82,7 @@ export interface PickCaps {
 export type WaitReason =
   | { readonly kind: 'deps'; readonly ids: readonly string[] }
   | { readonly kind: 'plan' }
+  | { readonly kind: 'prep'; readonly step: string; readonly elapsedMs: number }
   | {
       readonly kind: 'quota';
       readonly harness: string;

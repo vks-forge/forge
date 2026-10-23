@@ -12,13 +12,14 @@
  *   floor result, so text from the repository or the chat cannot talk it into approving.
  *
  * Exports: REPO_RULE_FILES, readRepoRules(), buildStepInput(), buildApprovalInput().
- * Depends on: tick/memory-context (the memory shown to the Director), @forge/core (grill and plan types), tick/plan-keys, tick/planning-state, types/card-planning.
+ * Depends on: tick/memory-context (the memory shown to the Director), tick/plan-impact, @forge/core (grill and plan types), tick/plan-keys, tick/planning-state, types/card-planning.
  *   Reads the memory and repo ports and the card's tickets.
  */
 
 import type { FloorResult, GrillState, PlanVersion } from '@forge/core';
 import type { FlowStep } from '@forge/core';
 import { buildMemoryContext } from '#/tick/memory-context.js';
+import { cardKeepStates } from '#/tick/plan-impact.js';
 import { ticketPlanKeys } from '#/tick/plan-keys.js';
 import { evidenceInput, loadEvidenceViews } from '#/tick/research-store.js';
 import type { PlanCtx } from '#/types/card-planning.types.js';
@@ -52,19 +53,40 @@ export async function readRepoRules(
   return out;
 }
 
-/** The card's tickets so far with their status and the plan key they came from; empty before the first approval. */
+/** The card's tickets so far with their status, plan key and what a new plan does to them; empty before the first approval. */
 async function existingTickets(pc: PlanCtx): Promise<Record<string, unknown>[]> {
   return pc.ctx.deps.storage.transaction(async (tx) => {
     const keys = await ticketPlanKeys(tx, pc.card.id);
 
-    return (await tx.tickets.listByCard(pc.card.id)).map((t) => ({
-      id: t.id,
-      title: t.title,
-      status: t.status,
-      plan_key: keys.get(t.id)?.key ?? null,
-      plan_version: keys.get(t.id)?.version ?? null,
-    }));
+    return (await cardKeepStates(tx, pc.card.id)).map(
+      ({ ticket: t, kept, replaced }) => ({
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        plan_key: keys.get(t.id)?.key ?? null,
+        plan_version: keys.get(t.id)?.version ?? null,
+        // The same rule approval uses: kept tickets stay, will_be_replaced ones are cancelled on approval.
+        kept,
+        will_be_replaced: replaced,
+      }),
+    );
   });
+}
+
+/** The stop a Re-plan came from, with the ticket's plan key so the plan can name it. */
+async function replanFrom(
+  pc: PlanCtx,
+  from: NonNullable<GrillState['replan_from']>,
+): Promise<Record<string, unknown>> {
+  const keys = await pc.ctx.deps.storage.transaction((tx) =>
+    ticketPlanKeys(tx, pc.card.id),
+  );
+
+  return {
+    ticket_id: from.ticket_id,
+    plan_key: keys.get(from.ticket_id)?.key ?? null,
+    stop: from.stop,
+  };
 }
 
 /** The playbook of `step` as the step input carries it, or null when it names none that exists. */
@@ -151,7 +173,11 @@ export async function buildStepInput(
       grill.pending_changes === null
         ? null
         : { ...grill.pending_changes, previous_plan: previousPlan },
-    // After a re-plan the card already has tickets: done and running ones stay and must not be planned twice.
+    // A Re-plan from a ticket's stop: why it stopped, so the Director's first job is that ticket's problem.
+    ...(grill.replan_from === null
+      ? {}
+      : { replan_from: await replanFrom(pc, grill.replan_from) }),
+    // After a re-plan the card already has tickets: kept ones stay and must not be planned twice; will_be_replaced ones are cancelled on approval.
     ...(existing.length === 0 ? {} : { existing_tickets: existing }),
     ...extra,
   };

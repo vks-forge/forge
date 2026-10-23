@@ -15,11 +15,12 @@
  *   Sorting by cost or creation has no stable key to resume from, so those pages (and any
  *   page with `offset`) carry `total` but no cursor; a cursor with `offset` or another sort
  *   is a 400. Every row carries its recorded run cost (one grouped read for the page, not a
- *   query per ticket) and its card's title.
+ *   query per ticket) and its card's title, plus its stage, the run in flight and a Retry offer (services/ticket-progress,
+ *   four batch reads for the page).
  *
  * Exports: ticketListRoute().
  * Depends on: @forge/core (TicketListQuery), services/ticket-cursor, services/ticket-summary,
- *   services/http/http-errors, services/http/respond, types/routes. IO: reads storage.
+ *   services/ticket-progress, services/http/http-errors, services/http/respond, types/routes. IO: reads storage.
  */
 
 import { TicketListQuery } from '@forge/core';
@@ -27,7 +28,9 @@ import type { CardId, TicketListPage, TicketMatch, TicketSummary } from '@forge/
 import { HttpError } from '#/services/http/http-errors.js';
 import { sendJson } from '#/services/http/respond.js';
 import { decodeTicketCursor, encodeTicketCursor } from '#/services/ticket-cursor.js';
+import { progressExtra, ticketProgress } from '#/services/ticket-progress.js';
 import { summarizeTicket } from '#/services/ticket-summary.js';
+import { attachWaits } from '#/services/ticket-waits.js';
 import type { Route } from '#/types/http.types.js';
 import type { RouteDeps } from '#/types/routes.types.js';
 
@@ -112,6 +115,7 @@ export function ticketListRoute(deps: RouteDeps): Route {
           }
         }
 
+        const progress = await ticketProgress(tx, shown);
         const items: TicketSummary[] = [];
         for (const ticket of shown) {
           const run = ticket.assignee_run_id
@@ -122,6 +126,7 @@ export function ticketListRoute(deps: RouteDeps): Route {
           items.push(
             summarizeTicket(ticket, slug, run?.status, {
               costUsd: costs[ticket.id] ?? 0,
+              ...progressExtra(progress, ticket.id),
               ...(cardTitle === undefined ? {} : { cardTitle }),
             }),
           );
@@ -144,7 +149,7 @@ export function ticketListRoute(deps: RouteDeps): Route {
         throw new HttpError(404, 'project_not_found', `no project ${slug}`);
       }
 
-      sendJson(res, 200, page);
+      sendJson(res, 200, { ...page, items: await attachWaits(deps.engine, page.items) });
     },
   };
 }

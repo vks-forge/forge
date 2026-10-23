@@ -14,6 +14,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { json, networkDown, refusal } from '#tests/helpers/fetch-stub.js';
+import { openNeedsYou } from '#tests/helpers/needs-you-modal.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
 const ticketPath = (id: string) => `/p/sample-service/tickets/${id}`;
@@ -27,12 +28,13 @@ describe('Ticket page', () => {
       await screen.findByRole('heading', { level: 1, name: /Reject oversized uploads/ }),
     ).toBeInTheDocument();
 
-    expect(screen.getByText(/Reworked 1×/)).toBeInTheDocument();
     expect(
       within(screen.getByRole('main')).getByRole('link', { name: /Board/ }),
     ).toHaveAttribute('href', '/p/sample-service/board');
 
     await user.click(screen.getByRole('tab', { name: 'Details' }));
+    expect(await screen.findByText('1 time')).toBeInTheDocument();
+
     const gates = within(await screen.findByRole('region', { name: 'Gates' }));
     expect(gates.getByText('G1')).toBeInTheDocument();
     expect(gates.getByText('failed')).toBeInTheDocument();
@@ -43,10 +45,10 @@ describe('Ticket page', () => {
     expect(runs.getByText(/retry of/)).toBeInTheDocument();
   });
 
-  it('links the pull request out in a new tab', async () => {
-    renderApp({ path: ticketPath('SVC-5') });
+  it('links the pull request out in a new tab from Details', async () => {
+    renderApp({ path: `${ticketPath('SVC-5')}/details` });
 
-    const pr = await screen.findByRole('link', { name: /Pull request #47/ });
+    const pr = await screen.findByRole('link', { name: /#47/ });
 
     expect(pr).toHaveAttribute('href', expect.stringContaining('/pull/47'));
     expect(pr).toHaveAttribute('target', '_blank');
@@ -78,7 +80,8 @@ describe('Ticket page', () => {
 
     expect(within(log).getByText(/Reading the request for SVC-1/)).toBeInTheDocument();
     expect(within(log).getByText('Allowed')).toBeInTheDocument();
-    expect(await screen.findByText(/Run ended \(success\)/)).toBeInTheDocument();
+    expect(await screen.findByText('Worker run 1 finished')).toBeInTheDocument();
+    expect(screen.queryByText(/Run ended/)).not.toBeInTheDocument();
 
     const read = within(log).getByRole('button', { name: /Read/ });
     expect(read).toHaveAttribute('aria-expanded', 'false');
@@ -120,6 +123,7 @@ describe('answering the Worker', () => {
   it('shows the question prominently and removes it at once when answered', async () => {
     const user = userEvent.setup();
     renderApp({ path: ticketPath('SVC-4') });
+    await openNeedsYou(userEvent.setup());
 
     expect(
       await screen.findByText(/Question: the Worker needs your answer/),
@@ -146,6 +150,8 @@ describe('answering the Worker', () => {
       routes: { 'POST /interactions/:id/answer': networkDown },
     });
 
+    await openNeedsYou(userEvent.setup());
+
     await user.type(await screen.findByLabelText('Your answer'), 'Use UTC');
     await user.click(screen.getByRole('button', { name: 'Send answer' }));
 
@@ -164,6 +170,8 @@ describe('answering the Worker', () => {
         'POST /interactions/:id/answer': refusal(409, 'not_pending', 'not pending'),
       },
     });
+
+    await openNeedsYou(userEvent.setup());
 
     await user.type(await screen.findByLabelText('Your answer'), 'x');
     await user.click(screen.getByRole('button', { name: 'Send answer' }));

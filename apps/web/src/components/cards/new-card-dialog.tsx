@@ -121,6 +121,7 @@ export function NewCardDialog(props: {
           form={FORM_ID}
           variant="primary"
           disabled={!valid}
+          aria-describedby={valid ? undefined : 'new-card-description-hint'}
           status={create.isPending ? 'loading' : 'idle'}
         >
           Create card

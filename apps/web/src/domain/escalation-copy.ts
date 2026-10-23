@@ -11,20 +11,24 @@
  *
  * Exports: ACTION_LABEL, FAILURE_TITLE, retryHintFor(), failureHelp(), escalationTitle(), settledWords(), settledLine(), replanConsequence(),
  *   describeEscalationError(), dependentsOf().
- *   (Words for the decision and sign-off bodies live in domain/finished-work-copy.)
- * Depends on: api/api-error, api/describe-error, domain/relative-time, schemas/escalation,
+ *   (Words for the decision and sign-off bodies live in domain/finished-work-copy; the sign-off title in
+ *   domain/protected-files-copy.)
+ * Depends on: api/api-error, api/describe-error, domain/conflict-copy, domain/protected-files-copy, domain/relative-time, domain/setup-failure-copy, schemas/escalation,
  *   types/escalation-ui.types (types).
  */
 
 import { ApiError } from '#/api/api-error.js';
 import { describeError } from '#/api/describe-error.js';
+import { CONFLICT_RETRY_HINT } from '#/domain/conflict-copy.js';
+import { signOffTitle } from '#/domain/protected-files-copy.js';
 import { timeAgo } from '#/domain/relative-time.js';
+import { SETUP_SETTLED_AUTO, setupFailureTitle } from '#/domain/setup-failure-copy.js';
 import type { FailurePayload } from '#/types/escalation-ui.types.js';
 import type {
+  DecisionCause,
   EscalationAction,
   EscalationView,
   FailureCause,
-  SignOffCause,
 } from '#/schemas/escalation.js';
 
 export const ACTION_LABEL: Readonly<Record<EscalationAction, string>> = {
@@ -39,6 +43,10 @@ export const ACTION_LABEL: Readonly<Record<EscalationAction, string>> = {
   sign_off: 'Sign off and merge',
   merge_anyway: 'Merge anyway',
   continue: 'Continue',
+  allow_once: 'Allow once',
+  allow_always: 'Always for this project',
+  deny: 'Deny',
+  skip_setup: 'Start without setup',
   // Settled by the engine when a held lane goes live; shown in history, never as a button.
   pipeline_ready: 'Lane went live',
   // Settled by the Director when it swaps in another agent; never offered to the owner.
@@ -63,12 +71,26 @@ export const FAILURE_TITLE: Readonly<Record<FailureCause, (lane?: string) => str
   refused: () => 'Stopped: the Worker refused the task',
   question_timeout: () => 'Stopped: a question went unanswered',
   no_agent_available: () => 'No agent could run this stage',
+  merge_conflict: () => 'Another ticket changed the same lines first',
+};
+
+/** The title of a held decision by cause. */
+const DECISION_TITLE: Readonly<Record<DecisionCause, (stage: string) => string>> = {
+  findings_hold: (stage) => `Held: ${stage} found problems that need your decision`,
+  config_hold: () =>
+    'Held: the Worker changed files that control how its work is checked',
+  provenance_hold: () => 'Held: Forge cannot prove who changed these files',
+  scope_drift: () => 'Held: the work went beyond its plan',
 };
 
 /** One line under a Retry that does something other than it says, or `undefined` when it does what it says. */
 export function retryHintFor(cause: FailureCause): string | undefined {
   if (cause === 'rework_cap') {
     return 'This gives it exactly one more attempt.';
+  }
+
+  if (cause === 'merge_conflict') {
+    return CONFLICT_RETRY_HINT;
   }
 
   return cause === 'no_agent_available'
@@ -95,15 +117,10 @@ export function failureHelp(
   return `${why}Every place this agent can run was tried, and the Director could not switch to another agent. Retry tries again, Re-plan changes what the ticket needs, Cancel stops it.`;
 }
 
-const SIGN_OFF_TITLE: Readonly<Record<SignOffCause, string>> = {
-  tier_b: 'Ready for your sign-off',
-  tier_c: 'Needs your sign-off: it touches protected files',
-  owner_stage: 'Ready for your sign-off',
-  director_declined: 'The Director did not sign this off: it is yours',
-};
-
 /** The one-line title of an escalation, in plain words. */
-export function escalationTitle(view: Pick<EscalationView, 'payload'>): string {
+export function escalationTitle(
+  view: Pick<EscalationView, 'payload'> & { ticket_id?: string },
+): string {
   const { payload } = view;
 
   if (payload.kind === 'question') {
@@ -117,13 +134,15 @@ export function escalationTitle(view: Pick<EscalationView, 'payload'>): string {
   }
 
   if (payload.kind === 'decision') {
-    return payload.cause === 'findings_hold'
-      ? `Held: ${payload.stage_label} found problems that need your decision`
-      : 'Held: the work went beyond its plan';
+    return DECISION_TITLE[payload.cause](payload.stage_label);
   }
 
   if (payload.kind === 'sign_off') {
-    return SIGN_OFF_TITLE[payload.cause];
+    return signOffTitle(payload.cause, payload.director_note);
+  }
+
+  if (payload.kind === 'permission') {
+    return 'Tool approval';
   }
 
   const { cause } = payload;
@@ -134,6 +153,10 @@ export function escalationTitle(view: Pick<EscalationView, 'payload'>): string {
 
   if (cause.type === 'tool') {
     return `Setup needed: approve the tool ${cause.tool}`;
+  }
+
+  if (cause.type === 'worktree_setup') {
+    return setupFailureTitle(view.ticket_id);
   }
 
   return `Setup needed: ${cause.harness_kind} changed, check it again`;
@@ -151,13 +174,21 @@ const SETTLED_VERB: Readonly<Record<string, string>> = {
   sign_off: 'Signed off and merged',
   merge_anyway: 'Merged anyway',
   continue: 'Continued as is',
+  allow_once: 'Allowed once',
+  allow_always: 'Allowed for this project',
+  deny: 'Denied',
+  skip_setup: 'Started without setup',
   substitute: 'Switched to a substitute agent',
 };
 
 /** "Answered by you": what was done and by whom, without a time. */
-export function settledWords(action: string, by: 'owner' | 'director' | 'auto'): string {
+export function settledWords(
+  action: string,
+  by: 'owner' | 'director' | 'auto',
+  afterSetupEdit: boolean = false,
+): string {
   if (by === 'auto') {
-    return 'Resumed by itself once it was fixed';
+    return afterSetupEdit ? SETUP_SETTLED_AUTO : 'Resumed by itself once it was fixed';
   }
 
   if (action === 'substitute') {
@@ -173,8 +204,12 @@ export function settledWords(action: string, by: 'owner' | 'director' | 'auto'):
 export function settledLine(
   settled: NonNullable<EscalationView['settled']>,
   now: number,
+  payload?: EscalationView['payload'],
 ): string {
-  return `${settledWords(settled.action, settled.by)} · ${timeAgo(settled.at, now)}`;
+  const afterSetupEdit =
+    payload?.kind === 'setup' && payload.cause.type === 'worktree_setup';
+
+  return `${settledWords(settled.action, settled.by, afterSetupEdit)} · ${timeAgo(settled.at, now)}`;
 }
 
 /** What Re-plan does to the card's tickets, said before the owner confirms. */

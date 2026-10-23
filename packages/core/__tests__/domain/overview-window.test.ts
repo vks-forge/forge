@@ -12,7 +12,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { computeOverviewStats, overviewRunsSince } from '#/domain/overview-stats.js';
+import { overviewRunsSince } from '#/domain/overview-range.js';
+import { computeOverviewStats } from '#/domain/overview-stats.js';
 
 const NOW = Date.parse('2026-10-16T12:00:00.000Z');
 
@@ -21,6 +22,7 @@ const base = (over: { tickets?: never[]; runs?: never[] } = {}) => ({
   status: 'ready' as const,
   tickets: [],
   runs: [],
+  directorSpend: [],
   gates: [],
   activeRuns: 0,
   openCards: 0,

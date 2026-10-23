@@ -21,8 +21,12 @@ const CHIP =
   'inline-flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-xs font-medium';
 
 /** The ticket's state in words; amber with an alert icon when it waits on the user. */
-export function StateChip(props: { state: TicketStatus }) {
-  const needsYou = NEEDS_YOU_STATUSES.includes(props.state);
+export function StateChip(props: {
+  state: TicketStatus;
+  /** The server's flag; when given it wins over the status, which alone cannot tell an answered question from an open one. */
+  needsYou?: boolean;
+}) {
+  const needsYou = props.needsYou ?? NEEDS_YOU_STATUSES.includes(props.state);
   const done = props.state === 'done';
   const tone = needsYou
     ? 'bg-attn-soft text-fg'

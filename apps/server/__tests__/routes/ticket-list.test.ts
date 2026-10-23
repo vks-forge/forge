@@ -94,6 +94,7 @@ beforeEach(async () => {
       ...stubHarnessDeps(),
       engine: {
         explainWait: vi.fn(async () => null),
+        explainWaits: vi.fn(async () => new Map()),
         reviewOf: vi.fn(async () => null),
         unservableProjects: vi.fn(() => new Map()),
       } as unknown as Engine,

@@ -6,11 +6,12 @@
  *   choice changes billing and what the credential field below must hold, so the three are
  *   plain radio options with one sentence each, not a dropdown that hides them. The path is
  *   optional (empty means "find it on PATH"). Saving resets the last test result on the
- *   server because it no longer describes these settings, and the form says so.
+ *   server because it no longer describes these settings, and the form says so. The
+ *   "Bypass permissions" switch (on by default, d-0183) saves with the same button.
  *
  * Exports: HarnessSetupForm.
  * Depends on: react, @tanstack/react-query, @forge/core (HarnessAuthMode), api/api-provider,
- *   api/use-settings-data, components/settings/form-field, components/settings/settings-card, components/ui/button,
+ *   api/use-settings-data, components/settings/{bypass-field,form-field}, components/settings/settings-card, components/ui/button,
  *   state/unsaved-changes, state/use-submit, api/describe-error.
  */
 
@@ -20,6 +21,7 @@ import { useState } from 'react';
 import { useForgeApi } from '#/api/api-provider.js';
 import { describeError } from '#/api/describe-error.js';
 import { HARNESSES_KEY } from '#/api/use-settings-data.js';
+import { BypassField } from '#/components/settings/bypass-field.js';
 import { FormField, Notice, TextInput } from '#/components/settings/form-field.js';
 import { FormFooter } from '#/components/settings/settings-card.js';
 import { Button } from '#/components/ui/button.js';
@@ -56,12 +58,20 @@ export function HarnessSetupForm(props: {
   const saved = {
     auth_mode: props.harness?.auth_mode ?? 'login',
     binary_path: props.harness?.binary_path ?? '',
+    bypass:
+      props.harness?.bypass_permissions_effective ??
+      props.harness?.bypass_permissions ??
+      true,
   };
 
   const [mode, setMode] = useState<HarnessAuthMode>(saved.auth_mode);
   const [path, setPath] = useState(saved.binary_path);
+  const [bypass, setBypass] = useState(saved.bypass);
   const dirty =
-    props.harness === undefined || mode !== saved.auth_mode || path !== saved.binary_path;
+    props.harness === undefined ||
+    mode !== saved.auth_mode ||
+    path !== saved.binary_path ||
+    bypass !== saved.bypass;
 
   useUnsavedChanges(dirty && props.harness !== undefined);
 
@@ -70,6 +80,7 @@ export function HarnessSetupForm(props: {
     await api.harnesses.save(props.id, {
       kind: 'claude',
       auth_mode: mode,
+      bypass_permissions: bypass,
       ...(trimmed === '' ? {} : { binary_path: trimmed }),
     });
 
@@ -136,6 +147,13 @@ export function HarnessSetupForm(props: {
           }}
         />
       </FormField>
+      <BypassField
+        checked={bypass}
+        onChange={(next) => {
+          setBypass(next);
+          submit.reset();
+        }}
+      />
       {submit.status === 'error' ? (
         <Notice tone="error" title="The harness settings were not saved">
           {describeError(submit.error).detail}

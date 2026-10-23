@@ -17,6 +17,7 @@ export function NotFound() {
     <StatePanel
       kind="empty"
       icon={Compass}
+      headingLevel={1}
       title="This page does not exist"
       actions={
         <Link className="font-medium text-signal underline" to="/">

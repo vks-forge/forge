@@ -25,6 +25,41 @@ const PARITY_REQUEST = {
   model: 'sonnet',
 } as never;
 
+describe('CLI permission mode (d-0183)', () => {
+  const mode = (permissions?: 'bypass' | 'ask') => {
+    const args = buildCliArgs(
+      { ...(PARITY_REQUEST as object), permissions } as never,
+      FILES,
+      undefined,
+    );
+
+    return args[args.indexOf('--permission-mode') + 1];
+  };
+
+  it.each([
+    ['bypass', 'bypassPermissions'],
+    ['ask', 'default'],
+    [undefined, 'default'],
+  ] as const)('permissions %s starts the CLI in %s mode', (permissions, expected) => {
+    expect(mode(permissions)).toBe(expected);
+  });
+
+  it('keeps the allow and deny lists under bypass', () => {
+    const args = buildCliArgs(
+      {
+        ...(PARITY_REQUEST as object),
+        permissions: 'bypass',
+        permissionPolicy: { allow: ['Read'], deny: ['WebSearch'], onUnlisted: 'deny' },
+      } as never,
+      FILES,
+      undefined,
+    );
+
+    expect(args).toContain('--allowedTools');
+    expect(args).toContain('--disallowedTools');
+  });
+});
+
 describe('CLI arguments', () => {
   it('are unchanged for the request an Express run on the built-in implementer builds', () => {
     expect(buildCliArgs(PARITY_REQUEST, FILES, undefined)).toEqual([

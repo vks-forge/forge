@@ -12,11 +12,13 @@
  * Depends on: every module under src/. No IO on import.
  */
 
+export * from '#/server/approval-gate.js';
 export * from '#/server/audit-gate.js';
 export * from '#/server/hook-handler.js';
 export * from '#/server/liveness-recorder.js';
 export * from '#/server/open-calls.js';
 export * from '#/server/resume-link.js';
 export * from '#/server/run-secrets.js';
+export type * from '#/types/approval-gate.types.js';
 export type * from '#/types/hook-handler.types.js';
 export type * from '#/types/run-secrets.types.js';

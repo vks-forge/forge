@@ -12,7 +12,7 @@
  *   so approving a stored plan can never produce a ticket graph that deadlocks.
  *
  * Exports: PLAN_TICKET_SIZES, PlanTicket, PlanTickets, PlanVerification, PlanOverlap,
- *   PlanDiffEntry, PlanVersion, PlanVersionRef, FloorResult.
+ *   DecisionConflict, PlanDiffEntry, PlanVersion, PlanVersionRef, FloorResult.
  * Depends on: schemas/card, schemas/ids, schemas/pipeline-adjust, schemas/ticket, domain/graph-cycle, zod. No IO.
  */
 
@@ -41,6 +41,8 @@ export const PlanTicket = z.object({
   files: z.array(z.string().min(1)),
   /** The Director's changes to this ticket's lane pipeline, each with a reason; the owner approves them with the plan. */
   pipeline: PlanPipeline.optional(),
+  /** True when the owner chose this lane (light edit or Request changes); the automatic size checks then leave it alone, Tier C still forces Full (d-0177). */
+  lane_by_owner: z.boolean().optional(),
 });
 export type PlanTicket = z.infer<typeof PlanTicket>;
 
@@ -107,6 +109,14 @@ export const PlanDiffEntry = z.object({
 });
 export type PlanDiffEntry = z.infer<typeof PlanDiffEntry>;
 
+/** A grill answer the written plan contradicts, found by the engine from the planner's own `decision_checks` or a negating non-goal. */
+export const DecisionConflict = z.object({
+  question: z.string(),
+  answer: z.string(),
+  where: z.string(),
+});
+export type DecisionConflict = z.infer<typeof DecisionConflict>;
+
 /** One stored plan version of a card (d-0132's fixed structure). */
 export const PlanVersion = z.object({
   card_id: CardId,
@@ -125,6 +135,8 @@ export const PlanVersion = z.object({
   assumptions: z.array(z.string()),
   verification: PlanVerification,
   tickets: PlanTickets,
+  /** Owner answers the plan contradicts; the floor refuses to let the Director approve while any remain. Absent on older plans. */
+  decision_conflicts: z.array(DecisionConflict).optional(),
   card_links: z.array(CardId),
   /** Markdown of the enhance pass, kept with the version (d-0140). */
   enhance_report: z.string(),

@@ -14,10 +14,12 @@ import { agentRoutes } from '#/routes/agents.js';
 import { authRoutes } from '#/routes/auth.js';
 import { cardPlanRoutes } from '#/routes/card-plan.js';
 import { cardRoutes } from '#/routes/cards.js';
+import { historyRoutes } from '#/routes/history.js';
 import { folderPickRoute } from '#/routes/folder-pick.js';
 import { folderRoutes } from '#/routes/folders.js';
 import { harnessRoutes } from '#/routes/harnesses.js';
 import { escalationRoutes } from '#/routes/escalations.js';
+import { ticketConsequencesRoute } from '#/routes/ticket-consequences.js';
 import { answerRoute } from '#/routes/interactions.js';
 import { healthRoute } from '#/routes/health.js';
 import { inboxRoutes } from '#/routes/inbox.js';
@@ -41,8 +43,10 @@ import { runEventsRoute } from '#/routes/run-events.js';
 import { scorecardRoutes } from '#/routes/scorecards.js';
 import { runSteerRoute } from '#/routes/run-steer.js';
 import { runsRoutes } from '#/routes/runs.js';
+import { setupCacheRoutes } from '#/routes/setup-cache.js';
 import { settingsRoutes } from '#/routes/settings.js';
 import { systemRoutes } from '#/routes/system.js';
+import { ticketEditRoute } from '#/routes/ticket-edit.js';
 import { ticketListRoute } from '#/routes/ticket-list.js';
 import { ticketPipelineRoutes } from '#/routes/ticket-pipeline.js';
 import { ticketRoute } from '#/routes/tickets.js';
@@ -53,12 +57,15 @@ export function buildRoutes(deps: RouteDeps): Route[] {
   return [
     intakeRoute(deps),
     ticketRoute(deps),
+    ticketEditRoute(deps),
     ticketListRoute(deps),
     ...ticketPipelineRoutes(deps),
     ...cardRoutes(deps),
+    ...historyRoutes(deps),
     ...cardPlanRoutes(deps),
     answerRoute(deps),
     ...escalationRoutes(deps),
+    ticketConsequencesRoute(deps),
     runEventsRoute(deps),
     projectEventsRoute(deps),
     runSteerRoute(deps),
@@ -67,6 +74,7 @@ export function buildRoutes(deps: RouteDeps): Route[] {
     ...authRoutes(deps),
     ...adminRoutes(deps),
     ...settingsRoutes(deps),
+    ...setupCacheRoutes(deps),
     ...agentRoutes(deps),
     ...projectAgentRoutes(deps),
     ...pipelineRoutes(deps),

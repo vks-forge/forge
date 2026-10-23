@@ -126,10 +126,14 @@ export type HookRequest = z.infer<typeof HookRequest>;
 export const HookVerdict = z.enum(['allow', 'deny', 'ask']);
 export type HookVerdict = z.infer<typeof HookVerdict>;
 
-/** `receipt_hash` is the HMAC of the receipt written for this event, or '' when none was. */
+/**
+ * `receipt_hash` is the HMAC of the receipt written for this event, or '' when none was.
+ * `interaction_id` names the owner approval an `ask` is waiting on (reason `awaiting_owner`).
+ */
 export const HookResponse = z.object({
   decision: HookVerdict,
   reason: z.string(),
   receipt_hash: z.string(),
+  interaction_id: z.string().min(1).optional(),
 });
 export type HookResponse = z.infer<typeof HookResponse>;

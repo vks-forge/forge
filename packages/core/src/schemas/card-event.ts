@@ -27,7 +27,8 @@
  *   Director from a stuck ticket. The chat renders the live escalation, not the event payload, so
  *   it shows the settled state wherever the answer was given.
  *
- * Exports: CARD_EVENT_KINDS, CardEventKind, NEEDS_YOU_ACTIONS, NewCardEvent, CardEvent.
+ * Exports: CARD_EVENT_KINDS, CardEventKind, NEEDS_YOU_ACTIONS, NEEDS_YOU_KINDS, NeedsYouKind,
+ *   NEEDS_YOU_TITLE_MAX, NewCardEvent, CardEvent.
  * Depends on: schemas/card, schemas/card-chat, schemas/escalation, schemas/grill, schemas/ids, schemas/ticket, zod. No IO.
  */
 
@@ -107,11 +108,40 @@ export const NEEDS_YOU_ACTIONS = [
   'raise_step_budget',
   'retry_step',
 ] as const;
+
+/**
+ * What kind of thing waits on the owner, named from its real cause. The first four are
+ * raised on the card by the Director's planning flow; the rest come from tickets and are
+ * never written as `needs_you` events, only listed on the details (schemas/needs-you).
+ */
+export const NEEDS_YOU_KINDS = [
+  'plan_approval',
+  'director_questions',
+  'step_budget',
+  'start_planning',
+  'held_ticket',
+  'ticket_escalation',
+  'ticket_review',
+  'ticket_signoff',
+  'tool_approval',
+] as const;
+export const NeedsYouKind = z.enum(NEEDS_YOU_KINDS);
+export type NeedsYouKind = z.infer<typeof NeedsYouKind>;
+
+/** The longest `title` a needs-you item may carry, so a dock row never has to wrap. */
+export const NEEDS_YOU_TITLE_MAX = 80;
+
 const NeedsYouPayload = z
   .object({
+    /** One sentence for readers that show a single line (Inbox, notifications, older clients). */
     reason: z.string().min(1),
     actions: z.array(z.enum(NEEDS_YOU_ACTIONS)).min(1),
     ticket_id: TicketId.optional(),
+    /** Absent on events written before the dock; readers derive it from `actions`. */
+    kind: NeedsYouKind.optional(),
+    title: z.string().min(1).max(NEEDS_YOU_TITLE_MAX).optional(),
+    /** The separate floor reasons or questions, so no reader splits a joined string. */
+    items: z.array(z.string().min(1)).optional(),
   })
   .refine((p) => !p.actions.includes('run_as_express') || p.ticket_id !== undefined, {
     message: 'run_as_express needs the ticket it applies to',
@@ -170,6 +200,8 @@ export const NewCardEvent = z.discriminatedUnion('kind', [
       files_read: FilesRead,
       config_version: z.number().int().nonnegative(),
       summary: z.string(),
+      /** How the step ended; absent (a normal finish) on events written before. `paused_for_you` = waiting for the owner, `failed` = the model call did not produce a result. */
+      outcome: z.enum(['finished', 'paused_for_you', 'failed']).optional(),
     }),
   ),
   event('grill_question', GrillQuestion),
@@ -228,6 +260,8 @@ export const NewCardEvent = z.discriminatedUnion('kind', [
       ticket_id: TicketId.optional(),
       comment: z.string().min(1),
       by: z.literal('owner'),
+      /** Why the ticket stopped (escalation, failures, findings, last run), as the Director is shown it. */
+      stop: z.record(z.string(), z.unknown()).optional(),
     }),
   ),
   event(

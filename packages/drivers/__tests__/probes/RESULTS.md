@@ -300,3 +300,11 @@ not exercised live, because no run needed a rework.
 - Hashes over name plus input schema: 2.1.293 (SDK-bundled binary), 2.1.299 and 2.1.300 (installed) agree on `glob`, `grep`, `edit`, `write`, `shell`, `task`; **only `read` differs** between 2.1.293 and 2.1.299/2.1.300. 2.1.299 and 2.1.300 have identical shapes for all seven. Both 2.1.293 and 2.1.299 pass every check; 2.1.300 passes too. The shipped list (`KNOWN_GOOD_BUILDS`) holds 2.1.293 and 2.1.299.
 - The host `claude` updated itself from 2.1.299 to 2.1.300 while B7 was built; a build not on the list is checked on first sight, which is the case the check exists for.
 - Under load (four probes in parallel) a healthy build misses the 10 s hook deadline (probe 5 failed the same way): the check then reports `permission_requests`/`receipt_timing` failures. Run probes serially (`pnpm probes --maxWorkers=1`); the server repeats a failed check once before pausing a harness.
+
+## Probe 12: PreToolUse hook under `--permission-mode bypassPermissions` (d-0183) - PASS (2026-10-23, Claude Code 2.1.304)
+
+`probe12-bypass-hook.test.ts`: `claude -p "run the shell command: echo hi" --model haiku --settings <hook settings> --setting-sources "" --permission-mode bypassPermissions --max-turns 2 --max-budget-usd 0.05 --output-format stream-json --verbose --include-hook-events`, no `--allowedTools`, the same hook as probe 2 (logs the event, exit 2 on every PreToolUse, `onFailure: "block"`).
+
+- The hook **fires** under bypassPermissions (the log has a `PreToolUse` line) and exit 2 **still blocks**: every tool result is an error carrying "blocked by probe hook", and `hi` is never printed. Exit code 0.
+- So the hard floor can stay in Forge's hook while the harness runs in its no-prompt mode; the fallback (`default` mode with an allow list of everything but the floor) is not needed on this build.
+- Re-run on a host Claude Code upgrade (d-0053): `pnpm probes probe12`.

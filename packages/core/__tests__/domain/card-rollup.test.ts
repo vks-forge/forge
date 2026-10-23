@@ -68,12 +68,18 @@ describe('rollupCardColumn', () => {
     },
   );
 
-  it.each(['waiting_human', 'blocked', 'review', 'needs_signoff'] as const)(
+  it.each(['blocked', 'review', 'needs_signoff'] as const)(
     'puts an in_progress card with a %s ticket in needs_you',
     (status) => {
       expect(rollupCardColumn(card('in_progress'), [t(1, status)], [])).toBe('needs_you');
     },
   );
+
+  it('keeps a waiting_human ticket with no open owner item out of needs_you (the answer is given)', () => {
+    expect(rollupCardColumn(card('in_progress'), [t(1, 'waiting_human')], [])).toBe(
+      'in_progress',
+    );
+  });
 
   it('puts a card in needs_you for a pending question even when the ticket looks busy', () => {
     expect(
@@ -145,7 +151,7 @@ describe('rollupCardColumn', () => {
 describe('cardNeedsYou', () => {
   it('is true for the own flag, a waiting ticket or a pending question, and false otherwise', () => {
     expect(cardNeedsYou({ needs_you: true }, [], [])).toBe(true);
-    expect(cardNeedsYou({ needs_you: false }, [t(1, 'waiting_human')], [])).toBe(true);
+    expect(cardNeedsYou({ needs_you: false }, [t(1, 'waiting_human')], [])).toBe(false);
     expect(
       cardNeedsYou({ needs_you: false }, [t(1, 'in_progress')], [asked('SF-1')]),
     ).toBe(true);
@@ -168,7 +174,7 @@ describe('rollupCardColumn: properties', () => {
       fc.property(
         phases.filter((p) => p !== 'closed'),
         statuses,
-        fc.constantFrom('waiting_human', 'review', 'needs_signoff'),
+        fc.constantFrom('review', 'needs_signoff'),
         (phase, list, w) => {
           expect(rollupCardColumn(card(phase), ticketsOf([...list, w]), [])).toBe(
             'needs_you',

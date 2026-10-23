@@ -39,7 +39,7 @@ function serverWith(items = [QUESTION, REVIEW]) {
     [LIST]: () => ({
       body: { items: items.filter((i) => !archived.has(i.id)), nextCursor: null },
     }),
-    [COUNTS]: { body: { needs_action: 2, unread: 1, all: 2, archived: 0 } },
+    [COUNTS]: { body: { needs_action: 2, notices: 0, unread: 1, all: 2, archived: 0 } },
     [ARCHIVE]: () => {
       archived.add(QUESTION.id);
 

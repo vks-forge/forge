@@ -7,35 +7,49 @@
  *   can set. A pass is evidence about one commit: gates take minutes, and a push that lands
  *   meanwhile would otherwise ride on a verdict that never saw it. So the PR head must equal
  *   the sha recorded on the gate rows, and the host is asked to merge exactly that sha; if
- *   the head moved, nothing merges and the caller gates the new head. The tier comes from
+ *   the head moved, nothing merges and the caller gates the new head. So it does for a PR the host
+ *   calls unmergeable and for a head without the base tip (tier A): a clash is not a policy denial,
+ *   the ticket is gated again after main is merged in (tick/verify-sync). The tier comes from
  *   the real diff against the project's tier-C globs, not from the triage guess, and must
  *   still match what `gate_passed` recorded. Tier B and C stop in Review / NeedsSignoff for
  *   a person, and so does tier A when the pipeline has a human or sign-off stage (`hold`); each
  *   such stop leaves one sign-off item for the owner. A Director-signed sign-off lets tier A through
- *   as always and tier B through the owner's door below with the signer `director` (same checks);
- *   tier C is refused here, in the state machine and in the sign-off decision. The merge is
- *   resumable: if the server died after the host merged but before the ticket moved, only the ticket
- *   event is missing. Cleanup after Done never undoes the merge. The owner's approval of tier B (or
- *   sign-off of tier C) comes through `mergeReviewed()`, the same door with the same checks.
+ *   as always, and tier B or a clean tier C (d-0181) through the owner's door below with the signer
+ *   `director`; a tier C signature is re-checked here and in the state machine. The merge is
+ *   resumable: if the server died after the host merged, only the ticket event is missing. Cleanup
+ *   never undoes the merge. Both doors judge the checks with `decideMerge()`, so a failed gate the
+ *   owner overruled merges the same either way and the card says so. The owner's approval of tier B
+ *   (or sign-off of tier C) comes through `mergeReviewed()`, the same door with the same checks.
  *
  * Exports: passAndMerge(), mergeReviewed(), MergeOutcome.
- * Depends on: @forge/core (errors, DIRECTOR_SIGNER), domain/gate-rows, tick/{sign-off-raise,stage-records,ticket-moves,
- *   verify-merge-steps,verify-outcomes}. IO only through GitHost and worktree ports.
+ * Depends on: @forge/core (errors, DIRECTOR_SIGNER), domain/gate-rows, tick/{base-sync,merge-checks,sign-off-raise,ticket-moves,verify-merge-steps,
+ *   verify-outcomes}. IO only through GitHost and worktree ports.
  */
 
 import {
   DIRECTOR_SIGNER,
   HeadMovedError,
+  MergeConflictError,
   PolicyDeniedError,
   RateLimitError,
 } from '@forge/core';
 import type { PrStatus } from '@forge/core';
 import { gatedHeadOf } from '#/domain/gate-rows.js';
-import { ENGINE_ACTOR, logCardEvent } from '#/tick/card-log.js';
-import { raiseOwnerSignOff } from '#/tick/sign-off-raise.js';
-import { holdForHuman } from '#/tick/stage-records.js';
-import { moveTicket, moveTicketTx } from '#/tick/ticket-moves.js';
-import { cleanup, recordPass, tierOfDiff } from '#/tick/verify-merge-steps.js';
+import { baseTipFor } from '#/tick/base-sync.js';
+import { judgeMerge, noteOverriddenMerge } from '#/tick/merge-checks.js';
+import { waitForOwner } from '#/tick/sign-off-raise.js';
+import { moveTicket } from '#/tick/ticket-moves.js';
+import {
+  assertAutoMergeable,
+  assertCleanTierC,
+  assertReviewable,
+  cleanup,
+  recordPass,
+  regateReviewed,
+  settleReviewed,
+  tierCNote,
+  tierOfDiff,
+} from '#/tick/verify-merge-steps.js';
 import { recordVerified } from '#/tick/verify-outcomes.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
 import type {
@@ -52,39 +66,35 @@ async function mergeTierA(
   rows: GateRows,
   status: PrStatus,
   gatedSha: string,
+  overrideNote = '',
 ): Promise<MergeOutcome> {
   const { deps } = ctx;
   const { ticket } = t;
-  // Fail closed: the only way to be here legitimately is Verifying + tier A + a PR.
-  if (
-    ticket.status !== 'verifying' ||
-    ticket.tier_actual !== 'A' ||
-    ticket.pr_number === undefined
-  ) {
-    throw new PolicyDeniedError(`${ticket.id} is not eligible to merge`);
-  }
-
-  if (status.state === 'closed') {
-    throw new PolicyDeniedError(`PR ${ticket.pr_number} is closed; it cannot be merged`);
-  }
-
+  const prNumber = assertAutoMergeable(ticket, status);
   if (status.state === 'open') {
+    // A clash is not a policy decision: judge again after main is merged in (tick/verify-sync).
     if (status.mergeable === false) {
-      throw new PolicyDeniedError(`PR ${ticket.pr_number} has merge conflicts`);
+      return 'regate';
     }
 
     if (status.mergeable === null) {
       // The host has not computed it yet. Never merge blind: back off like a rate limit,
       // which the retry cap turns into a park if the host never answers.
       throw new RateLimitError(
-        `PR ${ticket.pr_number} mergeability is not computed yet; trying again later`,
+        `PR ${prNumber} mergeability is not computed yet; trying again later`,
       );
     }
 
+    // The pass judged this head; if main moved on since, those gates never saw the merged result.
+    const tip = await baseTipFor(ctx, t.project.slug, t.runtime.gitHost);
+    if (!(await t.runtime.worktrees.contains(t.worktree, tip.sha))) {
+      return 'regate';
+    }
+
     try {
-      await t.runtime.gitHost.merge(ticket.pr_number, 'squash', gatedSha);
+      await t.runtime.gitHost.merge(prNumber, 'squash', gatedSha);
     } catch (e) {
-      if (e instanceof HeadMovedError) {
+      if (e instanceof HeadMovedError || e instanceof MergeConflictError) {
         return 'regate';
       }
 
@@ -100,6 +110,7 @@ async function mergeTierA(
     throw new Error(`PR merged but ${ticket.id} could not move to done: ${moved.reason}`);
   }
 
+  await noteOverriddenMerge(ctx, ticket, overrideNote);
   recordVerified(ctx, t, 'merged', rows);
   await cleanup(ctx, t);
 
@@ -120,34 +131,15 @@ export async function mergeReviewed(
   also: ReviewedExtras = {},
 ): Promise<'done' | 'head_moved'> {
   const { ticket } = t;
-  const prNumber = ticket.pr_number;
   const byDirector = signer?.trim().toLowerCase() === DIRECTOR_SIGNER;
-  // Fail closed: the Director signs tier A and B only; the state machine refuses tier C as well.
-  if (byDirector && ticket.tier_actual === 'C') {
-    throw new PolicyDeniedError(
-      `${ticket.id} is tier C; only a named person signs it off`,
-    );
-  }
-
-  // Fail closed: only finished work in review (B, or A held by a human stage) or sign-off (C), with a PR, merges here.
-  const tierOk =
-    ticket.status === 'review'
-      ? ticket.tier_actual === 'A' || ticket.tier_actual === 'B'
-      : ticket.tier_actual === 'C';
-
-  if (
-    (ticket.status !== 'review' && ticket.status !== 'needs_signoff') ||
-    !tierOk ||
-    prNumber === undefined
-  ) {
-    throw new PolicyDeniedError(`${ticket.id} is not eligible to merge`);
-  }
+  const prNumber = assertReviewable(ticket, byDirector, also.cleanFloor === true);
 
   const status = await t.runtime.gitHost.prStatus(prNumber);
   if (status.state === 'closed') {
     throw new PolicyDeniedError(`PR ${prNumber} is closed; it cannot be merged`);
   }
 
+  let mergeSha: string | undefined;
   if (status.state === 'open') {
     const gatedSha = gatedHeadOf(rows);
     let moved = gatedSha === undefined || status.headSha !== gatedSha;
@@ -159,67 +151,36 @@ export async function mergeReviewed(
         );
       }
 
-      if (status.mergeable === false) {
-        throw new PolicyDeniedError(`PR ${prNumber} has merge conflicts`);
-      }
-
       if (status.mergeable === null) {
         throw new RateLimitError(
           `PR ${prNumber} mergeability is not computed yet; try again in a moment`,
         );
       }
 
-      try {
-        await t.runtime.gitHost.merge(prNumber, 'squash', gatedSha ?? '');
-      } catch (e) {
-        if (!(e instanceof HeadMovedError)) {
-          throw e;
-        }
-
+      // A clash the owner never saw (main moved after the gates) goes back to be merged in and gated, not refused.
+      if (status.mergeable === false) {
         moved = true;
+      } else {
+        try {
+          mergeSha = (await t.runtime.gitHost.merge(prNumber, 'squash', gatedSha ?? ''))
+            .sha;
+        } catch (e) {
+          if (!(e instanceof HeadMovedError || e instanceof MergeConflictError)) {
+            throw e;
+          }
+
+          moved = true;
+        }
       }
     }
 
     if (moved) {
-      const back = await moveTicket(ctx.deps.storage, ticket.id, ctx.nowIso, (cur) =>
-        cur.status === ticket.status ? { events: [{ type: 'regate' }] } : null,
-      );
-
-      if (!back.ok) {
-        throw new Error(`could not send ${ticket.id} back to the gates: ${back.reason}`);
-      }
-
-      return 'head_moved';
+      return regateReviewed(ctx, ticket);
     }
   }
 
   const who = signer?.trim() ? signer.trim() : undefined;
-  const done = await ctx.deps.storage.transaction(async (tx) => {
-    // The caller's own writes (settling the sign-off item) join the transaction that moves the ticket.
-    await also.beforeMove?.(tx);
-    const end = await moveTicketTx(tx, ticket.id, ctx.nowIso, (cur) =>
-      cur.status === ticket.status
-        ? { events: [{ type: 'done', ...(who === undefined ? {} : { signer: who }) }] }
-        : null,
-    );
-
-    if (end.ok) {
-      await logCardEvent(tx, ticket.card_id, {
-        kind: 'note',
-        at: ctx.nowIso,
-        actor: byDirector ? ENGINE_ACTOR : { type: 'user', id: who ?? 'owner' },
-        payload: {
-          text:
-            also.note ??
-            (who === undefined
-              ? `${ticket.id} was approved and merged.`
-              : `${ticket.id} was signed off by ${who} and merged.`),
-        },
-      });
-    }
-
-    return end;
-  });
+  const done = await settleReviewed(ctx, ticket, who, byDirector, also, mergeSha);
 
   if (!done.ok) {
     throw new Error(`PR merged but ${ticket.id} could not move to done: ${done.reason}`);
@@ -247,10 +208,8 @@ export async function passAndMerge(
   }
 
   const status = await t.runtime.gitHost.prStatus(prNumber);
-  if (
-    status.state === 'open' &&
-    (gatedSha === undefined || status.headSha !== gatedSha)
-  ) {
+  const judged = await judgeMerge(ctx, t, rows, status);
+  if (judged === 'regate') {
     return 'regate';
   }
 
@@ -267,34 +226,42 @@ export async function passAndMerge(
     );
   }
 
-  // Fail closed: a Director signature never carries tier C, whatever the stage rows say.
+  // Fail closed: a Director signature carries tier C only when its row says it signed tier C (a clean
+  // floor) and the diff still holds no secrets path; whatever else the stage rows say, a person signs.
   if (opts.directorSigned === true && tier === 'C') {
-    throw new PolicyDeniedError(`${ticket.id} is tier C; only a person signs it`);
+    await assertCleanTierC(t, ticket, opts.signedTier);
+    const end = await mergeReviewed(ctx, { ...t, ticket }, rows, DIRECTOR_SIGNER, {
+      note: tierCNote(ticket.id, opts.signReason),
+      overrideNote: judged.overrideNote,
+      cleanFloor: true,
+    });
+
+    return end === 'done' ? 'done' : 'regate';
   }
 
   if (opts.directorSigned === true && tier === 'B') {
     const end = await mergeReviewed(ctx, { ...t, ticket }, rows, DIRECTOR_SIGNER, {
       note: `Signed off by the Director (tier B): ${opts.signReason ?? 'every check passed'}`,
+      overrideNote: judged.overrideNote,
     });
 
     return end === 'done' ? 'done' : 'regate';
   }
 
   if (tier === 'B' || tier === 'C' || opts.hold) {
-    // The owner's stage begins: their review is a row and a sign-off item, so every screen shows it.
-    await ctx.deps.storage.transaction(async (tx) => {
-      if (opts.hold) {
-        await holdForHuman(tx, ctx.nowIso, ticket.id);
-      }
-
-      await raiseOwnerSignOff(ctx, tx, ticket, tier, opts.declined, t.run.id);
-    });
-
+    await waitForOwner(ctx, ticket, tier, opts, t.run.id);
     recordVerified(ctx, t, tier === 'C' ? 'needs_signoff' : 'review', rows);
 
     return 'done';
   }
 
   // A merged PR has no head left to pin; `gatedSha` only matters while the PR is open.
-  return mergeTierA(ctx, { ...t, ticket }, rows, status, gatedSha ?? '');
+  return mergeTierA(
+    ctx,
+    { ...t, ticket },
+    rows,
+    status,
+    gatedSha ?? '',
+    judged.overrideNote,
+  );
 }

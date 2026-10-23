@@ -74,7 +74,7 @@ export function SidebarContent() {
         className="flex min-h-0 flex-1 flex-col gap-0.5 scroll-area overflow-y-auto"
       >
         {slug ? (
-          PROJECT_NAV.map((entry) => (
+          PROJECT_NAV.filter((entry) => entry.built).map((entry) => (
             <NavLinkItem
               key={entry.segment}
               to={projectPath(slug, entry.segment)}

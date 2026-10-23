@@ -1,17 +1,19 @@
 /**
  * Deletes the receipt secrets of runs that are over.
  *
- * Why: a run's HMAC secrets are kept in the SecretStore for the life of the run so gate G1 can
- *   verify its receipts after a restart (d-0100), and must not outlive it: a secret that
- *   stays on disk forever is a standing key for forging that run's chain. A run is over when
- *   it has stopped for good (any outcome), with one exception: a run that succeeded is judged
- *   by G1 after it settles, and a later rework run of the same ticket reuses its branch and
- *   leans on its receipts for the files it edited, which G1 only trusts after re-verifying that
- *   chain with this secret. So a successful run's secrets stay until its ticket is done or
- *   cancelled. Runs that are still alive, or interrupted and waiting for a resume, are never
- *   touched. The sweep runs at start (it also removes what a crash
- *   left behind, and secrets of runs the database no longer knows) and after every tick.
- *   A failing sweep is logged and retried next time; it never stops a tick.
+ * Why: a run's HMAC secrets are kept in the SecretStore so gate G1 can verify its receipts
+ *   after a restart (d-0100), and must not outlive the work: a secret that stays on disk
+ *   forever is a standing key for forging that run's chain. But a ticket's runs vouch for each
+ *   other. A run that paused for an answer, hit its turn limit, errored or timed out has still
+ *   edited and read files that stay in the ticket's branch, and the next run (often the same
+ *   harness session) claims them without a receipt of its own; G1 trusts that earlier chain
+ *   only after re-verifying it with this secret. Deleting it at the run's end left the ticket
+ *   failing G1 for ever, with no way the Worker could make the proof come back. So the rule is
+ *   the one successful runs already followed, now for every ended run: the secrets stay until
+ *   the run's ticket is done or cancelled (d-0178, amending d-0100). Runs that are still alive,
+ *   or interrupted and waiting for a resume, are never touched. The sweep runs at start (it
+ *   also removes what a crash left behind, and secrets of runs the database no longer knows)
+ *   and after every tick. A failing sweep is logged and retried next time; it never stops a tick.
  *
  * Exports: createSecretRetirement().
  * Depends on: @forge/core (StorageAdapter, TicketId), @forge/engine (Logger), @forge/hooks
@@ -44,10 +46,6 @@ export function createSecretRetirement(deps: {
 
       if (NOT_OVER.includes(run.status)) {
         return false;
-      }
-
-      if (run.status !== 'success') {
-        return true;
       }
 
       const ticket = await tx.tickets.get(run.ticket_id as TicketId);

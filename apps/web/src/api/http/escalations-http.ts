@@ -12,6 +12,7 @@
 
 import { requestJson } from '#/api/http/request-json.js';
 import {
+  ActionConsequences,
   EscalationActBody,
   EscalationActReply,
   EscalationList,
@@ -36,5 +37,12 @@ export function createEscalationsHttp(client: HttpClientOptions): EscalationsApi
         method: 'POST',
         body: EscalationActBody.parse(body),
       }),
+    consequences: (ticketId, action, options) =>
+      requestJson(
+        client,
+        `/tickets/${enc(ticketId)}/consequences?action=${action}`,
+        ActionConsequences,
+        options,
+      ),
   };
 }

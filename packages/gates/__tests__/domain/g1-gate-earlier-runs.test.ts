@@ -12,7 +12,12 @@
  *   an earlier run's read receipt; a forged earlier chain and an earlier run whose secret is
  *   gone give no cover and the report says why; a file nobody's receipts cover still fails; a
  *   file this run edited itself still needs its own edited claim; the report names the run
- *   that covered a file; ran_tests still needs this run's own receipt.
+ *   that covered a file; ran_tests still needs this run's own receipt. An earlier run that
+ *   errored or paused (turn limit, owner answer) still vouches while its secret is kept (d-0178,
+ *   eval FR-11 and FR-1); when that secret is really gone the finding says the evidence is gone
+ *   and tells the Worker to re-apply the files through its edit tool, and the verdict is
+ *   `provenanceOnly` so the owner, not a dead-end rework, can vouch (F-D3); any other kind of
+ *   failure is never `provenanceOnly`.
  * Depends on: adapters/g1-gate-factory, helpers/fixtures.
  */
 
@@ -180,5 +185,86 @@ describe('G1 with earlier runs of the ticket', () => {
 
     expect(verdict.status).toBe('failed');
     expect(verdict.findings.map((f) => f.claim?.kind)).toContain('ran_tests');
+  });
+
+  it('covers an errored earlier run edits while its secret is present (FR-11 7cfef9)', async () => {
+    const own = chain([edit('o1', 'src/todos.js')]);
+
+    const verdict = await createG1Gate(
+      deps({ own, earlier: { 'run-err': earlierEdits() } }, { 'run-err': SECRET }),
+    ).run(ctx(claimed('src/todos.js')));
+
+    expect(verdict.status).toBe('passed');
+    expect(verdict.provenanceOnly).toBeUndefined();
+  });
+
+  it('says the evidence is gone, names the files and marks the verdict provenanceOnly (FR-11 6214ef)', async () => {
+    const own = chain([edit('o1', 'src/todos.js')]);
+
+    const verdict = await createG1Gate(
+      deps({ own, earlier: { 'run-err': earlierEdits() } }, { 'run-err': null }),
+    ).run(ctx(claimed('src/todos.js')));
+
+    expect(verdict.status).toBe('failed');
+    expect(verdict.provenanceOnly).toBe(true);
+    expect(verdict.findings.map((f) => f.file).sort()).toEqual([
+      'README.md',
+      'src/app.js',
+    ]);
+
+    expect(verdict.findings[0]?.message).toContain('run-err');
+    expect(verdict.findings[0]?.message).toContain('proof is gone');
+    expect(verdict.report).toContain('re-apply README.md through your edit/write tool');
+    expect(verdict.report).toContain('rewrite it as it should be');
+  });
+
+  it('passes when the Worker re-applies the files with its own write receipts', async () => {
+    const own = chain(FILES.map((f, i) => ({ id: `w${i}`, tool: 'write', resource: f })));
+
+    const verdict = await createG1Gate(
+      deps({ own, earlier: { 'run-err': earlierEdits() } }, { 'run-err': null }),
+    ).run(ctx(claimed(...FILES)));
+
+    expect(verdict.status).toBe('passed');
+    expect(verdict.provenanceOnly).toBeUndefined();
+  });
+
+  it('is not provenanceOnly when a file no run has a receipt for also fails', async () => {
+    const own = chain([edit('o1', 'src/todos.js')]);
+    const earlier = chain([edit('e1', 'README.md')]);
+
+    const verdict = await createG1Gate(
+      deps({ own, earlier: { 'run-err': earlier } }, { 'run-err': null }),
+    ).run(ctx(claimed('src/todos.js')));
+
+    expect(verdict.status).toBe('failed');
+    expect(verdict.provenanceOnly).toBeUndefined();
+  });
+
+  it('is not provenanceOnly when a claim is unsupported as well', async () => {
+    const verdict = await createG1Gate(
+      deps(
+        { own: chain([]), earlier: { 'run-err': earlierEdits() } },
+        { 'run-err': null },
+      ),
+    ).run(ctx(claimed('src/app.js')));
+
+    expect(verdict.status).toBe('failed');
+    expect(verdict.provenanceOnly).toBeUndefined();
+  });
+
+  it('is not provenanceOnly for a forged earlier chain', async () => {
+    const own = chain([edit('o1', 'src/todos.js')]);
+    const forged = chain(
+      FILES.map((f, i) => edit(`e${i}`, f)),
+      OTHER_SECRET,
+    );
+
+    const verdict = await createG1Gate(deps({ own, earlier: { 'run-0': forged } })).run(
+      ctx(claimed('src/todos.js')),
+    );
+
+    expect(verdict.status).toBe('failed');
+    expect(verdict.provenanceOnly).toBeUndefined();
   });
 });

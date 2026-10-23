@@ -7,7 +7,8 @@
  *   is the same for the waits that have no interaction behind them (finished work waiting for
  *   review or sign-off, a ticket the scheduler holds back), where only Rework and Cancel exist.
  *   `GET /cards/:id/escalations` is what the card chat renders live, so a wait shows its settled
- *   state wherever it was answered. Nothing here writes storage: the engine's doors do, and its
+ *   state wherever it was answered. Both act routes answer with `next`, the plain line of what
+ *   happens to the ticket now (the same derivation as the board's wait line). Nothing here writes storage: the engine's doors do, and its
  *   tracked writes announce the change on the project stream. Refusals are mapped in one place
  *   (services/escalation-refusal).
  *
@@ -62,7 +63,13 @@ export function escalationRoutes(deps: RouteDeps): Route[] {
         return row ? escalationViews(tx, [row]) : [];
       });
 
-      sendJson(res, 200, { escalation });
+      const next = escalation
+        ? (await deps.engine.explainWaits([escalation.ticket_id])).get(
+            escalation.ticket_id,
+          )?.text
+        : undefined;
+
+      sendJson(res, 200, { escalation, ...(next === undefined ? {} : { next }) });
     },
   };
 
@@ -81,10 +88,16 @@ export function escalationRoutes(deps: RouteDeps): Route[] {
         throw escalationRefusal(out, id.data, 'ticket');
       }
 
+      const next = (await deps.engine.explainWaits([id.data])).get(id.data)?.text;
+
       sendJson(
         res,
         200,
-        TicketActReply.parse({ ticket_id: id.data, action: body.action }),
+        TicketActReply.parse({
+          ticket_id: id.data,
+          action: body.action,
+          ...(next === undefined ? {} : { next }),
+        }),
       );
     },
   };

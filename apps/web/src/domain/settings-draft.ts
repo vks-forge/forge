@@ -7,29 +7,31 @@
  *   override freezes it against later company changes, and dropping a key the editor does
  *   not show (git host, gate rules, tool grants) deletes settings made elsewhere. Keeping
  *   the rules here, away from React, lets tests pin them: inherited versus override, clearing
- *   an override, carrying unknown keys through, and what counts as unsaved.
+ *   an override, carrying unknown keys through, revoking an approved tool rule (removal only),
+ *   and what counts as unsaved.
  *
  * Exports: FIELD_KEYS, draftFromSnapshot(), inheritedOf(), docFromDraft(), isDirty(), dirtyFields(), SCOPE_FIELDS,
  *   validateDraft(), setOverridden(), parseLines(), SAFE_TIER_C.
- * Depends on: @forge/core (BUILTIN_PROJECT_SETTINGS), domain/director-override, domain/research-narrowing,
- *   domain/director-settings, types/project-settings.types. No IO.
+ * Depends on: @forge/core (BUILTIN_PROJECT_SETTINGS), domain/director-override, domain/research-narrowing, domain/setup-draft,
+ *   domain/settings-validate (re-exported), types/project-settings.types. No IO.
  */
 
 import { BUILTIN_PROJECT_SETTINGS } from '@forge/core';
 import type { ProjectCheck } from '@forge/core';
-import { directorDraftOf, directorIssues } from '#/domain/director-override.js';
-import { effectiveDirector } from '#/domain/director-settings.js';
+import { directorDraftOf } from '#/domain/director-override.js';
+import { rowsFromSteps, stepsFromRows } from '#/domain/setup-draft.js';
 import * as narrowing from '#/domain/research-narrowing.js';
 import type {
+  DirtyKey,
   FieldKey,
   FormScope,
   SettingsDraft,
-  SettingsIssue,
   SettingsSnapshot,
 } from '#/types/project-settings.types.js';
 
 export const FIELD_KEYS: readonly FieldKey[] = [
   'checks',
+  'setup',
   'ecosystems',
   'default_harness',
   'max_concurrent',
@@ -63,6 +65,9 @@ export function inheritedOf(
   switch (key) {
     case 'checks':
       return BUILTIN_PROJECT_SETTINGS.checks;
+    case 'setup':
+      // Not overridden means "the steps Forge detects", which only the server can say.
+      return [];
     case 'ecosystems':
       return lines(BUILTIN_PROJECT_SETTINGS.ecosystems);
     case 'default_harness':
@@ -97,6 +102,7 @@ export function draftFromSnapshot(snapshot: SettingsSnapshot): SettingsDraft {
       project.checks,
       inheritedOf(snapshot, 'checks') as readonly ProjectCheck[],
     ),
+    setup: field('setup', rowsFromSteps(project.setup ?? []), []),
     ecosystems: field(
       'ecosystems',
       lines(project.ecosystems),
@@ -125,6 +131,7 @@ export function draftFromSnapshot(snapshot: SettingsSnapshot): SettingsDraft {
     remote: field('remote', project.remote ?? '', ''),
     director: directorDraftOf(own['director']),
     research: narrowing.researchDraftOf(own['research']),
+    revoked: [],
   };
 }
 
@@ -155,6 +162,8 @@ function valueForDoc(key: FieldKey, draft: SettingsDraft): unknown {
         command: c.command.trim(),
         ...(c.cwd && c.cwd.trim() !== '' ? { cwd: c.cwd.trim() } : {}),
       }));
+    case 'setup':
+      return stepsFromRows(draft.setup.value);
     case 'ecosystems':
       return parseLines(draft.ecosystems.value);
     case 'default_harness':
@@ -192,7 +201,35 @@ export function docFromDraft(
     }
   }
 
-  return doc;
+  return withoutRevoked(doc, draft.revoked);
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/**
+ * The document with the revoked approvals taken out of `tool_grants.approved`. Revoking only
+ * removes: nothing here can add or edit an approved rule, so consent stays the owner's act in
+ * the dock (d-0175).
+ */
+function withoutRevoked(
+  doc: Record<string, unknown>,
+  revoked: readonly string[],
+): Record<string, unknown> {
+  const grants = doc['tool_grants'];
+  if (revoked.length === 0 || !isRecord(grants) || !Array.isArray(grants['approved'])) {
+    return doc;
+  }
+
+  return {
+    ...doc,
+    tool_grants: {
+      ...grants,
+      approved: grants['approved'].filter(
+        (rule: unknown) => !(isRecord(rule) && revoked.includes(String(rule['id']))),
+      ),
+    },
+  };
 }
 
 function stable(value: unknown): string {
@@ -214,85 +251,26 @@ export function isDirty(snapshot: SettingsSnapshot, draft: SettingsDraft): boole
 /** Which overridable fields each tab of the project settings shows. */
 export const SCOPE_FIELDS = {
   workers: ['default_harness', 'max_concurrent', 'harness_fallbacks'],
-  checks: ['checks', 'ecosystems'],
+  checks: ['checks', 'setup', 'ecosystems'],
   repository: ['remote', 'tier_c_globs'],
   director: ['director'],
   research: ['research'],
-} as const satisfies Record<FormScope | 'director' | 'research', readonly FieldKey[]>;
+  approvals: ['tool_grants'],
+} as const satisfies Record<
+  FormScope | 'director' | 'research' | 'approvals',
+  readonly DirtyKey[]
+>;
 
 /** The fields whose value in the draft differs from the saved one, so a tab can say "unsaved". */
 export function dirtyFields(
   snapshot: SettingsSnapshot,
   draft: SettingsDraft,
-): ReadonlySet<FieldKey> {
+): ReadonlySet<DirtyKey> {
   const now = docFromDraft(snapshot.override, draft);
   const saved = docFromDraft(snapshot.override, draftFromSnapshot(snapshot));
+  const keys: readonly DirtyKey[] = [...FIELD_KEYS, 'tool_grants'];
 
-  return new Set(FIELD_KEYS.filter((key) => stable(now[key]) !== stable(saved[key])));
+  return new Set(keys.filter((key) => stable(now[key]) !== stable(saved[key])));
 }
 
-/** Problems that would make the server refuse the save, found before the user clicks it. */
-export function validateDraft(
-  draft: SettingsDraft,
-  snapshot: SettingsSnapshot,
-): SettingsIssue[] {
-  const issues: SettingsIssue[] = [];
-
-  if (draft.default_harness.overridden && draft.default_harness.value.trim() === '') {
-    issues.push({ field: 'default_harness', message: 'Name the harness Workers use.' });
-  }
-
-  if (draft.max_concurrent.overridden) {
-    const n = Number(draft.max_concurrent.value);
-    const cap = snapshot.company.engine.max_concurrent_per_project;
-    if (!Number.isInteger(n) || n < 1) {
-      issues.push({
-        field: 'max_concurrent',
-        message: 'Use a whole number of 1 or more.',
-      });
-    } else if (n > cap) {
-      issues.push({
-        field: 'max_concurrent',
-        message: `A project can lower the company limit (${cap}), never raise it.`,
-      });
-    }
-  }
-
-  if (draft.checks.overridden) {
-    const names = draft.checks.value.map((c) => c.name.trim());
-    if (draft.checks.value.some((c) => c.name.trim() === '' || c.command.trim() === '')) {
-      issues.push({
-        field: 'checks',
-        message: 'Every check needs a name and a command.',
-      });
-    } else if (new Set(names).size !== names.length) {
-      issues.push({ field: 'checks', message: 'Check names must be unique.' });
-    }
-
-    if (
-      draft.checks.value.some(
-        (c) =>
-          /^([a-z]:)?[\\/]/i.test(c.cwd ?? '') ||
-          /(^|[\\/])\.\.($|[\\/])/.test(c.cwd ?? ''),
-      )
-    ) {
-      issues.push({
-        field: 'checks',
-        message:
-          'A working folder must be inside the repository (no leading slash, no “..”).',
-      });
-    }
-  }
-
-  issues.push(...narrowing.researchIssues(draft.research));
-
-  if (draft.director.overridden) {
-    const seen = effectiveDirector(snapshot.company.director, draft.director.value);
-
-    for (const message of directorIssues(seen, draft.director.value)) {
-      issues.push({ field: 'director', message });
-    }
-  }
-
-  return issues;
-}
+export { validateDraft } from '#/domain/settings-validate.js';

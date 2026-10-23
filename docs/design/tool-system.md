@@ -14,6 +14,7 @@ Status: proposed v2, 2026-10-12 (v1 same day; v2 after source reads of 13 system
 > | Native tools approved once by the catalogue | Native tool schemas belong to the installed harness build. Each build gets a compatibility check; a new or changed native tool shape is `pending` and `admit()` denies it (`schema_pending`, or `schema_denied`) until the owner approves it in Settings. An unknown build or tool is denied (d-0088). Each run records `catalogue_hash`, the catalogue with the approved native hashes applied. |
 > | Floors protect `.forge/**` policy files | Floors protect Forge's data home by absolute path, for every path tool and every word of every shell argv (and `--flag=value` values), plus git options that read outside the worktree, environment reads, credential files and `.git` edits. The hook resolves path-tool arguments on disk, so a junction in the worktree is caught. |
 > | Shell allow-list fixed to the JS toolchain | Built per project from its role-tagged checks and ecosystems (d-0095); an interpreter-led or wrapped command gets no allow rule. |
+| An `ask` is answered in Needs-you with allow once / always / deny (d-0175) | Built end to end, screens included. The owner sees a Tool approval card in the dock, the Inbox drawer and the ticket: the exact command or path (hidden and direction-flipping characters made visible), the Worker's reason as plain text, the rule that asked in plain words, **Allow once**, **Always for this project** (with the rule spelled out, or why none is offered) and **Deny** with an optional note, keys 1 to 3. The Worker thread shows "Waiting for your approval" with a link to the item. Settings, Project, **Tool approvals** lists every stored always rule (action, resource, source ticket, date); Revoke saves a new settings version with the owner's reason, and nothing there adds or edits a rule. |
 >
 > Honest limit (d-0117): the floors are policy over tool arguments, not an OS
 > boundary. Code a Worker runs (tests, scripts, a build) runs as the Forge OS
@@ -147,6 +148,29 @@ Evaluated before lane, before agent YAML, before any hook, before "yolo", and
 **inside containers too** (Hermes skips approvals in containers; we do not).
 Tested as an invariant: no configuration can make a floor pass.
 
+### 5.6 Bypass mode and the hard floor (d-0183)
+
+A harness's "Bypass permissions" setting (default on) sets `bypass` on the run's
+grant. It is read from the grant only, like the lane, and only the literal
+`true` counts. A final `ask` that comes from a lane rule (an install, an edit
+under `migrations/` or a protected path, a command no rule names, a risky shell
+construct) becomes `allow` with reason and rule `bypass`, so the decision record
+shows why. Three things never change:
+
+- A `deny` stays `deny`; the capability gate, grants, project and ticket denies
+  and budgets' hard limit run before this step.
+- The **hard floor** (`domain/hard-floor.ts`, the one list) still denies: Forge's
+  data folder (`floor:data-home*`), secrets and credential files, harness config,
+  paths outside the worktree, `git push`, publishing and `git config` that runs
+  programs (`floor:argv:*`), destructive deletes (`floor:argv:recursive-delete`)
+  and every built-in or operator managed deny (`managed#<n>`). A floor rule that
+  ever shows up as an `ask` becomes `deny` under bypass, never `allow`.
+- An `ask` raised by an inspector or a budget soft limit is not a lane rule and
+  stays an `ask`.
+
+Any error inside `admit()` is still `deny`. Off restores the lane rules of §12.
+Receipts, hooks and G1 are unchanged.
+
 ### 5.1 Capability gate (visibility)
 
 Narrowing-only layered scopes (OpenClaw pipeline, Paperclip profile):
@@ -178,7 +202,7 @@ standard:
   - { action: shell, resource: "pnpm add *",   effect: ask,   save: "pnpm add <pkg>" }
   - { action: shell, resource: "git push*",    effect: deny }
   - { action: edit,  resource: "migrations/**", effect: ask }
-  - { action: web_fetch, resource: "https://docs.*", effect: allow }
+  - { action: web_fetch, resource: "https://*",     effect: allow }  # d-0174; also http://*
 ```
 
 - `{action, resource, effect}`; multiple matches resolve deny > ask > allow;
@@ -227,10 +251,38 @@ Decision vocabulary and consent contract (Hermes, OpenClaw, Paperclip, Cline):
   new ask. `always` creates a narrow, expiring, revocable rule in the `save`
   pattern's shape, never wider; it lands in the session's grants file with
   provenance and is visible in the Ticket screen.
-- **Timeout = tighten.** Express: 10 min then deny. Standard: 4 h then
-  Blocked with reason (existing `interactions` timeout). Never auto-allow on
-  timeout (OpenClaw `askFallback`). Codex, OpenCode, Goose and OpenHands have
-  no timeout at all; we always do.
+- **Real approvals (d-0175, brief `docs/briefs/real-tool-approvals.md`).** On
+  Standard/Full an `ask` is answered by the owner as `allow_once`,
+  `allow_always` or `deny`, with no expiry, and the run resumes. `@forge/tools`
+  already holds the policy half: `approvalKey()` (tool + live schema hash +
+  full resource), `AdmitContext.approvals`, the project grant's `approved`
+  rules and the `admit()` approval step (`approved_once`, `approved_always`,
+  `approval_denied`), which only ever turns an `ask` into an answer. The flow
+  is mechanism (b), deny now and resume on the answer: the hook handler
+  answers an `ask` at once (exit 2, "NOT run, waiting for the owner's
+  approval") after the injected `raiseApproval` opened one `permission` item
+  at the owner's stage through the engine door `raiseToolApproval` (one
+  transaction; refused on Express, an inactive run or a ticket not in
+  progress; de-duplicated by approval key; at most five pending per run). The
+  receipt is an `ask` with `approval_ref` = the interaction id. The run can
+  never settle `success` with an item unanswered: the settle guard turns it
+  into a pause and the ticket parks in Needs-you. The owner answers once
+  (`allow_once`, `allow_always`, `deny`); `allow_always` first appends a
+  project settings version holding the rule, then settles with
+  `settings_version`. The last answer of a run queues one `response_wake`
+  keyed `perm:<run id>` and the same harness session resumes with every answer
+  in its brief. `admitContext` builds `approvals` from the answered
+  `permission` items of the run and of the run it resumes (`retry_of`); an
+  allow that rode on an answer is receipted `approver: 'user'`, `approval_ref`
+  = the rule. A project's `tool_grants` that do not parse as a grant (a
+  wildcard shell rule, a banned command, an allow over a protected path) are
+  refused at settings save.
+- **Timeout = tighten.** Express: 10 min then deny. A Worker question on
+  Standard: 4 h then Blocked with reason (existing `interactions` timeout). A
+  tool approval has no expiry: nothing runs and no Worker slot is held while it
+  waits, so it stays in Needs-you and the Inbox until the owner answers, and a
+  restart loses nothing. Never auto-allow on timeout (OpenClaw `askFallback`).
+  Codex, OpenCode, Goose and OpenHands have no timeout at all.
 - **Unattended mode per lane**: Express runs `unattended: deny` (no human in
   the loop, so an ask is a deny with a receipt); Standard/Full route to
   Needs-you. The engine detects at dispatch whether a human can answer and
@@ -366,6 +418,10 @@ tool_effects     decision_id, state (not_started|read_completed|failed_no_effect
 - A `SecurityAnalysisEvent` is emitted for every inspector verdict even when
   no ask happens (OpenHands), so the Ticket screen can show why a call was
   allowed.
+- Approvals (d-0175): an `ask` the owner is being asked about has `approver: auto` and
+  `approval_ref` = the interaction id, reason `awaiting_owner`; an allow that rode on the
+  owner's answer has `approver: user` and `approval_ref` = `approval:<interaction>` (once)
+  or `project:approved#<id>` (always). G1 treats an `ask` like a deny: no effect receipt.
 - `enforced_by` makes coverage honest: `attribution-only` receipts are shown
   in a different colour and never count as a gate.
 
@@ -395,14 +451,20 @@ tool_effects     decision_id, state (not_started|read_completed|failed_no_effect
 | shell: test, lint, typecheck, git (no push) | allow | allow | allow |
 | shell: package install | deny | allow-list (lockfile-known registries) | ask |
 | web_search | deny | allow, metered, taints | allow, taints |
-| web_fetch (allow-listed, proxied) | deny | allow-list | ask |
+| web_fetch (public http(s), SSRF-guarded, banned hosts denied) | deny | allow (d-0174) | allow (d-0174) |
 | db_query_readonly | deny | per project grant | per project grant |
 | project MCPs | deny | per project grant | per project grant |
 | ask_director / report_blocked / finish | allow | allow | allow |
 | memory_search, memory_get, memory_related | deny | allow | allow |
 | harness-native network | deny | deny | deny |
-| unattended mode | `deny` | Needs-you, 4 h | Needs-you, 4 h |
+| unattended mode | `deny` | Needs-you, no expiry | Needs-you, no expiry |
 | guardian reviewer | off | on for ask-class calls | on for all exec/network |
+
+Installing a project's packages is not a Worker tool call at all (d-0180): Forge
+runs the project's setup steps itself in each fresh worktree, outside this policy,
+so the "package install" row stays `deny` / allow-list / `ask` for Workers and a
+Worker never needs it for the dependencies the lockfile already names. Adding a
+new dependency is still a Worker request that goes through the row above.
 
 Director's fixed grant: the memory index, `code_graph`, `web_search`,
 `docs_lookup`, read-only repo access. Never `shell` on the product repo.
@@ -422,7 +484,7 @@ stays byte-identical and they keep the pasted block (d-0168).
 | Agent spec `tools.allow/deny` (database, versioned) | C | `execution-plane.md` §5a, `self-improvement.md` §2 |
 | Edit a floor or the banned-always list | C + typed confirmation | not editable: floors are code (`FLOOR_RULES`) |
 | Narrowing anything | A | any reviewed commit |
-| `always(scope, ttl)` from an approval | session grant, expires | written by the engine with provenance; visible on Ticket |
+| `always` from an approval (d-0175) | owner's click only | appended by the engine as a project settings version (`tool_grants.approved`, with the ticket and interaction it came from); no expiry; revoked by saving settings without it |
 | Worker asks for a tool it does not have | never granted at runtime | `ask_director` → Needs-you → user edits grants → new run |
 
 Protected-path shield (Roo): edits to `.forge/**`, `CLAUDE.md`, `AGENTS.md`,

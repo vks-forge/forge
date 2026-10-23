@@ -66,6 +66,27 @@ export function describeHarnessesContract(getDb: () => StorageAdapter): void {
       expect('binary_path' in (list[0] ?? {})).toBe(false);
     });
 
+    it('keeps bypass_permissions absent when never set and round-trips false and true', async () => {
+      await tx((t) => t.harnesses.upsert(makeHarness('a')));
+      expect(
+        'bypass_permissions' in ((await tx((t) => t.harnesses.get('a'))) ?? {}),
+      ).toBe(false);
+
+      await tx((t) =>
+        t.harnesses.upsert(makeHarness('a', { bypass_permissions: false })),
+      );
+
+      expect((await tx((t) => t.harnesses.get('a')))?.bypass_permissions).toBe(false);
+
+      await tx((t) => t.harnesses.upsert(makeHarness('a', { bypass_permissions: true })));
+      expect((await tx((t) => t.harnesses.get('a')))?.bypass_permissions).toBe(true);
+
+      await tx((t) => t.harnesses.upsert(makeHarness('a')));
+      expect(
+        'bypass_permissions' in ((await tx((t) => t.harnesses.get('a'))) ?? {}),
+      ).toBe(false);
+    });
+
     it('rejects an unknown auth mode and leaves nothing stored', async () => {
       const failure = await tx((t) =>
         t.harnesses.upsert(makeHarness('a', { auth_mode: 'password' as never })),

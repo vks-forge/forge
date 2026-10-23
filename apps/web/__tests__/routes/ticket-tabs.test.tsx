@@ -2,8 +2,9 @@
  * Pins: the Ticket page's tab is a path segment. `/tickets/:id` opens Conversation, an unknown
  * tab replaces itself with it, a deep link opens its tab, Back and Forward step through views,
  * Review exists only while the ticket waits on review or sign-off (and `/review` otherwise
- * falls back), `?run=` picks the run whose thread is shown, a question that waits on the owner
- * stays above whichever tab is open, and cost shows in the header, per run and in Details.
+ * falls back), `?run=` picks the run whose thread is shown, a question that waits on the
+ * owner is in the dock above the steer box (the header and the Conversation tab say so on other
+ * views), and cost shows in the header, per run and in Details.
  *
  * Why: the owner follows a ticket from a link, steps back through views and must never lose
  *   the question the Worker is waiting on by changing tab. A Review tab on a ticket that is not
@@ -11,9 +12,10 @@
  * Depends on: the stubbed Forge server via helpers/render-app, routes/ticket/*.
  */
 
-import { act, screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { NO_NEEDS_YOU, openNeedsYou } from '#tests/helpers/needs-you-modal.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 
 const ticket = (id: string, tab = '') =>
@@ -32,7 +34,7 @@ describe('Ticket page tabs in the URL', () => {
       await screen.findByRole('log', { name: 'Worker messages' }),
     ).toBeInTheDocument();
 
-    expect(tabNames()).toEqual(['Conversation', 'Runs', 'Details']);
+    expect(tabNames()).toEqual(['Conversation', 'Runs', 'History', 'Details']);
     expect(screen.getByRole('tab', { name: 'Conversation' })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -83,34 +85,42 @@ describe('Ticket page tabs in the URL', () => {
 });
 
 describe('Review tab', () => {
-  it('is there while the ticket waits on review, with a notice that links to it', async () => {
+  it('is there while the ticket waits on review, and the dock leads to it', async () => {
     const user = userEvent.setup();
     const { router } = renderApp({ path: ticket('SVC-5') });
 
-    expect(
-      await screen.findByText('This ticket is ready for your review.'),
-    ).toBeVisible();
+    await screen.findByText('Needs your attention');
 
-    expect(tabNames()).toEqual(['Conversation', 'Review', 'Runs', 'Details']);
+    expect(tabNames()).toEqual(['Conversation', 'Review', 'Runs', 'History', 'Details']);
 
-    await user.click(screen.getByRole('link', { name: 'Open the review' }));
+    const dock = await openNeedsYou(user, 'Waiting on you (1)');
 
+    expect(within(dock).getByText('SVC-5 is ready for review')).toBeVisible();
+
+    await user.click(within(dock).getByRole('button', { name: 'Open the review' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(router.state.location.pathname).toBe(ticket('SVC-5', 'review'));
     expect(await screen.findByRole('region', { name: 'Gates' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /Review/ })).toHaveAttribute(
       'aria-selected',
       'true',
     );
+
+    // The decision stays one press away from its evidence: the alert is under the header on every tab.
+    expect(screen.getByRole('button', NO_NEEDS_YOU)).toBeVisible();
   });
 
   it('is there for a ticket that needs sign-off', async () => {
+    const user = userEvent.setup();
     renderApp({ path: ticket('SVC-11') });
 
-    expect(
-      await screen.findByText('This ticket needs your sign-off.'),
-    ).toBeInTheDocument();
-
+    expect(await screen.findByText('Needs your sign-off')).toBeInTheDocument();
     expect(tabNames()).toContain('Review');
+
+    const dock = await openNeedsYou(user);
+
+    expect(within(dock).getByText('SVC-11 needs your sign-off')).toBeInTheDocument();
   });
 
   it('is hidden for any other state, and its URL falls back to the conversation', async () => {
@@ -126,14 +136,24 @@ describe('Review tab', () => {
 });
 
 describe('Ticket page: waiting on you, run choice and cost', () => {
-  it('keeps the Worker’s question above whichever tab is open', async () => {
-    renderApp({ path: ticket('SVC-4', 'details') });
+  it('keeps the Worker’s question in the dock, and marks the Conversation when another view is open', async () => {
+    const user = userEvent.setup();
+    renderApp({ path: ticket('SVC-4') });
+
+    const dock = await openNeedsYou(user, 'Waiting on you (1)');
 
     expect(
-      await screen.findByText(/Question: the Worker needs your answer/),
+      within(dock).getByText(/Question: the Worker needs your answer/),
     ).toBeInTheDocument();
 
-    expect(screen.getByLabelText('Your answer')).toBeInTheDocument();
+    expect(within(dock).getByLabelText('Your answer')).toBeInTheDocument();
+  });
+
+  it('says in the header that something waits while the Details view is open', async () => {
+    renderApp({ path: ticket('SVC-4', 'details') });
+
+    expect(await screen.findByText('Needs you')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Your answer')).not.toBeInTheDocument();
   });
 
   it('shows the thread of the run ?run= names and keeps it on the Conversation tab link', async () => {

@@ -30,6 +30,7 @@ function rig(
   const engine = {
     liveRunIds: () => (typeof over.live === 'function' ? over.live() : (over.live ?? [])),
     gateJobsInFlight: over.jobs ?? (() => 0),
+    directorJobsInFlight: () => 0,
   } as unknown as Engine;
 
   const parts: ShutdownParts = {

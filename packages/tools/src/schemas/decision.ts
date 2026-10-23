@@ -44,6 +44,18 @@ export const ReasonCode = z.enum([
   'budget_exceeded',
   'budget_soft_limit',
   'unattended',
+  /** Bypass permissions is on for the harness: a lane `ask` outside the hard floor was allowed (d-0183). */
+  'bypass',
+  /** The owner allowed exactly this call once (d-0175). */
+  'approved_once',
+  /** A project "always" rule the owner approved covers this call. */
+  'approved_always',
+  /** The owner denied exactly this call; it is not asked again. */
+  'approval_denied',
+  /** The call did not run: the owner has been asked and the run waits for the answer (set by the hook handler). */
+  'awaiting_owner',
+  /** The ask could not be raised to the owner, so the call is refused (set by the hook handler). */
+  'approval_unavailable',
   'fail_closed_unknown_run',
   'fail_closed_no_credentials',
   'fail_closed_bad_token',

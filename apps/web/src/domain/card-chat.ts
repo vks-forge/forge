@@ -23,7 +23,12 @@ import { flowLineOf } from '#/domain/card-event-lines.js';
 import { grillOf } from '#/domain/director-flow.js';
 import { echoedAnswerSeqs } from '#/domain/grill-answer-echo.js';
 import type { CardHistoryEvent } from '#/schemas/cards.js';
-import type { ChatAction, ChatLine, FlowLineContext } from '#/types/cards-ui.types.js';
+import type {
+  ChatAction,
+  ChatLine,
+  FlowLineContext,
+  TicketEventKind,
+} from '#/types/cards-ui.types.js';
 
 const str = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim() !== '' ? value : undefined;
@@ -89,6 +94,20 @@ export function lineOf(
     ...(ticketId === undefined ? {} : { ticketId }),
   });
 
+  // The four ticket kinds can fold into a run (domain/chat-folds). The ticket's link is drawn
+  // before the text, so with a ticket the text starts at the verb.
+  const ticketNote = (
+    kind: TicketEventKind,
+    withLink: string,
+    without: string,
+    toState?: string,
+  ): ChatLine => ({
+    ...note(ticketId === undefined ? without : withLink, ticketId),
+    fold: 'ticket',
+    ticketEvent: kind,
+    ...(toState === undefined ? {} : { toState }),
+  });
+
   const ticketId = str(payload['ticket_id']);
 
   switch (event.kind) {
@@ -124,21 +143,33 @@ export function lineOf(
       };
     }
 
-    case 'ticket_created':
-      return note(`Ticket created: ${str(payload['title']) ?? 'untitled'}`, ticketId);
+    case 'ticket_created': {
+      const title = str(payload['title']) ?? 'untitled';
+
+      return ticketNote('created', `created: ${title}`, `Ticket created: ${title}`);
+    }
+
     case 'ticket_state': {
       const why = str(payload['reason']);
+      const from = stateWord(payload['from']);
+      const to = stateWord(payload['to']);
+      const tail = `${to} (was ${from})${why ? `: ${why}` : ''}`;
 
-      return note(
-        `moved from ${stateWord(payload['from'])} to ${stateWord(payload['to'])}${why ? ` (${why})` : ''}`,
-        ticketId,
-      );
+      return ticketNote('moved', `is now ${tail}`, `A ticket is now ${tail}`, to);
     }
 
     case 'interaction_opened':
-      return note('asked a question that needs you', ticketId);
+      return ticketNote(
+        'asked',
+        'asked a question that needs you',
+        'A ticket asked a question that needs you',
+      );
     case 'interaction_answered':
-      return note('had its question answered', ticketId);
+      return ticketNote(
+        'answered',
+        'had its question answered',
+        'A ticket had its question answered',
+      );
     case 'type_changed':
       return note(
         `Type changed from ${typeLabel(String(payload['from']))} to ${typeLabel(String(payload['to']))}`,
@@ -158,8 +189,8 @@ export function lineOf(
   }
 }
 
-/** Kinds the transcript leaves out: a running step shows as the "thinking" row, a raise as the banner. */
-const NOT_IN_TRANSCRIPT: ReadonlySet<string> = new Set(['step_started', 'needs_you']);
+/** Kinds the transcript leaves out: a running step shows as the "thinking" row. */
+const NOT_IN_TRANSCRIPT: ReadonlySet<string> = new Set(['step_started']);
 
 /**
  * The whole transcript, plus lines the server has not confirmed yet at the end.
@@ -178,6 +209,12 @@ export function transcriptOf(
   return [
     ...events
       .filter((event) => !NOT_IN_TRANSCRIPT.has(event.kind))
+      // A finished step the very next raise explains ("Approve the plan · Waiting for the
+      // owner") would only say the dock's words twice.
+      .filter(
+        (event, index, all) =>
+          !(event.kind === 'step_finished' && all[index + 1]?.kind === 'needs_you'),
+      )
       // A typed answer is also a chat message; one owner bubble per answer.
       .filter((event) => !echoed.has(event.seq))
       // A settle whose block is already in the chat would only repeat it.

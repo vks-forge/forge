@@ -13,9 +13,9 @@
  *   transaction. Behind a port, the backend (SQLite WAL by default) can change without
  *   touching the engine (director-core.md §2-§3, §7-§8, d-0023).
  *
- * Cards and their type registry (ports/card.types), planning state and plan versions (ports/card-planning.types), the harness registries (ports/harness-registry.types), ticket pipeline snapshots, stage rows and artifacts (ports/stage-storage.types), pipeline proposals and finding marks (ports/proposal-storage.types), research sources and evidence (ports/research-storage.types) and memory (ports/memory-repository.types) join the same transaction.
+ * Cards and their type registry (ports/card.types), planning state and plan versions (ports/card-planning.types), the harness registries (ports/harness-registry.types), ticket pipeline snapshots, stage rows and artifacts (ports/stage-storage.types), pipeline proposals and finding marks (ports/proposal-storage.types), research sources and evidence (ports/research-storage.types), the Director spend ledger (ports/director-spend-storage.types) and memory (ports/memory-repository.types) join the same transaction.
  *
- * Exports: TicketPatch, TicketRepository, TicketRelationRepository, RunRepository,
+ * Exports: TicketRepository, TicketRelationRepository, RunRepository,
  *   RunEventRepository, RunInboxRepository, RunTokenRepository, IntakeEventRepository,
  *   InteractionRepository, WakeRequestRepository, GateResultRepository, ProjectRepository,
  *   GithubConnectionRepository, StorageTx, StorageAdapter.
@@ -51,6 +51,7 @@ import type {
 } from '#/types/ports/proposal-storage.types.js';
 import type { InboxStateRepository } from '#/types/ports/inbox-state.types.js';
 import type { MemoryRepository } from '#/types/ports/memory-repository.types.js';
+import type { DirectorSpendRepository } from '#/types/ports/director-spend-storage.types.js';
 import type { EvidenceRepository } from '#/types/ports/research-storage.types.js';
 import type { ResearchSourceRepository } from '#/types/ports/research-storage.types.js';
 import type {
@@ -63,26 +64,9 @@ import type { TicketRelation } from '#/schemas/ticket-relation.js';
 import type { Ticket, TicketRelationKind, TicketStatus } from '#/schemas/ticket.js';
 import type { NewWakeRequest, WakeKind, WakeRequest } from '#/schemas/wake-request.js';
 import type { NewRunEvent } from '#/types/run-event.types.js';
+import type { TicketPatch } from '#/types/ticket-patch.types.js';
 import type { RunListFilter } from '#/types/run-list.types.js';
 import type { TicketListFilter, TicketMatch } from '#/types/ticket-list.types.js';
-
-/**
- * Fields a CAS update may change; identity and creation time are immutable,
- * `status_version` belongs to storage, and `parent` / `blocked_by` are derived from
- * `ticket_relations` (change them through `TicketRelationRepository`).
- */
-export type TicketPatch = Partial<
-  Omit<
-    Ticket,
-    | 'id'
-    | 'project'
-    | 'card_id'
-    | 'created_at'
-    | 'status_version'
-    | 'parent'
-    | 'blocked_by'
-  >
->;
 
 /**
  * Ticket persistence with compare-and-swap updates (director-core.md §3). `Ticket.parent`
@@ -241,6 +225,8 @@ export interface WakeRequestRepository {
   listDue(now: string): Promise<WakeRequest[]>;
   // pending -> consumed; false when unknown or already consumed.
   markConsumed(id: string, at: string): Promise<boolean>;
+  // Every wake of the ticket, oldest first: the History tab reads what woke it and when.
+  listByTicket(ticketId: string): Promise<WakeRequest[]>;
   // Wakes created at or after `since` (coalesced duplicates do not count), optionally only
   // of the given kinds: the input to the automated re-wake cap.
   countSince(
@@ -288,6 +274,7 @@ export interface StorageTx {
   readonly pipelineProposals: PipelineProposalRepository;
   readonly findingMarks: FindingMarkRepository;
   readonly researchSources: ResearchSourceRepository;
+  readonly directorSpend: DirectorSpendRepository;
   readonly evidence: EvidenceRepository;
   readonly memory: MemoryRepository;
 }

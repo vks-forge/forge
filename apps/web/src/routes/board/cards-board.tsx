@@ -28,6 +28,7 @@ import { dependencyChain } from '#/domain/card-chain.js';
 import {
   CARD_BOARD_COLUMNS,
   filterCards,
+  firstFilledColumn,
   groupCards,
   isCardFilterActive,
 } from '#/domain/card-columns.js';
@@ -59,6 +60,9 @@ export function CardsBoard(props: { slug: string }) {
 
     return new Set(cards.filter((card) => !chain.has(card.id)).map((card) => card.id));
   }, [cards, lit]);
+
+  const first = firstFilledColumn(groups);
+  const startAt = CARD_BOARD_COLUMNS.findIndex((column) => column.id === first);
 
   if (query.isPending) {
     return <StatePanel kind="loading" label="Loading cards" />;
@@ -110,7 +114,7 @@ export function CardsBoard(props: { slug: string }) {
       ) : null}
 
       <LayoutGroup id="card-board">
-        <ColumnScroller>
+        <ColumnScroller startAt={startAt}>
           {CARD_BOARD_COLUMNS.map((column) => (
             <CardColumnView
               key={column.id}

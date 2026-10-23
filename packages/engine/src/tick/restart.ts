@@ -1,29 +1,27 @@
 /**
  * Restart reconcile: resume the runs the last server left behind.
  *
- * Why: a Worker that was an hour into a ticket when Forge stopped has a worktree full of
- *   changes and a harness session holding its whole conversation. Throwing both away as a
- *   crash (the old rule, d-0054) costs real work on every update or reboot, so the first tick
- *   resumes instead (d-0092). Two kinds of run are found: those the old server interrupted at
- *   shutdown, and those it lost without a shutdown (a crash or a killed process) that had
- *   already reported a harness session. Each is restarted on the same run row from its
- *   session, under a NEW generation, token and receipt secret (d-0100): the old token is
- *   replaced, so the dead Worker's credentials stop working, the hook liveness mark is cleared
- *   so the resumed process must register itself again before its first tool call (d-0033), and
- *   the app writes the `resumed` link into the receipt chain when it prepares the run. A run
- *   that cannot be resumed (no session, a harness that cannot resume, the worktree gone, a
- *   start that fails) is never lost: it is settled as a crash and the ticket is retried as a
- *   new run in the same worktree (a lost run with no session is crash-settled the same way).
- *   Resumes are due work like any other wake: they wait for the scheduler's limits, at the
- *   priority of their ticket and on the same rotation cursor as new starts. A start that fails
- *   before the chain's `resumed` link was written gives the generation back, so the chain stays
- *   1, 2, 3 without a gap. Each run is resumed on its own: a project whose runtime cannot be
- *   built (or a store error) is a tick error against that run, which stays interrupted for the
- *   next tick. A resume keeps its run's agent; a writer-group member resumes by its stage row.
+ * Why: a Worker that was an hour into a ticket when Forge stopped has a worktree full of changes and a harness
+ *   session holding its whole conversation. Throwing both away as a crash (the old rule, d-0054) costs real
+ *   work on every update or reboot, so the first tick resumes instead (d-0092). Two kinds of run are found:
+ *   those the old server interrupted at shutdown, and those it lost without a shutdown (a crash or a killed
+ *   process) that had already reported a harness session. Each is restarted on the same run row from its
+ *   session, under a NEW generation, token and receipt secret (d-0100): the old token is replaced, so the
+ *   dead Worker's credentials stop working, the hook liveness mark is cleared so the resumed process must
+ *   register itself again before its first tool call (d-0033), and the app writes the `resumed` link into
+ *   the receipt chain when it prepares the run. A run that cannot be resumed (no session, a harness that
+ *   cannot resume, the worktree gone, a start that fails) is never lost: it is settled as a crash and the
+ *   ticket is retried as a new run in the same worktree (a lost run with no session is crash-settled the
+ *   same way). Resumes are due work like any other wake: they wait for the scheduler's limits, at their
+ *   ticket's priority on the same rotation cursor as new starts. A start that fails before the chain's
+ *   `resumed` link was written gives the generation back (the chain stays 1, 2, 3). Each run is resumed on
+ *   its own: a runtime that cannot be built (or a store error) is a tick error against that run, which stays
+ *   interrupted. A resume keeps its run's agent and setup PATH folders; a writer-group member resumes by its
+ *   stage row.
  *
  * Exports: reconcileRestart(), resumeInterrupted().
  * Depends on: @forge/core (TERMINAL_STATUSES, branchName), @forge/tools (sha256Hex), domain/results,
- *   tick/{project-runtime,pump,resume-prompt,run-agent,run-request,settle,stage-state}, shared/time. IO only through the engine ports.
+ *   tick/{prep-jobs,project-runtime,pump,resume-prompt,run-agent,run-permissions,run-request,settle,stage-state}, shared/time. IO only through the engine ports.
  */
 
 import { TERMINAL_STATUSES, branchName } from '@forge/core';
@@ -32,12 +30,15 @@ import { sha256Hex } from '@forge/tools';
 import { pickNext } from '#/domain/pick-next.js';
 import { failureResult } from '#/domain/results.js';
 import { ticketNumber } from '#/domain/ticket-numbers.js';
-import { baseRefFor, driverFor, runtimeFor } from '#/tick/project-runtime.js';
+import { prepPaths } from '#/tick/prep-jobs.js';
+import { createWorktree } from '#/tick/base-sync.js';
+import { driverFor, runtimeFor } from '#/tick/project-runtime.js';
 import { startPump } from '#/tick/pump.js';
 import { generationLinked } from '#/tick/resume-chain.js';
 import { RESUME_PROMPT } from '#/tick/resume-prompt.js';
 import { resolveAgent } from '#/tick/run-agent.js';
 import { buildRunRequest } from '#/tick/run-request.js';
+import { runPermissions } from '#/tick/run-permissions.js';
 import { planDispatch } from '#/tick/schedule.js';
 import { settleRun } from '#/tick/settle.js';
 import { settleGuarded } from '#/tick/settle-guard.js';
@@ -107,11 +108,8 @@ async function tryResume(
 
   let worktree;
   try {
-    worktree = await runtime.worktrees.create(
-      ticket.id,
-      ticket.branch ?? branchName(ticket.type, ticket.id, ticket.title),
-      baseRefFor(ctx, ticket.project),
-    );
+    const branch = ticket.branch ?? branchName(ticket.type, ticket.id, ticket.title);
+    worktree = await createWorktree(ctx, runtime, ticket.project, ticket.id, branch);
   } catch (e) {
     return `its worktree is unavailable: ${msg(e)}`;
   }
@@ -126,12 +124,14 @@ async function tryResume(
     runId: run.id,
     ticket,
     agent,
+    permissions: await runPermissions(ctx, run.harness),
     cwd: run.cwd,
     prompt: RESUME_PROMPT,
     promptHash: run.prompt_hash ?? sha256Hex(RESUME_PROMPT),
     token,
     resume: session,
     generation,
+    pathPrepend: await prepPaths(runtime, worktree.path),
   });
 
   await deps.storage.transaction(async (tx) => {

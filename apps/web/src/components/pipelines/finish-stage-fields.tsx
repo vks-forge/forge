@@ -153,7 +153,7 @@ export function SignOffFields(props: {
         />
         <p className="text-xs text-muted">
           {stage.signer === 'director_or_owner'
-            ? 'The Director signs only when every check passed outright and the change is within its limit. Otherwise it comes to you with the reason. Tier C always needs you.'
+            ? 'The Director signs only when every check passed outright and the change is within its limit. Otherwise it comes to you with the reason. Protected files follow their own rule: the Director signs them only when no secret file is touched.'
             : 'Every ticket waits for you to sign, whatever the tier.'}
         </p>
       </div>

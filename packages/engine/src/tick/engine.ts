@@ -6,9 +6,9 @@
  *   reconcile (restart, stalls, finished runs, expired questions), refresh (triage new
  *   tickets, deliver steering replies), release lane holds, verify (publish, gate, check and merge finished work),
  *   advance stages (the red proof), then dispatch (start what is ready), and ends with
- *   the invariant sweep. Ticks are single-flight, and the engine owns no timers: the app
- *   calls `tick()` on its clock and whenever the engine asks through `onTickRequested`
- *   (an intake event, a run event, a settled run), so the same code runs under a real
+ *   the invariant sweep. Ticks are single-flight, and the engine owns one timer only (tick/tick-timer, for
+ *   a not_before wake, a quota pause or a hold): the app calls `tick()` on its clock and whenever the
+ *   engine asks through `onTickRequested` (any event that can make work startable, or that timer), so the same code runs under a real
  *   scheduler and under a test that moves a fake clock by hand (director-core.md §2-§3).
  *
  * Exports: createEngine().
@@ -17,22 +17,33 @@
  *   The escalation phases run between expiring questions and the planning sweep: the Director's
  *   first look at every new wait, then the automatic resume of fixed setups; at the first tick
  *   the backfill gives tickets parked before escalations existed one to act on.
+ *   The first tick also sweeps the worktrees and local branches of cancelled tickets that a failed removal left behind.
+ *   Director steps (card turns) run as jobs beside the tick, so the tick never waits on a model call; each tick
+ *   collects the jobs that ended and starts the ones owed (tick/director-jobs).
  */
 
 import { familyOf } from '#/domain/results.js';
 import { iso } from '#/shared/time.js';
 import { emitTrace } from '#/shared/trace.js';
-import { runCardChats } from '#/tick/card-chat.js';
+import { releaseCardClaims, runCardChats } from '#/tick/card-chat.js';
 import { cardDirectorStatus, postCardMessage } from '#/tick/card-chat-post.js';
 import { closeCardWork, sweepClosedCards } from '#/tick/card-close.js';
 import { sweepCardPhases } from '#/tick/card-sweep.js';
 import { createCard, setCardRelations } from '#/tick/card-create.js';
+import {
+  collectDirectorJobs,
+  directorIdle,
+  directorJobsInFlight,
+} from '#/tick/director-jobs.js';
 import { dispatchReady } from '#/tick/dispatch.js';
 import { releaseLaneHolds } from '#/tick/lane-hold-release.js';
 import { backfillEscalations } from '#/tick/escalation-backfill.js';
 import { actOnEscalation, actOnTicket } from '#/tick/escalation-act.js';
+import { cancelFlow } from '#/tick/escalation-cancel.js';
+import { raiseToolApproval } from '#/tick/tool-approval-raise.js';
 import { sweepEscalations } from '#/tick/escalation-director.js';
-import { explainWait } from '#/tick/explain.js';
+import { explainWait, explainWaits } from '#/tick/explain.js';
+import { editTicket } from '#/tick/ticket-edit.js';
 import { answerInteraction, expireInteractions } from '#/tick/interactions.js';
 import { ingest } from '#/tick/intake.js';
 import { interruptRun } from '#/tick/interrupt.js';
@@ -54,8 +65,9 @@ import { reconcileRestart, resumeInterrupted } from '#/tick/restart.js';
 import { steerRun } from '#/tick/steer-run.js';
 import { deliverReplies } from '#/tick/steering.js';
 import { beginTick, endTick, requestTick } from '#/tick/tick-requests.js';
+import { armWakeTimer } from '#/tick/tick-timer.js';
 import { resumeFixedSetups } from '#/tick/setup-recheck.js';
-import { cancelTicketsTx, stopCancelled } from '#/tick/ticket-cancel.js';
+import { sweepCancelledWorkspaces } from '#/tick/workspace-cleanup.js';
 import { loadTickConfig } from '#/tick/tick-config.js';
 import { emptyReport } from '#/tick/tick-report.js';
 import { triageInbox } from '#/tick/triage.js';
@@ -122,12 +134,33 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
   }
 
   const ctx: EngineCtx = { deps, state, report, config, now, nowIso: iso(now) };
+  // Director jobs that ended since the last tick free their keys and hand over their reports.
+  await phase(ctx, 'collect director jobs', collectDirectorJobs);
   // Work of a closed card is cancelled before anything can raise a wait for it or run it.
   await phase(ctx, 'closed cards', async (c) => void (await sweepClosedCards(c)));
+  // A cancelled ticket whose folder was held by a running process is retried once the process is gone.
+  if (state.cleanupPending && !state.firstTick) {
+    state.cleanupPending = false;
+    await phase(
+      ctx,
+      'workspace retry',
+      async (c) => void (await sweepCancelledWorkspaces(c)),
+    );
+  }
+
   // Cards that disagree with their tickets (a Done card with open work) are repaired here.
   await phase(ctx, 'card phases', async (c) => void (await sweepCardPhases(c)));
   if (state.firstTick) {
     await phase(ctx, 'restart reconcile', reconcileRestart);
+    // Any claim on a card reply at boot belongs to the process that died: answer those rows now.
+    await phase(ctx, 'release card claims', releaseCardClaims);
+    // Worktrees and local branches of cancelled tickets that a failed removal or a crash left behind.
+    await phase(
+      ctx,
+      'workspace sweep',
+      async (c) => void (await sweepCancelledWorkspaces(c)),
+    );
+
     // Tickets parked before escalations existed get one to act on, once, at start.
     await phase(
       ctx,
@@ -158,6 +191,8 @@ async function runTick(deps: EngineDeps, state: EngineState): Promise<TickReport
   await phase(ctx, 'escalations after verify', sweepEscalations);
   await phase(ctx, 'dispatch', dispatchReady);
   await phase(ctx, 'invariants', checkInvariants);
+  // Ends by time alone (a not_before wake, a quota pause, a hold) get their own request.
+  await phase(ctx, 'wake timer', armWakeTimer);
 
   return ctx.report;
 }
@@ -169,20 +204,25 @@ export function createEngine(deps: EngineDeps): Engine {
     running: null,
     requested: false,
     notified: false,
+    wakeTimer: null,
     pumps: new Map(),
     schedulerCursor: undefined,
     unservable: new Map(),
     holds: new Map(),
     baseShas: new Map(),
     gateJobs: new Map(),
+    directorJobs: new Map(),
+    briefing: new Map(),
+    prepJobs: new Map(),
+    cleanupPending: false,
     stageJobs: new Map(),
     checkJobs: new Map(),
     diffRouted: new Set(),
     regates: new Map(),
     replies: [],
     chat: { pending: new Set(), busy: new Set(), errors: new Map() },
-    escalating: new Set(),
     settleFailures: new Map(),
+    stuckLogged: new Set(),
   };
 
   const engine: Engine = {
@@ -199,7 +239,15 @@ export function createEngine(deps: EngineDeps): Engine {
     requestTick: () => requestTick(deps, state),
     ingest: (event) => ingest(deps, state, event),
     createCard: (input) => createCard(deps, state, input),
-    setCardRelations: (cardId, input) => setCardRelations(deps, cardId, input),
+    async setCardRelations(cardId, input) {
+      const result = await setCardRelations(deps, cardId, input);
+      if (result.status === 'updated') {
+        requestTick(deps, state);
+      }
+
+      return result;
+    },
+    editTicket: (ticketId, edit, actor) => editTicket(deps, state, ticketId, edit, actor),
     answerGrill: (cardId, input, author) =>
       answerGrill(deps, state, cardId, input, author),
     grillShortcut: (cardId, kind, author) =>
@@ -222,25 +270,18 @@ export function createEngine(deps: EngineDeps): Engine {
     cardDirector: (cardId) => cardDirectorStatus(state, cardId),
     closeCardWork: (cardId) => closeCardWork(deps, state, cardId),
     reviewOf: (ticketId) => reviewOf(deps, state, ticketId),
+    // An alias of the one cancel door: a ticket others wait on is refused here too.
     async cancelTicket(ticketId) {
-      const nowIso = iso(deps.clock.now());
-      const [cancelled] = await deps.storage.transaction((tx) =>
-        cancelTicketsTx(tx, [ticketId], nowIso),
-      );
+      const out = await cancelFlow(deps, state, ticketId, null, false, 'owner');
 
-      if (!cancelled) {
-        return false;
-      }
-
-      await stopCancelled(deps, state, cancelled);
-      requestTick(deps, state);
-
-      return true;
+      return out.status === 'done';
     },
+    raiseToolApproval: (req) => raiseToolApproval(deps, req),
     actOnEscalation: (id, body, author) => actOnEscalation(deps, state, id, body, author),
     actOnTicket: (ticketId, body, author) =>
       actOnTicket(deps, state, ticketId, body, author),
     explainWait: (ticketId) => explainWait(deps, state, ticketId),
+    explainWaits: (ticketIds) => explainWaits(deps, state, ticketIds),
     interruptRun: (runId) => interruptRun(deps, state, runId),
     liveRunIds: () => [...state.pumps.keys()],
     unservableProjects: () => new Map(state.unservable),
@@ -249,7 +290,10 @@ export function createEngine(deps: EngineDeps): Engine {
         ...state.gateJobs.values(),
         ...state.stageJobs.values(),
         ...state.checkJobs.values(),
+        ...state.prepJobs.values(),
       ].filter((j) => j.outcome === undefined).length,
+    directorJobsInFlight: () => directorJobsInFlight(state),
+    idle: () => directorIdle(state),
   };
 
   return engine;

@@ -5,7 +5,9 @@
  *   period before), what this month, how much got done, what is moving, what waits on me, how
  *   many Workers run right now, how many projects are alive, and whether first-gate checks
  *   pass. A figure that cannot be known is "No data" with the reason, never 0: spend with no
- *   run that reported a cost reads "No data", not a free week. "Waiting on you" is the one
+ *   run or Director step that reported a cost reads "No data", not a free week. Spend is the
+ *   total first, then "Workers $a · Director $b" in the order every screen uses, with a gloss
+ *   for the Director. "Waiting on you" is the one
  *   tile in amber, because it is the only figure that asks something of the person. On a
  *   project's Home (`scoped`) "Active projects" is dropped, since there is only one.
  *
@@ -16,6 +18,8 @@
 
 import type { OverviewStats } from '@forge/core';
 import { StatTile } from '#/components/stats/stat-tile.js';
+import { WhatsThis } from '#/components/ui/whats-this.js';
+import { splitLine } from '#/domain/cost-display.js';
 import { spendChange } from '#/domain/overview-view.js';
 import {
   formatCount,
@@ -26,7 +30,7 @@ import {
 
 export function OverviewKpis(props: { stats: OverviewStats; scoped?: boolean }) {
   const { kpis, cost_coverage: coverage } = props.stats;
-  const reported = coverage.runs_with_cost > 0;
+  const reported = coverage.runs_with_cost > 0 || coverage.director_steps_recorded > 0;
   const change = reported
     ? spendChange(kpis.spend_usd, kpis.spend_prev_usd, props.stats.range === 'today')
     : null;
@@ -38,11 +42,12 @@ export function OverviewKpis(props: { stats: OverviewStats; scoped?: boolean }) 
       <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatTile
           label="Spend"
+          help={<WhatsThis term="director" />}
           value={reported ? formatUsd(kpis.spend_usd) : null}
           note={
             reported
-              ? `${rangeLabel(props.stats.range)}${change ? `. ${change}` : ''}`
-              : coverage.runs_total === 0
+              ? `${splitLine(kpis.spend_worker_usd, kpis.spend_director_usd)}. ${rangeLabel(props.stats.range)}${change ? `. ${change}` : ''}`
+              : coverage.runs_total === 0 && coverage.director_steps === 0
                 ? 'No runs in this range.'
                 : 'No run reported a cost.'
           }
@@ -83,11 +88,12 @@ export function OverviewKpis(props: { stats: OverviewStats; scoped?: boolean }) 
           />
         )}
         <StatTile
-          label="G1 pass rate"
+          label="Independent check pass rate"
+          help={<WhatsThis term="check" />}
           value={g1.rate === null ? null : formatPercent(g1.rate)}
           note={
             g1.total === 0
-              ? 'No G1 verdict in this range.'
+              ? 'No independent check ran in this range.'
               : `${g1.hits} of ${g1.total} verdicts passed`
           }
         />

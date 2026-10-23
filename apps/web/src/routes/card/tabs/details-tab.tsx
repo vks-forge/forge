@@ -3,8 +3,10 @@
  *
  * Why: the conversation is about what to do; this tab answers "where did this come from, who
  *   made it, what may it cost and what has it cost" without making anyone dig through history.
- *   Source, creator, times and the budget cap (an absent cap is "No cap", never 0, and the
- *   cap can be set, changed or cleared here: it only warns) are plain labelled facts. The Director's summary is shown when it has written one,
+ *   Source, creator, times and the budget cap are plain labelled facts: the cap in force says
+ *   whose it is (this card, the project or the Forge default) and what has been spent against it,
+ *   "No cap" appears only when none applies (never 0), and the card's own cap can be set,
+ *   changed or cleared here (it only warns). The Director's summary is shown when it has written one,
  *   as text. The cost breakdown lists the Director, each ticket and the total, with "not
  *   recorded" kept honest (components/cost/cost-breakdown).
  *
@@ -34,6 +36,7 @@ export function DetailsTab(props: { card: CardDetailReply }) {
         key="cap"
         cardId={card.id}
         cap={card.budget_cap_usd}
+        budget={card.budget}
         closed={card.closed_reason !== undefined}
       />,
     ],

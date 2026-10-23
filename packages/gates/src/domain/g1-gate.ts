@@ -4,7 +4,7 @@
  * Why: after a Worker finishes, the Director must not take its word for what it did.
  *   G1 is the cheapest independent check and runs first in every lane: it matches the
  *   Worker's `finish` claims against HMAC-chained tool receipts and the git diff, proves
- *   the receipts are intact and complete, refuses test or config tampering and changes outside the project folder, and re-runs
+ *   the receipts are intact and complete, refuses test or config tampering, unresolved merge-conflict markers and changes outside the project folder, and re-runs
  *   every configured check (tests, lint, typecheck, build, ...) itself. Any finding fails the gate and the report goes back
  *   to the Worker as the rework prompt. A check that could not run (missing run secret,
  *   spawn failure) makes the verdict `error`, never `passed`, so the engine retries or
@@ -19,13 +19,18 @@
  *   the reworked code, so ran_tests needs this run's own receipt, and the chain check that
  *   gates the verdict is this run's.
  *
+ *   When an earlier run's secret is gone, files only it edited get a finding that tells the Worker to re-apply them, and a verdict whose only problem is that is `provenanceOnly` (F-D2, F-D3).
+ *
+ *   Checks run with the tool folders the worktree's setup recorded (a virtual environment's `bin`) first on PATH, so `pytest` is the project's own.
+ *
  * Exports: buildG1Gate().
- * Depends on: @forge/core (Gate), @forge/tools (Receipt type), domain/* (earlier-runs verifies earlier chains, gate-rules picks the ecosystem rules), types/g1-deps. No IO; every side effect is an injected dep.
+ * Depends on: @forge/core (Gate), @forge/tools (Receipt type), domain/* (earlier-runs verifies earlier chains, gate-rules picks the ecosystem rules, conflict-markers refuses added merge markers), types/g1-deps. No IO; every side effect is an injected dep.
  */
 
 import type { Gate, GateContext, GateFinding, GateVerdict } from '@forge/core';
 import { checkChain, recordedGenerations } from '#/domain/chain-check.js';
 import { checkClaims } from '#/domain/claim-check.js';
+import { checkConflictMarkers } from '#/domain/conflict-markers.js';
 import { checkGateConfig } from '#/domain/config-guard.js';
 import { resolveRules } from '#/domain/gate-rules.js';
 import { verifyEarlierRuns } from '#/domain/earlier-runs.js';
@@ -44,6 +49,34 @@ function combine(outcomes: readonly CheckOutcome[]): GateVerdict['status'] {
   }
 
   return outcomes.some((o) => o.status === 'error') ? 'error' : 'passed';
+}
+
+/**
+ * True when gate-config is the only check that did not pass and no check errored: the one
+ * failure the owner, not a rework, can settle (d-0173). Anything else is the ordinary road.
+ */
+function configOnly(outcomes: readonly CheckOutcome[]): boolean {
+  const bad = outcomes.filter((o) => o.status !== 'passed' || o.findings.length > 0);
+
+  return (
+    bad.length > 0 && bad.every((o) => o.name === 'gate-config' && o.status === 'failed')
+  );
+}
+
+/**
+ * True when the claims check is the only check that did not pass, no check errored, and every one
+ * of its findings is a lost earlier-run proof for a file (F-D3): a rework can re-apply the files,
+ * and when it cannot the owner can vouch. Anything else is the ordinary road.
+ */
+function provenanceOnly(outcomes: readonly CheckOutcome[]): boolean {
+  const bad = outcomes.filter((o) => o.status !== 'passed' || o.findings.length > 0);
+
+  return (
+    bad.length > 0 &&
+    bad.every(
+      (o) => o.name === 'claims' && o.status === 'failed' && o.provenanceOnly === true,
+    )
+  );
 }
 
 /** The ticket's earlier runs with their receipts, chain-verified under their own secrets. */
@@ -134,11 +167,13 @@ export function buildG1Gate(deps: G1CoreDeps): Gate {
         checkScope(diff),
         checkTestDiff(diff, patch, rules),
         checkGateConfig(diff, patch, ctx.project.checks, rules),
+        checkConflictMarkers(patch),
         await runProjectChecks({
           project: ctx.project,
           cwd: ctx.worktreePath,
           env: deps.env,
           passEnv: deps.passEnv,
+          pathDirs: (await deps.worktrees.readPrep?.(ctx.worktreePath))?.path ?? [],
           run,
           timeoutMs,
         }),
@@ -150,6 +185,8 @@ export function buildG1Gate(deps: G1CoreDeps): Gate {
       return {
         status,
         findings,
+        ...(configOnly(outcomes) ? { configOnly: true } : {}),
+        ...(provenanceOnly(outcomes) ? { provenanceOnly: true } : {}),
         report: renderReport(status, outcomes, now()),
       };
     },

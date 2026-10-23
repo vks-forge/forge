@@ -6,9 +6,10 @@
  *   independent of how rows were read and lets tests build it by hand.
  *
  * Exports: OverviewProjectInput, OverviewStatsInput.
- * Depends on: schemas/gate-result, inbox, project, run, stats-range, ticket. Types only.
+ * Depends on: schemas/director-spend, schemas/gate-result, inbox, project, run, stats-range, ticket. Types only.
  */
 
+import type { DirectorSpend } from '#/schemas/director-spend.js';
 import type { GateResult } from '#/schemas/gate-result.js';
 import type { InboxItem } from '#/schemas/inbox.js';
 import type { ProjectStatus } from '#/schemas/project.js';
@@ -23,6 +24,8 @@ export interface OverviewProjectInput {
   readonly tickets: readonly Ticket[];
   /** Runs started since `overviewRunsSince()` (all of them for `all`). */
   readonly runs: readonly Run[];
+  /** Director spend rows dated since `overviewRunsSince()` (all of them for `all`). */
+  readonly directorSpend: readonly DirectorSpend[];
   /** G1 verdicts of those runs. */
   readonly gates: readonly GateResult[];
   /** Runs `starting` or `running` right now. */

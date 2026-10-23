@@ -8,10 +8,11 @@
  *   late click or a second tab is a normal answer, not a crash. The Director's own first look
  *   shares the sweep state and the settle shape, so those are named here too.
  *
- * Exports: RaisedPayload, AnswerGuard, AnswerVerdict, EffectEnd, ActOutcome, EscalationDoors.
+ * Exports: RaisedPayload, AnswerGuard, AnswerVerdict, EffectEnd, ActOutcome, CancelBy, EscalationDoors.
  * Depends on: @forge/core (escalation schemas, interaction, ticket types). Types only.
  */
 
+import type { ToolApprovalRequest, ToolApprovalResult } from '#/types/approval.types.js';
 import type {
   ApprovalMode,
   EscalationActBody,
@@ -58,8 +59,18 @@ export type ActOutcome =
   | { readonly status: 'merge_refused'; readonly detail: string }
   | { readonly status: 'stale' };
 
+/** Who cancelled a ticket: the owner from a page, or the card's Director when the owner asked in chat (d-0179). */
+export type CancelBy = 'owner' | 'director';
+
 /** The engine doors of escalations: what `POST /interactions/:id/act` and `POST /tickets/:id/act` call. */
 export interface EscalationDoors {
+  /**
+   * Parks a Worker's tool call that hit `ask` for the owner (d-0175): one transaction writes the
+   * `permission` item at the owner's stage, a `permission` run event and the card's history.
+   * A repeated call returns the item already pending; Express, a run that is not live, a ticket
+   * that is not in progress, a closed card and more than five pending items per run are refused.
+   */
+  raiseToolApproval(request: ToolApprovalRequest): Promise<ToolApprovalResult>;
   /**
    * Settles one pending escalation with the owner's action. Refuses an action the escalation does
    * not offer (`action_not_offered`), one that is no longer pending (`not_pending`), and a cancel

@@ -35,6 +35,8 @@ export const FINDINGS = [
 
 export const DECISION_ACTIONS: Readonly<Record<string, readonly string[]>> = {
   findings_hold: ['merge_anyway', 'rework', 'replan', 'cancel'],
+  config_hold: ['merge_anyway', 'rework', 'replan', 'cancel'],
+  provenance_hold: ['merge_anyway', 'rework', 'replan', 'cancel'],
   scope_drift: ['continue', 'replan', 'cancel'],
 };
 
@@ -58,7 +60,7 @@ function base(over: Raw): Raw {
 }
 
 export function decisionView(
-  cause: 'findings_hold' | 'scope_drift',
+  cause: 'findings_hold' | 'config_hold' | 'provenance_hold' | 'scope_drift',
   over: Raw = {},
 ): Raw {
   return base({
@@ -70,14 +72,18 @@ export function decisionView(
       summary:
         cause === 'findings_hold'
           ? 'The critic found 2 problems it will not send back again.'
-          : 'The change touches 2 files the plan did not name.',
-      stage_id: cause === 'findings_hold' ? 'critique' : 'check-plan',
-      stage_label: cause === 'findings_hold' ? 'Critique' : 'Check against the plan',
-      findings: cause === 'findings_hold' ? FINDINGS : [],
+          : cause === 'config_hold'
+            ? 'The Worker changed files that control how its work is checked (tsconfig.json); review them, then Merge anyway or send it back.'
+            : cause === 'provenance_hold'
+              ? 'Forge cannot prove who changed src/cli.ts: the record of the earlier run that edited it is gone. Check the changes, then Merge anyway or send it back.'
+              : 'The change touches 2 files the plan did not name.',
+      stage_id: cause === 'scope_drift' ? 'check-plan' : 'critique',
+      stage_label: cause === 'scope_drift' ? 'Check against the plan' : 'Critique',
+      findings: cause === 'scope_drift' ? [] : FINDINGS,
       ...(cause === 'scope_drift'
         ? { unplanned: ['src/billing/invoice.ts', 'src/billing/tax.ts'] }
         : {}),
-      rework: { count: cause === 'findings_hold' ? 2 : 0, cap: 2 },
+      rework: { count: cause === 'scope_drift' ? 0 : 2, cap: 2 },
     },
     actions: [...DECISION_ACTIONS[cause]!],
     ...over,

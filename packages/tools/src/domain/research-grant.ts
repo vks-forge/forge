@@ -91,6 +91,7 @@ function grantFor(limits: ResearchLimits): EffectiveGrant {
         ],
       },
     ],
+    approved: [],
     managed: [
       ...FLOOR_RULES,
       ...limits.denyHosts.flatMap((h) => denyRules(h.toLowerCase())),

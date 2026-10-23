@@ -6,10 +6,12 @@
  *   GitHub App key missing from the secret store must fail loudly with the fix, not mint a
  *   token from nothing; and building the real Claude ports must spawn nothing.
  *
- * Pins: local/github/none host selection, missing key is an AuthError, createClaudePorts is lazy.
+ * Pins: local/github/none host selection, the local host fetches the base into the project's clone,
+ * missing key is an AuthError, createClaudePorts is lazy.
  * Depends on: src/services/git-host, claude-ports. IO: temp files.
  */
 
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -54,6 +56,33 @@ describe('createProjectGitHost', () => {
       push: expect.any(Function),
       merge: expect.any(Function),
     });
+  });
+
+  it('lets the local host fetch the base into the project clone it was given', async () => {
+    const git = (...args: string[]): string =>
+      execFileSync(
+        'git',
+        ['-c', 'user.name=T', '-c', 'user.email=t@example.com', ...args],
+        {
+          cwd: dir,
+          encoding: 'utf8',
+          windowsHide: true,
+        },
+      ).trim();
+
+    git('init', '-b', 'main');
+    writeFileSync(join(dir, 'a.txt'), 'a');
+    git('add', '-A');
+    git('commit', '-m', 'init', '--no-gpg-sign');
+    git('clone', '--bare', '.', 'remote.git');
+    const project = ProjectConfig.parse({
+      ...base,
+      git_host: { kind: 'local', remote_path: 'remote.git' },
+    });
+
+    const tip = await createProjectGitHost(project, deps())?.syncBase();
+
+    expect(tip).toEqual({ ref: 'refs/forge/base/main', sha: git('rev-parse', 'main') });
   });
 
   it('asks for the App key by name and explains how to store it when missing', async () => {

@@ -41,6 +41,7 @@ describe('0012 harnesses', () => {
       'status',
       'last_checked_at',
       'status_note',
+      'bypass_permissions',
     ]);
 
     expect(rows).toEqual([]);

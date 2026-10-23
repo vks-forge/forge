@@ -10,11 +10,11 @@
  *   field added there reaches the UI with no edit here.
  *
  * Exports: ProjectConfigResponse, CompanyConfigResponse, ConfigHistoryResponse, SavedVersion,
- *   ArchiveResponse, DeleteResponse (schemas and inferred types).
+ *   ArchiveResponse, DeleteResponse, DetectedReply (schemas and inferred types).
  * Depends on: @forge/core (ConfigVersion), schemas/director-config, schemas/projects, zod.
  */
 
-import { ConfigVersion } from '@forge/core';
+import { ConfigVersion, ProjectCheck, SetupStep } from '@forge/core';
 import { z } from 'zod';
 import { CompanyConfigReply, EffectiveConfigReply } from '#/schemas/director-config.js';
 import { ProjectView } from '#/schemas/projects.js';
@@ -47,3 +47,15 @@ export const DeleteResponse = z.object({
   leftovers: z.array(z.string()).optional(),
 });
 export type DeleteResponse = z.infer<typeof DeleteResponse>;
+
+/**
+ * `GET` / `POST /projects/:slug/detected`: what Forge finds in the folder. `setup` is the default
+ * list it runs before each ticket when the settings say nothing; each step's `inputs` start with
+ * the file it was found from (the lockfile).
+ */
+export const DetectedReply = z.object({
+  ecosystems: z.array(z.string()),
+  checks: z.array(ProjectCheck),
+  setup: z.array(SetupStep),
+});
+export type DetectedReply = z.infer<typeof DetectedReply>;

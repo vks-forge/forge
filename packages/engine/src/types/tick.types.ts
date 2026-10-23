@@ -36,6 +36,10 @@ export type EventSpec = WithoutAt<TicketEvent>;
 /** The non-status ticket columns a move may set after its events (status only moves via events). */
 export interface TicketFields {
   title?: string;
+  /** Set only by the ticket edit door, and only before work starts. */
+  body?: string;
+  /** Set only by the ticket edit door and plan edits. */
+  priority?: number;
   type?: Ticket['type'];
   /** Only a person's "run as Express" lowers a lane; the Director's own moves raise it (d-0141 item 9). */
   lane?: Ticket['lane'];
@@ -51,6 +55,8 @@ export interface TicketFields {
 export interface TicketPlan {
   readonly events: readonly EventSpec[];
   readonly fields?: TicketFields;
+  /** Why the status changes, in plain words, for the card's history; falls back to the blocked reason. */
+  readonly reason?: string;
 }
 
 export type MoveResult =
@@ -150,6 +156,8 @@ export interface RunRequestInput {
   /** The harness the run starts on when a fallback harness took it; absent means the agent's own. */
   readonly harnessId?: string;
   readonly cwd: string;
+  /** The harness's Bypass permissions switch read for this run (d-0183). */
+  readonly permissions: 'bypass' | 'ask';
   readonly prompt: string;
   readonly promptHash: string;
   /** The run's bearer token; the app registers it with a new secret before the harness starts. */
@@ -158,4 +166,6 @@ export interface RunRequestInput {
   readonly resume?: string;
   /** Secret generation: absent for a first start, the run's new generation on a restart resume. */
   readonly generation?: number;
+  /** Tool folders the worktree's setup created (`.venv/bin`), first on the Worker's PATH. */
+  readonly pathPrepend?: readonly string[];
 }

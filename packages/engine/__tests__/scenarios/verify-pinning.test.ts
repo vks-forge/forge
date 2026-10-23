@@ -97,7 +97,7 @@ describe('verify: merge pinned to the gated commit', () => {
 
     const t = await rig.ticket(id);
     expect(t.status).toBe('waiting_human');
-    expect(t.blocked_reason).toContain('moved');
+    expect(t.blocked_reason).toContain('main kept moving');
     expect(host.count('merge')).toBe(0);
     expect(gate.contexts.length).toBeLessThanOrEqual(5);
   });
@@ -190,11 +190,16 @@ describe('verify: one base branch', () => {
   it("cuts the worktree, diffs and opens the PR against the project's base branch", async () => {
     const { rig, host } = await makeVerifyRig();
     developRuntime(rig);
+    host.baseTip = { ref: 'refs/forge/base/develop', sha: 'base-sha-1' };
 
     await startAndFinish(rig);
     await rig.tick();
 
-    expect(rig.worktrees.created.map((c) => c.baseRef)).toEqual(['develop']);
+    // Worktrees are cut from the host's fetched copy of the project's base; the PR targets the branch itself.
+    expect(rig.worktrees.created.map((c) => c.baseRef)).toEqual([
+      'refs/forge/base/develop',
+    ]);
+
     expect(host.opened.map((o) => o.base)).toEqual(['develop']);
   });
 
@@ -204,7 +209,7 @@ describe('verify: one base branch', () => {
     await startAndFinish(rig);
     await rig.tick();
 
-    expect(rig.worktrees.created.map((c) => c.baseRef)).toEqual(['main']);
+    expect(rig.worktrees.created.map((c) => c.baseRef)).toEqual(['refs/forge/base/main']);
     expect(host.opened.map((o) => o.base)).toEqual(['main']);
   });
 

@@ -9,7 +9,8 @@
  *   close with no reason on record, a type change with no confirmation or a page that goes blank
  *   on an event from a newer server would each break trust in the one place the user talks to
  *   the Director.
- * Depends on: the stubbed Forge server via helpers/render-app, routes/card/*, components/card/*.
+ * Depends on: the stubbed Forge server via helpers/render-app, routes/card/*, components/card/*,
+ *   components/work/*.
  */
 
 import { screen, waitFor, within } from '@testing-library/react';
@@ -17,6 +18,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { storageKeyOf } from '#/state/create-persisted-store.js';
 import { json, networkDown, refusal } from '#tests/helpers/fetch-stub.js';
+import { openNeedsYou } from '#tests/helpers/needs-you-modal.js';
 import { renderApp } from '#tests/helpers/render-app.js';
 import { SAMPLE_CARDS } from '#tests/helpers/forge-data/card-data.js';
 
@@ -33,18 +35,26 @@ const detailOf = (n: number) => {
 };
 
 describe('Card page: header and history', () => {
-  it('shows the title, column, source and type', async () => {
+  it('shows the title and one status in a single header row, with the type behind the menu', async () => {
+    const user = userEvent.setup();
     renderApp({ path: card('FG-C2') });
 
     expect(
       await screen.findByRole('heading', { level: 1, name: /Plan a retry strategy/ }),
     ).toBeInTheDocument();
 
-    expect(screen.getByText('Shaping')).toBeInTheDocument();
-    expect(screen.getByText(/from Chat/)).toBeInTheDocument();
-    expect(await screen.findByRole('combobox', { name: 'Type' })).toHaveTextContent(
-      'Plan',
+    expect(screen.getByText('Plan ready')).toBeInTheDocument();
+    // The old type dropdown is gone from the header row (Close card is behind the menu too).
+    expect(screen.queryByRole('combobox', { name: 'Type' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Card actions' }));
+
+    expect(await screen.findByRole('menuitem', { name: 'Plan' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
     );
+
+    expect(screen.getByRole('menuitem', { name: 'Close card…' })).toBeInTheDocument();
   });
 
   it('renders speech, the Director’s actions, events and unknown kinds as notes', async () => {
@@ -75,29 +85,34 @@ describe('Card page: header and history', () => {
     expect(await screen.findByText('There is no card FG-C99')).toBeInTheDocument();
   });
 
-  it('shows questions that wait on the user, linking each ticket', async () => {
+  it('shows a question that waits on a ticket as a dock item linking the ticket', async () => {
+    const user = userEvent.setup();
     renderApp({
       path: card('FG-C3'),
       routes: {
         'GET /cards/:id': json({
           ...detailOf(3),
-          pending_interactions: [
+          needs_you: true,
+          needs_you_detail: [
             {
-              id: 'int-svc-4',
+              kind: 'ticket_escalation',
+              title: 'SVC-4 asks a question',
+              items: [],
+              actions: ['answer'],
+              raised_at: '2026-10-16T10:00:00.000Z',
+              seq: null,
               ticket_id: 'SVC-4',
-              kind: 'question',
-              payload: {},
-              status: 'pending',
-              asked_at: '2026-10-16T10:00:00.000Z',
-              timeout_at: '2026-10-17T10:00:00.000Z',
+              interaction_id: 'int-svc-4',
             },
           ],
         }),
       },
     });
 
-    expect(await screen.findByText('A question is waiting for you')).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: 'SVC-4' })[0]).toHaveAttribute(
+    const dock = await openNeedsYou(user, 'Waiting on you (1)');
+
+    expect(within(dock).getByText('SVC-4 asks a question')).toBeInTheDocument();
+    expect(within(dock).getByRole('link', { name: 'Open the ticket' })).toHaveAttribute(
       'href',
       '/p/sample-service/tickets/SVC-4',
     );

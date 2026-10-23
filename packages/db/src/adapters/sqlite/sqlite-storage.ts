@@ -41,6 +41,7 @@ import { createHarnessStateRepository } from '#/adapters/sqlite/harness-state-re
 import { createHarnessRepository } from '#/adapters/sqlite/harnesses-repository.js';
 import { createProjectRepository } from '#/adapters/sqlite/projects-repository.js';
 import { createEvidenceRepository } from '#/adapters/sqlite/evidence-repository.js';
+import { createDirectorSpendRepository } from '#/adapters/sqlite/director-spend-repository.js';
 import { createResearchSourceRepository } from '#/adapters/sqlite/research-sources-repository.js';
 import { createSqliteReceiptLog } from '#/adapters/sqlite/receipt-log.js';
 import {
@@ -103,6 +104,7 @@ export function createStorageOnDriver(
     pipelineProposals: createPipelineProposalRepository(driver),
     findingMarks: createFindingMarkRepository(driver),
     researchSources: createResearchSourceRepository(driver),
+    directorSpend: createDirectorSpendRepository(driver),
     evidence: createEvidenceRepository(driver),
     memory: createMemoryRepository(driver),
   };

@@ -16,13 +16,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   EscalationActBody,
-  EscalationActReply,
   EscalationAnswer,
   EscalationList,
   EscalationPayload,
   FailureCause,
-  SetupCause,
 } from '#/schemas/escalation.js';
+import { EscalationActReply, TicketActReply } from '#/schemas/escalation-reply.js';
+import { SetupCause } from '#/schemas/escalation-setup.js';
 
 const question = {
   kind: 'question',
@@ -85,6 +85,25 @@ describe('EscalationPayload', () => {
     expect(SetupCause.safeParse({ type: 'wifi' }).success).toBe(false);
   });
 
+  it('accepts a worktree setup failure and keeps its output tail within 4 KB', () => {
+    const cause = {
+      type: 'worktree_setup',
+      step: 'Install packages',
+      command: 'pnpm install --frozen-lockfile',
+      exit_code: null,
+      timed_out: true,
+      tail: 'x'.repeat(4096),
+      settings_version: 0,
+    };
+
+    expect(SetupCause.safeParse(cause).success).toBe(true);
+    expect(SetupCause.safeParse({ ...cause, tail: 'x'.repeat(4097) }).success).toBe(
+      false,
+    );
+
+    expect(EscalationActBody.safeParse({ action: 'skip_setup' }).success).toBe(true);
+  });
+
   it('lists every failure cause the contract names', () => {
     expect(FailureCause.options).toEqual([
       'lane_hold',
@@ -96,6 +115,7 @@ describe('EscalationPayload', () => {
       'refused',
       'question_timeout',
       'no_agent_available',
+      'merge_conflict',
     ]);
   });
 });
@@ -171,6 +191,14 @@ describe('EscalationList and EscalationActReply', () => {
     expect(EscalationList.safeParse({ items: [view] }).success).toBe(true);
     expect(EscalationActReply.safeParse({ escalation: view }).success).toBe(true);
     expect(
+      EscalationActReply.safeParse({ escalation: view, next: 'Queued' }).success,
+    ).toBe(true);
+
+    expect(
+      TicketActReply.safeParse({ ticket_id: 'FX-1', action: 'rework', next: '' }).success,
+    ).toBe(false);
+
+    expect(
       EscalationActReply.safeParse({ escalation: { ...view, stage: 'x' } }).success,
     ).toBe(false);
   });
@@ -202,7 +230,12 @@ describe('decision and sign-off payloads', () => {
   };
 
   it('parses a decision for each cause and a sign-off for each cause', () => {
-    for (const cause of ['findings_hold', 'scope_drift']) {
+    for (const cause of [
+      'findings_hold',
+      'config_hold',
+      'provenance_hold',
+      'scope_drift',
+    ]) {
       expect(EscalationPayload.safeParse({ ...decision, cause }).success).toBe(true);
     }
 

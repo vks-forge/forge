@@ -85,6 +85,29 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - d-0169 — Build S7 (memory DB) autonomously on the brief's defaults, one commit+push, never stop on low memory
 - d-0170 — Data folder fixed to the platform default (%LOCALAPPDATA%\Forge); no onboarding data-folder step, no forge-home.json override (FORGE_HOME dev/test only); amends d-0098
 - d-0171 — Research limits keep owner-set options but with high ceilings (search and reads are free); model spend still bounded by the step budget; amends d-0144
+- d-0172 — Card + ticket pages: one-row header, chat main column, side rail (Plan/Evidence/Tickets/Details), one "needs you" dock above the composer (one item at a time, open questions live there), structured needs-you payload; amends d-0134
+- d-0173 — G1 config guard never dead-ends the owner: config files may be created when no checks are configured; a config-only G1 failure holds for the owner (Merge anyway / Send back / Re-plan / Cancel) instead of auto rework (amends d-0071)
+- d-0174 — Workers may web_fetch any http(s) page by default in Standard and Full (was ask); SSRF guard, banned hosts, caps, untrusted envelope stay
+- d-0192 — Pipeline/agent versions frozen per ticket at start; amends d-0075
+- d-0191 — Inbox keeps its list; pill + modal only on ticket and card pages
+- d-0190 — Director may lower the card lane hint per ticket (reason shown); owner lanes and tier C unchanged; amends d-0177
+- d-0189 — Old projects auto-detected on next start (owner can edit); no configured check = blocks "checks not run"
+- d-0188 — Setup off the Worker slot with own limit 2; default 2 Workers per project + machine-load gate; amends d-0097
+- d-0187 — Re-plan from a ticket covers only it and its dependents; whole-card re-plan is a separate card action; amends d-0134
+- d-0186 — Tier C sign details: secret globs + env files; undo = revert PR via merge door; notice in Inbox + card history; amends d-0181
+- d-0185 — Mechanical failures (lockfile, generated file, merge clash) own repair budget: 2 tries, stop on same failure; amends d-0165
+- d-0184 — At rework cap Director decides before owner (owner only for scope/conflicting/same failure); owner Retry = fresh round; amends d-0165
+- x-0017 — Director spend in its own ledger table `director_spend`; amends d-0159 (approved 2026-10-23)
+- x-0016 — Merge base into ticket branch when main moves; writer resolves clashes, cap 2 (approved 2026-10-23)
+- d-0183 — Per-harness "Bypass permissions" setting, default on: no approval prompts, ask rules allow; hard floor kept by Forge hook (secrets/data folder, outside worktree, push, destructive); supersedes r-0005; amends d-0175, d-0182, d-0117
+- d-0182 — Routine worktree tooling (installs, codegen like prisma, build/lint/test/format) never asks the owner: Worker allowed or Director answers; owner only for risky actions; routine list is per-ecosystem data; amends d-0175
+- d-0181 — Director signs tier C when the floor is clean (all checks pass, no critical/high, plan check passed, no secrets paths); owner notified with diff + one-click revert; amends d-0012, d-0136, d-0137, d-0141, d-0145, d-0146, d-0149, d-0150
+- d-0180 — Forge prepares worktrees: runs editable per-ecosystem setup (frozen installs, scripts + network allowed) outside Worker policy; env folders on PATH for checks; amends d-0095, d-0059
+- d-0179 — Cancel a ticket from its page; Director cancels only when owner asked that turn; cancel deletes branch, closes PR, keeps last commit id; amends d-0109
+- d-0178 — Run secrets of every ended run kept until the ticket closes so G1 can vouch for paused/errored runs; amends d-0100
+- d-0177 — Owner-set lane is honoured (no size raise); Tier C still forces Full; amends d-0141
+- d-0176 — Any language, never Node-only: ecosystem specifics (install/build/test, lockfiles) are editable detector data, not core logic; no-ecosystem repos work too
+- d-0175 — Ask rules (Standard/Full) become real owner approvals in the dock: Allow once / Always for this project / Deny; Worker pauses; no silent denial or false success; Express still denies
 - d-0161 — Workers can run in a sandbox with the full codebase as worktree; Windows/macOS/Linux hosts; provider adapter interface for any third-party server (design x-0015, plan docs/briefs/worker-sandbox-plan.md)
 - d-0159 — `/` = cross-project Overview dashboard (KPIs, charts by day/week/month, projects table, cost); amends d-0104; brief docs/briefs/forge-overview-dashboard.md
 - d-0122 — Web UI state in zustand + persist (localStorage), UI prefs/drafts only; server data stays in TanStack Query; never tokens/secrets
@@ -182,7 +205,7 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 - r-0002 — Always-on memory janitor agent
 - r-0003 — Long-lived LLM session as the orchestrator
 - r-0004 — Embedding a third-party tracker (Plane, Huly, OpenProject, Planka, Focalboard, Vibe Kanban)
-- r-0005 — Bypass-permissions as default harness policy (Paperclip's default)
+- r-0005 — Bypass-permissions as default harness policy (Paperclip's default) — superseded by d-0183
 - r-0006 — Uniform full process for every task size
 - r-0007 — Self-hosted CI runner (no spare machine; work PC would slow down again)
 
@@ -204,4 +227,4 @@ Schema and rules: `docs/design/memory-system.md`. Operating rules for Claude:
 
 ## Outcomes
 - Older outcome pointers (2026-10-12 – 2026-10-16 overnight): `outcomes/ARCHIVE.md`
-- 2026-10-16 — Worker sandbox research: cloudroom-core teardown, local + remote sandbox surveys, Forge seams map; d-0161, x-0015, plan docs/briefs/worker-sandbox-plan.md: `outcomes/2026-10/2026-10-16-sandbox-research.md`
+- 2026-10-23 — Eval fixes done; CHE-C1 findings, Anneal comparison, next-work plan built overnight; d-0181..d-0183; owner answers d-0184..d-0192, x-0016/x-0017 approved: `outcomes/2026-10/2026-10-23-eval-fixes-and-next-work-autonomous.md`

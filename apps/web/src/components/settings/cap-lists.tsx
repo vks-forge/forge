@@ -10,7 +10,8 @@
  *   the screen says so instead of offering a button that would do nothing.
  *
  * Exports: HarnessCaps, StateCaps, FallbackOrder.
- * Depends on: react, lucide-react, @forge/core (TicketStatus, types), components/settings/form-field,
+ * Depends on: react, lucide-react, @forge/core (TicketStatus, types), domain/plain-words,
+ *   domain/harness-labels, components/settings/form-field,
  *   components/ui/button, components/ui/picker, components/ui/tooltip.
  */
 
@@ -22,6 +23,8 @@ import { FormField, TextInput } from '#/components/settings/form-field.js';
 import { Button } from '#/components/ui/button.js';
 import { Picker } from '#/components/ui/picker.js';
 import { Tooltip } from '#/components/ui/tooltip.js';
+import { harnessName } from '#/domain/harness-labels.js';
+import { stateLabel } from '#/domain/plain-words.js';
 import type {
   FieldErrors,
   FieldSetter as Setter,
@@ -89,20 +92,24 @@ export function HarnessCaps(props: {
 }) {
   const caps = props.config.engine.max_concurrent_per_harness.by_id;
   const [name, setName] = useState('');
-  const taken = name.trim() === '' || name.trim() in caps;
+  const available = props.known.filter((id) => !(id in caps));
+  const chosenTool = available.find((id) => id === name) ?? '';
+  const taken = chosenTool === '';
 
   return (
     <div className="grid gap-3">
-      <p className="text-sm font-medium">Caps for a specific harness</p>
+      <p className="text-sm font-medium">Caps for a specific AI coding tool</p>
       {Object.keys(caps).length === 0 ? (
-        <p className="text-sm text-muted">None. Every harness uses the default above.</p>
+        <p className="text-sm text-muted">
+          None. Every AI coding tool uses the default above.
+        </p>
       ) : (
         <ul className="grid gap-2">
           {Object.entries(caps).map(([id, value]) => (
             <CapRow
               key={id}
               id={`cap-harness-${id}`}
-              label={id}
+              label={harnessName(id)}
               value={value}
               error={props.errors[`${BY_ID}.${id}`]}
               onChange={(n) => props.onChange(BY_ID, { ...caps, [id]: n })}
@@ -117,25 +124,21 @@ export function HarnessCaps(props: {
         </ul>
       )}
       <div className="flex flex-wrap items-end gap-2">
-        <FormField id="cap-harness-new" label="Add a harness cap">
-          <TextInput
+        <FormField id="cap-harness-new" label="Add a cap for an AI coding tool">
+          <Picker
             id="cap-harness-new"
-            list="known-harnesses"
-            value={name}
-            placeholder="Harness id"
-            autoComplete="off"
-            onChange={(e) => setName(e.target.value)}
+            className="min-w-44"
+            items={available.map((id) => ({ value: id, label: harnessName(id) }))}
+            value={chosenTool}
+            placeholder="Choose a tool"
+            emptyText="Every known tool already has a cap"
+            onChange={setName}
           />
-          <datalist id="known-harnesses">
-            {props.known.map((id) => (
-              <option key={id} value={id} />
-            ))}
-          </datalist>
         </FormField>
         <Button
           disabled={taken}
           onClick={() => {
-            props.onChange(BY_ID, { ...caps, [name.trim()]: 1 });
+            props.onChange(BY_ID, { ...caps, [chosenTool]: 1 });
             setName('');
           }}
         >
@@ -167,7 +170,7 @@ export function StateCaps(props: {
           <CapRow
             key={state}
             id={`cap-state-${state}`}
-            label={state}
+            label={stateLabel(state as TicketStatus)}
             value={value}
             error={props.errors[`${BY_STATE}.${state}`]}
             onChange={(n) => props.onChange(BY_STATE, { ...caps, [state]: n })}
@@ -195,7 +198,7 @@ export function StateCaps(props: {
             <Picker
               id="cap-state-new"
               className="min-w-44"
-              items={free.map((s) => ({ value: s, label: s }))}
+              items={free.map((s) => ({ value: s, label: stateLabel(s) }))}
               value={chosen}
               onChange={setPick}
             />
@@ -217,8 +220,8 @@ export function FallbackOrder(props: { config: ForgeConfig; onChange: Setter }) 
   return (
     <FormField
       id="fallbacks"
-      label="When a harness is out of quota, try these next"
-      hint="Harness ids separated by commas, in order. Leave empty to wait for the quota to return."
+      label="When an AI coding tool is out of quota, try these next"
+      hint="Tool ids separated by commas, in order. Leave empty to wait for the quota to return."
     >
       <TextInput
         id="fallbacks"

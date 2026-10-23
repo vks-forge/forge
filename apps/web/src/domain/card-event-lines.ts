@@ -19,6 +19,7 @@ import {
   GrillAnswer,
   GrillDone,
   GrillQuestion,
+  NeedsYou,
   PlanApproved,
   PlanChangesRequested,
   PlanReady,
@@ -28,7 +29,7 @@ import { researchLineOf } from '#/domain/research-copy.js';
 import type { CardHistoryEvent } from '#/schemas/cards.js';
 import type { ChatLine, FlowLineContext } from '#/types/cards-ui.types.js';
 
-/** Event kinds this module draws. `needs_you` and `step_started` are drawn elsewhere. */
+/** Event kinds this module draws. `step_started` is drawn elsewhere (the thinking row). */
 export const FLOW_KINDS: ReadonlySet<string> = new Set([
   'grill_question',
   'grill_answer',
@@ -39,6 +40,7 @@ export const FLOW_KINDS: ReadonlySet<string> = new Set([
   'plan_changes_requested',
   'budget_warning',
   'research',
+  'needs_you',
 ]);
 
 const DONE_WORDS: Readonly<Record<string, string>> = {
@@ -188,7 +190,16 @@ export function flowLineOf(
 
       return note(
         `Plan v${parsed.data.version} approved by ${by}${
-          count > 0 ? `: ${count} ticket${count === 1 ? '' : 's'} created` : ''
+          count > 0
+            ? `: ${count} ticket${count === 1 ? '' : 's'} created (${parsed.data.ticket_ids
+                .map((id, i) => {
+                  // The id is what the Board and the Director use; the plan key is only the plan's own label.
+                  const key = parsed.data.plan_keys?.[i];
+
+                  return key === undefined ? id : `${id} (${key})`;
+                })
+                .join(', ')})`
+            : ''
         }.`,
       );
     }
@@ -214,6 +225,17 @@ export function flowLineOf(
         text: research.text,
         block: { kind: 'research', research },
       };
+    }
+
+    case 'needs_you': {
+      // A one-line record; the action lives in the dock, which reads the card detail.
+      const parsed = NeedsYou.safeParse(payload);
+
+      return note(
+        parsed.success
+          ? `Waiting on you: ${parsed.data.title ?? parsed.data.reason}`
+          : 'The card is waiting on you.',
+      );
     }
 
     case 'budget_warning': {

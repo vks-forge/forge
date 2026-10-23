@@ -6,10 +6,11 @@
  *   while the others wait for days, and starting tickets on a harness that is out of quota
  *   would fail the same way each time. This one pure function is the door for that choice
  *   (d-0097): committed work (a due wake: a retry, a resume, a rework) goes before new
- *   tickets; inside each group the projects take turns, starting after the project that got
+ *   tickets, and a ticket whose setup just finished goes before all of them; inside each group the projects take turns, starting after the project that got
  *   the last slot, so with any slot at all every project with work reaches the front within
  *   as many ticks as there are projects; inside a project the highest priority goes first,
- *   then the lowest ticket number. A candidate is skipped, with a stated reason, when its card is
+ *   then the lowest ticket number. A candidate is skipped, with a stated reason, when its worktree is
+ *   being prepared (it already holds its slot), when its card is
  *   being re-planned (the new plan may replace it), when it has unfinished blockers, its harness is parked until a quota reset, or starting it would
  *   exceed the global, per-project, per-harness or In Progress limit. The same call answers
  *   the ticket page's "why is this waiting?", so the explanation can never disagree with
@@ -93,6 +94,10 @@ export function pickNext(
   // Unfinished blockers and a parked harness hold a ticket back whatever else is free, so
   // those tickets sit out of the rotation: they must not use up a project's turn.
   const staticWait = (c: PickCandidate): WaitReason | null => {
+    if (c.prep) {
+      return { kind: 'prep', step: c.prep.step, elapsedMs: c.prep.elapsedMs };
+    }
+
     if (c.awaitsPlan === true) {
       return { kind: 'plan' };
     }
@@ -118,13 +123,19 @@ export function pickNext(
     }
   }
 
+  // A ticket whose setup just finished goes first: it already holds finished work that would otherwise
+  // be thrown away or redone by another ticket taking the slot (fairness d-0097 holds inside each rank).
   const ordered = [
     ...orderCandidates(
-      eligible.filter((c) => c.wake),
+      eligible.filter((c) => c.prepared === true),
       cursor,
     ),
     ...orderCandidates(
-      eligible.filter((c) => !c.wake),
+      eligible.filter((c) => c.prepared !== true && c.wake),
+      cursor,
+    ),
+    ...orderCandidates(
+      eligible.filter((c) => c.prepared !== true && !c.wake),
       cursor,
     ),
   ];

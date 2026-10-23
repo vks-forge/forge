@@ -10,7 +10,7 @@
  *
  * Exports: HarnessStep.
  * Depends on: api/describe-error, api/use-settings-data, components/settings/*,
- *   components/status/state-panel.
+ *   components/status/state-panel, domain/harness-labels.
  */
 
 import type { ReactNode } from 'react';
@@ -21,6 +21,7 @@ import { HarnessSetupForm } from '#/components/settings/harness-setup-form.js';
 import { HarnessTestPanel } from '#/components/settings/harness-test-panel.js';
 import { StatusPill } from '#/components/settings/status-pill.js';
 import { StatePanel } from '#/components/status/state-panel.js';
+import { harnessHealth } from '#/domain/harness-labels.js';
 
 /** The harness Forge runs Workers on today. */
 const HARNESS_ID = 'claude';
@@ -61,10 +62,10 @@ export function HarnessStep() {
     <div className="grid gap-6">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-base font-semibold">{HARNESS_ID}</span>
-        {harness?.status === 'ok' ? (
-          <StatusPill tone="good">Working</StatusPill>
-        ) : harness ? (
-          <StatusPill tone="quiet">Not tested yet</StatusPill>
+        {harness ? (
+          <StatusPill tone={harnessHealth(harness).tone}>
+            {harnessHealth(harness).label}
+          </StatusPill>
         ) : (
           <StatusPill tone="quiet">Not registered yet</StatusPill>
         )}

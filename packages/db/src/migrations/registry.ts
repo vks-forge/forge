@@ -16,7 +16,8 @@
  *   migrations/0019-cards, migrations/0020-project-scope, migrations/0021-card-flow,
  *   migrations/0022-card-planning, migrations/0023-escalations, migrations/0024-run-agent,
  *   migrations/0025-stage-runner, migrations/0026-full-lane, migrations/0027-director-pipelines, migrations/0028-research,
- *   migrations/0029-memory. No IO.
+ *   migrations/0029-memory, migrations/0030-conflict-count, migrations/0031-harness-bypass,
+ *   migrations/0032-director-spend. No IO.
  */
 
 import { MIGRATION_0001 } from '#/migrations/0001-state-tables.js';
@@ -46,6 +47,9 @@ import { MIGRATION_0026 } from '#/migrations/0026-full-lane.js';
 import { MIGRATION_0027 } from '#/migrations/0027-director-pipelines.js';
 import { MIGRATION_0028 } from '#/migrations/0028-research.js';
 import { MIGRATION_0029 } from '#/migrations/0029-memory.js';
+import { MIGRATION_0030 } from '#/migrations/0030-conflict-count.js';
+import { MIGRATION_0031 } from '#/migrations/0031-harness-bypass.js';
+import { MIGRATION_0032 } from '#/migrations/0032-director-spend.js';
 import type { Migration } from '#/types/migrations.types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -76,4 +80,7 @@ export const MIGRATIONS: readonly Migration[] = [
   MIGRATION_0027,
   MIGRATION_0028,
   MIGRATION_0029,
+  MIGRATION_0030,
+  MIGRATION_0031,
+  MIGRATION_0032,
 ];

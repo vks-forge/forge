@@ -5,3 +5,4 @@
 - 2026-10-16 — Overnight: web app W2–W7 + W6 cards on the real API, mock removed, zustand, forge start serves UI; CI quota exhausted: `outcomes/2026-10/2026-10-16-web-app-overnight.md`
 - 2026-10-16 — Card-first Director flow grill (d-0127..d-0158, build on hold); delete/archive projects, Picker, board fit; CI fixed forward: `outcomes/2026-10/2026-10-16-card-flow-grill-and-ui.md`
 - 2026-10-17 — Card-first S1–S4a + Overview dashboard (all committed, CI green): `outcomes/2026-10/2026-10-17-card-first-s1-s4a-and-overview.md`
+- 2026-10-16 — Worker sandbox research: cloudroom-core teardown, local + remote sandbox surveys, Forge seams map; d-0161, x-0015, plan docs/briefs/worker-sandbox-plan.md: `outcomes/2026-10/2026-10-16-sandbox-research.md`

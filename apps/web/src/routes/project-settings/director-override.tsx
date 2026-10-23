@@ -11,7 +11,8 @@
  *
  * Exports: DirectorOverride.
  * Depends on: react-router, components/director/*, components/settings/config-fields,
- *   components/ui/button, domain/director-*, routes/project-settings/override-field.
+ *   components/ui/button, domain/director-*, domain/protected-files-copy,
+ *   routes/project-settings/override-field.
  */
 
 import type { DirectorConfig } from '@forge/core';
@@ -37,6 +38,7 @@ import {
   effectiveDirector,
   overriddenKeys,
 } from '#/domain/director-settings.js';
+import { PROTECTED_CEILING_NOTE } from '#/domain/protected-files-copy.js';
 import { OverrideField } from '#/routes/project-settings/override-field.js';
 import type { SettingsDraft, SettingsSnapshot } from '#/types/project-settings.types.js';
 import type { DirectorRow, OverridableKey } from '#/types/director-ui.types.js';
@@ -57,7 +59,7 @@ const ROWS: readonly DirectorRow[] = [
   {
     key: 'sign_off',
     label: 'Director sign-off',
-    hint: 'How far the Director may sign finished work here. A project can only lower the company setting; tier C always needs you.',
+    hint: `How far the Director may sign finished work here. A project can only lower the company setting. ${PROTECTED_CEILING_NOTE}`,
     words: (d) =>
       SIGN_OFF_ITEMS.find((i) => i.value === d.sign_off.max_tier)?.label ?? '',
   },

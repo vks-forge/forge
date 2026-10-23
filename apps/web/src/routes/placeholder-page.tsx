@@ -3,8 +3,8 @@
  *
  * Why: the shell, routing and navigation ship first so every later batch plugs into a working
  *   frame; the screens themselves arrive one batch at a time (docs/design/web-build-plan.md).
- *   Until then each destination says what it will do and which batch delivers it, so a user
- *   who clicks it learns that it is planned rather than broken, and a builder replaces exactly
+ *   Until then the sidebar hides the destination; an old link still says what it will do, so a
+ *   user who lands on it learns that it is planned rather than broken, and a builder replaces exactly
  *   one file. It is the shared EmptyState (centred, quiet, one title and one help line) like
  *   every other empty screen, with the page's own heading kept for assistive tech and the tab
  *   title; project screens also name the project, which proves the switcher changed the view.
@@ -34,7 +34,7 @@ export function PlaceholderPage(props: { entry: NavEntry; inProject?: boolean })
         {entry.label}
       </h1>
       <EmptyState icon={Hammer} title={`${entry.label} is not built yet`}>
-        {entry.blurb} Coming in {entry.batch} of the web build plan.
+        {entry.blurb} This screen is not built yet.
       </EmptyState>
     </section>
   );

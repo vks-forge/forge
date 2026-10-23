@@ -16,6 +16,7 @@ import { createAgentsHttp } from '#/api/http/agents-http.js';
 import { createPipelinesHttp } from '#/api/http/pipelines-http.js';
 import { createCardsHttp } from '#/api/http/cards-http.js';
 import { createEscalationsHttp } from '#/api/http/escalations-http.js';
+import { createHistoryHttp } from '#/api/http/history-http.js';
 import { createMemoryHttp } from '#/api/http/memory-http.js';
 import { createOnboardingHttp } from '#/api/http/onboarding-http.js';
 import { createProposalsHttp, createScorecardsHttp } from '#/api/http/proposals-http.js';
@@ -28,7 +29,12 @@ import { TicketListPage } from '@forge/core';
 import { watchProjectEvents } from '#/api/sse/watch-project-events.js';
 import { watchRunEvents } from '#/api/sse/watch-run-events.js';
 import { ProjectsResponse } from '#/schemas/projects.js';
-import { AnswerReply, IngestReply, TicketDetail } from '#/schemas/tickets.js';
+import {
+  AnswerReply,
+  IngestReply,
+  TicketDetail,
+  TicketEditReply,
+} from '#/schemas/tickets.js';
 import type { ForgeApi, HttpClientOptions, TicketListParams } from '#/types/api.types.js';
 
 /** `?limit=&cursor=&state=a,b` for the ticket list; absent options add nothing. */
@@ -61,6 +67,7 @@ export function createHttpAdapter(client: HttpClientOptions): ForgeApi {
     scorecards: createScorecardsHttp(client),
     cards: createCardsHttp(client),
     escalations: createEscalationsHttp(client),
+    history: createHistoryHttp(client),
     memory: createMemoryHttp(client),
     onboarding: createOnboardingHttp(client),
     projectSettings: createProjectSettingsHttp(client),
@@ -82,6 +89,12 @@ export function createHttpAdapter(client: HttpClientOptions): ForgeApi {
         ),
       get: (id, options) =>
         requestJson(client, `/tickets/${encodeURIComponent(id)}`, TicketDetail, options),
+      edit: (id, body, options) =>
+        requestJson(client, `/tickets/${encodeURIComponent(id)}`, TicketEditReply, {
+          ...options,
+          method: 'PATCH',
+          body,
+        }),
     },
     interactions: {
       answer: (id, answer, options) =>

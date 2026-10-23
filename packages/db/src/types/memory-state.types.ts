@@ -28,6 +28,7 @@ import type {
   InboxStateRow,
   PipelineProposal,
   PlanVersion,
+  DirectorSpend,
   ResearchSource,
   HarnessVersion,
   Interaction,
@@ -118,6 +119,10 @@ export interface MemoryState {
   researchSources: (ResearchSource & { text: string })[];
   /** Last research source id handed out. */
   researchSourceSeq: number;
+  /** The Director spend ledger in insertion order (append-only). */
+  directorSpend: DirectorSpend[];
+  /** Last Director spend id handed out. */
+  directorSpendSeq: number;
   /** Checked card evidence, in insertion order. */
   evidence: Evidence[];
   /** Last evidence id handed out. */

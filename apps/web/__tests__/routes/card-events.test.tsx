@@ -61,6 +61,23 @@ describe('Card chat: windows', () => {
   });
 });
 
+describe('Card chat: ticket log lines', () => {
+  it('draws a ticket line as one block: link, sentence and time together', async () => {
+    renderApp({ path: card('FG-C4') });
+    const log = await screen.findByRole('log', { name: 'Conversation' });
+    const created = await within(log).findByText(/created: Stream large CSV/);
+
+    expect(created.closest('p')).toHaveTextContent('SVC-3 created: Stream large CSV');
+    expect(
+      within(log).getByText(/is now In progress \(was Planned\)/),
+    ).toBeInTheDocument();
+
+    expect(
+      within(log).queryByRole('button', { name: /updates/ }),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe('Card chat: Director actions and close suggestions', () => {
   it('says whether each action was done or refused, with its summary', async () => {
     renderApp({ path: card('FG-C2') });

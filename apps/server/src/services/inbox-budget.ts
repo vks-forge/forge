@@ -6,16 +6,16 @@
  *   never stop anything: it is one Inbox item per threshold, `budget_warning:<card id>:<threshold>`, that needs
  *   the owner's attention and is dated by when the warning was written. Acknowledge is the Inbox's own archive
  *   mark; changing the cap is `PATCH /cards/:id`. A cap the owner changed makes an older warning moot, so an
- *   item shows only while its cap is the card's current one (a card with no cap of its own uses the Director's
- *   warning level, which a stored event cannot be compared with, so its warnings stay until archived). Cards
+ *   item shows only while its cap is the one in force (core's `effectiveCardBudget`: the card's own cap, else the
+ *   project's warning level, else the Forge default, the same answer the card page gives). Cards
  *   that are done or closed show nothing. Derived from the events on every read, never copied.
  *
  * Exports: budgetWarningItems().
- * Depends on: @forge/core (inboxItemId, InboxCandidate, Card). IO: reads storage.
+ * Depends on: @forge/core (effectiveCardBudget, inboxItemId, InboxCandidate, Card). IO: reads storage.
  */
 
-import { inboxItemId } from '@forge/core';
-import type { Card, InboxCandidate, StorageTx } from '@forge/core';
+import { effectiveCardBudget, inboxItemId } from '@forge/core';
+import type { BudgetDefault, Card, InboxCandidate, StorageTx } from '@forge/core';
 
 const PAGE = 200;
 const SHOWN_PHASES = new Set([
@@ -62,6 +62,7 @@ export async function budgetWarningItems(
   tx: StorageTx,
   projectId: string,
   slug: string,
+  budgetDefault: BudgetDefault,
 ): Promise<InboxCandidate[]> {
   const items: InboxCandidate[] = [];
   let after: { updated_at: string; id: string } | undefined;
@@ -77,7 +78,7 @@ export async function budgetWarningItems(
       }
 
       for (const [threshold, w] of await latestWarnings(tx, card)) {
-        if (card.budget_cap_usd !== undefined && w.cap !== card.budget_cap_usd) {
+        if (w.cap !== effectiveCardBudget(card, budgetDefault).cap_usd) {
           continue;
         }
 

@@ -49,6 +49,25 @@ describe('New card popup', () => {
     expect(createButton()).toBeEnabled();
   });
 
+  it('says the 20-character minimum up front, counts up while typing, and ties the disabled Create to it', async () => {
+    const user = userEvent.setup();
+    renderApp({ path: BOARD });
+    await openPopup(user);
+
+    const hint = screen.getByText(
+      /At least 20 characters, so the Director has something/,
+    );
+
+    expect(hint).toHaveTextContent('0 of 20 so far');
+    expect(createButton()).toHaveAttribute('aria-describedby', hint.id);
+
+    await user.type(screen.getByLabelText('Description'), 'seven c');
+    expect(hint).toHaveTextContent('7 of 20 so far');
+
+    await user.type(screen.getByLabelText('Description'), 'haracters and more');
+    expect(hint).not.toHaveTextContent('so far');
+  });
+
   it('refuses a title over 120 characters', async () => {
     const user = userEvent.setup();
     renderApp({ path: BOARD });

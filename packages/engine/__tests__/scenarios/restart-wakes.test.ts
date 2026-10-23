@@ -51,7 +51,7 @@ describe('restart reconcile of a run with no session', () => {
     expect(wakes).toEqual([expect.objectContaining({ kind: 'retry', ticket_id: id })]);
 
     rig.clock.advance(10_001);
-    const second = await b.tick();
+    const second = await rig.tickOn(b);
     expect(second.firstTick).toBe(false);
     expect(second.crashed).toEqual([]);
     expect(second.dispatched).toEqual([{ ticketId: id, runId: 'run-2', kind: 'retry' }]);

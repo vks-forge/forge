@@ -15,7 +15,7 @@
 
 import type { CardId } from '@forge/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { at, card, startCardRig, ticket } from '#tests/helpers/card-rig.js';
+import { at, card, question, startCardRig, ticket } from '#tests/helpers/card-rig.js';
 import type { CardRig } from '#tests/helpers/card-rig.js';
 
 let ctx: CardRig;
@@ -100,6 +100,9 @@ describe('card column and overlay on the reads', () => {
         at(1),
       );
     });
+
+    // The waiting ticket has an open question with the owner; without one the card would not be Needs you.
+    await ctx.storage.transaction((tx) => tx.interactions.insert(question('FX-1')));
 
     const list = (await get('/projects/fixture/cards')).body as {
       items: Record<string, unknown>[];

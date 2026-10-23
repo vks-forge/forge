@@ -76,10 +76,20 @@ export async function sendBackItem(
 }
 
 /** Actions only the owner may take, and the author names that are not the owner (the Director, the engine, automatic actions). */
-const OWNER_ONLY: readonly string[] = ['merge_anyway', 'continue', 'approve', 'sign_off'];
+const OWNER_ONLY: readonly string[] = [
+  'merge_anyway',
+  'continue',
+  'approve',
+  'sign_off',
+  // Consent to a tool call is the owner's alone (d-0175).
+  'allow_once',
+  'allow_always',
+  'deny',
+];
+
 const NOT_OWNER: readonly string[] = ['director', 'engine', 'auto'];
 
-/** True when `author` may not take `action`: overruling a hold and signing finished work are the owner's alone. */
+/** True when `author` may not take `action`: overruling a hold, signing finished work and consenting to a tool call are the owner's alone. */
 export const refusesAuthor = (action: string, author: string): boolean =>
   OWNER_ONLY.includes(action) && NOT_OWNER.includes(author.trim().toLowerCase());
 

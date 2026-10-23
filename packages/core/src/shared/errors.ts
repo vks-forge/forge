@@ -10,9 +10,9 @@
  *   and at the storage boundary, so they are not mistaken for harness faults and retried (execution-plane.md §8).
  *
  * Exports: ForgeError, AuthError, RateLimitError, QuotaError, BudgetError,
- *   StallError, RefusalError, CrashError, PolicyDeniedError, UnknownForgeError,
+ *   StallError, RefusalError, CrashError, PolicyDeniedError, MergeConflictError, UnknownForgeError,
  *   InvalidInputError, HeadMovedError, ConfigVersionConflictError, ProjectNotFoundError,
- *   HarnessChangedError.
+ *   HarnessChangedError, HarnessToolsPendingError.
  * Depends on: schemas/errors, types/errors. No IO.
  */
 
@@ -90,6 +90,16 @@ export class PolicyDeniedError extends ForgeError {
     super('policy_denied', message, options);
   }
 }
+/**
+ * The ticket's branch clashes with the base (a host refused a merge as "not mergeable").
+ * Not a policy decision: work can fix it, so the engine syncs the base into the branch
+ * and routes the clash to the ticket's writer instead of parking the ticket.
+ */
+export class MergeConflictError extends ForgeError {
+  constructor(message: string, options?: ForgeErrorOptions) {
+    super('merge_conflict', message, options);
+  }
+}
 /** Unclassified failure; policy treats it as fail-closed. */
 export class UnknownForgeError extends ForgeError {
   constructor(message: string, options?: ForgeErrorOptions) {
@@ -136,6 +146,28 @@ export class HarnessChangedError extends ForgeError {
 
     this.loaded = loaded;
     this.installed = installed;
+  }
+}
+
+/**
+ * The installed harness build is the loaded one, but some of its built-in tools have no owner
+ * decision yet (or its compatibility check has not finished). A Worker started now would be
+ * denied on every call and the run wasted. Family `policy_denied`: the start is refused before
+ * any run exists and the ticket parks as a setup problem for the owner, not the Worker.
+ */
+export class HarnessToolsPendingError extends ForgeError {
+  readonly installed: string;
+  readonly tools: readonly string[];
+
+  constructor(installed: string, tools: readonly string[], options?: ForgeErrorOptions) {
+    super(
+      'policy_denied',
+      `harness_tools_pending: build ${installed} has tools waiting for approval${tools.length === 0 ? ' (its compatibility check is still running)' : ` (${tools.join(', ')})`}; approve them in Settings, then the ticket resumes`,
+      options,
+    );
+
+    this.installed = installed;
+    this.tools = tools;
   }
 }
 

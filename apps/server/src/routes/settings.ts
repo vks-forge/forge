@@ -9,10 +9,14 @@
  *   Scope and project come from the path, so a body cannot aim a save somewhere else.
  *   The Director's own sign-off ceiling is the one setting a project may only lower: a project
  *   value above the company's is a 400, as is `C` (tier C always needs a person).
+ *   A project's `tool_grants` must also parse as a tool grant: an owner-approved "always" rule
+ *   that is not an exact allow (a wildcard, a banned command, a protected path) is a 400, so a rule
+ *   the policy would refuse at run time is never stored (d-0175).
  *   The engine reads the new version on its next tick; nothing needs a restart.
  *
  * Exports: settingsRoutes().
- * Depends on: @forge/core (ConfigAppend, ConfigVersionConflictError, signOffAboveCeiling), schemas/api,
+ * Depends on: @forge/core (ConfigAppend, ConfigVersionConflictError, signOffAboveCeiling), @forge/tools (CatalogueDoc,
+ *   InvalidGrantError, parseGrant), schemas/api,
  *   services/http/{body,http-errors,respond}, types/routes. IO: config source and storage reads.
  */
 
@@ -21,7 +25,7 @@ import {
   ConfigVersionConflictError,
   signOffAboveCeiling,
 } from '@forge/core';
-import { CatalogueDoc } from '@forge/tools';
+import { CatalogueDoc, InvalidGrantError, parseGrant } from '@forge/tools';
 import { CataloguePutBody, SettingsPutBody } from '#/schemas/api.js';
 import { readJson } from '#/services/http/body.js';
 import { HttpError } from '#/services/http/http-errors.js';
@@ -41,6 +45,23 @@ async function requireProject(deps: RouteDeps, ctx: RouteContext): Promise<strin
   }
 
   return slug;
+}
+
+/** A project's tool grant must be one the policy would load; a refusal says which rule and why. */
+function refuseBadToolGrants(grants: unknown): void {
+  if (grants === undefined) {
+    return;
+  }
+
+  try {
+    parseGrant(grants);
+  } catch (e) {
+    if (e instanceof InvalidGrantError) {
+      throw new HttpError(400, 'invalid_request', e.message);
+    }
+
+    throw e;
+  }
 }
 
 /** Validates the body into an append request for the scope and saves it; maps the two expected failures. */
@@ -65,6 +86,8 @@ async function save(
     if (reason !== undefined) {
       throw new HttpError(400, 'invalid_request', reason);
     }
+
+    refuseBadToolGrants((request.data.doc as { tool_grants?: unknown }).tool_grants);
   }
 
   try {

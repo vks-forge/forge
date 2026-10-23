@@ -15,7 +15,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { isSetupFixed } from '#/domain/setup-fixed.js';
-import type { SetupCause } from '#/schemas/escalation.js';
+import type { SetupCause } from '#/schemas/escalation-setup.js';
 
 const ASKED = '2026-10-17T10:00:00.000Z';
 const BEFORE = '2026-10-17T09:00:00.000Z';
@@ -96,8 +96,32 @@ describe('isSetupFixed', () => {
     };
 
     expect(isSetupFixed(cause, { build: { compat: 'pass' } }, ASKED)).toBe(true);
+    expect(
+      isSetupFixed(cause, { build: { compat: 'pass', pending_tools: 0 } }, ASKED),
+    ).toBe(true);
+
+    expect(
+      isSetupFixed(cause, { build: { compat: 'pass', pending_tools: 2 } }, ASKED),
+    ).toBe(false);
+
     expect(isSetupFixed(cause, { build: { compat: 'fail' } }, ASKED)).toBe(false);
     expect(isSetupFixed(cause, { build: { compat: 'pending' } }, ASKED)).toBe(false);
+    expect(isSetupFixed(cause, {}, ASKED)).toBe(false);
+  });
+
+  it('is fixed for a failed worktree setup only once the settings moved past the version it saw', () => {
+    const cause: SetupCause = {
+      type: 'worktree_setup',
+      step: 'Install packages',
+      command: 'npm ci',
+      exit_code: 1,
+      timed_out: false,
+      tail: 'boom',
+      settings_version: 4,
+    };
+
+    expect(isSetupFixed(cause, { setup_version: 5 }, ASKED)).toBe(true);
+    expect(isSetupFixed(cause, { setup_version: 4 }, ASKED)).toBe(false);
     expect(isSetupFixed(cause, {}, ASKED)).toBe(false);
   });
 });

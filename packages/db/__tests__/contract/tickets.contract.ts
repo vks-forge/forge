@@ -32,6 +32,19 @@ export function describeTicketsContract(getDb: () => StorageAdapter): void {
       expect(missing).toBeNull();
     });
 
+    it('stores conflict_count: starts at 0, is written by a CAS patch and read back', async () => {
+      const t = makeTicket(1);
+      await db.transaction((tx) => tx.tickets.insert(t));
+      const start = await db.transaction((tx) => tx.tickets.get(t.id));
+      await db.transaction((tx) =>
+        tx.tickets.updateTicketCas(t.id, 0, { status: 'planned', conflict_count: 2 }),
+      );
+
+      const after = await db.transaction((tx) => tx.tickets.get(t.id));
+      expect(start?.conflict_count).toBe(0);
+      expect(after?.conflict_count).toBe(2);
+    });
+
     it('lists tickets by status in insertion order', async () => {
       await db.transaction(async (tx) => {
         await tx.tickets.insert(makeTicket(1));

@@ -6,7 +6,7 @@
  *   attached so the owner can act in place; and it must not show a wait the Director is still
  *   looking at, or call that ticket "waiting on you" before the owner has anything to do.
  *
- * Pins: `question:<id>` items for all three kinds with the `escalation` view and its actions, the
+ * Pins: a tool approval listed with the exact call as its title; `question:<id>` items for all three kinds with the `escalation` view and its actions, the
  *   item dated by when it reached the owner, and a Director-stage wait staying out of every view;
  *   finished work (review, needs sign-off) listed once through its sign-off item and as a plain
  *   review row only when it has none; a held ticket listed through its decision.
@@ -114,6 +114,48 @@ describe('escalations in the Inbox', () => {
     expect(items.find((i) => i.id === 'question:int-1')?.escalation?.kind).toBe(
       'question',
     );
+  });
+
+  it('lists a tool approval as a question item titled with the exact call and its three actions', async () => {
+    await t.storage.transaction(async (tx) => {
+      await tx.tickets.insert(makeTicket('FX', 7, { status: 'waiting_human' }));
+      await tx.interactions.insert({
+        id: 'int-p',
+        ticket_id: 'FX-7',
+        run_id: 'run-7',
+        kind: 'permission',
+        payload: {
+          kind: 'permission',
+          tool: 'shell',
+          action: 'shell',
+          what: 'pkg add left-pad',
+          approval_key: 'key-p',
+          reason_code: 'rule_ask',
+          lane: 'standard',
+          always: {
+            offered: true,
+            rule: { action: 'shell', resource: 'pkg add left-pad' },
+          },
+          summary: 'Waiting for your approval: pkg add left-pad',
+        },
+        status: 'pending',
+        asked_at: '2026-10-16T07:00:00.000Z',
+        escalated_at: '2026-10-16T07:00:00.000Z',
+        timeout_at: '9999-12-31T23:59:59.999Z',
+      });
+    });
+
+    const items = ((await get('/projects/fixture/inbox')).body as Page).items;
+
+    expect(items.find((i) => i.id === 'question:int-p')).toMatchObject({
+      title: 'Allow `pkg add left-pad`?',
+      updated_at: '2026-10-16T07:00:00.000Z',
+      escalation: {
+        kind: 'permission',
+        stage: 'owner',
+        actions: ['allow_once', 'allow_always', 'deny'],
+      },
+    });
   });
 
   it('keeps a wait out of the Inbox while the Director is still looking, and does not call its ticket waiting', async () => {

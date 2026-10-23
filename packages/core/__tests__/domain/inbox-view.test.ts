@@ -121,11 +121,16 @@ describe('views and counts', () => {
     ]);
 
     expect(items.filter((i) => inInboxView(i, 'needs_action'))).toHaveLength(1);
+
+    expect(items.filter((i) => inInboxView(i, 'notices')).map((i) => i.id)).toEqual([
+      'gate_failed:1',
+    ]);
   });
 
   it('counts every view the same way the views filter', () => {
     expect(inboxCounts(items)).toEqual({
       needs_action: 1,
+      notices: 1,
       unread: 1,
       all: 2,
       archived: 1,

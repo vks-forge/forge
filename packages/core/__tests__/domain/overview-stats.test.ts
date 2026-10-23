@@ -71,6 +71,7 @@ const project = (
   status: 'ready',
   tickets: [],
   runs: [],
+  directorSpend: [],
   gates: [],
   activeRuns: 0,
   openCards: 0,
@@ -109,15 +110,29 @@ describe('computeOverviewStats', () => {
     expect(stats.buckets).toHaveLength(7);
     expect(stats.buckets.at(-1)).toBe('2026-10-16');
     expect(stats.spend_by_project).toEqual([
-      { project: 'a', values: [0, 0, 0, 0, 0, 1, 2] },
-      { project: 'b', values: [0, 0, 0, 0, 0, 0, 4] },
+      {
+        project: 'a',
+        values: [0, 0, 0, 0, 0, 1, 2],
+        director_values: [0, 0, 0, 0, 0, 0, 0],
+      },
+      {
+        project: 'b',
+        values: [0, 0, 0, 0, 0, 0, 4],
+        director_values: [0, 0, 0, 0, 0, 0, 0],
+      },
     ]);
 
     expect(stats.kpis.spend_usd).toBe(7);
-    expect(stats.cost_coverage).toEqual({ runs_total: 4, runs_with_cost: 3 });
+    expect(stats.cost_coverage).toEqual({
+      runs_total: 4,
+      runs_with_cost: 3,
+      director_steps: 0,
+      director_steps_recorded: 0,
+    });
+
     expect(stats.spend_by_project_total).toEqual([
-      { key: 'b', usd: 4 },
-      { key: 'a', usd: 3 },
+      { key: 'b', usd: 4, worker_usd: 4, director_usd: 0 },
+      { key: 'a', usd: 3, worker_usd: 3, director_usd: 0 },
     ]);
   });
 
@@ -274,6 +289,11 @@ describe('computeOverviewStats', () => {
     expect(stats.projects).toEqual([]);
     expect(stats.kpis.spend_usd).toBe(0);
     expect(stats.kpis.g1_pass_rate.rate).toBeNull();
-    expect(stats.cost_coverage).toEqual({ runs_total: 0, runs_with_cost: 0 });
+    expect(stats.cost_coverage).toEqual({
+      runs_total: 0,
+      runs_with_cost: 0,
+      director_steps: 0,
+      director_steps_recorded: 0,
+    });
   });
 });

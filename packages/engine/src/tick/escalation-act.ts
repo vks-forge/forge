@@ -12,7 +12,7 @@
  *
  * Exports: actOnEscalation(), actOnTicket().
  * Depends on: @forge/core (escalation rules and schemas), tick/escalation-{act-finished,effects,facts},
- *   tick/{interactions,ticket-cancel,card-notify,tick-requests}, types/escalation. Writes storage.
+ *   tick/{interactions,ticket-cancel,card-notify,tick-requests,setup-skip,tool-approval-act}, types/escalation. Writes storage.
  */
 
 import {
@@ -21,18 +21,12 @@ import {
   ticketWaitActions,
   toEscalation,
 } from '@forge/core';
-import type {
-  EscalationActBody,
-  Interaction,
-  StorageTx,
-  Ticket,
-  TicketId,
-} from '@forge/core';
+import type { EscalationActBody, Interaction, Ticket, TicketId } from '@forge/core';
 import { resolveAnswer, stillBroken } from '#/domain/escalation-copy.js';
 import { iso } from '#/shared/time.js';
 import { notifyCard } from '#/tick/card-notify.js';
 import { cancelFlow } from '#/tick/escalation-cancel.js';
-import { replanTx, retryTx, reworkTx } from '#/tick/escalation-effects.js';
+import { replannable, replanTx, retryTx, reworkTx } from '#/tick/escalation-effects.js';
 import {
   actOnFinished,
   ended,
@@ -43,17 +37,12 @@ import { setupFactsFor } from '#/tick/escalation-facts.js';
 import { answerQuestionTx } from '#/tick/interactions.js';
 import { approveAndMerge } from '#/tick/review-merge.js';
 import { runAsExpress } from '#/tick/run-as-express.js';
+import { skipSetup } from '#/tick/setup-skip.js';
+import { actOnToolApproval } from '#/tick/tool-approval-act.js';
 import { requestTick } from '#/tick/tick-requests.js';
 import type { EngineState } from '#/types/engine-state.types.js';
 import type { EngineDeps } from '#/types/engine.types.js';
 import type { ActOutcome } from '#/types/escalation.types.js';
-
-/** A card the Director can re-plan through: the ticket has one, and it is not a Discussion. */
-async function replannable(tx: StorageTx, ticket: Ticket): Promise<boolean> {
-  const card = ticket.card_id === undefined ? null : await tx.cards.get(ticket.card_id);
-
-  return card !== null && card.type !== 'discussion' && card.closed_reason === undefined;
-}
 
 const NOT_FOUND: ActOutcome = { status: 'not_found' };
 
@@ -112,11 +101,11 @@ async function apply(
       const cause = view.payload.cause;
       const fixed = await deps.storage.transaction(async (tx) => {
         const slug = (await tx.projects.get(ticket.project))?.slug ?? ticket.project;
-        const settings = (await deps.config.project(slug)).config.project;
+        const view = await deps.config.project(slug);
 
         return isSetupFixed(
           cause,
-          await setupFactsFor(deps, tx, cause, settings),
+          await setupFactsFor(deps, tx, cause, view.config.project, view.version.project),
           row.escalated_at ?? row.asked_at,
         );
       });
@@ -133,7 +122,10 @@ async function apply(
     }
 
     case 'cancel':
-      return cancelFlow(deps, state, ticket.id, row, body.cascade === true, author);
+      return cancelFlow(deps, state, ticket.id, row, body.cascade === true, author, {
+        by: 'owner',
+        ...(body.reason === undefined ? {} : { reason: body.reason }),
+      });
     case 'run_as_express': {
       const out = await runAsExpress(deps, state, ticket.id, author);
 
@@ -150,11 +142,16 @@ async function apply(
       return ended(end, await reload());
     }
 
-    case 'merge_anyway':
-    case 'continue':
-    case 'rework':
-    case 'approve':
-    case 'sign_off':
+    case 'skip_setup':
+      return skipSetup(deps, row, ticket, author);
+    // The owner's answers to a tool approval (d-0175).
+    case 'allow_once':
+    case 'allow_always':
+    case 'deny':
+      return actOnToolApproval(deps, row, ticket, body, author);
+
+    // Finished-work actions; `actOnFinished` refuses anything else (tool approvals have their own handler, d-0175).
+    default:
       return actOnFinished(deps, state, row, ticket, body, author);
   }
 }
@@ -260,7 +257,10 @@ export async function actOnTicket(
   }
 
   if (body.action === 'cancel') {
-    return cancelFlow(deps, state, ticketId, null, body.cascade === true, author);
+    return cancelFlow(deps, state, ticketId, null, body.cascade === true, author, {
+      by: 'owner',
+      ...(body.reason === undefined ? {} : { reason: body.reason }),
+    });
   }
 
   if (body.action !== 'rework') {

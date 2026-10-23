@@ -32,7 +32,12 @@ import type {
 import { addDirectorSpend } from '#/tick/card-budget.js';
 import { cardInput, playbookOf, stepOf } from '#/tick/planning-input.js';
 import { logPlanEvent, stamp } from '#/tick/planning-state.js';
-import { callStep, finishStep, startStep } from '#/tick/planning-step-io.js';
+import {
+  callStep,
+  finishStep,
+  recordCarriedSpend,
+  startStep,
+} from '#/tick/planning-step-io.js';
 import { claimsToCheck, knownUrls } from '#/tick/research-known.js';
 import {
   fitResultsToPrompt,
@@ -172,6 +177,8 @@ export async function runResearch(
 
     cost += call.cost;
     if (!call.ok) {
+      await recordCarriedSpend(pc, step, cost - call.cost);
+
       return { ok: false, outcome: call.outcome };
     }
 
@@ -279,5 +286,6 @@ export async function recordDetourTx(
     end.cost,
     at,
     pc.director.budget_warning_usd,
+    { kind: 'research_detour' },
   );
 }

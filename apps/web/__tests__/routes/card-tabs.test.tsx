@@ -31,7 +31,14 @@ describe('Card page tabs in the URL', () => {
 
     const strip = await screen.findByRole('tablist', { name: 'Card' });
 
-    expect(names(strip)).toEqual(['Conversation', 'Plan', 'Tickets', 'Details']);
+    expect(names(strip)).toEqual([
+      'Conversation',
+      'Plan',
+      'Tickets',
+      'History',
+      'Details',
+    ]);
+
     expect(screen.getByRole('tab', { name: 'Conversation' })).toHaveAttribute(
       'aria-selected',
       'true',

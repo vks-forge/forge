@@ -80,7 +80,8 @@ export async function startFlowRig(
   const rig = await startHttp(
     buildRoutes({
       ...stubHarnessDeps(),
-      engine,
+      // The bare engine above has no settings or drivers to plan a dispatch with, so the routes see no wait lines.
+      engine: { ...engine, explainWaits: async () => new Map() },
       storage,
       config: createMemoryConfigSource(),
       ...inertRouteExtras(),

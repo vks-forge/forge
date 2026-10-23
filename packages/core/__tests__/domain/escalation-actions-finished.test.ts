@@ -42,6 +42,18 @@ describe('decision and sign-off tables', () => {
     ).toEqual(['continue', 'replan', 'cancel']);
   });
 
+  it('offers a config hold the same four choices as held findings (d-0173)', () => {
+    expect(
+      escalationActions(decisionPayload('config_hold'), { replannable: true }),
+    ).toEqual(['merge_anyway', 'rework', 'replan', 'cancel']);
+  });
+
+  it('offers a provenance hold merge anyway, rework, replan and cancel', () => {
+    expect(
+      escalationActions(decisionPayload('provenance_hold'), { replannable: true }),
+    ).toEqual(['merge_anyway', 'rework', 'replan', 'cancel']);
+  });
+
   it('drops replan when the ticket has no card to go back to', () => {
     expect(
       escalationActions(decisionPayload('findings_hold'), { replannable: false }),

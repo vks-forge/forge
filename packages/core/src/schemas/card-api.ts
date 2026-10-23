@@ -9,9 +9,9 @@
  *   type or closes the card; the column is never patchable (d-0107).
  *
  * Exports: CARD_LIST_DEFAULT_LIMIT, CARD_LIST_MAX_LIMIT, CARD_EVENTS_DEFAULT_LIMIT,
- *   CARD_EVENTS_MAX_LIMIT, CardSummary, CardListQuery, CardListPage, CardDetail,
+ *   CARD_EVENTS_MAX_LIMIT, CardBudgetView, CardSummary, CardListQuery, CardListPage, CardDetail,
  *   CardEventsQuery, CardEventsPage, CardPatchBody.
- * Depends on: schemas/card, schemas/card-chat, schemas/card-event, schemas/cost-rollup, schemas/ids, schemas/interaction, schemas/ticket-summary, zod. No IO.
+ * Depends on: schemas/card, schemas/card-chat, schemas/card-event, schemas/cost-rollup, schemas/ids, schemas/interaction, schemas/needs-you, schemas/ticket-summary, zod. No IO.
  */
 
 import { z } from 'zod';
@@ -21,7 +21,20 @@ import { CardEvent } from '#/schemas/card-event.js';
 import { CardCost } from '#/schemas/cost-rollup.js';
 import { CardId } from '#/schemas/ids.js';
 import { Interaction } from '#/schemas/interaction.js';
+import { NeedsYouItem } from '#/schemas/needs-you.js';
 import { TicketSummary } from '#/schemas/ticket-summary.js';
+
+/**
+ * The budget the card is held to, as the Details row and the warnings see it: `cap_usd` is the
+ * cap in force (null when none applies), `source` says whose it is (the card's own, the project's
+ * or the Forge default), and `spent_usd` is what the warning compares it with (runs plus Director).
+ */
+export const CardBudgetView = z.object({
+  cap_usd: z.number().positive().nullable(),
+  source: z.enum(['card', 'project', 'forge']),
+  spent_usd: z.number().nonnegative(),
+});
+export type CardBudgetView = z.infer<typeof CardBudgetView>;
 
 export const CARD_LIST_DEFAULT_LIMIT = 50;
 export const CARD_LIST_MAX_LIMIT = 200;
@@ -37,8 +50,15 @@ export const CardSummary = Card.extend({
   column: CardColumn,
   depends_on: z.array(CardId),
   blocks: z.array(CardId),
+  /** Tickets the card still stands behind: every ticket that was not cancelled. */
   ticket_count: z.number().int().nonnegative(),
   tickets_done: z.number().int().nonnegative(),
+  /** Tickets cancelled (by the owner or the Director; the server always sets it); kept out of `ticket_count` so a finished card reads "2 of 2 done, 1 cancelled". */
+  tickets_cancelled: z.number().int().nonnegative().optional(),
+  /** Tickets being worked now (in progress or verifying); the server always sets it, for the tile's roll-up line. */
+  tickets_running: z.number().int().nonnegative().optional(),
+  /** Tickets that wait on the owner (a review, a sign-off, a blocked ticket, or an open owner question); the server always sets it. */
+  tickets_waiting_you: z.number().int().nonnegative().optional(),
   /** Points the Director still has open while it grills the card; null at any other time (d-0130). */
   open_points: z.number().int().nonnegative().nullable().default(null),
   /** The newest plan version of the card; null until a plan is written (d-0132). */
@@ -68,13 +88,20 @@ export const CardListPage = z.object({
 });
 export type CardListPage = z.infer<typeof CardListPage>;
 
-/** `GET /cards/:id`: the card, its rolled-up column, linked tickets, the questions waiting on the user and whether the Director is answering a chat message. */
+/** `GET /cards/:id`: the card, its rolled-up column, linked tickets, the questions waiting on the user, the needs-you items and whether the Director is answering a chat message. */
 export const CardDetail = CardSummary.extend({
   tickets: z.array(TicketSummary),
   pending_interactions: z.array(Interaction),
+  /**
+   * What waits on the owner now: the card's own raise and the escalations at the owner, so the
+   * dock does not depend on which history window the page loaded (d-0172). Empty for a closed card.
+   */
+  needs_you_detail: z.array(NeedsYouItem).default([]),
   director: CardDirectorStatus,
   /** The cost split behind `cost_usd`. The server always sets it. */
   cost: CardCost.optional(),
+  /** The budget in force for this card and what it has spent against it. The server always sets it. */
+  budget: CardBudgetView.optional(),
 });
 export type CardDetail = z.infer<typeof CardDetail>;
 

@@ -8,7 +8,8 @@
  *   run's agent: its own model choice (the lane matrix, the harness default or a named model)
  *   and its own budget keys, each falling back to the company run budget when the agent does
  *   not set one. Building the request once means a settings change reaches both paths, and a
- *   resume can never run under looser limits than the first start.
+ *   resume can never run under looser limits than the first start. The tool folders the worktree's
+ *   setup created go first on the Worker's PATH, so it runs the project's own `pytest`, not another.
  *
  * Exports: buildRunRequest().
  * Depends on: @forge/core (RunRequest), tick/run-agent, types/engine-state, types/tick. No IO.
@@ -58,6 +59,10 @@ export function buildRunRequest(ctx: EngineCtx, input: RunRequestInput): RunRequ
     ...(input.resume ? { resume: input.resume } : {}),
     ...(input.generation === undefined ? {} : { generation: input.generation }),
     env: { FORGE_RUN_TOKEN: input.token, FORGE_TICKET: ticket.id },
+    ...(input.pathPrepend === undefined || input.pathPrepend.length === 0
+      ? {}
+      : { pathPrepend: [...input.pathPrepend] }),
+    permissions: input.permissions,
     isolation: 'host',
   };
 }

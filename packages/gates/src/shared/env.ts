@@ -9,7 +9,7 @@
  *   and `NoDefaultCurrentDirectoryInExePath=1` stops cmd.exe resolving commands from the
  *   Worker's tree. This narrows the leak; it does not isolate the process (see README Limits).
  *
- * Exports: scrubEnv(), ALLOWED_ENV, FORCED_ENV.
+ * Exports: scrubEnv(), prependPath(), ALLOWED_ENV, FORCED_ENV.
  * Depends on: none. No IO.
  */
 
@@ -61,4 +61,28 @@ export function scrubEnv(
   }
 
   return { ...out, ...FORCED_ENV };
+}
+
+/**
+ * A copy of `env` with `dirs` first on PATH, so a project's own tool folder (`.venv/bin`) wins.
+ * The existing PATH variable keeps its own spelling (`Path` on Windows); with none, `PATH` is set.
+ */
+export function prependPath(
+  env: Readonly<Record<string, string>>,
+  dirs: readonly string[],
+  delimiter: string,
+): Record<string, string> {
+  if (dirs.length === 0) {
+    return { ...env };
+  }
+
+  const key = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') ?? 'PATH';
+  const rest = env[key];
+
+  return {
+    ...env,
+    [key]: [...dirs, ...(rest === undefined || rest === '' ? [] : [rest])].join(
+      delimiter,
+    ),
+  };
 }

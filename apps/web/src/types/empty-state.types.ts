@@ -22,6 +22,8 @@ export interface EmptyStateProps {
   /** Primary and secondary actions, rendered in a row under the help line. */
   readonly actions?: ReactNode;
   readonly variant?: EmptyStateVariant;
+  /** `1` when the block is the page's only heading (a 404); default follows the variant. */
+  readonly headingLevel?: 1 | 2;
   readonly className?: string;
 }
 

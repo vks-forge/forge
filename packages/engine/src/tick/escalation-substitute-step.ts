@@ -47,6 +47,7 @@ import { agentViews, resolveStageAgent } from '#/tick/run-agent.js';
 import { loadScorecardInput } from '#/tick/scorecards.js';
 import { readStageState } from '#/tick/stage-state.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
+import type { DirectorApply } from '#/types/director-jobs.types.js';
 import type { SubstituteLook } from '#/types/substitute-step.types.js';
 import type { StageState } from '#/types/stage-runner.types.js';
 
@@ -87,25 +88,29 @@ async function read(ctx: EngineCtx, ticket: Ticket): Promise<SubstituteLook | nu
   });
 }
 
-/** Looks at one director-stage `no_agent_available` failure: a substitute from the engine's list, or the owner. */
+/** Looks at one director-stage `no_agent_available` failure: a substitute from the engine's list, or the owner. Returns the write for the tick to apply. */
 export async function lookAtNoAgent(
   ctx: EngineCtx,
   row: Interaction,
   ticket: Ticket,
   failure: EscalationFailure,
-): Promise<void> {
-  const toOwner = async (diagnosis?: string, cost = 0, warnAt = 0): Promise<void> => {
-    await ctx.deps.storage.transaction(async (tx) => {
-      if (cost > 0) {
-        await addDirectorSpend(tx, row.card_id, cost, ctx.nowIso, warnAt);
-      }
+): Promise<DirectorApply> {
+  const toOwner =
+    (diagnosis?: string, cost = 0, warnAt = 0): DirectorApply =>
+    (tick) =>
+      tick.deps.storage.transaction(async (tx) => {
+        if (cost > 0) {
+          await addDirectorSpend(tx, row.card_id, cost, tick.nowIso, warnAt, {
+            kind: 'escalation_substitute',
+            ticketId: row.ticket_id,
+          });
+        }
 
-      await handToOwner(tx, ctx.nowIso, row, {
-        ...failure,
-        ...(diagnosis === undefined ? {} : { diagnosis }),
+        await handToOwner(tx, tick.nowIso, row, {
+          ...failure,
+          ...(diagnosis === undefined ? {} : { diagnosis }),
+        });
       });
-    });
-  };
 
   const look = await read(ctx, ticket);
   if (!look) {
@@ -225,60 +230,62 @@ export async function lookAtNoAgent(
     return toOwner(pick.reason, cost, director.budget_warning_usd);
   }
 
-  await ctx.deps.storage.transaction(async (tx) => {
-    await addDirectorSpend(
-      tx,
-      row.card_id,
-      cost,
-      ctx.nowIso,
-      director.budget_warning_usd,
-    );
+  return (tick) =>
+    tick.deps.storage.transaction(async (tx) => {
+      await addDirectorSpend(
+        tx,
+        row.card_id,
+        cost,
+        tick.nowIso,
+        director.budget_warning_usd,
+        { kind: 'escalation_substitute', ticketId: row.ticket_id },
+      );
 
-    const fresh = await tx.tickets.get(ticket.id);
-    const pending = await tx.interactions.get(row.id);
-    if (
-      !fresh ||
-      pending?.status !== 'pending' ||
-      (fresh.status !== 'waiting_human' && fresh.status !== 'blocked')
-    ) {
-      return;
-    }
+      const fresh = await tx.tickets.get(ticket.id);
+      const pending = await tx.interactions.get(row.id);
+      if (
+        !fresh ||
+        pending?.status !== 'pending' ||
+        (fresh.status !== 'waiting_human' && fresh.status !== 'blocked')
+      ) {
+        return;
+      }
 
-    const adjusted = await adjustTicketPipelineTx(
-      tx,
-      ctx,
-      fresh,
-      [
-        {
-          op: 'swap',
-          stage_id: stageRow.stage_id,
-          ...(stageRow.member_id === '' ? {} : { member_id: stageRow.member_id }),
-          agent: chosen.id,
-          reason: pick.reason,
-        },
-      ],
-      'fallback',
-    );
+      const adjusted = await adjustTicketPipelineTx(
+        tx,
+        tick,
+        fresh,
+        [
+          {
+            op: 'swap',
+            stage_id: stageRow.stage_id,
+            ...(stageRow.member_id === '' ? {} : { member_id: stageRow.member_id }),
+            agent: chosen.id,
+            reason: pick.reason,
+          },
+        ],
+        'fallback',
+      );
 
-    if (adjusted.adjustments[adjusted.adjustments.length - 1]?.status !== 'applied') {
-      // The door's rules refused it (the roster moved since the list was built): the owner decides.
-      await handToOwner(tx, ctx.nowIso, row, {
-        ...failure,
-        diagnosis: `The Director's pick, ${chosen.id}, could not be applied.`,
-      });
+      if (adjusted.adjustments[adjusted.adjustments.length - 1]?.status !== 'applied') {
+        // The door's rules refused it (the roster moved since the list was built): the owner decides.
+        await handToOwner(tx, tick.nowIso, row, {
+          ...failure,
+          diagnosis: `The Director's pick, ${chosen.id}, could not be applied.`,
+        });
 
-      return;
-    }
+        return;
+      }
 
-    // The substitute starts its own chain from its own place.
-    await resetFallbackTx(tx, ticket.id);
-    await retryTx(
-      ctx.deps,
-      tx,
-      ctx.nowIso,
-      row,
-      { action: 'substitute', by: 'director', note: `${chosen.id}: ${pick.reason}` },
-      'engine',
-    );
-  });
+      // The substitute starts its own chain from its own place.
+      await resetFallbackTx(tx, ticket.id);
+      await retryTx(
+        tick.deps,
+        tx,
+        tick.nowIso,
+        row,
+        { action: 'substitute', by: 'director', note: `${chosen.id}: ${pick.reason}` },
+        'engine',
+      );
+    });
 }

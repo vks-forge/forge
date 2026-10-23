@@ -30,14 +30,23 @@ const type = (name: string): CardType => {
   return found;
 };
 
+// Ticket edits and cancels are allowed in every phase: they only touch tickets that already exist.
+const TICKET_EDITS = [
+  'set_ticket_dependencies',
+  'set_ticket_priority',
+  'edit_ticket_description',
+  'cancel_ticket',
+];
+
 describe('allowedChatActions', () => {
-  it('lets every type do all four actions once the plan is approved', () => {
+  it('lets every type do every action once the plan is approved', () => {
     for (const name of ['discussion', 'plan', 'issue', 'pr_issue']) {
       expect(allowedChatActions(type(name), 'approved')).toEqual([
         'create_ticket',
         'steer_run',
         'change_type',
         'suggest_close',
+        ...TICKET_EDITS,
       ]);
     }
   });
@@ -49,6 +58,7 @@ describe('allowedChatActions', () => {
         'steer_run',
         'change_type',
         'suggest_close',
+        ...TICKET_EDITS,
       ]);
 
       expect(chatActionRefusal(type('issue'), 'create_ticket', phase)).toBe(
@@ -66,7 +76,12 @@ describe('allowedChatActions', () => {
   it('drops change_type without convert and suggest_close without close', () => {
     const t = { ...type('issue'), actions: ['chat'] };
 
-    expect(allowedChatActions(t, 'in_progress')).toEqual(['create_ticket', 'steer_run']);
+    expect(allowedChatActions(t, 'in_progress')).toEqual([
+      'create_ticket',
+      'steer_run',
+      ...TICKET_EDITS,
+    ]);
+
     expect(chatActionRefusal(t, 'change_type')).toMatch(/cannot be converted/);
     expect(chatActionRefusal(t, 'suggest_close')).toMatch(/cannot be closed/);
   });

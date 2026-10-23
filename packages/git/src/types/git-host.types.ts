@@ -5,7 +5,7 @@
  *   runner, key reader). Naming them once keeps the adapter files short and lets tests
  *   swap the network, the git process and the key source without touching adapter code.
  *
- * Exports: BaseLanding, LocalBareGitHostOptions, LocalRepoGitHostOptions, GitHubAppGitHostOptions, GitHubAppGitHost.
+ * Exports: BaseLanding, FetchBaseInput, LocalBareGitHostOptions, LocalRepoGitHostOptions, GitHubAppGitHostOptions, GitHubAppGitHost.
  * Depends on: types/git-worktree. Types only.
  */
 
@@ -22,11 +22,23 @@ export interface BaseLanding {
   }): Promise<void>;
 }
 
+/** What to fetch from where. `secrets` are scrubbed from error text; `env` may carry auth config. */
+export interface FetchBaseInput {
+  readonly localRepo: string | undefined;
+  /** Path or URL of the remote repository. */
+  readonly source: string;
+  readonly branch: string;
+  readonly env?: Readonly<Record<string, string>>;
+  readonly secrets?: readonly string[];
+}
+
 export interface LocalBareGitHostOptions {
   /** Path of the bare repository that plays the remote. */
   readonly remotePath: string;
   /** Branch PRs merge into. */
   readonly baseBranch: string;
+  /** The local repository `syncBase` fetches the base into; without it `syncBase` is refused. */
+  readonly localRepo?: string;
   /** Epoch milliseconds, for PR record timestamps. */
   readonly now: () => number;
   readonly gitBinary?: string;
@@ -66,8 +78,10 @@ export interface GitHubAppGitHostOptions {
   readonly gitBase?: string;
   /** Epoch milliseconds; defaults to Date.now. */
   readonly now?: () => number;
-  /** Git process seam for push; defaults to the real git binary. */
+  /** Git process seam for push and fetch; defaults to the real git binary. */
   readonly git?: GitRunner;
+  /** The local repository `syncBase` fetches the base into; without it `syncBase` is refused. */
+  readonly localRepo?: string;
 }
 
 /** The GitHub App host: the GitHost port plus the git auth env its own pushes use. */

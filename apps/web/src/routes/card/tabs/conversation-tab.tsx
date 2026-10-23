@@ -11,18 +11,22 @@
  *   first message arrives, and the Director's failure in words. A refusal removes the unsent
  *   line and keeps the draft in the box. A closed card keeps its history readable but takes no
  *   message, and the box says why. Consecutive messages of one author share a header and time,
- *   and each new day gets a separator. The planning flow lives in the same log: grill
- *   questions answered with one click (only the newest open one, only while grilling),
- *   finished steps, ready plans and system lines. A ticket that waits on the owner is drawn
- *   from the card's live escalations, so it shows as settled once acted on anywhere.
+ *   and each new day gets a separator. The planning flow lives in the same log as one-line
+ *   records: a question asked (open, answered or passed), finished steps, runs of three or more
+ *   ticket log lines folded into one line that opens to them, a ready plan with a
+ *   link to open it, what waits on the owner and system lines. The decisions themselves are made
+ *   in the needs-you modal the alert under the page title opens; a ticket that
+ *   waited on the owner is a record read from the card's live escalations, so it shows as settled
+ *   once acted on anywhere.
  *
  * Exports: ConversationTab.
- * Depends on: react, lucide-react, api/use-card, api/use-escalations, api/use-plan,
+ * Depends on: react, lucide-react, api/use-card, api/use-escalations,
  *   api/describe-error, components/card/*, components/chat/chat-pane, domain/card-chat,
- *   domain/chat-groups, domain/director-flow, domain/flow-errors, domain/owner,
+ *   domain/chat-folds, domain/chat-groups, domain/director-flow, domain/owner,
  *   state/message-draft, state/use-now, schemas/cards (types).
  */
 
+import { CARD_MESSAGE_MAX_CHARS } from '@forge/core';
 import type { CardType } from '@forge/core';
 import { MessageSquare } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
@@ -30,22 +34,27 @@ import { ApiError } from '#/api/api-error.js';
 import { describeError } from '#/api/describe-error.js';
 import { useCardEvents, useLoadOlderEvents, useSendCardMessage } from '#/api/use-card.js';
 import { useCardEscalations } from '#/api/use-escalations.js';
-import { useAnswerGrill, useGrillShortcut } from '#/api/use-plan.js';
 import { DirectorStatus } from '#/components/card/director-status.js';
+import { ChatFoldLine } from '#/components/card/chat-fold-line.js';
 import { ChatLineView } from '#/components/card/chat-line-view.js';
 import { labelOfType } from '#/components/card/card-type-icon.js';
 import { MessageComposer } from '#/components/card/message-composer.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { ChatPane } from '#/components/chat/chat-pane.js';
 import { lineAuthor, transcriptOf } from '#/domain/card-chat.js';
+import { foldTicketRuns } from '#/domain/chat-folds.js';
 import { groupChat } from '#/domain/chat-groups.js';
-import { grillOf, pendingStep } from '#/domain/director-flow.js';
-import { describeFlowError } from '#/domain/flow-errors.js';
+import {
+  canAnswerGrill,
+  grillOf,
+  isThinking,
+  lastStepOutcome,
+  pendingStep,
+} from '#/domain/director-flow.js';
 import { OWNER } from '#/domain/owner.js';
 import type { CardDetailReply } from '#/schemas/cards.js';
 import { cardDraftKey } from '#/state/message-draft.js';
 import { useNow } from '#/state/use-now.js';
-import type { FlowHandlers } from '#/types/cards-ui.types.js';
 import type { ScrollMemory } from '#/types/route-tabs.types.js';
 import { EmptyState } from '#/components/ui/empty-state.js';
 
@@ -70,8 +79,10 @@ export function ConversationTab(props: {
   types: readonly CardType[] | undefined;
   /** Opens the close dialog with the Director's reason prefilled. */
   onSuggestClose: (reason: string) => void;
-  /** Opens the Plan tab (the "Review plan" button on a ready plan). */
+  /** Opens the plan (the "Open plan" link on a ready plan). */
   onReviewPlan: () => void;
+  /** True while the server lists an open Director question (typing then answers it). */
+  questionOpen: boolean;
   memory: ScrollMemory;
 }) {
   const { card } = props;
@@ -86,32 +97,7 @@ export function ConversationTab(props: {
   const events = history.data?.events;
 
   // Only a card that is still grilling has a question the server will accept an answer to.
-  // The server takes an answer while the card is grilling or verifying (`isShaping`).
-  const canAnswer =
-    !closed &&
-    (card.phase === undefined || card.phase === 'grilling' || card.phase === 'verifying');
-
-  const answer = useAnswerGrill(card.id);
-  const shortcut = useGrillShortcut(card.id);
-  const flowError = answer.error ?? shortcut.error;
-
-  const flow: FlowHandlers = {
-    busy: answer.isPending || shortcut.isPending,
-    error: flowError === null ? null : describeFlowError(flowError),
-    onReviewPlan: props.onReviewPlan,
-    onShortcut: (kind) => {
-      answer.reset();
-      shortcut.mutate(kind);
-    },
-    onAnswer: (questionId, choice) => {
-      shortcut.reset();
-      answer.mutate(
-        'optionId' in choice
-          ? { question_id: questionId, option_id: choice.optionId }
-          : { question_id: questionId, text: choice.text },
-      );
-    },
-  };
+  const canAnswer = canAnswerGrill(card);
 
   const lines = useMemo(
     () =>
@@ -134,13 +120,26 @@ export function ConversationTab(props: {
     [lines, now],
   );
 
+  const items = useMemo(() => foldTicketRuns(lines, metas), [lines, metas]);
+
   const director = card.director;
-  const step = events === undefined ? null : pendingStep(events);
+  const rawStep = events === undefined ? null : pendingStep(events);
+  // A Director that stopped to ask the owner is not thinking, even if an older step never wrote its end.
+  const waitingOnOwner = !closed && card.needs_you_detail.length > 0;
+  const stepRunning = rawStep !== null;
+  const step = rawStep !== null && !waitingOnOwner ? rawStep : null;
+  const lastOutcome = events === undefined ? null : lastStepOutcome(events);
   // While a question is open the server takes a typed message as its free-text answer.
   const questionOpen =
-    canAnswer && events !== undefined && grillOf(events).question !== null;
+    props.questionOpen ||
+    (canAnswer && events !== undefined && grillOf(events).question !== null);
 
-  const thinking = director.state === 'thinking' || step !== null;
+  const thinking = isThinking({
+    serverState: director.state,
+    stepRunning,
+    waitingOnOwner,
+  });
+
   // A new card is `grilling` with no Director message yet: the Director is reading the project.
   const reading =
     !thinking &&
@@ -166,38 +165,44 @@ export function ConversationTab(props: {
   }
 
   if (history.isError && !events) {
+    // A raise stays in the alert even when the history will not load.
     return (
-      <StatePanel
-        kind="error"
-        title={describeError(history.error).title}
-        detail={describeError(history.error).detail}
-        onRetry={() => void history.refetch()}
-        retrying={history.isFetching}
-      />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <StatePanel
+          kind="error"
+          title={describeError(history.error).title}
+          detail={describeError(history.error).detail}
+          onRetry={() => void history.refetch()}
+          retrying={history.isFetching}
+        />
+      </div>
     );
   }
 
   const composer = (
-    <MessageComposer
-      id={`card-message-${card.id}`}
-      label="Message the Director"
-      draftKey={cardDraftKey(card.id)}
-      sendLabel="Send message"
-      placeholder={
-        questionOpen
-          ? 'Type your answer to the open question, or pick an option above'
-          : 'Ask, refine, or tell it what to do with this card'
-      }
-      hint="The Director replies here. Ctrl+Enter sends."
-      disabledReason={
-        closed
-          ? `This card is closed (${card.closed_reason}). The Director takes no more messages on it; its history stays readable.`
-          : undefined
-      }
-      sending={send.isPending}
-      error={send.isError ? refusalText(send.error) : null}
-      onSend={submit}
-    />
+    <>
+      <MessageComposer
+        id={`card-message-${card.id}`}
+        label="Message the Director"
+        draftKey={cardDraftKey(card.id)}
+        sendLabel="Send message"
+        maxChars={CARD_MESSAGE_MAX_CHARS}
+        placeholder={
+          questionOpen
+            ? 'Type your answer to the open question, or pick an option above'
+            : 'Ask, refine, or tell it what to do with this card'
+        }
+        hint="The Director replies here. Ctrl+Enter sends."
+        disabledReason={
+          closed
+            ? `This card is closed (${card.closed_reason}). The Director takes no more messages on it; its history stays readable.`
+            : undefined
+        }
+        sending={send.isPending}
+        error={send.isError ? refusalText(send.error) : null}
+        onSend={submit}
+      />
+    </>
   );
 
   return (
@@ -231,22 +236,37 @@ export function ConversationTab(props: {
             Tell the Director what you want from this card.
           </EmptyState>
         ) : (
-          lines.map((line, index) => (
-            <ChatLineView
-              key={line.key}
-              line={line}
-              slug={card.project}
-              flow={flow}
-              meta={metas[index] ?? { header: true, day: null }}
-              first={index === 0}
-              escalations={escalations.data?.items}
-              onSuggestClose={closed ? undefined : props.onSuggestClose}
-            />
-          ))
+          items.map((item) => {
+            const meta = metas[item.index] ?? { header: true, day: null };
+
+            return item.kind === 'fold' ? (
+              <ChatFoldLine
+                key={item.fold.key}
+                fold={item.fold}
+                slug={card.project}
+                meta={meta}
+                first={item.index === 0}
+                onReviewPlan={props.onReviewPlan}
+              />
+            ) : (
+              <ChatLineView
+                key={item.line.key}
+                line={item.line}
+                slug={card.project}
+                onReviewPlan={props.onReviewPlan}
+                meta={meta}
+                first={item.index === 0}
+                escalations={escalations.data?.items}
+                onSuggestClose={closed ? undefined : props.onSuggestClose}
+              />
+            );
+          })
         )}
         <div className="mt-3">
           <DirectorStatus
             state={director.state}
+            thinking={thinking}
+            stepFailed={lastOutcome === 'failed'}
             step={step?.label ?? null}
             reading={reading}
             lastError={director.last_error}

@@ -17,10 +17,14 @@
  *   again (the read is a cached `--version`, one spawn per file state), and a build that
  *   differs from the loaded one starts the first-sight check of the new build in the
  *   background and refuses this start with `HarnessChangedError`; the ticket parks until the
- *   owner has approved the new build's tools.
+ *   owner has approved the new build's tools. The same refusal (`HarnessToolsPendingError`)
+ *   covers a loaded build whose check is still running or that has a tool left `pending`:
+ *   no run starts to be denied on every call, the ticket parks as a setup problem for the
+ *   owner and resumes when the tools are decided. Tools whose shape an earlier build already
+ *   had decided are carried over by the check, so an update that touched nothing parks nothing.
  *
  * Exports: createHarnessCompat().
- * Depends on: @forge/core (HarnessChangedError), @forge/drivers (findKnownGood), services/compat-record,
+ * Depends on: @forge/core (HarnessChangedError), @forge/drivers (findKnownGood), services/compat-record, services/pending-tools,
  *   services/harness-source, types/harness-compat. IO: storage; the
  *   injected check spawns the harness.
  */
@@ -30,6 +34,7 @@ import type { HarnessToolSchema } from '@forge/core';
 import { findKnownGood } from '@forge/drivers';
 import type { CompatJobState } from '@forge/drivers';
 import { nativeNames, recordReport } from '#/services/compat-record.js';
+import { assertToolsDecided } from '#/services/pending-tools.js';
 import { readHarnessSetup } from '#/services/harness-source.js';
 import type { HarnessCompat, HarnessCompatDeps } from '#/types/harness-compat.types.js';
 
@@ -170,6 +175,8 @@ export function createHarnessCompat(deps: HarnessCompatDeps): HarnessCompat {
       }
 
       if (installed === null || installed === loaded) {
+        await assertToolsDecided(storage, KIND, loaded);
+
         return loaded;
       }
 

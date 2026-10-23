@@ -4,7 +4,9 @@
  * Why: Cost shows where a project's money went. It is computed on request from the runs already
  *   stored, so it can never drift from the board and needs no new tables. The per-project stats
  *   route was removed (d-0166): the overview dashboard replaced Home's figures. Spend is only what runs recorded: the
- *   responses say how many runs carried a cost rather than guessing the rest. `range` is 7d,
+ *   responses say how many runs and Director steps carried a cost rather than guessing the rest. The
+ *   total adds the Director's own steps (its dated spend ledger) to the Workers' runs and carries the split, so the
+ *   project total equals the sum of its cards' totals. `range` is 7d,
  *   30d or 90d (default 30d); anything else is a 400, an unregistered slug is a 404. The two
  *   ranked cost tables (tickets, runs) page independently with `ticket_limit` / `ticket_offset`
  *   and `run_limit` / `run_offset` (limit 1..100, default 50 = the report's old top 50); the
@@ -82,6 +84,7 @@ export function projectStatsRoutes(deps: RouteDeps): Route[] {
             range,
             nowMs,
             runs,
+            directorSpend: await tx.directorSpend.listByProject(project.id, { from }),
             titles,
             page,
             budgets: {

@@ -15,6 +15,8 @@
  *   chips carry a badge and a stage the Director removed stays as a dashed ghost with its reason. Before the first dispatch there is no pipeline to show, and the strip
  *   says when it will start; it never shows an empty frame.
  *
+ *   On a finished ticket the chips are quiet history (see stage-chip).
+ *
  * Exports: PipelineStrip.
  * Depends on: react, api/use-ticket-pipeline, routes/ticket/{director-changes,stage-chip,stage-detail},
  *   components/status/state-panel, domain/stage-view-copy, schemas/pipelines.
@@ -35,7 +37,12 @@ import { StageChip } from '#/routes/ticket/stage-chip.js';
 import { StageDetail } from '#/routes/ticket/stage-detail.js';
 import type { StageView } from '#/schemas/pipelines.js';
 
-export function PipelineStrip(props: { slug: string; ticketId: string }) {
+export function PipelineStrip(props: {
+  slug: string;
+  ticketId: string;
+  /** The ticket is done or cancelled: the chips read as history. */
+  finished?: boolean;
+}) {
   const { ticketId } = props;
   const query = useTicketPipeline(ticketId);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -99,6 +106,7 @@ export function PipelineStrip(props: { slug: string; ticketId: string }) {
               selected={member.id === openId}
               panelId={panelId}
               addedByRule={ruleFor(pipeline.routed, member.id) !== undefined}
+              finished={props.finished === true}
               onToggle={() => setOpenId(member.id === openId ? null : member.id)}
             />
           );

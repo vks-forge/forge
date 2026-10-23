@@ -1,14 +1,17 @@
 /**
  * OverviewCharts: spend, tickets and runs over time, spend breakdowns, and how complete the cost is.
  *
- * Why: the KPI strip says how much; these say when and where. Spend is stacked by project so
- *   one runaway project is visible against the rest, tickets show what got done against what
+ * Why: the KPI strip says how much; these say when and where. Spend over time is two series,
+ *   Workers and the Director, stacked and keyed in words, because the Director's planning and
+ *   answering is now half the bill and must not hide; across projects a second chart stacks it
+ *   by project so one runaway project is visible against the rest. Tickets show what got done against what
  *   was started, runs split into passed, failed and interrupted so a bad week shows its colour.
- *   Three rings break the same spend down by project, harness and lane. Spend only ever
- *   includes runs that reported a cost, and the line under the charts says how many did ("N of
- *   M runs reported a cost"): the rest are counted, never estimated, so no chart can be read as
- *   complete when it is not. On a project's Home (`scoped`) spend over time is one series, not
- *   stacked, and the by-project ring is left out.
+ *   Three rings break the same spend down by project, harness and lane (the harness and lane rings
+ *   are Worker spend; the Director has neither). Spend only ever
+ *   includes runs and Director steps that reported a cost, and the line under the charts says how many did ("N of
+ *   M runs reported a cost", then the Director steps and "Director spend before 20 Oct is dated by card"):
+ *   the rest are counted, never estimated, so no chart can be read as
+ *   complete when it is not. On a project's Home (`scoped`) the by-project chart and ring are left out.
  *
  * Exports: OverviewCharts.
  * Depends on: @forge/core (OverviewStats type), components/charts/*, domain/overview-view,
@@ -18,11 +21,12 @@
 import type { OverviewStats } from '@forge/core';
 import { BucketChart } from '#/components/charts/bucket-chart.js';
 import { DonutChart } from '#/components/charts/donut-chart.js';
+import { DIRECTOR_DATING_NOTE, costParts } from '#/domain/cost-view.js';
 import {
   coverageSentence,
   donutSlices,
+  sourceSpend,
   stackedSpend,
-  totalSpend,
 } from '#/domain/overview-view.js';
 import { formatCount, formatUsd } from '#/domain/stats-format.js';
 
@@ -32,8 +36,9 @@ export function OverviewCharts(props: { stats: OverviewStats; scoped?: boolean }
   const { stats, scoped = false } = props;
   const { buckets, group } = stats;
   const noSpend =
-    stats.cost_coverage.runs_with_cost === 0
-      ? 'No run reported a cost in this range.'
+    stats.cost_coverage.runs_with_cost === 0 &&
+    stats.cost_coverage.director_steps_recorded === 0
+      ? 'Nothing reported a cost in this range.'
       : 'No spend in this range.';
 
   return (
@@ -43,21 +48,30 @@ export function OverviewCharts(props: { stats: OverviewStats; scoped?: boolean }
       </h2>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className={`${CARD} lg:col-span-2`}>
+        <div className={`${CARD} ${scoped ? 'lg:col-span-2' : ''}`}>
           <BucketChart
-            title={scoped ? 'Spend over time' : 'Spend over time, by project'}
+            title="Spend over time"
             buckets={buckets}
             group={group}
-            series={
-              scoped
-                ? totalSpend(stats.spend_by_project)
-                : stackedSpend(stats.spend_by_project, stats.spend_by_project_total)
-            }
+            series={sourceSpend(stats.spend_by_source, costParts)}
             mode="stacked"
             format={formatUsd}
             noData={noSpend}
           />
         </div>
+        {scoped ? null : (
+          <div className={CARD}>
+            <BucketChart
+              title="Spend over time, by project"
+              buckets={buckets}
+              group={group}
+              series={stackedSpend(stats.spend_by_project, stats.spend_by_project_total)}
+              mode="stacked"
+              format={formatUsd}
+              noData={noSpend}
+            />
+          </div>
+        )}
         <div className={CARD}>
           <BucketChart
             title="Tickets done and started"
@@ -143,9 +157,11 @@ export function OverviewCharts(props: { stats: OverviewStats; scoped?: boolean }
         <span className="font-medium text-fg">
           {coverageSentence(stats.cost_coverage)}
         </span>
-        {stats.cost_coverage.runs_total > stats.cost_coverage.runs_with_cost
-          ? '. Runs without a cost are counted but never estimated, so spend is a floor.'
-          : '. Runs without a cost are counted but never estimated.'}
+        {stats.cost_coverage.runs_total > stats.cost_coverage.runs_with_cost ||
+        stats.cost_coverage.director_steps > stats.cost_coverage.director_steps_recorded
+          ? '. Steps without a cost are counted but never estimated, so spend is a floor.'
+          : '. Steps without a cost are counted but never estimated.'}{' '}
+        {DIRECTOR_DATING_NOTE}
       </p>
     </section>
   );

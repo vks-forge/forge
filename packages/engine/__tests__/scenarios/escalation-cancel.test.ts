@@ -9,7 +9,9 @@
  *
  * Pins: Done-when 7 (cancel with dependents is refused naming them, with `cascade` cancels the
  *   chain, the escalation settled with `cascade`), cancel from a ticket page closing its waits,
- *   only cancel and rework on a ticket page, 404 for an unknown ticket, and rework from review.
+ *   only cancel and rework on a ticket page, 404 for an unknown ticket, rework from review, and a cancel
+ *   that removes the worktree and both branches, closes the PR and notes the last commit id (d-0179),
+ *   carrying on when the host is down and leaving a merged PR alone.
  * Depends on: helpers/escalation-rig, helpers/planning-rig, helpers/verify-rig, vitest.
  */
 
@@ -78,6 +80,10 @@ describe('cancelling', () => {
     expect(
       states.filter((e) => e.payload.to === 'cancelled').map((e) => e.payload.ticket_id),
     ).toEqual(expect.arrayContaining([t1.id, t2.id]));
+
+    expect(
+      states.filter((e) => e.payload.to === 'cancelled').map((e) => e.payload.reason),
+    ).toEqual(Array(2).fill('You cancelled the stuck ticket and what waited on it'));
   });
 
   it('cancels a ticket from its own page and closes whatever wait it had', async () => {
@@ -151,5 +157,56 @@ describe('finished work in review', () => {
     expect(delta).toContain('"kind":"rework"');
     expect(delta).toContain('rename the flag');
     expect(rig.driver.starts).toHaveLength(2);
+  });
+});
+
+describe('cancelling a ticket that already has a branch and a PR', () => {
+  async function inReview() {
+    const { rig, host } = await makeVerifyRig({ tier: 'B' });
+    const id = await startAndFinish(rig);
+    await rig.tick();
+    const ticket = await rig.ticket(id);
+    expect(ticket.status).toBe('review');
+
+    return { rig, host, ticket };
+  }
+
+  it('removes the worktree and both branches, closes the PR and notes the last commit', async () => {
+    const { rig, host, ticket } = await inReview();
+    const branch = ticket.branch as string;
+
+    const done = await rig.engine.actOnTicket(ticket.id, { action: 'cancel' }, 'owner');
+
+    expect(done).toEqual({ status: 'done', interaction: null });
+    expect(rig.worktrees.removed).toContain(ticket.worktree);
+    expect(rig.worktrees.removedBranches).toContain(branch);
+    expect(host.calls).toContain(`closePr:${ticket.pr_number}`);
+    expect(host.calls).toContain(`deleteBranch:${branch}`);
+    const notes = await cardEventsOf(rig, ticket.card_id, 'note');
+    const text = notes.map((e) => e.payload.text).join(' ');
+    expect(text).toContain(ticket.id);
+    expect(text).toContain(rig.worktrees.headSha);
+  });
+
+  it('keeps going when the host refuses to close the PR or delete the branch', async () => {
+    const { rig, host, ticket } = await inReview();
+    host.failNext('closePr', new Error('host is down'));
+    host.failNext('deleteBranch', new Error('host is down'));
+
+    const done = await rig.engine.actOnTicket(ticket.id, { action: 'cancel' }, 'owner');
+
+    expect(done).toEqual({ status: 'done', interaction: null });
+    expect(rig.worktrees.removed).toContain(ticket.worktree);
+    expect(rig.worktrees.removedBranches).toContain(ticket.branch);
+    expect((await rig.ticket(ticket.id)).worktree).toBeUndefined();
+  });
+
+  it('leaves the PR open when the PR already merged', async () => {
+    const { rig, host, ticket } = await inReview();
+    host.prState = 'merged';
+
+    await rig.engine.actOnTicket(ticket.id, { action: 'cancel' }, 'owner');
+
+    expect(host.count('closePr')).toBe(0);
   });
 });

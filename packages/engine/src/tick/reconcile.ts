@@ -18,13 +18,11 @@
 
 import type { RunResult } from '@forge/core';
 import { failureResult } from '#/domain/results.js';
+import { CANCEL_GRACE_MS } from '#/shared/time.js';
 import { pumpResult } from '#/tick/pump.js';
 import { settleRun } from '#/tick/settle.js';
 import { settleGuarded } from '#/tick/settle-guard.js';
 import type { EngineCtx } from '#/types/engine-state.types.js';
-
-/** Grace for a cancelled harness to report before the stall is settled without its result. */
-const CANCEL_GRACE_MS = 10_000;
 
 /** Settles every pump whose stream and result are in. */
 export async function settleFinishedPumps(ctx: EngineCtx): Promise<void> {

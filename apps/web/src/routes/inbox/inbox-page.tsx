@@ -3,10 +3,12 @@
  *
  * Why: a Worker's question, a ticket waiting for review, a failed gate or a harness out of
  *   quota each live on a different screen; the owner should not have to patrol them. The
- *   Inbox gathers them (d-0116), opens on "Needs action", and lets the owner clear them fast:
+ *   Inbox gathers them (d-0116), opens on "Needs action" (only what waits on a decision; the
+ *   rest is news and sits under "Notices"), and lets the owner clear them fast:
  *   mark read or archive with one click, instantly (the list answers before the server does),
  *   with a few seconds to Undo an archive and a plain message if the server refuses, in which
- *   case the item is put back. Items whose source changes resurface as unread, so archiving
+ *   case the item is put back. Notices and Unread carry "Mark all read", one click for the whole
+ *   view that says how many it marked (each item can be marked unread again). Items whose source changes resurface as unread, so archiving
  *   never hides something that has since moved. Long histories load 50 at a time and are
  *   windowed. A ticket waiting on the owner has a "Respond" button that opens its escalation card
  *   in a drawer (rows are fixed-height for the windowed list, so the card does not grow the row);
@@ -34,6 +36,7 @@ import { WindowedList } from '#/components/ui/windowed-list.js';
 import { undoOf } from '#/domain/inbox-marks.js';
 import { budgetCardId } from '#/domain/inbox-links.js';
 import { InboxBudget } from '#/routes/inbox/inbox-budget.js';
+import { InboxReadAll } from '#/routes/inbox/inbox-read-all.js';
 import { InboxProposal } from '#/routes/inbox/inbox-proposal.js';
 import { InboxRow, INBOX_ROW_HEIGHT } from '#/routes/inbox/inbox-row.js';
 import { INBOX_VIEW_LABEL, InboxTabs } from '#/routes/inbox/inbox-tabs.js';
@@ -46,6 +49,8 @@ import { Inbox as InboxIcon } from 'lucide-react';
 const EMPTY_HINT = {
   needs_action:
     'When a Worker asks a question or a ticket waits for your review, it appears here.',
+  notices:
+    'Budget warnings, failed gates and other news that needs no decision from you appear here.',
   unread: 'Everything new has been read.',
   all: 'Questions, reviews and alerts from this project appear here.',
   archived:
@@ -123,6 +128,11 @@ export function InboxPage() {
   }
 
   const items = (list.data?.pages ?? []).flatMap((page) => page.items);
+  // The button clears the whole view on the server; show it only while something in it is unread.
+  const hasUnread =
+    view === 'unread'
+      ? (counts.data?.unread ?? items.length) > 0
+      : items.some((item) => !item.read);
 
   return (
     <section className="grid gap-4">
@@ -147,6 +157,10 @@ export function InboxPage() {
         aria-labelledby={`inbox-tab-${view}`}
         className="grid gap-3"
       >
+        {(view === 'notices' || view === 'unread') && hasUnread ? (
+          <InboxReadAll slug={slug} view={view} online={online} />
+        ) : null}
+
         {items.length === 0 ? (
           <StatePanel
             kind="empty"

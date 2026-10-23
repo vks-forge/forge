@@ -3,20 +3,23 @@
  *
  * Why: once the Director turns a card into work, the user wants to see what was built for it
  *   and where each piece stands without leaving the card. Tickets are listed in the order they
- *   were created, each with its state (amber when it waits on the user), run status, lane, cost
- *   (muted; a dash when the server sent none) and last change, and each is one link to its Ticket page (d-0116) where the live Worker thread
- *   and the steer box live. A card with no tickets says so and why that is normal (talk-only
+ *   were created, each with its phase in words (Queued, Working, Held by re-plan...; amber only
+ *   when it waits on the user) and, when it adds something, the line that says why (links to the tickets and card it names),
+ *   run status, lane, cost (muted; a dash when the server sent none) and last change, and each is
+ *   one link to its Ticket page (d-0116) where the live Worker thread and the steer box live. A card with no tickets says so and why that is normal (talk-only
  *   types start with none).
  *
  * Exports: TicketsTab.
  * Depends on: react, @forge/core (type), components/ticket/*, components/cost/cost-chip,
- *   domain/relative-time, state/use-now.
+ *   domain/relative-time, domain/ticket-phase-copy, state/use-now.
  */
 
 import type { TicketSummary } from '@forge/core';
 import { CostChip } from '#/components/cost/cost-chip.js';
+import { PhaseChip, WaitLine } from '#/components/ticket/phase-chip.js';
 import { LaneChip, RunChip, StateChip } from '#/components/ticket/status-chips.js';
 import { TicketLink } from '#/components/ticket/ticket-link.js';
+import { showsWaitLine } from '#/domain/ticket-phase-copy.js';
 import { timeAgo } from '#/domain/relative-time.js';
 import { useNow } from '#/state/use-now.js';
 import { EmptyState } from '#/components/ui/empty-state.js';
@@ -53,9 +56,15 @@ export function TicketsTab(props: { slug: string; tickets: readonly TicketSummar
           ) : null}
           <div className="flex flex-wrap items-center gap-2">
             <TicketLink id={ticket.id} slug={props.slug} />
-            <StateChip state={ticket.state} />
+            {ticket.wait ? (
+              <PhaseChip phase={ticket.wait.phase} />
+            ) : (
+              <StateChip state={ticket.state} needsYou={ticket.needs_you} />
+            )}
             <LaneChip lane={ticket.lane} />
-            {ticket.run_status ? <RunChip status={ticket.run_status} /> : null}
+            {ticket.run_status && ticket.wait?.phase !== 'working' ? (
+              <RunChip status={ticket.run_status} />
+            ) : null}
             <CostChip
               usd={ticket.cost_usd}
               recorded={(ticket.cost_usd ?? 0) > 0}
@@ -64,6 +73,9 @@ export function TicketsTab(props: { slug: string; tickets: readonly TicketSummar
             />
           </div>
           <p className="text-sm">{ticket.title}</p>
+          {ticket.wait && showsWaitLine(ticket.wait.phase) ? (
+            <WaitLine wait={ticket.wait} slug={props.slug} />
+          ) : null}
           <p className="text-xs text-muted">
             Created {timeAgo(ticket.created_at, now)}, changed{' '}
             {timeAgo(ticket.updated_at, now)}

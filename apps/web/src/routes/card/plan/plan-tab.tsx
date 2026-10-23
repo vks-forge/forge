@@ -7,11 +7,13 @@
  *   no longer current), and can show what changed since the version before. The decision buttons
  *   exist only when the card is waiting for one (phase `plan_ready`), on the newest version, on
  *   an open card; at any other time the plan is a record. A card with no plan says so and what
- *   brings one. The floor result is stated plainly (pass, or the reasons), and a refused
+ *   brings one. The floor result is stated plainly (pass, or the reasons) while the plan is open to a
+ *   decision; once approved the server freezes it (`floor: null`, `floor_frozen_at`), the banner goes and one muted line says it was
+ *   checked at approval, so a done card never reads "Safety minimum not met" because of its own merges. A refused
  *   decision is shown right under the buttons.
  *
  * Exports: PlanTab.
- * Depends on: react, api/use-plan, components/ui/*, routes/card/plan/*, domain/plan-diff,
+ * Depends on: react, api/use-plan, routes/card/plan/plan-impact, components/ui/*, routes/card/plan/*, domain/plan-diff,
  *   schemas/cards (type), types/plan.types.
  */
 
@@ -23,15 +25,18 @@ import { usePlan, usePlanVersion } from '#/api/use-plan.js';
 import { StatePanel } from '#/components/status/state-panel.js';
 import { Button } from '#/components/ui/button.js';
 import { Picker } from '#/components/ui/picker.js';
+import { formatWhen } from '#/domain/format-time.js';
 import { diffPlans, diffRowsOf } from '#/domain/plan-diff.js';
 import { outsideFactsBanner } from '#/domain/research-copy.js';
 import { PlanDiffView } from '#/routes/card/plan/plan-diff-view.js';
+import { PlanImpact } from '#/routes/card/plan/plan-impact.js';
 import { PlanBody, PlanLinks } from '#/routes/card/plan/plan-sections.js';
 import { PlanTickets } from '#/routes/card/plan/plan-tickets.js';
 import type { CardDetailReply } from '#/schemas/cards.js';
 import type { FloorResult, PlanVersion } from '#/schemas/plan.js';
 import type { PlanDecisions } from '#/types/plan.types.js';
 import { EmptyState } from '#/components/ui/empty-state.js';
+import { WhatsThis } from '#/components/ui/whats-this.js';
 
 function Floor(props: { floor: FloorResult; unverified: number }) {
   const { floor } = props;
@@ -45,7 +50,8 @@ function Floor(props: { floor: FloorResult; unverified: number }) {
           aria-hidden="true"
           className={`size-4 shrink-0 ${floor.pass ? 'text-good' : 'text-attn'}`}
         />
-        {floor.pass ? 'Floor check passed' : 'Floor check did not pass'}
+        {floor.pass ? 'Safety minimum met' : 'Safety minimum not met'}
+        <WhatsThis term="safety_minimum" />
       </p>
       {banner !== null && !floor.pass ? (
         <p className="pl-6 text-xs font-medium">{banner}</p>
@@ -164,21 +170,6 @@ export function PlanTab(props: { card: CardDetailReply; decisions: PlanDecisions
         </p>
       ) : null}
 
-      {canDecide ? (
-        <div className="flex flex-wrap gap-2">
-          <Button variant="primary" onClick={() => decisions.open('approve')}>
-            Approve plan
-          </Button>
-          <Button onClick={() => decisions.open('changes')}>Request changes</Button>
-        </div>
-      ) : null}
-
-      {decisions.error !== null ? (
-        <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm">
-          {decisions.error}
-        </p>
-      ) : null}
-
       {viewing === null && plan.data?.floor ? (
         <Floor
           floor={plan.data.floor}
@@ -186,6 +177,24 @@ export function PlanTab(props: { card: CardDetailReply; decisions: PlanDecisions
             current.verification.outside_claims.filter((c) => c.status === 'unverified')
               .length
           }
+        />
+      ) : null}
+
+      {viewing === null &&
+      plan.data?.floor === null &&
+      plan.data.floor_frozen_at !== null ? (
+        <p className="text-sm text-muted">
+          The safety minimum was checked when this plan was approved (
+          {formatWhen(plan.data.floor_frozen_at)}). It is not re-checked against the
+          card&apos;s own merges.
+        </p>
+      ) : null}
+
+      {viewing === null && canDecide ? (
+        <PlanImpact
+          willCancel={plan.data?.will_cancel ?? []}
+          notCovered={plan.data?.not_covered ?? []}
+          alreadyExists={plan.data?.already_exists ?? []}
         />
       ) : null}
 
@@ -214,6 +223,24 @@ export function PlanTab(props: { card: CardDetailReply; decisions: PlanDecisions
           <PlanLinks slug={card.project} links={shown.card_links} />
         </>
       )}
+
+      {canDecide || decisions.error !== null ? (
+        <div className="sticky bottom-0 -mx-1 grid gap-2 border-t border-line bg-bg px-1 py-3">
+          {canDecide ? (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="primary" onClick={() => decisions.open('approve')}>
+                Approve plan
+              </Button>
+              <Button onClick={() => decisions.open('changes')}>Request changes</Button>
+            </div>
+          ) : null}
+          {decisions.error !== null ? (
+            <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm">
+              {decisions.error}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

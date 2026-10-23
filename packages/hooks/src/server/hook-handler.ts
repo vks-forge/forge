@@ -27,12 +27,15 @@
  *   judged a second time; either look denying denies (server/path-resolver). While the server
  *   drains for a graceful stop (`draining`), a new PreToolUse is refused as `server_draining`
  *   (a signed deny receipt, since the harness reports the refused call), and PostToolUse still records the effect of calls allowed before, so a
- *   stop never lands between an edit and its proof.
+ *   stop never lands between an edit and its proof. An `ask` is not dropped: the injected
+ *   `raiseApproval` opens the owner's approval and the Worker is answered `ask` with the
+ *   interaction id (receipt `approval_ref`); an allow that rode on the owner's answer is receipted
+ *   `approver: 'user'` (server/approval-gate, d-0175).
  *
  * Exports: createHookHandler().
  * Depends on: @forge/core (isRunActive), @forge/tools (HookRequest and HookResponse wire
  *   schemas, makeDecisionReceipt, makeEffectReceipt, callResource, constantTimeEqual),
- *   server/tool-resolver, server/audit-gate, server/path-resolver, shared/args-hash, types/hook-handler.
+ *   server/tool-resolver, server/audit-gate, server/approval-gate, server/admit-views, shared/args-hash, types/hook-handler.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -45,16 +48,11 @@ import {
   makeDecisionReceipt,
   makeEffectReceipt,
 } from '@forge/tools';
-import type {
-  AdmitCall,
-  AdmitContext,
-  Decision,
-  HookResponse,
-  Receipt,
-} from '@forge/tools';
+import type { Decision, HookResponse, Receipt } from '@forge/tools';
 import { effectStateFor, resolveToolId, toolDefinition } from '#/server/tool-resolver.js';
+import { approverOf, resolveAsk } from '#/server/approval-gate.js';
 import { createAuditGate, createMemoryAudit } from '#/server/audit-gate.js';
-import { physicalView } from '#/server/path-resolver.js';
+import { admitBothViews } from '#/server/admit-views.js';
 import { argsHash, resultHash } from '#/shared/args-hash.js';
 import type {
   FailClosedCode,
@@ -84,7 +82,9 @@ const drainDecision = (tool: string): Decision => ({
   tool,
 });
 
-const SEVERITY = { allow: 0, ask: 1, deny: 2 } as const;
+/** The approval an allow rode on (the owner's answer or the stored rule), for the receipt. */
+const approvalRef = (d: Decision): string | null =>
+  approverOf(d) === 'user' ? d.matched_rule : null;
 
 const lastHash = (r: readonly Receipt[]): string => r.at(-1)?.hash ?? '';
 
@@ -94,26 +94,6 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
   const now = (): string => deps.clock().toISOString();
 
   const audit = createAuditGate(deps.audit ?? createMemoryAudit().sink, deps.clock);
-
-  /**
-   * The lexical call and its physical twin (junctions, symlinks and short names resolved) both
-   * go through the one `admit()`; the stricter verdict stands (M8: the floors are lexical).
-   */
-  function admitBothViews(ctx: AdmitContext, call: AdmitCall): Decision {
-    const lexical = deps.admit(ctx, call);
-    const view = physicalView(ctx, call);
-    if (view.kind === 'none') {
-      return lexical;
-    }
-
-    // A path that cannot be resolved safely is judged as an empty path: `invalid_resource`.
-    const physical =
-      view.kind === 'refuse'
-        ? deps.admit(ctx, { ...call, input: { ...call.input, file_path: '', path: '' } })
-        : deps.admit(view.ctx, view.call);
-
-    return SEVERITY[physical.decision] > SEVERITY[lexical.decision] ? physical : lexical;
-  }
 
   async function preToolUse(
     run: Run,
@@ -140,9 +120,17 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
     // refusal is receipted like any denial: the harness reports the refused call and its
     // error result, and G1 owes every reported call a decision receipt. The reason tells the
     // harness the call can be made again after the resume.
-    const decision = deps.draining?.()
-      ? drainDecision(toolId)
-      : admitBothViews(ctx, call);
+    const judged = deps.draining?.()
+      ? { decision: drainDecision(toolId), ctx, call }
+      : admitBothViews(deps.admit, ctx, call);
+
+    const { decision, interactionId } = await resolveAsk(
+      deps,
+      run,
+      judged,
+      judged.decision,
+      useId,
+    );
 
     const def = toolDefinition(ctx, toolId);
     const [receipt] = await deps.receipts.append(run.id, (view) => [
@@ -156,7 +144,8 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
           schema_hash: def?.schema_hash ?? null,
           args_hash: argsHash(input),
           resource: callResource(ctx, call),
-          approver: 'auto',
+          approver: approverOf(decision),
+          approval_ref: interactionId ?? approvalRef(decision),
           ts: now(),
         },
         view.last,
@@ -168,6 +157,7 @@ export function createHookHandler(deps: HookHandlerDeps): HookHandler {
       decision: decision.decision,
       reason: decision.reason,
       receipt_hash: receipt?.hash ?? '',
+      ...(interactionId === undefined ? {} : { interaction_id: interactionId }),
     };
   }
 

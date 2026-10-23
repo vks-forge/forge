@@ -70,6 +70,7 @@ describe('0013 catalogue-and-compat', () => {
       'status',
       'last_checked_at',
       'status_note',
+      'bypass_permissions',
     ]);
 
     driver.close();

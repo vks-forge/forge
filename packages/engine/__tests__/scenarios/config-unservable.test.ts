@@ -66,12 +66,15 @@ describe('a project whose settings do not validate', () => {
     const report = await rig.tickOn(engine);
 
     expect(report.dispatched.map((d) => d.ticketId)).toEqual(['AP-1']);
-    expect(report.errors).toEqual([
-      {
-        where: 'project config forge',
-        message: 'stored override is not valid',
-      },
-    ]);
+    // Triage, the brief and the launch take several ticks; each one reports the broken project.
+    expect(report.errors.length).toBeGreaterThan(0);
+    expect(report.errors).toSatisfy((all: typeof report.errors) =>
+      all.every(
+        (e) =>
+          e.where === 'project config forge' &&
+          e.message === 'stored override is not valid',
+      ),
+    );
 
     expect(engine.unservableProjects().get('forge')).toBe('stored override is not valid');
     expect((await rig.ticket('FG-1')).status).toBe('inbox');

@@ -72,13 +72,18 @@ export function reasonForStatus(status: number, rateLimited: boolean): GitHostRe
 /**
  * What a 405/409 on the merge endpoint means, from GitHub's message: the head moved
  * (re-gate it), the base or something else was modified a moment ago (try again shortly),
- * or a real refusal (conflict, protection, not open) that only a human fixes.
+ * the branch clashes with the base (merge the base in), or a real refusal (protection, not
+ * open) that only a human fixes.
  */
 export function refineMergeRefusal(
   message: string,
-): 'head_moved' | 'merge_busy' | 'refused' {
+): 'head_moved' | 'merge_busy' | 'conflict' | 'refused' {
   if (/head branch was modified/i.test(message)) {
     return 'head_moved';
+  }
+
+  if (/not mergeable|merge conflict|conflicts? with/i.test(message)) {
+    return 'conflict';
   }
 
   return /modified/i.test(message) ? 'merge_busy' : 'refused';

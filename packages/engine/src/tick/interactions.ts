@@ -28,11 +28,14 @@ import { requestWakeTx } from '#/tick/wakes.js';
 import type { EngineCtx, EngineState } from '#/types/engine-state.types.js';
 import type { EngineDeps } from '#/types/engine.types.js';
 
-/** Interaction kinds a Worker is waiting on and that therefore expire. */
+/**
+ * Interaction kinds a Worker is waiting on and that therefore expire. A tool approval is not
+ * one: nothing runs and nothing is held while it waits, and a timeout must never turn the
+ * owner's pending decision into a Blocked ticket (d-0175).
+ */
 const QUESTION_KINDS: readonly Interaction['kind'][] = [
   'question',
   'plan_confirm',
-  'permission',
   'blocked',
 ];
 

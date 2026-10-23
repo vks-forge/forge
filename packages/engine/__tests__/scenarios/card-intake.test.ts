@@ -200,7 +200,12 @@ describe('card intake', () => {
 
     expect(states).toEqual([
       { ticket_id: 'FG-1', from: 'inbox', to: 'planned' },
-      { ticket_id: 'FG-1', from: 'planned', to: 'in_progress' },
+      {
+        ticket_id: 'FG-1',
+        from: 'planned',
+        to: 'in_progress',
+        reason: 'A Worker slot was free, so a Worker started',
+      },
     ]);
   });
 

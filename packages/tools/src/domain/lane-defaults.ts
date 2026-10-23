@@ -6,11 +6,13 @@
  *   for risky ones with a human in the loop. The tools a Worker gets and the questions
  *   it is asked must follow the lane mechanically, otherwise a cheap ticket could
  *   install packages or fetch the web, and a heavy one could be starved of what it needs.
+ *   Standard and Full Workers may read any public web page (library and API docs) without
+ *   the owner: a Worker cannot answer an `ask` mid-call, so it would be a silent denial.
  *   Express turns every `ask` into a denial (nobody to answer); Standard and Full route
  *   asks to a human. These are the ceilings; project and ticket grants can only narrow
  *   them (tool-system.md §12).
  *
- * Exports: LANE_DEFAULTS, LANE_UNATTENDED, laneRulesFor().
+ * Exports: LANE_DEFAULTS, LANE_UNATTENDED, SENSITIVE_DIR_NAMES, laneRulesFor().
  * Depends on: @forge/core (Lane), schemas/grant, types/grants, domain/check-exact-rules, domain/floors, domain/shell-allowlist. No IO.
  */
 
@@ -76,7 +78,10 @@ export const LANE_UNATTENDED: Readonly<Record<Lane, boolean>> = {
   full: false,
 };
 
-const SENSITIVE_DIRS = ['migrations/**', '**/migrations/**', 'auth/**', '**/auth/**'];
+/** Folder names whose contents Standard and Full ask about (and Express denies). */
+export const SENSITIVE_DIR_NAMES: readonly string[] = ['migrations', 'auth'];
+
+const SENSITIVE_DIRS = SENSITIVE_DIR_NAMES.flatMap((n) => [`${n}/**`, `**/${n}/**`]);
 
 const rule = (action: string, resource: string, effect: Effect): CallRule => ({
   action,
@@ -104,10 +109,10 @@ export function laneRulesFor(lane: Lane, shell?: ShellAllowInput): CallRule[] {
 
   if (lane !== 'express') {
     rules.push(rule('web_search', '*', 'allow'));
-    rules.push(rule('web_fetch', '*', 'ask'));
-    if (lane === 'standard') {
-      rules.push(rule('web_fetch', 'https://docs.*', 'allow'));
-    }
+    // Any public http(s) page: a Worker cannot answer an `ask` mid-call, so `ask` was a silent denial
+    // (d-0174). Private addresses, banned hosts and project/ticket denies still win (SSRF guard, managed deny).
+    rules.push(rule('web_fetch', 'http://*', 'allow'));
+    rules.push(rule('web_fetch', 'https://*', 'allow'));
 
     for (const t of MEMORY_TOOLS) {
       rules.push(rule(t.split('__')[2] as string, '*', 'allow'));

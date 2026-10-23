@@ -6,13 +6,15 @@
  *   different judge: independent agents who never read the Worker's own account, a Director check
  *   over the plan's typed artifacts only, and a sign-off the Director gives only for low-risk work
  *   that passed everything. If the reviewer and the critic ran as two Workers at once under a limit
- *   of one, the Director's check read the Worker's story, the Director signed tier C, or the owner
+ *   of one, the Director's check read the Worker's story, the Director signed unsafe tier C, or the owner
  *   were asked to review every tier A ticket anyway, the lane would be either unsafe or noise. Tier C
- *   (auth, migrations, secrets) must always wait for a named person (d-0012, d-0141 item 9).
+ *   (auth, migrations, secrets) is the Director's only on a clean floor with no secrets path
+ *   (d-0181); anything else waits for a named person.
  *
  * Pins: Done-when 3 (the reviewer and the critic placed in separate ticks, Director check pass,
- *   Director signs tier A and merges; tier B goes through review to done with a card note; tier C
- *   waits in needs_signoff with a sign_off item and a named signer finishes it; the check's prompt
+ *   Director signs tier A and merges; tier B goes through review to done with a card note; a clean
+ *   tier C is signed by the Director with a card note and undo line; tier C touching `.env` waits
+ *   in needs_signoff with a sign_off item naming the path and a named signer finishes it; the check's prompt
  *   holds no sentinel from the finish summary or claims).
  * Depends on: helpers/full-rig, helpers/pipeline-rig, vitest.
  */
@@ -112,11 +114,33 @@ describe('Full lane, tier B', () => {
 });
 
 describe('Full lane, tier C', () => {
-  it('never lets the Director sign tier C: needs_signoff with a sign_off item, finished by a named person', async () => {
+  it('lets the Director sign a clean tier C change, merges it and leaves a note with the undo', async () => {
     const v = await makeFullRig('C');
     const { rig, host } = v;
     rig.worktrees.changed = ['src/auth/login.ts'];
     const id = await toChecks(v, { plan: { files: ['src/auth/login.ts'] } });
+    await passChecks(v);
+
+    expect(await rig.ticket(id)).toMatchObject({ status: 'done', tier_actual: 'C' });
+    expect(host.count('merge')).toBe(1);
+    expect(await pendingItem(v, id, 'sign_off')).toBeUndefined();
+    const row = (await stageRows(rig, id)).find((r) => r.stage_id === 'sign-off');
+
+    expect(row).toMatchObject({ status: 'passed', kind: 'director' });
+    expect(row?.outcome).toMatchObject({ signed_by: 'director', signed_tier: 'C' });
+    const note = (await cardNotes(v, id)).find((n) =>
+      n.startsWith('The Director signed off tier C change'),
+    );
+
+    expect(note).toContain('0 critical/high');
+    expect(note).toContain('Undo: revert');
+  });
+
+  it('keeps a tier C change that touches an env file for the owner, naming the path', async () => {
+    const v = await makeFullRig('C');
+    const { rig, host } = v;
+    rig.worktrees.changed = ['src/auth/login.ts', '.env'];
+    const id = await toChecks(v, { plan: { files: ['src/auth/login.ts', '.env'] } });
     await passChecks(v);
 
     expect(await rig.ticket(id)).toMatchObject({
@@ -129,7 +153,7 @@ describe('Full lane, tier C', () => {
 
     expect(item?.payload).toMatchObject({ kind: 'sign_off', cause: 'tier_c', tier: 'C' });
     expect(item?.payload).toMatchObject({
-      director_note: expect.stringContaining('Tier C'),
+      director_note: expect.stringContaining('secrets path (.env)'),
     });
 
     const out = await rig.engine.actOnEscalation(
